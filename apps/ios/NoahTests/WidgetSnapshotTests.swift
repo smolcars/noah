@@ -1,6 +1,7 @@
 import BarkBoltFFI
 import Foundation
 @testable import Noah
+import Synchronization
 import Testing
 
 /// The widgets' snapshot (docs/native-rewrite/design/widgets.md, "Data the app writes" and "Testing").
@@ -41,7 +42,7 @@ struct WidgetSnapshotTests {
                                     .init(changes: [.init(at: Self.now.addingTimeInterval(-3 * day), delta: 20_000)], renewal: .blocks(108)),
                                     unit: .sats, quote: .init(currency: "USD", btcPrice: 100_000))
         #expect(written.balance == 22_000)
-        #expect(written.pending == 1_000)
+        #expect(written.arriving == 1_000)
         #expect(written.dailyBalances?.count == 31)
         #expect(written.dailyBalances?.suffix(5) == [2_000, 22_000, 22_000, 22_000, 22_000])
         #expect(written.fiat == .init(currency: "USD", btcPrice: 100_000))
@@ -59,7 +60,7 @@ struct WidgetSnapshotTests {
         defaults.set(["totalBalance": 125_000.0, "onchainBalance": 30_000.0, "offchainBalance": 95_000.0, "pendingBalance": 5_000.0,
                       "closestExpiryBlocks": 90.0, "expiryThreshold": 288.0], forKey: WidgetSnapshot.legacyKey)
         let snapshot = try #require(WidgetSnapshot.read(from: defaults, variant: "regtest", now: Self.now))
-        #expect(snapshot == WidgetSnapshot(writtenAt: Self.now, balance: 125_000, pending: 5_000, dailyBalances: nil, amountUnit: .bip177,
+        #expect(snapshot == WidgetSnapshot(writtenAt: Self.now, balance: 125_000, arriving: 5_000, dailyBalances: nil, amountUnit: .bip177,
                                            hidden: false, fiat: nil, renewBy: nil, variant: "regtest"))
         let shown = WidgetPresentation(snapshot: snapshot, now: Self.now, language: "en", calendar: Self.utc)
         #expect(shown.balance == "₿\u{00A0}125,000")
@@ -81,9 +82,39 @@ struct WidgetSnapshotTests {
             #expect(shown.change == nil)
             #expect(shown.balance == (unit == .sats ? "•••••• sats" : "₿\u{00A0}••••••"))
             #expect(shown.fiat == "••••")
-            #expect(shown.status == .arriving(unit == .sats ? "+•••• sats arriving" : "+₿\u{00A0}•••• arriving"))
+            #expect(shown.status == .arriving("•••• arriving")) // Home's hidden arriving line.
             let readsDigits = shown.accessibilityLabel.contains(where: \.isNumber)
             #expect(!readsDigits)
+        }
+    }
+
+    /// The same balance and records give Home's arriving line: incoming only, capped at on-chain pending.
+    @Test func arrivingIsHomesArrivingAmount() {
+        func balance(claimable: UInt64, sending: UInt64 = 0, boarding: UInt64 = 0, onchainPending: UInt64 = 0) -> WalletBalance {
+            WalletBalance(ark: .init(spendable: 10_000, needsRefresh: 0, pendingLightningSend: sending, claimableLightningReceive: claimable,
+                                     pendingInRound: 0, pendingExit: 0, pendingBoard: boarding, pendingArkoorSend: 0, pendingOffboard: 0),
+                          onchain: .init(confirmed: 5_000, pending: onchainPending, total: 5_000 + onchainPending))
+        }
+        struct Case { let balance: WalletBalance, incoming: UInt64, expected: UInt64 }
+        let cases = [
+            Case(balance: balance(claimable: 2_000), incoming: 0, expected: 2_000),
+            Case(balance: balance(claimable: 0, sending: 7_000), incoming: 0, expected: 0), // A Lightning send in flight isn't arriving.
+            Case(balance: balance(claimable: 0, boarding: 40_000, onchainPending: 1_200), incoming: 0, expected: 0), // A board's change isn't either.
+            Case(balance: balance(claimable: 0, onchainPending: 30_000), incoming: 30_000, expected: 30_000), // An incoming on-chain payment is.
+            Case(balance: balance(claimable: 500, onchainPending: 1_000), incoming: 30_000, expected: 1_500), // Capped at what the wallet counts pending.
+        ]
+        for testCase in cases {
+            let (balance, incoming, expected) = (testCase.balance, testCase.incoming, testCase.expected)
+            let snapshot = Self.snapshot(balance, .init(changes: [], incomingOnchain: incoming))
+            #expect(snapshot.arriving == expected)
+            #expect(snapshot.arriving == HomeStatusLine.arriving(balance, incomingOnchain: incoming))
+            let home = HomeStatusLine.current(error: nil, balance: balance, incomingOnchain: incoming, activeRounds: 0)
+            let shown = WidgetPresentation(snapshot: snapshot, now: Self.now, language: "en", calendar: Self.utc).status
+            if case .arriving(let sats) = home {
+                #expect(shown == .arriving("+" + BitcoinAmount.format(sats: Int64(sats), unit: .bip177, locale: Locale(identifier: "en")) + " arriving"))
+            } else {
+                #expect(shown == nil)
+            }
         }
     }
 
@@ -174,23 +205,89 @@ extension ForegroundWidgetRefreshTests {
         let previous = (defaults.object(forKey: WidgetSnapshot.key), defaults.object(forKey: WidgetSnapshot.legacyKey))
         defer { defaults.set(previous.0, forKey: WidgetSnapshot.key); defaults.set(previous.1, forKey: WidgetSnapshot.legacyKey) }
         defaults.removeObject(forKey: WidgetSnapshot.key)
-        WidgetDataWriter.republish(variant: .regtest, settings: settings)
+        WidgetDataWriter.republish(variant: .regtest, display: { .init(settings: settings) })
         #expect(defaults.data(forKey: WidgetSnapshot.key) == nil) // Nothing to republish before the first write.
 
-        WidgetDataWriter.write(balance: Self.balance(ark: 1_000), facts: .init(changes: []), variant: .regtest, settings: settings)
+        WidgetDataWriter.write(balance: Self.balance(ark: 1_000), facts: .init(changes: []), variant: .regtest,
+                               ticket: WidgetDataWriter.ticket(variant: .regtest), display: { .init(settings: settings) })
         try settings.setPersistedState(PersistedPrivacyState(isHomeBalanceHidden: true), key: PersistedPrivacyState.key,
                                        version: PersistedPrivacyState.version)
         try settings.setPersistedState(PersistedProfileState(preferredCurrency: "JPY", bitcoinAmountUnit: "sats"),
                                        key: PersistedProfileState.key, version: PersistedProfileState.version)
-        WidgetDataWriter.republish(variant: .regtest, settings: settings)
+        WidgetDataWriter.republish(variant: .regtest, display: { .init(settings: settings) })
         var snapshot = try #require(WidgetSnapshot.read(from: defaults, variant: "regtest"))
         #expect(snapshot.hidden && snapshot.amountUnit == .sats && snapshot.balance == 1_000)
-        WidgetDataWriter.publishQuote(currency: "JPY", btcPrice: 15_000_000, variant: .regtest, settings: settings)
+        WidgetDataWriter.publishQuote(currency: "JPY", btcPrice: 15_000_000, variant: .regtest, display: { .init(settings: settings) })
         snapshot = try #require(WidgetSnapshot.read(from: defaults, variant: "regtest"))
         #expect(snapshot.fiat == .init(currency: "JPY", btcPrice: 15_000_000))
 
-        WidgetDataWriter.clear(defaults)
+        WidgetDataWriter.clear(appGroup: AppVariant.regtest.appGroup)
         #expect(WidgetSnapshot.read(from: defaults, variant: "regtest") == nil)
+    }
+}
+
+/// A writer that read the settings before the user hid their balance can't save over the hidden snapshot.
+extension ForegroundWidgetRefreshTests {
+    @Test func aSlowWriterCannotUndoHidingTheBalance() async throws {
+        let root = FileManager.default.temporaryDirectory.appending(path: "widget-race-\(UUID())")
+        defer { try? FileManager.default.removeItem(at: root) }
+        let settings = try SettingsStorage(rootPath: root.path)
+        let defaults = try #require(UserDefaults(suiteName: AppVariant.regtest.appGroup))
+        let previous = (defaults.object(forKey: WidgetSnapshot.key), defaults.object(forKey: WidgetSnapshot.legacyKey))
+        defer { defaults.set(previous.0, forKey: WidgetSnapshot.key); defaults.set(previous.1, forKey: WidgetSnapshot.legacyKey) }
+        let balance = Self.balance(ark: 1_000)
+        WidgetDataWriter.write(balance: balance, facts: .init(changes: []), variant: .regtest,
+                               ticket: WidgetDataWriter.ticket(variant: .regtest), display: { .init(settings: settings) })
+        let readSettings = Mutex(false)
+        // A push job's writer reads the settings (balance shown), then takes a while to save.
+        let ticket = WidgetDataWriter.ticket(variant: .regtest)
+        let writer = Task.detached {
+            WidgetDataWriter.write(balance: balance, facts: .init(changes: []), variant: .regtest, ticket: ticket, display: {
+                let display = WidgetDataWriter.Display(settings: settings)
+                readSettings.withLock { $0 = true }
+                Thread.sleep(forTimeInterval: 0.3)
+                return display
+            })
+        }
+        try await SendPaymentTests.waitUntil { readSettings.withLock { $0 } }
+        // Meanwhile the user hides their balance: Home saves it, then republishes.
+        try settings.setPersistedState(PersistedPrivacyState(isHomeBalanceHidden: true), key: PersistedPrivacyState.key,
+                                       version: PersistedPrivacyState.version)
+        let republish = Task.detached { WidgetDataWriter.republish(variant: .regtest, display: { .init(settings: settings) }) }
+        await writer.value
+        await republish.value
+        #expect(WidgetSnapshot.read(from: defaults, variant: "regtest")?.hidden == true)
+    }
+
+    /// A push reads balance A and stalls; the foreground reads and publishes newer balance B; the push's late write
+    /// of A is dropped. A writer still reading a deleted wallet can't bring it back either.
+    @Test func aStalledWriterCannotPublishAnOlderBalance() throws {
+        let defaults = try #require(UserDefaults(suiteName: AppVariant.regtest.appGroup))
+        let previous = (defaults.object(forKey: WidgetSnapshot.key), defaults.object(forKey: WidgetSnapshot.legacyKey))
+        defer { defaults.set(previous.0, forKey: WidgetSnapshot.key); defaults.set(previous.1, forKey: WidgetSnapshot.legacyKey) }
+        let display: () -> WidgetDataWriter.Display = { .init(hidden: false, unit: .bip177, currency: "USD") }
+        let push = WidgetDataWriter.ticket(variant: .regtest) // Then it reads balance A and stalls.
+        let foreground = WidgetDataWriter.ticket(variant: .regtest)
+        #expect(WidgetDataWriter.write(balance: Self.balance(ark: 2_000), facts: .init(changes: []), variant: .regtest,
+                                       ticket: foreground, display: display))
+        let stale = Date().addingTimeInterval(60)
+        #expect(!WidgetDataWriter.write(balance: Self.balance(ark: 1_000), facts: .init(changes: []), variant: .regtest,
+                                        ticket: push, display: display, now: stale))
+        let shown = try #require(WidgetSnapshot.read(from: defaults, variant: "regtest"))
+        #expect(shown.balance == 2_000 && shown.writtenAt < stale)
+        // The other way round both land, newest last; a ticket is used once.
+        let first = WidgetDataWriter.ticket(variant: .regtest), second = WidgetDataWriter.ticket(variant: .regtest)
+        #expect(WidgetDataWriter.write(balance: Self.balance(ark: 3_000), facts: .init(changes: []), variant: .regtest, ticket: first, display: display))
+        #expect(WidgetDataWriter.write(balance: Self.balance(ark: 4_000), facts: .init(changes: []), variant: .regtest, ticket: second, display: display))
+        #expect(!WidgetDataWriter.write(balance: Self.balance(ark: 4_000), facts: .init(changes: []), variant: .regtest, ticket: second, display: display))
+        #expect(WidgetSnapshot.read(from: defaults, variant: "regtest")?.balance == 4_000)
+        // Deleting the wallet while a push is still reading it.
+        let reading = WidgetDataWriter.ticket(variant: .regtest)
+        WidgetDataWriter.clear(appGroup: AppVariant.regtest.appGroup)
+        #expect(!WidgetDataWriter.write(balance: Self.balance(ark: 5_000), facts: .init(changes: []), variant: .regtest, ticket: reading, display: display))
+        #expect(WidgetSnapshot.read(from: defaults, variant: "regtest") == nil)
+        #expect(WidgetDataWriter.write(balance: Self.balance(ark: 0), facts: .init(changes: []), variant: .regtest,
+                                       ticket: WidgetDataWriter.ticket(variant: .regtest), display: display))
     }
 }
 
@@ -205,7 +302,7 @@ struct WidgetBalanceHistoryTests {
         var settled = 0
         for fixture in cases {
             let movement = try #require(fixture.input.movement).sdk
-            let changes = WidgetBalanceHistory.changes(movements: [movement], chain: [], tip: 0, now: Self.now)
+            let changes = WidgetBalanceHistory.changes(movements: [movement], chain: [], confirmed: [:], now: Self.now)
             if movement.status == "successful" && movement.effectiveBalanceSats != 0 {
                 settled += 1
                 let row = HistoryMapping.transaction(movement, now: Self.now)
@@ -223,9 +320,12 @@ struct WidgetBalanceHistoryTests {
         #expect(cases.count == 6)
         for fixture in cases {
             let chain = try #require(fixture.input.onchain).decode(HistoryFixtureTests.ChainInput.self).sdk
-            let changes = WidgetBalanceHistory.changes(movements: [], chain: [chain], tip: 48, now: Self.now)
-            if let height = chain.confirmation?.height, chain.balanceChangeSats != 0 {
-                let at = Self.now.addingTimeInterval(-Double(48 - height) * 600)
+            let estimate = WidgetBalanceHistory.estimate(chain, tip: 48, now: Self.now)
+            #expect(estimate == chain.confirmation.map { Self.now.addingTimeInterval(-Double(48 - $0.height) * 600) }, "\(fixture.name)")
+            // Dated by the store; a date for an unconfirmed transaction still doesn't make it a change.
+            let at = Self.now.addingTimeInterval(-86_400)
+            let changes = WidgetBalanceHistory.changes(movements: [], chain: [chain], confirmed: [chain.txid: at], now: Self.now)
+            if chain.confirmation != nil, chain.balanceChangeSats != 0 {
                 #expect(changes == [.init(at: at, delta: chain.balanceChangeSats)], "\(fixture.name)")
             } else {
                 #expect(changes.isEmpty, "\(fixture.name)")
@@ -245,12 +345,76 @@ struct WidgetBalanceHistoryTests {
         let funding = WalletTransaction(txid: "funding-txid", txHex: "", onchainFeeSats: 500, balanceChangeSats: -50_500,
                                         confirmation: .init(height: 10, hash: "block"), isCpfp: false)
         let created = try #require(HistoryRules.parseDate("2026-10-01T12:00:00.000Z"))
-        #expect(WidgetBalanceHistory.changes(movements: [board("successful")], chain: [funding], tip: 9_000, now: Self.now)
+        let elsewhere: [String: Date] = ["funding-txid": Self.now] // Never used for a transaction a movement names.
+        #expect(WidgetBalanceHistory.changes(movements: [board("successful")], chain: [funding], confirmed: elsewhere, now: Self.now)
             == [.init(at: created, delta: 50_000), .init(at: created, delta: -50_500)])
-        #expect(WidgetBalanceHistory.changes(movements: [board("pending")], chain: [funding], tip: 9_000, now: Self.now).isEmpty)
+        #expect(WidgetBalanceHistory.changes(movements: [board("pending")], chain: [funding], confirmed: elsewhere, now: Self.now).isEmpty)
         // Not yet in a block: not a change.
         var unconfirmed = funding
         unconfirmed.confirmation = nil
-        #expect(WidgetBalanceHistory.changes(movements: [], chain: [unconfirmed], tip: 9_000, now: Self.now).isEmpty)
+        #expect(WidgetBalanceHistory.changes(movements: [], chain: [unconfirmed], confirmed: elsewhere, now: Self.now).isEmpty)
+    }
+
+    private static var utc: Calendar {
+        var calendar = Calendar(identifier: .gregorian)
+        calendar.timeZone = .gmt
+        return calendar
+    }
+
+    private static func movement(_ name: String, _ kind: String, metadata: String, effective: Int64, created: Date,
+                                 status: String = "successful") -> Movement {
+        let at = HistoryRules.isoDate(created)
+        return Movement(id: 9, status: status, subsystemName: name, subsystemKind: kind, metadataJson: metadata,
+                        intendedBalanceSats: effective, effectiveBalanceSats: effective, offchainFeeSats: 0, sentToAddresses: [],
+                        receivedOnAddresses: [], inputVtxoIds: [], outputVtxoIds: [], exitedVtxoIds: [], createdAt: at, updatedAt: at,
+                        completedAt: nil, paymentHash: nil, lightningInvoice: nil, lightningOffer: nil)
+    }
+
+    /// A round offboard names its on-chain credit by the round's funding transaction: both halves share its date,
+    /// on either side of the window's edge, and a renewal in the same round doesn't take the credit.
+    @Test func aRoundOffboardsTwoHalvesStayTogetherAcrossTheWindowEdge() {
+        let credit = WalletTransaction(txid: "round-txid", txHex: "", onchainFeeSats: nil, balanceChangeSats: 50_000,
+                                       confirmation: .init(height: 1_000, hash: "h"), isCpfp: false)
+        let recently: [String: Date] = ["round-txid": Self.now] // What a height estimate would say.
+        for days in [40.0, 30.5, 29.5, 5.0] {
+            let created = Self.now.addingTimeInterval(-days * 86_400)
+            let offboard = Self.movement("bark.round", "offboard", metadata: #"{"funding_txid":"round-txid"}"#, effective: -50_300,
+                                         created: created)
+            let renewal = Self.movement("bark.round", "refresh", metadata: #"{"funding_txid":"round-txid"}"#, effective: 0,
+                                        created: created, status: "pending")
+            for movements in [[offboard], [renewal, offboard], [offboard, renewal]] {
+                let changes = WidgetBalanceHistory.changes(movements: movements, chain: [credit], confirmed: recently, now: Self.now)
+                #expect(changes == [.init(at: created, delta: -50_300), .init(at: created, delta: 50_000)], "\(days) days")
+                let values = WidgetWave.dailyBalances(current: 100_000, changes: changes, now: Self.now, calendar: Self.utc)
+                #expect(WidgetWave.change(values) == (days > 30 ? 0 : -300), "\(days) days")
+            }
+        }
+    }
+
+    /// The first estimate of an on-chain date is kept, so it never moves with the clock or the tip; the block's
+    /// own time from History replaces it; entries go with their transactions and with the wallet.
+    @Test func onChainDatesNeverDrift() throws {
+        let folder = FileManager.default.temporaryDirectory.appending(path: "widget-dates-\(UUID())")
+        defer { try? FileManager.default.removeItem(at: folder) }
+        let dates = WidgetChainDates(url: folder.appending(path: "dates.json"))
+        let receive = WalletTransaction(txid: "chain-txid", txHex: "", onchainFeeSats: nil, balanceChangeSats: 21_000,
+                                        confirmation: .init(height: 1_000, hash: "h"), isCpfp: false)
+        var seen: [Date] = []
+        for (day, tip) in [(0.0, UInt32(1_006)), (1, 1_006), (2, 1_300), (31, 1_006)] {
+            let now = Self.now.addingTimeInterval(day * 86_400)
+            let estimate = try #require(WidgetBalanceHistory.estimate(receive, tip: tip, now: now))
+            let confirmed = dates.dates([receive.txid: estimate], keeping: [receive.txid])
+            let changes = WidgetBalanceHistory.changes(movements: [], chain: [receive], confirmed: confirmed, now: now)
+            seen += changes.map(\.at)
+        }
+        #expect(seen == Array(repeating: Self.now.addingTimeInterval(-3_600), count: 4))
+        let block = Self.now.addingTimeInterval(-5_000)
+        dates.record(txid: receive.txid, at: block)
+        #expect(dates.dates([receive.txid: Self.now], keeping: [receive.txid]) == [receive.txid: block])
+        // Another wallet's transaction goes; a wallet deletion clears the rest.
+        #expect(dates.dates(["other": Self.now], keeping: ["other"]) == ["other": Self.now])
+        #expect(dates.dates([receive.txid: Self.now], keeping: [receive.txid]) == [receive.txid: Self.now])
+        dates.clear()
+        #expect(!FileManager.default.fileExists(atPath: folder.appending(path: "dates.json").path))
     }
 }

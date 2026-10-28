@@ -36,8 +36,11 @@ extension RecurringExecutor.Dependencies {
                      },
                      notifications: { await RecurringNotifications.refresh($0, result: $1) },
                      refresh: {
+                         let ticket = WidgetDataWriter.ticket(variant: services.variant)
                          guard let summary = try? await services.session.summary() else { return }
-                         WidgetDataWriter.write(balance: summary.balance, facts: .init(), variant: services.variant)
+                         // No chain tip here: the wave's earlier days and the Renew line stay as they are.
+                         let facts = (try? await services.session.widgetFacts(readsTip: false)) ?? .init()
+                         WidgetDataWriter.write(balance: summary.balance, facts: facts, variant: services.variant, ticket: ticket)
                      })
     }
 }

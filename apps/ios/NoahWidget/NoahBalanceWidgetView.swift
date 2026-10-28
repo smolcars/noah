@@ -13,7 +13,7 @@ struct BalanceProvider: TimelineProvider {
     let variant: String
 
     func placeholder(in _: Context) -> BalanceEntry {
-        BalanceEntry(date: .now, snapshot: WidgetSnapshot(writtenAt: .now, balance: 252_742, pending: 0, dailyBalances: nil,
+        BalanceEntry(date: .now, snapshot: WidgetSnapshot(writtenAt: .now, balance: 252_742, arriving: 0, dailyBalances: nil,
                                                           amountUnit: .bip177, hidden: false, fiat: nil, renewBy: nil, variant: variant))
     }
 

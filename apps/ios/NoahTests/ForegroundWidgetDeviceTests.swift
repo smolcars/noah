@@ -39,7 +39,11 @@ import Testing
                                                                    // The receive is today's one settled change, so the wave starts at zero.
                                                                    #expect(facts.changes?.map(\.delta).reduce(0, +) == Int64(balance.totalSats))
                                                                    #expect(facts.renewal != .unknown)
-                                                                   WidgetDataWriter.write(balance: balance, facts: facts, variant: .regtest)
+                                                                   WidgetDataWriter.write(
+                                                                       balance: balance,
+                                                                       facts: facts,
+                                                                       variant: .regtest,
+                                                                       ticket: WidgetDataWriter.ticket(variant: .regtest))
                                                                    published = true
                                                                })
                 } catch { Issue.record("Foreground widget refresh failed") }

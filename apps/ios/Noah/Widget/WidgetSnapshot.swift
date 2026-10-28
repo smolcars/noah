@@ -18,7 +18,8 @@ struct WidgetSnapshot: Codable, Equatable, Sendable {
     /// The daily balances end on this local day.
     var writtenAt: Date
     var balance: UInt64
-    var pending: UInt64
+    /// Home's arriving amount: incoming money only (`HomeStatusLine.arriving`).
+    var arriving: UInt64
     /// 31 balances in sats, oldest first (`WidgetWave.dailyBalances`); nil when unknown (calm water).
     var dailyBalances: [Int64]? // swiftlint:disable:this discouraged_optional_collection - persisted JSON; nil: unknown
     var amountUnit: BitcoinAmountUnit
@@ -29,8 +30,8 @@ struct WidgetSnapshot: Codable, Equatable, Sendable {
     /// `AppVariant.rawValue`, for the network chip.
     var variant: String
 
-    /// The new snapshot, else one built from the old keys (balance, pending, ₿, no fiat, calm water,
-    /// no Renew line), else nil: no wallet.
+    /// The new snapshot, else one built from the old keys (balance, their pending as arriving, ₿, no fiat,
+    /// calm water, no Renew line), else nil: no wallet.
     static func read(from defaults: UserDefaults, variant: String, now: Date = Date()) -> Self? {
         if let data = defaults.data(forKey: key), let snapshot = try? JSONDecoder().decode(Self.self, from: data) {
             return snapshot
@@ -41,7 +42,7 @@ struct WidgetSnapshot: Codable, Equatable, Sendable {
             guard let value = (legacy[key] as? NSNumber)?.doubleValue, value.isFinite, value > 0 else { return 0 }
             return UInt64(min(value, Double(Int64.max)))
         }
-        return Self(writtenAt: now, balance: sats("totalBalance"), pending: sats("pendingBalance"), dailyBalances: nil,
+        return Self(writtenAt: now, balance: sats("totalBalance"), arriving: sats("pendingBalance"), dailyBalances: nil,
                     amountUnit: .bip177, hidden: false, fiat: nil, renewBy: nil, variant: variant)
     }
 

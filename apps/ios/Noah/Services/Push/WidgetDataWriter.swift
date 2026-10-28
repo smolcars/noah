@@ -20,6 +20,8 @@ enum WidgetDataWriter {
         /// today takes the new balance.
         var changes: [WidgetWave.Change]? // swiftlint:disable:this discouraged_optional_collection - nil: not read, unlike no changes
         var renewal = Renewal.unknown
+        /// Incoming unconfirmed on-chain (`HomeStatusLine.incomingOnchain`); nil when not read.
+        var incomingOnchain: UInt64?
     }
 
     /// Home's persisted settings the widgets follow.
@@ -31,14 +33,56 @@ enum WidgetDataWriter {
 
     /// Home's latest quote in this process; the snapshot carries it to the next one.
     private static let quote = Mutex<WidgetSnapshot.Fiat?>(nil)
+    private static let threads = NSLock()
 
-    static func write(balance: WalletBalance, facts: Facts, variant: AppVariant, settings: SettingsStorage = .shared,
-                      now: Date = Date()) {
-        guard let defaults = UserDefaults(suiteName: variant.appGroup) else { return }
-        save(snapshot(balance: balance, facts: facts, previous: stored(defaults), display: Display(settings: settings),
-                      quote: quote.withLock { $0 }, variant: variant, now: now, calendar: .current), to: defaults)
-        mirrorLanguage(defaults)
-        WidgetCenter.shared.reloadAllTimelines()
+    /// A writer's place in line, taken before it reads the wallet: a write whose reads started before another
+    /// writer's, or before the wallet was deleted, is dropped rather than saved over newer data.
+    struct Ticket: Equatable, Sendable {
+        fileprivate let value: Int // swiftlint:disable:this strict_fileprivate - WidgetDataWriter, which encloses it, issues and compares it
+    }
+
+    private static let issuedKey = "widgetSnapshotTickets", publishedKey = "widgetSnapshotPublished"
+
+    static func ticket(variant: AppVariant) -> Ticket {
+        var ticket = Ticket(value: 0)
+        update(variant.appGroup) { defaults in
+            ticket = Ticket(value: defaults.integer(forKey: issuedKey) + 1)
+            defaults.set(ticket.value, forKey: issuedKey)
+            return false
+        }
+        return ticket
+    }
+
+    /// Saves the whole snapshot unless a writer that started reading later, or a deletion, got there first.
+    /// `display` reads Home's settings when the snapshot is saved, never before.
+    @discardableResult
+    static func write(balance: WalletBalance, facts: Facts, variant: AppVariant, ticket: Ticket,
+                      display: () -> Display = { Display(settings: .shared) }, now: Date = Date()) -> Bool {
+        let saved = update(variant.appGroup) { defaults in
+            guard ticket.value > defaults.integer(forKey: publishedKey) else { return false }
+            save(snapshot(balance: balance, facts: facts, previous: stored(defaults), display: display(),
+                          quote: quote.withLock { $0 }, variant: variant, now: now, calendar: .current), to: defaults)
+            defaults.set(ticket.value, forKey: publishedKey)
+            mirrorLanguage(defaults)
+            return true
+        }
+        if saved { WidgetCenter.shared.reloadAllTimelines() }
+        return saved
+    }
+
+    /// One snapshot change at a time, across threads and processes: read, change and save under the app group's
+    /// lock file. Each change reads the settings it shows inside, so a slower writer never saves over a newer setting.
+    /// `change` says whether it saved.
+    @discardableResult
+    private static func update(_ appGroup: String, _ change: (UserDefaults) -> Bool) -> Bool {
+        guard let defaults = UserDefaults(suiteName: appGroup) else { return false }
+        threads.lock()
+        defer { threads.unlock() }
+        let lock = FileManager.default.containerURL(forSecurityApplicationGroupIdentifier: appGroup)
+            .map { open($0.appending(path: "widget-snapshot.lock").path, O_CREAT | O_RDWR | O_CLOEXEC, 0o600) } ?? -1
+        if lock >= 0 { flock(lock, LOCK_EX) }
+        defer { if lock >= 0 { flock(lock, LOCK_UN); close(lock) } }
+        return change(defaults)
     }
 
     // swiftlint:disable:next function_parameter_count - the pure step the tests drive: every input explicit
@@ -56,35 +100,47 @@ enum WidgetDataWriter {
         case .notDue: nil
         case .blocks(let blocks): now.addingTimeInterval(Double(blocks) * 600)
         }
-        return WidgetSnapshot(writtenAt: now, balance: balance.totalSats, pending: balance.pendingSats, dailyBalances: daily,
+        return WidgetSnapshot(writtenAt: now, balance: balance.totalSats,
+                              arriving: HomeStatusLine.arriving(balance, incomingOnchain: facts.incomingOnchain ?? 0), dailyBalances: daily,
                               amountUnit: display.unit, hidden: display.hidden,
                               fiat: fiat(quote, previous?.fiat, currency: display.currency), renewBy: renewBy,
                               variant: variant.rawValue)
     }
 
     /// The hide setting, the unit or the fiat currency changed: the same snapshot, shown the new way.
-    static func republish(variant: AppVariant, settings: SettingsStorage = .shared) {
-        guard let defaults = UserDefaults(suiteName: variant.appGroup), let previous = stored(defaults) else { return }
-        let display = Display(settings: settings)
-        var snapshot = previous
-        snapshot.hidden = display.hidden
-        snapshot.amountUnit = display.unit
-        snapshot.fiat = fiat(quote.withLock { $0 }, previous.fiat, currency: display.currency)
-        guard snapshot != previous else { return }
-        save(snapshot, to: defaults)
-        WidgetCenter.shared.reloadAllTimelines()
+    static func republish(variant: AppVariant, display: () -> Display = { Display(settings: .shared) }) {
+        let changed = update(variant.appGroup) { defaults in
+            guard let previous = stored(defaults) else { return false }
+            let display = display()
+            var snapshot = previous
+            snapshot.hidden = display.hidden
+            snapshot.amountUnit = display.unit
+            snapshot.fiat = fiat(quote.withLock { $0 }, previous.fiat, currency: display.currency)
+            guard snapshot != previous else { return false }
+            save(snapshot, to: defaults)
+            return true
+        }
+        if changed { WidgetCenter.shared.reloadAllTimelines() }
     }
 
     /// Home has a new quote.
-    static func publishQuote(currency: String, btcPrice: Double, variant: AppVariant, settings: SettingsStorage = .shared) {
+    static func publishQuote(currency: String, btcPrice: Double, variant: AppVariant,
+                             display: () -> Display = { Display(settings: .shared) }) {
         quote.withLock { $0 = .init(currency: currency, btcPrice: btcPrice) }
-        republish(variant: variant, settings: settings)
+        republish(variant: variant, display: display)
     }
 
-    /// Deleting the wallet: no snapshot, old or new, so the widgets show No wallet.
-    static func clear(_ defaults: UserDefaults) {
-        defaults.removeObject(forKey: WidgetSnapshot.key)
-        defaults.removeObject(forKey: WidgetSnapshot.legacyKey)
+    /// Deleting the wallet: no snapshot, old or new, so the widgets show No wallet, and no dates kept for its
+    /// transactions.
+    static func clear(appGroup: String, chainDates: WidgetChainDates = .shared) {
+        update(appGroup) { defaults in
+            defaults.removeObject(forKey: WidgetSnapshot.key)
+            defaults.removeObject(forKey: WidgetSnapshot.legacyKey)
+            // Writers still reading the deleted wallet can't bring it back.
+            defaults.set(defaults.integer(forKey: issuedKey), forKey: publishedKey)
+            return true
+        }
+        chainDates.clear()
         WidgetCenter.shared.reloadAllTimelines()
     }
 

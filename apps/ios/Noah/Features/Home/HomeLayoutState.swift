@@ -132,13 +132,18 @@ enum HomeStatusLine: Equatable {
     /// `incomingOnchain` comes from `incomingOnchain(_:)`: only money coming in counts as arriving.
     static func current(error: String?, balance: WalletBalance?, incomingOnchain: UInt64, activeRounds: Int) -> Self? {
         if let error { return .error(error) }
-        // Never sends, offboards, exits or boards: those are your own money leaving or moving.
-        // The records' incoming amount can't exceed what the wallet itself counts as pending on-chain.
-        let arriving = (balance?.ark.claimableLightningReceive ?? 0) + min(incomingOnchain, balance?.onchain.pending ?? 0)
+        let arriving = arriving(balance, incomingOnchain: incomingOnchain)
         if arriving > 0 { return .arriving(arriving) }
         if let balance, balance.ark.pendingInRound > 0 { return .pendingRound(balance.ark.pendingInRound) }
         if activeRounds > 0 { return .rounds(activeRounds) }
         return nil
+    }
+
+    /// Money coming in: claimable Lightning receives and incoming unconfirmed on-chain (the widgets show it too).
+    /// Never sends, offboards, exits or boards: those are your own money leaving or moving.
+    /// The records' incoming amount can't exceed what the wallet itself counts as pending on-chain.
+    static func arriving(_ balance: WalletBalance?, incomingOnchain: UInt64) -> UInt64 {
+        (balance?.ark.claimableLightningReceive ?? 0) + min(incomingOnchain, balance?.onchain.pending ?? 0)
     }
 
     /// Unconfirmed on-chain transactions that add to the wallet, by their net change.

@@ -49,15 +49,15 @@ struct WidgetShotTests {
         defaults.removeObject(forKey: WidgetSnapshot.key)
         defaults.removeObject(forKey: WidgetSnapshot.legacyKey)
         let now = Date()
-        var snapshot = WidgetSnapshot(writtenAt: now, balance: 252_742, pending: 0, dailyBalances: month,
+        var snapshot = WidgetSnapshot(writtenAt: now, balance: 252_742, arriving: 0, dailyBalances: month,
                                       amountUnit: words.contains("sats") ? .sats : .bip177, hidden: false,
                                       fiat: words.contains("nofiat") ? nil : .init(currency: "USD", btcPrice: 112_000),
                                       renewBy: nil, variant: "mainnet")
         switch words.first(where: { !["sats", "nofiat"].contains($0) && !LegacyLocale.supported.contains($0) }) ?? "everyday" {
-        case "arriving": snapshot.pending = 100_000
-        case "renew": snapshot.renewBy = now.addingTimeInterval(18 * 3600 + 120); snapshot.pending = 100_000
+        case "arriving": snapshot.arriving = 100_000
+        case "renew": snapshot.renewBy = now.addingTimeInterval(18 * 3600 + 120); snapshot.arriving = 100_000
         case "fresh": snapshot.balance = 0; snapshot.dailyBalances = Array(repeating: 0, count: 31)
-        case "hidden": snapshot.hidden = true; snapshot.pending = 100_000
+        case "hidden": snapshot.hidden = true; snapshot.arriving = 100_000
         case "signet": snapshot.variant = "signet"
         case "regtest": snapshot.variant = "regtest"
         case "large": snapshot.balance = 12_480_315; snapshot.dailyBalances = month.map { $0 * 49 + 95_957 }

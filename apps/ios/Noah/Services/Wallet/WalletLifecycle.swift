@@ -233,9 +233,7 @@ struct WalletLifecycle: Sendable {
         try dependencies.seed.deleteWalletSeed()
         dependencies.authToken.remove()
         try dependencies.settings.removeAllDurably()
-        if let appGroup = dependencies.appGroup, let defaults = UserDefaults(suiteName: appGroup) {
-            WidgetDataWriter.clear(defaults)
-        }
+        if let appGroup = dependencies.appGroup { WidgetDataWriter.clear(appGroup: appGroup) }
     }
 
     private func authority() -> RecurringAutomationAuthority? {

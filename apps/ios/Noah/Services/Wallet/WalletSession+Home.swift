@@ -1,3 +1,4 @@
+import BarkBoltFFI
 import Foundation
 
 extension WalletSession {
@@ -26,18 +27,29 @@ extension WalletSession {
 }
 
 extension WalletSession {
-    /// What the widgets show besides the balance, read-only: settled balance changes for the wave and Home's
-    /// Renew rule. Without the chain tip neither is read, and the widgets keep what they have.
-    func widgetFacts(now: Date = Date()) async throws -> WidgetDataWriter.Facts {
+    /// What the widgets show besides the balance, read-only. Home's arriving amount comes from the records Home
+    /// reads. The wave and the Renew line need the chain tip (`readsTip`); without it the widgets keep what they have.
+    func widgetFacts(readsTip: Bool = true, dates: WidgetChainDates = .shared, now: Date = Date()) async throws -> WidgetDataWriter.Facts {
         try await withOpenWallet { handles in
             var facts = WidgetDataWriter.Facts()
+            var records: (movements: [Movement], chain: [WalletTransaction])?
+            if let movements = try? await handles.wallet.history(), let chain = try? await handles.onchain.transactions() {
+                records = (movements, chain)
+                // Activity's rows, merged as History merges them, so the amount is Home's.
+                let rows = HistoryRules.merge(movements.filter(HistoryMapping.include).map { HistoryMapping.transaction($0, now: now) },
+                                              onchain: chain.filter { $0.balanceChangeSats != 0 }.map { HistoryMapping.transaction($0) })
+                facts.incomingOnchain = HomeStatusLine.incomingOnchain(rows)
+            } else { AppLog("widget").w("History unavailable; the widget keeps its wave") }
+            guard readsTip else { return facts }
             guard let tip = try? await handles.onchain.tipHeight() else {
                 AppLog("widget").w("Chain tip unavailable; the widget keeps its wave and Renew line")
                 return facts
             }
-            if let movements = try? await handles.wallet.history(), let chain = try? await handles.onchain.transactions() {
-                facts.changes = WidgetBalanceHistory.changes(movements: movements, chain: chain, tip: tip, now: now)
-            } else { AppLog("widget").w("History unavailable; the widget keeps its wave") }
+            if let (movements, chain) = records {
+                let estimates = chain.reduce(into: [String: Date]()) { $0[$1.txid] = WidgetBalanceHistory.estimate($1, tip: tip, now: now) }
+                let confirmed = dates.dates(estimates, keeping: Set(chain.map(\.txid)))
+                facts.changes = WidgetBalanceHistory.changes(movements: movements, chain: chain, confirmed: confirmed, now: now)
+            }
             if let expiring = try? await handles.wallet.getExpiringVtxos(
                 thresholdBlocks: UInt32(WalletConfiguration.base(for: .current).vtxoRefreshExpiryThreshold)) {
                 facts.renewal = HomeRenewal.select(expiring.map(Self.renewalCoin), tip: tip).map { .blocks($0.blocksLeft) } ?? .notDue

@@ -165,11 +165,12 @@ extension PushJobs.Dependencies {
                     UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil))
             },
             refreshWidget: {
+                let ticket = WidgetDataWriter.ticket(variant: services.variant)
                 guard let summary = try? await session.summary() else { return }
                 guard (try? BackgroundExecution.checkActive()) != nil else { return }
                 let facts = (try? await session.widgetFacts()) ?? .init()
                 guard (try? BackgroundExecution.checkActive()) != nil else { return }
-                WidgetDataWriter.write(balance: summary.balance, facts: facts, variant: services.variant)
+                WidgetDataWriter.write(balance: summary.balance, facts: facts, variant: services.variant, ticket: ticket)
             },
             recurring: { await RecurringExecutor.shared.execute() },
             progressExits: { await session.progressPendingExits { AppLog("pushJobs").w("Background exit progress failed: \($0)") } },

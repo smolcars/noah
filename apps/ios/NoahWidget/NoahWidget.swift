@@ -59,17 +59,17 @@ struct NoahWidgetBundle: WidgetBundle {
                                      243242, 255242, 261242, 261242, 257242, 247242, 250642, 252742, 252742]
 
         // swiftlint:disable:next discouraged_optional_collection - nil: calm water
-        static func make(balance: UInt64 = 252_742, pending: UInt64 = 0, daily: [Int64]? = month, unit: BitcoinAmountUnit = .bip177,
+        static func make(balance: UInt64 = 252_742, arriving: UInt64 = 0, daily: [Int64]? = month, unit: BitcoinAmountUnit = .bip177,
                          hidden: Bool = false, renewHours: Double? = nil, variant: String = "mainnet") -> WidgetSnapshot {
-            WidgetSnapshot(writtenAt: .now, balance: balance, pending: pending, dailyBalances: daily, amountUnit: unit, hidden: hidden,
+            WidgetSnapshot(writtenAt: .now, balance: balance, arriving: arriving, dailyBalances: daily, amountUnit: unit, hidden: hidden,
                            fiat: .init(currency: "USD", btcPrice: 112_000), renewBy: renewHours.map { .now.addingTimeInterval($0 * 3600 + 60) },
                            variant: variant)
         }
 
         static func entry(_ snapshot: WidgetSnapshot?) -> BalanceEntry { BalanceEntry(date: .now, snapshot: snapshot) }
-        static let everyday = entry(make()), arriving = entry(make(pending: 100_000)), renew = entry(make(renewHours: 18))
+        static let everyday = entry(make()), arriving = entry(make(arriving: 100_000)), renew = entry(make(renewHours: 18))
         static let fresh = entry(make(balance: 0, daily: Array(repeating: 0, count: 31)))
-        static let hidden = entry(make(pending: 100_000, hidden: true)), signet = entry(make(variant: "signet"))
+        static let hidden = entry(make(arriving: 100_000, hidden: true)), signet = entry(make(variant: "signet"))
         static let large = entry(make(balance: 12_480_315, unit: .sats)), noWallet = entry(nil)
     }
 

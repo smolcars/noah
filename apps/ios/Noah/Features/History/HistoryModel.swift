@@ -19,6 +19,8 @@ final class HistoryModel {
         var chainStatus: @Sendable (String) async throws -> ChainTransactionStatus? = { _ in nil }
         /// One coin by ID, spent ones included.
         var coin: @Sendable (String) async throws -> VtxoModel? = { _ in nil }
+        /// A confirmed transaction's block time, for the widgets' wave (`WidgetChainDates`).
+        var blockTimeRead: @Sendable (String, Date) -> Void = { _, _ in }
 
         static func live(session: WalletSession, client: Client, variant: AppVariant) -> Self {
             Self(
@@ -59,7 +61,8 @@ final class HistoryModel {
                 recurring: { await RecurringExecutor.shared.historyLinks() },
                 chainTip: { try await session.chainTip() },
                 chainStatus: { try await session.chainTransactionStatus($0) },
-                coin: { try await session.vtxo($0) })
+                coin: { try await session.vtxo($0) },
+                blockTimeRead: { WidgetChainDates.shared.record(txid: $0, at: $1) })
         }
     }
 
@@ -177,7 +180,9 @@ final class HistoryModel {
     private func blockTime(_ txid: String, publishFirst publish: () async -> Void) async -> Date? {
         if let cached = blockTimes[txid] { return cached }
         await publish()
-        return try? await dependencies.blockTime(txid)
+        let time = try? await dependencies.blockTime(txid)
+        if let time { dependencies.blockTimeRead(txid, time) }
+        return time
     }
 
     private func enrich(_ rows: [HistoryTransaction], currency: String, generation: UUID) async {

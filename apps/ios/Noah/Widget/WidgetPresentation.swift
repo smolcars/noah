@@ -6,7 +6,7 @@ struct WidgetPresentation: Equatable {
     enum Status: Equatable {
         /// Renew is due: "Expires in 18 hours", or "Expires in under an hour".
         case renew(expiry: String)
-        /// "+₿ 100,000 arriving".
+        /// "+₿ 100,000 arriving", or Home's hidden "•••• arriving".
         case arriving(String)
     }
 
@@ -49,10 +49,9 @@ struct WidgetPresentation: Equatable {
         if let hours = snapshot.renewHours(now: now) {
             status = .renew(expiry: hours < 1 ? L10n.text("Expires in under an hour", locale: language)
                 : L10n.plural("Expires in {n} hours", count: hours, locale: language))
-        } else if snapshot.pending > 0 {
-            let amount = hidden ? (unit == .sats ? "•••• sats" : "₿\u{00A0}••••")
-                : BitcoinAmount.format(sats: Int64(clamping: snapshot.pending), unit: unit, locale: locale)
-            status = .arriving(L10n.text("{amount} arriving", "+" + amount, locale: language))
+        } else if snapshot.arriving > 0 {
+            let amount = hidden ? "••••" : "+" + BitcoinAmount.format(sats: Int64(clamping: snapshot.arriving), unit: unit, locale: locale)
+            status = .arriving(L10n.text("{amount} arriving", amount, locale: language))
         } else {
             status = nil
         }

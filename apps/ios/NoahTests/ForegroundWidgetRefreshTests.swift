@@ -17,9 +17,13 @@ struct ForegroundWidgetRefreshTests {
         defer { defaults.set(previous.0, forKey: WidgetSnapshot.key); defaults.set(previous.1, forKey: WidgetSnapshot.legacyKey) }
         defaults.set(["totalBalance": 1.0], forKey: WidgetSnapshot.legacyKey)
         _ = try await ForegroundWidgetRefresh.read(summary: { summary }, widget: { .init(changes: [], renewal: .blocks(123)) },
-                                                   checkStage: {}, publish: { WidgetDataWriter.write(balance: $0, facts: $1, variant: .regtest) })
+                                                   checkStage: {}, publish: { WidgetDataWriter.write(
+                                                       balance: $0,
+                                                       facts: $1,
+                                                       variant: .regtest,
+                                                       ticket: WidgetDataWriter.ticket(variant: .regtest)) })
         let published = try #require(WidgetSnapshot.read(from: defaults, variant: "regtest"))
-        WidgetDataWriter.write(balance: summary.balance, facts: .init(), variant: .regtest)
+        WidgetDataWriter.write(balance: summary.balance, facts: .init(), variant: .regtest, ticket: WidgetDataWriter.ticket(variant: .regtest))
         let snapshot = try #require(WidgetSnapshot.read(from: defaults, variant: "regtest"))
         #expect(snapshot.renewBy == published.renewBy)
         #expect(snapshot.renewHours(now: snapshot.writtenAt) == 20)

@@ -37,6 +37,24 @@ struct HistoryModelTests {
         #expect(model.transactions.first?.btcPrice == 85000)
     }
 
+    /// The block times History reads from Esplora reach the widgets' wave; one it can't read doesn't.
+    @Test func blockTimesReachTheWidgetsDates() async {
+        final class Reads: @unchecked Sendable { var value: [String: Date] = [:] }
+        let reads = Reads()
+        let block = Date(timeIntervalSince1970: 1_790_000_000)
+        func chain(_ txid: String) -> HistoryTransaction {
+            .init(id: "onchain-wallet-\(txid)", type: "Onchain", amount: 21_000, date: "1970-01-01T00:00:00.000Z", direction: "incoming",
+                  dateLabel: "Confirmed at block 42", source: "onchain-wallet", txid: txid, balanceChangeSat: 21_000, hasConfirmation: true,
+                  confirmationHeight: 42)
+        }
+        var dependencies = dependencies([chain("known"), chain("unknown")])
+        dependencies.blockTime = { $0 == "known" ? block : nil }
+        dependencies.blockTimeRead = { reads.value[$0] = $1 }
+        let model = HistoryModel(dependencies: dependencies)
+        await model.refresh(currency: "USD"); await model.awaitEnrichment()
+        #expect(reads.value == ["known": block])
+    }
+
     @Test func unavailableMarketDataDoesNotHidePayments() async {
         struct Offline: Error {}
         var dependencies = dependencies([transaction()])

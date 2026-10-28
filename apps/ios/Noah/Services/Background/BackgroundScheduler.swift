@@ -103,11 +103,12 @@ extension BackgroundScheduler.Dependencies {
                              if enabled { try await services.backupCoordinator.flush(.startup) }
                          },
                          widget: {
+                             let ticket = WidgetDataWriter.ticket(variant: services.variant)
                              guard let summary = try await services.session.summary() else { return }
                              try BackgroundExecution.checkActive()
                              let facts = (try? await services.session.widgetFacts()) ?? .init()
                              try BackgroundExecution.checkActive()
-                             WidgetDataWriter.write(balance: summary.balance, facts: facts, variant: services.variant)
+                             WidgetDataWriter.write(balance: summary.balance, facts: facts, variant: services.variant, ticket: ticket)
                          },
                          progressExits: {
                              await services.session.progressPendingExits { AppLog("backgroundTasks").w("Background exit progress failed: \($0)") }
