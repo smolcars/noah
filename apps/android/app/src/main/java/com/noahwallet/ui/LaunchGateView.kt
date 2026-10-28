@@ -61,7 +61,7 @@ fun LaunchGateView(model: AppModel) {
     val route = launchRoute(model, gate)
     val links = androidx.lifecycle.viewmodel.compose.viewModel<PaymentLinks>()
     val linkStep = linkStep(route, model.walletLock.locked, checking, state, model.error != null, model.isWalletSuspended)
-    LaunchedEffect(linkStep, links.pending) { if (linkStep == LinkStep.ignore) links.drop() }
+    DropIgnoredLinks(links, linkStep)
     fun unlock() { scope.launch { model.walletLock.unlock(activity) } }
     androidx.compose.runtime.CompositionLocalProvider(LocalWalletPrivacy provides WalletPrivacy(covered,
         unlock = if (model.walletLock.locked) ::unlock else null), LocalWindowChrome provides remember { WindowChrome() }) {

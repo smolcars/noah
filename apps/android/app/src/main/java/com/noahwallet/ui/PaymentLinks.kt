@@ -71,6 +71,12 @@ internal fun ReviewOpen(count: MutableIntState, open: Boolean) {
 /** What a held link does at the launch gate. */
 enum class LinkStep { wait, open, ignore }
 
+/** Drops a held link or widget route when the launch gate ignores it, including one that arrives while a gate is showing. */
+@Composable
+internal fun DropIgnoredLinks(links: PaymentLinks, step: LinkStep) {
+    androidx.compose.runtime.LaunchedEffect(step, links.pending, links.route) { if (step == LinkStep.ignore) links.drop() }
+}
+
 /** The widget's routes: `com.noahwallet.<variant>://widget/<route>`, sent as an explicit intent's data. */
 enum class WidgetRoute {
     home, receive, scan, send;
