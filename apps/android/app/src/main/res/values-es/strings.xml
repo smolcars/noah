@@ -772,7 +772,6 @@
   <string name="gt_57c8529db3e2719a">"No, desactivar"</string>
   <string name="gt_678202b3c0c345ef">"Noah"</string>
   <string name="gt_b5bdadc7e5c0579d">"Saldo de Noah"</string>
-  <string name="gt_2910b8ef5d4d95af">"Billetera Noah"</string>
   <string name="gt_51bf7dd8c85b84da">"Exportación de transacciones de la billetera Noah"</string>
   <string name="gt_518f6fc1d2bea961">"Noah puede recibir y renovar aunque esté cerrado."</string>
   <string name="gt_966bc2f318542271">"Noah aún no puede leer su almacenamiento seguro. Desbloquea tu dispositivo para continuar."</string>
@@ -924,7 +923,6 @@
   <string name="gt_5fb55a3f477aee2b">"Envío pendiente"</string>
   <string name="gt_48b8c81ab100b17d">"Salidas pendientes y anteriores"</string>
   <string name="gt_4262dff6a3c38095">"Salidas pendientes"</string>
-  <string name="gt_f41dbd7482670f0c">"Pendiente: %1$s"</string>
   <string name="gt_dbb6cf817820de0b">"Permiso necesario"</string>
   <string name="gt_cbf613fce96573ac">"Elige un nombre"</string>
   <string name="gt_46d931c1d03b0781">"Lugares visibles"</string>
@@ -1373,11 +1371,6 @@
   <string name="gt_94dcfd1ebf80512e">"Usando el predeterminado"</string>
   <string name="gt_b338094d31cf192f">"VTXO"</string>
   <string name="gt_ef3bb53fb52f49d8">"ID de VTXO"</string>
-  <plurals name="gt_1c5b6b6468f0c580">
-    <item quantity="one">"VTXO vence en %1$s bloque"</item>
-    <item quantity="many">"VTXO vence en %1$s bloques"</item>
-    <item quantity="other">"VTXO vence en %1$s bloques"</item>
-  </plurals>
   <string name="gt_a3d44a4fe18f60fb">"Valor hexadecimal o ID del VTXO"</string>
   <string name="gt_3e552e392aa7a2c8">"Vida útil de VTXO"</string>
   <string name="gt_00ca04b2d388077c">"VTXO eliminado"</string>
@@ -1645,7 +1638,6 @@
   <string name="home">"Inicio"</string>
   <string name="receive">"Recibir"</string>
   <string name="send">"Enviar"</string>
-  <string name="widget_title">"Billetera Noah"</string>
   <string name="widget_onchain">"En la cadena"</string>
   <string name="widget_offchain">"Fuera de la cadena"</string>
   <string name="widget_mainnet_description">"Consulta tu saldo de Bitcoin"</string>

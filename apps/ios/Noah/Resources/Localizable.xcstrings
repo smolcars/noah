@@ -27001,42 +27001,6 @@
         }
       }
     },
-    "Noah Wallet": {
-      "comment": "GT gt_2910b8ef5d4d95af; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Noah Wallet"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Billetera Noah"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Noahウォレット"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Noah 지갑"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Noah-plånbok"
-          }
-        }
-      }
-    },
     "Noah Wallet Transaction Export": {
       "comment": "GT gt_51bf7dd8c85b84da; arguments: none",
       "extractionState": "manual",
@@ -32301,42 +32265,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Pågående nöduttag"
-          }
-        }
-      }
-    },
-    "Pending: {amount}": {
-      "comment": "GT gt_f41dbd7482670f0c; arguments: amount",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Pending: %1$@"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Pendiente: %1$@"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "保留中：%1$@"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "대기 중: %1$@"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Väntande: %1$@"
           }
         }
       }
@@ -48213,102 +48141,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "VTXO-ID"
-          }
-        }
-      }
-    },
-    "VTXO expires: {n} blocks": {
-      "comment": "GT gt_1c5b6b6468f0c580; arguments: n",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "variations": {
-            "plural": {
-              "one": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "VTXO expires: %1$lld block"
-                }
-              },
-              "other": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "VTXO expires: %1$lld blocks"
-                }
-              }
-            }
-          }
-        },
-        "es": {
-          "variations": {
-            "plural": {
-              "one": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "VTXO vence en %1$lld bloque"
-                }
-              },
-              "other": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "VTXO vence en %1$lld bloques"
-                }
-              }
-            }
-          }
-        },
-        "ja": {
-          "variations": {
-            "plural": {
-              "one": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "VTXOの有効期限：あと%1$lldブロック"
-                }
-              },
-              "other": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "VTXOの有効期限：あと%1$lldブロック"
-                }
-              }
-            }
-          }
-        },
-        "ko": {
-          "variations": {
-            "plural": {
-              "one": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "VTXO 만료까지: %1$lld블록"
-                }
-              },
-              "other": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "VTXO 만료까지: %1$lld블록"
-                }
-              }
-            }
-          }
-        },
-        "sv": {
-          "variations": {
-            "plural": {
-              "one": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "VTXO löper ut om %1$lld block"
-                }
-              },
-              "other": {
-                "stringUnit": {
-                  "state": "translated",
-                  "value": "VTXO löper ut om %1$lld block"
-                }
-              }
-            }
           }
         }
       }
