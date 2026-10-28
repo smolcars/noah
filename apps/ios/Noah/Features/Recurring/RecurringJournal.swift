@@ -241,6 +241,6 @@ struct RecurringJournal {
 }
 
 extension RecurringJournal {
-    // swiftlint:disable:next redundant_string_enum_value - explicit raw values pin the persisted strings (raw_value_for_camel_cased_codable_enum)
+    // swiftlint:disable:next raw_value_for_camel_cased_codable_enum - case names are the wire strings; SwiftFormat strips equal raw values
     enum TerminalOutcome: String, Codable, Sendable { case succeeded, alreadyPaid, failed, uncertain }
 }
