@@ -33,11 +33,21 @@ class SendReceiveGalleryTest {
         val folder = File(instrumentation.targetContext.filesDir, "sr-shots/$label").apply { deleteRecursively(); mkdirs() }
         compose.mainClock.autoAdvance = false
         compose.runOnUiThread { compose.activity.enableEdgeToEdge() }
+        val shots = Shots(folder, only)
+        compose.setContent { NoahTheme { shots.scene?.let { (name, content) -> key(name) { content() } } } }
+        shots.sendSteps()
+        shots.reviews()
+        shots.sending()
+        shots.endings()
+        shots.receiving()
+    }
+
+    /** Shows each scene and screenshots it into [folder], skipping those not in [only]. */
+    private inner class Shots(val folder: File, val only: Set<String>?) {
         var scene by mutableStateOf<Pair<String, @Composable () -> Unit>?>(null)
-        compose.setContent { NoahTheme { scene?.let { (name, content) -> key(name) { content() } } } }
         fun settle(millis: Long) { compose.mainClock.advanceTimeBy(100); Thread.sleep(millis); compose.mainClock.advanceTimeBy(400) }
         fun save(name: String) {
-            val bitmap = checkNotNull(instrumentation.uiAutomation.takeScreenshot())
+            val bitmap = checkNotNull(InstrumentationRegistry.getInstrumentation().uiAutomation.takeScreenshot())
             File(folder, "$name.png").outputStream().use { bitmap.compress(Bitmap.CompressFormat.PNG, 100, it) }
             bitmap.recycle()
         }
@@ -47,8 +57,7 @@ class SendReceiveGalleryTest {
             settle(wait); then(); settle(400); save(name)
         }
         fun main(block: suspend () -> Unit) = runBlocking(Dispatchers.Main) { block() }
-
-        // Send: the steps over today's model.
+        /** A Send step over today's model, set up by [setup]. */
         fun send(name: String, wallet: SendFixtures.Wallet = SendFixtures.Wallet(), env: SendEnv = SendFixtures.env(), wait: Long = 1_200,
             setup: suspend (SendPresentation) -> Unit) {
             if (only != null && name !in only) return
@@ -56,6 +65,9 @@ class SendReceiveGalleryTest {
             main { setup(presentation) }
             show(name, wait) { SendPreviewHost(presentation, env) }
         }
+    }
+
+    private fun Shots.sendSteps() {
         send("send-amount-empty") { }
         send("send-amount") { it.model.amount = "500" }
         send("send-amount-over") { it.model.amount = "200000" }
@@ -97,6 +109,9 @@ class SendReceiveGalleryTest {
             it.model.continueStage()
         }
         send("send-balance") { it.model.amount = "5000"; it.model.continueStage(); it.model.setRecipient(SendFixtures.onchain); it.model.continueStage() }
+    }
+
+    private fun Shots.reviews() {
         send("send-review-ark") { it.model.amount = "500"; it.model.continueStage(); it.model.setRecipient(SendFixtures.ark); it.model.continueStage() }
         send("send-review-lightning", SendFixtures.Wallet(quote = SendQuote(2_500, 12, 2_512, walletIdentity = SendFixtures.owner))) {
             it.model.amount = "2500"; it.model.continueStage(); it.model.setRecipient("maya@localhost.com"); it.model.continueStage()
@@ -118,7 +133,9 @@ class SendReceiveGalleryTest {
             it.model.setRecipient(SendFixtures.onchain)
             it.model.continueStage()
         }
+    }
 
+    private fun Shots.sending() {
         // Sending: phase frames (the controller holds in flight) and every ending (static last frames).
         fun inFlight(name: String, route: SendRoute, at: Long, vararg reached: Pair<SendMilestone, Long>, env: SendEnv = SendFixtures.env(),
             destination: String = SendFixtures.ark, method: String = "ark") {
@@ -150,7 +167,9 @@ class SendReceiveGalleryTest {
         inFlight("send-chain-drop", SendRoute.chainArk, 2_250, paying, SendMilestone.sent to 1_500, destination = SendFixtures.onchain, method = "onchain")
         inFlight("send-chain-waiting", SendRoute.chainArk, 3_800, paying, SendMilestone.sent to 1_500, destination = SendFixtures.onchain, method = "onchain")
         inFlight("send-chain-wallet", SendRoute.chainWallet, 3_000, paying, SendMilestone.sent to 900, destination = SendFixtures.onchain, method = "onchain")
+    }
 
+    private fun Shots.endings() {
         fun ended(name: String, outcome: SendFixtures.Outcome, payment: SendPayment, env: SendEnv = SendFixtures.env(),
             quote: SendQuote = SendQuote(payment.amount, 0, payment.amount, walletIdentity = SendFixtures.owner),
             block: suspend (SendController) -> Unit = {}) {
@@ -185,7 +204,9 @@ class SendReceiveGalleryTest {
         ended("send-result-already-paid", SendFixtures.Outcome.alreadyPaid, lnPayment)
         ended("send-result-unknown", SendFixtures.Outcome.unknown, arkPayment)
         ended("send-result-unavailable", SendFixtures.Outcome.arkSent, arkPayment) { it.invalidateForWalletChange() }
+    }
 
+    private fun Shots.receiving() {
         // Receive: every format, the sheets, errors and each arrival.
         fun receive(name: String, ui: ReceiveUi, wait: Long = 2_200, then: () -> Unit = {}) = show(name, wait, then) { ReceivePreviewHost(ui) }
         for (state in listOf("address", "no-address", "request", "amount", "invoice", "ark", "onchain", "loading", "error"))

@@ -25,37 +25,10 @@ class UpgradeCompatibilityTest {
         val args = InstrumentationRegistry.getArguments()
         assumeTrue(args.getString("noahUpgradeCheck") == "1")
         assertEquals("regtest", BuildConfig.APP_VARIANT)
-        val fingerprint = requireNotNull(args.getString("expectedFingerprint")?.takeIf { it.isNotEmpty() }) {
-            "RN fingerprint expectation is required"
-        }
-        val movements = requireNotNull(args.getString("expectedMovements")?.toIntOrNull()?.takeIf { it >= 0 }) {
-            "RN movement count expectation is required"
-        }
-        val spendable = requireNotNull(args.getString("expectedSpendable")?.toULongOrNull()) {
-            "RN spendable expectation is required"
-        }
+        val expected = Expected(args)
         val context = InstrumentationRegistry.getInstrumentation().targetContext
-        val legacyFiles = listOf(
-            File(context.filesDir, "datastore/RN_KEYCHAIN.preferences_pb"),
-            File(context.applicationInfo.dataDir, "shared_prefs/RN_KEYCHAIN.xml"),
-            File(context.applicationInfo.dataDir, "shared_prefs/noah_native_secrets.xml"),
-        )
-        val nativeSeedFile = File(context.noBackupFilesDir, "noah-native-seed-regtest.bin")
-        val nativeSeedBefore = nativeSeedFile.takeIf(File::exists)?.readBytes()
-        fun nativeSeedUnchanged(): Boolean = nativeSeedBefore?.contentEquals(nativeSeedFile.takeIf(File::exists)?.readBytes())
-            ?: !nativeSeedFile.exists()
-        val before = legacyFiles.map { it.takeIf(File::exists)?.readBytes() }
-        val old = KeychainPassword.mnemonic(context, "regtest").read()
-        assertTrue("RN seed must be readable", old is SecretResult.Found)
-        val oldValue = (old as SecretResult.Found).value
-        assertTrue("RN seed must have 12 or 24 words", oldValue.trim().split(Regex("\\s+")).size in setOf(12, 24))
-        val seed = SeedStorage(context, "regtest").read()
-        assertTrue("Migration must retain the RN seed", seed is SecretResult.Found && seed.value == oldValue)
-        assertTrue("Seed reads must not write before DB fingerprint validation", nativeSeedUnchanged())
-        for ((index, file) in legacyFiles.withIndex()) {
-            val after = file.takeIf(File::exists)?.readBytes()
-            assertTrue("Legacy storage must remain untouched", before[index]?.contentEquals(after) ?: (after == null))
-        }
+        val seedFile = NativeSeed(File(context.noBackupFilesDir, "noah-native-seed-regtest.bin"))
+        val oldValue = migratedSeed(context, seedFile)
         assertTrue("RN wallet DB missing", WalletDataLocation(context.filesDir, "regtest").databaseExists)
         assertEquals(LaunchState.existingWallet, LaunchState.current(context))
         // Import a disposable copy independently; never map the live RN files.
@@ -68,36 +41,112 @@ class UpgradeCompatibilityTest {
         val rnSettings = SettingsStorage(comparisonContext)
         val settings = SettingsStorage(context)
         settings.validateStores()
-        val envelopesBefore = RNStoreCodec.versions.keys.associateWith(settings::string)
-        val schedulesBefore = settings.string(RecurringStore.key)?.let {
-            Json.parseToJsonElement(it).jsonObject.getValue("state").jsonObject["schedules"]
-        }
-        val mailboxBefore = PersistedServerState.decode(settings.string(PersistedServerState.key)).isMailboxAuthorizationEnabled
+        val baseline = Baseline(settings)
         val funded = args.getString("funded") == "1"
-        if (funded) {
-            assertEquals("RN language preference changed", "sv", LegacyLocale.read(context))
-            assertEquals(true, PersistedServerState.decode(settings.string(PersistedServerState.key)).isEmailPromptDismissed)
-            assertEquals("Android upgrade", SettingsPreferences.state(settings.string("profile-storage"))["displayName"]?.jsonPrimitive?.content)
-            assertEquals("sats", SettingsPreferences.state(settings.string("profile-storage"))["bitcoinAmountUnit"]?.jsonPrimitive?.content)
-            assertEquals("EUR", SettingsPreferences.state(settings.string("profile-storage"))["preferredCurrency"]?.jsonPrimitive?.content)
-            assertEquals(true, SettingsPreferences.state(settings.string("privacy-storage"))["isHomeBalanceHidden"]?.jsonPrimitive?.boolean)
-            assertEquals(false, SettingsPreferences.transaction(settings.string("transaction-storage"))["isAutoBoardingEnabled"]?.jsonPrimitive?.boolean)
-            assertTrue("RN schedules must never import", RecurringStore(settings).load().schedules.isEmpty())
-            assertTrue("RN baseline must contain a recurring upgrade notice", rnSettings.nativeFile.load().recurringNoticePending)
-            // The runner checks the visible notice before instrumentation, then restarts
-            // Home and requires it to be absent. Do not require an already consumed flag.
-            assertFalse("Recurring notice must be consumed once by Home", settings.nativeFile.load().recurringNoticePending)
-            for (key in listOf("profile-storage", "privacy-storage", "transaction-storage", "esplora-storage")) {
-                assertEquals("Imported RN preference differs: $key", rnSettings.string(key), settings.string(key))
-            }
-            assertEquals("Biometrics flag differs", rnSettings.persistedState<PersistedWalletState>(PersistedWalletState.key)?.isBiometricsEnabled,
-                settings.persistedState<PersistedWalletState>(PersistedWalletState.key)?.isBiometricsEnabled)
-            assertTrue("Native import marker missing", settings.nativeFile.exists)
-        }
+        if (funded) assertImported(context, settings, rnSettings)
         val state = settings.persistedState<PersistedWalletState>(PersistedWalletState.key)
         assertEquals("RN initialized flag missing", true, state?.isInitialized)
         // Launch and instrumentation must share the owner of bark's datadir lock.
         val session = WalletSession.shared(context)
+        openAfterRefusingOtherSeeds(context, session, oldValue, seedFile)
+        val summary = requireNotNull(session.summary())
+        expected.assertSame(summary)
+        if (funded) assertFundedHistory(expected, session, summary, settings, baseline)
+        args.getString("widgetInfoSha256")?.let { assertWidget(context, it) }
+        val expo = ExpoInstallationID(context)
+        assertExpoID(expo, args.getString("expoIdSha256"))
+        // Exercise the first real native foreground launch, including recurring automation gates.
+        InstrumentationRegistry.getInstrumentation().startActivitySync(android.content.Intent(context,
+            com.noahwallet.MainActivity::class.java).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
+        if (funded) assertLaunchKeptState(expected, session, settings, baseline)
+        args.getString("expoTokenSha256")?.let { assertExpoToken(context, it) }
+        val finalSummary = requireNotNull(session.summary())
+        File(context.filesDir, "noah-upgrade-result.json").writeText(result(finalSummary, settings, oldValue, state, args).toString())
+        comparisonRoot.deleteRecursively()
+        val id = expo.getOrCreate()
+        assertTrue("Expo UUID changed across reads", id == ExpoInstallationID(context).getOrCreate())
+    }
+
+    /** What the RN wallet held before the upgrade, from the runner's arguments. */
+    private class Expected(val args: android.os.Bundle) {
+        val fingerprint = requireNotNull(args.getString("expectedFingerprint")?.takeIf { it.isNotEmpty() }) {
+            "RN fingerprint expectation is required"
+        }
+        val movements = requireNotNull(args.getString("expectedMovements")?.toIntOrNull()?.takeIf { it >= 0 }) {
+            "RN movement count expectation is required"
+        }
+        val spendable = requireNotNull(args.getString("expectedSpendable")?.toULongOrNull()) {
+            "RN spendable expectation is required"
+        }
+
+        fun assertSame(summary: WalletSession.Summary) {
+            assertEquals(Network.REGTEST, summary.network)
+            assertEquals("Wallet identity changed", fingerprint, summary.fingerprint)
+            assertEquals("History differs from RN", movements, summary.movementCount)
+            assertEquals("Spendable balance differs from RN", spendable, summary.spendableSats)
+            assertEquals(spendable, summary.balance.offchainSats)
+            assertEquals(0uL, summary.balance.pendingSats)
+        }
+    }
+
+    /** The native seed file, and whether it still holds what it did when this was made. */
+    private class NativeSeed(private val file: File) {
+        private val before = file.takeIf(File::exists)?.readBytes()
+        fun unchanged(): Boolean = before?.contentEquals(file.takeIf(File::exists)?.readBytes()) ?: !file.exists()
+    }
+
+    /** Settings as they were before the wallet opened. */
+    private class Baseline(settings: SettingsStorage) {
+        val envelopes = RNStoreCodec.versions.keys.associateWith(settings::string)
+        val schedules = schedules(settings)
+        val mailbox = PersistedServerState.decode(settings.string(PersistedServerState.key)).isMailboxAuthorizationEnabled
+    }
+
+    /** The RN seed, read through the native storage without writing it or touching the legacy stores. */
+    private suspend fun migratedSeed(context: android.content.Context, seedFile: NativeSeed): String {
+        val legacyFiles = listOf(
+            File(context.filesDir, "datastore/RN_KEYCHAIN.preferences_pb"),
+            File(context.applicationInfo.dataDir, "shared_prefs/RN_KEYCHAIN.xml"),
+            File(context.applicationInfo.dataDir, "shared_prefs/noah_native_secrets.xml"),
+        )
+        val before = legacyFiles.map { it.takeIf(File::exists)?.readBytes() }
+        val old = KeychainPassword.mnemonic(context, "regtest").read()
+        assertTrue("RN seed must be readable", old is SecretResult.Found)
+        val oldValue = (old as SecretResult.Found).value
+        assertTrue("RN seed must have 12 or 24 words", oldValue.trim().split(Regex("\\s+")).size in setOf(12, 24))
+        val seed = SeedStorage(context, "regtest").read()
+        assertTrue("Migration must retain the RN seed", seed is SecretResult.Found && seed.value == oldValue)
+        assertTrue("Seed reads must not write before DB fingerprint validation", seedFile.unchanged())
+        for ((index, file) in legacyFiles.withIndex()) {
+            val after = file.takeIf(File::exists)?.readBytes()
+            assertTrue("Legacy storage must remain untouched", before[index]?.contentEquals(after) ?: (after == null))
+        }
+        return oldValue
+    }
+
+    private fun assertImported(context: android.content.Context, settings: SettingsStorage, rnSettings: SettingsStorage) {
+        assertEquals("RN language preference changed", "sv", LegacyLocale.read(context))
+        assertEquals(true, PersistedServerState.decode(settings.string(PersistedServerState.key)).isEmailPromptDismissed)
+        assertEquals("Android upgrade", SettingsPreferences.state(settings.string("profile-storage"))["displayName"]?.jsonPrimitive?.content)
+        assertEquals("sats", SettingsPreferences.state(settings.string("profile-storage"))["bitcoinAmountUnit"]?.jsonPrimitive?.content)
+        assertEquals("EUR", SettingsPreferences.state(settings.string("profile-storage"))["preferredCurrency"]?.jsonPrimitive?.content)
+        assertEquals(true, SettingsPreferences.state(settings.string("privacy-storage"))["isHomeBalanceHidden"]?.jsonPrimitive?.boolean)
+        assertEquals(false, SettingsPreferences.transaction(settings.string("transaction-storage"))["isAutoBoardingEnabled"]?.jsonPrimitive?.boolean)
+        assertTrue("RN schedules must never import", RecurringStore(settings).load().schedules.isEmpty())
+        assertTrue("RN baseline must contain a recurring upgrade notice", rnSettings.nativeFile.load().recurringNoticePending)
+        // The runner checks the visible notice before instrumentation, then restarts
+        // Home and requires it to be absent. Do not require an already consumed flag.
+        assertFalse("Recurring notice must be consumed once by Home", settings.nativeFile.load().recurringNoticePending)
+        for (key in listOf("profile-storage", "privacy-storage", "transaction-storage", "esplora-storage")) {
+            assertEquals("Imported RN preference differs: $key", rnSettings.string(key), settings.string(key))
+        }
+        assertEquals("Biometrics flag differs", rnSettings.persistedState<PersistedWalletState>(PersistedWalletState.key)?.isBiometricsEnabled,
+            settings.persistedState<PersistedWalletState>(PersistedWalletState.key)?.isBiometricsEnabled)
+        assertTrue("Native import marker missing", settings.nativeFile.exists)
+    }
+
+    /** A foreign or invalid seed is refused before any write; then the RN seed opens the wallet and is saved natively. */
+    private suspend fun openAfterRefusingOtherSeeds(context: android.content.Context, session: WalletSession, oldValue: String, seedFile: NativeSeed) {
         fun databaseHashes(): Map<String, String> = WalletDataLocation(context.filesDir, "regtest").directory
             .walkTopDown().filter { it.isFile }.associate { file -> file.name to MessageDigest.getInstance("SHA-256")
                 .digest(file.readBytes()).joinToString("") { "%02x".format(it) } }
@@ -107,51 +156,46 @@ class UpgradeCompatibilityTest {
             .plus(StoredMnemonic.wordList[102]).joinToString(" ")
         assertTrue("Foreign seed must be rejected before writes", runCatching { session.ensureOpen(foreign, false, "upgrade-test") }.isFailure)
         assertTrue("DB changed after seed fingerprint mismatch", databaseBefore == databaseHashes())
-        assertTrue("Fingerprint mismatch must never write seed", nativeSeedUnchanged())
+        assertTrue("Fingerprint mismatch must never write seed", seedFile.unchanged())
         assertTrue("Invalid seed must be rejected before wallet open", runCatching { session.ensureOpen("", false, "upgrade-test") }.isFailure)
         assertTrue("Invalid seed changed DB", databaseBefore == databaseHashes())
         session.ensureOpen(oldValue, true, "upgrade-test")
         SeedStorage(context, "regtest").save(oldValue)
         assertTrue("Native seed must persist after DB validation", File(context.noBackupFilesDir, "noah-native-seed-regtest.bin").isFile)
-        val summary = requireNotNull(session.summary())
-        assertEquals(Network.REGTEST, summary.network)
-        assertEquals("Wallet identity changed", fingerprint, summary.fingerprint)
-        assertEquals("History differs from RN", movements, summary.movementCount)
-        assertEquals("Spendable balance differs from RN", spendable, summary.spendableSats)
-        assertEquals(spendable, summary.balance.offchainSats)
-        assertEquals(0uL, summary.balance.pendingSats)
-        if (funded) {
-            val expectedOnchain = requireNotNull(args.getString("expectedOnchain")?.toULongOrNull())
-            assertEquals("Confirmed onchain balance differs", expectedOnchain, summary.balance.onchain.confirmed)
-            assertEquals(expectedOnchain, summary.balance.onchain.total)
-            assertEquals(spendable + expectedOnchain, summary.balance.totalSats)
-            val history = session.transactionHistory()
-            assertEquals("RN movement identities changed", args.getString("expectedMovementIds"),
-                history.mapNotNull { it.movementId }.sorted().joinToString(","))
-            assertTrue("RN Ark receive missing", history.any { it.direction == "incoming" && it.amount == 100000L })
-            assertTrue("RN Ark send missing", history.any { it.direction == "outgoing" && it.amount == 5000L })
-            assertTrue("Confirmed onchain movement missing", history.any { it.hasConfirmation == true && it.balanceChangeSat == expectedOnchain.toLong() })
-            assertTrue("Settings changed while opening wallet", envelopesBefore == RNStoreCodec.versions.keys.associateWith(settings::string))
-            assertTrue("Recurring schedule list must remain empty", schedulesBefore == settings.string(RecurringStore.key)?.let {
-                Json.parseToJsonElement(it).jsonObject.getValue("state").jsonObject["schedules"]
-            })
+    }
+
+    private suspend fun assertFundedHistory(expected: Expected, session: WalletSession, summary: WalletSession.Summary, settings: SettingsStorage,
+        baseline: Baseline) {
+        val expectedOnchain = requireNotNull(expected.args.getString("expectedOnchain")?.toULongOrNull())
+        assertEquals("Confirmed onchain balance differs", expectedOnchain, summary.balance.onchain.confirmed)
+        assertEquals(expectedOnchain, summary.balance.onchain.total)
+        assertEquals(expected.spendable + expectedOnchain, summary.balance.totalSats)
+        val history = session.transactionHistory()
+        assertEquals("RN movement identities changed", expected.args.getString("expectedMovementIds"),
+            history.mapNotNull { it.movementId }.sorted().joinToString(","))
+        assertTrue("RN Ark receive missing", history.any { it.direction == "incoming" && it.amount == 100000L })
+        assertTrue("RN Ark send missing", history.any { it.direction == "outgoing" && it.amount == 5000L })
+        assertTrue("Confirmed onchain movement missing", history.any { it.hasConfirmation == true && it.balanceChangeSat == expectedOnchain.toLong() })
+        assertTrue("Settings changed while opening wallet", baseline.envelopes == RNStoreCodec.versions.keys.associateWith(settings::string))
+        assertTrue("Recurring schedule list must remain empty", baseline.schedules == schedules(settings))
+    }
+
+    private fun assertWidget(context: android.content.Context, expected: String) {
+        val provider = android.appwidget.AppWidgetManager.getInstance(context).installedProviders.single {
+            it.provider.className == "com.noahwallet.widgets.NoahWidgetRegtestProvider" && it.provider.packageName == context.packageName
         }
-        args.getString("widgetInfoSha256")?.let { expected ->
-            val provider = android.appwidget.AppWidgetManager.getInstance(context).installedProviders.single {
-                it.provider.className == "com.noahwallet.widgets.NoahWidgetRegtestProvider" && it.provider.packageName == context.packageName
-            }
-            val metadata = listOf(provider.provider.flattenToString(), provider.minWidth, provider.minHeight,
-                provider.minResizeWidth, provider.minResizeHeight, provider.updatePeriodMillis, provider.resizeMode,
-                provider.widgetCategory, context.resources.getResourceEntryName(provider.initialLayout)).joinToString("|")
-            val actual = MessageDigest.getInstance("SHA-256").digest(metadata.toByteArray()).joinToString("") { "%02x".format(it) }
-            assertTrue("Widget provider metadata changed", actual == expected)
-            assertTrue("Placed widget missing", android.appwidget.AppWidgetManager.getInstance(context).getAppWidgetIds(provider.provider).isNotEmpty())
-            val shortcut = context.getSystemService(android.content.pm.ShortcutManager::class.java).pinnedShortcuts
-                .single { it.id == "noah-upgrade-check" }
-            assertEquals("com.noahwallet.MainActivity", shortcut.activity?.className)
-        }
-        val expo = ExpoInstallationID(context)
-        val expectedHash = args.getString("expoIdSha256")
+        val metadata = listOf(provider.provider.flattenToString(), provider.minWidth, provider.minHeight,
+            provider.minResizeWidth, provider.minResizeHeight, provider.updatePeriodMillis, provider.resizeMode,
+            provider.widgetCategory, context.resources.getResourceEntryName(provider.initialLayout)).joinToString("|")
+        val actual = MessageDigest.getInstance("SHA-256").digest(metadata.toByteArray()).joinToString("") { "%02x".format(it) }
+        assertTrue("Widget provider metadata changed", actual == expected)
+        assertTrue("Placed widget missing", android.appwidget.AppWidgetManager.getInstance(context).getAppWidgetIds(provider.provider).isNotEmpty())
+        val shortcut = context.getSystemService(android.content.pm.ShortcutManager::class.java).pinnedShortcuts
+            .single { it.id == "noah-upgrade-check" }
+        assertEquals("com.noahwallet.MainActivity", shortcut.activity?.className)
+    }
+
+    private fun assertExpoID(expo: ExpoInstallationID, expectedHash: String?) {
         if (expectedHash != null && expectedHash != "absent") {
             val id = expo.read()
             assertNotNull("Existing Expo ID missing", id)
@@ -159,55 +203,55 @@ class UpgradeCompatibilityTest {
                 .joinToString("") { "%02x".format(it) }
             assertTrue("Expo ID changed", expectedHash == hash)
         }
-        // Exercise the first real native foreground launch, including recurring automation gates.
-        InstrumentationRegistry.getInstrumentation().startActivitySync(android.content.Intent(context,
-            com.noahwallet.MainActivity::class.java).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
-        if (funded) {
-            kotlinx.coroutines.withTimeout(20000) {
-                while (RecurringStore(settings).load().binding == null) kotlinx.coroutines.delay(100)
-            }
-            val afterLaunch = requireNotNull(session.summary())
-            assertEquals("Launch executed a wallet movement", movements, afterLaunch.movementCount)
-            assertEquals(spendable, afterLaunch.spendableSats)
-            assertEquals(args.getString("expectedOnchain")!!.toULong(), afterLaunch.balance.onchain.confirmed)
-            assertTrue("Native launch must not recreate RN schedules", schedulesBefore == settings.string(RecurringStore.key)?.let {
-                Json.parseToJsonElement(it).jsonObject.getValue("state").jsonObject["schedules"]
-            })
-            for (key in listOf("profile-storage", "privacy-storage", "transaction-storage")) {
-                assertTrue("Native launch changed saved preferences", envelopesBefore[key] == settings.string(key))
-            }
-            assertEquals(true, PersistedServerState.decode(settings.string(PersistedServerState.key)).isEmailPromptDismissed)
-            assertEquals("Mailbox preference changed", mailboxBefore,
-                PersistedServerState.decode(settings.string(PersistedServerState.key)).isMailboxAuthorizationEnabled)
-        }
-        args.getString("expoTokenSha256")?.let { expected ->
-            assertTrue("Real Expo token expectation missing", expected.matches(Regex("[0-9a-f]{64}")))
-            var actual: String? = null
-            val outcome = PushRuntime(context, AppServices.shared(context)).register { token ->
-                actual = MessageDigest.getInstance("SHA-256").digest(token.toByteArray()).joinToString("") { "%02x".format(it) }
-            }
-            assertEquals(com.noahwallet.services.push.PushRegistration.Outcome.registered, outcome)
-            assertTrue("Expo token changed", actual == expected)
-        }
-        val finalSummary = requireNotNull(session.summary())
-        File(context.filesDir, "noah-upgrade-result.json").writeText(buildJsonObject {
-            put("loginKey", com.noahwallet.services.server.ServerClient.loginKey("regtest", oldValue))
-            put("fingerprint", finalSummary.fingerprint)
-            put("movements", finalSummary.movementCount)
-            put("spendable", finalSummary.spendableSats.toString())
-            put("onchainConfirmed", finalSummary.balance.onchain.confirmed.toString())
-            put("language", LegacyLocale.read(context))
-            put("displayUnit", SettingsPreferences.state(settings.string("profile-storage"))["bitcoinAmountUnit"] ?: JsonNull)
-            put("currency", SettingsPreferences.state(settings.string("profile-storage"))["preferredCurrency"] ?: JsonNull)
-            put("hiddenBalance", SettingsPreferences.state(settings.string("privacy-storage"))["isHomeBalanceHidden"] ?: JsonNull)
-            put("biometrics", state?.isBiometricsEnabled)
-            put("autoBoarding", SettingsPreferences.transaction(settings.string("transaction-storage"))["isAutoBoardingEnabled"] ?: JsonNull)
-            put("recurringSchedules", RecurringStore(settings).load().schedules.size)
-            put("expoIdSha256", args.getString("expoIdSha256"))
-            put("expoTokenSha256", args.getString("expoTokenSha256"))
-        }.toString())
-        comparisonRoot.deleteRecursively()
-        val id = expo.getOrCreate()
-        assertTrue("Expo UUID changed across reads", id == ExpoInstallationID(context).getOrCreate())
     }
+
+    private suspend fun assertLaunchKeptState(expected: Expected, session: WalletSession, settings: SettingsStorage, baseline: Baseline) {
+        kotlinx.coroutines.withTimeout(20000) {
+            while (RecurringStore(settings).load().binding == null) kotlinx.coroutines.delay(100)
+        }
+        val afterLaunch = requireNotNull(session.summary())
+        assertEquals("Launch executed a wallet movement", expected.movements, afterLaunch.movementCount)
+        assertEquals(expected.spendable, afterLaunch.spendableSats)
+        assertEquals(expected.args.getString("expectedOnchain")!!.toULong(), afterLaunch.balance.onchain.confirmed)
+        assertTrue("Native launch must not recreate RN schedules", baseline.schedules == schedules(settings))
+        for (key in listOf("profile-storage", "privacy-storage", "transaction-storage")) {
+            assertTrue("Native launch changed saved preferences", baseline.envelopes[key] == settings.string(key))
+        }
+        assertEquals(true, PersistedServerState.decode(settings.string(PersistedServerState.key)).isEmailPromptDismissed)
+        assertEquals("Mailbox preference changed", baseline.mailbox,
+            PersistedServerState.decode(settings.string(PersistedServerState.key)).isMailboxAuthorizationEnabled)
+    }
+
+    private suspend fun assertExpoToken(context: android.content.Context, expected: String) {
+        assertTrue("Real Expo token expectation missing", expected.matches(Regex("[0-9a-f]{64}")))
+        var actual: String? = null
+        val outcome = PushRuntime(context, AppServices.shared(context)).register { token ->
+            actual = MessageDigest.getInstance("SHA-256").digest(token.toByteArray()).joinToString("") { "%02x".format(it) }
+        }
+        assertEquals(com.noahwallet.services.push.PushRegistration.Outcome.registered, outcome)
+        assertTrue("Expo token changed", actual == expected)
+    }
+
+    /** The public upgrade evidence the runner compares across the RN and native installs. */
+    private fun result(summary: WalletSession.Summary, settings: SettingsStorage, oldValue: String, state: PersistedWalletState?,
+        args: android.os.Bundle) = buildJsonObject {
+        put("loginKey", com.noahwallet.services.server.ServerClient.loginKey("regtest", oldValue))
+        put("fingerprint", summary.fingerprint)
+        put("movements", summary.movementCount)
+        put("spendable", summary.spendableSats.toString())
+        put("onchainConfirmed", summary.balance.onchain.confirmed.toString())
+        put("language", LegacyLocale.read(InstrumentationRegistry.getInstrumentation().targetContext))
+        put("displayUnit", SettingsPreferences.state(settings.string("profile-storage"))["bitcoinAmountUnit"] ?: JsonNull)
+        put("currency", SettingsPreferences.state(settings.string("profile-storage"))["preferredCurrency"] ?: JsonNull)
+        put("hiddenBalance", SettingsPreferences.state(settings.string("privacy-storage"))["isHomeBalanceHidden"] ?: JsonNull)
+        put("biometrics", state?.isBiometricsEnabled)
+        put("autoBoarding", SettingsPreferences.transaction(settings.string("transaction-storage"))["isAutoBoardingEnabled"] ?: JsonNull)
+        put("recurringSchedules", RecurringStore(settings).load().schedules.size)
+        put("expoIdSha256", args.getString("expoIdSha256"))
+        put("expoTokenSha256", args.getString("expoTokenSha256"))
+    }
+}
+
+private fun schedules(settings: SettingsStorage) = settings.string(RecurringStore.key)?.let {
+    Json.parseToJsonElement(it).jsonObject.getValue("state").jsonObject["schedules"]
 }

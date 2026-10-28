@@ -17,6 +17,7 @@ import com.noahwallet.services.backup.RestoreTransaction
 import com.noahwallet.services.launch.LaunchState
 import com.noahwallet.services.server.*
 import com.noahwallet.services.storage.*
+import com.noahwallet.services.wallet.WalletSession.Summary
 import com.noahwallet.ui.*
 import io.github.niteshbalusu11.bark.generateMnemonic
 import kotlinx.coroutines.*
@@ -102,43 +103,67 @@ class RestoreUIDeviceTest {
         optIn()
         val location = WalletDataLocation(context.filesDir, "regtest")
         assertFalse("Requires a fresh disposable app", location.hasAnyData)
+        val run = RestoreRun()
+        try {
+            val backup = run.createAndBackUp()
+            val restoredModel = run.wipe(backup.model, location)
+            run.missingBackup(restoredModel, location)
+            run.keepAndClearPhrase()
+            val actual = run.restoreFromPhrase(restoredModel, backup, location)
+            run.restoreFromSavedPhrase(restoredModel, backup, location)
+            instrumentation.sendStatus(0, Bundle().apply {
+                putString("restoreEvidence",
+                    "balance=${actual.balance.totalSats};movements=${actual.movementCount};fingerprintMatches=true;backupStorageSeeded=true;" +
+                        "missingBackupActionable=true;savedPhraseRestore=true")
+            })
+        } catch (failure: Exception) {
+            // Do not let provider/FFI or accessibility exceptions include secret input in runner output.
+            fail("Restore UI integration failed at ${run.stage} (${failure.javaClass.simpleName}; details suppressed)")
+        } finally {
+            runCatching {
+                run.cleanupClient?.let { client ->
+                    V0BackupV2ListClient(client).listBackupObjects().value().forEach {
+                        V0BackupV2DeleteClient(client).deleteBackupObject(DeleteBackupObjectPayload(it.backupId)).value()
+                    }
+                }
+            }
+            run.cleanupClient?.close(); run.cleanupPublic?.close()
+            instrumentation.runOnMainSync { run.activity?.finish() }
+            runCatching { run.current?.services?.lifecycle?.delete() }
+            runCatching { shell("cmd deviceidle whitelist -${context.packageName}") }
+        }
+    }
+
+    /** What the throwaway wallet held when its backup was uploaded. */
+    private class Backed(val model: AppModel, val state: PersistedBackupState, val summary: Summary,
+        val movements: List<com.noahwallet.history.HistoryTransaction>)
+
+    /** One run's activity and model, its stage for failure messages, and the clients its cleanup deletes backups with. */
+    private inner class RestoreRun {
         var activity: MainActivity? = null
         var current: AppModel? = null
         var cleanupClient: io.ktor.client.HttpClient? = null
         var cleanupPublic: io.ktor.client.HttpClient? = null
+        var cleanupToken: String? = null
         var stage = "launch"
-        try {
+        var phrase = ""
+
+        suspend fun createAndBackUp(): Backed {
             val launched = launch(); activity = launched.first; current = launched.second
             val originalModel = launched.second
             stage = "create throwaway wallet"
             withContext(Dispatchers.Main) { originalModel.create() }
-            var phrase = withContext(Dispatchers.Main) { originalModel.mnemonic().joinToString(" ") }
+            phrase = withContext(Dispatchers.Main) { originalModel.mnemonic().joinToString(" ") }
             assertTrue(RecoveryPhraseInput.isValid(phrase))
             val cleanupPhrase = phrase
             val public = ServerClient.make(BuildConfig.REGTEST_SERVER_URL)
             cleanupPublic = public
-            var cleanupToken: String? = null
             val tokens = AuthTokenProvider({ cleanupToken }, { cleanupToken = it }, { cleanupToken = null },
                 { cleanupPhrase }, { ServerClient.login(public, "regtest", it) })
             cleanupClient = ServerClient.make(BuildConfig.REGTEST_SERVER_URL, tokens)
             withContext(Dispatchers.Main) { originalModel.finish() }
             originalModel.server.ensureRegistered()
-            if (InstrumentationRegistry.getArguments().getString("noahRestoreFunded") == "1") {
-                stage = "fund throwaway wallet"
-                val addressFile = File(context.filesDir, "restore-funding-address.txt")
-                try {
-                    addressFile.writeText(originalModel.session.peekAddress(0u))
-                    val deadline = System.currentTimeMillis() + 180_000
-                    while (System.currentTimeMillis() < deadline) {
-                        originalModel.session.sync()
-                        if ((originalModel.session.summary()?.balance?.totalSats ?: 0uL) > 0uL) break
-                        delay(500)
-                    }
-                    val funded = checkNotNull(originalModel.session.summary())
-                    assertTrue("Funded wallet has a balance", funded.balance.totalSats > 0uL)
-                    assertTrue("Funded wallet has movements", funded.movementCount > 0)
-                } finally { addressFile.delete() }
-            }
+            if (InstrumentationRegistry.getArguments().getString("noahRestoreFunded") == "1") fund(originalModel)
             stage = "upload backup"
             originalModel.services.backupService.registerBackup()
             originalModel.services.backupCoordinator.flush(BackupCoordinator.Reason.manual, requireEnabled = false)
@@ -147,7 +172,27 @@ class RestoreUIDeviceTest {
             cleanupToken = originalModel.services.tokens.token()
             val expected = checkNotNull(originalModel.session.summary())
             val expectedMovements = originalModel.session.transactionHistory()
+            return Backed(originalModel, backed, expected, expectedMovements)
+        }
 
+        private suspend fun fund(originalModel: AppModel) {
+            stage = "fund throwaway wallet"
+            val addressFile = File(context.filesDir, "restore-funding-address.txt")
+            try {
+                addressFile.writeText(originalModel.session.peekAddress(0u))
+                val deadline = System.currentTimeMillis() + 180_000
+                while (System.currentTimeMillis() < deadline) {
+                    originalModel.session.sync()
+                    if ((originalModel.session.summary()?.balance?.totalSats ?: 0uL) > 0uL) break
+                    delay(500)
+                }
+                val funded = checkNotNull(originalModel.session.summary())
+                assertTrue("Funded wallet has a balance", funded.balance.totalSats > 0uL)
+                assertTrue("Funded wallet has movements", funded.movementCount > 0)
+            } finally { addressFile.delete() }
+        }
+
+        suspend fun wipe(originalModel: AppModel, location: WalletDataLocation): AppModel {
             stage = "wipe local wallet without removing server backup"
             // This is a reinstall-equivalent local wipe, scoped to this opt-in disposable package.
             instrumentation.runOnMainSync { activity!!.finish() }
@@ -163,7 +208,10 @@ class RestoreUIDeviceTest {
             val relaunched = launch(); activity = relaunched.first; current = relaunched.second
             val restoredModel = relaunched.second
             assertEquals(LaunchState.onboarding, restoredModel.launchState)
+            return restoredModel
+        }
 
+        suspend fun missingBackup(restoredModel: AppModel, location: WalletDataLocation) {
             stage = "open restore entry"
             clickText("I already have a wallet")
             waitFor("Private screen protected") { activity!!.window.attributes.flags and WindowManager.LayoutParams.FLAG_SECURE != 0 }
@@ -177,12 +225,14 @@ class RestoreUIDeviceTest {
             assertTrue(restoredModel.restore.canLeave)
             assertFalse(location.databaseExists)
             assertEquals(SecretResult.NotFound, SeedStorage(context, "regtest").read())
+        }
 
+        fun keepAndClearPhrase() {
             stage = "clear phrase on leaving"
             // Entry was already discarded on submit; leave and return through the actual controls.
             clickText("Back"); waitFor("Phrase screen returns") { wordField() != null }
             clickDescription("Back"); waitFor("Welcome returns") { text("I already have a wallet") != null }
-            assertEquals(0, activity.window.attributes.flags and WindowManager.LayoutParams.FLAG_SECURE)
+            assertEquals(0, activity!!.window.attributes.flags and WindowManager.LayoutParams.FLAG_SECURE)
             clickText("I already have a wallet")
             waitFor("Phrase input returns") { wordField() != null }
             stage = "keep phrase through background"
@@ -196,24 +246,13 @@ class RestoreUIDeviceTest {
                 assertTrue("Accepted whole phrase removed from clipboard", clipboard.primaryClip?.getItemAt(0)?.text?.toString() != phrase)
                 clipboard.setPrimaryClip(android.content.ClipData.newPlainText("test", "unrelated replacement"))
             }
-            fun firstField(view: android.view.View): RecoveryWordEditText? {
-                if (view is RecoveryWordEditText) return view
-                if (view is android.view.ViewGroup) for (i in 0 until view.childCount)
-                    firstField(view.getChildAt(i))?.let { return it }
-                return null
-            }
-            fun firstWord(): String? {
-                var word: String? = null
-                instrumentation.runOnMainSync { word = firstField(activity!!.window.decorView)?.text?.toString() }
-                return word
-            }
             val typedFirst = phrase.split(" ").first()
             automation.performGlobalAction(android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_HOME)
             waitFor("Activity backgrounded") { !activity!!.lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.STARTED) }
             context.startActivity(Intent(context, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
             waitFor("Phrase kept through background") { activity!!.lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED) &&
-                firstWord() == typedFirst }
-            assertTrue("Still secure after returning", activity.window.attributes.flags and WindowManager.LayoutParams.FLAG_SECURE != 0)
+                firstWord(activity!!) == typedFirst }
+            assertTrue("Still secure after returning", activity!!.window.attributes.flags and WindowManager.LayoutParams.FLAG_SECURE != 0)
             instrumentation.runOnMainSync {
                 val clipboard = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
                 assertTrue("Background preserves replacement clipboard", clipboard.primaryClip?.getItemAt(0)?.text?.toString() == "unrelated replacement")
@@ -223,7 +262,7 @@ class RestoreUIDeviceTest {
             instrumentation.runOnMainSync { oldField = firstField(activity!!.window.decorView) }
             clickDescription("Back"); waitFor("Welcome returns") { text("I already have a wallet") != null }
             clickText("I already have a wallet")
-            waitFor("Phrase input returns empty") { wordField() != null && firstWord()?.isEmpty() == true }
+            waitFor("Phrase input returns empty") { wordField() != null && firstWord(activity!!)?.isEmpty() == true }
             instrumentation.runOnMainSync {
                 val fresh = checkNotNull(firstField(activity!!.window.decorView))
                 assertTrue("Leaving recreates native fields", fresh !== oldField)
@@ -235,6 +274,9 @@ class RestoreUIDeviceTest {
                 assertTrue("Hardware Undo cannot restore cleared words", fresh.text.isEmpty())
             }
             enterPhrase(phrase)
+        }
+
+        suspend fun restoreFromPhrase(restoredModel: AppModel, backup: Backed, location: WalletDataLocation): Summary {
             // No screenshots, screen dumps, clipboard persistence, shell arguments or assertion diffs contain the phrase.
             stage = "submit restore UI"
             submit(); phrase = ""
@@ -242,14 +284,18 @@ class RestoreUIDeviceTest {
             assertTrue("Restore completed without a retryable failure", restoredModel.restore.completed)
             assertTrue(restoredModel.open); assertTrue(restoredModel.onboarded)
             val actual = checkNotNull(restoredModel.session.summary())
-            assertTrue("Fingerprint preserved", expected.fingerprint == actual.fingerprint)
-            assertEquals(expected.balance, actual.balance)
-            assertEquals(expected.movementCount, actual.movementCount)
-            assertTrue("Restored movement details match", expectedMovements == restoredModel.session.transactionHistory())
+            assertTrue("Fingerprint preserved", backup.summary.fingerprint == actual.fingerprint)
+            assertEquals(backup.summary.balance, actual.balance)
+            assertEquals(backup.summary.movementCount, actual.movementCount)
+            assertTrue("Restored movement details match", backup.movements == restoredModel.session.transactionHistory())
             val seeded = PersistedBackupState.decode(restoredModel.settings.string(PersistedBackupState.key))
-            assertEquals(backed.lastUploadedSnapshotSha256, seeded.lastUploadedSnapshotSha256)
+            assertEquals(backup.state.lastUploadedSnapshotSha256, seeded.lastUploadedSnapshotSha256)
             assertFalse(location.restorePending)
             waitFor("Server services restarted") { restoredModel.server.state.isRegisteredWithServer == true }
+            return actual
+        }
+
+        suspend fun restoreFromSavedPhrase(restoredModel: AppModel, backup: Backed, location: WalletDataLocation) {
             stage = "restore from securely stored phrase after database loss"
             withContext(Dispatchers.Main) { restoredModel.suspendWallet() }
             instrumentation.runOnMainSync { activity!!.finish() }
@@ -268,59 +314,51 @@ class RestoreUIDeviceTest {
             shell("cmd deviceidle whitelist +${context.packageName}")
             if (android.os.Build.VERSION.SDK_INT >= 33) shell("pm grant ${context.packageName} android.permission.POST_NOTIFICATIONS")
             val seedModel = seedOnly.second
-            fun secureWindow(): Boolean {
-                var on = false
-                instrumentation.runOnMainSync { on = activity.window.attributes.flags and WindowManager.LayoutParams.FLAG_SECURE != 0 }
-                return on
-            }
-            // Read with the hold on the main thread, so a sample can't land between Ready ending and Home appearing.
-            fun shieldedWhileHeld(): Boolean {
-                var ok = true
-                instrumentation.runOnMainSync {
-                    if (seedModel.holdRestoreCompletion) ok = activity.window.attributes.flags and WindowManager.LayoutParams.FLAG_SECURE != 0
-                }
-                return ok
-            }
-            fun home() = find(automation.rootInActiveWindow) { it.contentDescription?.toString() == "Settings" } != null
             submit()
             // As on iOS: onboarding's Restoring scene, a visible "Ready", then Home. With App lock off, the restore shield
             // alone keeps FLAG_SECURE on the whole way and lets go only when Home takes over.
             waitFor("Ready shown") {
-                assertTrue("Secure while restoring", shieldedWhileHeld())
+                assertTrue("Secure while restoring", shieldedWhileHeld(activity!!, seedModel))
                 text("Ready") != null || seedModel.restore.issue != null
             }
             assertNull("Saved phrase restore succeeded", seedModel.restore.issue)
             assertTrue(seedModel.restore.completed)
-            waitFor("Home follows Ready") { assertTrue("Secure until Home", shieldedWhileHeld()); home() }
+            waitFor("Home follows Ready") { assertTrue("Secure until Home", shieldedWhileHeld(activity!!, seedModel)); home() }
             assertFalse(seedModel.holdRestoreCompletion)
-            waitFor("Home isn't shielded with App lock off") { !secureWindow() }
+            waitFor("Home isn't shielded with App lock off") { !secureWindow(activity!!) }
             val seedOnlySummary = checkNotNull(seedOnly.second.session.summary())
-            assertEquals(expected.balance, seedOnlySummary.balance)
-            assertEquals(expected.movementCount, seedOnlySummary.movementCount)
-            assertTrue("Stored-seed movement details match", expectedMovements == seedOnly.second.session.transactionHistory())
-            assertTrue(expected.fingerprint == seedOnlySummary.fingerprint)
-            instrumentation.sendStatus(0, Bundle().apply {
-                putString("restoreEvidence",
-                    "balance=${actual.balance.totalSats};movements=${actual.movementCount};fingerprintMatches=true;backupStorageSeeded=true;" +
-                        "missingBackupActionable=true;savedPhraseRestore=true")
-            })
-        } catch (failure: Exception) {
-            // Do not let provider/FFI or accessibility exceptions include secret input in runner output.
-            fail("Restore UI integration failed at $stage (${failure.javaClass.simpleName}; details suppressed)")
-        } finally {
-            runCatching {
-                cleanupClient?.let { client ->
-                    V0BackupV2ListClient(client).listBackupObjects().value().forEach {
-                        V0BackupV2DeleteClient(client).deleteBackupObject(DeleteBackupObjectPayload(it.backupId)).value()
-                    }
-                }
-            }
-            cleanupClient?.close(); cleanupPublic?.close()
-            instrumentation.runOnMainSync { activity?.finish() }
-            runCatching { current?.services?.lifecycle?.delete() }
-            runCatching { shell("cmd deviceidle whitelist -${context.packageName}") }
+            assertEquals(backup.summary.balance, seedOnlySummary.balance)
+            assertEquals(backup.summary.movementCount, seedOnlySummary.movementCount)
+            assertTrue("Stored-seed movement details match", backup.movements == seedOnly.second.session.transactionHistory())
+            assertTrue(backup.summary.fingerprint == seedOnlySummary.fingerprint)
         }
     }
+
+    private fun firstField(view: android.view.View): RecoveryWordEditText? {
+        if (view is RecoveryWordEditText) return view
+        if (view is android.view.ViewGroup) for (i in 0 until view.childCount)
+            firstField(view.getChildAt(i))?.let { return it }
+        return null
+    }
+    private fun firstWord(activity: MainActivity): String? {
+        var word: String? = null
+        instrumentation.runOnMainSync { word = firstField(activity.window.decorView)?.text?.toString() }
+        return word
+    }
+    private fun secureWindow(activity: MainActivity): Boolean {
+        var on = false
+        instrumentation.runOnMainSync { on = activity.window.attributes.flags and WindowManager.LayoutParams.FLAG_SECURE != 0 }
+        return on
+    }
+    // Read with the hold on the main thread, so a sample can't land between Ready ending and Home appearing.
+    private fun shieldedWhileHeld(activity: MainActivity, seedModel: AppModel): Boolean {
+        var ok = true
+        instrumentation.runOnMainSync {
+            if (seedModel.holdRestoreCompletion) ok = activity.window.attributes.flags and WindowManager.LayoutParams.FLAG_SECURE != 0
+        }
+        return ok
+    }
+    private fun home() = find(automation.rootInActiveWindow) { it.contentDescription?.toString() == "Settings" } != null
 
     @Test fun seedOnlyLaunchCanConfirmDeletionAndStartOver() = runBlocking<Unit> {
         optIn()
