@@ -319,21 +319,29 @@ class NoahWidgetProviderTest {
      */
     @Test fun theMediumLabelTakesTheWidthItNeeds() {
         // 320 dp leaves a 284 dp row, 14 dp between the columns: a 167 dp label leaves 103 for a balance 72 at its narrowest.
-        val usual = WidgetViews.LabelParts(20f, 39f, 56f, 52f)
-        assertEquals(WidgetViews.Label(167f, true), WidgetViews.label(320f, usual, 72f))
+        val usual = WidgetViews.LabelParts(20f, 39f, 56f, 52f, 19f)
+        assertEquals(WidgetViews.Label(167f, true), WidgetViews.label(320f, usual, 72f, 28f))
         assertEquals(WidgetViews.Box(103f, 38f, 34f, .45f), WidgetViews.balanceBox(WidgetLayout.medium, 320f, WidgetViews.Label(167f, true)))
         // Eight figures: " · 30 days" goes first, and comes back where there's room.
-        val long = WidgetViews.LabelParts(20f, 39f, 95f, 52f)
-        assertEquals(WidgetViews.Label(154f, false), WidgetViews.label(320f, long, 98f))
-        assertEquals(WidgetViews.Label(206f, true), WidgetViews.label(553f, long, 98f))
+        val long = WidgetViews.LabelParts(20f, 39f, 95f, 52f, 19f)
+        assertEquals(WidgetViews.Label(154f, false), WidgetViews.label(320f, long, 98f, 28f))
+        assertEquals(WidgetViews.Label(206f, true), WidgetViews.label(553f, long, 98f, 28f))
         // Then the text shrinks, down to 80%...
-        assertEquals(WidgetViews.Label(130f, false, (130f - 22f) / 134f), WidgetViews.label(320f, long, 140f))
-        // ...and below that the label takes its own line, the balance the whole row.
-        assertEquals(WidgetViews.Label(206f, true, line = true), WidgetViews.label(320f, long, 150f))
+        assertEquals(WidgetViews.Label(130f, false, (130f - 22f) / 134f), WidgetViews.label(320f, long, 140f, 28f))
+        // ...and below that the label takes its own line, the balance the whole row, where the height leaves room for it
+        // and the 4 dp under it...
+        assertEquals(WidgetViews.Label(206f, true, line = true), WidgetViews.label(320f, long, 150f, 23f))
         assertEquals(WidgetViews.Box(284f, 38f, 34f, .45f), WidgetViews.balanceBox(WidgetLayout.medium, 320f, WidgetViews.Label(206f, true, line = true)))
-        // At 200% beside a chip, its own line at 80% even if the amount still doesn't fit; without a chip, at full size.
-        assertEquals(WidgetViews.Label(284f, false, .8f, true), WidgetViews.label(320f, WidgetViews.LabelParts(20f, 78f, 260f, 104f), 197f))
-        assertEquals(WidgetViews.Label(190f, false, line = true), WidgetViews.label(320f, WidgetViews.LabelParts(0f, 0f, 190f, 104f), 197f))
+        // ...or else it's left out, the balance again with the whole row.
+        val out = WidgetViews.Label(0f, false, shown = false)
+        assertEquals(out, WidgetViews.label(320f, long, 150f, 22f))
+        assertEquals(WidgetViews.Box(284f, 38f, 34f, .45f), WidgetViews.balanceBox(WidgetLayout.medium, 320f, out))
+        // At 200% beside a chip: its own line at 80% even if the amount still doesn't fit; without a chip, at full size;
+        // above a status line in 180 dp (28 to spare), neither.
+        val chip = WidgetViews.LabelParts(20f, 78f, 260f, 104f, 31f)
+        assertEquals(WidgetViews.Label(284f, false, .8f, true), WidgetViews.label(320f, chip, 197f, 50f))
+        assertEquals(WidgetViews.Label(190f, false, line = true), WidgetViews.label(320f, WidgetViews.LabelParts(0f, 0f, 190f, 104f, 28f), 197f, 50f))
+        assertEquals(out, WidgetViews.label(320f, chip, 197f, 28f))
         // The other layouts keep their boxes, and the balance's half-size floor.
         assertEquals(WidgetViews.Box(144f, 34f, 30f, .5f), WidgetViews.balanceBox(WidgetLayout.small, 180f))
     }
@@ -350,6 +358,8 @@ class NoahWidgetProviderTest {
         findViewById<TextView>(id).let { it.layout.getEllipsisCount(0) == 0 && it.width >= kotlin.math.ceil(it.paint.measureText(it.text.toString())) }
     private fun View.left(id: Int) = generateSequence(findViewById<View>(id)) { it.parent as? View }.sumOf { it.left }
     private fun View.right(id: Int) = left(id) + findViewById<View>(id).width
+    private fun View.top(id: Int) = generateSequence(findViewById<View>(id)) { it.parent as? View }.sumOf { it.top }
+    private fun View.bottom(id: Int) = top(id) + findViewById<View>(id).height
 
     /**
      * "+₿ 30,142 · 30 days" was cut to "+₿ 30,142 · …" by a fixed 60/40 split: every medium size from 320 dp now shows it
@@ -374,7 +384,7 @@ class NoahWidgetProviderTest {
                 assertTrue("$at: the balance column ends before the label", view.right(R.id.widget_balance) <= view.left(R.id.widget_chip))
                 // The balance's box is the column the label leaves, and the figures are drawn for it: within the text's
                 // rounding at 1×, where drawn at half size and scaled down they'd be 11% over.
-                val box = WidgetViews.balanceBox(WidgetLayout.medium, width, WidgetViews.label(context, content, width)).width
+                val box = WidgetViews.balanceBox(WidgetLayout.medium, width, WidgetViews.label(context, content, width, 180f)).width
                 val balance = view.findViewById<android.widget.ImageView>(R.id.widget_balance)
                 assertEquals(at, box * d, balance.width.toFloat(), d)
                 assertTrue(at, balance.drawable.intrinsicWidth <= balance.width * 1.05f)
@@ -411,41 +421,72 @@ class NoahWidgetProviderTest {
     private fun largeText() {
         language("en")
         val large = month.copy(balance = 12_480_315, daily = List(30) { 222_600L } + 12_480_315, amountUnit = "sats")
-        val cases = listOf("regtest" to large, "mainnet" to large, "regtest" to month, "mainnet" to month.copy(amountUnit = "sats"))
+        // Sol's cases (fiat and an Arriving or Renew line), one without a status line, a mainnet one and the usual ones.
+        val cases = listOf("regtest" to large, "regtest" to large.copy(arriving = 0, renewDue = now + 18 * hour), "regtest" to large.copy(arriving = 0),
+            "mainnet" to large, "regtest" to month, "mainnet" to month.copy(amountUnit = "sats"))
+        val placements = mutableSetOf<String>()
         try {
             for (scale in listOf(1f, 1.3f, 2f)) {
                 RuntimeEnvironment.setFontScale(scale)
                 val d = context.resources.displayMetrics.density
-                for ((variant, snapshot, width) in cases.flatMap { (variant, snapshot) -> listOf(320f, 380.57f).map { Triple(variant, snapshot, it) } }) {
-                    checkLargeText(scale, d, variant, snapshot, width)
-                }
+                for ((variant, snapshot) in cases) placements += checkLargeText(scale, d, variant, snapshot)
             }
-            // Sol's case: at 200% the label has its own line; at 100% it stays beside the balance, without " · 30 days".
+            assertEquals(setOf("beside", "own line", "left out"), placements)
+            // Sol's case: at 200% in 180 dp above an Arriving line, the label is left out; without a status line it has its
+            // own; at 100% it stays beside the balance, without " · 30 days".
+            RuntimeEnvironment.setFontScale(2f)
             val sol = WidgetContent.of(context, large, "regtest", now)
             assertEquals("+12,257,715 sats", sol.change)
-            assertTrue(WidgetViews.label(context, sol, 320f).line)
+            assertFalse(WidgetViews.label(context, sol, 320f, 180f).shown)
+            assertTrue(WidgetViews.label(context, WidgetContent.of(context, large.copy(arriving = 0), "regtest", now), 320f, 180f).line)
             RuntimeEnvironment.setFontScale(1f)
-            val usual = WidgetViews.label(context, sol, 320f)
-            assertFalse(usual.line); assertFalse(usual.days); assertEquals(1f, usual.scale)
+            val usual = WidgetViews.label(context, sol, 320f, 180f)
+            assertTrue(usual.shown); assertFalse(usual.line); assertFalse(usual.days); assertEquals(1f, usual.scale)
         } finally { RuntimeEnvironment.setFontScale(1f) }
     }
 
-    /** One medium widget at [scale]: the balance at its floor or larger and drawn for its box, the label's amount whole. */
-    private fun checkLargeText(scale: Float, d: Float, variant: String, snapshot: WidgetSnapshot, width: Float) {
-        val content = WidgetContent.of(context, snapshot, variant, now)
-        val label = WidgetViews.label(context, content, width)
-        val view = laidOut(content, width, variant = variant)
-        val at = "$scale× $variant ${content.change} $width dp, $label"
-        val balance = view.findViewById<android.widget.ImageView>(R.id.widget_balance)
-        val narrowest = WidgetType.minWidth(context, content.balance, content.satsSuffix, 34f, 38f, d, WidgetViews.MEDIUM_FLOOR)
-        assertTrue("$at: a ${balance.width} px balance", balance.width >= narrowest - 1)
-        assertTrue("$at: drawn at its floor or larger", balance.drawable.intrinsicWidth >= narrowest - 1)
-        assertTrue("$at: drawn for its box", balance.drawable.intrinsicWidth <= balance.width * 1.05f)
-        // The label beside the balance or on its own line, the amount whole.
-        assertEquals(at, label.line, view.shown(R.id.widget_label_line)); assertEquals(at, !label.line, view.shown(R.id.widget_label))
-        val change = if (label.line) R.id.widget_change_line else R.id.widget_change
-        assertEquals(at, content.change, view.text(change)); assertTrue(at, view.whole(change))
-        assertTrue("$at: inside the padding", view.right(change) <= ((width - 18f) * d).toInt() + 1)
+    /**
+     * One medium widget at [scale] in each size: the balance at its floor or larger and drawn for its box, the label beside
+     * it, on its own line or left out, and the status line and Actions inside the padding. Returns where the label went.
+     */
+    private fun checkLargeText(scale: Float, d: Float, variant: String, snapshot: WidgetSnapshot): List<String> {
+        val placements = mutableListOf<String>()
+        for ((width, height) in listOf(320f, 380.57f).flatMap { width -> listOf(160f, 180f).map { width to it } }) {
+            val content = WidgetContent.of(context, snapshot, variant, now)
+            val label = WidgetViews.label(context, content, width, height)
+            val view = laidOut(content, width, height, variant)
+            val at = "$scale× $variant ${content.change} ${content.status?.javaClass?.simpleName} $width × $height dp, $label"
+            placements += when { !label.shown -> "left out"; label.line -> "own line"; else -> "beside" }
+            // The balance at its narrowest or wider...
+            val balance = view.findViewById<android.widget.ImageView>(R.id.widget_balance)
+            val narrowest = WidgetType.minWidth(context, content.balance, content.satsSuffix, 34f, 38f, d, WidgetViews.MEDIUM_FLOOR)
+            assertTrue("$at: a ${balance.width} px balance", balance.width >= narrowest - 1)
+            assertTrue("$at: drawn at its floor or larger", balance.drawable.intrinsicWidth >= narrowest - 1)
+            assertTrue("$at: drawn for its box", balance.drawable.intrinsicWidth <= balance.width * 1.05f)
+            // ...the label beside it, on its own line or left out, the amount whole...
+            assertEquals(at, label.line, view.shown(R.id.widget_label_line))
+            assertEquals(at, label.shown && !label.line, view.shown(R.id.widget_label))
+            if (label.shown) {
+                val change = if (label.line) R.id.widget_change_line else R.id.widget_change
+                assertEquals(at, content.change, view.text(change)); assertTrue(at, view.whole(change))
+                assertTrue("$at: inside the padding", view.right(change) <= ((width - 18f) * d).toInt() + 1)
+            }
+            // ...and under the balance's fiat, the status line and every Action whole inside the widget's padding,
+            // where the launcher clips them.
+            val clip = ((height - 16f) * d).toInt()
+            var above = view.bottom(R.id.widget_fiat)
+            if (content.status != null) {
+                assertTrue(at, view.shown(R.id.widget_status))
+                assertTrue("$at: the status line from ${view.top(R.id.widget_status)}", view.top(R.id.widget_status) >= above)
+                above = view.bottom(R.id.widget_status)
+            }
+            for (id in listOf(R.id.widget_receive, R.id.widget_scan, R.id.widget_send)) {
+                assertEquals(at, (40 * d).toInt(), view.findViewById<View>(id).height)
+                assertTrue("$at: an Action at ${view.top(id)}..${view.bottom(id)} px, the status line to $above, clipped at $clip",
+                    view.top(id) >= above && view.bottom(id) <= clip)
+            }
+        }
+        return placements
     }
 
     /** The placed widget renders through the provider, from the old keys before the app runs, then the full snapshot. */
