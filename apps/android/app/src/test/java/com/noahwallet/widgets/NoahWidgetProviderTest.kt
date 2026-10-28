@@ -181,6 +181,32 @@ class NoahWidgetProviderTest {
         assertEquals(Math.round(360 * 2.75f), one.bitmaps.single().width)
     }
 
+    /**
+     * The Fold's two-column 4×4 reports five sizes, its own (380.57 × 468.95) the fifth: keeping four left none that
+     * fitted, and Android drew the smallest, the 2×2 design. Every size stays, within the bitmap budget.
+     */
+    @GraphicsMode(GraphicsMode.Mode.NATIVE)
+    @Test
+    fun everyReportedSizeIsKept() {
+        language("en")
+        val slot = android.util.SizeF(380.57144f, 468.9524f)
+        val reported = listOf(android.util.SizeF(368f, 477.7143f), android.util.SizeF(368f, 477.7143f), android.util.SizeF(319.2381f, 541.3333f),
+            android.util.SizeF(319.2381f, 541.3333f), android.util.SizeF(595.8095f, 353.5238f), android.util.SizeF(595.8095f, 353.5238f),
+            android.util.SizeF(380.57144f, 470.09525f), slot)
+        fun options(sizes: List<android.util.SizeF>) =
+            android.os.Bundle().apply { putParcelableArrayList(AppWidgetManager.OPTION_APPWIDGET_SIZES, ArrayList(sizes)) }
+        val sizes = NoahWidgetProvider.sizes(options(reported))
+        assertEquals(reported.distinct(), sizes)
+        assertEquals(WidgetLayout.medium, WidgetLayout.of(slot.width, slot.height))
+        for (content in listOf(null, WidgetContent.of(context, month, "regtest", now))) {
+            val built = WidgetViews.buildAll(context, "regtest", content, sizes, 2.625f, WidgetViews.budget(listOf(2208L * 1840)))
+            assertTrue(slot in built.views.keys)
+            assertTrue("${bytes(built)} bytes", bytes(built) <= WidgetViews.budget(listOf(2208L * 1840)))
+        }
+        // A size map takes 16 at most.
+        assertEquals(16, NoahWidgetProvider.sizes(options(List(20) { android.util.SizeF(200f + it, 200f) })).size)
+    }
+
     /** A launcher that still refuses the update (a lower limit than we took) gets it again with a quarter of the bytes. */
     @GraphicsMode(GraphicsMode.Mode.NATIVE)
     @Test

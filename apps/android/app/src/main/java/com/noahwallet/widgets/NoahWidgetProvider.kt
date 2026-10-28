@@ -29,12 +29,16 @@ open class NoahWidgetProvider : AppWidgetProvider() {
         private val updates = Mutex()
         /** The launcher's default before it reports a size: the 2×2. */
         private val fallback = SizeF(180f, 180f)
-        /** The launcher's report of every size it may show, in dp (Android 12+). */
+        /**
+         * The launcher's report of every size it may show, in dp (Android 12+), all of them up to the 16 a size map takes:
+         * the launcher shows the one that fits its slot, and without it Android falls back to the smallest (a Fold's 4×4
+         * reports five, its own the fifth, and drew the 2×2 design).
+         */
         @Suppress("DEPRECATION")
         internal fun sizes(options: Bundle): List<SizeF> {
             val reported = if (Build.VERSION.SDK_INT >= 31) options.getParcelableArrayList<SizeF>(AppWidgetManager.OPTION_APPWIDGET_SIZES).orEmpty()
             else emptyList()
-            return reported.filter { it.width > 0 && it.height > 0 }.distinct().take(4).ifEmpty { orientations(options).toList().distinct() }
+            return reported.filter { it.width > 0 && it.height > 0 }.distinct().take(16).ifEmpty { orientations(options).toList().distinct() }
         }
         /**
          * Publishes [build]'s views. A launcher that still refuses them (its bitmap limit is lower than we took it to be)
