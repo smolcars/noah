@@ -33,9 +33,26 @@ internal object WidgetType {
         balancePx(context, text, satsSuffix, TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, sizeSp, context.resources.displayMetrics),
             widthDp, heightDp, density, floor)
 
-    /** The balance's width in pixels at [sizeSp] (the system's font scale applied), unshrunk. */
-    fun width(context: Context, text: String, satsSuffix: Boolean, sizeSp: Float): Float =
-        measure(context, text, satsSuffix, TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, sizeSp, context.resources.displayMetrics))
+    /**
+     * The narrowest the balance is drawn in a [heightDp] box, in pixels: at [floor] of its size, or smaller where the box's
+     * height already holds large system text to less.
+     */
+    @Suppress("LongParameterList") // a drawing primitive: the text, its size and the box it fits
+    fun minWidth(context: Context, text: String, satsSuffix: Boolean, sizeSp: Float, heightDp: Float, density: Float, floor: Float): Float {
+        val full = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, sizeSp, context.resources.displayMetrics)
+        val height = (heightDp * density).roundToInt().coerceAtLeast(1)
+        return measure(context, text, satsSuffix, minOf(full * floor, tallest(context, parts(text, satsSuffix).first, full, height)))
+    }
+
+    /**
+     * The largest size a [height] px box takes: the figures' ink above the baseline and the line's descent below it must
+     * fit, however large the system text is (they scale with the size).
+     */
+    private fun tallest(context: Context, main: String, full: Float, height: Int): Float {
+        val ink = android.graphics.Rect().also { paint(context, full, false).getTextBounds(main, 0, main.length, it) }
+        val tall = (-ink.top + paint(context, full, false).fontMetrics.descent).coerceAtLeast(1f)
+        return full * (height - 1) / tall
+    }
 
     private fun parts(text: String, satsSuffix: Boolean): Pair<String, String> =
         (if (satsSuffix && text.endsWith(" sats")) text.dropLast(5) else text).let { it to text.removePrefix(it) }
@@ -61,11 +78,8 @@ internal object WidgetType {
         val available = widthDp * density
         val height = (heightDp * density).roundToInt().coerceAtLeast(1)
         val byWidth = (full * minOf(1f, available / width(full).coerceAtLeast(1f))).coerceAtLeast(full * floor)
-        // Large system text: the figures' ink above the baseline and the line's descent below it must fit the box too,
-        // whatever the width allows (they scale with the size).
-        val ink = android.graphics.Rect().also { paint(context, full, false).getTextBounds(main, 0, main.length, it) }
-        val tall = (-ink.top + paint(context, full, false).fontMetrics.descent).coerceAtLeast(1f)
-        val size = minOf(byWidth, full * (height - 1) / tall)
+        // Large system text: the height holds it too, whatever the width allows.
+        val size = minOf(byWidth, tallest(context, main, full, height))
         val bitmap = Bitmap.createBitmap(ceil(width(size)).toInt().coerceAtLeast(1), height, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bitmap)
         val numbers = paint(context, size, false)

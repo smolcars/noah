@@ -51,6 +51,60 @@
         android:paddingEnd="18dp"
         android:paddingBottom="16dp">
 
+        <!-- The label on a line of its own, where beside the balance it would squeeze it (WidgetViews.label). -->
+        <LinearLayout
+            android:id="@+id/widget_label_line"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="4dp"
+            android:gravity="center_vertical|end"
+            android:importantForAccessibility="noHideDescendants"
+            android:minHeight="18dp"
+            android:orientation="horizontal"
+            android:visibility="gone">
+
+            <TextView
+                android:id="@+id/widget_chip_line"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginEnd="6dp"
+                android:background="@drawable/widget_chip"
+                android:fontFamily="sans-serif-medium"
+                android:includeFontPadding="false"
+                android:maxLines="1"
+                android:paddingStart="7dp"
+                android:paddingTop="3dp"
+                android:paddingEnd="7dp"
+                android:paddingBottom="3dp"
+                android:textColor="@color/widget_chip_text"
+                android:textSize="11sp"
+                android:visibility="gone" />
+
+            <TextView
+                android:id="@+id/widget_change_line"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:ellipsize="end"
+                android:fontFamily="sans-serif"
+                android:textFontWeight="600"
+                android:textStyle="bold"
+                android:fontFeatureSettings="tnum"
+                android:includeFontPadding="false"
+                android:maxLines="1"
+                android:textColor="@color/widget_text"
+                android:textSize="12sp" />
+
+            <TextView
+                android:id="@+id/widget_change_days_line"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:ellipsize="end"
+                android:includeFontPadding="false"
+                android:maxLines="1"
+                android:textColor="@color/widget_muted"
+                android:textSize="11.5sp" />
+        </LinearLayout>
+
         <LinearLayout
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
@@ -91,10 +145,12 @@
 
             <!-- The label takes the width it needs (WidgetViews.label); the balance column has the rest. -->
             <LinearLayout
+                android:id="@+id/widget_label"
                 android:layout_width="wrap_content"
-                android:layout_height="18dp"
+                android:layout_height="wrap_content"
                 android:layout_marginStart="14dp"
                 android:gravity="center_vertical|end"
+                android:minHeight="18dp"
                 android:orientation="horizontal">
 
                 <TextView

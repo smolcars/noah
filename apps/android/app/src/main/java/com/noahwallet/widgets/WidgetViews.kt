@@ -85,27 +85,46 @@ internal object WidgetViews {
      */
     const val MEDIUM_FLOOR = .45f
 
-    /** Each layout's balance box from its fixed dimensions; [label] is the medium label's width. */
-    fun balanceBox(layout: WidgetLayout, widthDp: Float, label: Float = 0f): Box = when (layout) {
+    /** Each layout's balance box from its fixed dimensions, beside the medium [label]. */
+    fun balanceBox(layout: WidgetLayout, widthDp: Float, label: Label? = null): Box = when (layout) {
         WidgetLayout.small -> Box(widthDp - 36f, 34f, 30f)
-        // The balance column has what the label leaves.
-        WidgetLayout.medium -> Box(widthDp - 36f - 14f - label, 38f, 34f, MEDIUM_FLOOR)
+        // The balance column has what the label leaves, or the whole row under a label on its own line.
+        WidgetLayout.medium -> Box(widthDp - 36f - if (label == null || label.line) 0f else 14f + label.width, 38f, 34f, MEDIUM_FLOOR)
         // Padding, the longship and three 44 dp buttons with their gaps.
         WidgetLayout.wide -> Box(widthDp - 32f - 42f - 3 * 52f, 28f, 24f)
         WidgetLayout.narrow -> Box(widthDp - 32f - 30f, 28f, 24f)
         WidgetLayout.empty -> error("""No balance without a wallet""")
     }
 
-    /** The medium label's width (dp), and whether it keeps " · 30 days". */
-    data class Label(val width: Float, val days: Boolean)
+    /** How far the medium label's text shrinks beside the balance before it takes a line of its own. */
+    const val LABEL_FLOOR = .8f
 
     /**
-     * Medium: the label (chip, change and " · 30 days", [full] dp) takes the width it needs beside a [widthDp] widget and
-     * the balance column the rest, so long as the balance ([balance] dp at full size) keeps [MEDIUM_FLOOR] of its size
-     * there. Otherwise " · 30 days" goes ([short] dp), never the amount.
+     * The medium label: its width (dp), whether it keeps " · 30 days", its text's scale, and whether it has a line of its
+     * own above the balance.
      */
-    fun label(widthDp: Float, full: Float, short: Float, balance: Float): Label =
-        if (widthDp - 36f - 14f - full >= balance * MEDIUM_FLOOR) Label(full, true) else Label(short, false)
+    data class Label(val width: Float, val days: Boolean, val scale: Float = 1f, val line: Boolean = false)
+
+    /** The label's widths at full size (dp): the chip's padding and gap, the chip's text, the change and " · 30 days". */
+    data class LabelParts(val fixed: Float, val chip: Float, val change: Float, val days: Float)
+
+    /**
+     * Medium: the label takes the width it needs beside a [widthDp] widget and the balance column the rest, never less
+     * than the balance's narrowest ([balance] dp, [WidgetType.minWidth]). Where the label doesn't fit, " · 30 days" goes,
+     * then its text shrinks down to [LABEL_FLOOR], and last it takes a line of its own above the balance, which then has
+     * the whole row. The amount and the balance always show.
+     */
+    fun label(widthDp: Float, parts: LabelParts, balance: Float): Label {
+        val row = widthDp - 36f
+        val text = parts.chip + parts.change
+        fun fit(room: Float, line: Boolean): Label? = when {
+            parts.fixed + text + parts.days <= room -> Label(parts.fixed + text + parts.days, true, line = line)
+            parts.fixed + text <= room -> Label(parts.fixed + text, false, line = line)
+            // 2 dp to spare for each view's whole pixels.
+            else -> ((room - parts.fixed - 2f) / text).takeIf { it >= LABEL_FLOOR }?.let { Label(room, false, it, line) }
+        }
+        return fit(row - 14f - balance, false) ?: fit(row, true) ?: Label(row, false, LABEL_FLOOR, true)
+    }
 
     /** [label] for [content], measured as widget_noah_medium.xml sets the label and the balance. */
     fun label(context: Context, content: WidgetContent, widthDp: Float): Label {
@@ -117,11 +136,11 @@ internal object WidgetViews {
                 if (tabular) fontFeatureSettings = "tnum"
             }.measureText(text)) / metrics.density
         // The chip with its padding and gap, the change at weight 600, then the days.
-        val chip = content.chip?.let { dp(it, Typeface.create("sans-serif-medium", Typeface.NORMAL), 11f) + 14f + 6f } ?: 0f
         val semibold = if (Build.VERSION.SDK_INT >= 28) Typeface.create(Typeface.SANS_SERIF, 600, false) else Typeface.DEFAULT_BOLD
-        val short = chip + dp(content.change, semibold, 12f, tabular = true)
-        return label(widthDp, short + dp(content.days, Typeface.DEFAULT, 11.5f), short,
-            WidgetType.width(context, content.balance, content.satsSuffix, 34f) / metrics.density)
+        val parts = LabelParts(if (content.chip != null) 14f + 6f else 0f, dp(content.chip, Typeface.create("sans-serif-medium", Typeface.NORMAL), 11f),
+            dp(content.change, semibold, 12f, tabular = true), dp(content.days, Typeface.DEFAULT, 11.5f))
+        val balance = WidgetType.minWidth(context, content.balance, content.satsSuffix, 34f, 38f, metrics.density, MEDIUM_FLOOR) / metrics.density
+        return label(widthDp, parts, balance)
     }
 
     /**
@@ -152,7 +171,7 @@ internal object WidgetViews {
         val layouts = sizes.associateWith { if (content == null) WidgetLayout.empty else WidgetLayout.of(it.width, it.height) }
         val labels = if (content == null) emptyMap()
         else layouts.filterValues { it == WidgetLayout.medium }.mapValues { (size, _) -> label(context, content, size.width) }
-        fun box(size: SizeF) = balanceBox(layouts.getValue(size), size.width, labels[size]?.width ?: 0f)
+        fun box(size: SizeF) = balanceBox(layouts.getValue(size), size.width, labels[size])
         val balances = if (content == null) emptyMap() else layouts.keys.map(::box).distinct()
             .associateWith { WidgetType.balance(context, content.balance, content.satsSuffix, it.sp, it.width, it.height, density, it.floor) }
         val frames = layouts.mapNotNull { (size, layout) -> frame(layout, content, size.width, size.height) }.distinct()
@@ -205,10 +224,20 @@ internal object WidgetViews {
     private fun labels(views: RemoteViews, layout: WidgetLayout, content: WidgetContent, label: Label?) {
         // The chip sits beside the change label, so only the layouts with a label have one.
         if (layout == WidgetLayout.small || layout == WidgetLayout.medium) {
-            views.setTextViewText(R.id.widget_chip, content.chip.orEmpty())
-            views.setViewVisibility(R.id.widget_chip, if (content.chip != null) View.VISIBLE else View.GONE)
-            views.setTextViewText(R.id.widget_change, content.change.orEmpty())
-            views.setTextViewText(R.id.widget_change_days, if (label?.days == false) "" else content.days.orEmpty())
+            // Medium: beside the balance, or on a line of its own above it.
+            val line = label?.line == true
+            if (layout == WidgetLayout.medium) {
+                views.setViewVisibility(R.id.widget_label, if (line) View.GONE else View.VISIBLE)
+                views.setViewVisibility(R.id.widget_label_line, if (line) View.VISIBLE else View.GONE)
+            }
+            val (chip, change, days) = if (line) Triple(R.id.widget_chip_line, R.id.widget_change_line, R.id.widget_change_days_line)
+            else Triple(R.id.widget_chip, R.id.widget_change, R.id.widget_change_days)
+            views.setTextViewText(chip, content.chip.orEmpty())
+            views.setViewVisibility(chip, if (content.chip != null) View.VISIBLE else View.GONE)
+            views.setTextViewText(change, content.change.orEmpty())
+            views.setTextViewText(days, if (label?.days == false) "" else content.days.orEmpty())
+            if (label != null && label.scale < 1f) for ((id, sp) in listOf(chip to 11f, change to 12f, days to 11.5f))
+                views.setTextViewTextSize(id, TypedValue.COMPLEX_UNIT_SP, sp * label.scale)
         }
     }
 
