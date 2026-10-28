@@ -22,7 +22,7 @@ From the top:
 - **Fiat:** muted, under the balance. Home's latest quote in the user's currency, formatted for the app's language. No quote, no line.
 - **Status line:** at most one, under the fiat:
   1. **Renew:** the renew-history glyph, **Renew** (semibold) and, muted, "Expires in {n} hours" (or "Expires in under an hour"). It shows only when Home would show its Renew card: refreshable VTXOs reported by `getExpiringVtxos(vtxoRefreshExpiryThreshold)`, the same rule as `HomeRules`. It never shows earlier. On the small widget it takes two lines (Renew, then the expiry); on the medium widget, one ("Renew · Expires in 18 hours").
-  2. **Arriving:** a muted dot and "+{amount} arriving" for today's pending balance.
+  2. **Arriving:** a muted dot and "+{amount} arriving", with Home's arriving amount (`HomeRules` on both platforms): incoming money only, i.e. claimable Lightning receives plus incoming unconfirmed on-chain. Outgoing pending sends and boards never show here.
 
   Renew wins when both apply. There is no green "all fine" state, no block count and no colour coding any more.
 - **Actions** (medium and Android 4×2 only): three equal soft-surface capsules, Receive · Scan · Send, with the Home tab bar's ↙ and ↗ glyphs and the scan glyph.
@@ -37,14 +37,14 @@ Gone: the "Noah Wallet" header (the system label under the widget says Noah), th
 | Arriving | pending balance > 0 | + the arriving line |
 | Renew | Home's Renew rule | + the Renew line (wins over arriving) |
 | New wallet | balance 0 and every daily balance equal | calm water, ₿ 0, fiat, no label |
-| Hidden | the app's hide-balance setting is on | calm water, "₿ ••••••", fiat "••••", "+₿ •••• arriving", no label. The wave would reveal your history, so it never draws while hidden. |
+| Hidden | the app's hide-balance setting is on | calm water, "₿ ••••••", fiat "••••", Home's hidden "•••• arriving", no label. The wave would reveal your history, so it never draws while hidden. |
 | Test network | signet, regtest | Home's chip beside the label |
 | Large | any balance | the balance shrinks to fit, to half size at most |
 | No wallet | no snapshot at all (never set up, or deleted) | just the longship mark, centred, on calm water. Never ₿ 0. |
 
 ## The wave
 
-- **Data:** 31 daily balances in sats, oldest first. `value[30]` is the current balance (the same number the widget shows). For `i < 30`, `value[i]` = current balance − the sum of every settled balance change whose **local date** (device time zone) is after day `i`, where day `i` is today − (30 − i). Changes older than the window cancel out; a change dated in the future (clock skew) counts as today. Pending and failed movements are not changes. The shared fixture [`apps/fixtures/widgets.json`](../../../apps/fixtures/widgets.json) has the reference values, including midnight, a non-UTC time zone, a daylight-saving change, a young wallet and clock skew. Both platforms must pass it.
+- **Data:** 31 daily balances in sats, oldest first. `value[30]` is the current balance (the same number the widget shows). For `i < 30`, `value[i]` = current balance − the sum of every settled balance change whose **local date** (device time zone) is after day `i`, where day `i` is today − (30 − i). Changes older than the window cancel out; a change dated in the future (clock skew) counts as today. Pending and failed movements are not changes. A settled movement is dated by its creation time (the date Activity shows). A confirmed on-chain transaction is dated by the board or offboard movement that names it and counts once that movement settles; otherwise by tip − height × 10 minutes. If the app last wrote on an earlier day, the widget shifts the 31 days forward to today and fills the missing days with the last balance. The shared fixture [`apps/fixtures/widgets.json`](../../../apps/fixtures/widgets.json) has the reference values, including midnight, a non-UTC time zone, a daylight-saving change, a young wallet and clock skew. Both platforms must pass it.
 - **Change label:** `value[30] − value[0]`, exact (not smoothed).
 - **Calm water:** when every value is equal (a new wallet, or no activity for 30 days) or the balance is hidden. A flat line at about 72% of the band's height with a gentle ripple (amplitude 1.4 pt, `sin(x / 7)`), and no label.
 - **Smoothing:** two passes of `(prev + 2·v + next) / 4` with clamped ends (fixture `swell`), then a monotone cubic through the points (Fritsch–Carlson, so it never overshoots). It reads as swell, not a stock ticker.
@@ -119,12 +119,12 @@ New in-app routes for Home, Receive, Scan and Send, on the existing `com.noahwal
 The widget never opens the wallet. The app writes one snapshot; the widget only reads it. Today's writers stay (foreground summary refresh, push jobs, hourly background refresh, recurring), and each one writes the whole new snapshot. Deleting the wallet clears it, as today.
 
 - **New snapshot**, versioned: iOS app-group `UserDefaults` key `widgetSnapshot` (JSON); Android the same prefs file, new keys. It holds:
-  - balance, pending, the 31 daily balances (see [The wave](#the-wave));
+  - balance, Home's arriving amount, the 31 daily balances (see [The wave](#the-wave));
   - `amountUnit` (`bip177` / `sats`) and the hide-balance flag (Home's persisted keys);
-  - fiat value and currency code from Home's latest quote (absent if none);
+  - Home's latest price and currency code (absent if none); the widget applies Home's fiat formula to the balance, and writers without a fresh price carry the last one forward;
   - Renew: the soonest refreshable-VTXO expiry as a date (now + blocks × 10 min), present only when Home's Renew rule holds;
   - the network variant (for the chip) and the app language (already mirrored).
-- **Fallback:** a widget that finds only the old keys (an RN-written or earlier native snapshot, before the updated app first runs) still renders the new design from them: balance, pending, ₿ unit, no fiat, calm water, no Renew line. No snapshot at all is the No wallet state.
+- **Fallback:** the old keys are read until the app's first write, then removed. A widget that finds only the old keys (an RN-written or earlier native snapshot, before the updated app first runs) still renders the new design from them: balance, pending, ₿ unit, no fiat, calm water, no Renew line. No snapshot at all is the No wallet state.
 - **Republish** when the hide setting, the unit or the fiat currency changes (like today's language mirror), and after history changes.
 - Same protection as today's balance: app-group / app-private storage only, never logged.
 
