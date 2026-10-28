@@ -276,7 +276,7 @@ struct SettingsList: View {
         Button(action: versionTapped) {
             VStack(spacing: 4) {
                 Text(verbatim: "Noah").noahText(HomeText.tucked)
-                Text(verbatim: SettingsList.version + (summary.debug ? " · " + L10n.text("debug", locale: language) : ""))
+                Text(verbatim: Self.version + (summary.debug ? " · " + L10n.text("debug", locale: language) : ""))
                     .noahText(HomeText.footnote).foregroundStyle(NoahTokens.Colors.muted)
             }
             .frame(maxWidth: .infinity)

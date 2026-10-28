@@ -448,6 +448,7 @@ private struct SettingsSheetModifier<Item: Identifiable & Equatable, Sheet: View
     private final class Layout { var wide = false }
 
     func body(content: Content) -> some View {
+        // swiftlint:disable:next redundant_discardable_let - a ViewBuilder body needs `let _ =` to run a statement
         let _ = { layout.wide = settings.wide }()
         content
             .sheet(item: Binding(get: { settings.wide ? nil : item }, set: { if !layout.wide { item = $0 } })) { value in

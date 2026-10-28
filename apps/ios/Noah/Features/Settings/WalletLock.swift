@@ -50,7 +50,7 @@ final class WalletLock {
     }
 
     /// `LAContext()` waits on coreauthd, which stalls behind the Face ID permission alert, so never on the main thread.
-    @concurrent private nonisolated static func probe() async
+    @concurrent nonisolated private static func probe() async
         -> sending (context: LAContext, available: Bool, noScreenLock: Bool, biometryType: LABiometryType) {
         let context = LAContext()
         var error: NSError?

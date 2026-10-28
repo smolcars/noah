@@ -12,14 +12,14 @@ final class SettingsStorage: @unchecked Sendable {
     private let storeID: String
     let nativeFile: NativeSettingsFile
     // All access, including the shared fallback for each file, holds `access`.
-    private nonisolated(unsafe) static var fallbacks: [String: NativeSettingsFile.State] = [:]
+    nonisolated(unsafe) private static var fallbacks: [String: NativeSettingsFile.State] = [:]
     private var fallback: NativeSettingsFile.State? {
         get { Self.fallbacks[nativeFile.file.path] }
         set { Self.fallbacks[nativeFile.file.path] = newValue }
     }
     /// The last verified or committed generation of each file and its stamp, so a read that finds the
     /// same bytes on disk skips the read, parse and hash. Any other write to the file changes the stamp.
-    private nonisolated(unsafe) static var committed: [String: (stamp: NativeSettingsFile.Stamp, state: NativeSettingsFile.State)] = [:]
+    nonisolated(unsafe) private static var committed: [String: (stamp: NativeSettingsFile.Stamp, state: NativeSettingsFile.State)] = [:]
 
     @MainActor static func bootstrap() {} // MMKV is initialized only if a snapshot needs importing.
 

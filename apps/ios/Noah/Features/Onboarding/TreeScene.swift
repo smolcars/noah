@@ -28,7 +28,7 @@ enum TreeScene {
     static let paths = (0..<tree.leaves.count).map { tree.path(toLeaf: $0) }
     static let specks: [CGPoint] = (0..<12).map { index in
         let angle = Double(index) / 12 * 2 * .pi + 0.4, radius = 90 + Double((index * 53) % 50)
-        let you = tree.leaves[TreeScene.you].point
+        let you = tree.leaves[Self.you].point
         return CGPoint(x: you.x + cos(angle) * radius * 1.2, y: you.y + sin(angle) * radius * 0.9 + 30)
     }
 

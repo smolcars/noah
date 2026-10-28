@@ -112,7 +112,7 @@ struct ExitStageScene: Equatable {
     /// spacing however long the path. The one being sent (or waiting, or needing funds) and the next two are
     /// always drawn on their own, and the coin; then as many of the latest confirmed ones as fit, the oldest
     /// stacked into one block; then more of the unsent ones, the rest folded into one "+N" node.
-    func folded(nodes capacity: Int) -> ExitStageScene {
+    func folded(nodes capacity: Int) -> Self {
         let n = levels.count, nodes = n - 1
         guard !explain, folds.isEmpty, nodes > max(1, capacity) else { return self }
         let current = levels.firstIndex { !$0.isMined } ?? n, sending = current < nodes

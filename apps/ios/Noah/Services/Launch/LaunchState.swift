@@ -26,7 +26,7 @@ enum LaunchState: String, Equatable, Sendable {
     }
 
     /// `walletDatabaseExists` means "the datadir holds any wallet data".
-    static func resolve(seed: SeedStatus, walletDatabaseExists: Bool) -> LaunchState {
+    static func resolve(seed: SeedStatus, walletDatabaseExists: Bool) -> Self {
         switch (seed, walletDatabaseExists) {
         case (.invalid, _): .invalidSeed
         case (.conflict, _): .seedConflict

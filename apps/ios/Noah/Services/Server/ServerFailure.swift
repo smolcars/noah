@@ -10,7 +10,7 @@ struct ServerFailure: Error, Sendable {
     var code: String?
 
     static func message(for error: Error, fallback: String) -> String {
-        if let error = error as? ServerFailure { return error.message }
+        if let error = error as? Self { return error.message }
         if let error = error as? IdentityValidationError { return error.errorDescription ?? fallback }
         if let error = error as? ClientError { return message(for: error.underlyingError, fallback: fallback) }
         return fallback

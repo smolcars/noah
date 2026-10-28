@@ -61,7 +61,7 @@ struct AutoBoardFunding {
     /// Decision 8: a claim to this phone's on-chain wallet isn't a deposit. Its outputs join the
     /// handled ledger, so auto-board never offers them, and the claims set, so a later deposit's board
     /// leaves their value on-chain. One durable write. On the main actor, with the ledger's other writers.
-    @MainActor static func markClaimed(_ outpoints: Set<String>, walletID: String, store: AutoBoardFunding = .init()) throws {
+    @MainActor static func markClaimed(_ outpoints: Set<String>, walletID: String, store: Self = .init()) throws {
         var saved = try store.load()
         let handled = saved.handled[walletID] ?? [], claims = saved.claims?[walletID] ?? []
         guard !outpoints.isSubset(of: handled) || !outpoints.isSubset(of: claims) else { return }

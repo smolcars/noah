@@ -19,7 +19,7 @@ actor OnchainOperationJournal {
         var quote: OnchainQuote
         var receipt: OnchainReceipt?
         var txid: String?
-        var chainStatusError: String? = nil
+        var chainStatusError: String?
         private enum CodingKeys: String, CodingKey { case quote, receipt, txid, overrideAudit, uncertainBoard }
         var overrideAudit: OverrideAudit?
         /// FFI 0.7.0's `uncertain` board: bark may have partly recorded it, so repeat protection can't be

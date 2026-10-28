@@ -251,7 +251,7 @@ struct ExitStageLabel: Equatable {
     var shrinks = false
     var size = 1.0
     /// Where this label can go instead when it doesn't fit here, in order.
-    var fallbacks: [ExitStageLabel] = []
+    var fallbacks: [Self] = []
     /// A confirmed transaction's block: labels that don't fit fold into one range.
     var block: UInt32?
     /// A stack of blocks' oldest block, folding with the rest.
@@ -409,7 +409,7 @@ enum ExitStageText {
     }
 
     /// Measured widths: a moving picture lays its labels out every frame. NSCache is thread-safe.
-    private nonisolated(unsafe) static let widths = NSCache<NSString, NSNumber>()
+    nonisolated(unsafe) private static let widths = NSCache<NSString, NSNumber>()
 }
 
 extension Double {

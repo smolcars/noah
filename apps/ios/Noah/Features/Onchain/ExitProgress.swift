@@ -229,7 +229,7 @@ struct ExitSightings: Codable, Equatable, Sendable {
     var tips: [String: UInt32] { seen.mapValues(\.tip) }
 
     static let key = "native-exit-sightings-v1"
-    typealias Store = ExitWalletStore<ExitSightings>
+    typealias Store = ExitWalletStore<Self>
 }
 
 /// Noah's id for each exit run, by VTXO, new each time it starts one (`ExitModel.run`).
@@ -253,10 +253,10 @@ struct ExitClaimRecord: Codable, Equatable, Sendable {
     var fee: UInt64
     var toPhone: Bool
     /// Another wallet's address, for the Claimed picture once the journal entry is gone.
-    var destination: String? = nil
+    var destination: String?
 
     static let key = "native-exit-claim-records-v1"
-    typealias Store = ExitWalletStore<[String: ExitClaimRecord]>
+    typealias Store = ExitWalletStore<[String: Self]>
 }
 
 /// One value per wallet in settings storage, written durably.

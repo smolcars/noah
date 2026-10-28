@@ -88,7 +88,7 @@ enum PaymentEncoding {
         return [0, 111].contains(decoded[0]) ? [0x76, 0xA9, 0x14] + hash + [0x88, 0xAC] : [0xA9, 0x14] + hash + [0x87]
     }
     struct Invoice {
-        let network: String; let sats: Decimal?; let hash: String?; let expires: Date; let descriptionHash: String?; var description: String? = nil
+        let network: String; let sats: Decimal?; let hash: String?; let expires: Date; let descriptionHash: String?; var description: String?
     }
     static func invoice(_ value: String) -> Invoice? {
         guard let decoded = bech32(value), !decoded.isM, decoded.words.count >= 111,

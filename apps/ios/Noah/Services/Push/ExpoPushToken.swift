@@ -10,7 +10,7 @@ struct ExpoPushToken: Sendable {
     static let baseURL = URL(string: "https://exp.host/--/api/v2/")!
 
     var session: URLSession = .shared
-    var baseURL: URL = ExpoPushToken.baseURL
+    var baseURL: URL = Self.baseURL
 
     struct Request: Encodable, Equatable {
         let type = "apns"

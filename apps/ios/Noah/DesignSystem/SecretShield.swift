@@ -90,7 +90,7 @@ final class SceneCapture {
         scenes.setObject(capture, forKey: scene)
         capture.report(scene.traitCollection.sceneCaptureState)
         scene.registerForTraitChanges([UITraitSceneCaptureState.self]) { (scene: UIWindowScene, _) in
-            SceneCapture.of(scene).report(scene.traitCollection.sceneCaptureState)
+            Self.of(scene).report(scene.traitCollection.sceneCaptureState)
         }
         return capture
     }

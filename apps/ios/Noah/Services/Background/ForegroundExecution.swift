@@ -10,7 +10,7 @@ enum ForegroundExecution {
     }
 
     @MainActor static func run(budget: RecurringSubmissionBudget = .init(),
-                               isActive: @escaping @MainActor @Sendable () -> Bool = { ForegroundExecution.isActive },
+                               isActive: @escaping @MainActor @Sendable () -> Bool = { Self.isActive },
                                _ operation: () async -> Void) async {
         guard !Task.isCancelled, RecurringSubmissionBudget.available, RecurringExecutionBudget.available, isActive() else { budget.revoke(); return }
         let center = NotificationCenter.default

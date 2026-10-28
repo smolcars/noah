@@ -13,7 +13,7 @@ enum SettingsPage: Hashable {
     case feedback, about
 
     /// The root row a page belongs to: wide windows highlight it in the list.
-    var root: SettingsPage {
+    var root: Self {
         switch self {
         case .lightningAddress, .email: .profile
         case .vtxo: .vtxos
@@ -82,8 +82,8 @@ struct SettingsNavigator {
     /// pages and My code push, Back dismisses.
     static func standalone(push: @escaping (SettingsPage) -> Void, myCode: @escaping () -> Void, pushed: @escaping () -> Bool,
                            dismiss: @escaping () -> Void) -> Self {
-        SettingsNavigator(select: push, open: push, back: dismiss, swap: { _, page in push(page) },
-                          leave: { _ in if !pushed() { dismiss() } }, close: dismiss, myCode: myCode)
+        Self(select: push, open: push, back: dismiss, swap: { _, page in push(page) },
+             leave: { _ in if !pushed() { dismiss() } }, close: dismiss, myCode: myCode)
     }
 }
 
@@ -161,7 +161,7 @@ struct SettingsHost: View {
         .background(NoahTokens.Colors.background.ignoresSafeArea())
         .navigationBarBackButtonHidden(settings.wide)
         .environment(\.settings, settings)
-        .navigationDestination(item: $standalonePage) { SettingsHost(page: $0) }
+        .navigationDestination(item: $standalonePage) { Self(page: $0) }
         .navigationDestination(isPresented: $standaloneMyCode) { QRHubView(isActive: true, mode: .myCode, onScan: scanPayment) }
         .task { if page == nil, let open = fixture?.sheet { sheet = open } }
         .foregroundStyle(NoahTokens.Colors.foreground)

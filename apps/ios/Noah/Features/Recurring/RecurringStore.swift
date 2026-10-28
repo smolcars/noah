@@ -385,14 +385,14 @@ struct RawObject {
             index += 1
         }
     }
-    static func arrayObjects(_ raw: String) throws -> [RawObject] {
+    static func arrayObjects(_ raw: String) throws -> [Self] {
         guard try JSONSerialization.jsonObject(with: Data(raw.utf8)) is [Any] else {
             throw RecurringError.message(RecurringPayment.unsupportedMessage)
         }
         let bytes = Array(raw.utf8)
         var start = bytes.firstIndex(of: 91)! + 1
         var depth = 0, quoted = false, escaped = false
-        var result: [RawObject] = []
+        var result: [Self] = []
         for index in start..<bytes.count {
             let byte = bytes[index]
             if quoted {
@@ -402,7 +402,7 @@ struct RawObject {
             } else {
                 if depth == 0, byte == 44 || byte == 93 {
                     let value = String(decoding: bytes[start..<index], as: UTF8.self)
-                    if !value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { result.append(try RawObject(value)) }
+                    if !value.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty { result.append(try Self(value)) }
                     start = index + 1
                     if byte == 93 { break }
                 } else if byte == 34 { quoted = true }

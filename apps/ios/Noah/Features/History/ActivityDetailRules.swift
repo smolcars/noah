@@ -162,7 +162,7 @@ struct ActivityDetail: Equatable {
     /// Details, the raw transaction or a receive's preimage.
     static func receipt(_ transaction: HistoryTransaction, ownDomain: String, unit: BitcoinAmountUnit,
                         locale: Locale, date: String) -> String {
-        let detail = ActivityDetail(transaction, ownDomain: ownDomain)
+        let detail = Self(transaction, ownDomain: ownDomain)
         let language = locale.identifier
         let row = HomeActivityRow(transaction, ownDomain: ownDomain)
         let status = detail.renewedCoins.map { L10n.plural("Renewed {n} coins", count: $0, locale: language) }

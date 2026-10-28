@@ -248,7 +248,7 @@ indirect enum SendDestinationError: LocalizedError, Equatable, Sendable {
     case networkMismatch(expected: String, actual: String)
     case subSatoshiInvoice, invalidOffer, invalidBitcoinAddress, invalidURI, invalidAmount, noPaymentMethods
     case duplicateParameter(String), addressNetworkMismatch(String), unknownRequiredParameter(String)
-    case invalidMethods([SendDestinationError])
+    case invalidMethods([Self])
     case lnurlAuth
 
     var errorDescription: String? { message() }

@@ -54,7 +54,7 @@ struct SendReceipt: Codable, Equatable, Sendable {
     var confirmedConflictTxid: String?
     var chainStatus: ChainTransactionStatus?
     // Lookup failures are display state, never durable payment evidence.
-    var chainStatusError: String? = nil
+    var chainStatusError: String?
     private enum CodingKeys: String, CodingKey {
         case amount, txid, paymentHash, movementID, amountIsEstimated, amountIsPending, status, fee, proof
         case broadcastRetryPending, confirmedConflictTxid, chainStatus

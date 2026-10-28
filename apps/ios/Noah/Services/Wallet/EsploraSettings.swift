@@ -10,13 +10,13 @@ struct EsploraSettings: Sendable {
     struct Selection: Codable, Equatable, Sendable {
         var endpoint: String?
         var variant: String
-        var input: String? = nil
-        var attention: String? = nil
+        var input: String?
+        var attention: String?
     }
     struct Record: Codable, Equatable, Sendable {
         var active: Selection
-        var pending: Selection? = nil
-        var logEndpoints: [String]? = nil
+        var pending: Selection?
+        var logEndpoints: [String]?
     }
     let read: @Sendable (String) -> String?
     let write: @Sendable (String, String) throws -> Void

@@ -88,7 +88,7 @@ struct MotionCanvas {
 
     /// A layer whose content is drawn around `center`, moved by `offset`, scaled and faded.
     func layer(center: CGPoint, offset: CGSize = .zero, scale s: Double = 1, rotation: Double = 0, opacity: Double,
-               _ draw: (inout MotionCanvas) -> Void) {
+               _ draw: (inout Self) -> Void) {
         guard opacity > 0.001, s > 0.001 else { return }
         var copy = self
         copy.context.opacity *= min(1, opacity)

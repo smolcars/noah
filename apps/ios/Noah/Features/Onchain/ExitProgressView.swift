@@ -307,7 +307,7 @@ struct ExitStatusLine: View {
 
 /// Everything the progress page says about one exit, from the same state the picture uses.
 @MainActor struct ExitText {
-    struct Row { var label: String; var value: String; var numeric = false; var failure = false; var note: String? = nil }
+    struct Row { var label: String; var value: String; var numeric = false; var failure = false; var note: String? }
 
     let progress: ExitProgress
     let exit: ExitModel
@@ -416,7 +416,7 @@ struct ExitStatusLine: View {
         case .waiting:
             let left = progress.left(tip: tip) ?? 0
             guard left > 0 else { return tr("Unlocks at block {height}", block(progress.claimableHeight ?? tip)) }
-            return L10n.plural("Claimable in {n} blocks · {time}", count: Int(left), ExitText.about(left, language), locale: language)
+            return L10n.plural("Claimable in {n} blocks · {time}", count: Int(left), Self.about(left, language), locale: language)
         case .claimable: return tr("Unlocked at block {height}", block(progress.claimableHeight ?? tip))
         case .claiming: return tr("Claiming · waiting for block {height}", block(tip + 1))
         case .claimed: return tr("Claimed in block {height}", block(progress.claimedHeight ?? tip))
@@ -465,7 +465,7 @@ struct ExitStatusLine: View {
             if let took {
                 rows.append(.init(
                     label: tr("Took"),
-                    value: L10n.plural("{n} blocks · {time}", count: Int(took), ExitText.about(took, language), locale: language)))
+                    value: L10n.plural("{n} blocks · {time}", count: Int(took), Self.about(took, language), locale: language)))
             }
             return rows
         case .canceled:

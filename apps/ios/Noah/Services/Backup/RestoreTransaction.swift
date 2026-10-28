@@ -140,7 +140,7 @@ struct RestoreTransaction: Sendable {
     }
 
     /// The seed is saved: retain settings completion, then drop the journal last.
-    func finish(sync: @Sendable (URL) throws -> Void = RestoreTransaction.fullSync) throws {
+    func finish(sync: @Sendable (URL) throws -> Void = Self.fullSync) throws {
         try Data().write(to: settingsCompletion)
         try sync(settingsCompletion)
         try sync(directory)
@@ -269,7 +269,7 @@ struct RestoreTransaction: Sendable {
 
     /// Settled: the journal's removal is on disk before anyone else may touch
     /// the datadir, so it can't reappear after a power loss.
-    private func removeJournal(sync: @Sendable (URL) throws -> Void = RestoreTransaction.fullSync) throws {
+    private func removeJournal(sync: @Sendable (URL) throws -> Void = Self.fullSync) throws {
         try removeIfPresent(journalURL)
         try sync(directory)
     }

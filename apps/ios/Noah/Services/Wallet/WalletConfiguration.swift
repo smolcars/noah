@@ -34,10 +34,10 @@ struct WalletConfiguration: Equatable, Sendable {
 
     static func base(for variant: AppVariant, regtestHost: String = RegtestHost.host(),
                      regtestArkURL: String? = RegtestHost.arkURL(),
-                     regtestBitcoindURL: String? = RegtestHost.bitcoindURL()) -> WalletConfiguration {
+                     regtestBitcoindURL: String? = RegtestHost.bitcoindURL()) -> Self {
         switch variant {
         case .mainnet:
-            WalletConfiguration(
+            Self(
                 network: .bitcoin,
                 arkServer: "https://ark.second.tech",
                 esplora: "https://mempool.second.tech/api",
@@ -47,7 +47,7 @@ struct WalletConfiguration: Equatable, Sendable {
                 vtxoExitMargin: 12,
                 roundTxRequiredConfirmations: 2)
         case .signet:
-            WalletConfiguration(
+            Self(
                 network: .signet,
                 arkServer: "https://ark.signet.2nd.dev",
                 esplora: "https://esplora.signet.2nd.dev",
@@ -57,7 +57,7 @@ struct WalletConfiguration: Equatable, Sendable {
                 vtxoExitMargin: 12,
                 roundTxRequiredConfirmations: 1)
         case .regtest:
-            WalletConfiguration(
+            Self(
                 network: .regtest,
                 arkServer: regtestArkURL ?? "http://\(regtestHost):3535",
                 bitcoind: regtestBitcoindURL ?? "http://\(regtestHost):18443",
@@ -71,7 +71,7 @@ struct WalletConfiguration: Equatable, Sendable {
         }
     }
 
-    static func effective(for variant: AppVariant, endpoint: String?) -> WalletConfiguration {
+    static func effective(for variant: AppVariant, endpoint: String?) -> Self {
         var config = base(for: variant)
         if variant != .regtest, let endpoint, let normalized = try? EsploraEndpoint.normalize(endpoint) {
             config.esplora = normalized

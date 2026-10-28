@@ -277,7 +277,7 @@ actor BackupCoordinator {
     // MARK: State
 
     /// Applied in place, like the RN store's actions, so ordering holds.
-    private nonisolated func update(_ change: (inout PersistedBackupState) -> Void) {
+    nonisolated private func update(_ change: (inout PersistedBackupState) -> Void) {
         stateLock.withLock { _ in
             var state = dependencies.loadState()
             change(&state)
