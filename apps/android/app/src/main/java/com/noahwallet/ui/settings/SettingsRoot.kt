@@ -107,15 +107,9 @@ internal fun rememberDebugTaps(model: AppModel, live: SettingsLive): () -> Unit 
  * beside the list on wide windows.
  */
 @Composable
-internal fun SettingsRoot(model: AppModel, live: SettingsLive, nav: SettingsNav, selected: NavKey?, initialSheet: String? = null) {
-    val palette = LocalPalette.current
+internal fun SettingsRoot(model: AppModel, live: SettingsLive, nav: SettingsNav, selected: NavKey?, state: SettingsListState) {
     val context = LocalContext.current
-    val activity = context as? FragmentActivity
     val toasts = LocalSettingsToasts.current
-    // Keyed by name in the list's own holder (SettingsHost): compact and split compose the list from different places, so
-    // positional keys wouldn't carry its sheet and scroll across a fold.
-    var sheet by rememberSaveable(key = "settings-sheet") { mutableStateOf(initialSheet?.takeIf { it in setOf("unit", "currency", "language", "delete") }) }
-    val scroll = rememberSaveable(saver = ScrollState.Saver, key = "settings-scroll") { ScrollState(0) }
     val locale = Locale.forLanguageTag(model.localeIdentifier)
     val schedules = com.noahwallet.recurring.RecurringRuntime.shared(context).executor.schedules
     LaunchedEffect(Unit) { runCatching { com.noahwallet.recurring.RecurringRuntime.shared(context).executor.reload() } }
@@ -124,78 +118,13 @@ internal fun SettingsRoot(model: AppModel, live: SettingsLive, nav: SettingsNav,
     val address = model.server.state.lightningAddress?.takeIf { it.isNotEmpty() }
     val name = profileName(model) ?: address?.substringBefore('@')
     val tap = rememberDebugTaps(model, live)
-    fun money(sats: Long) = if (model.hidden) BitcoinAmount.format(0, model.amountUnit, locale).replace("0", "••••") else BitcoinAmount.format(sats,
-        model.amountUnit, locale)
     val open = nav.open
-    SettingsFrame(tr("Settings"), nav.back, scroll = scroll) {
+    SettingsFrame(tr("Settings"), nav.back, scroll = state.scroll) {
         Me(name ?: tr("Profile"), address, selected == SettingsDestination.Profile) { open(SettingsDestination.Profile) }
-        val backup = SettingsRules.backup(model.server.state.isBackupEnabled == true, live.backup.lastBackupStatus)
-        SettingsGroup(tr("Security"), rows = listOfNotNull(
-            { d -> SettingsRow(tr("Backup"), SettingsIcons.cloud, value = when (backup) {
-                SettingsRules.Backup.failed -> tr("Failed"); SettingsRules.Backup.running -> tr("Backing up…")
-                SettingsRules.Backup.on -> tr("On"); SettingsRules.Backup.off -> tr("Off")
-            }, dot = if (backup == SettingsRules.Backup.failed) RowDot.failure else null, failed = backup == SettingsRules.Backup.failed,
-                selected = selected == SettingsDestination.Backup, divider = d,
-                modifier = Modifier.testTag("settings-backup")) { open(SettingsDestination.Backup) } },
-            { d -> SettingsRow(tr("Recovery phrase"), SettingsIcons.key, value = if (!model.recoveryPhraseBackedUp) tr("Not saved") else null,
-                dot = if (!model.recoveryPhraseBackedUp) RowDot.attention else null, selected = selected == SettingsDestination.Seed, divider = d,
-                modifier = Modifier.testTag("settings-recovery")) { open(SettingsDestination.Seed) } },
-            if (activity != null && (WalletLock.available(activity) || model.walletLock.enabled)) ({ d ->
-                SettingsRow(tr("App lock"), SettingsIcons.finger, divider = d, modifier = Modifier.testTag("settings-app-lock"),
-                    end = RowEnd.Toggle(model.walletLock.enabled, !model.walletLock.authenticating && !model.busy) {
-                        model.action("Couldn't save authentication preference.") { model.walletLock.setEnabled(activity, it) }
-                    })
-            }) else null,
-        ))
-        val vtxos = SettingsRules.vtxos(live.overview?.vtxos)
-        val recurring = SettingsRules.recurring(schedules)
-        val onchain = model.summary?.balance?.onchain?.total?.toLong()
-        SettingsGroup(tr("Bitcoin"), rows = listOf(
-            { d -> SettingsRow(tr("VTXOs"), SettingsIcons.coins, value = when (vtxos) {
-                SettingsRules.Vtxos.Renew -> tr("Renew"); is SettingsRules.Vtxos.Count -> vtxos.count.toString(); SettingsRules.Vtxos.Unknown -> null
-            }, dot = if (vtxos == SettingsRules.Vtxos.Renew) RowDot.attention else null, selected = selected == SettingsDestination.Vtxos, divider = d,
-                modifier = Modifier.testTag("settings-vtxos")) { open(SettingsDestination.Vtxos) } },
-            { d -> SettingsRow(tr("On-chain"), SettingsIcons.chain, value = onchain?.let(::money), numeric = true,
-                selected = selected == SettingsDestination.Board, divider = d,
-                modifier = Modifier.testTag("settings-board-ark")) { open(SettingsDestination.Board) } },
-            { d -> SettingsRow(tr("Recurring payments"), SettingsIcons.repeat, value = when {
-                recurring.approve > 0 -> tr("Approve"); recurring.active > 0 -> tr("{n} active", recurring.active.toString()); else -> null
-            }, dot = if (recurring.approve > 0) RowDot.attention else null, selected = selected == SettingsDestination.Recurring, divider = d,
-                modifier = Modifier.testTag("settings-recurring-payments")) { open(SettingsDestination.Recurring) } },
-            // Decision 5 (exit.md): only while an exit runs, from its start until it's claimed or canceled.
-            { d -> SettingsRow(tr("Emergency exit"), SettingsIcons.exit,
-                value = if (com.noahwallet.onchain.ExitList.live(live.overview?.exits)) tr("In progress") else null,
-                selected = selected == SettingsDestination.Exits, divider = d,
-                modifier = Modifier.testTag("settings-emergencyExit")) { open(SettingsDestination.Exits) } },
-            { d -> SettingsRow(tr("Spend bitcoin nearby"), SettingsIcons.map, divider = d, modifier = Modifier.testTag("settings-btcmap")) { nav.map() } },
-        ))
-        SettingsGroup(tr("Display"), rows = listOf(
-            { d -> SettingsRow(tr("Bitcoin unit"), glyph = if (model.amountUnit == BitcoinAmountUnit.sats) "s" else "₿",
-                value = if (model.amountUnit == BitcoinAmountUnit.sats) tr("sats") else "₿", divider = d,
-                modifier = Modifier.testTag("settings-bitcoinUnit")) { sheet = "unit" } },
-            { d -> SettingsRow(tr("Currency"), SettingsIcons.cash, value = model.preferredCurrency, divider = d,
-                modifier = Modifier.testTag("settings-currency")) { sheet = "currency" } },
-            { d -> SettingsRow(tr("Language"), SettingsIcons.globe, value = preferenceName(Preference.language, model.localeIdentifier, locale), divider = d,
-                modifier = Modifier.testTag("settings-language")) { sheet = "language" } },
-            { d -> SettingsRow(tr("Hide amounts"), SettingsIcons.eyeOff, divider = d, modifier = Modifier.testTag("settings-hide-amounts"),
-                end = RowEnd.Toggle(model.hidden) { model.toggleBalance() }) },
-        ))
-        val notifications = live.permission
-        SettingsGroup(tr("App"), rows = listOf(
-            { d -> SettingsRow(tr("Notifications"),
-                if (notifications == PlatformGateRules.Permission.granted || notifications == PlatformGateRules.Permission.checking)
-                    SettingsIcons.bell else SettingsIcons.bellOff, value = when (notifications) {
-                    PlatformGateRules.Permission.granted -> tr("On"); PlatformGateRules.Permission.checking -> null; else -> tr("Off")
-                }, failed = notifications == PlatformGateRules.Permission.denied || notifications == PlatformGateRules.Permission.undetermined,
-                dot = if (notifications == PlatformGateRules.Permission.denied ||
-                    notifications == PlatformGateRules.Permission.undetermined) RowDot.failure else null,
-                selected = selected == SettingsDestination.Notifications, divider = d, modifier = Modifier.testTag("settings-notifications")) {
-                open(SettingsDestination.Notifications)
-            } },
-            { d -> SettingsRow(tr("Advanced"), SettingsIcons.sliders, value = if (model.isWalletSuspended) tr("Suspended") else null,
-                failed = model.isWalletSuspended, selected = selected == SettingsDestination.Advanced, divider = d,
-                modifier = Modifier.testTag("settings-advanced")) { open(SettingsDestination.Advanced) } },
-        ))
+        SecurityGroup(model, live, selected, open)
+        BitcoinGroup(model, live, schedules, selected, nav)
+        DisplayGroup(model, locale) { state.sheet = it }
+        AppGroup(model, live, selected, open)
         SettingsGroup(tr("Help"), rows = listOf(
             { d -> SettingsRow(tr("Feedback"), SettingsIcons.chat, selected = selected == SettingsDestination.Feedback, divider = d,
                 modifier = Modifier.testTag("settings-feedback")) { open(SettingsDestination.Feedback) } },
@@ -204,20 +133,138 @@ internal fun SettingsRoot(model: AppModel, live: SettingsLive, nav: SettingsNav,
         ))
         SettingsGroup(rows = listOf({ d ->
             SettingsRow(tr("Delete wallet"), SettingsIcons.trash, danger = true, divider = d, enabled = !model.busy,
-                modifier = Modifier.testTag("settings-delete-wallet")) { sheet = "delete" }
+                modifier = Modifier.testTag("settings-delete-wallet")) { state.sheet = "delete" }
         }))
-        Column(Modifier.fillMaxWidth().padding(top = 38.dp, bottom = 6.dp).clickable(role = Role.Button, onClickLabel = tr("Version")) { tap() }
-            .testTag("settings-version"), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text("Noah", style = TextStyle(fontFamily = NoahTokens.Display, fontWeight = FontWeight.SemiBold, fontSize = 20.sp, lineHeight = 20.sp,
-                letterSpacing = (-0.03).em), color = palette.foreground)
-            Text(versionText() + if (live.debug) " · " + tr("debug") else "", style = SettingsType.tick, color = palette.muted)
-        }
+        Wordmark(live.debug, tap)
     }
-    when (sheet) {
-        "unit" -> UnitSheet(model) { sheet = null }
-        "currency" -> CurrencySheet(model) { sheet = null }
-        "language" -> LanguageSheet(model) { sheet = null }
-        "delete" -> DeleteWalletSheet(model, live, onRecovery = { sheet = null; open(SettingsDestination.Seed) }) { sheet = null }
+    when (state.sheet) {
+        "unit" -> UnitSheet(model) { state.sheet = null }
+        "currency" -> CurrencySheet(model) { state.sheet = null }
+        "language" -> LanguageSheet(model) { state.sheet = null }
+        "delete" -> DeleteWalletSheet(model, live, state, onRecovery = { state.sheet = null; open(SettingsDestination.Seed) }) { state.sheet = null }
+    }
+}
+
+/**
+ * The list's sheet, its scroll and Delete wallet's typed word. SettingsHost keeps them at one place above the list:
+ * compact and split compose the list from different places, so state saved inside it wouldn't carry across a fold.
+ */
+@Stable
+internal class SettingsListState(private val shown: MutableState<String?>, val scroll: ScrollState, private val typedWord: MutableState<String>) {
+    /** The open sheet; leaving Delete wallet clears its typed word, as closing that sheet always has. */
+    var sheet: String?
+        get() = shown.value
+        set(value) {
+            if (value != "delete") typedWord.value = ""
+            shown.value = value
+        }
+    var typed by typedWord
+}
+
+@Composable
+internal fun rememberSettingsListState(initialSheet: String?) = SettingsListState(
+    rememberSaveable { mutableStateOf(initialSheet?.takeIf { it in setOf("unit", "currency", "language", "delete") }) },
+    rememberSaveable(saver = ScrollState.Saver) { ScrollState(0) },
+    rememberSaveable { mutableStateOf("") },
+)
+
+@Composable
+private fun SecurityGroup(model: AppModel, live: SettingsLive, selected: NavKey?, open: (NavKey) -> Unit) {
+    val activity = LocalContext.current as? FragmentActivity
+    val backup = SettingsRules.backup(model.server.state.isBackupEnabled == true, live.backup.lastBackupStatus)
+    SettingsGroup(tr("Security"), rows = listOfNotNull(
+        { d -> SettingsRow(tr("Backup"), SettingsIcons.cloud, value = when (backup) {
+            SettingsRules.Backup.failed -> tr("Failed"); SettingsRules.Backup.running -> tr("Backing up…")
+            SettingsRules.Backup.on -> tr("On"); SettingsRules.Backup.off -> tr("Off")
+        }, dot = if (backup == SettingsRules.Backup.failed) RowDot.failure else null, failed = backup == SettingsRules.Backup.failed,
+            selected = selected == SettingsDestination.Backup, divider = d,
+            modifier = Modifier.testTag("settings-backup")) { open(SettingsDestination.Backup) } },
+        { d -> SettingsRow(tr("Recovery phrase"), SettingsIcons.key, value = if (!model.recoveryPhraseBackedUp) tr("Not saved") else null,
+            dot = if (!model.recoveryPhraseBackedUp) RowDot.attention else null, selected = selected == SettingsDestination.Seed, divider = d,
+            modifier = Modifier.testTag("settings-recovery")) { open(SettingsDestination.Seed) } },
+        if (activity != null && (WalletLock.available(activity) || model.walletLock.enabled)) ({ d ->
+            SettingsRow(tr("App lock"), SettingsIcons.finger, divider = d, modifier = Modifier.testTag("settings-app-lock"),
+                end = RowEnd.Toggle(model.walletLock.enabled, !model.walletLock.authenticating && !model.busy) {
+                    model.action("Couldn't save authentication preference.") { model.walletLock.setEnabled(activity, it) }
+                })
+        }) else null,
+    ))
+}
+
+@Composable
+private fun BitcoinGroup(model: AppModel, live: SettingsLive, schedules: List<com.noahwallet.recurring.RecurringPayment>, selected: NavKey?,
+    nav: SettingsNav) {
+    val locale = Locale.forLanguageTag(model.localeIdentifier)
+    val open = nav.open
+    fun money(sats: Long) = if (model.hidden) BitcoinAmount.format(0, model.amountUnit, locale).replace("0", "••••")
+    else BitcoinAmount.format(sats, model.amountUnit, locale)
+    val vtxos = SettingsRules.vtxos(live.overview?.vtxos)
+    val recurring = SettingsRules.recurring(schedules)
+    val onchain = model.summary?.balance?.onchain?.total?.toLong()
+    SettingsGroup(tr("Bitcoin"), rows = listOf(
+        { d -> SettingsRow(tr("VTXOs"), SettingsIcons.coins, value = when (vtxos) {
+            SettingsRules.Vtxos.Renew -> tr("Renew"); is SettingsRules.Vtxos.Count -> vtxos.count.toString(); SettingsRules.Vtxos.Unknown -> null
+        }, dot = if (vtxos == SettingsRules.Vtxos.Renew) RowDot.attention else null, selected = selected == SettingsDestination.Vtxos, divider = d,
+            modifier = Modifier.testTag("settings-vtxos")) { open(SettingsDestination.Vtxos) } },
+        { d -> SettingsRow(tr("On-chain"), SettingsIcons.chain, value = onchain?.let(::money), numeric = true,
+            selected = selected == SettingsDestination.Board, divider = d,
+            modifier = Modifier.testTag("settings-board-ark")) { open(SettingsDestination.Board) } },
+        { d -> SettingsRow(tr("Recurring payments"), SettingsIcons.repeat, value = when {
+            recurring.approve > 0 -> tr("Approve"); recurring.active > 0 -> tr("{n} active", recurring.active.toString()); else -> null
+        }, dot = if (recurring.approve > 0) RowDot.attention else null, selected = selected == SettingsDestination.Recurring, divider = d,
+            modifier = Modifier.testTag("settings-recurring-payments")) { open(SettingsDestination.Recurring) } },
+        // Decision 5 (exit.md): only while an exit runs, from its start until it's claimed or canceled.
+        { d -> SettingsRow(tr("Emergency exit"), SettingsIcons.exit,
+            value = if (com.noahwallet.onchain.ExitList.live(live.overview?.exits)) tr("In progress") else null,
+            selected = selected == SettingsDestination.Exits, divider = d,
+            modifier = Modifier.testTag("settings-emergencyExit")) { open(SettingsDestination.Exits) } },
+        { d -> SettingsRow(tr("Spend bitcoin nearby"), SettingsIcons.map, divider = d, modifier = Modifier.testTag("settings-btcmap")) { nav.map() } },
+    ))
+}
+
+@Composable
+private fun DisplayGroup(model: AppModel, locale: Locale, sheet: (String) -> Unit) {
+    val sats = model.amountUnit == BitcoinAmountUnit.sats
+    SettingsGroup(tr("Display"), rows = listOf(
+        { d -> SettingsRow(tr("Bitcoin unit"), glyph = if (sats) "s" else "₿",
+            value = if (sats) tr("sats") else "₿", divider = d,
+            modifier = Modifier.testTag("settings-bitcoinUnit")) { sheet("unit") } },
+        { d -> SettingsRow(tr("Currency"), SettingsIcons.cash, value = model.preferredCurrency, divider = d,
+            modifier = Modifier.testTag("settings-currency")) { sheet("currency") } },
+        { d -> SettingsRow(tr("Language"), SettingsIcons.globe, value = preferenceName(Preference.language, model.localeIdentifier, locale), divider = d,
+            modifier = Modifier.testTag("settings-language")) { sheet("language") } },
+        { d -> SettingsRow(tr("Hide amounts"), SettingsIcons.eyeOff, divider = d, modifier = Modifier.testTag("settings-hide-amounts"),
+            end = RowEnd.Toggle(model.hidden) { model.toggleBalance() }) },
+    ))
+}
+
+@Composable
+private fun AppGroup(model: AppModel, live: SettingsLive, selected: NavKey?, open: (NavKey) -> Unit) {
+    val notifications = live.permission
+    val on = notifications == PlatformGateRules.Permission.granted || notifications == PlatformGateRules.Permission.checking
+    val blocked = notifications == PlatformGateRules.Permission.denied || notifications == PlatformGateRules.Permission.undetermined
+    SettingsGroup(tr("App"), rows = listOf(
+        { d -> SettingsRow(tr("Notifications"), if (on) SettingsIcons.bell else SettingsIcons.bellOff, value = when (notifications) {
+            PlatformGateRules.Permission.granted -> tr("On"); PlatformGateRules.Permission.checking -> null; else -> tr("Off")
+        }, failed = blocked, dot = if (blocked) RowDot.failure else null,
+            selected = selected == SettingsDestination.Notifications, divider = d, modifier = Modifier.testTag("settings-notifications")) {
+            open(SettingsDestination.Notifications)
+        } },
+        { d -> SettingsRow(tr("Advanced"), SettingsIcons.sliders, value = if (model.isWalletSuspended) tr("Suspended") else null,
+            failed = model.isWalletSuspended, selected = selected == SettingsDestination.Advanced, divider = d,
+            modifier = Modifier.testTag("settings-advanced")) { open(SettingsDestination.Advanced) } },
+    ))
+}
+
+/** The wordmark and version at the foot; tapping it is the debug menu's way in. */
+@Composable
+private fun Wordmark(debug: Boolean, tap: () -> Unit) {
+    val palette = LocalPalette.current
+    Column(Modifier.fillMaxWidth().padding(top = 38.dp, bottom = 6.dp).clickable(role = Role.Button, onClickLabel = tr("Version")) { tap() }
+        .testTag("settings-version"), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Text("Noah", style = TextStyle(fontFamily = NoahTokens.Display, fontWeight = FontWeight.SemiBold, fontSize = 20.sp, lineHeight = 20.sp,
+            letterSpacing = (-0.03).em), color = palette.foreground)
+        Text(versionText() + if (debug) " · " + tr("debug") else "", style = SettingsType.tick, color = palette.muted)
     }
 }
 
@@ -318,16 +365,33 @@ private fun LanguageSheet(model: AppModel, dismiss: () -> Unit) {
     }
 }
 
+/** What you'd need to restore: the balance, whether the phrase is saved ([onRecovery] goes to save it) and the last backup. */
+@Composable
+private fun DeleteChecklist(model: AppModel, checklist: SettingsRules.DeleteChecklist, onRecovery: (() -> Unit)?) {
+    val locale = Locale.forLanguageTag(model.localeIdentifier)
+    val toasts = LocalSettingsToasts.current
+    Column(Modifier.padding(top = 12.dp)) {
+        DetailRow(tr("In this wallet"), checklist.balance?.let { if (model.hidden) "₿••••" else BitcoinAmount.format(it, model.amountUnit, locale) } ?: "—",
+            ValueKind.number, toasts = toasts)
+        DetailRow(tr("Recovery phrase"), if (checklist.phraseSaved) tr("Saved") else tr("Not saved"), toasts = toasts, failed = !checklist.phraseSaved,
+            onClick = onRecovery)
+        DetailRow(tr("Last backup"), when {
+            checklist.backupFailed -> tr("Failed")
+            checklist.lastBackupAt != null -> java.text.DateFormat.getDateTimeInstance(java.text.DateFormat.MEDIUM, java.text.DateFormat.SHORT, locale)
+                .format(java.util.Date(checklist.lastBackupAt))
+            else -> tr("Never")
+        }, toasts = toasts, failed = checklist.backupFailed, last = true)
+    }
+}
+
 /**
  * Delete wallet: what you'd need to restore (balance, phrase, last backup), then typed "delete". The sheet locks while
  * deleting; success returns to onboarding as today.
  */
 @Composable
-internal fun DeleteWalletSheet(model: AppModel, live: SettingsLive, onRecovery: () -> Unit, dismiss: () -> Unit) {
+internal fun DeleteWalletSheet(model: AppModel, live: SettingsLive, state: SettingsListState, onRecovery: () -> Unit, dismiss: () -> Unit) {
     val palette = LocalPalette.current
-    val locale = Locale.forLanguageTag(model.localeIdentifier)
-    val toasts = LocalSettingsToasts.current
-    var typed by rememberSaveable(key = "delete-typed") { mutableStateOf("") }
+    var typed by state::typed
     // From the model: a fold or rotation mid-delete keeps the sheet locked and still hears how it ended.
     val deleting = model.deletingWallet
     val error = model.deleteWalletError
@@ -339,18 +403,7 @@ internal fun DeleteWalletSheet(model: AppModel, live: SettingsLive, onRecovery: 
     SettingsSheet({ if (!deleting) { model.deleteWalletError = null; dismiss() } }, tr("Delete wallet"),
         tr("This removes the wallet and its recovery phrase from this phone. It can’t be undone."), locked = deleting,
         modifier = Modifier.testTag("delete-wallet-sheet")) { close ->
-        Column(Modifier.padding(top = 12.dp)) {
-            DetailRow(tr("In this wallet"), checklist.balance?.let { if (model.hidden) "₿••••" else BitcoinAmount.format(it, model.amountUnit, locale) } ?: "—",
-                ValueKind.number, toasts = toasts)
-            DetailRow(tr("Recovery phrase"), if (checklist.phraseSaved) tr("Saved") else tr("Not saved"), toasts = toasts, failed = !checklist.phraseSaved,
-                onClick = if (checklist.phraseSaved || deleting) null else onRecovery)
-            DetailRow(tr("Last backup"), when {
-                checklist.backupFailed -> tr("Failed")
-                checklist.lastBackupAt != null -> java.text.DateFormat.getDateTimeInstance(java.text.DateFormat.MEDIUM, java.text.DateFormat.SHORT, locale)
-                    .format(java.util.Date(checklist.lastBackupAt))
-                else -> tr("Never")
-            }, toasts = toasts, failed = checklist.backupFailed, last = true)
-        }
+        DeleteChecklist(model, checklist, onRecovery.takeIf { !checklist.phraseSaved && !deleting })
         SettingsField(typed, { typed = it; model.deleteWalletError = null }, tr("Type delete to confirm"), Modifier.testTag("delete-wallet-input"),
             enabled = !deleting,
             keyboard = KeyboardOptions(capitalization = KeyboardCapitalization.None, autoCorrectEnabled = false))
