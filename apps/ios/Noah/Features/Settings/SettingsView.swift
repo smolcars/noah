@@ -111,14 +111,26 @@ struct SettingsList: View {
                 bitcoin
                 display
                 SettingsGroup(label: "App") {
-                    row("Notifications", icon: "bell", value: notificationsValue, dot: summary.notificationsOn == false ? .failure : .hidden,
-                        failure: summary.notificationsOn == false, page: .notifications, id: "settings-notifications")
-                    row("Advanced", icon: "slider.horizontal.3", value: app.isWalletSuspended ? L10n.text("Suspended", locale: language) : nil,
-                        failure: app.isWalletSuspended, page: .advanced, last: true, id: "settings-advanced")
+                    row(
+                        "Notifications",
+                        icon: "bell",
+                        page: .notifications,
+                        id: "settings-notifications",
+                        value: notificationsValue,
+                        dot: summary.notificationsOn == false ? .failure : .hidden,
+                        failure: summary.notificationsOn == false)
+                    row(
+                        "Advanced",
+                        icon: "slider.horizontal.3",
+                        page: .advanced,
+                        id: "settings-advanced",
+                        value: app.isWalletSuspended ? L10n.text("Suspended", locale: language) : nil,
+                        failure: app.isWalletSuspended,
+                        last: true)
                 }
                 SettingsGroup(label: "Help") {
                     row("Feedback", icon: "bubble.left", page: .feedback, id: "settings-feedback")
-                    row("About Noah", icon: "sailboat", page: .about, last: true, id: "settings-about")
+                    row("About Noah", icon: "sailboat", page: .about, id: "settings-about", last: true)
                 }
                 SettingsGroup {
                     SettingsRow(icon: "trash", title: L10n.text("Delete wallet", locale: language), danger: true, hairline: false,
@@ -206,11 +218,22 @@ struct SettingsList: View {
     private var security: some View {
         SettingsGroup(label: "Security") {
             let backup = BackupStatus(summary.backup, enabled: app.server.state.isBackupEnabled == true)
-            row("Backup", icon: "icloud.and.arrow.up", value: L10n.text(backup.rowValue(enabled: app.server.state.isBackupEnabled == true), locale: language),
-                dot: backup.mark == .failed ? .failure : .hidden, failure: backup.mark == .failed, page: .backup, id: "settings-backup")
-            row("Recovery phrase", icon: "key", value: app.needsRecoveryPhraseBackup ? L10n.text("Not saved", locale: language) : nil,
-                dot: app.needsRecoveryPhraseBackup ? .attention : .hidden, page: .recovery,
-                last: !(lock.available || lock.policy.enabled), id: "settings-recovery")
+            row(
+                "Backup",
+                icon: "icloud.and.arrow.up",
+                page: .backup,
+                id: "settings-backup",
+                value: L10n.text(backup.rowValue(enabled: app.server.state.isBackupEnabled == true), locale: language),
+                dot: backup.mark == .failed ? .failure : .hidden,
+                failure: backup.mark == .failed)
+            row(
+                "Recovery phrase",
+                icon: "key",
+                page: .recovery,
+                id: "settings-recovery",
+                value: app.needsRecoveryPhraseBackup ? L10n.text("Not saved", locale: language) : nil,
+                dot: app.needsRecoveryPhraseBackup ? .attention : .hidden,
+                last: !(lock.available || lock.policy.enabled))
             if lock.available || lock.policy.enabled {
                 SettingsToggleRow(icon: lock.biometry.symbol, title: L10n.text(lock.biometry.title, locale: language),
                                   isOn: Binding(get: { lock.policy.enabled }, set: setLock), hairline: false, id: "settings-app-lock")
@@ -226,25 +249,32 @@ struct SettingsList: View {
             row(
                 "VTXOs",
                 icon: "cylinder.split.1x2",
-                value: summary.overview == nil ? nil : due ? L10n.text("Renew", locale: language) : vtxos.count.formatted(.number.locale(locale)),
-                dot: due ? .attention : .hidden,
                 page: .vtxos,
-                id: "settings-vtxos")
+                id: "settings-vtxos",
+                value: summary.overview == nil ? nil : due ? L10n.text("Renew", locale: language) : vtxos.count.formatted(.number.locale(locale)),
+                dot: due ? .attention : .hidden)
             row(
                 "On-chain",
                 icon: "link",
-                value: walletSummary.map { money($0.balance.onchain.confirmed) },
-                numeric: true,
                 page: .onchain,
-                id: "settings-onchain")
+                id: "settings-onchain",
+                value: walletSummary.map { money($0.balance.onchain.confirmed) },
+                numeric: true)
             let approvals = executor.schedules.count(where: { $0.status == "needs_approval" })
             let active = executor.schedules.count(where: { $0.status == "active" })
-            row("Recurring payments", icon: "arrow.triangle.2.circlepath",
+            row(
+                "Recurring payments",
+                icon: "arrow.triangle.2.circlepath",
+                page: .recurring,
+                id: "settings-recurring-payments",
                 value: approvals > 0 ? L10n.text("Approve", locale: language) : active > 0 ? L10n.text("{n} active", active, locale: language) : nil,
-                dot: approvals > 0 ? .attention : .hidden, page: .recurring, id: "settings-recurring-payments")
-            row("Emergency exit", icon: "rectangle.portrait.and.arrow.right",
-                value: ExitRules.settingsValue(summary.overview?.exits ?? []).map { L10n.text($0, locale: language) }, page: .exit,
-                id: "settings-emergencyExit")
+                dot: approvals > 0 ? .attention : .hidden)
+            row(
+                "Emergency exit",
+                icon: "rectangle.portrait.and.arrow.right",
+                page: .exit,
+                id: "settings-emergencyExit",
+                value: ExitRules.settingsValue(summary.overview?.exits ?? []).map { L10n.text($0, locale: language) })
             SettingsRow(icon: "map", title: L10n.text("Spend bitcoin nearby", locale: language), hairline: false, id: "settings-btcmap") {
                 haptics.play(.light)
                 settings.map()
@@ -296,8 +326,8 @@ struct SettingsList: View {
 
     // MARK: Actions
 
-    private func row(_ title: String, icon: String, value: String? = nil, numeric: Bool = false, dot: SettingsRow.Dot = .hidden,
-                     failure: Bool = false, page: SettingsPage, last: Bool = false, id: String) -> some View {
+    private func row(_ title: String, icon: String, page: SettingsPage, id: String, value: String? = nil, numeric: Bool = false,
+                     dot: SettingsRow.Dot = .hidden, failure: Bool = false, last: Bool = false) -> some View {
         SettingsRow(icon: icon, title: L10n.text(title, locale: language), value: value, numeric: numeric, dot: dot, failure: failure,
                     selected: selected == page, hairline: !last, id: id) {
             haptics.play(.light)

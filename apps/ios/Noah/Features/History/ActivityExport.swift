@@ -16,13 +16,13 @@ struct ActivityExportSheet: View {
 
     nonisolated static let fileName = "noah_transactions.csv"
 
-    private var count: Int { transactions.filter(HistoryCSV.exports).count }
+    private var exportCount: Int { transactions.filter(HistoryCSV.exports).count }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             Text("Export activity").noahText(NoahTokens.Typography.sheetTitle).accessibilityAddTraits(.isHeader)
                 .padding(.bottom, 6)
-            Text(verbatim: filter.exportSentence(count: count, locale: locale.identifier))
+            Text(verbatim: filter.exportSentence(count: exportCount, locale: locale.identifier))
                 .noahText(NoahTokens.Typography.sub).foregroundStyle(NoahTokens.Colors.muted)
             HStack(spacing: 14) {
                 Image(systemName: "doc.text").accessibilityHidden(true).font(.system(size: 24, weight: .regular)).frame(width: 26)
@@ -50,7 +50,7 @@ struct ActivityExportSheet: View {
                     Text(working ? "Exporting…" : "Export").frame(maxWidth: .infinity)
                 }
                 .buttonStyle(HomePillStyle(height: 52, font: NoahTokens.Typography.button))
-                .disabled(count == 0 || working)
+                .disabled(exportCount == 0 || working)
                 .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { anchor = $0 }
                 .accessibilityIdentifier("activity-export-confirm")
             }

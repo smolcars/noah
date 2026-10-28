@@ -30,7 +30,7 @@ struct SendConfirmation: View {
 
     private var isWide: Bool { wide ?? window.wide }
     private var label: SendRecipientLabel {
-        recipient ?? .of(destination: payment.destination, payment: payment, ownDomain: LightningIdentity.domain(for: .current))
+        recipient ?? .of(destination: payment.destination, ownDomain: LightningIdentity.domain(for: .current), payment: payment)
     }
     private func format(_ sats: UInt64) -> String { BitcoinAmount.format(sats: Int64(clamping: sats), unit: unit, locale: locale) }
 

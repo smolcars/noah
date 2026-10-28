@@ -407,6 +407,7 @@ struct SendView: View {
     }
 
     private var toField: some View {
+        // swiftlint:disable:next accessibility_trait_for_button - the tap only focuses the field; the TextField is the accessible control
         HStack(spacing: 10) {
             Text("To").noahText(NoahTokens.Typography.label).foregroundStyle(NoahTokens.Colors.muted)
             TextField("Name, address or invoice", text: $model.destination)
@@ -771,7 +772,7 @@ struct SendView: View {
                 },
                 btcPrice: model.btcPrice, fiatCurrency: model.fiatCurrency, payment: payment, quote: quote,
                 controller: model.controller, cancel: cancelReview, done: finish, onLeave: onLeave,
-                unit: unit, recipient: .of(destination: model.destination, payment: payment, ownDomain: ownDomain),
+                unit: unit, recipient: .of(destination: model.destination, ownDomain: ownDomain, payment: payment),
                 invoiceNote: invoiceNote, wide: wide, sideInsets: (window.insets.leading, window.insets.trailing), clock: clock,
                 gate: holdGate, chainTip: chainTip)
         } else {

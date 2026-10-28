@@ -258,10 +258,10 @@ enum ExitGutterPainter {
         canvas.fill(canvas.circle(p.x, p.y, 10), (coin.ink ? colors.foreground : colors.soft).opacity(alpha))
         canvas.stroke(canvas.circle(p.x, p.y, 10), (coin.canceled ? colors.muted : colors.orange).opacity(alpha), 1.9)
         if coin.claimed {
-            canvas.layer(center: CGPoint(x: p.x + 8, y: p.y + 8), scale: 0.62, opacity: 1) { $0.checkBadge(p.x + 8, p.y + 8) }
+            canvas.layer(center: CGPoint(x: p.x + 8, y: p.y + 8), opacity: 1, scale: 0.62) { $0.checkBadge(p.x + 8, p.y + 8) }
         }
         if coin.lock != nil {
-            canvas.layer(center: CGPoint(x: p.x + 8, y: p.y + 15), scale: 10 / 24, opacity: 1) { pad in
+            canvas.layer(center: CGPoint(x: p.x + 8, y: p.y + 15), opacity: 1, scale: 10 / 24) { pad in
                 pad.padlockBody(p.x + 8, p.y + 8)
                 pad.shackle(p.x + 8, p.y + 8, open: 0)
             }

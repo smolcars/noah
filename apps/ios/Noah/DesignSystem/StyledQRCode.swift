@@ -230,7 +230,7 @@ private struct QRLogoTile: View {
                 .fill(Color.white)
                 .frame(width: tile.width, height: tile.height)
                 .offset(x: tile.minX, y: tile.minY)
-            Image("QRLogo")
+            Image(.qrLogo)
                 .resizable()
                 .accessibilityHidden(true)
                 .scaledToFill()

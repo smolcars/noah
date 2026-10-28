@@ -87,7 +87,7 @@ struct MotionCanvas {
     func point(_ x: Double, _ y: Double) -> CGPoint { CGPoint(x: origin.x + x * scale, y: origin.y + y * scale) }
 
     /// A layer whose content is drawn around `center`, moved by `offset`, scaled and faded.
-    func layer(center: CGPoint, offset: CGSize = .zero, scale s: Double = 1, rotation: Double = 0, opacity: Double,
+    func layer(center: CGPoint, opacity: Double, offset: CGSize = .zero, scale s: Double = 1, rotation: Double = 0,
                _ draw: (inout Self) -> Void) {
         guard opacity > 0.001, s > 0.001 else { return }
         var copy = self
@@ -118,8 +118,8 @@ struct MotionCanvas {
         return path
     }
 
-    func text(_ string: String, _ x: Double, _ y: Double, size: Double, weight: Font.Weight = .semibold,
-              color: Color, display: Bool = true) {
+    func text(_ string: String, _ x: Double, _ y: Double, size: Double, color: Color,
+              weight: Font.Weight = .semibold, display: Bool = true) {
         let font: Font = display
             ? .custom(weight == .semibold ? "SpaceGrotesk-SemiBold" : "SpaceGrotesk-Medium", fixedSize: size * scale)
             : .system(size: size * scale, weight: weight)
@@ -239,7 +239,7 @@ struct ChainBlockRow {
             let rect = CGRect(x: canvas.point(x, y).x, y: canvas.point(x, y).y, width: size * canvas.scale, height: size * canvas.scale)
             canvas.fill(Path(roundedRect: rect, cornerRadius: 7 * canvas.scale), colors.foreground.opacity((0.55 + Double(index) * 0.15) * fade))
             if tip != nil || confirmed {
-                canvas.text(height(h), x + size / 2, y + size + 14, size: label, weight: .medium, color: colors.muted.opacity(fade))
+                canvas.text(height(h), x + size / 2, y + size + 14, size: label, color: colors.muted.opacity(fade), weight: .medium)
             }
         }
         // The block that held your transaction.
@@ -254,14 +254,14 @@ struct ChainBlockRow {
             bounced.context.translateBy(x: -center.x, y: -center.y)
             bounced.fill(Path(roundedRect: txRect, cornerRadius: 6 * canvas.scale), colors.foreground)
             if dot { bounced.fill(bounced.circle(txX + size / 2, y + size / 2, 6), colors.background) }
-            canvas.text(height(confirmedHeight), txX + size / 2, y + size + 14, size: label, weight: .medium, color: colors.foreground)
+            canvas.text(height(confirmedHeight), txX + size / 2, y + size + 14, size: label, color: colors.foreground, weight: .medium)
             // A fresh "next" block slides in behind it.
             let nextX = txX + gap
             let nextRect = CGRect(x: canvas.point(nextX, y).x, y: canvas.point(nextX, y).y, width: size * canvas.scale, height: size * canvas.scale)
             var next = canvas
             next.context.opacity *= time.o(confirmedAt ?? 0, .snappy)
             next.stroke(Path(roundedRect: nextRect, cornerRadius: 6 * canvas.scale), colors.foreground, 2, dash: [4, 4])
-            next.text(nextLabel, nextX + size / 2, y + size + 14, size: label, weight: .medium, color: colors.muted)
+            next.text(nextLabel, nextX + size / 2, y + size + 14, size: label, color: colors.muted, weight: .medium)
         } else {
             var pending = canvas
             if blinking, !time.reduceMotion {
@@ -270,7 +270,7 @@ struct ChainBlockRow {
                 pending.context.opacity *= phase < 1 ? 1 - 0.7 * phase : 0.3 + 0.7 * (phase - 1)
             }
             pending.stroke(Path(roundedRect: txRect, cornerRadius: 6 * canvas.scale), colors.foreground, 2, dash: [4, 4])
-            canvas.text(nextLabel, txX + size / 2, y + size + 14, size: label, weight: .medium, color: colors.muted)
+            canvas.text(nextLabel, txX + size / 2, y + size + 14, size: label, color: colors.muted, weight: .medium)
             if dot, let heldAt, time.t >= heldAt { canvas.fill(canvas.circle(slot.x, slot.y, 6), colors.orange) }
         }
     }

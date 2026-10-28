@@ -176,7 +176,7 @@ private struct ProfileNameSheet: View {
     }
 
     private func save() {
-        Task {
+        Task<Void, Never> {
             guard let saved = await draft.save({ try await model.server.saveDisplayName($0) }) else { return }
             summary?.reloadLocal()
             haptics.play(.success)

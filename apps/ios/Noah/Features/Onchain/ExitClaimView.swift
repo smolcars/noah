@@ -71,8 +71,11 @@ struct ExitClaimView: View {
                     SettingsFine(text: L10n.text("Enter an on-chain Bitcoin address for this network.", locale: language), failure: true)
                 }
             }
-            option(L10n.text("This phone’s on-chain wallet", locale: language), sub: L10n.text("Noah won’t move these back to Ark.", locale: language),
-                   selected: toPhone, id: "exit-claim-phone") { choose(phone: true) }
+            option(
+                L10n.text("This phone’s on-chain wallet", locale: language),
+                selected: toPhone,
+                id: "exit-claim-phone",
+                sub: L10n.text("Noah won’t move these back to Ark.", locale: language)) { choose(phone: true) }
                 .disabled(model.busy)
                 .padding(.top, toPhone ? 0 : 8)
             VStack(spacing: 0) {
@@ -180,7 +183,7 @@ struct ExitClaimView: View {
         }
     }
 
-    private func option(_ title: String, sub: String? = nil, selected: Bool, id: String, action: @escaping () -> Void) -> some View {
+    private func option(_ title: String, selected: Bool, id: String, action: @escaping () -> Void, sub: String? = nil) -> some View {
         Button(action: action) {
             SettingsRowLabel(title: title, sub: sub, hairline: false) {
                 Image(systemName: selected ? "largecircle.fill.circle" : "circle").accessibilityHidden(true)

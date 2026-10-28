@@ -764,7 +764,7 @@ struct ExitStagePainter {
         let target = ExitStageStill(s), new = labels(s, ys: g.levels(target.mined, lock: target.lock))
         let arrangement = arrange(s, ys: ys, lock: f.lock, labels: new)
         func Y(_ level: Int) -> Double { ys[safe: level] ?? yC }
-        func text(_ string: String, _ x: Double, _ y: Double, size: Double, strong: Bool = false, color: Color, anchor: UnitPoint = .leading,
+        func text(_ string: String, _ x: Double, _ y: Double, size: Double, color: Color, strong: Bool = false, anchor: UnitPoint = .leading,
                   opacity: Double = 1) {
             guard opacity > 0.01 else { return }
             var layer = context
@@ -1112,7 +1112,7 @@ struct ExitStagePainter {
             c.fill(c.circle(cx + cos(angle) * R, cy + sin(angle) * R, 3.4), colors.orange.opacity(0.55 + 0.45 * breathe))
         }
         let px = cx + g.coinRadius * 0.78, py = cy + g.coinRadius * 0.72
-        canvas.layer(center: CGPoint(x: px, y: py + 7), scale: 15 / 24 * max(0, f.padlock), opacity: 1 - f.stem) { pad in
+        canvas.layer(center: CGPoint(x: px, y: py + 7), opacity: 1 - f.stem, scale: 15 / 24 * max(0, f.padlock)) { pad in
             pad.padlockBody(px, py)
             pad.shackle(px, py, open: f.open)
         }
@@ -1142,13 +1142,13 @@ struct ExitStagePainter {
         let alpha = claiming ? 1 : f.wallet
         guard alpha > 0.01 else { return }
         let center = CGPoint(x: g.walletX, y: g.walletY), grow = 1 + 0.12 * f.destPop.clamped(0, 1.2)
-        canvas.layer(center: center, scale: grow, opacity: alpha * (1 - f.toOther)) { badge in
+        canvas.layer(center: center, opacity: alpha * (1 - f.toOther), scale: grow) { badge in
             badge.fill(badge.circle(center.x, center.y, 15), colors.background)
             badge.stroke(badge.circle(center.x, center.y, 15), alarm ? NoahTokens.Colors.failure : colors.hairline, 1.5)
             badge.symbol("iphone", center.x, center.y, size: 15, color: colors.foreground)
         }
         if f.toOther > 0.01 {
-            canvas.layer(center: center, scale: grow, opacity: f.toOther) { badge in
+            canvas.layer(center: center, opacity: f.toOther, scale: grow) { badge in
                 badge.fill(badge.circle(center.x, center.y, 15), colors.background)
                 badge.stroke(badge.circle(center.x, center.y, 15), colors.hairline, 1.5)
                 badge.symbol("wallet.bifold", center.x, center.y, size: 14, color: colors.foreground)
@@ -1165,7 +1165,7 @@ struct ExitStagePainter {
             canvas.context.stroke(ring, with: .color(colors.orange), lineWidth: 2.2)
         }
         if f.destPop > 0.001 {
-            canvas.layer(center: CGPoint(x: center.x + 15, y: center.y - 15), scale: 0.9 * f.destPop.clamped(0, 1.2), opacity: 1) { mark in
+            canvas.layer(center: CGPoint(x: center.x + 15, y: center.y - 15), opacity: 1, scale: 0.9 * f.destPop.clamped(0, 1.2)) { mark in
                 mark.checkBadge(center.x + 15, center.y - 15)
             }
         }

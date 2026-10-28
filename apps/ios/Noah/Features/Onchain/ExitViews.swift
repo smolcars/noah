@@ -251,7 +251,7 @@ struct ExitPathRail: View {
             canvas.stroke(canvas.line(CGPoint(x: cx + cos(angle) * 16, y: y + sin(angle) * 16), CGPoint(x: cx + cos(angle) * r1, y: y + sin(angle) * r1)),
                           colors.muted.opacity(0.5), 1)
         }
-        canvas.layer(center: CGPoint(x: cx, y: y + 6), scale: 0.5, opacity: 1) { pad in
+        canvas.layer(center: CGPoint(x: cx, y: y + 6), opacity: 1, scale: 0.5) { pad in
             pad.padlockBody(cx, y - 1)
             pad.shackle(cx, y - 1, open: 0)
         }

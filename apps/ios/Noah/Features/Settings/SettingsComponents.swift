@@ -561,6 +561,7 @@ struct SettingsField: View {
             if let label {
                 Text(verbatim: label).noahText(HomeText.section).foregroundStyle(NoahTokens.Colors.muted)
             }
+            // swiftlint:disable:next accessibility_trait_for_button - the tap only focuses the field; the TextField is the accessible control
             HStack(spacing: 10) {
                 Group {
                     if multiline {

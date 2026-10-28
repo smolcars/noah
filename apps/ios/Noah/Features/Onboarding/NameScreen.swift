@@ -125,6 +125,7 @@ struct NameHandleField: View {
     @Environment(\.locale) private var locale
 
     var body: some View {
+        // swiftlint:disable:next accessibility_trait_for_button - the tap only focuses the field; the TextField is the accessible control
         VStack(alignment: .leading, spacing: 12) {
             WrapLayout(spacing: 3, lineSpacing: 0) {
                 Text(verbatim: name.text.isEmpty ? L10n.text("name", locale: locale.identifier) : name.text)

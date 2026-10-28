@@ -423,8 +423,8 @@ final class OnchainModel {
 /// Native equivalent of RN's isBackgroundJobRunning query gate; counts overlapping pushes.
 actor WalletBackgroundActivity {
     static let shared = WalletBackgroundActivity()
-    private var count = 0
-    var isRunning: Bool { count > 0 }
+    private var running = 0
+    var isRunning: Bool { running > 0 }
     struct Snapshot: Equatable, Sendable {
         var isRunning: Bool
         var completionRevision: UInt64
@@ -446,8 +446,8 @@ actor WalletBackgroundActivity {
     private func removeObserver(_ id: UUID) { observers[id] = nil }
     private func publish() { for observer in observers.values { observer.yield(snapshot) } }
 
-    func begin() { count += 1; revision += 1; publish() }
-    func end() { count -= 1; completionRevision += 1; revision += 1; publish() }
+    func begin() { running += 1; revision += 1; publish() }
+    func end() { running -= 1; completionRevision += 1; revision += 1; publish() }
 }
 
 /// The freshest overview any page's model has read since the last submission one made (an exit started, canceled or

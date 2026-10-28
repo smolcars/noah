@@ -61,7 +61,7 @@ struct SendOutcomeView: View {
         rail == .onchainSwap ? Int(WalletConfiguration.base(for: .current).roundTxRequiredConfirmations) : 1
     }
     private var label: SendRecipientLabel {
-        recipient ?? payment.map { .of(destination: $0.destination, payment: $0, ownDomain: LightningIdentity.domain(for: .current)) }
+        recipient ?? payment.map { .of(destination: $0.destination, ownDomain: LightningIdentity.domain(for: .current), payment: $0) }
             ?? SendRecipientLabel(name: "", nameIsVerbatim: true, avatar: .lightning)
     }
     private var recipientName: String { label.nameIsVerbatim ? label.name : L10n.text(label.name, locale: locale.identifier) }
@@ -205,8 +205,12 @@ struct SendOutcomeView: View {
         } ?? []
         return TimelineView(.explicit([now] + boundaries)) { timeline in
             let t = motion.elapsed(timeline.date)
-            let phase = SendMotion.phase(rail: rail, outcome: motion.outcome, outcomeAt: motion.since(motion.outcomeAt) ?? .infinity,
-                                         confirmedAt: motion.since(motion.confirmedAt), at: t)
+            let phase = SendMotion.phase(
+                rail: rail,
+                outcome: motion.outcome,
+                outcomeAt: motion.since(motion.outcomeAt) ?? .infinity,
+                at: t,
+                confirmedAt: motion.since(motion.confirmedAt))
             let text = phaseText(phase)
             Text(verbatim: text)
                 .noahText(NoahTokens.Typography.control)

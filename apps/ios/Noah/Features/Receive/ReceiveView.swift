@@ -481,7 +481,7 @@ struct ReceiveQRCode: View {
         if let image = Self.image(uri: uri) {
             Image(uiImage: image).interpolation(.none).resizable().scaledToFit()
                 .overlay {
-                    Image("ReceiveLogo").resizable().scaledToFit()
+                    Image(.receiveLogo).resizable().scaledToFit()
                         .frame(width: 36, height: 36).padding(4)
                         .background(.white, in: RoundedRectangle(cornerRadius: 10))
                 }

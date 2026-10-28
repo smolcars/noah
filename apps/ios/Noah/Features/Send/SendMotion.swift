@@ -91,7 +91,7 @@ enum SendMotion {
 
     /// The phase at `t` seconds after submission. `outcomeAt` is when the outcome was
     /// first seen and `confirmedAt` when an on-chain confirmation was first seen.
-    static func phase(rail: Rail, outcome: Outcome, outcomeAt: Double, confirmedAt: Double? = nil, at t: Double) -> Phase {
+    static func phase(rail: Rail, outcome: Outcome, outcomeAt: Double, at t: Double, confirmedAt: Double? = nil) -> Phase {
         switch outcome {
         case .inFlight: return inFlight(rail, t)
         case .pending:

@@ -255,7 +255,7 @@ struct AutoBoardingService: View {
                 confirm: {
                     busy = true
                     plan = nil
-                    Task {
+                    Task<Void, Never> {
                         defer { busy = false; Task { await check() } }
                         defer { Task { await app.session.discardBoard(quote) } }
                         // A board changes what every page shows, as the pages' own submissions do (SharedOverview).

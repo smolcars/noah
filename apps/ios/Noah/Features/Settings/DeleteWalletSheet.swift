@@ -117,7 +117,7 @@ struct DeleteWalletSheet: View {
     private func delete() {
         guard confirmed, !deleting else { return }
         haptics.play(.warning)
-        Task {
+        Task<Void, Never> {
             if await progress.delete({ try await model.deleteWallet() }) { leave() }
         }
     }

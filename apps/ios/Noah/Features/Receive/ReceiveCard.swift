@@ -377,23 +377,33 @@ private struct ArrivalOverlay: View {
         switch arrival.rail {
         case .ark:
             // Ark's mailbox drops a coin into the card, an orange ripple, then the flip.
-            canvas.layer(center: CGPoint(x: cx, y: sy), scale: Time.mix(0.4, 1, time.p(0, .bouncy)),
-                         opacity: time.o(0, .bouncy) * (1 - time.o(0.63, .soft))) { $0.badge(server: true, cx, sy) }
+            canvas
+                .layer(center: CGPoint(x: cx, y: sy), opacity: time.o(0, .bouncy) * (1 - time.o(0.63, .soft)), scale: Time.mix(0.4, 1, time.p(0, .bouncy))) {
+                    $0.badge(
+                        server: true,
+                        cx,
+                        sy)
+                }
             let drop = time.p(0.38, .bouncy)
-            canvas.layer(center: CGPoint(x: cx, y: cy), offset: CGSize(width: 0, height: Time.mix(sy - cy, 0, drop)),
-                         scale: Time.mix(0.4, 1, drop), opacity: time.o(0.38, .bouncy) * (1 - time.o(arrival.flipAt, .snappy))) {
-                $0.payCoin(cx, cy, 26, fill: NoahTokens.Colors.qrInk, ink: .white)
-            }
+            canvas.layer(
+                center: CGPoint(x: cx, y: cy),
+                opacity: time.o(0.38, .bouncy) * (1 - time.o(arrival.flipAt, .snappy)),
+                offset: CGSize(width: 0, height: Time.mix(sy - cy, 0, drop)),
+                scale: Time.mix(0.4, 1, drop)) {
+                    $0.payCoin(cx, cy, 26, fill: NoahTokens.Colors.qrInk, ink: .white)
+                }
             if t >= 0.76 && !reduceMotion {
                 let ripple = Time.spring(t - 0.76, .soft)
-                canvas.layer(center: CGPoint(x: cx, y: cy), scale: Time.mix(1, 2.6, ripple), opacity: 1 - min(1, ripple)) {
+                canvas.layer(center: CGPoint(x: cx, y: cy), opacity: 1 - min(1, ripple), scale: Time.mix(1, 2.6, ripple)) {
                     $0.stroke($0.circle(cx, cy, 28), $0.colors.orange, 2.5)
                 }
             }
         case .lightning:
             let serverFade = 1 - time.o(2.5, .soft)
-            canvas.layer(center: CGPoint(x: cx, y: sy), scale: Time.mix(0.4, 1, time.p(0, .bouncy)),
-                         opacity: time.o(0, .bouncy) * serverFade) { $0.badge(server: true, cx, sy) }
+            canvas.layer(center: CGPoint(x: cx, y: sy), opacity: time.o(0, .bouncy) * serverFade, scale: Time.mix(0.4, 1, time.p(0, .bouncy))) { $0.badge(
+                server: true,
+                cx,
+                sy) }
             // "Incoming over Lightning": the bolt hits the server.
             if t >= 0.25 && t < 0.87 || (reduceMotion && t >= 0.25 && t < 0.85) {
                 var path = Path()
@@ -412,14 +422,17 @@ private struct ArrivalOverlay: View {
             // "Ark holds it for you": a locked coin drops into the card; your key opens it.
             let drop = time.p(0.85, .bouncy)
             let coinOpacity = time.o(0.85, .bouncy) * (1 - time.o(arrival.flipAt, .snappy))
-            canvas.layer(center: CGPoint(x: cx, y: cy), offset: CGSize(width: 0, height: Time.mix(sy - cy, 0, drop)),
-                         scale: Time.mix(0.4, 1, drop), opacity: coinOpacity) { canvas in
-                canvas.payCoin(cx, cy, 26, fill: NoahTokens.Colors.qrInk, ink: .white)
-                var lock = canvas
-                lock.context.opacity *= 1 - time.o(2.5, .snappy)
-                lock.shackle(cx, cy - 25, open: time.p(2.07, .bouncy), ink: NoahTokens.Colors.qrInk)
-                lock.padlockBody(cx, cy - 25, ink: NoahTokens.Colors.qrInk, paper: .white)
-            }
+            canvas.layer(
+                center: CGPoint(x: cx, y: cy),
+                opacity: coinOpacity,
+                offset: CGSize(width: 0, height: Time.mix(sy - cy, 0, drop)),
+                scale: Time.mix(0.4, 1, drop)) { canvas in
+                    canvas.payCoin(cx, cy, 26, fill: NoahTokens.Colors.qrInk, ink: .white)
+                    var lock = canvas
+                    lock.context.opacity *= 1 - time.o(2.5, .snappy)
+                    lock.shackle(cx, cy - 25, open: time.p(2.07, .bouncy), ink: NoahTokens.Colors.qrInk)
+                    lock.padlockBody(cx, cy - 25, ink: NoahTokens.Colors.qrInk, paper: .white)
+                }
             if t >= 1.65 && t < 2.07 {
                 let rise = time.p(1.65, .snappy)
                 var key = canvas

@@ -114,6 +114,7 @@ private struct HomeCardActions: View {
                     .buttonStyle(HomePillStyle(prominent: false, height: NoahTokens.Size.buttonCompact, font: NoahTokens.Typography.button))
                     .frame(maxWidth: .infinity)
                     .accessibilityIdentifier("home-copy-address")
+                // swiftlint:disable:next accessibility_trait_for_button - ShareLink is a button; the gesture only records the tap
                 ShareLink(item: address) { Text("Share").frame(maxWidth: .infinity) }
                     .buttonStyle(HomePillStyle(height: NoahTokens.Size.buttonCompact, font: NoahTokens.Typography.button))
                     .simultaneousGesture(TapGesture().onEnded(onShare))

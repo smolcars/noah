@@ -92,11 +92,14 @@ struct AdvancedPage: View {
     var body: some View {
         SettingsScroll {
             SettingsGroup(label: "Network", first: true) {
-                row("Ark server", icon: "server.rack", value: URL(string: configuration.arkServer)?.host() ?? configuration.arkServer, page: .arkServer,
-                    id: "settings-ark-server")
-                row("Esplora", icon: "link", value: AppVariant.current == .regtest ? "Bitcoin Core"
-                    : esplora.endpoint == nil ? L10n.text("Noah default", locale: language) : L10n.text("Custom", locale: language),
-                    page: .esplora, last: true, id: "settings-esplora")
+                row(
+                    "Ark server",
+                    icon: "server.rack",
+                    page: .arkServer,
+                    id: "settings-ark-server",
+                    value: URL(string: configuration.arkServer)?.host() ?? configuration.arkServer)
+                row("Esplora", icon: "link", page: .esplora, id: "settings-esplora", value: AppVariant.current == .regtest ? "Bitcoin Core"
+                    : esplora.endpoint == nil ? L10n.text("Noah default", locale: language) : L10n.text("Custom", locale: language), last: true)
             }
             SettingsGroup(label: "Diagnostics") {
                 row("Logs", icon: "doc.text", page: .logs, id: "settings-logs")
@@ -153,7 +156,7 @@ struct AdvancedPage: View {
         }
     }
 
-    private func row(_ title: String, icon: String, value: String? = nil, page: SettingsPage, last: Bool = false, id: String) -> some View {
+    private func row(_ title: String, icon: String, page: SettingsPage, id: String, value: String? = nil, last: Bool = false) -> some View {
         SettingsRow(icon: icon, title: L10n.text(title, locale: language), value: value, hairline: !last, id: id) {
             haptics.play(.light)
             settings.open(page)

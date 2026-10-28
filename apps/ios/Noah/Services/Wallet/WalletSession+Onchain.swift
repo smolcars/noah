@@ -332,7 +332,7 @@ extension WalletSession {
     }
 
     static func startQuote(
-        ids: [String], automatic: Bool = false, estimate: Bool = true, access: OnchainStartAccess) async throws -> OnchainQuote {
+        ids: [String], access: OnchainStartAccess, automatic: Bool = false, estimate: Bool = true) async throws -> OnchainQuote {
         let balance = try await access.confirmed()
         guard Set(ids).count == ids.count else { throw OnchainFailure.invalid }
         let spendable = try await access.spendable()
@@ -351,7 +351,7 @@ extension WalletSession {
         guard !quote.feesUnknown || quote.hasUnknownFeeConsent else { throw OnchainFailure.changed }
         let fresh: OnchainQuote
         do {
-            fresh = try await startQuote(ids: quote.ids, automatic: quote.automatic, estimate: !quote.hasUnknownFeeConsent, access: access)
+            fresh = try await startQuote(ids: quote.ids, access: access, automatic: quote.automatic, estimate: !quote.hasUnknownFeeConsent)
         } catch let failure as ExitEstimateUnavailable { throw try failure.preserving(quote) }
         guard quote.matches(fresh), ExitRules.current(elapsed: quote.elapsed()) else { throw OnchainFailure.changed }
         return try await journal.perform(quote) {
@@ -364,7 +364,7 @@ extension WalletSession {
     }
 
     static func claimQuote(
-        ids: [String], destination: String?, automatic: Bool = false, estimate: Bool = true, access: OnchainClaimAccess) async throws -> OnchainQuote {
+        ids: [String], destination: String?, access: OnchainClaimAccess, automatic: Bool = false, estimate: Bool = true) async throws -> OnchainQuote {
         let balance = try await access.confirmed()
         guard Set(ids).count == ids.count else { throw OnchainFailure.invalid }
         let selected = try await access.exits().filter { $0.isClaimable && ids.contains($0.vtxoId) }
@@ -396,8 +396,12 @@ extension WalletSession {
         guard !quote.feesUnknown || quote.hasUnknownFeeConsent else { throw OnchainFailure.changed }
         let fresh: OnchainQuote
         do {
-            fresh = try await claimQuote(ids: quote.ids, destination: quote.destination, automatic: quote.automatic,
-                                         estimate: !quote.hasUnknownFeeConsent, access: access)
+            fresh = try await claimQuote(
+                ids: quote.ids,
+                destination: quote.destination,
+                access: access,
+                automatic: quote.automatic,
+                estimate: !quote.hasUnknownFeeConsent)
         } catch let failure as ExitEstimateUnavailable { throw try failure.preserving(quote) }
         guard quote.matches(fresh), ExitRules.current(elapsed: quote.elapsed()) else { throw OnchainFailure.changed }
         // A claim quote always names where it pays; refuse before journaling one that doesn't.
@@ -430,10 +434,10 @@ extension WalletSession {
         _ handles: Handles, action: OnchainAction, ids: [String], amount requested: UInt64,
         destination: String?, automatic: Bool, estimate: Bool = true) async throws -> OnchainQuote {
         if action == .claim {
-            return try await claimQuote(ids: ids, destination: destination, automatic: automatic, access: claimAccess(handles))
+            return try await claimQuote(ids: ids, destination: destination, access: claimAccess(handles), automatic: automatic)
         }
         if action == .startExit {
-            return try await startQuote(ids: ids, automatic: automatic, estimate: estimate, access: startAccess(handles))
+            return try await startQuote(ids: ids, access: startAccess(handles), automatic: automatic, estimate: estimate)
         }
         let balance = try await handles.onchain.balance().confirmedSats
         var quote = OnchainQuote(
