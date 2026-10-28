@@ -33,8 +33,8 @@ struct FFI070LiveTests {
         func check() async throws {
             let summary = try #require(try await session.summary())
             #expect(summary.fingerprint == baseline["fingerprint"] as? String)
-            #expect(summary.spendableSats == (baseline["spendable"] as? NSNumber)?.uint64Value)
-            #expect(summary.balance.onchain.confirmed == (baseline["onchainConfirmed"] as? NSNumber)?.uint64Value)
+            #expect(summary.spendableSats == (baseline["spendable"] as? UInt64))
+            #expect(summary.balance.onchain.confirmed == (baseline["onchainConfirmed"] as? UInt64))
             #expect(try await rows() == baseline["movements"] as? [[String: String]])
             #expect(try await utxos() == baseline["utxos"] as? [String])
             #expect(try await vtxos() == baseline["vtxos"] as? [String])
@@ -42,8 +42,8 @@ struct FFI070LiveTests {
         try await check()
         try await session.sync()
         try await check()
-        try await evidence("upgrade", ["movements": UInt64((baseline["movements"] as? [Any])?.count ?? 0),
-                                       "spendable": try await session.summary()?.spendableSats ?? 0])
+        try evidence("upgrade", ["movements": UInt64((baseline["movements"] as? [Any])?.count ?? 0),
+                                 "spendable": try await session.summary()?.spendableSats ?? 0])
     }
 
     /// The biggest confirmed coin stands in for an exit claim to this phone, marked in auto-board's ledger
@@ -64,15 +64,15 @@ struct FFI070LiveTests {
         let quote = try #require(try await session.autoBoardQuote())
         let inputs = quote.prepared?.inputs?.map { "\($0.txid):\($0.vout)" } ?? []
         #expect(!inputs.isEmpty && !quote.spends([claim.0]))
-        #expect(quote.confirmed - quote.amount - quote.chainFee! >= claim.1 + BoardingRules.reserve)
+        #expect(try quote.confirmed - quote.amount - #require(quote.chainFee) >= claim.1 + BoardingRules.reserve)
         _ = try await session.executeOnchain(quote)
         let attempt = try #require(try await OnchainOperationJournal.shared.loadAll().first { $0.id == quote.id })
         #expect(attempt.receipt?.txid == quote.prepared?.txid)
         try write("autoboard-attempt.txt", quote.id.uuidString)
         try write("claim-outpoint.txt", claim.0)
-        try await evidence("autoboard", ["claimSats": claim.1, "boardSats": quote.amount, "chainFee": quote.chainFee ?? 0,
-                                         "inputs": UInt64(inputs.count), "manualInputs": UInt64(manual.prepared?.inputs?.count ?? 0),
-                                         "coins": UInt64(coins.count)])
+        try evidence("autoboard", ["claimSats": claim.1, "boardSats": quote.amount, "chainFee": quote.chainFee ?? 0,
+                                   "inputs": UInt64(inputs.count), "manualInputs": UInt64(manual.prepared?.inputs?.count ?? 0),
+                                   "coins": UInt64(coins.count)])
     }
 
     /// After the board's confirmations: it resolved, the claimed coin is still on-chain, and the whole-wallet
@@ -89,7 +89,10 @@ struct FFI070LiveTests {
         #expect(try await session.withOpenWallet { try await $0.wallet.pendingBoards() }.isEmpty)
         #expect(try await session.checkOnchainAttempt(id))
         let receipt = try #require(try await OnchainOperationJournal.shared.loadAll().first { $0.id == id }?.receipt)
-        if case .confirmed = receipt.chainStatus {} else { Issue.record("Board not confirmed: \(String(describing: receipt.chainStatus))") }
+        switch receipt.chainStatus {
+        case .confirmed: break
+        default: Issue.record("Board not confirmed: \(String(describing: receipt.chainStatus))")
+        }
         #expect(try await utxos().contains { $0.hasPrefix(claim + "=") })
         let all = try await session.withOpenWallet {
             try await $0.wallet.estimateEmergencyExitFee(vtxoIds: [], feeRateSatPerVb: nil, destination: nil)
@@ -100,13 +103,13 @@ struct FFI070LiveTests {
         #expect(Set(excluded.keys) == Set(all.excludedVtxos.map(\.vtxoId)))
         let spendable = try await session.withOpenWallet { try await $0.wallet.vtxos() }.filter { $0.state == .spendable }
         let explicit = try await session.exitEstimate(spendable.map(\.id).filter { excluded[$0] == nil })
-        try write("exit-all.json", String(decoding: try JSONSerialization.data(withJSONObject: [
+        try write("exit-all.json", #require(String(bytes: JSONSerialization.data(withJSONObject: [
             "all": ["exitBroadcastFeeSats": all.exitBroadcastFeeSats, "claimFeeSats": all.claimFeeSats,
                     "txsToBroadcast": all.txsToBroadcast, "feeRateSatPerVb": all.feeRateSatPerVb,
                     "excluded": all.excludedVtxos.map { ["amountSats": $0.amountSats, "code": $0.code.rawValue] }],
             "explicitSpendable": ["vtxos": spendable.count, "exitBroadcastFeeSats": explicit.exitBroadcastFeeSats,
                                   "txsToBroadcast": explicit.txsToBroadcast],
-        ], options: [.sortedKeys]), as: UTF8.self))
+        ], options: [.sortedKeys]), encoding: .utf8)))
     }
 
     // MARK: Helpers
@@ -137,7 +140,7 @@ struct FFI070LiveTests {
         try text.write(to: URL.documentsDirectory.appending(path: "ffi070-\(name)"), atomically: true, encoding: .utf8)
     }
 
-    private func evidence(_ stage: String, _ values: [String: UInt64]) async throws {
+    private func evidence(_ stage: String, _ values: [String: UInt64]) throws {
         try JSONEncoder().encode(values).write(to: URL.documentsDirectory.appending(path: "ffi070-\(stage).json"))
     }
 }

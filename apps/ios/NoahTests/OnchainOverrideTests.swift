@@ -57,7 +57,7 @@ struct OnchainOverrideTests {
         other.quote.action = .claim
         let data = try single ? JSONEncoder().encode(original) : JSONEncoder().encode([original, other])
         // Both existing schemas lack the optional override field.
-        #expect(!String(decoding: data, as: UTF8.self).contains("override"))
+        #expect(try !#require(String(bytes: data, encoding: .utf8)).contains("override"))
         try data.write(to: file)
         let journal = OnchainOperationJournal(file: file)
         #expect(try await journal.loadAll().allSatisfy { $0.overrideAudit == nil })

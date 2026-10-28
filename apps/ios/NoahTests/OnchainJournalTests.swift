@@ -42,10 +42,10 @@ struct OnchainJournalTests {
             try await journal.recordTransaction("tx", for: first.id)
             return .init(message: "submitted", txid: "tx")
         }
-        #expect(try await journal.load()!.blocks(.board, ids: []))
+        #expect(try #require(try await journal.load()).blocks(.board, ids: []))
         try await journal.observe(.confirmed(100), for: first.id)
         let restarted = OnchainOperationJournal(file: file)
-        #expect(try await !restarted.load()!.blocks(.board, ids: []))
+        #expect(try !#require(try await restarted.load()).blocks(.board, ids: []))
         _ = try await restarted.perform(Self.quote) { .init(message: "second", txid: "tx2") }
         let attempts = try await restarted.loadAll()
         #expect(attempts.count == 2)
@@ -105,7 +105,7 @@ struct OnchainJournalTests {
         let quote = try JSONDecoder().decode(OnchainQuote.self, from: JSONSerialization.data(withJSONObject: json))
         #expect(quote.boardAll == nil)
     }
-    @Test func quotePinsWalletSelectionDestinationAndBothFees() {
+    @Test func quotePinsWalletSelectionDestinationAndBothFees() throws {
         let original = Self.quote
         var changed = original
         changed.walletID = "another-wallet"
@@ -117,10 +117,10 @@ struct OnchainJournalTests {
         changed.destination = "new"
         #expect(!original.matches(changed))
         changed = original
-        changed.chainFee! += 1
+        changed.chainFee = try #require(changed.chainFee) + 1
         #expect(!original.matches(changed))
         changed = original
-        changed.fee! += 1
+        changed.fee = try #require(changed.fee) + 1
         #expect(!original.matches(changed))
         changed = original
         changed.confirmed += 1

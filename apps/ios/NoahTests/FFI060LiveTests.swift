@@ -23,8 +23,8 @@ struct FFI060LiveTests {
             try seed.save(mnemonic)
             try SettingsStorage.shared.setPersistedState(PersistedWalletState(isInitialized: true),
                                                          key: PersistedWalletState.key, version: PersistedWalletState.version)
-            try await write("onchain-address.txt", try await session.receiveRequest().onchainAddress)
-            try await write("ark-info.json", try DebugJSON.ark(try await session.withOpenWallet { try await $0.wallet.arkInfo() }))
+            try write("onchain-address.txt", await session.receiveRequest().onchainAddress)
+            try write("ark-info.json", DebugJSON.ark(await session.withOpenWallet { try await $0.wallet.arkInfo() }))
             try await session.close()
             return
         }
@@ -53,7 +53,7 @@ struct FFI060LiveTests {
         if try await received().isEmpty {
             var request = try await session.receiveRequest()
             request = try await session.receiveInvoice(for: request, amountSat: 30_000, description: "")
-            try await write("invoice.txt", try #require(request.lightningInvoice))
+            try write("invoice.txt", try #require(request.lightningInvoice))
             try await poll(seconds: 240) {
                 try await session.sync(includingLightningClaims: true)
                 return try await !received().isEmpty
@@ -65,8 +65,8 @@ struct FFI060LiveTests {
         // The server keeps its Lightning receive fee (100 sats + 2,000 ppm on noah-bark08).
         #expect(summary.spendableSats > 0 && summary.spendableSats == UInt64(movement.effectiveBalanceSats))
         #expect(summary.balance.onchain.confirmed >= 200_000)
-        try await evidence("receive", ["arkSpendable": summary.spendableSats, "onchainConfirmed": summary.balance.onchain.confirmed,
-                                       "lightningReceiveMovementID": UInt64(movement.id), "lightningReceiveFee": movement.offchainFeeSats])
+        try evidence("receive", ["arkSpendable": summary.spendableSats, "onchainConfirmed": summary.balance.onchain.confirmed,
+                                 "lightningReceiveMovementID": UInt64(movement.id), "lightningReceiveFee": movement.offchainFeeSats])
     }
 
     /// Ark send to a second in-process wallet, which pays part of it back.
@@ -99,9 +99,9 @@ struct FFI060LiveTests {
             try await session.sync()
             return try await history().contains { $0.subsystemName == "bark.arkoor" && $0.subsystemKind == "receive" }
         }
-        try await evidence("ark", ["movementID": UInt64(id), "journalMovementID": UInt64(journal.receipt?.movementID ?? 0),
-                                   "peerSendMovementID": UInt64(peerMovement),
-                                   "spendable": try await session.summary()?.spendableSats ?? 0])
+        try evidence("ark", ["movementID": UInt64(id), "journalMovementID": UInt64(journal.receipt?.movementID ?? 0),
+                             "peerSendMovementID": UInt64(peerMovement),
+                             "spendable": try await session.summary()?.spendableSats ?? 0])
     }
 
     private func lightningSend() async throws {
@@ -114,7 +114,7 @@ struct FFI060LiveTests {
         let movement = try #require(try await history().first { $0.id == id })
         #expect(movement.subsystemName == "bark.lightning_send" && movement.status == "successful" && movement.paymentHash == hash)
         controller.acknowledge()
-        try await evidence("ln-send", ["movementID": UInt64(id), "fee": receipt.fee ?? 0])
+        try evidence("ln-send", ["movementID": UInt64(id), "fee": receipt.fee ?? 0])
     }
 
     /// 60 s is also captaind's default, so a distinct value shows the SDK forwards retryForSecs (host greps its span).
@@ -144,9 +144,9 @@ struct FFI060LiveTests {
             return after?.spendable == before.balance.ark.spendable && after?.pendingLightningSend == 0
         }
         controller.acknowledge()
-        try await evidence("ln-fail", ["movementID": UInt64(movement.id), "spendableBefore": before.spendableSats,
-                                       "spendableAfter": try await session.summary()?.spendableSats ?? 0,
-                                       "seconds": UInt64(elapsed.components.seconds)])
+        try evidence("ln-fail", ["movementID": UInt64(movement.id), "spendableBefore": before.spendableSats,
+                                 "spendableAfter": try await session.summary()?.spendableSats ?? 0,
+                                 "seconds": UInt64(elapsed.components.seconds)])
     }
 
     /// Ark → onchain (sendOnchain): the receipt keeps the returned txid and movement id.
@@ -163,9 +163,9 @@ struct FFI060LiveTests {
         await controller.checkStatus()
         #expect(controller.attempt?.receipt?.chainStatus == .inMempool)
         #expect(controller.attempt?.receipt?.amount == 10_000 && controller.attempt?.receipt?.movementID == id)
-        try await write("offboard-txid.txt", txid)
-        try await evidence("offboard", ["movementID": UInt64(id), "amount": controller.attempt?.receipt?.amount ?? 0,
-                                        "fee": controller.attempt?.receipt?.fee ?? 0])
+        try write("offboard-txid.txt", txid)
+        try evidence("offboard", ["movementID": UInt64(id), "amount": controller.attempt?.receipt?.amount ?? 0,
+                                  "fee": controller.attempt?.receipt?.fee ?? 0])
     }
 
     /// After the host mines a block, the restarted journal resolves by id and txid without resubmitting.
@@ -174,11 +174,14 @@ struct FFI060LiveTests {
         let saved = try #require(controller.attempt?.receipt)
         await controller.checkStatus()
         let receipt = try #require(controller.attempt?.receipt)
-        if case .confirmed = receipt.chainStatus {} else { Issue.record("Expected a confirmed offboard") }
+        switch receipt.chainStatus {
+        case .confirmed: break
+        default: Issue.record("Expected a confirmed offboard")
+        }
         #expect(receipt.status == .confirmed && receipt.movementID == saved.movementID && receipt.txid == saved.txid)
         controller.acknowledge()
         #expect(!controller.locked)
-        try await evidence("offboard-confirmed", ["movementID": UInt64(receipt.movementID ?? 0)])
+        try evidence("offboard-confirmed", ["movementID": UInt64(receipt.movementID ?? 0)])
     }
 
     /// Close and reopen: history, balances and identity survive; debug info is display-only.
@@ -198,8 +201,8 @@ struct FFI060LiveTests {
         // The xpub never reaches the app log that Settings exports.
         let logs = try await LogFile.shared.checkedLinesForExport()
         #expect(!logs.isEmpty && !logs.contains { $0.contains(info.vtxoXpub) })
-        try await evidence("reopen", ["movements": UInt64(after.movementCount), "spendable": after.spendableSats,
-                                      "onchainConfirmed": after.balance.onchain.confirmed])
+        try evidence("reopen", ["movements": UInt64(after.movementCount), "spendable": after.spendableSats,
+                                "onchainConfirmed": after.balance.onchain.confirmed])
     }
 
     /// In-place upgrade: a wallet funded and used by the bark-bolt-ffi 0.5.0 build opens unchanged.
@@ -215,12 +218,12 @@ struct FFI060LiveTests {
         let expected = try #require(baseline["movements"] as? [[String: String]])
         let summary = try #require(try await session.summary())
         #expect(summary.fingerprint == baseline["fingerprint"] as? String)
-        #expect(summary.spendableSats == (baseline["spendable"] as? NSNumber)?.uint64Value)
+        #expect(summary.spendableSats == (baseline["spendable"] as? UInt64))
         #expect(try await rows() == expected)
         try await session.sync()
         #expect(try await rows() == expected)
-        #expect(try await session.summary()?.spendableSats == (baseline["spendable"] as? NSNumber)?.uint64Value)
-        try await evidence("upgrade", ["movements": UInt64(expected.count), "spendable": summary.spendableSats])
+        #expect(try await session.summary()?.spendableSats == (baseline["spendable"] as? UInt64))
+        try evidence("upgrade", ["movements": UInt64(expected.count), "spendable": summary.spendableSats])
     }
 
     // MARK: Helpers
@@ -251,11 +254,11 @@ struct FFI060LiveTests {
         try #require(try await done(), "Timed out after \(seconds) s")
     }
 
-    private func write(_ name: String, _ text: String) async throws {
+    private func write(_ name: String, _ text: String) throws {
         try text.write(to: URL.documentsDirectory.appending(path: "ffi060-\(name)"), atomically: true, encoding: .utf8)
     }
 
-    private func evidence(_ stage: String, _ values: [String: UInt64]) async throws {
+    private func evidence(_ stage: String, _ values: [String: UInt64]) throws {
         try JSONEncoder().encode(values).write(to: URL.documentsDirectory.appending(path: "ffi060-\(stage).json"))
     }
 
@@ -263,7 +266,7 @@ struct FFI060LiveTests {
     struct Peer: @unchecked Sendable {
         let wallet: Wallet
         let onchain: OnchainWallet
-        static func create() async throws -> Peer {
+        static func create() async throws -> Self {
             let directory = FileManager.default.temporaryDirectory.appending(path: "ffi060-peer-\(UUID().uuidString)")
             try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
             let configuration = WalletConfiguration.base(for: .regtest)
@@ -273,7 +276,7 @@ struct FFI060LiveTests {
             let wallet = try await Wallet.openWithOnchain(
                 network: .regtest, mnemonicOrSeed: mnemonic, config: config,
                 args: WalletOpenArgs(runDaemon: false, datadir: directory.path, createIfNotExists: true), onchain: onchain)
-            return Peer(wallet: wallet, onchain: onchain)
+            return Self(wallet: wallet, onchain: onchain)
         }
     }
 }

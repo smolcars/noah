@@ -97,7 +97,7 @@ struct ExitTypedErrorTests {
     }
 
     /// FFI 0.7.0's "All" estimate lists what bark's whole-wallet exit leaves out instead of failing.
-    @MainActor @Test func wholeWalletExclusionsRenewFirstAndStayOutOfAll() async {
+    @MainActor @Test func wholeWalletExclusionsRenewFirstAndStayOutOfAll() async throws {
         let calls = OnchainModelTests.Calls()
         var dependencies = OnchainModelTests().dependencies(calls)
         dependencies.exclusions = {
@@ -108,7 +108,7 @@ struct ExitTypedErrorTests {
         let excluded = await model.exitExclusions()
         #expect(Set(excluded.keys) == ["b", "x"] && excluded.values.allSatisfy(\.renewFirst))
         let vtxos = [ExitProgressTests.vtxo("a", 31_000), ExitProgressTests.vtxo("b", 24_500)]
-        let costs: [String: ExitEconomics.Cost] = ["a": .worthIt, "b": .refused(excluded["b"]!)]
+        let costs: [String: ExitEconomics.Cost] = try ["a": .worthIt, "b": .refused(#require(excluded["b"]))]
         #expect(ExitEconomics.classified(vtxos, costs: costs))
         #expect(ExitEconomics.all(vtxos, costs: costs).map(\.id) == ["a"])
         // Unreadable: nothing is marked, and each VTXO's own estimate still refuses it.

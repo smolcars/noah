@@ -14,8 +14,8 @@ struct ReviewClockTests {
         (ContinuousClock.now - .seconds(elapsed), Date().addingTimeInterval(-elapsed - move))
     }
 
-    @Test(arguments: clockMoves) func sendBoardAndExitReviewsExpireOnTheContinuousClock(move: TimeInterval) {
-        var send = SendPreparedTests.quote.prepared!
+    @Test(arguments: clockMoves) func sendBoardAndExitReviewsExpireOnTheContinuousClock(move: TimeInterval) throws {
+        var send = try #require(SendPreparedTests.quote.prepared)
         var board = BoardPreparedTests.quote
         var exit = OnchainJournalTests.quote
         exit.action = .startExit
@@ -76,8 +76,8 @@ struct ReviewClockTests {
         var board = BoardPreparedTests.quote
         board.reviewedAt = .now
         let data = try JSONEncoder().encode(board)
-        #expect(!String(decoding: data, as: UTF8.self).contains("reviewedAt"))
-        #expect(!String(decoding: try JSONEncoder().encode(SendPreparedTests.quote), as: UTF8.self).contains("reviewedAt"))
+        #expect(try !#require(String(bytes: data, encoding: .utf8)).contains("reviewedAt"))
+        #expect(try !#require(String(bytes: JSONEncoder().encode(SendPreparedTests.quote), encoding: .utf8)).contains("reviewedAt"))
         let decoded = try JSONDecoder().decode(OnchainQuote.self, from: data)
         #expect(decoded.reviewedAt == nil && decoded.prepared?.reviewedAt == nil && decoded.createdAt == board.createdAt)
         // Read back, an exit review keeps the wall-clock cap it was saved with.
