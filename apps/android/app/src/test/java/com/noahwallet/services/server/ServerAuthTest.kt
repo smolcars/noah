@@ -27,7 +27,10 @@ class ServerAuthTest {
         var fail = false
         var failSave = false
         fun provider() = AuthTokenProvider(
-            readToken = { stored }, saveToken = { if (failSave) error("secret"); stored = it },
+            readToken = { stored }, saveToken = {
+                if (failSave) error("secret")
+                stored = it
+            },
             clearToken = { stored = null }, readMnemonic = { "fixture" },
             login = {
                 val index = logins.incrementAndGet()

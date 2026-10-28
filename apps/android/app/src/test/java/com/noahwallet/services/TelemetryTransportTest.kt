@@ -287,9 +287,9 @@ class TelemetryTransportTest {
             envelopes += envelope
             HintUtils.runIfHasType(hint, SubmissionResult::class.java) { it.setResult(true) }
         }
-        override fun flush(timeoutMillis: Long) {}
-        override fun close() {}
-        override fun close(isRestarting: Boolean) {}
+        override fun flush(timeoutMillis: Long) = Unit
+        override fun close() = Unit
+        override fun close(isRestarting: Boolean) = Unit
         override fun getRateLimiter(): io.sentry.transport.RateLimiter? = null
     }
 }

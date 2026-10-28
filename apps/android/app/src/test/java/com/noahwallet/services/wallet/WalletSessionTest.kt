@@ -264,7 +264,10 @@ class WalletSessionTest {
             request.copy(amountSat = amountSat, description = description, lightningInvoice = "invoice", paymentHash = "hash")
         var initialized = false
         var initializationFails = false
-        override suspend fun initializeAddress() { if (initializationFails) throw Boom(); initialized = true }
+        override suspend fun initializeAddress() {
+            if (initializationFails) throw Boom()
+            initialized = true
+        }
         override suspend fun peekPublicKey(index: UInt): String { check(initialized); return "public-key-0" }
         override suspend fun peekAddress(index: UInt) = "ark-test"
         var closed = false
@@ -303,7 +306,11 @@ class WalletSessionTest {
     @Test fun nextWalletActivityRetriesExhaustedSendCleanup() = runBlocking {
         withLocation { location ->
             val handles = Handles(); var calls = 0; var reserved = true
-            val held = com.noahwallet.send.SendPreparations({ calls++; if (calls <= 3) error("discard"); reserved = false }, {})
+            val held = com.noahwallet.send.SendPreparations({
+                calls++
+                if (calls <= 3) error("discard")
+                reserved = false
+            }, {})
             handles.preparations = held
             val session = WalletSession("regtest", location, opener = { _, _, _, _, _ -> handles })
             session.createNew("unused", false, "test")

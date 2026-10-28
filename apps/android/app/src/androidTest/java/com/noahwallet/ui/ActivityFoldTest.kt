@@ -60,8 +60,8 @@ class ActivityFoldTest {
         val vertical = region.height > region.width
         for (node in nodes()) {
             val bounds = node.boundsInWindow
-            if (bounds.width <= 0f || bounds.height <= 0f) continue
-            if (node.config.getOrNull(SemanticsProperties.ContentDescription)?.contains("Close sheet") == true) continue
+            val scrim = node.config.getOrNull(SemanticsProperties.ContentDescription)?.contains("Close sheet") == true
+            if (bounds.width <= 0f || bounds.height <= 0f || scrim) continue
             val text = node.config.getOrNull(SemanticsProperties.Text)?.joinToString()
                 ?: node.config.getOrNull(SemanticsProperties.ContentDescription)?.joinToString()
             val what = "$label: $text $bounds $region"

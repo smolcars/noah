@@ -76,7 +76,11 @@ class RecurringLiveTest {
             File(context.filesDir, "recurring-live-funding-address.txt").writeText(request.onchainAddress)
             settings.set(SettingsPreferences.autoBoard(settings.string("transaction-storage"), false), "transaction-storage"); settings.sync()
             withTimeout(180_000) {
-                while (true) { session.sync(); if (session.summary()!!.balance.onchain.confirmed >= 100_000u) break; delay(1000) }
+                while (true) {
+                    session.sync()
+                    if (session.summary()!!.balance.onchain.confirmed >= 100_000u) break
+                    delay(1000)
+                }
             }
             val board = session.quoteOnchain(com.noahwallet.onchain.OnchainAction.board, amount = 30_000)
             session.executeOnchain(board)

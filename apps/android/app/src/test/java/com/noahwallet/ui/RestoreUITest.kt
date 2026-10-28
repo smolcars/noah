@@ -183,9 +183,17 @@ class RestoreCompletionTest {
         var failSave = false
         var failRecovery = false
         val completion get() = RestoreCompletion(
-            { state }, { if (failSave) error("save"); state = it; events += "flags" },
+            { state }, {
+                if (failSave) error("save")
+                state = it
+                events += "flags"
+            },
             { sha, id -> seeded = sha to id; events += "seed" },
-            { events += "recover"; if (failRecovery) error("recovery"); recovery }, { events += "open" })
+            {
+                events += "recover"
+                if (failRecovery) error("recovery")
+                recovery
+            }, { events += "open" })
     }
     @Test fun savesFlagsSeedsBackupRecoversThenOpens() = runBlocking {
         val fake = Fake()
@@ -330,7 +338,9 @@ class RestoreCompletionReplayTest {
             var state = PersistedWalletState(isInitialized = false)
             val events = mutableListOf<String>()
             val completion = RestoreCompletion({ state }, {
-                events += "flags"; if (unavailable) error("settings write failed"); state = it
+                events += "flags"
+                if (unavailable) error("settings write failed")
+                state = it
             }, { _, _ -> events += "backup" },
                 { events += "recover"; RestoreTransaction.Recovery.completed }, { events += "open" }, journal,
                 { events += "token" }, settingsUnavailable = { unavailable })

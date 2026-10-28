@@ -77,8 +77,8 @@ class OnchainOperationsTest {
                 val failure = runCatching { ops.quote(action, listOf("a"), destination = if (action == OnchainAction.claim)
                     "address" else null) }.exceptionOrNull()
                 // Untyped failures, an unreachable chain and a fee-rate overflow keep today's fallback; refusals offer none.
-                val allowed = error is BarkError && (error.code == BarkErrorCode.OTHER || error.code == BarkErrorCode.INVALID_FEE_RATE ||
-                    error.code in ExitErrors.chain) || error is java.net.SocketTimeoutException || error is java.net.UnknownHostException
+                val allowed = (error is BarkError && (error.code == BarkErrorCode.OTHER || error.code == BarkErrorCode.INVALID_FEE_RATE ||
+                    error.code in ExitErrors.chain)) || error is java.net.SocketTimeoutException || error is java.net.UnknownHostException
                 assertEquals("$action / $error", allowed, failure is ExitEstimateUnavailable)
                 if (error is BarkError && error.code in ExitErrors.never) assertTrue("$action / ${error.code}", failure is ExitNotPossible)
                 else if (!allowed) assertSame(error, failure)

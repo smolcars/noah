@@ -96,7 +96,10 @@ class RecoveryPhraseBackupTest {
     private fun completion(settings: SettingsStorage, journal: RestoreCompletionJournal, crash: String? = null) =
         RestoreCompletion.withSettings(settings, journal,
             seedRestored = { _, _ -> if (crash == "seed") error("crash") },
-            recover = { if (crash == "recover") error("crash"); RestoreTransaction.Recovery.nothingPending },
+            recover = {
+                if (crash == "recover") error("crash")
+                RestoreTransaction.Recovery.nothingPending
+            },
             openWallet = { if (crash == "open") error("crash") },
             clearToken = { if (crash == "token") error("crash") })
 

@@ -49,7 +49,10 @@ class WalletLifecycleTest {
             settleBackground = { settleBackground() },
             finishBackground = { finishBackground() },
             syncIdentityDirectory = {}, drainTimeoutMillis = drainTimeoutMillis,
-            syncFiles = { if (syncFails) error("Directory sync failed"); events.add("sync") })
+            syncFiles = {
+                if (syncFails) error("Directory sync failed")
+                events.add("sync")
+            })
         fun files() { location.directory.mkdirs(); location.database.writeText("fake"); location.restoreDirectory.mkdirs() }
         fun clean() { root.deleteRecursively() }
     }

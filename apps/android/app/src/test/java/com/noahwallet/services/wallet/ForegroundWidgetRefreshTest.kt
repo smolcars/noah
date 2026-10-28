@@ -23,7 +23,10 @@ class ForegroundWidgetRefreshTest {
             withContext(WalletExecutionBudget(budget)) {
                 val caller = currentCoroutineContext()
                 try {
-                    ForegroundWidgetRefresh.read({ if (afterSummary) budget.revoke(); summary },
+                    ForegroundWidgetRefresh.read({
+                        if (afterSummary) budget.revoke()
+                        summary
+                    },
                         { expiryReads++; budget.revoke(); 123 }, { caller.checkWalletAdmission() }, { _, _ -> writes++ })
                     fail("Revoked refresh returned successfully")
                 } catch (_: CancellationException) { }

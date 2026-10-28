@@ -171,7 +171,7 @@ class CrossPlatformBackupTest {
                     it.soTimeout = 5000
                     val reader = it.getInputStream().bufferedReader()
                     val path = reader.readLine().split(' ')[1]
-                    while (!reader.readLine().isNullOrEmpty()) { }
+                    do { val header = reader.readLine() } while (!header.isNullOrEmpty())
                     val response = when (path) {
                         "/v0/backup/v2/list" -> "[$info]".toByteArray()
                         "/v0/backup/v2/download" -> """{"backup":$info,"download_url":"$url/file"}""".toByteArray()

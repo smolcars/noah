@@ -165,7 +165,6 @@ class ExitTreeSweepTest {
 
     @Test fun theGutterAndReviewsRailFoldRatherThanSqueeze() {
         var gutters = 0; var rails = 0
-        val st = ExitGutter.St.entries
         for (n in lengths) {
             // Two to four exits that part after k shared transactions, each a block (or a fifth of the path) behind the one
             // before, with none, some or all mined and the one being sent waiting, ready, short of funds or not sent yet.

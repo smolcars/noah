@@ -18,7 +18,11 @@ internal class RecurringWorld(val scope: CoroutineScope, val wallet: FakeSendWal
     var beforeBinding: () -> Unit = {}
     var beforeGeneration: () -> Unit = {}
     var raw: String? = null
-    val store = RecurringStore({ beforeRead(); raw }, { beforeWrite(it); if (mmkvFails) error("MMKV"); raw = it })
+    val store = RecurringStore({ beforeRead(); raw }, {
+        beforeWrite(it)
+        if (mmkvFails) error("MMKV")
+        raw = it
+    })
     var journalRaw: String? = null
     var journalFails = false; var mmkvFails = false; var auditFails = false
     var quarantineRaw: ByteArray? = null
@@ -29,7 +33,11 @@ internal class RecurringWorld(val scope: CoroutineScope, val wallet: FakeSendWal
     val journal = RecurringJournal(File(policyDirectory, "journal.json"), {
         beforeJournalRead()
         journalRaw
-    }, { beforeJournalWrite(it); if (journalFails) error("journal"); journalRaw = it },
+    }, {
+        beforeJournalWrite(it)
+        if (journalFails) error("journal")
+        journalRaw = it
+    },
         quarantine = { if (quarantineRaw == null) quarantineRaw = it })
     init { wallet.owner = SendIdentity("wallet-a", "regtest"); wallet.snapshot = SendSnapshot(walletIdentity = wallet.owner) }
     val sendJournal = TestJournal()
@@ -54,7 +62,10 @@ internal class RecurringWorld(val scope: CoroutineScope, val wallet: FakeSendWal
         },
         automationGeneration = { beforeGeneration(); generation }, now = { now }, zone = { zone },
         sync = { sentEntries.add(it); syncCalls++; sync() }, notify = { _, result -> result?.let { notifications.add(it) } },
-        audit = { _, _, _, _ -> if (auditFails) error("audit"); audits++ }), scope)
+        audit = { _, _, _, _ ->
+            if (auditFails) error("audit")
+            audits++
+        }), scope)
     val schedule get() = store.load().schedules["rent"]
     fun add(start: Long = 1000): RecurringPayment {
         val schedule = RecurringPayment("rent", "Rent", "recipient", "ark", 1000, interval = RecurringInterval("day", 1), startAt = start,
@@ -74,7 +85,7 @@ internal class RecurringWorld(val scope: CoroutineScope, val wallet: FakeSendWal
 }
 
 class RecurringExecutorTest {
-    @Test fun RNImportNeverPaysAndSyncsEmptyAfterAdmissionWithRetry() = runBlocking {
+    @Test fun rnImportNeverPaysAndSyncsEmptyAfterAdmissionWithRetry() = runBlocking {
         val w = RecurringWorld(this)
         val imported = com.noahwallet.services.storage.SettingsStorage.importValues(mapOf(RecurringStore.key to
             """{"state":{"schedules":{"old":{"id":"old"}}},"version":0}"""))

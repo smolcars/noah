@@ -86,7 +86,10 @@ class OnchainModelTest {
         var saved = listOf(uncertain)
         var proven = false
         val model = OnchainModel(OnchainModel.Dependencies({ true }, { error("offline") }, { _, _, _, _ -> error("unused") }, { "unused" },
-            { saved }, {}, { if (proven) saved = emptyList(); proven }, {}, { null }, {}))
+            { saved }, {}, {
+                if (proven) saved = emptyList()
+                proven
+            }, {}, { null }, {}))
         model.checkStatus(uncertain.id)
         assertEquals("Status remains uncertain. Noah checks again automatically as your wallet syncs.", model.message)
         proven = true
@@ -313,7 +316,13 @@ class OnchainModelTest {
         bump(); assertEquals(2, m.revision); assertNotNull(m.quote)
         watching.cancel()
     }
-    private suspend fun until(condition: () -> Boolean) { repeat(100) { if (condition()) return; yield() }; fail("never happened") }
+    private suspend fun until(condition: () -> Boolean) {
+        repeat(100) {
+            if (condition()) return
+            yield()
+        }
+        fail("never happened")
+    }
     @Test fun aChangeDuringThePagesFirstReadReadsAgain() = runBlocking {
         val f = Fake().apply { overviewGate = CompletableDeferred() }
         val m = OnchainModel(f.dependencies())
@@ -453,7 +462,9 @@ class OnchainModelTest {
             val normalStore = AutoBoardFunding({ null }, { error("Must not consume") })
             val review = AutoBoardReview(if (stopAt == "quote") normalStore else store)
             val quote = review.prepare({ allowed }, {
-                reads++; if (stopAt == "funding") allowed = false; funding
+                reads++
+                if (stopAt == "funding") allowed = false
+                funding
             }, {
                 preparations++; allowed = false; OnchainQuote(OnchainAction.board, "wallet")
             }, { discards++ })

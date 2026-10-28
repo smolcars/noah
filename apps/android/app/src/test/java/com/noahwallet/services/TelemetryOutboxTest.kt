@@ -166,9 +166,9 @@ class TelemetryOutboxTest {
         val pending = LinkedBlockingQueue<Pending>()
         fun take() = requireNotNull(pending.poll(2, TimeUnit.SECONDS)) { "No accepted upload received" }
         override fun send(envelope: SentryEnvelope, hint: Hint) { pending.add(Pending(envelope, hint)) }
-        override fun flush(timeoutMillis: Long) {}
-        override fun close() {}
-        override fun close(isRestarting: Boolean) {}
+        override fun flush(timeoutMillis: Long) = Unit
+        override fun close() = Unit
+        override fun close(isRestarting: Boolean) = Unit
         override fun getRateLimiter(): io.sentry.transport.RateLimiter? = null
     }
     private class RecordingTransport : ITransport {
@@ -177,9 +177,9 @@ class TelemetryOutboxTest {
             types += envelope.items.map { it.header.type }
             HintUtils.runIfHasType(hint, SubmissionResult::class.java) { it.setResult(true) }
         }
-        override fun flush(timeoutMillis: Long) {}
-        override fun close() {}
-        override fun close(isRestarting: Boolean) {}
+        override fun flush(timeoutMillis: Long) = Unit
+        override fun close() = Unit
+        override fun close(isRestarting: Boolean) = Unit
         override fun getRateLimiter(): io.sentry.transport.RateLimiter? = null
     }
 }

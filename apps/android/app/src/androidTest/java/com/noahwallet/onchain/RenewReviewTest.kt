@@ -46,7 +46,7 @@ class RenewReviewTest {
                 onStart = { started = it })
         }
     }
-    @Composable private fun Text(@Suppress("UNUSED_PARAMETER") request: List<String>?) {}
+    @Composable private fun Text(@Suppress("UNUSED_PARAMETER") request: List<String>?) = Unit
 
     @Test fun aLateQuoteStillOpensTheReviewForExactlyThoseVtxos() {
         show()

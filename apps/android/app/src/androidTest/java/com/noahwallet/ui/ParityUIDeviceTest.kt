@@ -274,10 +274,12 @@ class ParityUIDeviceTest {
             assertNull("My code has no Scan beside it", text("Scan"))
             shot("qr-live-address")
             // Back through Profile and Settings to Home, whose scan button opens the scanner alone.
-            for (step in 1..4) if (text("Scan") == null) {
-                automation.performGlobalAction(AccessibilityService.GLOBAL_ACTION_BACK)
-                instrumentation.waitForIdleSync()
-                Thread.sleep(500)
+            repeat(4) {
+                if (text("Scan") == null) {
+                    automation.performGlobalAction(AccessibilityService.GLOBAL_ACTION_BACK)
+                    instrumentation.waitForIdleSync()
+                    Thread.sleep(500)
+                }
             }
             click("Scan")
             waitFor("Live scanner") { text("Scan QR code") != null }

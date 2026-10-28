@@ -23,19 +23,19 @@ class WalletRestorerTest {
         override suspend fun history(): List<Movement> = error("unused")
         override suspend fun receiveRequest(): ReceiveRequest = error("unused")
         override suspend fun receiveInvoice(request: ReceiveRequest, amountSat: Long, description: String): ReceiveRequest = error("unused")
-        override suspend fun initializeAddress() { }
+        override suspend fun initializeAddress() = Unit
         override suspend fun peekPublicKey(index: UInt): String = error("unused")
         override suspend fun peekAddress(index: UInt): String = error("unused")
         override suspend fun summary(): WalletSession.Summary = error("unused")
-        override suspend fun sync() { }
-        override suspend fun maintenanceDelegated() { }
+        override suspend fun sync() = Unit
+        override suspend fun maintenanceDelegated() = Unit
         override suspend fun bolt11Invoice(amountSats: ULong): String = error("unused")
-        override suspend fun claimLightningReceives() { }
+        override suspend fun claimLightningReceives() = Unit
         override suspend fun closestExpiryBlocks(): Long? = null
         override suspend fun createSnapshot(destination: File): WalletSnapshotInfo = error("unused")
         var stopFails = false
         override suspend fun stopDaemonWait() { if (stopFails) throw Boom() }
-        override fun close() { }
+        override fun close() = Unit
     }
     private class World {
         val root = Files.createTempDirectory("restorer").toFile()
@@ -105,7 +105,10 @@ class WalletRestorerTest {
                     val file = if (url == "http://legacy") legacyFile else encrypted
                     if (file.length() > limit || url == "http://bad") throw WalletRestorer.Failure(WalletRestorer.Reason.downloadMismatch)
                     file.copyTo(destination)
-                }, beginOnboarding = { if (markerFails) throw Boom(); initialized = false }, rounds = testRounds)
+                }, beginOnboarding = {
+                    if (markerFails) throw Boom()
+                    initialized = false
+                }, rounds = testRounds)
         }
         fun previous() {
             assertEquals("old wallet", location.database.readText()); assertTrue("Previous seed differs", seed.value == "old seed")

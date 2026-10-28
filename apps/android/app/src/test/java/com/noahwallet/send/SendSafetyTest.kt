@@ -21,14 +21,14 @@ internal open class FakeSendWallet : SendWallet {
     override suspend fun pay(payment: SendPayment, quote: SendQuote, snapshot: SendSnapshot): SendReceipt { calls++; return payBlock() }
     override suspend fun reconcile(attempt: SendAttempt) = reconciliation(attempt)
     override suspend fun discard(quote: SendQuote, includingClaimed: Boolean) { discards++ }
-    override suspend fun discardAll() {}
+    override suspend fun discardAll() = Unit
     companion object { val quote = SendQuote(1000, 10, 1010, walletIdentity = SendIdentity("wallet-a", "REGTEST")) }
 }
 internal class TestJournal {
     val audits = mutableListOf<SendOverrideAudit>()
     var attempt: SendAttempt? = null; var fail = false; var failReceipt = false
     fun write(value: SendAttempt?) {
-        if (fail || failReceipt && value?.receipt != null) error("disk")
+        if (fail || (failReceipt && value?.receipt != null)) error("disk")
         attempt = value?.let { Json.decodeFromString<SendAttempt>(Json { encodeDefaults = true }.encodeToString(it)) }
     }
 }

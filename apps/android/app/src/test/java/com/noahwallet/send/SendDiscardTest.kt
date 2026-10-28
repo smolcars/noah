@@ -29,7 +29,11 @@ class SendDiscardTest {
     @Test fun exhaustedCleanupRetainsUnboundAndClaimedPreparationsUntilAnotherPass() = runBlocking {
         for (claimed in listOf(false, true)) {
             var calls = 0; var reserved = true
-            val held = SendPreparations({ calls++; if (calls <= 3) error("discard"); reserved = false }, {})
+            val held = SendPreparations({
+                calls++
+                if (calls <= 3) error("discard")
+                reserved = false
+            }, {})
             held.retain("process-local")
             if (claimed) { held.bind("process-local", chainPayment, chainQuote); held.claim(chainPayment, chainQuote) }
             held.discard("process-local", true)

@@ -27,7 +27,7 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 
-/**
+/*
  * A short window (360 × 480 dp, a phone in split screen) and large text: Send's tall stage and title must never squeeze
  * the step's action out of reach. Each action is scrolled to, must lie wholly inside the window, and is tapped by touch.
  */
@@ -48,7 +48,11 @@ class SendShortWindowTest {
 
     private fun has(tag: String) = compose.onAllNodesWithTag(tag).fetchSemanticsNodes().isNotEmpty()
     private fun until(done: () -> Boolean) {
-        repeat(1_000) { if (done()) return; shadowOf(Looper.getMainLooper()).idle(); Thread.sleep(2) }
+        repeat(1_000) {
+            if (done()) return
+            shadowOf(Looper.getMainLooper()).idle()
+            Thread.sleep(2)
+        }
         fail("Timed out")
     }
     private fun main(work: suspend () -> Unit) { CoroutineScope(Dispatchers.Main).launch { work() } }

@@ -30,16 +30,30 @@ class WalletCreatorTest {
         val session = WalletSession("regtest", WalletDataLocation(java.io.File("unused-creator-test"), "regtest"))
         fun dependencies() = WalletCreator.Dependencies(
             readSeed = { seed },
-            saveSeed = { if (saveFails) throw Boom(); seed = SecretResult.Found(it); checkpoint("seed") },
+            saveSeed = {
+                if (saveFails) throw Boom()
+                seed = SecretResult.Found(it)
+                checkpoint("seed")
+            },
             deleteSeed = { if ((seed as? SecretResult.Found)?.value == it) seed = SecretResult.NotFound },
-            walletDataExists = { if (filesystemFails) throw Boom(); data },
+            walletDataExists = {
+                if (filesystemFails) throw Boom()
+                data
+            },
             datadirExists = { datadir },
             removeAttemptFiles = { existed ->
                 cleanupCount++
-                if (cleanupFails) false else { data = false; if (!existed) datadir = false; true }
+                if (cleanupFails) false else {
+                    data = false
+                    if (!existed) datadir = false
+                    true
+                }
             },
             generateMnemonic = { "seed-${generated.size + 1}".also { generated += it } },
-            openExisting = { if (openFailure) throw Boom(); opened += it },
+            openExisting = {
+                if (openFailure) throw Boom()
+                opened += it
+            },
             reserve = session::reserve,
             release = session::release,
             createNew = { reservation, value ->
@@ -54,7 +68,11 @@ class WalletCreatorTest {
                 created += value
                 session.release(reservation)
             },
-            beginOnboarding = { if (markerFails) throw Boom(); initialized = false; checkpoint("marker") },
+            beginOnboarding = {
+                if (markerFails) throw Boom()
+                initialized = false
+                checkpoint("marker")
+            },
         )
         fun seedIs(value: String) = (seed as? SecretResult.Found)?.value == value
     }

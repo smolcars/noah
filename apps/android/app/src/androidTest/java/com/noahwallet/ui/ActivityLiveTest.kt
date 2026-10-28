@@ -160,7 +160,10 @@ class ActivityLiveTest {
 
     private suspend fun poll(seconds: Int, done: suspend () -> Boolean) {
         val deadline = System.currentTimeMillis() + seconds * 1000L
-        while (System.currentTimeMillis() < deadline) { if (done()) return; delay(2000) }
+        while (System.currentTimeMillis() < deadline) {
+            if (done()) return
+            delay(2000)
+        }
         check(done()) { "Timed out after $seconds s" }
     }
 

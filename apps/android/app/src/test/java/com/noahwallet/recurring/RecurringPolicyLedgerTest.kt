@@ -79,7 +79,7 @@ class RecurringPolicyLedgerTest {
         // A stale policy cannot be blessed by an ordinary update or destructive resume.
         assertTrue(runCatching { w.store().upsert(w.policy) }.isFailure)
     }
-    @Test fun MMKVAheadOfLedgerAlsoStopsAndLedgerFailureNeverWritesMMKV() = World().use { w ->
+    @Test fun mmkvAheadOfLedgerAlsoStopsAndLedgerFailureNeverWritesMMKV() = World().use { w ->
         val store = w.store(); store.load()
         w.store(false).upsert(w.policy.copy(amountSat = 500, nativeRevision = UUID.randomUUID().toString()))
         assertEquals("needs_attention", w.store().load().schedules.getValue("rent").status)

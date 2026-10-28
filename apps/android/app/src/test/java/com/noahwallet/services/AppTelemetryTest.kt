@@ -193,7 +193,7 @@ class AppTelemetryTest {
         assertFalse(json(clean).contains("payload")); assertFalse(json(clean).contains("private path"))
     }
 
-    @Test fun SDKInfoIsDetachedAndDropsUnknownSDKAndPackageFields() {
+    @Test fun sdkInfoIsDetachedAndDropsUnknownSDKAndPackageFields() {
         val event = event().apply {
             sdk = serializer.deserialize(StringReader("""{"name":"sentry.java.android","version":"8.57.0","integrations":["ANR"],""" +
                 """"packages":[{"name":"maven:io.sentry:sentry","version":"8.57.0","secret":"payload"}],"surprise":"payload"}"""), SdkVersion::class.java)

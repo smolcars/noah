@@ -317,8 +317,8 @@ class AdaptiveStateRestorationTest {
                 return SendReceipt(500, proof = SendReceipt.Proof.submitReturnedArkSuccess)
             }
             override suspend fun reconcile(attempt: SendAttempt) = SendResolution.Uncertain
-            override suspend fun discard(quote: SendQuote, includingClaimed: Boolean) {}
-            override suspend fun discardAll() {}
+            override suspend fun discard(quote: SendQuote, includingClaimed: Boolean) = Unit
+            override suspend fun discardAll() = Unit
         }
         val controller = SendController(SendController.Dependencies(read = { null }, write = {}, reservation = { it(wallet) }))
         val draft = SendModel(controller, "regtest", { error("Not used") }, { quote }, {})

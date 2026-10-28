@@ -198,7 +198,7 @@ class EndpointRecordPrivacyTest {
             EndpointLogPrivacy.register(test.getValue("endpoint").jsonPrimitive.content)
             val app = org.robolectric.RuntimeEnvironment.getApplication()
             val context = object : android.content.ContextWrapper(app) {
-                override fun getPackageName(): String = throw IllegalStateException("fake raw throwable detail")
+                override fun getPackageName(): String = error("fake raw throwable detail")
             }
             val method = com.noahwallet.widgets.NoahWidgetProvider::class.java.getDeclaredMethod("updateWidget",
                 android.content.Context::class.java, android.appwidget.AppWidgetManager::class.java, Int::class.javaPrimitiveType)
