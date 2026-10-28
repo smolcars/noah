@@ -72,7 +72,7 @@ class PushRuntime(private val context: Context, private val services: AppService
                 admitted()
                 val extras = WidgetDataWriter.extras(handles, BuildConfig.APP_VARIANT)
                 admitted()
-                WidgetDataWriter.write(context, summary.balance, extras, services.widgetDisplay(), BuildConfig.APP_VARIANT)
+                WidgetDataWriter.write(context, summary.balance, extras, services::widgetDisplay, BuildConfig.APP_VARIANT)
             }
         }, log = log::i,
     ))

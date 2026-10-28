@@ -200,8 +200,8 @@ class PaymentLinksTest {
     /** The widget's explicit intent: the same URI iOS opens, as the data of an intent to MainActivity. */
     private fun widget(route: String, variant: String = "regtest") =
         Intent(Intent.ACTION_VIEW, Uri.parse("com.noahwallet.$variant://widget/$route")).setClassName("com.noahwallet.regtest", "com.noahwallet.MainActivity")
-    private fun PaymentLinks.route(send: SendController, reviews: Int = 0): List<WidgetRoute> =
-        mutableListOf<WidgetRoute>().also { opened -> deliverRoute(send, mutableIntStateOf(reviews)) { opened += it } }
+    private fun PaymentLinks.route(send: SendController, reviews: Int = 0, preparing: Int = 0): List<WidgetRoute> =
+        mutableListOf<WidgetRoute>().also { opened -> deliverRoute(send, mutableIntStateOf(reviews), mutableIntStateOf(preparing)) { opened += it } }
 
     @Test fun widgetRoutesAreTheirOwnAndNeverPaymentLinks() {
         for (route in WidgetRoute.entries) {
@@ -237,23 +237,30 @@ class PaymentLinksTest {
         assertEquals(emptyList<WidgetRoute>(), ignored.route(ready))
     }
 
-    @Test fun aWidgetRouteNeverDiscardsAPaymentReviewOrApproval() {
+    /**
+     * No route leaves a Send that's preparing or reviewing a payment, holds one in flight, or a recurring approval: the
+     * app just comes forward where it is, and the route is used up (iOS review). Home and Receive as well as Scan and Send.
+     */
+    @Test fun aWidgetRouteNeverLeavesAPaymentReviewOrApproval() {
         // Send hasn't read its saved payment yet: the route waits.
         val links = PaymentLinks()
         links.receive(widget("scan"))
         assertEquals(emptyList<WidgetRoute>(), links.route(send().apply { invalidateForWalletChange() }))
         assertEquals(WidgetRoute.scan, links.route)
-        // A payment in flight: Scan opens the Send tab as it is; Send, Home and Receive go where they say.
         val inFlight = send(SendAttempt(payment = arkPayment))
-        assertEquals(listOf(WidgetRoute.send), links.route(inFlight))
-        for (route in listOf(WidgetRoute.send, WidgetRoute.home, WidgetRoute.receive)) {
-            links.receive(widget(route.name)); assertEquals(listOf(route), links.route(inFlight))
-        }
-        // A review or recurring approval on screen stays exactly as it is, and the route is used up.
+        assertTrue(inFlight.locked && !inFlight.loading)
         for (route in WidgetRoute.entries) {
+            for ((label, opened) in listOf(
+                "payment in flight" to { links.receive(widget(route.name)); links.route(inFlight) },
+                "review or approval open" to { links.receive(widget(route.name)); links.route(send(), reviews = 1) },
+                "Send preparing" to { links.receive(widget(route.name)); links.route(send(), preparing = 1) },
+            )) {
+                assertEquals("$route, $label", emptyList<WidgetRoute>(), opened())
+                assertNull("$route, $label: used up", links.route)
+            }
+            // Nothing under way: it goes where it says.
             links.receive(widget(route.name))
-            assertEquals(emptyList<WidgetRoute>(), links.route(send(), reviews = 1))
-            assertNull(links.route)
+            assertEquals(listOf(route), links.route(send()))
         }
         assertFalse("a widget route never shows the payment-link block", links.blocked)
     }

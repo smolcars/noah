@@ -34,15 +34,15 @@ class PaymentLinks : ViewModel() {
     fun drop() { pending = null; route = null }
 
     /**
-     * Opens the widget's [route] once Send has read its saved payment, then forgets it. Nothing is discarded or
-     * replaced: a review or approval on screen stays as it is, and Scan opens the Send tab as it is while a payment
-     * holds it. Nothing pays from a widget.
+     * Opens the widget's [route] once Send has read its saved payment, then forgets it. While Send is preparing or
+     * reviewing a payment, holds one in flight, or a recurring approval is open ([reviews], [preparing]), the app just
+     * comes forward where it is: nothing is left, discarded or replaced. Nothing pays from a widget.
      */
-    fun deliverRoute(send: SendController, reviews: IntState, open: (WidgetRoute) -> Unit) {
+    fun deliverRoute(send: SendController, reviews: IntState, preparing: IntState, open: (WidgetRoute) -> Unit) {
         val next = route ?: return
         if (send.loading) return
         route = null
-        WidgetRoute.target(next, paying = send.locked, reviewing = reviews.intValue > 0)?.let(open)
+        WidgetRoute.target(next, busy = send.locked || reviews.intValue > 0 || preparing.intValue > 0)?.let(open)
     }
 
     /**
@@ -82,11 +82,7 @@ enum class WidgetRoute {
             return entries.firstOrNull { "/${it.name}" == data.path }
         }
 
-        /** Where [route] may go: nowhere over an open review or approval; Scan, while a payment holds Send, to Send as it is. */
-        fun target(route: WidgetRoute, paying: Boolean, reviewing: Boolean): WidgetRoute? = when {
-            reviewing -> null
-            route == scan && paying -> send
-            else -> route
-        }
+        /** Where [route] may go: nowhere while a payment, review or approval is under way ([busy]). */
+        fun target(route: WidgetRoute, busy: Boolean): WidgetRoute? = route.takeUnless { busy }
     }
 }

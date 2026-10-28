@@ -78,23 +78,58 @@ object WidgetWave {
     }
 
     /**
-     * Settled balance changes in Activity's unified rows ([com.noahwallet.history.HistoryRules.unified]). A bark
-     * movement counts once successful, dated by its creation (the date Activity shows): its Ark delta, plus the
-     * on-chain delta of the board or offboard transaction merged into it once that's confirmed, so a board moves the
-     * balance by its fee alone. Any other on-chain transaction counts once confirmed, dated by its confirmation height
-     * ([tip] − height blocks ago; bark reports no block time). Pending, failed and canceled movements, and unconfirmed
-     * transactions, are not changes.
+     * Settled balance changes in Activity's unified rows ([com.noahwallet.history.HistoryRules.unified]), each movement
+     * first [paired] with the wallet transaction it names. A bark movement counts once successful, dated by its creation
+     * (the date Activity shows): its Ark delta, plus its on-chain half once that's confirmed, so a board moves the
+     * balance by its fee alone. Any other on-chain transaction counts once confirmed, dated by [chainDates] (txid →
+     * epoch ms, see [ChainDate]). Pending, failed and canceled movements, and unconfirmed transactions, are not changes.
      */
-    fun changes(rows: List<HistoryTransaction>, tip: Long, now: Long): List<Change> = rows.mapNotNull { row ->
+    fun changes(rows: List<HistoryTransaction>, chainDates: Map<String, Long>): List<Change> = paired(rows).mapNotNull { row ->
         if (row.source == "onchain-wallet") {
-            val height = row.confirmationHeight?.toLong()
-            if (row.hasConfirmation != true || height == null) return@mapNotNull null
-            val sats = row.balanceChangeSat ?: return@mapNotNull null
-            Change(now - (tip - height).coerceAtLeast(0) * BLOCK_MILLIS, sats)
+            if (row.hasConfirmation != true) return@mapNotNull null
+            val at = row.txid?.let(chainDates::get) ?: return@mapNotNull null
+            Change(at, row.balanceChangeSat ?: return@mapNotNull null)
         } else {
             if (row.movementStatus != "successful") return@mapNotNull null
             val at = row.timestamp?.time ?: return@mapNotNull null
             Change(at, (row.effectiveBalanceSat ?: 0L) + (row.balanceChangeSat?.takeIf { row.hasConfirmation == true } ?: 0L))
         }
     }.filter { it.sats != 0L }
+
+    /**
+     * Activity merges a board or offboard with its transaction by the txid it shows; a round offboard names its
+     * transaction only as `funding_txid`. Any movement left unmerged takes the wallet transaction its offboard txid,
+     * chain anchor or funding txid names, so both halves of one transfer stay one change on the movement's day.
+     */
+    internal fun paired(rows: List<HistoryTransaction>): List<HistoryTransaction> {
+        val chain = rows.filter { it.source == "onchain-wallet" && !it.txid.isNullOrEmpty() }.associateBy { it.txid!! }
+        val taken = mutableSetOf<String>()
+        val movements = rows.filter { it.source != "onchain-wallet" }.map { row ->
+            if (row.balanceChangeSat != null) return@map row
+            val metadata = row.metadataJson?.let(com.noahwallet.history.HistoryMetadata::parse) ?: return@map row
+            val txid = listOfNotNull(metadata.offboardTxid, metadata.chainAnchor?.substringBefore(':'), metadata.fundingTxid)
+                .firstOrNull { it in chain && it !in taken } ?: return@map row
+            taken += txid
+            val tx = chain.getValue(txid)
+            row.copy(balanceChangeSat = tx.balanceChangeSat, hasConfirmation = tx.hasConfirmation, confirmationHeight = tx.confirmationHeight)
+        }
+        return movements + rows.filter { it.source == "onchain-wallet" && it.txid !in taken }
+    }
+
+    /**
+     * When a confirmed transaction was confirmed. bark reports only its height, so the first sighting estimates it as
+     * now − (tip − height) × 10 min and keeps that ([exact] false) rather than recomputing it, which would drift a day
+     * per day while the tip stands still; a block time Activity has read replaces it ([exact] true).
+     */
+    @kotlinx.serialization.Serializable
+    data class ChainDate(val at: Long, val exact: Boolean = false)
+
+    /** The confirmed wallet transactions' dates in [rows]: [known] block times, else [stored], else a first estimate. */
+    fun chainDates(rows: List<HistoryTransaction>, stored: Map<String, ChainDate>, known: Map<String, Long>, tip: Long?, now: Long): Map<String, ChainDate> =
+        rows.filter { it.source == "onchain-wallet" && it.hasConfirmation == true && !it.txid.isNullOrEmpty() }.mapNotNull { row ->
+            val txid = row.txid!!
+            val date = known[txid]?.takeIf { it > 0 }?.let { ChainDate(it, exact = true) } ?: stored[txid]
+                ?: row.confirmationHeight?.toLong()?.let { height -> tip?.let { ChainDate(now - (it - height).coerceAtLeast(0) * BLOCK_MILLIS) } }
+            date?.let { txid to it }
+        }.toMap()
 }

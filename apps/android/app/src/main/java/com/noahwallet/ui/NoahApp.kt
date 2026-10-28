@@ -136,11 +136,11 @@ private fun LinkDelivery(model: AppModel, links: PaymentLinks, nav: AppNavigator
     val send = remember(context) { com.noahwallet.send.SendRuntime.shared(context).controller }
     LaunchedEffect(links.pending, send.loading) { links.deliver(send, model.openReviews, nav::scanned) }
     LaunchedEffect(links.route, send.loading) {
-        links.deliverRoute(send, model.openReviews) { route ->
+        links.deliverRoute(send, model.openReviews, model.sendPreparing) { route ->
             when (route) {
                 WidgetRoute.home -> nav.showHome()
                 WidgetRoute.receive -> nav.select(Destination.Receive)
-                // The Send tab as it is: its draft, review or payment in flight stays.
+                // The Send tab as it is: its draft stays.
                 WidgetRoute.send -> nav.select(Destination.Send)
                 // Home's scan button: the QR hub, scanning.
                 WidgetRoute.scan -> { nav.showHome(); nav.backStack.add(QRDestination(true)) }

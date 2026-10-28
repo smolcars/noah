@@ -45,7 +45,7 @@ class WidgetIOTest {
             }
             val work = async(Dispatchers.Main) {
                 if (clear) WidgetDataWriter.clear(context, "regtest")
-                else WidgetDataWriter.write(context, balance, WidgetDataWriter.Extras(emptyList(), 2), display, "regtest")
+                else WidgetDataWriter.write(context, balance, WidgetDataWriter.Extras(emptyList(), 100, 2), { display }, "regtest")
             }
             try {
                 assertNotSame(Looper.getMainLooper().thread, withTimeout(5000) { entered.await() })

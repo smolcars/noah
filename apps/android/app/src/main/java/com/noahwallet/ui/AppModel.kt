@@ -146,6 +146,8 @@ class AppModel(application: Application, val settings: SettingsStorage = Setting
     var scannedDestination by mutableStateOf<String?>(null)
     /** Send reviews and recurring approvals on screen ([ReviewOpen]); an OS link is rejected while any is open. */
     val openReviews = mutableIntStateOf(0)
+    /** Send preparing a review on screen ([ReviewOpen]); a widget route leaves the app where it is meanwhile. */
+    val sendPreparing = mutableIntStateOf(0)
     var repeatPayment by mutableStateOf<com.noahwallet.history.RepeatPayment?>(null)
     /** The expiring VTXOs Home's Renew nudge hands to today's VTXO refresh review; consumed once. */
     var renewVtxos by mutableStateOf<List<String>?>(null)
@@ -163,13 +165,17 @@ class AppModel(application: Application, val settings: SettingsStorage = Setting
     /** What the widget follows from Home: unit, hide setting and fiat currency. */
     private val widgetDisplay get() = com.noahwallet.services.push.WidgetDataWriter.Display(amountUnit, hidden, preferredCurrency)
 
-    /** The widget takes a display change, or Home's latest [quote], without reading the wallet. */
+    /** The widget takes a display change, or Home's latest [quote], without reading the wallet; the display is read when it applies. */
     fun republishWidget(quote: com.noahwallet.services.push.WidgetDataWriter.Quote? = null) {
-        val display = widgetDisplay
         viewModelScope.launch {
-            runCatching { com.noahwallet.services.push.WidgetDataWriter.republish(getApplication(), display, BuildConfig.APP_VARIANT, quote) }
+            runCatching { com.noahwallet.services.push.WidgetDataWriter.republish(getApplication(), { widgetDisplay }, BuildConfig.APP_VARIANT, quote) }
         }
     }
+
+    /** The block times Activity has read for confirmed on-chain rows (it rewrites their date once it knows one). */
+    private fun widgetBlockTimes(): Map<String, Long> = history.transactions
+        .filter { it.source == "onchain-wallet" && it.hasConfirmation == true && it.dateLabel == null }
+        .mapNotNull { row -> row.txid?.let { txid -> row.timestamp?.time?.takeIf { it > 0 }?.let { txid to it } } }.toMap()
 
     fun refreshLocale() { localeIdentifier = com.noahwallet.services.storage.LegacyLocale.resolved(getApplication()) }
 
@@ -420,8 +426,8 @@ class AppModel(application: Application, val settings: SettingsStorage = Setting
             checkStage()
             if (sync) session.sync()
             summary = ForegroundWidgetRefresh.read(session::summary, session::widgetExtras, ::checkStage) { balance, extras ->
-                com.noahwallet.services.push.WidgetDataWriter.write(getApplication(), balance, extras, widgetDisplay, BuildConfig.APP_VARIANT,
-                    checkStage = ::checkStage)
+                com.noahwallet.services.push.WidgetDataWriter.write(getApplication(), balance, extras, { widgetDisplay }, BuildConfig.APP_VARIANT,
+                    known = widgetBlockTimes(), checkStage = ::checkStage)
             }
             summaryRevision++
             error = null
