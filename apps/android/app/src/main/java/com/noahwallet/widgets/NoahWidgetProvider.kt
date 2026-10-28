@@ -81,7 +81,8 @@ open class NoahWidgetProvider : AppWidgetProvider() {
     private fun updateWidget(context: Context, appWidgetManager: AppWidgetManager, appWidgetId: Int) {
         @Suppress("TooGenericExceptionCaught") // broadcast boundary: a failed update is logged, never crashes the receiver
         try {
-            val snapshot = WidgetSnapshot.read(context.getSharedPreferences(appGroup, Context.MODE_PRIVATE))
+            val prefs = context.getSharedPreferences(appGroup, Context.MODE_PRIVATE)
+            val snapshot = WidgetSnapshot.read(prefs)
             val content = snapshot?.let { WidgetContent.of(context, it, variant) }
             val density = context.resources.displayMetrics.density
             val options = appWidgetManager.getAppWidgetOptions(appWidgetId)

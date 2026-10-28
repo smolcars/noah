@@ -62,7 +62,12 @@ class HeadlessEntryPointsTest {
     @Test fun everyWidgetRendersCachedDataWithoutOpeningWallets() {
         val code = source("widgets/NoahWidgetProvider")
         assertTrue(code.contains("WidgetSnapshot.read(prefs)"))
-        assertFalse(code.contains("AppServices")); assertFalse(code.contains("WalletSession"))
+        // Everything the provider draws with reads the snapshot alone.
+        for (path in listOf("NoahWidgetProvider", "WidgetContent", "WidgetViews", "WidgetSea", "WidgetType", "WidgetSnapshot")) {
+            val drawn = source("widgets/$path")
+            assertFalse(path, drawn.contains("AppServices")); assertFalse(path, drawn.contains("WalletSession"))
+            assertFalse(path, drawn.contains("SettingsStorage"))
+        }
         for (path in listOf("NoahWidgetMainnetProvider", "NoahWidgetSignetProvider", "NoahWidgetRegtestProvider")) {
             assertTrue(path, source("widgets/$path").contains("NoahWidgetProvider()"))
         }
