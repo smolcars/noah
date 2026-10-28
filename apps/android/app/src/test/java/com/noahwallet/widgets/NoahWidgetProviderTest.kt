@@ -332,7 +332,7 @@ class NoahWidgetProviderTest {
         assertEquals(WidgetViews.Label(130f, false, (130f - 22f) / 134f), WidgetViews.label(320f, long, 140f, 28f))
         // ...and below that the label takes its own line, the balance the whole row, where the height leaves room for it
         // and the 4 dp under it...
-        assertEquals(WidgetViews.Label(206f, true, line = true), WidgetViews.label(320f, long, 150f, 23f))
+        assertEquals(WidgetViews.Label(206f, true, line = true, lift = 23f), WidgetViews.label(320f, long, 150f, 23f))
         assertEquals(WidgetViews.Box(284f, 38f, 34f, .45f), WidgetViews.balanceBox(WidgetLayout.medium, 320f, WidgetViews.Label(206f, true, line = true)))
         // ...or else it's left out, the balance again with the whole row.
         val out = WidgetViews.Label(0f, false, shown = false)
@@ -341,8 +341,9 @@ class NoahWidgetProviderTest {
         // At 200% beside a chip: its own line at 80% even if the amount still doesn't fit; without a chip, at full size;
         // above a status line in 180 dp (28 to spare), neither.
         val chip = WidgetViews.LabelParts(20f, 78f, 260f, 104f, 31f)
-        assertEquals(WidgetViews.Label(284f, false, .8f, true), WidgetViews.label(320f, chip, 197f, 50f))
-        assertEquals(WidgetViews.Label(190f, false, line = true), WidgetViews.label(320f, WidgetViews.LabelParts(0f, 0f, 190f, 104f, 28f), 197f, 50f))
+        assertEquals(WidgetViews.Label(284f, false, .8f, true, lift = 35f), WidgetViews.label(320f, chip, 197f, 50f))
+        assertEquals(WidgetViews.Label(190f, false, line = true, lift = 32f),
+            WidgetViews.label(320f, WidgetViews.LabelParts(0f, 0f, 190f, 104f, 28f), 197f, 50f))
         assertEquals(out, WidgetViews.label(320f, chip, 197f, 28f))
         // The other layouts keep their boxes, and the balance's half-size floor.
         assertEquals(WidgetViews.Box(144f, 34f, 30f, .5f), WidgetViews.balanceBox(WidgetLayout.small, 180f))
@@ -520,6 +521,8 @@ class NoahWidgetProviderTest {
         // ...the label beside it, on its own line or left out, the amount whole...
         assertEquals(at, label.line, view.shown(R.id.widget_label_line))
         assertEquals(at, label.shown && !label.line, view.shown(R.id.widget_label))
+        // The boat sails below the label's own line.
+        if (label.line) assertTrue("$at: the boat from ${view.top(R.id.widget_boat)} px", view.top(R.id.widget_boat) >= view.bottom(R.id.widget_label_line))
         if (label.shown) {
             val change = if (label.line) R.id.widget_change_line else R.id.widget_change
             assertEquals(at, content.change, view.text(change)); assertTrue(at, view.whole(change))

@@ -65,7 +65,7 @@ internal object WidgetViews {
      */
     @Suppress("LongParameterList") // the slot, and the measured rows that move its sea
     fun frame(layout: WidgetLayout, content: WidgetContent?, widthDp: Float, heightDp: Float, status: Float? = null,
-        labelRow: Float = 18f): WidgetSea.Frame? = when (layout) {
+        labelRow: Float = 18f, lift: Float = 0f): WidgetSea.Frame? = when (layout) {
         WidgetLayout.small -> {
             // From the bottom: padding, the status line (Renew takes two lines here), fiat, then the balance.
             val lines = status ?: when (content?.status) { is WidgetContent.Status.Renew -> 39f; is WidgetContent.Status.Arriving -> 22f; null -> 0f }
@@ -77,7 +77,9 @@ internal object WidgetViews {
         WidgetLayout.medium -> {
             val width = (widthDp * .52f).roundToInt().toFloat()
             val actionsTop = heightDp - 16f - 40f
-            WidgetSea.Frame(widthDp - width, 34f, width, heightDp - 34f, maxOf(26f, actionsTop - 8f - 34f), 26f, 18f, fade = true)
+            // Below the label's own line ([lift]), if it has one: the boat never sails over it.
+            val top = 34f + lift
+            WidgetSea.Frame(widthDp - width, top, width, heightDp - top, maxOf(26f, actionsTop - 8f - top), 26f, 18f, fade = true)
         }
         WidgetLayout.empty -> {
             // The boat mid-widget on calm water; the sea starts just above the line, so only water is drawn.
@@ -112,9 +114,9 @@ internal object WidgetViews {
 
     /**
      * The medium label: its width (dp), whether it keeps " · 30 days", its text's scale, whether it has a line of its own
-     * above the balance, and whether it shows at all.
+     * above the balance, whether it shows at all, and how far its own line and the gap under it lower the rest (dp).
      */
-    data class Label(val width: Float, val days: Boolean, val scale: Float = 1f, val line: Boolean = false, val shown: Boolean = true)
+    data class Label(val width: Float, val days: Boolean, val scale: Float = 1f, val line: Boolean = false, val shown: Boolean = true, val lift: Float = 0f)
 
     /**
      * The label's widths at full size (dp): the chip's padding and gap, the chip's text, the change and " · 30 days"; and
@@ -140,7 +142,7 @@ internal object WidgetViews {
         }
         fit(row - 14f - balance, false)?.let { return it }
         // Its own line and the 4 dp under it.
-        if (parts.tall + 4f <= spare) return fit(row, true) ?: Label(row, false, LABEL_FLOOR, true)
+        if (parts.tall + 4f <= spare) return (fit(row, true) ?: Label(row, false, LABEL_FLOOR, true)).copy(lift = parts.tall + 4f)
         return Label(0f, false, shown = false)
     }
 
@@ -357,7 +359,8 @@ internal object WidgetViews {
     fun buildAll(context: Context, variant: String, content: WidgetContent?, sizes: List<SizeF>, density: Float, budget: Long): Built {
         val plans = sizes.associateWith { plan(context, content, it.width, it.height) }
         fun box(size: SizeF) = plans.getValue(size).let { balanceBox(it.layout, size.width, it.label) }
-        fun frame(size: SizeF) = plans.getValue(size).let { frame(it.layout, content, size.width, size.height, it.status?.tall ?: 0f, it.labelRow) }
+        fun frame(size: SizeF) =
+            plans.getValue(size).let { frame(it.layout, content, size.width, size.height, it.status?.tall ?: 0f, it.labelRow, it.label?.lift ?: 0f) }
         val balances = if (content == null) emptyMap() else plans.keys.map(::box).distinct()
             .associateWith { WidgetType.balance(context, content.balance, content.satsSuffix, it.sp, it.width, it.height, density, it.floor) }
         val frames = plans.keys.mapNotNull(::frame).distinct()
