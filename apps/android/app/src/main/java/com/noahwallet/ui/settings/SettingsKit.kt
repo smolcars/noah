@@ -1,7 +1,6 @@
 package com.noahwallet.ui.settings
 
 import android.annotation.SuppressLint
-
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ScrollState
@@ -126,8 +125,6 @@ internal fun SettingsFrame(title: String, back: (() -> Unit)?, modifier: Modifie
     foot: (@Composable RowScope.() -> Unit)? = null, scroll: ScrollState? = rememberScrollState(),
     bare: Boolean = false, footFade: Float = .46f, content: @Composable ColumnScope.() -> Unit) {
     val palette = LocalPalette.current
-    val haptics = rememberHaptics()
-    val reduceMotion = LocalReduceMotion.current
     val pane = LocalSettingsPane.current
     val wide = pane != SettingsPane.compact
     val start = if (pane == SettingsPane.trailing) 32.dp else 24.dp
@@ -139,53 +136,86 @@ internal fun SettingsFrame(title: String, back: (() -> Unit)?, modifier: Modifie
         with(LocalDensity.current) { footHeight.toDp() } + 12.dp) else if (wide) 110.dp else 56.dp
     Box(modifier.fillMaxSize().background(palette.background)) {
         val body: @Composable ColumnScope.() -> Unit = {
-            if (!wide && !hero) Row(Modifier.fillMaxWidth().heightIn(min = 46.dp), verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text(title, Modifier.semantics { heading() }, style = ActivityType.large, color = palette.foreground)
-                chip?.invoke()
-            }
-            line?.let { Text(it, Modifier.padding(bottom = 4.dp), style = HomeType.line, color = palette.muted) }
+            FrameHeading(title, line, chip, large = !wide && !hero)
             content()
         }
         val padding = Modifier.widthIn(max = 640.dp).fillMaxWidth().padding(start = start, end = end, top = navHeight + if (wide) 6.dp else 0.dp,
             bottom = bottom)
-        if (bare) Column(Modifier.fillMaxSize().padding(top = navHeight), content = content)
-        else if (scroll != null) Column(Modifier.fillMaxSize().verticalScroll(scroll), horizontalAlignment = Alignment.CenterHorizontally) {
-            Column(padding, content = body)
-        } else Column(Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally) {
-            Column(padding.weight(1f).padding(bottom = 0.dp), content = body)
-        }
-        val scrolled = (scroll?.value ?: 0) > 2
-        val edge by animateFloatAsState(if (wide || scrolled || bare) 1f else 0f, tween(200), label = "edge")
-        Box(Modifier.fillMaxWidth().height(navHeight).graphicsLayer { alpha = edge }
-            .background(Brush.verticalGradient(0f to palette.background, .78f to palette.background, 1f to palette.background.copy(alpha = 0f))))
-        Row(Modifier.fillMaxWidth().height(navHeight).padding(start = if (wide && back == null) start - 4.dp else 4.dp, end = 4.dp),
-            verticalAlignment = Alignment.CenterVertically) {
-            back?.let { BarButton(R.drawable.ic_activity_back, tr("Back"), Modifier.testTag("settings-back")) { haptics.light(); it() } }
-            if (wide) {
-                if (!hero) {
-                    Text(title, Modifier.padding(start = if (back != null) 8.dp else 0.dp).semantics { heading() }, style = ActivityType.wide,
-                        color = palette.foreground, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    chip?.let { Spacer(Modifier.width(10.dp)); it() }
-                }
-                Spacer(Modifier.weight(1f))
-            } else {
-                val tucked = bare || (scroll?.value ?: 0) > with(androidx.compose.ui.platform.LocalDensity.current) { (if (hero) 120 else 40).dp.toPx() }
-                val alpha by animateFloatAsState(if (tucked) 1f else 0f, tween(if (reduceMotion) 180 else 250), label = "mini")
-                Text(title, Modifier.padding(start = 12.dp).weight(1f).graphicsLayer { this.alpha = alpha }.clearAndSetSemantics { },
-                    style = ActivityType.mini, color = palette.foreground, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        when {
+            bare -> Column(Modifier.fillMaxSize().padding(top = navHeight), content = content)
+            scroll != null -> Column(Modifier.fillMaxSize().verticalScroll(scroll), horizontalAlignment = Alignment.CenterHorizontally) {
+                Column(padding, content = body)
             }
-            actions()
-        }
-        foot?.let { actionsRow ->
-            Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth().onSizeChanged { footHeight = it.height }
-                .background(Brush.verticalGradient(0f to palette.background.copy(alpha = 0f), footFade to palette.background))
-                .padding(start = start, end = if (wide) 24.dp else end, top = 48.dp, bottom = if (wide) 24.dp else 28.dp)) {
-                Row(Modifier.widthIn(max = 640.dp).fillMaxWidth().align(Alignment.Center), horizontalArrangement = Arrangement.spacedBy(10.dp),
-                    verticalAlignment = Alignment.CenterVertically, content = actionsRow)
+            else -> Column(Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally) {
+                Column(padding.weight(1f).padding(bottom = 0.dp), content = body)
             }
         }
+        FrameBar(title, back, chip, actions, scroll, bare, hero, start)
+        foot?.let { FrameFoot(start, end, footFade, it) { height -> footHeight = height } }
         HomeToast(LocalSettingsToasts.current.current, Modifier.align(Alignment.TopCenter).padding(top = 64.dp))
+    }
+}
+
+/** The page's large title (compact pages that draw no hero) with its chip, then its line. */
+@Composable
+private fun FrameHeading(title: String, line: String?, chip: (@Composable () -> Unit)?, large: Boolean) {
+    val palette = LocalPalette.current
+    if (large) Row(Modifier.fillMaxWidth().heightIn(min = 46.dp), verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        Text(title, Modifier.semantics { heading() }, style = ActivityType.large, color = palette.foreground)
+        chip?.invoke()
+    }
+    line?.let { Text(it, Modifier.padding(bottom = 4.dp), style = HomeType.line, color = palette.muted) }
+}
+
+/** The bar over the page: Back, then the title (always in a split pane; tucked in once the page scrolls), then [actions]. */
+@Composable
+private fun FrameBar(title: String, back: (() -> Unit)?, chip: (@Composable () -> Unit)?, actions: @Composable RowScope.() -> Unit,
+    scroll: ScrollState?, bare: Boolean, hero: Boolean, start: Dp) {
+    val palette = LocalPalette.current
+    val haptics = rememberHaptics()
+    val wide = LocalSettingsPane.current != SettingsPane.compact
+    val scrolled = (scroll?.value ?: 0) > 2
+    val edge by animateFloatAsState(if (wide || scrolled || bare) 1f else 0f, tween(200), label = "edge")
+    Box(Modifier.fillMaxWidth().height(navHeight).graphicsLayer { alpha = edge }
+        .background(Brush.verticalGradient(0f to palette.background, .78f to palette.background, 1f to palette.background.copy(alpha = 0f))))
+    Row(Modifier.fillMaxWidth().height(navHeight).padding(start = if (wide && back == null) start - 4.dp else 4.dp, end = 4.dp),
+        verticalAlignment = Alignment.CenterVertically) {
+        back?.let { BarButton(R.drawable.ic_activity_back, tr("Back"), Modifier.testTag("settings-back")) { haptics.light(); it() } }
+        if (wide) {
+            if (!hero) BarTitle(title, back != null, chip)
+            Spacer(Modifier.weight(1f))
+        } else TuckedTitle(title, bare || (scroll?.value ?: 0) > with(LocalDensity.current) { (if (hero) 120 else 40).dp.toPx() })
+        actions()
+    }
+}
+
+/** A split pane's title in the bar, after Back when there is one. */
+@Composable
+private fun BarTitle(title: String, afterBack: Boolean, chip: (@Composable () -> Unit)?) {
+    Text(title, Modifier.padding(start = if (afterBack) 8.dp else 0.dp).semantics { heading() }, style = ActivityType.wide,
+        color = LocalPalette.current.foreground, maxLines = 1, overflow = TextOverflow.Ellipsis)
+    chip?.let { Spacer(Modifier.width(10.dp)); it() }
+}
+
+@Composable
+private fun RowScope.TuckedTitle(title: String, tucked: Boolean) {
+    val reduceMotion = LocalReduceMotion.current
+    val alpha by animateFloatAsState(if (tucked) 1f else 0f, tween(if (reduceMotion) 180 else 250), label = "mini")
+    Text(title, Modifier.padding(start = 12.dp).weight(1f).graphicsLayer { this.alpha = alpha }.clearAndSetSemantics { },
+        style = ActivityType.mini, color = LocalPalette.current.foreground, maxLines = 1, overflow = TextOverflow.Ellipsis)
+}
+
+/** The bottom actions over a fade, reporting their [measured] height so nothing sits under them. */
+@Composable
+private fun BoxScope.FrameFoot(start: Dp, end: Dp, footFade: Float, actions: @Composable RowScope.() -> Unit, measured: (Int) -> Unit) {
+    val palette = LocalPalette.current
+    val wide = LocalSettingsPane.current != SettingsPane.compact
+    Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth().onSizeChanged { measured(it.height) }
+        .background(Brush.verticalGradient(0f to palette.background.copy(alpha = 0f), footFade to palette.background))
+        .padding(start = start, end = if (wide) 24.dp else end, top = 48.dp, bottom = if (wide) 24.dp else 28.dp)) {
+        Row(Modifier.widthIn(max = 640.dp).fillMaxWidth().align(Alignment.Center), horizontalArrangement = Arrangement.spacedBy(10.dp),
+            verticalAlignment = Alignment.CenterVertically, content = actions)
     }
 }
 
@@ -237,48 +267,100 @@ internal fun SettingsRow(title: String, icon: Int? = null, glyph: String? = null
     val pressed by interaction.collectIsPressedAsState()
     val highlight by animateFloatAsState(if (pressed || selected) 1f else 0f, tween(200), label = "row")
     val leading = icon != null || glyph != null
-    val action = when (end) {
-        is RowEnd.Toggle -> Modifier.toggleable(end.checked, interaction, null, enabled = enabled && end.enabled, role = Role.Switch) {
-            haptics.selection(); end.change(it)
-        }
-        else -> if (onClick != null) Modifier.clickable(interaction, null, enabled = enabled, role = Role.Button) { haptics.light(); onClick() } else Modifier
-    }
+    val action = rowAction(end, enabled, interaction, haptics, onClick)
     Row(modifier.fillMaxWidth().heightIn(min = 56.dp).graphicsLayer { alpha = if (enabled) 1f else .4f }
-        .drawBehind {
-            if (highlight > 0f) drawRoundRect(palette.soft.copy(alpha = palette.soft.alpha * highlight), Offset(-12.dp.toPx(), 3.dp.toPx()),
-                Size(size.width + 24.dp.toPx(), size.height - 6.dp.toPx()), CornerRadius(16.dp.toPx()))
-            if (divider && !selected) {
-                val inset = if (leading) 48.dp.toPx() else 0f
-                drawRect(palette.hairline, Offset(inset, size.height - 1.dp.toPx()), Size(size.width - inset, 1.dp.toPx()))
-            }
-        }.then(action).semantics(mergeDescendants = true) { if (selected) this.selected = true },
+        .rowBackground(palette, { highlight }, divider = divider && !selected, inset = if (leading) 48.dp else 0.dp)
+        .then(action).semantics(mergeDescendants = true) { if (selected) this.selected = true },
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
         val ink = if (danger) palette.failure else palette.foreground
-        if (leading) Box(Modifier.size(34.dp).background(palette.soft, CircleShape), contentAlignment = Alignment.Center) {
-            if (icon != null) Icon(painterResource(icon), null, Modifier.size(19.dp), tint = ink)
-            else Text(glyph!!, style = TextStyle(fontFamily = NoahTokens.Display, fontWeight = FontWeight.SemiBold, fontSize = 17.sp, lineHeight = 17.sp),
-                color = ink)
-        }
+        if (leading) RowLeading(icon, glyph, ink)
         Column(Modifier.weight(1f).padding(vertical = 9.dp)) {
             Text(title, style = SettingsType.row.copy(fontWeight = if (bold) FontWeight.Medium else FontWeight.Normal), color = ink)
             sub?.let { Text(it, Modifier.padding(top = 1.dp), style = HomeType.small, color = palette.muted) }
         }
-        if (value != null || dot != null) Row(Modifier.widthIn(max = 200.dp), verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(7.dp)) {
-            dot?.let { Box(Modifier.size(8.dp).background(if (it == RowDot.failure) palette.failure else palette.orange, CircleShape)) }
-            value?.let { Text(it, style = if (numeric) SettingsType.number else SettingsType.value, color = if (failed) palette.failure else palette.muted,
-                maxLines = 1, overflow = TextOverflow.Ellipsis) }
+        if (value != null || dot != null) RowValue(value, dot, numeric, failed)
+        RowTrailing(end, enabled)
+    }
+}
+
+/** The avatar's circle (ringed in orange for you) with an initial or an icon. */
+@Composable
+private fun AvatarCore(size: Dp, you: Boolean, initial: String?, icon: Int?) {
+    val palette = LocalPalette.current
+    val large = size >= 60.dp
+    Box(Modifier.fillMaxSize().then(if (you) Modifier.border(2.dp, palette.orange, CircleShape) else Modifier.background(palette.soft, CircleShape)),
+        contentAlignment = Alignment.Center) {
+        val fontSize = when { size >= 84.dp -> 34.sp; large -> 24.sp; else -> 17.sp }
+        if (initial != null) Text(initial.lowercase(), style = TextStyle(fontFamily = NoahTokens.Display, fontWeight = FontWeight.SemiBold,
+            fontSize = fontSize, lineHeight = fontSize), color = palette.foreground)
+        else icon?.let { Icon(painterResource(it), null, Modifier.size(if (large) 27.dp else 20.dp), tint = palette.foreground) }
+    }
+}
+
+/** A pending avatar's dashed ring, turning slowly (still under Reduce Motion). */
+@Composable
+private fun AvatarRing(size: Dp, modifier: Modifier) {
+    val palette = LocalPalette.current
+    val reduceMotion = LocalReduceMotion.current
+    val large = size >= 60.dp
+    val turn = if (!reduceMotion) rememberInfiniteTransition(label = "pending").animateFloat(0f, 360f,
+        infiniteRepeatable(tween(8_000, easing = LinearEasing)), label = "pending").value else 0f
+    Canvas(modifier.requiredSize(size + if (large) 8.dp else 6.dp).graphicsLayer { rotationZ = turn }) {
+        val width = (if (large) 2.dp else 1.5.dp).toPx()
+        drawCircle(palette.muted, (this.size.minDimension - width) / 2, style = Stroke(width,
+            pathEffect = PathEffect.dashPathEffect(floatArrayOf(4.5.dp.toPx(), 3.dp.toPx()))))
+    }
+}
+
+/** A toggle row toggles; any other row with [onClick] is a button. */
+private fun rowAction(end: RowEnd, enabled: Boolean, interaction: MutableInteractionSource, haptics: com.noahwallet.ui.onboarding.Haptics,
+    onClick: (() -> Unit)?): Modifier = when (end) {
+    is RowEnd.Toggle -> Modifier.toggleable(end.checked, interaction, null, enabled = enabled && end.enabled, role = Role.Switch) {
+        haptics.selection(); end.change(it)
+    }
+    else -> if (onClick != null) Modifier.clickable(interaction, null, enabled = enabled, role = Role.Button) { haptics.light(); onClick() } else Modifier
+}
+
+/** The row's press or selection highlight, and its hairline from [inset] when [divider]. */
+private fun Modifier.rowBackground(palette: NoahTokens.Palette, highlight: () -> Float, divider: Boolean, inset: Dp) = drawBehind {
+    val shown = highlight()
+    if (shown > 0f) drawRoundRect(palette.soft.copy(alpha = palette.soft.alpha * shown), Offset(-12.dp.toPx(), 3.dp.toPx()),
+        Size(size.width + 24.dp.toPx(), size.height - 6.dp.toPx()), CornerRadius(16.dp.toPx()))
+    if (divider) drawRect(palette.hairline, Offset(inset.toPx(), size.height - 1.dp.toPx()), Size(size.width - inset.toPx(), 1.dp.toPx()))
+}
+
+/** The row's leading circle: its icon, else its glyph. */
+@Composable
+private fun RowLeading(icon: Int?, glyph: String?, ink: Color) {
+    Box(Modifier.size(34.dp).background(LocalPalette.current.soft, CircleShape), contentAlignment = Alignment.Center) {
+        if (icon != null) Icon(painterResource(icon), null, Modifier.size(19.dp), tint = ink)
+        else Text(glyph!!, style = TextStyle(fontFamily = NoahTokens.Display, fontWeight = FontWeight.SemiBold, fontSize = 17.sp, lineHeight = 17.sp),
+            color = ink)
+    }
+}
+
+@Composable
+private fun RowValue(value: String?, dot: RowDot?, numeric: Boolean, failed: Boolean) {
+    val palette = LocalPalette.current
+    Row(Modifier.widthIn(max = 200.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(7.dp)) {
+        dot?.let { Box(Modifier.size(8.dp).background(if (it == RowDot.failure) palette.failure else palette.orange, CircleShape)) }
+        value?.let { Text(it, style = if (numeric) SettingsType.number else SettingsType.value, color = if (failed) palette.failure else palette.muted,
+            maxLines = 1, overflow = TextOverflow.Ellipsis) }
+    }
+}
+
+@Composable
+private fun RowTrailing(end: RowEnd, enabled: Boolean) {
+    val palette = LocalPalette.current
+    when (end) {
+        RowEnd.Chevron -> Icon(painterResource(HomeIcons.chevron), null, Modifier.offset(x = 4.dp).size(18.dp), tint = palette.muted)
+        is RowEnd.Expand -> {
+            val turn by animateFloatAsState(if (end.open) 90f else 0f, tween(300), label = "expand")
+            Icon(painterResource(HomeIcons.chevron), null, Modifier.offset(x = 4.dp).size(18.dp).graphicsLayer { rotationZ = turn }, tint = palette.muted)
         }
-        when (end) {
-            RowEnd.Chevron -> Icon(painterResource(HomeIcons.chevron), null, Modifier.offset(x = 4.dp).size(18.dp), tint = palette.muted)
-            is RowEnd.Expand -> {
-                val turn by animateFloatAsState(if (end.open) 90f else 0f, tween(300), label = "expand")
-                Icon(painterResource(HomeIcons.chevron), null, Modifier.offset(x = 4.dp).size(18.dp).graphicsLayer { rotationZ = turn }, tint = palette.muted)
-            }
-            RowEnd.External -> Icon(painterResource(SettingsIcons.external), null, Modifier.size(17.dp), tint = palette.muted)
-            is RowEnd.Toggle -> SettingsSwitch(end.checked, enabled && end.enabled)
-            RowEnd.None -> {}
-        }
+        RowEnd.External -> Icon(painterResource(SettingsIcons.external), null, Modifier.size(17.dp), tint = palette.muted)
+        is RowEnd.Toggle -> SettingsSwitch(end.checked, enabled && end.enabled)
+        RowEnd.None -> Unit
     }
 }
 
@@ -350,26 +432,33 @@ internal enum class MarkKind { ok, running, failed, idle }
 @Composable
 internal fun StatusMark(kind: MarkKind, icon: Int? = null, iconTint: Color? = null, ring: Color? = null, check: Float = 1f) {
     val palette = LocalPalette.current
-    val reduceMotion = LocalReduceMotion.current
-    val spin = if (kind == MarkKind.running && !reduceMotion) rememberInfiniteTransition(label = "mark").animateFloat(0f, 360f,
-        infiniteRepeatable(tween(1_000, easing = LinearEasing)), label = "spin").value else 0f
     Box(Modifier.size(56.dp), contentAlignment = Alignment.Center) {
-        Canvas(Modifier.fillMaxSize()) {
-            val s = size.width / 56f
-            val color = ring ?: when (kind) { MarkKind.ok -> palette.orange; MarkKind.failed -> palette.failure; else -> palette.hairline }
-            drawCircle(color, 26 * s, style = Stroke(2.5f * s))
-            if (kind == MarkKind.running) drawArc(palette.foreground, spin - 90f, 90f, false, Offset(2 * s, 2 * s), Size(52 * s, 52 * s),
-                style = Stroke(2.6f * s, cap = StrokeCap.Round))
-            if (kind == MarkKind.ok && icon == null && check > 0f) {
-                val path = androidx.compose.ui.graphics.Path().apply { moveTo(18.5f * s, 28.8f * s); lineTo(24.9f * s, 35.2f * s)
-                    lineTo(37.9f * s, 21.8f * s) }
-                drawPath(com.noahwallet.ui.onboarding.trimmed(path, check), palette.foreground, style = Stroke(2.6f * s, cap = StrokeCap.Round,
-                    join = androidx.compose.ui.graphics.StrokeJoin.Round))
-            }
-        }
+        MarkRing(kind, ring, if (icon == null) check else 0f)
         if (kind == MarkKind.failed && icon == null) Text("!", style = TextStyle(fontWeight = FontWeight.Bold, fontSize = 22.sp, lineHeight = 22.sp),
             color = palette.failure)
         icon?.let { Icon(painterResource(it), null, Modifier.size(26.dp), tint = iconTint ?: palette.muted) }
+    }
+}
+
+/** The mark's ring in its kind's colour, the spinning arc while running and, when it's done, the drawn [check]. */
+@Composable
+private fun MarkRing(kind: MarkKind, ring: Color?, check: Float) {
+    val palette = LocalPalette.current
+    val reduceMotion = LocalReduceMotion.current
+    val spin = if (kind == MarkKind.running && !reduceMotion) rememberInfiniteTransition(label = "mark").animateFloat(0f, 360f,
+        infiniteRepeatable(tween(1_000, easing = LinearEasing)), label = "spin").value else 0f
+    Canvas(Modifier.fillMaxSize()) {
+        val s = size.width / 56f
+        val color = ring ?: when (kind) { MarkKind.ok -> palette.orange; MarkKind.failed -> palette.failure; else -> palette.hairline }
+        drawCircle(color, 26 * s, style = Stroke(2.5f * s))
+        if (kind == MarkKind.running) drawArc(palette.foreground, spin - 90f, 90f, false, Offset(2 * s, 2 * s), Size(52 * s, 52 * s),
+            style = Stroke(2.6f * s, cap = StrokeCap.Round))
+        if (kind == MarkKind.ok && check > 0f) {
+            val path = androidx.compose.ui.graphics.Path().apply { moveTo(18.5f * s, 28.8f * s); lineTo(24.9f * s, 35.2f * s)
+                lineTo(37.9f * s, 21.8f * s) }
+            drawPath(com.noahwallet.ui.onboarding.trimmed(path, check), palette.foreground, style = Stroke(2.6f * s, cap = StrokeCap.Round,
+                join = androidx.compose.ui.graphics.StrokeJoin.Round))
+        }
     }
 }
 
@@ -470,23 +559,10 @@ internal fun PickerRow(text: String, modifier: Modifier = Modifier, icon: Int? =
 internal fun SettingsAvatar(size: Dp, modifier: Modifier = Modifier, you: Boolean = false, initial: String? = null, icon: Int? = null,
     badge: Boolean = false, due: Boolean = false, pending: Boolean = false) {
     val palette = LocalPalette.current
-    val reduceMotion = LocalReduceMotion.current
-    val turn = if (pending && !reduceMotion) rememberInfiniteTransition(label = "pending").animateFloat(0f, 360f,
-        infiniteRepeatable(tween(8_000, easing = LinearEasing)), label = "pending").value else 0f
     val large = size >= 60.dp
     Box(modifier.size(size)) {
-        Box(Modifier.fillMaxSize().then(if (you) Modifier.border(2.dp, palette.orange, CircleShape) else Modifier.background(palette.soft, CircleShape)),
-            contentAlignment = Alignment.Center) {
-            val fontSize = when { size >= 84.dp -> 34.sp; large -> 24.sp; else -> 17.sp }
-            if (initial != null) Text(initial.lowercase(), style = TextStyle(fontFamily = NoahTokens.Display, fontWeight = FontWeight.SemiBold,
-                fontSize = fontSize, lineHeight = fontSize), color = palette.foreground)
-            else icon?.let { Icon(painterResource(it), null, Modifier.size(if (large) 27.dp else 20.dp), tint = palette.foreground) }
-        }
-        if (pending) Canvas(Modifier.requiredSize(size + if (large) 8.dp else 6.dp).align(Alignment.Center).graphicsLayer { rotationZ = turn }) {
-            val width = (if (large) 2.dp else 1.5.dp).toPx()
-            drawCircle(palette.muted, (this.size.minDimension - width) / 2, style = Stroke(width,
-                pathEffect = PathEffect.dashPathEffect(floatArrayOf(4.5.dp.toPx(), 3.dp.toPx()))))
-        }
+        AvatarCore(size, you, initial, icon)
+        if (pending) AvatarRing(size, Modifier.align(Alignment.Center))
         if (badge) Box(Modifier.align(Alignment.BottomEnd).offset(3.dp, 3.dp).size(if (large) 26.dp else 21.dp).background(palette.background, CircleShape)
             .padding(2.dp).background(palette.failure, CircleShape), contentAlignment = Alignment.Center) {
             val fontSize = if (large) 13.sp else 11.sp

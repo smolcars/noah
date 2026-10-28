@@ -1,7 +1,6 @@
 package com.noahwallet.ui.onboarding
 
 import android.annotation.SuppressLint
-
 import android.provider.Settings
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animateFloatAsState
