@@ -43,12 +43,7 @@ final class HistoryModel {
                     request.timeoutInterval = 10
                     let (data, response) = try await URLSession.shared.data(for: request)
                     guard (response as? HTTPURLResponse)?.statusCode == 200 else { return nil }
-                    struct Transaction: Decodable {
-                        // swiftlint:disable:next discouraged_optional_boolean - Esplora's JSON omits it
-                        struct Status: Decodable { var confirmed: Bool?; var block_time: Double? }
-                        var status: Status?
-                    }
-                    let status = try JSONDecoder().decode(Transaction.self, from: data).status
+                    let status = try JSONDecoder().decode(EsploraTransaction.self, from: data).status
                     return status?.confirmed == true ? status?.block_time.map(Date.init(timeIntervalSince1970:)) : nil
                 },
                 price: { timestamp, currency in
@@ -82,7 +77,8 @@ final class HistoryModel {
     private var enrichment: Task<Void, Never>?
     /// The last recurring join, applied at once so rows don't flicker on each refresh.
     private var recurringLinks: [HistoryMapping.RecurringLink] = []
-    private var quote: (currency: String, price: Double, at: Date)?
+    private struct Quote { let currency: String; let price: Double; let at: Date }
+    private var quote: Quote?
 
     func awaitEnrichment() async { await enrichment?.value }
 
@@ -92,7 +88,7 @@ final class HistoryModel {
         guard let price = try? await dependencies.currentPrice(currency), price.isFinite, price > 0 else {
             return quote?.currency == currency ? quote?.price : nil
         }
-        quote = (currency, price, Date())
+        quote = Quote(currency: currency, price: price, at: Date())
         return price
     }
 
@@ -234,4 +230,13 @@ final class HistoryModel {
             if (index + 1).isMultiple(of: 32) || index == latest.indices.last { await publish() }
         }
     }
+}
+
+/// The fields of Esplora's `/tx/:txid` that date a confirmation.
+private struct EsploraTransaction: Decodable {
+    struct Status: Decodable {
+        var confirmed: Bool? // swiftlint:disable:this discouraged_optional_boolean - Esplora's JSON omits it
+        var block_time: Double?
+    }
+    var status: Status?
 }

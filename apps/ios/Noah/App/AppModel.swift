@@ -121,6 +121,7 @@ final class AppModel {
     @ObservationIgnored private let settleRestore: @MainActor () async throws -> RestoreTransaction.Recovery
     @ObservationIgnored private var backupTriggers: (id: UUID, task: Task<Void, Never>)?
     @ObservationIgnored private let lifecycle = WalletLifecycle(dependencies: .live())
+    @ObservationIgnored private var summaryRefresh = UUID()
 
     init(settings: SettingsStorage = .shared, readLaunchState: @escaping () -> LaunchState = { .current() },
          settleRestore: @escaping @MainActor () async throws -> RestoreTransaction.Recovery = { try await AppServices.shared.restoreRecovery.settle() },
@@ -323,9 +324,10 @@ final class AppModel {
         await registerPush()
         await reconcileBackupTriggers()
     }
+}
 
-    @ObservationIgnored private var summaryRefresh = UUID()
-
+/// Refresh, sync, the wallet lifecycle, backups and foreground services.
+extension AppModel {
     func refresh() async {
         let generation = UUID()
         summaryRefresh = generation

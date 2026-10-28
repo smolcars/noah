@@ -59,16 +59,16 @@ struct ExitDetails: Codable, Equatable, Sendable {
         var height: UInt32
         var hash: String
     }
+    struct TransactionStatus: Codable, Equatable, Sendable {
+        var kind: String
+        var child_txid: String?
+        var block: Block?
+        /// Whose fee child: "wallet" (this wallet paid), "mempool" or "block" (another wallet's, adopted).
+        var origin: String?
+    }
     struct Transaction: Codable, Equatable, Sendable {
-        struct Status: Codable, Equatable, Sendable {
-            var kind: String
-            var child_txid: String?
-            var block: Block?
-            /// Whose fee child: "wallet" (this wallet paid), "mempool" or "block" (another wallet's, adopted).
-            var origin: String?
-        }
         var txid: String
-        var status: Status
+        var status: TransactionStatus
     }
     var kind: String?
     var tip_height: UInt32?

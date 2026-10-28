@@ -128,17 +128,18 @@ struct ReceiveChainSnapshot: Equatable, Sendable {
     /// A transaction spending any of `spent` (the inputs of deposits already announced, and of
     /// their replacements) replaces one of them (RBF) and is never a new arrival. The `spent`
     /// returned adds its inputs and the arrivals', so a replacement of a replacement isn't either.
-    func look(known: Set<String>?, announced: Set<String>, spent: Set<SendTransaction.Input> = [])
+    func look(known: Set<String>?, announced: Set<String>, spent: Set<SendTransaction.Input> = []) -> Look {
         // swiftlint:enable discouraged_optional_collection
-        -> (arrivals: [Transaction], known: Set<String>, spent: Set<SendTransaction.Input>) {
         let unseenHere = Set(incoming.filter { $0.toAddress > 0 && $0.confirmedHeight == nil }.map(\.txid))
         let first = (before ?? Set(incoming.map(\.txid))).subtracting(unseenHere)
         let seen = (known ?? first).union(announced)
         let spent = incoming.filter { !$0.inputs.isDisjoint(with: spent) }.reduce(spent) { $0.union($1.inputs) }
         let fresh = incoming.filter { !seen.contains($0.txid) && $0.confirmedHeight == nil && $0.inputs.isDisjoint(with: spent) }
         let arrivals = fresh.filter { $0.toAddress > 0 } + fresh.filter { $0.toAddress == 0 }
-        return (arrivals, seen.union(incoming.map(\.txid)), arrivals.reduce(spent) { $0.union($1.inputs) })
+        return Look(arrivals: arrivals, known: seen.union(incoming.map(\.txid)), spent: arrivals.reduce(spent) { $0.union($1.inputs) })
     }
+
+    struct Look { let arrivals: [Transaction]; let known: Set<String>; let spent: Set<SendTransaction.Input> }
 
     /// A followed transaction in this check, or the one that replaced it (spending any of
     /// its inputs), which may already be confirmed.

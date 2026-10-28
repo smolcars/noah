@@ -183,7 +183,7 @@ struct ExitClaimView: View {
         }
     }
 
-    private func option(_ title: String, selected: Bool, id: String, action: @escaping () -> Void, sub: String? = nil) -> some View {
+    private func option(_ title: String, selected: Bool, id: String, sub: String? = nil, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             SettingsRowLabel(title: title, sub: sub, hairline: false) {
                 Image(systemName: selected ? "largecircle.fill.circle" : "circle").accessibilityHidden(true)

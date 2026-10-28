@@ -37,10 +37,8 @@ struct ExpoPushToken: Sendable {
 
     /// POST push/getExpoPushToken → `ExponentPushToken[…]`.
     func fetch(_ request: Request) async throws -> String {
-        struct Response: Decodable {
-            struct Payload: Decodable { let expoPushToken: String }
-            let data: Payload
-        }
+        struct Payload: Decodable { let expoPushToken: String }
+        struct Response: Decodable { let data: Payload }
         let data = try await post(path: "push/getExpoPushToken", body: request)
         return try JSONDecoder().decode(Response.self, from: data).data.expoPushToken
     }

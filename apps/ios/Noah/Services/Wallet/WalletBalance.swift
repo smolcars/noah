@@ -44,6 +44,7 @@ struct WalletBalance: Equatable, Sendable {
             self.total = total ?? (spendable + needsRefresh + pending)
         }
 
+        // swiftlint:disable:next nesting - Codable synthesis needs CodingKeys inside the type
         private enum CodingKeys: String, CodingKey {
             case spendable, needsRefresh, pendingLightningSend, claimableLightningReceive, pendingInRound
             case pendingExit, pendingBoard, pendingArkoorSend, pendingOffboard, pending, total

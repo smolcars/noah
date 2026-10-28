@@ -196,13 +196,15 @@ private struct HomeReceipt: View {
     }
 
     private func play() async {
-        let steps: [(Double, Animation, () -> Void)] = [
-            (0.12, NoahTokens.Motion.snappy, { shown = true }),
-            (0.16, NoahTokens.Motion.soft, { ring = true }),
-            (0.56, NoahTokens.Motion.bouncy, { amount = true }),
-            (0.62, NoahTokens.Motion.soft, { check = true }),
+        struct Step { let time: Double; let animation: Animation; let change: () -> Void }
+        let steps = [
+            Step(time: 0.12, animation: NoahTokens.Motion.snappy) { shown = true },
+            Step(time: 0.16, animation: NoahTokens.Motion.soft) { ring = true },
+            Step(time: 0.56, animation: NoahTokens.Motion.bouncy) { amount = true },
+            Step(time: 0.62, animation: NoahTokens.Motion.soft) { check = true },
         ]
-        for (time, animation, change) in steps {
+        for step in steps {
+            let time = step.time, animation = step.animation, change = step.change
             let wait = time - Date().timeIntervalSince(celebration.start)
             if wait > 0 {
                 do { try await Task.sleep(for: .seconds(wait)) } catch { return }

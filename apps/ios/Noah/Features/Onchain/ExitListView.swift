@@ -114,7 +114,8 @@ struct ExitListView: View {
 
     /// Ready to claim, Exiting and Finished, each with its groups of exits that share transactions
     /// (drawn in one gutter, Approved item 3's option B) and the rest, one coin each.
-    nonisolated static func sections(_ exits: [ExitModel]) -> [(title: String, shared: [[ExitModel]], solo: [ExitModel])] {
+    struct ListSection { let title: String; let shared: [[ExitModel]]; let solo: [ExitModel] }
+    nonisolated static func sections(_ exits: [ExitModel]) -> [ListSection] {
         ["Ready to claim", "Exiting", "Finished"].compactMap { title in
             let rows = exits.filter { group($0) == title }
             guard !rows.isEmpty else { return nil }
@@ -122,7 +123,7 @@ struct ExitListView: View {
             let shared = title == "Finished" ? [] : ExitSharing.groups(rows).map {
                 $0.sorted { $0.path.map(\.txid).lexicographicallyPrecedes($1.path.map(\.txid)) }
             }
-            return (title, shared, rows.filter { exit in !shared.contains { $0.contains { $0.id == exit.id } } })
+            return ListSection(title: title, shared: shared, solo: rows.filter { exit in !shared.contains { $0.contains { $0.id == exit.id } } })
         }
     }
 
@@ -359,24 +360,24 @@ struct ExitGutterTree: View {
 
         /// The route along a group's `plan` (`ExitGutterTree.plan`): each place alone or each run of places as one
         /// step, then the coin. A step's id names its column, so routes share it exactly where they share the transaction.
-        func drawn(plan: [ClosedRange<Int>]) -> [(id: String, status: Status, fold: ExitStageScene.Fold.Kind?)] {
+        func drawn(plan: [ClosedRange<Int>]) -> [Step] {
             let places = txids.count - 1
-            var steps: [(id: String, status: Status, fold: ExitStageScene.Fold.Kind?)] = []
+            var steps: [Step] = []
             for (column, run) in plan.enumerated() where run.lowerBound < places {
                 let first = run.lowerBound, status = statuses[safe: first] ?? .unsent
                 if run.count == 1 {
-                    steps.append(("\(column)/" + txids[first], status, nil))
+                    steps.append(Step(id: "\(column)/" + txids[first], status: status, fold: nil))
                 } else {
-                    let kind: ExitStageScene.Fold.Kind = status == .mined ? .stack : .more
-                    steps.append(("\(column)/\(kind)/" + txids[first], status == .mined ? .mined : .unsent, kind))
+                    let kind: ExitStageScene.FoldKind = status == .mined ? .stack : .more
+                    steps.append(Step(id: "\(column)/\(kind)/" + txids[first], status: status == .mined ? .mined : .unsent, fold: kind))
                 }
             }
-            return steps + [("coin/" + (txids.last ?? ""), statuses.last ?? .unsent, nil)]
+            return steps + [Step(id: "coin/" + (txids.last ?? ""), status: statuses.last ?? .unsent, fold: nil)]
         }
 
         /// The route on its own in at most `capacity` steps before its coin, folded as the exit's picture folds a long
         /// path: the oldest blocks stacked, the one being sent and the next unsent on their own, the rest one "+N" node.
-        func drawn(capacity: Int) -> [(id: String, status: Status, fold: ExitStageScene.Fold.Kind?)] {
+        func drawn(capacity: Int) -> [Step] {
             let scene = ExitStageScene(picture: .path, levels: statuses.map { status -> ExitStageScene.Level in
                 switch status {
                 case .mined: .mined(nil)
@@ -393,7 +394,7 @@ struct ExitGutterTree: View {
                 case .needsFunds: .needsFunds
                 default: .unsent
                 }
-                return ("\(index)/" + (fold.map { "\($0.kind)\($0.count)/" } ?? "") + txid, status, fold?.kind)
+                return Step(id: "\(index)/" + (fold.map { "\($0.kind)\($0.count)/" } ?? "") + txid, status: status, fold: fold?.kind)
             }
         }
 
@@ -412,13 +413,20 @@ struct ExitGutterTree: View {
         }
     }
 
+    /// One place on a route: its column's id, its status and what it folds.
+    struct Step {
+        var id: String
+        var status: Status
+        var fold: ExitStageScene.FoldKind?
+    }
+
     struct Node: Equatable {
         var id: String
         var point: CGPoint
         var status: Status
         var alpha: Double
         /// Stands for several transactions: the oldest blocks stacked, or unsent ones as "+N".
-        var fold: ExitStageScene.Fold.Kind?
+        var fold: ExitStageScene.FoldKind?
     }
 
     struct Link: Equatable {
@@ -490,7 +498,7 @@ struct ExitGutterTree: View {
     nonisolated static func layout(_ paths: [Route], ys: [Double], gutter: Double, step: Double) -> Layout {
         let width = gutter + 14, coinX = width - 30, x0 = 8.0, capacity = capacity(gutter: gutter)
         let routes = plan(paths, capacity: capacity).map { plan in paths.map { $0.drawn(plan: plan) } }
-            ?? paths.enumerated().map { row, path in path.drawn(capacity: capacity).map { ("row\(row)/" + $0.id, $0.status, $0.fold) } }
+            ?? paths.enumerated().map { row, path in path.drawn(capacity: capacity).map { Step(id: "row\(row)/" + $0.id, status: $0.status, fold: $0.fold) } }
         let longest = routes.map(\.count).max() ?? 1, d = min(max(step, minimumStep), (coinX - 36) / Double(max(1, longest - 1)))
         var rows: [String: [Double]] = [:]
         for (route, y) in zip(routes, ys) { for step in route.dropLast() { rows[step.id, default: []].append(y) } }

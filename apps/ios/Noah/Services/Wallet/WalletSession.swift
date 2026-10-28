@@ -454,7 +454,10 @@ actor WalletSession {
         guard runningCalls > 0 else { return }
         await withCheckedContinuation { drainWaiters.append($0) }
     }
+}
 
+/// Reads, receive requests, observers and sync through the open wallet.
+extension WalletSession {
     func peekPublicKey(index: UInt32) async throws -> String {
         try await withOpenWallet { try await $0.wallet.peekPublicKey(index: index) }
     }

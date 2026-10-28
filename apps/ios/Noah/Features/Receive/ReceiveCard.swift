@@ -99,11 +99,15 @@ struct ReceiveArrival: Equatable, Identifiable {
     }
 
     /// Every haptic of the arrival (prototype `hap` calls), by key.
-    var haptics: [(key: String, at: Double, kind: OnboardingHaptics.Kind)] {
+    struct Cue {
+        let key: String, at: Double, kind: OnboardingHaptics.Kind
+        init(_ key: String, _ at: Double, _ kind: OnboardingHaptics.Kind) { self.key = key; self.at = at; self.kind = kind }
+    }
+    var haptics: [Cue] {
         switch rail {
-        case .ark: [("ripple", 0.76, .light), ("flip", flipAt, .success)]
-        case .lightning: [("lock", 0.85, .light), ("unlock", 2.07, .light), ("flip", flipAt, .success)]
-        case .onchain: [("flip", flipAt, .success)]
+        case .ark: [Cue("ripple", 0.76, .light), Cue("flip", flipAt, .success)]
+        case .lightning: [Cue("lock", 0.85, .light), Cue("unlock", 2.07, .light), Cue("flip", flipAt, .success)]
+        case .onchain: [Cue("flip", flipAt, .success)]
         }
     }
 }
@@ -130,7 +134,8 @@ struct ReceiveArrivalQueue: Equatable {
     /// Follows the on-chain arrivals (playing or waiting) in a new check; one that's gone
     /// ends, and the next starts. Returns whether the playing one just confirmed or ended, and
     /// the transactions followed now, replacements included.
-    mutating func follow(_ snapshot: ReceiveChainSnapshot, at date: Date = Date()) -> (confirmed: Bool, ended: Bool, txids: Set<String>) {
+    struct Followed { let confirmed: Bool; let ended: Bool; let txids: Set<String> }
+    mutating func follow(_ snapshot: ReceiveChainSnapshot, at date: Date = Date()) -> Followed {
         for index in waiting.indices.reversed() where waiting[index].follow(snapshot, at: date) == .gone {
             waiting.remove(at: index)
         }
@@ -145,7 +150,7 @@ struct ReceiveArrivalQueue: Equatable {
                 if !waiting.isEmpty { start(waiting.removeFirst(), at: date) }
             }
         }
-        return (confirmed, ended, Set(([current] + waiting).compactMap { $0?.txid }))
+        return Followed(confirmed: confirmed, ended: ended, txids: Set(([current] + waiting).compactMap { $0?.txid }))
     }
 
     mutating func clear() {

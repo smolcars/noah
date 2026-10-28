@@ -1,29 +1,5 @@
 import SwiftUI
 
-/// The screen Send shows for the model's state. The steps are today's `SendStage`s.
-enum SendScreen: Int, Comparable {
-    case amount, recipient, method, source, review, sending
-
-    @MainActor static func of(_ model: SendModel) -> Self {
-        if model.controller.locked { return .sending }
-        if model.showReview { return .review }
-        switch model.stage {
-        case .amount: return .amount
-        case .recipient: return .recipient
-        case .method: return .method
-        case .source: return .source
-        case .review: return .review
-        }
-    }
-
-    static func < (a: Self, b: Self) -> Bool { a.rawValue < b.rawValue }
-}
-
-extension SendModel {
-    /// Phones hide the tab bar on every step after Amount; it returns on Done.
-    var hidesTabBar: Bool { SendScreen.of(self) != .amount }
-}
-
 /// Send (docs/native-rewrite/design/send-receive.md): Amount → To → Method → Balance →
 /// Review → Sending, on today's `SendModel` and payment controller. Compact windows get
 /// one column; wide ones (the iPhone Duo open or half-open) split into two panes at the
@@ -343,23 +319,12 @@ struct SendView: View {
     }
 
     // MARK: To
+}
 
+/// Recipient, method, balance, review and sending screens.
+extension SendView {
     private var recipientLabel: SendRecipientLabel { .of(destination: model.destination, ownDomain: ownDomain) }
     private var parsedLive: SendDestination { SendDestination.parse(model.destination) }
-
-    private func typeName(_ type: String?, destination: String) -> String? {
-        switch type {
-        case "lnurl":
-            let domain = destination.split(separator: "@").last.map(String.init)?.lowercased()
-            return domain == ownDomain.lowercased() ? "Noah user" : "Lightning address"
-        case "onchain": return "Bitcoin address"
-        case "lightning": return "Lightning invoice"
-        case "bip321": return "Payment request"
-        case "ark": return "Ark address"
-        case "offer": return "Lightning offer"
-        default: return nil
-        }
-    }
 
     private var summaryAmount: String? {
         if model.isMax { return L10n.text("Maximum available", locale: locale.identifier) }
@@ -407,7 +372,6 @@ struct SendView: View {
     }
 
     private var toField: some View {
-        // swiftlint:disable:next accessibility_trait_for_button - the tap only focuses the field; the TextField is the accessible control
         HStack(spacing: 10) {
             Text("To").noahText(NoahTokens.Typography.label).foregroundStyle(NoahTokens.Colors.muted)
             TextField("Name, address or invoice", text: $model.destination)
@@ -499,7 +463,7 @@ struct SendView: View {
             // swiftlint:disable:next legacy_objc_type - Decimal converts to an integer only through NSDecimalNumber
             L10n.text("Asks for {amount}", format(NSDecimalNumber(decimal: $0).uint64Value), locale: locale.identifier)
         } : nil
-        let primary = parsed.error == nil ? asks ?? typeName(parsed.destinationType, destination: typed) : nil
+        let primary = parsed.error == nil ? asks ?? Self.typeName(parsed.destinationType, destination: typed, ownDomain: ownDomain) : nil
         VStack(spacing: 0) {
             if let primary {
                 resultRow(label: recipientLabel, type: primary, busy: model.busy || model.resolvingRecipient,
@@ -507,14 +471,14 @@ struct SendView: View {
             }
             ForEach(suggestions, id: \.self) { suggestion in
                 resultRow(label: .of(destination: suggestion, ownDomain: ownDomain),
-                          type: typeName("lnurl", destination: suggestion) ?? "Lightning address") {
+                          type: Self.typeName("lnurl", destination: suggestion, ownDomain: ownDomain) ?? "Lightning address") {
                     model.destination = suggestion
                     acceptRecipient()
                 }
             }
             ForEach(recents) { recent in
-                resultRow(label: recent.label, type: typeName(SendDestination.parse(recent.destination).destinationType,
-                                                              destination: recent.destination) ?? "") {
+                resultRow(label: recent.label, type: Self.typeName(SendDestination.parse(recent.destination).destinationType,
+                                                                   destination: recent.destination, ownDomain: ownDomain) ?? "") {
                     model.destination = recent.destination
                     acceptRecipient()
                 }
@@ -572,16 +536,6 @@ struct SendView: View {
     /// Keeps the amount you typed for the review's invoice note. Taken on every way to a
     /// recipient (Next, a scan, a paste or a tapped result), before one can set its own amount.
     private func captureTypedAmount() { typedAmount = Self.typedAmount(model, keeping: typedAmount) }
-
-    static func typedAmount(_ model: SendModel, keeping previous: UInt64?) -> UInt64? {
-        model.parsed.amount == nil ? model.sats : previous
-    }
-
-    /// Whether the review notes that the invoice sets a different amount from the one you typed.
-    static func showsInvoiceNote(typed: UInt64?, fixed: Decimal?) -> Bool {
-        guard let fixed, let typed, typed > 0 else { return false }
-        return Decimal(typed) != fixed
-    }
 
     private func loadSuggestions() async {
         model.suggestions = []
@@ -682,10 +636,6 @@ struct SendView: View {
         .disabled(!enabled)
         .opacity(enabled ? 1 : 0.4)
         .accessibilityIdentifier("send-rail-\(rail.rawValue)")
-    }
-
-    static func glyph(_ rail: SendRail) -> String {
-        switch rail { case .ark: "sailboat"; case .lightning: "bolt"; case .onchain: "link" }
     }
 
     private func loadRailFees() async {
@@ -799,8 +749,8 @@ struct SendView: View {
                         done: finish, clock: clock, unit: unit,
                         recipient: (model.controller.attempt?.payment ?? model.payment).map { .of(
                             destination: model.destination,
-                            payment: $0,
-                            ownDomain: ownDomain) },
+                            ownDomain: ownDomain,
+                            payment: $0) },
                         wide: wide, sideInsets: (window.insets.leading, window.insets.trailing), onLeave: onLeave,
                         reviewed: model.payment, chainTip: chainTip)
     }
@@ -841,21 +791,5 @@ struct SendView: View {
             await app.refresh()
             await model.load()
         }
-    }
-}
-
-/// A small Liquid Glass chip ("Max").
-struct SendChipStyle: ButtonStyle {
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .noahText(HomeText.strong)
-            .foregroundStyle(NoahTokens.Colors.foreground)
-            .padding(.horizontal, 14)
-            .frame(minHeight: 32)
-            .contentShape(Capsule())
-            .glassCompat(in: Capsule(), interactive: true)
-            .frame(minHeight: NoahTokens.Size.hitTarget)
-            .scaleEffect(configuration.isPressed ? 0.95 : 1)
-            .animation(NoahTokens.Motion.tap, value: configuration.isPressed)
     }
 }

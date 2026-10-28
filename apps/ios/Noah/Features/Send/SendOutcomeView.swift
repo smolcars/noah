@@ -327,7 +327,10 @@ struct SendOutcomeView: View {
             fine(L10n.text(message, locale: locale.identifier))
         }
     }
+}
 
+/// The result's rows, actions and the haptics and refund reads behind them.
+extension SendOutcomeView {
     private var line: String? {
         let language = locale.identifier
         switch kind {
