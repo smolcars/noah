@@ -67,41 +67,75 @@ internal fun ExitFrame(title: String, back: (() -> Unit)?, hero: Boolean = false
     scroll: ScrollState = rememberScrollState(), actions: @Composable RowScope.() -> Unit = {}, footFade: Float = .46f,
     pictureLeads: Boolean = false, chip: (@Composable () -> Unit)? = null,
     leading: @Composable ColumnScope.() -> Unit, trailing: @Composable ColumnScope.() -> Unit) {
-    val palette = LocalPalette.current
-    val haptics = rememberHaptics()
     when (val pose = LocalPose.current) {
-        is OnboardingPose.Wide, is OnboardingPose.Tabletop -> Box(Modifier.fillMaxSize().background(palette.background)) {
-            val split = pose is OnboardingPose.Wide
-            Column(when (pose) {
-                is OnboardingPose.Wide -> Modifier.width(pose.start).fillMaxHeight()
-                else -> Modifier.height((pose as OnboardingPose.Tabletop).top).fillMaxWidth()
-            }.testTag("exit-leading").padding(start = 24.dp, end = 24.dp, top = 56.dp, bottom = if (split) 24.dp else 8.dp)
-                .then(if (!pictureLeads) Modifier.verticalScroll(rememberScrollState()) else Modifier),
-                verticalArrangement = if (split && !pictureLeads) Arrangement.Center else Arrangement.Top) {
-                if (!hero) Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text(title, Modifier.semantics { heading() }, style = ActivityType.large.copy(fontSize = if (split) 36.sp else 30.sp,
-                        lineHeight = if (split) 42.sp else 36.sp), color = palette.foreground)
-                    chip?.invoke()
-                }
-                leading()
-            }
-            Box(when (pose) {
-                is OnboardingPose.Wide -> Modifier.padding(start = pose.end)
-                else -> Modifier.padding(top = (pose as OnboardingPose.Tabletop).bottom)
-            }.fillMaxSize().testTag("exit-trailing")) {
-                CompositionLocalProvider(LocalSettingsPane provides SettingsPane.trailing) {
-                    SettingsFrame(title, null, hero = true, foot = foot, scroll = scroll, footFade = footFade, content = trailing)
-                }
-            }
-            // The bar across the top, above both panes: Back leads, ⋯ trails.
-            Row(Modifier.fillMaxWidth().height(56.dp).padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                back?.let { BarButton(R.drawable.ic_activity_back, tr("Back"), Modifier.testTag("settings-back")) { haptics.light(); it() } }
-                Spacer(Modifier.weight(1f))
-                actions()
-            }
-        }
+        is OnboardingPose.Wide, is OnboardingPose.Tabletop ->
+            ExitSplitFrame(pose, title, back, hero, foot, scroll, actions, footFade, pictureLeads, chip, leading, trailing)
         else -> SettingsFrame(title, back, hero = hero, foot = foot, scroll = scroll, actions = actions, footFade = footFade,
             chip = chip) { leading(); trailing() }
+    }
+}
+
+/** [ExitFrame] on a wide or tabletop window: the two panes and the bar across both. */
+@Composable
+private fun ExitSplitFrame(pose: OnboardingPose, title: String, back: (() -> Unit)?, hero: Boolean, foot: (@Composable RowScope.() -> Unit)?,
+    scroll: ScrollState, actions: @Composable RowScope.() -> Unit, footFade: Float, pictureLeads: Boolean, chip: (@Composable () -> Unit)?,
+    leading: @Composable ColumnScope.() -> Unit, trailing: @Composable ColumnScope.() -> Unit) {
+    val palette = LocalPalette.current
+    val haptics = rememberHaptics()
+    Box(Modifier.fillMaxSize().background(palette.background)) {
+        val split = pose is OnboardingPose.Wide
+        Column(when (pose) {
+            is OnboardingPose.Wide -> Modifier.width(pose.start).fillMaxHeight()
+            else -> Modifier.height((pose as OnboardingPose.Tabletop).top).fillMaxWidth()
+        }.testTag("exit-leading").padding(start = 24.dp, end = 24.dp, top = 56.dp, bottom = if (split) 24.dp else 8.dp)
+            .then(if (!pictureLeads) Modifier.verticalScroll(rememberScrollState()) else Modifier),
+            verticalArrangement = if (split && !pictureLeads) Arrangement.Center else Arrangement.Top) {
+            if (!hero) Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text(title, Modifier.semantics { heading() }, style = ActivityType.large.copy(fontSize = if (split) 36.sp else 30.sp,
+                    lineHeight = if (split) 42.sp else 36.sp), color = palette.foreground)
+                chip?.invoke()
+            }
+            leading()
+        }
+        Box(when (pose) {
+            is OnboardingPose.Wide -> Modifier.padding(start = pose.end)
+            else -> Modifier.padding(top = (pose as OnboardingPose.Tabletop).bottom)
+        }.fillMaxSize().testTag("exit-trailing")) {
+            CompositionLocalProvider(LocalSettingsPane provides SettingsPane.trailing) {
+                SettingsFrame(title, null, hero = true, foot = foot, scroll = scroll, footFade = footFade, content = trailing)
+            }
+        }
+        // The bar across the top, above both panes: Back leads, ⋯ trails.
+        Row(Modifier.fillMaxWidth().height(56.dp).padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+            back?.let { BarButton(R.drawable.ic_activity_back, tr("Back"), Modifier.testTag("settings-back")) { haptics.light(); it() } }
+            Spacer(Modifier.weight(1f))
+            actions()
+        }
+    }
+}
+
+private fun valueStyle(kind: ValueKind, small: Boolean) =
+    when (kind) { ValueKind.text -> ActivityType.value; ValueKind.number -> ActivityType.number; ValueKind.mono -> ActivityType.mono }
+        .let { if (small) it.copy(fontSize = if (kind == ValueKind.mono) 13.5.sp else 15.sp) else it }
+
+/** The label and value side by side when both fit (never when [stacked]), else the value under the label. */
+private fun valueRowLayout(stacked: Boolean) = androidx.compose.ui.layout.MeasurePolicy { measurables, constraints ->
+    val gap = 18.dp.roundToPx()
+    val loose = constraints.copy(minWidth = 0, minHeight = 0)
+    val title = measurables[0]; val cell = measurables[1]
+    val labelWidth = title.maxIntrinsicWidth(Int.MAX_VALUE); val valueWidth = cell.maxIntrinsicWidth(Int.MAX_VALUE)
+    val beside = !stacked && labelWidth + gap + valueWidth <= constraints.maxWidth
+    if (beside) {
+        val a = title.measure(loose); val b = cell.measure(loose)
+        val height = maxOf(a.height, b.height)
+        layout(constraints.maxWidth, height) {
+            a.place(0, (height - a.height) / 2); b.place(constraints.maxWidth - b.width, (height - b.height) / 2)
+        }
+    } else {
+        val a = title.measure(loose); val b = cell.measure(loose)
+        layout(constraints.maxWidth, a.height + b.height + 2.dp.roundToPx()) {
+            a.place(0, 0); b.place(if (stacked) 0 else constraints.maxWidth - b.width, a.height + 2.dp.roundToPx())
+        }
     }
 }
 
@@ -123,8 +157,7 @@ internal fun ExitValueRow(label: String, value: String, modifier: Modifier = Mod
     failed: Boolean = false, small: Boolean = false, last: Boolean = false, content: (@Composable RowScope.() -> Unit)? = null) {
     val palette = LocalPalette.current
     val stacked = androidx.compose.ui.platform.LocalDensity.current.fontScale >= 1.5f
-    val style = when (kind) { ValueKind.text -> ActivityType.value; ValueKind.number -> ActivityType.number; ValueKind.mono -> ActivityType.mono }
-        .let { if (small) it.copy(fontSize = if (kind == ValueKind.mono) 13.5.sp else 15.sp) else it }
+    val style = valueStyle(kind, small)
     val end = if (stacked) androidx.compose.ui.text.style.TextAlign.Start else androidx.compose.ui.text.style.TextAlign.End
     Column(modifier.fillMaxWidth().heightIn(min = if (small) 44.dp else 48.dp).drawBehind {
         if (!last) drawRect(palette.hairline, Offset(0f, size.height - 1.dp.toPx()), Size(size.width, 1.dp.toPx()))
@@ -135,25 +168,7 @@ internal fun ExitValueRow(label: String, value: String, modifier: Modifier = Mod
                 Text(value, Modifier.weight(1f, fill = false), style = style, color = if (failed) palette.failure else palette.foreground, textAlign = end)
                 content?.invoke(this)
             }
-        }) { measurables, constraints ->
-            val gap = 18.dp.roundToPx()
-            val loose = constraints.copy(minWidth = 0, minHeight = 0)
-            val title = measurables[0]; val cell = measurables[1]
-            val labelWidth = title.maxIntrinsicWidth(Int.MAX_VALUE); val valueWidth = cell.maxIntrinsicWidth(Int.MAX_VALUE)
-            val beside = !stacked && labelWidth + gap + valueWidth <= constraints.maxWidth
-            if (beside) {
-                val a = title.measure(loose); val b = cell.measure(loose)
-                val height = maxOf(a.height, b.height)
-                layout(constraints.maxWidth, height) {
-                    a.place(0, (height - a.height) / 2); b.place(constraints.maxWidth - b.width, (height - b.height) / 2)
-                }
-            } else {
-                val a = title.measure(loose); val b = cell.measure(loose)
-                layout(constraints.maxWidth, a.height + b.height + 2.dp.roundToPx()) {
-                    a.place(0, 0); b.place(if (stacked) 0 else constraints.maxWidth - b.width, a.height + 2.dp.roundToPx())
-                }
-            }
-        }
+        }, measurePolicy = valueRowLayout(stacked))
         note?.let { Text(it, Modifier.fillMaxWidth().padding(top = 2.dp), style = HomeType.small, color = palette.muted, textAlign = end) }
     }
 }
@@ -398,80 +413,135 @@ internal fun ExitChooseContent(all: List<VtxoModel>, costs: Map<String, ExitCost
     var everything by rememberSaveable { mutableStateOf(initial == null) }
     var picked by rememberSaveable { mutableStateOf(initial.orEmpty()) }
     val vtxos = all.sortedByDescending { it.amount }
-    // "All" is fixed only once every VTXO is classified: until then it might hold one that costs more than it's worth.
-    val unknown = if (costs == null) 0 else vtxos.count { ExitCosts.barred(it, refused, excluded) == null && costs[it.id] == null }
-    val classified = costs != null && unknown == 0
-    // No selection or total holds a VTXO that can't be selected, whatever was picked before.
-    val chosen = if (everything) ExitCosts.all(vtxos, costs.orEmpty(), refused, excluded)
-    else vtxos.filter { it.id in picked && ExitCosts.barred(it, refused, excluded) == null }
+    val selection = ChooseSelection(vtxos, costs, refused, excluded, if (everything) null else picked)
+    val unknown = selection.unknown
+    val classified = selection.classified
+    val chosen = selection.chosen
     val ids = chosen.map { it.id }
     // Only when the selection changes: never on the page's periodic read.
     val quote by produceState<OnchainQuote?>(null, ids, classified) {
         value = null
-        if (ids.isEmpty() || (everything && !classified)) return@produceState
-        delay(250)
-        value = estimate(ids)
-    }
-    val fees = quote?.takeIf { it.fee != null && it.chainFee != null && it.ids == ids.sorted() }
-    val value = chosen.sumOf { it.amount }
-    val short = if (fees != null && confirmed != null) checkNotNull(fees.chainFee) - confirmed else 0
-    // A summary above the pill: the fade turns solid sooner so rows never show through it (prototype `.foot:has(.fsum)`).
-    ExitFrame(tr("Choose VTXOs"), back, footFade = if (everything) .46f else .3f, foot = {
-        Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
-            if (!everything) Text(if (chosen.isEmpty()) tr("Choose the VTXOs to exit") else fees?.chainFee?.let { tr("{amount} · fees ~{fee}", money(value),
-                money(it)) }
-                ?: money(value), Modifier.padding(bottom = 8.dp), style = HomeType.amount.copy(fontSize = 15.sp), color = palette.foreground)
-            SendPill(tr("Review exit"), Modifier.fillMaxWidth().testTag("exit-review"), height = 56.dp, wrap = true,
-                enabled = chosen.isNotEmpty() && !busy && !suspended && (!everything || classified)) { haptics.light(); review(ids) }
+        if (selection.estimable) {
+            delay(250)
+            value = estimate(ids)
         }
+    }
+    val fees = feesFor(quote, ids)
+    val value = chosen.sumOf { it.amount }
+    val short = shortForFees(fees, confirmed)
+    // A summary above the pill: the fade turns solid sooner so rows never show through it (prototype `.foot:has(.fsum)`).
+    val reviewable = selection.reviewable && !busy && !suspended
+    ExitFrame(tr("Choose VTXOs"), back, footFade = if (everything) .46f else .3f, foot = {
+        ChooseFoot(if (everything) null else chooseSummary(chosen, fees, value, money), reviewable) { haptics.light(); review(ids) }
     }, leading = {
         Segmented(listOf(true to tr("All"), false to tr("Choose")), everything, Modifier.padding(top = 10.dp).testTag("exit-mode")) { everything = it }
-        when {
-            suspended -> FinePrint(tr("Wallet suspended. Resume your wallet in Settings."))
-            !ready -> FinePrint(if (loading) tr("Loading…") else tr("Couldn't read wallet status. Pull to refresh."))
-            vtxos.isEmpty() -> FinePrint(tr("No eligible spendable VTXOs."))
-            else -> Column(Modifier.padding(top = 6.dp)) {
-                vtxos.forEachIndexed { index, vtxo ->
-                    ChooseRow(vtxo, costs?.get(vtxo.id), if (everything) null else vtxo.id in picked, money, divider = index < vtxos.lastIndex,
-                        refused = refused, excluded = excluded) {
-                        haptics.selection(); picked = if (vtxo.id in picked) picked - vtxo.id else picked + vtxo.id
-                    }
-                }
-            }
+        val note = chooseNote(suspended, ready, loading, vtxos.isEmpty())
+        if (note != null) FinePrint(note)
+        else ChooseList(vtxos, costs, if (everything) null else picked, money, refused, excluded) { id ->
+            haptics.selection(); picked = if (id in picked) picked - id else picked + id
         }
     }) {
         if (vtxos.isEmpty()) { content(); return@ExitFrame }
-        Column(Modifier.padding(top = 18.dp)) {
-            ExitValueRow(tr("VTXOs"), fees?.transactions?.let { "${chosen.size} · " + trPlural("{n} transactions", it) } ?: chosen.size.toString(),
-                kind = ValueKind.number)
-            ExitValueRow(tr("Network fees"), fees?.chainFee?.let { "~" + money(it) } ?: "—", kind = ValueKind.number)
-            ExitValueRow(tr("Claim fee"), fees?.fee?.let { "~" + money(it) } ?: "—", kind = ValueKind.number, last = true)
-            TotalRow(tr("You get"), fees?.fee?.let { "~" + money(ExitRules.received(value, it)) } ?: money(value))
-        }
-        val unestimated = chosen.isNotEmpty() && (classified || !everything) && quote == null
-        if (short > 0) {
-            Warning(tr("Add about {amount} on-chain first. Each exit transaction’s fee comes from there.", money(short)), failed = true)
-            SettingsLink(tr("Add on-chain funds"), Modifier.padding(top = 4.dp).testTag("exit-add-funds")) { deposit(short) }
-        } else if (fees != null && confirmed != null) {
-            @Suppress("MaxLineLength") // one translation source string
-            FinePrint(tr("Network fees come from your on-chain {amount} at {rate} sat/vB. Transactions your VTXOs share are paid once. Fees may change.",
-                money(confirmed), fees.feeRate.toString()))
-        } else if (unestimated) FinePrint(tr("Fee estimate unavailable"))
-        if (fees != null && value > 0 && fees.totalFee >= value) Warning(tr("Fees are more than these VTXOs are worth."), failed = true)
-        if (everything) {
-            if (unknown > 0) {
-                FinePrint(trPlural("Couldn’t check the fees of {n} VTXOs, so All waits. Choose them one by one, or try again.", unknown), failed = true)
-                SettingsLink(tr("Try again"), Modifier.testTag("exit-costs-retry"), enabled = !busy, onClick = retry)
-            }
-            val out = ExitCosts.leftOut(vtxos, costs.orEmpty())
-            if (out.dust > 0) FinePrint(tr("Left out: {amount}, too small to exit.", money(out.dust)))
-            if (out.locked > 0) FinePrint(tr("Left out: {amount}, in use right now.", money(out.locked)))
-            if (out.uneconomic > 0) FinePrint(tr("Left out: {amount} that costs more in fees than it’s worth. Choose it to exit anyway.",
-                money(out.uneconomic)))
-        }
+        ChooseFees(chosen.size, fees, value, money)
+        ChooseFeeNotes(short, fees, confirmed, selection.estimable && quote == null, value, money, deposit)
+        if (everything) AllLeftOut(vtxos, costs, unknown, busy, money, retry)
         Spacer(Modifier.height(40.dp))
         content()
     }
+}
+
+/** All ([picked] null) or the picked VTXOs, never one that can't exit; All waits until every VTXO is classified. */
+private class ChooseSelection(vtxos: List<VtxoModel>, costs: Map<String, ExitCosts.Cost?>?, refused: Map<String, String>, excluded: Set<String>,
+    picked: List<String>?) {
+    // "All" is fixed only once every VTXO is classified: until then it might hold one that costs more than it's worth.
+    val unknown = if (costs == null) 0 else vtxos.count { ExitCosts.barred(it, refused, excluded) == null && costs[it.id] == null }
+    val classified = costs != null && unknown == 0
+    // No selection or total holds a VTXO that can't be selected, whatever was picked before.
+    val chosen = if (picked == null) ExitCosts.all(vtxos, costs.orEmpty(), refused, excluded)
+    else vtxos.filter { it.id in picked && ExitCosts.barred(it, refused, excluded) == null }
+    val estimable = chosen.isNotEmpty() && (picked != null || classified)
+    val reviewable = estimable
+}
+
+private fun feesFor(quote: OnchainQuote?, ids: List<String>) = quote?.takeIf { it.fee != null && it.chainFee != null && it.ids == ids.sorted() }
+
+/** What the list shows instead of the VTXOs, if anything. */
+@Composable
+private fun chooseNote(suspended: Boolean, ready: Boolean, loading: Boolean, empty: Boolean) = when {
+    suspended -> tr("Wallet suspended. Resume your wallet in Settings.")
+    !ready -> if (loading) tr("Loading…") else tr("Couldn't read wallet status. Pull to refresh.")
+    empty -> tr("No eligible spendable VTXOs.")
+    else -> null
+}
+
+private fun shortForFees(fees: OnchainQuote?, confirmed: Long?) = if (fees != null && confirmed != null) checkNotNull(fees.chainFee) - confirmed else 0
+
+/** Where the fees come from, what's short, or that bark couldn't estimate them. */
+@Composable
+private fun ChooseFeeNotes(short: Long, fees: OnchainQuote?, confirmed: Long?, unestimated: Boolean, value: Long, money: (Long) -> String,
+    deposit: (Long) -> Unit) {
+    if (short > 0) {
+        Warning(tr("Add about {amount} on-chain first. Each exit transaction’s fee comes from there.", money(short)), failed = true)
+        SettingsLink(tr("Add on-chain funds"), Modifier.padding(top = 4.dp).testTag("exit-add-funds")) { deposit(short) }
+    } else if (fees != null && confirmed != null) {
+        @Suppress("MaxLineLength") // one translation source string
+        FinePrint(tr("Network fees come from your on-chain {amount} at {rate} sat/vB. Transactions your VTXOs share are paid once. Fees may change.",
+            money(confirmed), fees.feeRate.toString()))
+    } else if (unestimated) FinePrint(tr("Fee estimate unavailable"))
+    if (fees != null && value > 0 && fees.totalFee >= value) Warning(tr("Fees are more than these VTXOs are worth."), failed = true)
+}
+
+/** Choose's line above the pill: the selection's total and, once estimated, its fees. */
+@Composable
+private fun chooseSummary(chosen: List<VtxoModel>, fees: OnchainQuote?, value: Long, money: (Long) -> String) =
+    if (chosen.isEmpty()) tr("Choose the VTXOs to exit")
+    else fees?.chainFee?.let { tr("{amount} · fees ~{fee}", money(value), money(it)) } ?: money(value)
+
+@Composable
+private fun RowScope.ChooseFoot(summary: String?, enabled: Boolean, review: () -> Unit) {
+    val palette = LocalPalette.current
+    Column(Modifier.weight(1f), horizontalAlignment = Alignment.CenterHorizontally) {
+        if (summary != null) Text(summary, Modifier.padding(bottom = 8.dp), style = HomeType.amount.copy(fontSize = 15.sp), color = palette.foreground)
+        SendPill(tr("Review exit"), Modifier.fillMaxWidth().testTag("exit-review"), height = 56.dp, wrap = true, enabled = enabled, onClick = review)
+    }
+}
+
+/** The VTXOs: checkboxes when [picked] (Choose), coins in All. */
+@Composable
+private fun ChooseList(vtxos: List<VtxoModel>, costs: Map<String, ExitCosts.Cost?>?, picked: List<String>?, money: (Long) -> String,
+    refused: Map<String, String>, excluded: Set<String>, toggle: (String) -> Unit) {
+    Column(Modifier.padding(top = 6.dp)) {
+        vtxos.forEachIndexed { index, vtxo ->
+            ChooseRow(vtxo, costs?.get(vtxo.id), picked?.let { vtxo.id in it }, money, divider = index < vtxos.lastIndex,
+                refused = refused, excluded = excluded) { toggle(vtxo.id) }
+        }
+    }
+}
+
+@Composable
+private fun ChooseFees(count: Int, fees: OnchainQuote?, value: Long, money: (Long) -> String) {
+    Column(Modifier.padding(top = 18.dp)) {
+        ExitValueRow(tr("VTXOs"), fees?.transactions?.let { "$count · " + trPlural("{n} transactions", it) } ?: count.toString(),
+            kind = ValueKind.number)
+        ExitValueRow(tr("Network fees"), fees?.chainFee?.let { "~" + money(it) } ?: "—", kind = ValueKind.number)
+        ExitValueRow(tr("Claim fee"), fees?.fee?.let { "~" + money(it) } ?: "—", kind = ValueKind.number, last = true)
+        TotalRow(tr("You get"), fees?.fee?.let { "~" + money(ExitRules.received(value, it)) } ?: money(value))
+    }
+}
+
+/** What All leaves out, and Try again while some VTXOs' fees are still unknown. */
+@Composable
+private fun AllLeftOut(vtxos: List<VtxoModel>, costs: Map<String, ExitCosts.Cost?>?, unknown: Int, busy: Boolean, money: (Long) -> String,
+    retry: () -> Unit) {
+    if (unknown > 0) {
+        FinePrint(trPlural("Couldn’t check the fees of {n} VTXOs, so All waits. Choose them one by one, or try again.", unknown), failed = true)
+        SettingsLink(tr("Try again"), Modifier.testTag("exit-costs-retry"), enabled = !busy, onClick = retry)
+    }
+    val out = ExitCosts.leftOut(vtxos, costs.orEmpty())
+    if (out.dust > 0) FinePrint(tr("Left out: {amount}, too small to exit.", money(out.dust)))
+    if (out.locked > 0) FinePrint(tr("Left out: {amount}, in use right now.", money(out.locked)))
+    if (out.uneconomic > 0) FinePrint(tr("Left out: {amount} that costs more in fees than it’s worth. Choose it to exit anyway.",
+        money(out.uneconomic)))
 }
 
 /** A total row (prototype `.br.tot`): a line above, the label in the foreground; the value goes under it when both don't fit. */
@@ -498,14 +568,7 @@ private fun ChooseRow(vtxo: VtxoModel, cost: ExitCosts.Cost?, checked: Boolean?,
     val uneconomic = ExitCosts.uneconomic(vtxo, cost)
     val barred = ExitCosts.barred(vtxo, refused, excluded)
     val exitable = barred == null
-    val sub = when (barred) {
-        ExitCosts.Barred.locked -> tr("In use right now")
-        ExitCosts.Barred.dust -> tr("Too small to exit · under {amount}", money(ExitRules.dust))
-        ExitCosts.Barred.state -> vtxo.status
-        ExitCosts.Barred.renew -> tr("Renew first")
-        ExitCosts.Barred.refused -> tr(refused.getValue(vtxo.id))
-        null -> if (uneconomic) tr("Fees more than it’s worth") else expiresText(vtxo)
-    }
+    val sub = chooseSub(vtxo, barred, uneconomic, refused, money)
     val picking = checked != null
     Row(Modifier.fillMaxWidth().heightIn(min = 62.dp).drawBehind {
         if (divider) drawRect(palette.hairline, Offset(54.dp.toPx(), size.height - 1.dp.toPx()), Size(size.width - 54.dp.toPx(), 1.dp.toPx()))
@@ -513,22 +576,40 @@ private fun ChooseRow(vtxo: VtxoModel, cost: ExitCosts.Cost?, checked: Boolean?,
         .semantics(mergeDescendants = true) { if (picking) toggleableState = androidx.compose.ui.state.ToggleableState(checked == true && exitable) }
         .graphicsLayer { alpha = if (exitable) 1f else .45f }.testTag("exit-vtxo-${vtxo.id.take(12)}"),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-        Box(Modifier.size(40.dp), contentAlignment = Alignment.Center) {
-            if (!picking) ExitCoin(32.dp)
-            else if (exitable) Box(Modifier.size(20.dp).background(if (checked == true) palette.foreground else palette.background, RoundedCornerShape(6.dp))
-                .then(if (checked == true) Modifier else Modifier.drawBehind {
-                    drawRoundRect(palette.muted, style = androidx.compose.ui.graphics.drawscope.Stroke(2.dp.toPx()),
-                        cornerRadius = androidx.compose.ui.geometry.CornerRadius(6.dp.toPx()))
-                }), contentAlignment = Alignment.Center) {
-                if (checked == true) Icon(painterResource(SettingsIcons.check), null, Modifier.size(15.dp), tint = palette.background)
-            } else Box(Modifier.size(14.dp, 2.dp).background(palette.muted, RoundedCornerShape(1.dp)))
-        }
+        ChooseMark(checked, exitable)
         Column(Modifier.weight(1f)) {
             WrappingLabel(money(vtxo.amount), HomeType.amount.copy(color = palette.foreground))
             Text(sub, style = HomeType.small, color = if (exitable && uneconomic) palette.failure else palette.muted)
             if (barred == ExitCosts.Barred.renew) Text(tr("Renew this VTXO in Settings → VTXOs before exiting it."), style = HomeType.small,
                 color = palette.muted)
         }
+    }
+}
+
+@Composable
+private fun chooseSub(vtxo: VtxoModel, barred: ExitCosts.Barred?, uneconomic: Boolean, refused: Map<String, String>, money: (Long) -> String) =
+    when (barred) {
+        ExitCosts.Barred.locked -> tr("In use right now")
+        ExitCosts.Barred.dust -> tr("Too small to exit · under {amount}", money(ExitRules.dust))
+        ExitCosts.Barred.state -> vtxo.status
+        ExitCosts.Barred.renew -> tr("Renew first")
+        ExitCosts.Barred.refused -> tr(refused.getValue(vtxo.id))
+        null -> if (uneconomic) tr("Fees more than it’s worth") else expiresText(vtxo)
+    }
+
+/** The coin in All (null [checked]); in Choose a checkbox, or a dash for a VTXO that can't exit. */
+@Composable
+private fun ChooseMark(checked: Boolean?, exitable: Boolean) {
+    val palette = LocalPalette.current
+    Box(Modifier.size(40.dp), contentAlignment = Alignment.Center) {
+        if (checked == null) ExitCoin(32.dp)
+        else if (exitable) Box(Modifier.size(20.dp).background(if (checked) palette.foreground else palette.background, RoundedCornerShape(6.dp))
+            .then(if (checked) Modifier else Modifier.drawBehind {
+                drawRoundRect(palette.muted, style = androidx.compose.ui.graphics.drawscope.Stroke(2.dp.toPx()),
+                    cornerRadius = androidx.compose.ui.geometry.CornerRadius(6.dp.toPx()))
+            }), contentAlignment = Alignment.Center) {
+            if (checked) Icon(painterResource(SettingsIcons.check), null, Modifier.size(15.dp), tint = palette.background)
+        } else Box(Modifier.size(14.dp, 2.dp).background(palette.muted, RoundedCornerShape(1.dp)))
     }
 }
 
