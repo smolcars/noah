@@ -37,7 +37,8 @@ class WidgetDataWriterTest {
     @Test fun snapshotHoldsHomesBalancePendingWaveAndRenew() {
         val changes = listOf(WidgetWave.Change(now - 3 * 86_400_000L, 25), WidgetWave.Change(now - 3_600_000, -5))
         val snapshot = WidgetDataWriter.snapshot(balance, WidgetDataWriter.Extras(changes, 18), bip177, null, now, ZoneId.of("UTC"))
-        assertEquals(75L, snapshot.balance); assertEquals(44L, snapshot.pending)
+        // Arriving is Home's: the claimable Lightning receive, with no unconfirmed deposit in history.
+        assertEquals(75L, snapshot.balance); assertEquals(3L, snapshot.arriving)
         assertEquals(WidgetWave.dailyBalances(75, changes, now, ZoneId.of("UTC")), snapshot.daily)
         assertEquals(75L, snapshot.daily!!.last()); assertEquals(55L, snapshot.daily!!.first())
         assertEquals(now + 18 * 600_000L, snapshot.renewDue)
@@ -47,13 +48,27 @@ class WidgetDataWriterTest {
         assertNull(bare.daily); assertNull(bare.renewDue)
     }
 
+    /** Home's Arriving rule: incoming only, so an outgoing pending send, a board or a change output never shows. */
+    @Test fun arrivingIsHomesRule() {
+        val wallet = WalletBalance(WalletBalance.Ark(0u, 0u, 7_000u, 2_000u, 0u, 0u, 50_000u, 0u, 0u), WalletBalance.Onchain(100_000u, 30_000u, 130_000u))
+        fun row(id: String, sats: Long, confirmed: Boolean) = com.noahwallet.history.HistoryTransaction(id, "Onchain", kotlin.math.abs(sats),
+            "1970-01-01T00:00:00.000Z", if (sats < 0) "outgoing" else "incoming", source = "onchain-wallet", txid = id,
+            balanceChangeSat = sats, hasConfirmation = confirmed)
+        val rows = listOf(row("deposit", 20_000, false), row("spend", -40_000, false), row("old", 90_000, true))
+        val snapshot = WidgetDataWriter.snapshot(wallet, WidgetDataWriter.Extras(null, null, rows), bip177, null, now)
+        assertEquals(HomeRules.arriving(wallet, rows).toLong(), snapshot.arriving)
+        assertEquals(22_000L, snapshot.arriving)
+        // Without history, only the Lightning receive Home would also count.
+        assertEquals(2_000L, WidgetDataWriter.snapshot(wallet, null, bip177, null, now).arriving)
+    }
+
     @Test fun fiatIsHomesLatestQuoteForTheChosenCurrencyOnly() {
         val wallet = WalletBalance(WalletBalance.Ark(100_000_000u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u), WalletBalance.Onchain(0u, 0u, 0u))
         val quoted = WidgetDataWriter.snapshot(wallet, null, bip177, WidgetDataWriter.Quote("USD", 112_000.5), now)
-        assertEquals(112_000.5, quoted.fiatValue!!, 0.0); assertEquals("USD", quoted.fiatCurrency); assertEquals(112_000.5, quoted.fiatPrice!!, 0.0)
+        assertEquals("USD", quoted.fiatCurrency); assertEquals(112_000.5, quoted.fiatPrice!!, 0.0)
         for (quote in listOf(WidgetDataWriter.Quote("EUR", 99_000.0), WidgetDataWriter.Quote("USD", Double.NaN), WidgetDataWriter.Quote("USD", 0.0), null)) {
             val snapshot = WidgetDataWriter.snapshot(wallet, null, bip177, quote, now)
-            assertNull(snapshot.fiatValue); assertNull(snapshot.fiatCurrency); assertNull(snapshot.fiatPrice)
+            assertNull(snapshot.fiatCurrency); assertNull(snapshot.fiatPrice)
         }
     }
 
@@ -63,14 +78,14 @@ class WidgetDataWriterTest {
         assertEquals(setOf(WidgetSnapshot.KEY), prefs.all.keys)
         assertEquals(75L, stored!!.balance)
         WidgetDataWriter.republish(context, bip177, "regtest", WidgetDataWriter.Quote("USD", 100_000_000.0))
-        assertEquals(75.0, stored!!.fiatValue!!, 0.0)
+        assertEquals(100_000_000.0, stored!!.fiatPrice!!, 0.0); assertEquals("USD", stored!!.fiatCurrency)
         // The next write (a push job, say) recomputes fiat from the stored quote.
         val more = WalletBalance(WalletBalance.Ark(200u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u), WalletBalance.Onchain(0u, 0u, 0u))
         WidgetDataWriter.write(context, more, null, bip177, "regtest")
-        assertEquals(200.0, stored!!.fiatValue!!, 0.0)
+        assertEquals(200L, stored!!.balance); assertEquals(100_000_000.0, stored!!.fiatPrice!!, 0.0)
         // Another currency has no quote until Home fetches one.
         WidgetDataWriter.write(context, more, null, bip177.copy(currency = "EUR"), "regtest")
-        assertNull(stored!!.fiatValue); assertNull(stored!!.fiatCurrency)
+        assertNull(stored!!.fiatPrice); assertNull(stored!!.fiatCurrency)
     }
 
     @Test fun displayChangesRepublishWithoutTheWallet() = runBlocking {
@@ -137,7 +152,7 @@ class WidgetDataWriterTest {
         }
         // A failed read is no Renew line, and doesn't stop the wave.
         val broken = object : OnchainWalletAccess { override val walletID = "x"; override suspend fun tip() = 100L }
-        assertEquals(WidgetDataWriter.Extras(emptyList(), null), WidgetDataWriter.extras(Handles(broken), "regtest", now))
+        assertEquals(WidgetDataWriter.Extras(emptyList(), null, emptyList()), WidgetDataWriter.extras(Handles(broken), "regtest", now))
     }
 }
 

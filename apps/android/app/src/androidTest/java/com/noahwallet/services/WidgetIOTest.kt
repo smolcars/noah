@@ -37,7 +37,7 @@ class WidgetIOTest {
                     else {
                         val stored = com.noahwallet.widgets.WidgetSnapshot.read(prefs)!!
                         assertEquals(18L, stored.balance)
-                        assertEquals(3L, stored.pending)
+                        assertEquals(0L, stored.arriving)
                         assertNotNull(stored.renewDue)
                     }
                     broadcast = true

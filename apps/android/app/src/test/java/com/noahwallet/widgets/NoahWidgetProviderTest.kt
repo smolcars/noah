@@ -31,10 +31,10 @@ class NoahWidgetProviderTest {
     private fun language(code: String) { context.getSharedPreferences("gt_store", 0).edit().putString(LegacyLocale.key, code).commit() }
     private val now = 1_761_577_200_000L
     private val hour = 3_600_000L
-    private val month = WidgetSnapshot(balance = 252_742, pending = 100_000,
+    private val month = WidgetSnapshot(balance = 252_742, arriving = 100_000,
         daily = listOf(222600, 230600, 228100, 228100, 232942, 232942, 228742, 228742, 243742, 233742, 233742, 230542, 251542, 251542,
             245542, 240542, 240542, 250042, 251542, 251542, 243742, 243242, 243242, 255242, 261242, 261242, 257242, 247242, 250642, 252742, 252742),
-        writtenAt = now, fiatValue = 283.07, fiatCurrency = "USD", fiatPrice = 112_000.0)
+        writtenAt = now, fiatCurrency = "USD", fiatPrice = 112_000.0)
 
     @Before fun reset() {
         context.getSharedPreferences("gt_store", 0).edit().clear().commit()
@@ -73,11 +73,12 @@ class NoahWidgetProviderTest {
         assertNull(hidden.wave); assertNull(hidden.change); assertNull(hidden.days)
         assertEquals("₿ ••••••", hidden.balance)
         assertEquals("\$ ••••", hidden.fiat)
-        assertEquals(WidgetContent.Status.Arriving("+₿ •••• arriving"), hidden.status)
+        // As Home words it.
+        assertEquals(WidgetContent.Status.Arriving("•••• arriving"), hidden.status)
         assertFalse("TalkBack reads no amount", hidden.description.any { it.isDigit() })
         val sats = WidgetContent.of(context, month.copy(hidden = true, amountUnit = "sats"), "regtest", now)
         assertEquals("•••••• sats", sats.balance)
-        assertEquals(WidgetContent.Status.Arriving("+•••• sats arriving"), sats.status)
+        assertEquals(WidgetContent.Status.Arriving("•••• arriving"), sats.status)
         // The sea is drawn as calm water: a flat line with a ripple at 72% of the band.
         val frame = WidgetViews.frame(WidgetLayout.small, hidden, 180f, 180f)!!
         val line = WidgetSea.line(hidden.wave, frame)
@@ -88,9 +89,8 @@ class NoahWidgetProviderTest {
         language("en")
         val fresh = WidgetContent.of(context, WidgetSnapshot(balance = 0, daily = List(31) { 0L }, writtenAt = now), "mainnet", now)
         assertNull(fresh.wave); assertNull(fresh.change); assertEquals("₿ 0", fresh.balance); assertNull(fresh.status)
-        val legacy = WidgetContent.of(context, WidgetSnapshot(balance = 1_234_567, pending = 12_345), "regtest", now)
-        assertNull(legacy.wave); assertNull(legacy.fiat); assertEquals("₿ 1,234,567", legacy.balance)
-        assertEquals(WidgetContent.Status.Arriving("+₿ 12,345 arriving"), legacy.status)
+        val legacy = WidgetContent.of(context, WidgetSnapshot(balance = 1_234_567), "regtest", now)
+        assertNull(legacy.wave); assertNull(legacy.fiat); assertEquals("₿ 1,234,567", legacy.balance); assertNull(legacy.status)
     }
 
     @Test fun renewCountsDownWithoutTheAppAndWinsOverArriving() {
@@ -185,7 +185,7 @@ class NoahWidgetProviderTest {
         val wide = apply(content, 372f, 84f)
         assertEquals("Expires in 18 hours", wide.text(R.id.widget_status_title)); assertFalse(wide.shown(R.id.widget_fiat))
         assertEquals("Receive", wide.findViewById<View>(R.id.widget_receive).contentDescription)
-        val narrow = apply(WidgetContent.of(context, month.copy(pending = 0), "regtest", now), 140f, 84f)
+        val narrow = apply(WidgetContent.of(context, month.copy(arriving = 0), "regtest", now), 140f, 84f)
         assertEquals("\$283.07", narrow.text(R.id.widget_fiat)); assertFalse(narrow.shown(R.id.widget_status))
         // No wallet: just the longship on calm water, never ₿ 0.
         val empty = apply(null, 180f, 180f)
@@ -207,7 +207,7 @@ class NoahWidgetProviderTest {
             .putLong("offchainBalance", 2).putLong("pendingBalance", 12_345).putLong("closestExpiryBlocks", 24).putLong("expiryThreshold", 24).commit()
         val old = render()
         assertEquals("₿ 1,234,567", old.balance())
-        assertEquals("+₿ 12,345 arriving", old.text(R.id.widget_status_title))
+        assertFalse("old keys never show arriving", old.shown(R.id.widget_status))
         assertEquals("", old.text(R.id.widget_change))
         context.getSharedPreferences("com.noahwallet.regtest", 0).edit().clear()
             .putString(WidgetSnapshot.KEY, month.copy(writtenAt = System.currentTimeMillis()).encode()).commit()

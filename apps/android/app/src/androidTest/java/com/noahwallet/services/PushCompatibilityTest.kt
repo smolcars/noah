@@ -92,7 +92,7 @@ class PushCompatibilityTest {
         // The provider reads exactly what the writer stored: one snapshot key, the old keys gone.
         assertEquals(setOf(com.noahwallet.widgets.WidgetSnapshot.KEY), prefs.all.keys)
         val stored = com.noahwallet.widgets.WidgetSnapshot.read(prefs)!!
-        assertEquals(18L, stored.balance); assertEquals(3L, stored.pending)
+        assertEquals(18L, stored.balance); assertEquals(0L, stored.arriving)
         assertEquals(List(31) { 18L }, stored.daily)
         assertTrue(stored.sats); assertTrue(stored.hidden)
         assertEquals(2 * 600_000L, stored.renewDue!! - stored.writtenAt!!)

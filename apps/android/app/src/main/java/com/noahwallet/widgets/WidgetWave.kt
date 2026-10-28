@@ -79,10 +79,11 @@ object WidgetWave {
 
     /**
      * Settled balance changes in Activity's unified rows ([com.noahwallet.history.HistoryRules.unified]). A bark
-     * movement counts once successful: its Ark delta, plus the on-chain delta of the board or offboard transaction
-     * merged into it, so a board moves the balance by its fee alone. An unmerged on-chain transaction counts once
-     * confirmed, dated by its confirmation height ([tip] − height blocks ago; bark reports no block time). Pending,
-     * failed and canceled movements, and unconfirmed transactions, are not changes.
+     * movement counts once successful, dated by its creation (the date Activity shows): its Ark delta, plus the
+     * on-chain delta of the board or offboard transaction merged into it once that's confirmed, so a board moves the
+     * balance by its fee alone. Any other on-chain transaction counts once confirmed, dated by its confirmation height
+     * ([tip] − height blocks ago; bark reports no block time). Pending, failed and canceled movements, and unconfirmed
+     * transactions, are not changes.
      */
     fun changes(rows: List<HistoryTransaction>, tip: Long, now: Long): List<Change> = rows.mapNotNull { row ->
         if (row.source == "onchain-wallet") {
@@ -93,7 +94,7 @@ object WidgetWave {
         } else {
             if (row.movementStatus != "successful") return@mapNotNull null
             val at = row.timestamp?.time ?: return@mapNotNull null
-            Change(at, (row.effectiveBalanceSat ?: 0L) + (row.balanceChangeSat ?: 0L))
+            Change(at, (row.effectiveBalanceSat ?: 0L) + (row.balanceChangeSat?.takeIf { row.hasConfirmation == true } ?: 0L))
         }
     }.filter { it.sats != 0L }
 }

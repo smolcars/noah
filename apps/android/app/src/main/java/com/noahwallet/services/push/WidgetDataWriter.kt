@@ -31,8 +31,12 @@ import java.time.ZoneId
  * writes the whole snapshot; display changes republish the stored one. The values are never logged.
  */
 object WidgetDataWriter {
-    /** The wave's settled changes and Home's Renew (blocks to the soonest due expiry); each null when unreadable or none. */
-    data class Extras(val changes: List<WidgetWave.Change>?, val renewBlocks: Long?)
+    /**
+     * The wave's settled changes, Activity's rows (for Home's Arriving rule) and Home's Renew (blocks to the soonest due
+     * expiry); each null when unreadable or none.
+     */
+    data class Extras(val changes: List<WidgetWave.Change>?, val renewBlocks: Long?,
+        val rows: List<com.noahwallet.history.HistoryTransaction>? = null)
 
     /** Home's persisted keys the widget follows. */
     data class Display(val unit: BitcoinAmountUnit, val hidden: Boolean, val currency: String) {
@@ -57,12 +61,12 @@ object WidgetDataWriter {
 
     /** Reads [Extras] inside the caller's counted session call. */
     internal suspend fun extras(handles: WalletSession.Handles, variant: String, now: Long = System.currentTimeMillis()): Extras {
-        val changes = optional {
-            // Activity's own rows, merged as it shows them, so a board's two halves land on one day.
-            val rows = handles.history().filter(HistoryMapping::include).map { HistoryMapping.transaction(it) } +
-                handles.transactions().filter { it.balanceChangeSats != 0L }.map { HistoryMapping.transaction(it) }
-            WidgetWave.changes(HistoryRules.unified(rows), handles.m6.tip(), now)
+        // Activity's own rows, merged as it shows them, so a board's two halves land on one day.
+        val rows = optional {
+            HistoryRules.unified(handles.history().filter(HistoryMapping::include).map { HistoryMapping.transaction(it) } +
+                handles.transactions().filter { it.balanceChangeSats != 0L }.map { HistoryMapping.transaction(it) })
         }
+        val changes = rows?.let { optional { WidgetWave.changes(it, handles.m6.tip(), now) } }
         val renew = optional {
             // Home's Renew rule: refreshable VTXOs in bark's expiring set for the refresh threshold.
             val threshold = WalletConfiguration.base(variant).vtxoRefreshExpiryThreshold.toUInt()
@@ -70,7 +74,7 @@ object WidgetDataWriter {
             val expiring = handles.m6.expiring(threshold)
             HomeRules.renew(handles.m6.vtxos().map { com.noahwallet.onchain.vtxoModel(it, tip, expiring) })?.blocks
         }
-        return Extras(changes, renew)
+        return Extras(changes, renew, rows)
     }
 
     @Suppress("LongParameterList") // now and zone are test seams
@@ -78,10 +82,9 @@ object WidgetDataWriter {
         now: Long = System.currentTimeMillis(), zone: ZoneId = ZoneId.systemDefault()): WidgetSnapshot {
         val total = balance.totalSats.toLong()
         val price = quote?.takeIf { it.currency == display.currency && it.price.isFinite() && it.price > 0 }?.price
-        return WidgetSnapshot(balance = total, pending = balance.pendingSats.toLong(),
+        return WidgetSnapshot(balance = total, arriving = HomeRules.arriving(balance, extras?.rows.orEmpty()).toLong(),
             daily = extras?.changes?.let { WidgetWave.dailyBalances(total, it, now, zone) }, writtenAt = now,
             amountUnit = display.unit.name, hidden = display.hidden,
-            fiatValue = price?.let { com.noahwallet.formatting.FiatCurrency.satsToFiat(total, it, display.currency).toDouble() },
             fiatCurrency = price?.let { display.currency }, fiatPrice = price,
             renewDue = extras?.renewBlocks?.let { now + it * WidgetWave.BLOCK_MILLIS })
     }
@@ -98,7 +101,7 @@ object WidgetDataWriter {
             "com.noahwallet.widgets.NoahWidget${name}Provider")))
     }
 
-    /** The whole snapshot replaces the file, old keys included; the stored quote carries over while its currency holds. */
+    /** The whole snapshot replaces the file, old keys included; the last quote carries over while its currency holds. */
     @Suppress("LongParameterList") // checkStage is optional per caller
     suspend fun write(context: Context, balance: WalletBalance, extras: Extras?, display: Display, variant: String,
         checkStage: () -> Unit = {}): Unit = withContext(NonCancellable + Dispatchers.IO) {
@@ -126,7 +129,6 @@ object WidgetDataWriter {
             val price = (quote ?: stored.fiatPrice?.let { price -> stored.fiatCurrency?.let { Quote(it, price) } })
                 ?.takeIf { it.currency == display.currency && it.price.isFinite() && it.price > 0 }?.price
             val next = stored.copy(amountUnit = display.unit.name, hidden = display.hidden,
-                fiatValue = price?.let { com.noahwallet.formatting.FiatCurrency.satsToFiat(stored.balance, it, display.currency).toDouble() },
                 fiatCurrency = price?.let { display.currency }, fiatPrice = price)
             if (next == stored) return@withLock false
             check(prefs.edit().putString(WidgetSnapshot.KEY, next.encode()).commit()) { "Widget preferences could not be saved" }

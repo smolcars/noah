@@ -11,9 +11,9 @@ import kotlinx.serialization.json.Json
 @Serializable
 internal data class WidgetSnapshot(
     val version: Int = VERSION,
-    /** Sats: the balance Home shows, and today's pending balance (the Arriving line). */
+    /** Sats: the balance Home shows, and what Home's Arriving line counts (incoming only, [com.noahwallet.ui.home.HomeRules.arriving]). */
     val balance: Long,
-    val pending: Long = 0,
+    val arriving: Long = 0,
     /** 31 daily balances, oldest first, the last one [balance]; absent draws calm water. */
     val daily: List<Long>? = null,
     /** When [daily] was read (epoch ms), so a later day moves the window on. */
@@ -21,8 +21,7 @@ internal data class WidgetSnapshot(
     /** Home's persisted unit (`bip177` / `sats`) and hide-balance flag. */
     val amountUnit: String = "bip177",
     val hidden: Boolean = false,
-    /** Home's latest quote: the balance in [fiatCurrency], and the price it came from, for later writes. */
-    val fiatValue: Double? = null,
+    /** Home's latest quote: the bitcoin price in [fiatCurrency]; the widget applies Home's fiat formula to the balance. */
     val fiatCurrency: String? = null,
     val fiatPrice: Double? = null,
     /** While Home's Renew rule holds: the soonest refreshable VTXO expiry (epoch ms, now + blocks × 10 min). */
@@ -44,9 +43,10 @@ internal data class WidgetSnapshot(
         fun read(prefs: SharedPreferences): WidgetSnapshot? {
             val values = prefs.all
             decode(values[KEY] as? String)?.let { return it }
-            // The old keys (an RN or earlier native snapshot, before the updated app runs): ₿, no fiat, calm water, no Renew.
+            // The old keys (an RN or earlier native snapshot, before the updated app runs): ₿, no fiat, calm water, no
+            // status line. Their pending total also counts outgoing payments, so it can't be shown as arriving.
             val total = values["totalBalance"] as? Long ?: return null
-            return WidgetSnapshot(balance = total, pending = values["pendingBalance"] as? Long ?: 0L)
+            return WidgetSnapshot(balance = total)
         }
     }
 }

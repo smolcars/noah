@@ -51,12 +51,14 @@ internal data class WidgetContent(
             val wave = wave(snapshot, now, zone)
             val change = wave?.let(WidgetWave::change)
             val renew = renew(context, snapshot.renewDue, now)
-            val arriving = snapshot.pending.takeIf { it > 0 }?.let {
-                Status.Arriving(L10n.text(context, "{amount} arriving", "+" + if (hidden) masked("••••") else amount(it)))
+            // As Home words it, hidden too.
+            val arriving = snapshot.arriving.takeIf { it > 0 }?.let {
+                Status.Arriving(L10n.text(context, "{amount} arriving", if (hidden) "••••" else "+" + amount(it)))
             }
             return WidgetContent(
                 balance = if (hidden) masked("••••••") else amount(snapshot.balance),
                 satsSuffix = unit == BitcoinAmountUnit.sats,
+                // Home's formula on Home's latest quote; no quote, no line.
                 fiat = fiat(snapshot, locale),
                 change = change?.let { (if (it < 0) "−" else "+") + amount(abs(it)) },
                 days = change?.let { " · " + L10n.plural(context, "{n} days", WidgetWave.DAYS) },
@@ -83,10 +85,8 @@ internal data class WidgetContent(
         }
 
         private fun fiat(snapshot: WidgetSnapshot, locale: Locale): String? =
-            snapshot.fiatCurrency?.takeIf { it in FiatCurrency.supported }?.let { currency ->
-                if (snapshot.hidden) HomeRules.fiat(null, null, currency, locale, true)
-                else snapshot.fiatValue?.takeIf { it.isFinite() }?.let { FiatCurrency.format(it, currency, locale) }
-            }
+            snapshot.fiatCurrency?.takeIf { it in FiatCurrency.supported && snapshot.fiatPrice?.let { p -> p.isFinite() && p > 0 } == true }
+                ?.let { HomeRules.fiat(snapshot.balance, snapshot.fiatPrice, it, locale, snapshot.hidden) }
 
         private fun chip(context: Context, variant: String): String? =
             when (variant) { "signet" -> L10n.text(context, "Signet"); "regtest" -> L10n.text(context, "Regtest"); else -> null }

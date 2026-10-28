@@ -116,6 +116,13 @@ class WidgetWaveTest {
         val pending = deposit.copy(id = "onchain-wallet-pending", txid = "pending", hasConfirmation = false, confirmationHeight = null)
         val changes = WidgetWave.changes(HistoryRules.unified(listOf(board, chain, deposit, pending)), 1_000, now)
         assertEquals(setOf(WidgetWave.Change(instant("2026-10-20T12:00:00Z"), -500), WidgetWave.Change(now - 120 * 600_000L, 60_000)), changes.toSet())
+        // An offboard counts its Ark half once settled, and its on-chain half once that's confirmed.
+        val offboard = board.copy(id = "movement-8", txid = "offboard-txid", movementKind = "offboard", effectiveBalanceSat = -30_000)
+        val credit = chain.copy(id = "onchain-wallet-offboard-txid", txid = "offboard-txid", balanceChangeSat = 29_700, hasConfirmation = false,
+            confirmationHeight = null)
+        assertEquals(listOf(-30_000L), WidgetWave.changes(HistoryRules.unified(listOf(offboard, credit)), 1_000, now).map { it.sats })
+        val confirmed = credit.copy(hasConfirmation = true, confirmationHeight = 990u)
+        assertEquals(listOf(-300L), WidgetWave.changes(HistoryRules.unified(listOf(offboard, confirmed)), 1_000, now).map { it.sats })
         // Pending movements change nothing.
         assertEquals(emptyList<WidgetWave.Change>(), WidgetWave.changes(listOf(board.copy(movementStatus = "pending")), 1_000, now))
     }
