@@ -1,3 +1,4 @@
+import CoreGraphics
 import Foundation
 @testable import Noah
 import Testing
@@ -70,6 +71,34 @@ struct WidgetWaveTests {
             }
         }
         #expect(WidgetWave.tangents(xs: [0, 1, 2], ys: [4, 4, 4]) == [0, 0, 0])
+    }
+
+    /// The boat sails on the line: the hull's lowest point rests on the stroke's upper edge at today, the line under
+    /// the boat is never higher than that, and a boat at the month's highest point stays inside the band.
+    @Test func theBoatSailsOnTopOfTheLine() {
+        let month: [Int64] = [222600, 230600, 228100, 228100, 232942, 232942, 228742, 228742, 243742, 233742, 233742, 230542, 251542,
+                              251542, 245542, 240542, 240542, 250042, 251542, 251542, 243742, 243242, 243242, 255242, 261242, 261242,
+                              257242, 247242, 250642, 252742, 252742]
+        let peak = month.dropLast() + [300_000]
+        let size = CGSize(width: 364, height: 170)
+        for side: CGFloat in [24, 26] {
+            let band = CGRect(x: 174, y: 32, width: 190, height: 84)
+            for values in [month, Array(peak), nil] {
+                let geometry = WaveGeometry(values: values, band: band, size: size, boat: side, inset: 16)
+                let hullBottom = geometry.boat.minY + WaveGeometry.hull * side
+                #expect(abs(hullBottom - (geometry.waterline - 1)) < 1e-9, "\(side)")
+                #expect(geometry.boat.minY + WaveGeometry.masthead * side >= band.minY - 1e-9, "\(side)")
+                // Under the boat the line is flat at today's level, or calm water whose crests reach the waterline.
+                let stride = Swift.stride(from: geometry.boat.minX, through: geometry.boat.maxX, by: 0.5)
+                for x in stride where values == nil {
+                    let level = geometry.waterline + WaveGeometry.ripple
+                    #expect(level + WaveGeometry.ripple * sin((x - band.minX) / 7) >= geometry.waterline - 1e-9)
+                }
+            }
+            // At the month's highest point the waterline is the band's top headroom.
+            let top = WaveGeometry(values: Array(peak), band: band, size: size, boat: side, inset: 16)
+            #expect(abs(top.waterline - (band.minY + WaveGeometry.headroom(side))) < 1e-9)
+        }
     }
 
     @Test func aSnapshotFromAnEarlierDayShiftsToToday() throws {
