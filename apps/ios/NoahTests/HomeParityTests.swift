@@ -90,6 +90,37 @@ struct HomeParityTests {
         #expect(requests == ["USD", "EUR", "USD"])
     }
 
+    /// The widgets get the quote Home shows, a cached one too: USD → EUR → USD inside the cache window
+    /// republishes USD without fetching it again, and an expired quote Home keeps after a failed fetch reaches them.
+    @Test func cachedQuotesReachTheWidgets() async {
+        var now = Date(timeIntervalSince1970: 10_000)
+        var requests: [String] = []
+        var published: [String] = []
+        var online = true
+        var deps = dependencies()
+        deps.now = { now }
+        deps.price = { currency in
+            requests.append(currency)
+            return online ? (currency == "USD" ? 100_000 : 90_000) : nil
+        }
+        deps.publishQuote = { published.append("\($0) \(Int($1))") }
+        let model = HomeModel(dependencies: deps)
+        await model.loadPrice(currency: "USD")
+        await model.loadPrice(currency: "EUR")
+        now += 120
+        await model.loadPrice(currency: "USD")
+        #expect(model.btcPrice == 100_000)
+        #expect(requests == ["USD", "EUR"])
+        #expect(published == ["USD 100000", "EUR 90000", "USD 100000"])
+        // Expired and offline: Home keeps the old quote, and so do the widgets.
+        now += 300
+        online = false
+        await model.loadPrice(currency: "EUR")
+        #expect(model.btcPrice == 90_000)
+        #expect(requests == ["USD", "EUR", "EUR"])
+        #expect(published.last == "EUR 90000")
+    }
+
     @Test func priceFailuresDoNotInventAFiatBalance() async {
         var deps = dependencies()
         deps.price = { _ in .nan }

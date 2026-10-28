@@ -134,11 +134,14 @@ final class HomeModel {
     func loadPrice(currency: String) async {
         priceGeneration += 1
         let generation = priceGeneration
-        if let cached = quotes[currency], dependencies.now().timeIntervalSince(cached.at) < 300 {
+        // The widgets show the quote Home shows, cached ones included: switching currency back must restore it.
+        if let cached = quotes[currency] {
             btcPrice = cached.price
-            return
+            dependencies.publishQuote(currency, cached.price)
+            if dependencies.now().timeIntervalSince(cached.at) < 300 { return }
+        } else {
+            btcPrice = nil
         }
-        btcPrice = quotes[currency]?.price
         guard let price = try? await dependencies.price(currency), price.isFinite, price > 0,
               generation == priceGeneration else { return }
         quotes[currency] = (price, dependencies.now())

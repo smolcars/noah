@@ -259,6 +259,44 @@ extension ForegroundWidgetRefreshTests {
         #expect(WidgetSnapshot.read(from: defaults, variant: "regtest")?.hidden == true)
     }
 
+    /// Switching currency drops the other currency's quote; switching back inside Home's cache window brings the
+    /// cached quote back to the widget without a fetch.
+    @Test func switchingBackToACachedCurrencyKeepsTheFiatLine() async throws {
+        let root = FileManager.default.temporaryDirectory.appending(path: "widget-currency-\(UUID())")
+        defer { try? FileManager.default.removeItem(at: root) }
+        let settings = try SettingsStorage(rootPath: root.path)
+        let defaults = try #require(UserDefaults(suiteName: AppVariant.regtest.appGroup))
+        let previous = (defaults.object(forKey: WidgetSnapshot.key), defaults.object(forKey: WidgetSnapshot.legacyKey))
+        defer { defaults.set(previous.0, forKey: WidgetSnapshot.key); defaults.set(previous.1, forKey: WidgetSnapshot.legacyKey) }
+        let display: () -> WidgetDataWriter.Display = { .init(settings: settings) }
+        func choose(_ currency: String) throws {
+            try settings.setPersistedState(PersistedProfileState(preferredCurrency: currency, bitcoinAmountUnit: "bip177"),
+                                           key: PersistedProfileState.key, version: PersistedProfileState.version)
+            WidgetDataWriter.republish(variant: .regtest, display: display) // What AppModel.updateProfile does.
+        }
+        func fiat() -> WidgetSnapshot.Fiat? { WidgetSnapshot.read(from: defaults, variant: "regtest")?.fiat }
+        try choose("USD")
+        WidgetDataWriter.write(balance: Self.balance(ark: 1_000), facts: .init(changes: []), variant: .regtest,
+                               ticket: WidgetDataWriter.ticket(variant: .regtest), display: display)
+        let now = Date(timeIntervalSince1970: 10_000)
+        var fetches: [String] = []
+        let home = HomeModel(dependencies: .init(
+            price: { fetches.append($0); return $0 == "USD" ? 100_000 : 90_000 }, rounds: { [] }, backup: { PersistedBackupState() },
+            retryBackup: {}, autoBoards: { [] }, backgroundSnapshot: { .init(isRunning: false, completionRevision: 0) },
+            now: { now }, renewal: { nil },
+            publishQuote: { WidgetDataWriter.publishQuote(currency: $0, btcPrice: $1, variant: .regtest, display: display) }))
+        await home.loadPrice(currency: "USD")
+        #expect(fiat() == .init(currency: "USD", btcPrice: 100_000))
+        try choose("EUR")
+        #expect(fiat() == nil)
+        await home.loadPrice(currency: "EUR")
+        #expect(fiat() == .init(currency: "EUR", btcPrice: 90_000))
+        try choose("USD")
+        await home.loadPrice(currency: "USD") // Cached: no fetch.
+        #expect(fiat() == .init(currency: "USD", btcPrice: 100_000))
+        #expect(fetches == ["USD", "EUR"])
+    }
+
     /// A push reads balance A and stalls; the foreground reads and publishes newer balance B; the push's late write
     /// of A is dropped. A writer still reading a deleted wallet can't bring it back either.
     @Test func aStalledWriterCannotPublishAnOlderBalance() throws {
