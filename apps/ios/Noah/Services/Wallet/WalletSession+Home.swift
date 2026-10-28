@@ -39,10 +39,10 @@ extension WalletSession {
                 let rows = HistoryRules.merge(movements.filter(HistoryMapping.include).map { HistoryMapping.transaction($0, now: now) },
                                               onchain: chain.filter { $0.balanceChangeSats != 0 }.map { HistoryMapping.transaction($0) })
                 facts.incomingOnchain = HomeStatusLine.incomingOnchain(rows)
-            } else { AppLog("widget").w("History unavailable; the widget keeps its wave") }
+            } else { AppLog("widget").w(#"History unavailable; the widget keeps its wave"#) }
             guard readsTip else { return facts }
             guard let tip = try? await handles.onchain.tipHeight() else {
-                AppLog("widget").w("Chain tip unavailable; the widget keeps its wave and Renew line")
+                AppLog("widget").w(#"Chain tip unavailable; the widget keeps its wave and Renew line"#)
                 return facts
             }
             if let (movements, chain) = records {
@@ -53,7 +53,7 @@ extension WalletSession {
             if let expiring = try? await handles.wallet.getExpiringVtxos(
                 thresholdBlocks: UInt32(WalletConfiguration.base(for: .current).vtxoRefreshExpiryThreshold)) {
                 facts.renewal = HomeRenewal.select(expiring.map(Self.renewalCoin), tip: tip).map { .blocks($0.blocksLeft) } ?? .notDue
-            } else { AppLog("widget").w("Expiring VTXOs unavailable; the widget keeps its Renew line") }
+            } else { AppLog("widget").w(#"Expiring VTXOs unavailable; the widget keeps its Renew line"#) }
             return facts
         }
     }
