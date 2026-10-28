@@ -3,8 +3,8 @@ import Foundation
 import Testing
 
 @MainActor struct RecurringOnboardingTests {
-    @Test(arguments: [nil, false, true] as [Bool?])
-    func liveAdmissionSkipsWelcomeThenRunsTheCreatedWallet(initialized: Bool?) async throws {
+    // swiftlint:disable:next discouraged_optional_boolean - nil is a third case: no saved wallet state at all
+    @Test(arguments: [nil, false, true] as [Bool?]) func liveAdmissionSkipsWelcomeThenRunsTheCreatedWallet(initialized: Bool?) async throws {
         let h = try RecurringExecutorTests.Harness()
         defer { try? FileManager.default.removeItem(at: h.directory) }
         let location = WalletDataLocation(variant: .regtest, documentsDirectory: h.directory.appending(path: "welcome"))

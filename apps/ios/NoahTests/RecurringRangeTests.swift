@@ -136,7 +136,8 @@ import Testing
     @Test func unknownJSONTokensSurviveWritesAndMalformedRowsStayVisible() throws {
         let h = try RecurringExecutorTests.Harness()
         defer { try? FileManager.default.removeItem(at: h.directory) }
-        let opaque = #" { "escaped\"key": ["},\\\"{", {"fraction":0.12345678901234567890123456789,"wide":9223372036854776000,"max":1.7976931348623157e+308}] } "#
+        let opaque = #" { "escaped\"key": ["},\\\"{", {"fraction":0.12345678901234567890123456789,"wide":922337203685477600"#
+            + #"0,"max":1.7976931348623157e+308}] } "#
         let rows = #"{"broken":{"amountSat":1},"primitive":false,"missing":null,"array":[]}"#
         let raw = "{\"version\":0,\"unknown\":\(opaque),\"state\":{\"schedules\":\(rows),\"unknown\":\(opaque)}}"
         h.settings.set(raw, forKey: RecurringStore.key)

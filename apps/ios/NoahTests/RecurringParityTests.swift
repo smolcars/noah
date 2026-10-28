@@ -103,7 +103,7 @@ import Testing
     func notificationTapRetainsRouteUntilWalletNavigationIsReady(type: String) throws {
         let route = SettingsRoute()
         let payload = ["notification_type": type]
-        let text = String(decoding: try JSONSerialization.data(withJSONObject: payload), as: UTF8.self)
+        let text = try #require(String(bytes: JSONSerialization.data(withJSONObject: payload), encoding: .utf8))
         let variants: [[AnyHashable: Any]] = [payload, ["body": text], ["body": payload],
                                               ["dataString": text], ["data": payload], ["data": ["body": text]],
                                               ["UIApplicationLaunchOptionsRemoteNotificationKey": ["body": text]]]

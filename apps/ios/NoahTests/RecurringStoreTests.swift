@@ -12,14 +12,14 @@ import Testing
         let settings = try settings()
         let fixture = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
             .appending(path: "fixtures/recurring-storage.json")
-        var envelope = try JSONSerialization.jsonObject(with: Data(contentsOf: fixture)) as! [String: Any]
-        var state = envelope["state"] as! [String: Any]
-        var schedules = state["schedules"] as! [String: Any]
-        var rent = schedules["rent"] as! [String: Any]
+        var envelope = try #require(JSONSerialization.jsonObject(with: Data(contentsOf: fixture)) as? [String: Any])
+        var state = try #require(envelope["state"] as? [String: Any])
+        var schedules = try #require(state["schedules"] as? [String: Any])
+        var rent = try #require(schedules["rent"] as? [String: Any])
         rent["futureField"] = "preserve me"; schedules["rent"] = rent
         state["schedules"] = schedules; state["futureState"] = true
         envelope["state"] = state; envelope["futureEnvelope"] = 123
-        settings.set(String(decoding: try JSONSerialization.data(withJSONObject: envelope), as: UTF8.self), forKey: RecurringStore.key)
+        try settings.set(#require(String(bytes: JSONSerialization.data(withJSONObject: envelope), encoding: .utf8)), forKey: RecurringStore.key)
         let store = RecurringStore(settings: settings)
         var payment = try #require(store.load().schedules["rent"])
         #expect(payment.label == "Rent" && payment.amountSat == 50_000)
@@ -58,7 +58,8 @@ import Testing
         try #require(sqlite3_open(location.database.path, &db) == SQLITE_OK)
         try #require(sqlite3_exec(
             db,
-            "CREATE TABLE bark_properties (id TEXT PRIMARY KEY, network TEXT, fingerprint TEXT); INSERT INTO bark_properties VALUES ('1', 'regtest', 'same-seed');",
+            "CREATE TABLE bark_properties (id TEXT PRIMARY KEY, network TEXT, fingerprint TEXT); INSERT INTO bark"
+                + "_properties VALUES ('1', 'regtest', 'same-seed');",
             nil,
             nil,
             nil) == SQLITE_OK)

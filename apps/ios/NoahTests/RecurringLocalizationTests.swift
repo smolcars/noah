@@ -100,38 +100,42 @@ import Testing
             await #expect(throws: (any Error).self) { try await h.executor.resume(s.id) }
         }
     }
+    /// Stored English issue text from older versions, and the code each must decode to.
+    private func legacyMessages(_ language: String) -> [(String, RecurringIssue.Code)] {
+        [(RecurringPolicyLedger.message, RecurringIssue.Code.policyEvidence),
+         (RecurringJournal.legacyMessage, .legacyHistory), (RecurringJournal.invalidMessage, .invalidJournal),
+         (RecurringAutomationAuthority.message, .automationStopped), (RecurringPayment.unsupportedMessage, .unsupported),
+         (RecurringPayment.amountLimitMessage, .amountLimit),
+         ("Noah was interrupted while sending this payment. Check your transaction history before resuming.", .interrupted),
+         (
+             "This schedule has more than 5,000 missed occurrences. Cancel it and create a schedule with a future first payment.",
+             .tooManyMissed),
+         ("This payment may have been sent. Check its status before making another payment.", .uncertain),
+         ("This invoice was already paid. This occurrence was not sent again. Check the recipient before resuming.", .alreadyPaid),
+         ("The fee for this Ark payment must be 0 sats to pay automatically. Review it to pay manually.", .arkFee),
+         (
+             "The fee for this payment (41 sats) is above your automatic limit of 40 sats. Review it to pay manually.",
+             .quoteExceedsCap),
+         (
+             "Ark's published Lightning fees for this amount can reach 500 sats, above your automatic limit of 200 sats. Review it to pay manually.",
+             .scheduleExceedsCap),
+         ("No payment was submitted.", .retryableFailure),
+         ("This payment could not be prepared. No payment was submitted.", .retryableFailure),
+         (display(language) + " unknown", .unknown)]
+    }
     @Test(arguments: languages) func legacyDecodeAndUnknownTextFailClosed(language: String) async throws {
         try await localized(language) {
             let h = try RecurringExecutorTests.Harness(); let original = try h.add()
             defer { try? FileManager.default.removeItem(at: h.directory) }
             let raw = try #require(h.settings.string(forKey: RecurringStore.key))
-            for (message, code) in [(RecurringPolicyLedger.message, RecurringIssue.Code.policyEvidence),
-                                    (RecurringJournal.legacyMessage, .legacyHistory), (RecurringJournal.invalidMessage, .invalidJournal),
-                                    (RecurringAutomationAuthority.message, .automationStopped), (RecurringPayment.unsupportedMessage, .unsupported),
-                                    (RecurringPayment.amountLimitMessage, .amountLimit),
-                                    ("Noah was interrupted while sending this payment. Check your transaction history before resuming.", .interrupted),
-                                    (
-                                        "This schedule has more than 5,000 missed occurrences. Cancel it and create a schedule with a future first payment.",
-                                        .tooManyMissed),
-                                    ("This payment may have been sent. Check its status before making another payment.", .uncertain),
-                                    ("This invoice was already paid. This occurrence was not sent again. Check the recipient before resuming.", .alreadyPaid),
-                                    ("The fee for this Ark payment must be 0 sats to pay automatically. Review it to pay manually.", .arkFee),
-                                    (
-                                        "The fee for this payment (41 sats) is above your automatic limit of 40 sats. Review it to pay manually.",
-                                        .quoteExceedsCap),
-                                    (
-                                        "Ark's published Lightning fees for this amount can reach 500 sats, above your automatic limit of 200 sats. Review it to pay manually.",
-                                        .scheduleExceedsCap),
-                                    ("No payment was submitted.", .retryableFailure),
-                                    ("This payment could not be prepared. No payment was submitted.", .retryableFailure),
-                                    (display(language) + " unknown", .unknown)] {
+            for (message, code) in legacyMessages(language) {
                 var root = try #require(JSONSerialization.jsonObject(with: Data(raw.utf8)) as? [String: Any])
                 var state = try #require(root["state"] as? [String: Any])
                 var rows = try #require(state["schedules"] as? [String: [String: Any]])
                 rows[original.id]?["issue"] = nil; rows[original.id]?["lastError"] = message
                 rows[original.id]?["retryNotBefore"] = h.now + 123
                 state["schedules"] = rows; root["state"] = state
-                let legacy = String(decoding: try JSONSerialization.data(withJSONObject: root), as: UTF8.self)
+                let legacy = try #require(String(bytes: JSONSerialization.data(withJSONObject: root), encoding: .utf8))
                 try h.settings.setDurably(legacy, forKey: RecurringStore.key)
                 let row = try #require(RecurringStore(settings: h.settings).load().schedules[original.id])
                 #expect(row.issue?.code == code && row.issue?.valid == true)
@@ -161,7 +165,7 @@ import Testing
             defer { try? FileManager.default.removeItem(at: h.directory) }
             await h.executor.execute(); #expect(h.calls.withLock { $0 } == 1)
             let bytes = try Data(contentsOf: h.journal.file)
-            let raw = String(decoding: bytes, as: UTF8.self).replacingOccurrences(of: "succeeded", with: "futureOutcome")
+            let raw = try #require(String(bytes: bytes, encoding: .utf8)).replacingOccurrences(of: "succeeded", with: "futureOutcome")
             try Data(raw.utf8).write(to: h.journal.file)
             await h.executor.execute(); await h.executor.execute(manual: true)
             #expect(h.calls.withLock { $0 } == 1)

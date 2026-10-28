@@ -12,7 +12,14 @@ import Testing
         #expect(!result.marked)
     }
 
-    private func run(revokeRead: Int?) async throws -> (readAtQuote: Int, quotes: Int, payments: Int, marked: Bool) {
+    private struct Run {
+        let readAtQuote: Int
+        let quotes: Int
+        let payments: Int
+        let marked: Bool
+    }
+
+    private func run(revokeRead: Int?) async throws -> Run {
         let h = try RecurringExecutorTests.Harness(); let schedule = try h.add()
         defer { try? FileManager.default.removeItem(at: h.directory) }
         let budget = RecurringSubmissionBudget()
@@ -32,7 +39,7 @@ import Testing
                                                              }, now: { clock.withLock { $0 } }, mutation: WalletMutationGate()))
         await RecurringSubmissionBudget.$current.withValue(budget) { await executor.execute() }
         #expect(try h.store.load().schedules[schedule.id]?.consecutiveFailures == 0)
-        return (readAtQuote.withLock { $0 }, quotes.withLock { $0 }, h.calls.withLock { $0 },
-                try h.journal.load()[schedule.id] != nil)
+        return try Run(readAtQuote: readAtQuote.withLock { $0 }, quotes: quotes.withLock { $0 }, payments: h.calls.withLock { $0 },
+                       marked: h.journal.load()[schedule.id] != nil)
     }
 }

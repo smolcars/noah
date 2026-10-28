@@ -3,8 +3,8 @@ import BarkBoltFFI
 import Testing
 
 struct RecurringFeePolicyTests {
+    struct Tier: Decodable { let expiryBlocksThreshold: UInt32; let ppm: UInt64 }
     struct Schedule: Decodable {
-        struct Tier: Decodable { let expiryBlocksThreshold: UInt32; let ppm: UInt64 }
         let minFeeSats: UInt64
         let baseFeeSats: UInt64
         let ppmExpiryTable: [Tier]

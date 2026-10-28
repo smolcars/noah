@@ -1,6 +1,7 @@
 import Foundation
 @testable import Noah
 import Testing
+import UIKit
 
 @MainActor struct RecurringWakeHandoffTests {
     private func waitUntil(_ condition: @MainActor () async -> Bool) async throws {
@@ -62,14 +63,15 @@ import Testing
             joined += 1
             await h.executor.execute()
         }
-        let wakes = budgets.map { budget in Task {
+        let wake: @Sendable (RecurringSubmissionBudget) async -> UIBackgroundFetchResult = { budget in
             await AppDelegate.completeWithin(.seconds(5)) {
                 try await RecurringSubmissionBudget.$current.withValue(budget) {
                     await join()
                     try BackgroundExecution.checkActive()
                 }
             }
-        } }
+        }
+        let wakes = budgets.map { budget in Task { await wake(budget) } }
         try await waitUntil { joined == 2 }
         if outcome != "settled" { active.withLock { $0 = false } }
         if outcome == "expired" { budgets.forEach { $0.revoke() } }

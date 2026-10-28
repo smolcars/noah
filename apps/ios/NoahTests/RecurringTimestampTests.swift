@@ -6,13 +6,18 @@ import Testing
     static let fields = ["startAt", "endAt", "nextRunAt", "createdAt", "updatedAt", "retryNotBefore",
                          "inFlight.startedAt", "runs.scheduledFor", "runs.attemptedAt"]
     /// A store holding one schedule with a fractional `field` beside a healthy one, and that schedule's raw row.
-    static func store(fractional field: String) throws -> (raw: String, unsupported: String, original: RecurringPayment) {
+    struct Stored {
+        let raw: String
+        let unsupported: String
+        let original: RecurringPayment
+    }
+    static func store(fractional field: String) throws -> Stored {
         let original = RecurringScheduleTests.schedule(start: 1000)
         var row = try #require(JSONSerialization.jsonObject(with: JSONEncoder().encode(original)) as? [String: Any])
         // RN's factory writes nullable keys; JSONEncoder omits nil properties.
         for key in ["endAt", "maxOccurrences", "nextRunAt", "lastError", "inFlight"] where row[key] == nil { row[key] = NSNull() }
         var healthy = row; healthy["id"] = "healthy"
-        let healthyJSON = String(decoding: try JSONSerialization.data(withJSONObject: healthy), as: UTF8.self)
+        let healthyJSON = try #require(String(bytes: JSONSerialization.data(withJSONObject: healthy), encoding: .utf8))
         switch field {
         case "inFlight.startedAt": row["inFlight"] = ["occurrenceIndex": 0, "startedAt": 1000.5]
         case "runs.scheduledFor", "runs.attemptedAt":
@@ -21,8 +26,9 @@ import Testing
             row["runs"] = [run]
         default: row[field] = 1000.5
         }
-        let unsupported = String(decoding: try JSONSerialization.data(withJSONObject: row, options: [.sortedKeys]), as: UTF8.self)
-        return ("{\"version\":0,\"state\":{\"schedules\":{\"rent\":\(unsupported),\"healthy\":\(healthyJSON)}}}", unsupported, original)
+        let unsupported = try #require(String(bytes: JSONSerialization.data(withJSONObject: row, options: [.sortedKeys]), encoding: .utf8))
+        return Stored(raw: "{\"version\":0,\"state\":{\"schedules\":{\"rent\":\(unsupported),\"healthy\":\(healthyJSON)}}}",
+                      unsupported: unsupported, original: original)
     }
 
     // Classification is parsing only, so every field is checked here; the executor flow below samples them.
@@ -30,7 +36,7 @@ import Testing
         let h = try RecurringExecutorTests.Harness()
         defer { try? FileManager.default.removeItem(at: h.directory) }
         for field in Self.fields {
-            let (raw, _, original) = try Self.store(fractional: field)
+            let stored = try Self.store(fractional: field), raw = stored.raw, original = stored.original
             h.settings.set(raw, forKey: RecurringStore.key)
             let visible = try #require(RecurringStore(settings: h.settings).load().schedules[original.id], "\(field)")
             #expect(visible.unsupportedStorage && visible.status == "needs_attention", "\(field)")
@@ -45,7 +51,7 @@ import Testing
         let h = try RecurringExecutorTests.Harness()
         defer { try? FileManager.default.removeItem(at: h.directory) }
         h.clock.withLock { $0 = 1001 }
-        let (raw, unsupported, original) = try Self.store(fractional: field)
+        let stored = try Self.store(fractional: field), raw = stored.raw, unsupported = stored.unsupported, original = stored.original
         h.settings.set(raw, forKey: RecurringStore.key)
         let visible = try #require(h.store.load().schedules[original.id])
         #expect(h.settings.string(forKey: RecurringStore.key) == raw)

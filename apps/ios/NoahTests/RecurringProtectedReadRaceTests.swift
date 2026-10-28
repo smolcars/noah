@@ -61,7 +61,9 @@ import Testing
             case "sync": await executor.syncServer()
             default: await executor.timeChanged()
             }
-        } catch is RecurringExecutor.NoWallet {} // Explicit mutations may report their vanished wallet.
+        } catch is RecurringExecutor.NoWallet {
+            // Explicit mutations may report their vanished wallet.
+        }
         #expect(executor.error == nil)
         #expect(h.calls.withLock { $0 } == 0)
         #expect(!FileManager.default.fileExists(atPath: directory.appending(path: ".noah-recurring-automation.json").path))

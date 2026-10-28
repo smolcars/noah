@@ -23,9 +23,9 @@ import Testing
         #expect(try h.journal.consumed(
             binding: entry.binding,
             scheduleID: original.id,
-            at: entry.plan.scheduledFor!,
+            at: #require(entry.plan.scheduledFor),
             policyRevision: entry.policyRevision,
-            occurrenceIndex: entry.plan.occurrenceIndex!))
+            occurrenceIndex: #require(entry.plan.occurrenceIndex)))
         await h.executor.execute(manual: true)
         #expect(h.calls.withLock { $0 } == 1)
     }

@@ -51,12 +51,11 @@ import Testing
             var savedRow = try oldRow(before)
             // The pre-A settings writer fills these RN nullable fields even though
             // the typed encoder used for ledger hashes omits nil properties.
-            for key in ["endAt", "maxOccurrences", "nextRunAt", "lastError", "retryNotBefore", "inFlight", "nativeRevision"] {
-                if savedRow[key] == nil { savedRow[key] = NSNull() }
-            }
+            for key in ["endAt", "maxOccurrences", "nextRunAt", "lastError", "retryNotBefore", "inFlight", "nativeRevision"]
+                where savedRow[key] == nil { savedRow[key] = NSNull() }
             let root: [String: Any] = ["version": 0, "state": ["nativeWalletBinding": try object(binding), "serverSyncPending": true,
                                                                "schedules": [before.id: savedRow]]]
-            try settings.setDurably(String(decoding: JSONSerialization.data(withJSONObject: root), as: UTF8.self), forKey: RecurringStore.key)
+            try settings.setDurably(#require(String(bytes: JSONSerialization.data(withJSONObject: root), encoding: .utf8)), forKey: RecurringStore.key)
             let decoded = try #require(RecurringStore(settings: settings).load().schedules[before.id])
             #expect(!decoded.unsupportedStorage)
             #expect(try oldDigest(decoded) == oldDigest(before))
@@ -103,7 +102,7 @@ import Testing
         row.nativeRevision = UUID()
         row.lastError = "No payment was submitted."; row.retryNotBefore = 901_000
         let plan = row.plan(now: 1000, ignoreBackoff: true)
-        row.inFlight = .init(occurrenceIndex: plan.occurrenceIndex!, startedAt: 1000)
+        row.inFlight = try .init(occurrenceIndex: #require(plan.occurrenceIndex), startedAt: 1000)
         var paid = row; paid.success(plan, now: 1000)
         try w.install(row, paid: paid)
         let restarted = w.store()
@@ -117,12 +116,12 @@ import Testing
         var row = RecurringScheduleTests.schedule(start: 1000)
         row.nativeRevision = UUID(); row.lastError = "No payment was submitted."; row.retryNotBefore = 901_000
         let plan = row.plan(now: 1000, ignoreBackoff: true)
-        row.inFlight = .init(occurrenceIndex: plan.occurrenceIndex!, startedAt: 1000)
+        row.inFlight = try .init(occurrenceIndex: #require(plan.occurrenceIndex), startedAt: 1000)
         var paid = row; paid.success(plan, now: 1000)
         try w.install(row, paid: paid)
         let oldSettings = try #require(w.settings.string(forKey: RecurringStore.key))
-        if boundary.hasPrefix("settings") { w.faults.crashSettings = Int(boundary.suffix(1))! }
-        else { w.faults.crashLedger = Int(boundary.suffix(1))! }
+        if boundary.hasPrefix("settings") { w.faults.crashSettings = try #require(Int(boundary.suffix(1))) }
+        else { w.faults.crashLedger = try #require(Int(boundary.suffix(1))) }
         #expect(throws: (any Error).self) { _ = try w.store().load() }
         w.faults.crashSettings = 0; w.faults.crashLedger = 0
         for _ in 0..<3 {
@@ -143,7 +142,7 @@ import Testing
         let w = try World(); defer { w.cleanup() }
         var row = RecurringScheduleTests.schedule(start: 1000); row.nativeRevision = UUID()
         let plan = row.plan(now: 1000)
-        row.inFlight = .init(occurrenceIndex: plan.occurrenceIndex!, startedAt: 1000)
+        row.inFlight = try .init(occurrenceIndex: #require(plan.occurrenceIndex), startedAt: 1000)
         var paid = row; paid.success(plan, now: 1000)
         try w.install(row, paid: paid)
         var root = try #require(JSONSerialization.jsonObject(with: Data(contentsOf: w.file)) as? [String: Any])

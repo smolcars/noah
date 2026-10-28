@@ -22,13 +22,15 @@ struct RecurringScheduleTests {
         for fixture in try Fixtures.load("recurring-schedule", input: CalendarInput.self, expected: Double.self) {
             var schedule = Self.schedule(start: fixture.input.startAt)
             schedule.interval = fixture.input.interval
-            #expect(schedule.occurrence(fixture.input.index, zone: TimeZone(identifier: fixture.input.zone)!) == fixture.expected, "\(fixture.name)")
+            let zone = try #require(TimeZone(identifier: fixture.input.zone))
+            #expect(schedule.occurrence(fixture.input.index, zone: zone) == fixture.expected, "\(fixture.name)")
         }
     }
     struct PolicyInput: Decodable { var zone: String; var schedule: RecurringPayment; var now: Double }
     @Test func planningMatchesRN() throws {
         for fixture in try Fixtures.load("recurring-policy", input: PolicyInput.self, expected: RecurringPayment.Plan.self) {
-            #expect(fixture.input.schedule.plan(now: fixture.input.now, zone: TimeZone(identifier: fixture.input.zone)!) == fixture.expected, "\(fixture.name)")
+            let zone = try #require(TimeZone(identifier: fixture.input.zone))
+            #expect(fixture.input.schedule.plan(now: fixture.input.now, zone: zone) == fixture.expected, "\(fixture.name)")
         }
     }
     @Test func missedOccurrencesAndResume() {

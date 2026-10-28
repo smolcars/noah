@@ -8,7 +8,8 @@ import Testing
         defer { try? FileManager.default.removeItem(at: h.directory) }
         var schedule = RecurringScheduleTests.schedule(start: 1_772_337_600_000)
         schedule.destinationType = "ark"; schedule.destination = "ark-test-destination"
-        h.zone.withLock { $0 = TimeZone(identifier: "America/New_York")! }
+        let newYork = try #require(TimeZone(identifier: "America/New_York"))
+        h.zone.withLock { $0 = newYork }
         h.clock.withLock { $0 = 1_774_753_200_000 }
         try h.store.upsert(schedule); await h.executor.execute()
         #expect(h.calls.withLock { $0 } == 1)
@@ -31,7 +32,8 @@ import Testing
         defer { try? FileManager.default.removeItem(at: h.directory) }
         var a = RecurringScheduleTests.schedule(start: 1_772_337_600_000)
         a.destinationType = "ark"; a.destination = "ark-test-destination"; a.nativeRevision = UUID()
-        h.zone.withLock { $0 = TimeZone(identifier: "America/New_York")! }
+        let newYork = try #require(TimeZone(identifier: "America/New_York"))
+        h.zone.withLock { $0 = newYork }
         h.clock.withLock { $0 = 1_774_753_200_000 }
         try h.store.upsert(a); await h.executor.execute()
         var b = a; b.startAt = h.clock.withLock { $0 } + 1; b.nextRunAt = b.startAt
@@ -71,6 +73,14 @@ import Testing
         var indices = try #require(raw["consumedIndices"] as? [[String: Any]])
         var attempts = try #require(raw["attempts"] as? [String: [String: Any]])
         var entry = try #require(attempts[scheduleID])
+        try breakIndices(kind, &indices)
+        try breakAttempt(kind, &entry)
+        if kind == "missingWatermark" { raw["consumed"] = [] }
+        attempts[scheduleID] = entry; raw["attempts"] = attempts; raw["consumedIndices"] = indices
+        if kind == "missingField" { raw.removeValue(forKey: "consumedIndices") }
+        return try JSONSerialization.data(withJSONObject: kind == "legacy" ? attempts : raw)
+    }
+    private static func breakIndices(_ kind: String, _ indices: inout [[String: Any]]) throws {
         switch kind {
         case "negative": indices[0]["indices"] = [-1]
         case "duplicate": indices[0]["indices"] = [4, 4]
@@ -78,28 +88,29 @@ import Testing
         case "empty": indices[0]["indices"] = []
         case "scope": indices[0]["scheduleID"] = " "
         case "wallet":
-            var binding = indices[0]["binding"] as! [String: Any]
-            var wallet = binding["wallet"] as! [String: Any]
+            var binding = try #require(indices[0]["binding"] as? [String: Any])
+            var wallet = try #require(binding["wallet"] as? [String: Any])
             wallet["fingerprint"] = ""; binding["wallet"] = wallet; indices[0]["binding"] = binding
         case "instance":
-            var binding = indices[0]["binding"] as! [String: Any]
+            var binding = try #require(indices[0]["binding"] as? [String: Any])
             binding["instance"] = "broken"; indices[0]["binding"] = binding
         case "revision": indices[0]["policyRevision"] = "broken"
-        case "attemptID": entry["scheduleID"] = "different"
-        case "attemptKind":
-            var plan = entry["plan"] as! [String: Any]; plan["kind"] = "idle"; entry["plan"] = plan
-        case "attemptIndex", "legacy":
-            var plan = entry["plan"] as! [String: Any]; plan["occurrenceIndex"] = -1; entry["plan"] = plan
-        case "attemptDate":
-            var plan = entry["plan"] as! [String: Any]; plan.removeValue(forKey: "scheduledFor"); entry["plan"] = plan
-        case "unresolvedConsumed": entry["resolved"] = false
         case "missingIndices": indices = []
-        case "missingWatermark": raw["consumed"] = []
         default: break
         }
-        attempts[scheduleID] = entry; raw["attempts"] = attempts; raw["consumedIndices"] = indices
-        if kind == "missingField" { raw.removeValue(forKey: "consumedIndices") }
-        return try JSONSerialization.data(withJSONObject: kind == "legacy" ? attempts : raw)
+    }
+    private static func breakAttempt(_ kind: String, _ entry: inout [String: Any]) throws {
+        switch kind {
+        case "attemptID": entry["scheduleID"] = "different"
+        case "attemptKind":
+            var plan = try #require(entry["plan"] as? [String: Any]); plan["kind"] = "idle"; entry["plan"] = plan
+        case "attemptIndex", "legacy":
+            var plan = try #require(entry["plan"] as? [String: Any]); plan["occurrenceIndex"] = -1; entry["plan"] = plan
+        case "attemptDate":
+            var plan = try #require(entry["plan"] as? [String: Any]); plan.removeValue(forKey: "scheduledFor"); entry["plan"] = plan
+        case "unresolvedConsumed": entry["resolved"] = false
+        default: break
+        }
     }
     // Validation is byte-only, so every malformed shape is checked against one paid journal; the executor flow samples them.
     @Test func everyMalformedEvidenceKindIsQuarantinedOnFirstRead() async throws {

@@ -46,7 +46,7 @@ import Testing
             try sink(attempt, generation, walletGeneration, outcome, message)
         }
     }
-    private func recover(_ h: RecurringExecutorTests.Harness, id: String) async throws {
+    private func recover(_ h: RecurringExecutorTests.Harness, id: String) async {
         h.storeWriteFails.withLock { $0 = false }
         h.store = RecurringStore(settings: h.settings)
         h.rebuild()
@@ -66,7 +66,7 @@ import Testing
         #expect(h.controller.state == .storageBlocked)
         #expect(try h.journal.load()[s.id]?.terminal == nil)
         try await h.executor.overrideAndResume(s.id, confirmed: true)
-        try await recover(h, id: s.id)
+        await recover(h, id: s.id)
         let e = try #require(h.journal.load()[s.id])
         #expect(e.terminal?.outcome == (outcome == "alreadyPaid" ? .alreadyPaid : .failed))
         #expect(e.resolved && e.historyApplied == true && e.released == true)
@@ -108,17 +108,17 @@ import Testing
         await h.executor.execute()
         #expect(h.controller.state == .storageBlocked)
         enabled.withLock { $0 = true }
-        do { try await h.executor.overrideAndResume(s.id, confirmed: true) } catch {}
+        _ = try? await h.executor.overrideAndResume(s.id, confirmed: true)
         #expect(crashed.withLock { $0 }, "Boundary must actually interrupt the override")
         enabled.withLock { $0 = false }
-        try await recover(h, id: s.id)
+        await recover(h, id: s.id)
         let row = try #require(h.store.load().schedules[s.id])
         #expect(row.occurrencesPaid == 1)
         #expect(row.runs.count(where: { $0.status == "success" }) == 1)
         let e = try #require(h.journal.load()[s.id])
         #expect(e.consumed == true && e.historyApplied == true && e.released == true && e.terminal?.outcome == .succeeded)
         #expect(h.calls.withLock { $0 } == 1)
-        try await recover(h, id: s.id)
+        await recover(h, id: s.id)
         #expect(try h.store.load().schedules[s.id]?.occurrencesPaid == 1)
     }
 }

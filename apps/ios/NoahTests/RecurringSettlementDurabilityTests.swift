@@ -12,11 +12,14 @@ import Testing
         let e = RecurringJournal.Entry(binding: h.owner.withLock { $0 }, scheduleID: s.id, plan: plan, markedAt: h.now, policyRevision: s.nativeRevision)
         try h.journal.save(e)
         var marked = s
-        marked.inFlight = .init(occurrenceIndex: plan.occurrenceIndex!, startedAt: h.now)
+        marked.inFlight = try .init(occurrenceIndex: #require(plan.occurrenceIndex), startedAt: h.now)
         try h.store.upsert(marked)
         let (payment, quote, _) = h.quoted(s, fees: RecurringFeePolicy.fallback)
         await h.controller.submitAndWait(payment, quote: quote, recurringKey: e.key, beforeSubmit: {})
-        if case .succeeded = h.controller.state {} else { Issue.record("Expected proven payment") }
+        switch h.controller.state {
+        case .succeeded: break
+        default: Issue.record("Expected proven payment")
+        }
         return s
     }
 
@@ -29,7 +32,10 @@ import Testing
         #expect(try h.journal.load()[s.id]?.terminal != nil)
         h.saved = receipt // Death before Done's shared-journal removal reaches disk.
         h.rebuild() // New controller/executor, only durable evidence survives.
-        if case .succeeded = h.controller.state {} else { Issue.record("Expected recovered receipt") }
+        switch h.controller.state {
+        case .succeeded: break
+        default: Issue.record("Expected recovered receipt")
+        }
         h.controller.acknowledge()
         await h.executor.execute(); await h.executor.checkStatus(s.id)
         #expect(try h.journal.load()[s.id]?.consumed == true, "Restarted Done must preserve the proof needed for consumption")
@@ -52,7 +58,10 @@ import Testing
         }
         h.controller.reloadForWalletChange()
         #expect(called)
-        if case .succeeded = h.controller.state {} else { Issue.record("Expected recovered receipt") }
+        switch h.controller.state {
+        case .succeeded: break
+        default: Issue.record("Expected recovered receipt")
+        }
         h.controller.acknowledge()
         await h.executor.execute(); await h.executor.checkStatus(s.id)
         #expect(try h.store.load().schedules[s.id]?.occurrencesPaid == 1)
@@ -93,7 +102,7 @@ import Testing
         for _ in 0..<5 { h.controller.reloadForWalletChange(); await h.controller.checkStatus() }
         h.controller.startNewPaymentAfterHistoryCheck(confirmed: true)
         #expect(!h.controller.locked)
-        let controller = try #require(h.controller)
+        let controller = h.controller
         let reflected = Mirror(reflecting: controller)
         #expect(!reflected.children.contains { $0.label?.contains("recurringResults") == true })
         h.owner.withLock { $0.instance = UUID(); $0.wallet.fingerprint = "replacement" }
@@ -150,13 +159,13 @@ import Testing
 }
 
 @MainActor struct RecurringSettlementCrashTests {
-    private func restart(_ h: RecurringExecutorTests.Harness) async {
+    private func restart(_ h: RecurringExecutorTests.Harness) {
         h.store = RecurringStore(settings: h.settings)
         h.rebuild()
         h.controller.reloadForWalletChange() // The occurrence sink is installed on the fresh executor.
     }
     private func assertPaidExactlyOnce(_ h: RecurringExecutorTests.Harness, id: String) async throws {
-        await restart(h)
+        restart(h)
         for _ in 0..<3 { await h.executor.execute(); await h.executor.checkStatus(id) }
         let paid = try #require(h.store.load().schedules[id])
         #expect(paid.occurrencesPaid == 1)
@@ -165,7 +174,7 @@ import Testing
         #expect(e.consumed == true && e.historyApplied == true && e.released == true)
         #expect(h.calls.withLock { $0 } == 1)
         h.controller.acknowledge()
-        await restart(h)
+        restart(h)
         await h.executor.execute(); await h.executor.checkStatus(id)
         #expect(try h.store.load().schedules[id]?.occurrencesPaid == 1)
         #expect(h.calls.withLock { $0 } == 1)
@@ -231,7 +240,7 @@ import Testing
         let before = try #require(h.settings.string(forKey: RecurringStore.key))
         await h.executor.execute(); try await h.executor.pause(s.id)
         try h.settings.setDurably(before, forKey: RecurringStore.key)
-        await restart(h)
+        restart(h)
         await h.executor.execute(); await h.executor.checkStatus(s.id)
         #expect(try h.store.load().schedules[s.id]?.status == "needs_attention")
         #expect(h.calls.withLock { $0 } == 1)
