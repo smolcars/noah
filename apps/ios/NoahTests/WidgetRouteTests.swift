@@ -89,4 +89,28 @@ struct WidgetRouteTests {
         #expect(reviewing.stage == .review && reviewing.quote != nil)
         #expect(await backend.calls == 1)
     }
+
+    /// While Send has a payment under way, Home and Receive leave the app as it is; Send and Scan show Send as it
+    /// is; an open recurring approval keeps everything.
+    @Test func routesNeverLeaveAPaymentUnderWay() async throws {
+        let draft = send()
+        let backend = SendPaymentTests.Backend()
+        let controller = SendPaymentTests().make(backend, SendPaymentTests.Storage())
+        controller.submit(SendPaymentTests().payment, quote: SendPaymentTests().quote)
+        try await SendPaymentTests.waitUntil { controller.state == .uncertain }
+        let inFlight = send(controller)
+        let preparing = send()
+        preparing.busy = true
+        preparing.stage = .review
+        let reviewing = send()
+        #expect(await QRScanRoute.apply("lightning:\(PaymentLinkTests.invoice)", to: reviewing))
+        let destinations: [WidgetRoute.Destination] = [.home, .receive, .send, .scan]
+        #expect(destinations.map { WidgetRoute.tab(for: $0, send: draft, approvalOpen: false) } == [.home, .receive, .send, .send])
+        for model in [inFlight, preparing, reviewing] {
+            #expect(destinations.map { WidgetRoute.tab(for: $0, send: model, approvalOpen: false) } == [nil, nil, .send, .send])
+        }
+        for model in [draft, inFlight, reviewing] {
+            #expect(destinations.allSatisfy { WidgetRoute.tab(for: $0, send: model, approvalOpen: true) == nil })
+        }
+    }
 }

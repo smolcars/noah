@@ -33,4 +33,16 @@ final class WidgetRoute {
     static func scans(_ send: SendModel) -> Bool {
         !send.controller.locked && !send.busy && send.stage != .review && !send.showReview
     }
+
+    /// The tab a route opens, or nil to leave the app as it is. Leaving Send discards a review it is preparing or
+    /// showing, so while Send has a payment under way (preparing, reviewing or sending) Home and Receive stay put,
+    /// and Send and Scan open Send as it is. Nothing moves under a recurring approval.
+    static func tab(for destination: Destination, send: SendModel, approvalOpen: Bool) -> WalletTabs.Tab? {
+        guard !approvalOpen else { return nil }
+        switch destination {
+        case .home: return scans(send) ? .home : nil
+        case .receive: return scans(send) ? .receive : nil
+        case .send, .scan: return .send
+        }
+    }
 }

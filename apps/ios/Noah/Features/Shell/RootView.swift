@@ -236,18 +236,11 @@ struct WalletTabs: View {
         }
     }
 
-    /// A widget's tap picks a tab and never discards anything: an open recurring approval keeps the screen,
-    /// and Send's camera opens only over a draft (`WidgetRoute.scans`).
+    /// A widget's tap picks a tab and never discards anything (`WidgetRoute.tab`); Send's camera opens only over a draft.
     private func open(_ destination: WidgetRoute.Destination) {
-        guard !app.paymentLink.approvalOpen else { return }
-        switch destination {
-        case .home: selection = .home
-        case .receive: selection = .receive
-        case .send: selection = .send
-        case .scan:
-            selection = .send
-            if WidgetRoute.scans(send) { send.scanning = true }
-        }
+        guard let tab = WidgetRoute.tab(for: destination, send: send, approvalOpen: app.paymentLink.approvalOpen) else { return }
+        selection = tab
+        if destination == .scan, WidgetRoute.scans(send) { send.scanning = true }
     }
 
     private func consumeRepeatPayment() {
