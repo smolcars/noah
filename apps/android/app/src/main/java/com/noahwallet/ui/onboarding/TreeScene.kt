@@ -91,15 +91,7 @@ internal fun TreeSceneCanvas(clock: SceneClock, foreground: Color, reduceMotion:
     if (alpha <= 0f && !visible) return
     Canvas(modifier.graphicsLayer { this.alpha = alpha }.clearAndSetSemantics { }) {
         val slot = clock.slot ?: return@Canvas
-        val t = clock.time()
-        val painter = ScenePainter(this, foreground, reduceMotion, clock.frozenAt != null)
-        when (clock.drawn) {
-            SceneMode.welcome -> painter.frame(slot, treeBoxes) { painter.welcome(if (reduceMotion) 60f else t) }
-            SceneMode.create -> painter.frame(slot, treeBoxes) { painter.create(t) }
-            SceneMode.restore -> painter.frame(slot, treeBoxes) { painter.restore(clock.frozenAt ?: t, clock.readyAt) }
-            SceneMode.conveyor -> painter.frame(slot, conveyorBoxes) { painter.conveyor(clock.frozenAt ?: if (reduceMotion) 1f else t) }
-            SceneMode.none -> Unit
-        }
+        ScenePainter(this, foreground, reduceMotion, clock.frozenAt != null).scene(clock, slot)
     }
 }
 
@@ -135,11 +127,26 @@ private val conveyorYs = listOf(226f, 282f, 334f)
 private const val conveyorLeaf = 10
 private const val roundSeconds = 3.8f
 
+/** A stroke's colour, its alpha (orange strokes glow unless the scene is off) and its width, in prototype points. */
+private data class Pen(val color: Color, val alpha: Float, val width: Float)
+
 /** Prototype drawWelcome/drawCreate/drawRestore/drawConveyor, in prototype points. */
 private class ScenePainter(val g: DrawScope, val base: Color, val reduceMotion: Boolean, val off: Boolean) {
     /** Design-space x range the slot covers, for the full-width chain line. */
     var left = 0f
     var right = 393f
+
+    /** The clock's drawn mode at its current time (or where it froze), fitted into [slot]. */
+    fun scene(clock: SceneClock, slot: SceneSlot) {
+        val t = clock.time()
+        when (clock.drawn) {
+            SceneMode.welcome -> frame(slot, treeBoxes) { welcome(if (reduceMotion) 60f else t) }
+            SceneMode.create -> frame(slot, treeBoxes) { create(t) }
+            SceneMode.restore -> frame(slot, treeBoxes) { restore(clock.frozenAt ?: t, clock.readyAt) }
+            SceneMode.conveyor -> frame(slot, conveyorBoxes) { conveyor(clock.frozenAt ?: if (reduceMotion) 1f else t) }
+            SceneMode.none -> Unit
+        }
+    }
 
     fun frame(target: SceneSlot, boxes: Boxes, draw: () -> Unit) {
         val slot = target.rect
@@ -158,7 +165,8 @@ private class ScenePainter(val g: DrawScope, val base: Color, val reduceMotion: 
     private fun pr(t: Float, a: Float, b: Float) = if (reduceMotion) (if (t >= b) 1f else 0f) else clamp((t - a) / (b - a))
     private fun glows(color: Color) = color == orange && !off
 
-    fun link(p: TreeNode, c: TreeNode, u0: Float, u1: Float, color: Color, a: Float, width: Float) {
+    fun link(p: TreeNode, c: TreeNode, u0: Float, u1: Float, pen: Pen) {
+        val (color, a, width) = pen
         if (u1 <= u0 || a <= 0f) return
         val path = Path()
         for (i in 0..14) {
@@ -178,7 +186,8 @@ private class ScenePainter(val g: DrawScope, val base: Color, val reduceMotion: 
         g.drawCircle(color.copy(alpha = alpha), r, Offset(x, y))
     }
 
-    fun ring(x: Float, y: Float, r: Float, color: Color, a: Float, width: Float) {
+    fun ring(x: Float, y: Float, r: Float, pen: Pen) {
+        val (color, a, width) = pen
         if (r <= 0f || a <= 0f) return
         val alpha = a.coerceAtMost(1f)
         if (glows(color)) g.drawCircle(orange.copy(alpha = .16f * alpha), r, Offset(x, y), style = Stroke(width + 4f))
@@ -194,7 +203,7 @@ private class ScenePainter(val g: DrawScope, val base: Color, val reduceMotion: 
             val index = if (depth == 3) d else d + 1
             val width = listOf(1.3f, 1f, .7f)[index]
             val a = listOf(.24f, .2f, .16f)[index]
-            for (parent in tree.levels[depth - d]) for (child in parent.children) link(parent, child, 0f, progress, base, a * alpha, width)
+            for (parent in tree.levels[depth - d]) for (child in parent.children) link(parent, child, 0f, progress, Pen(base, a * alpha, width))
         }
         for (d in 1 until depth) if (grow[d - 1] >= 1f) for (node in tree.levels[depth - d]) dot(node.x, node.y, 1.8f, base, .45f * alpha)
         dot(tree.root.x, tree.root.y, 4 * rootScale, base, .9f * alpha)
@@ -217,22 +226,33 @@ private class ScenePainter(val g: DrawScope, val base: Color, val reduceMotion: 
         chain(496f, if (reduceMotion) 0f else t * 7, ease(pr(t, 0f, .6f)))
         tree(welcomeTree, listOf(ease(pr(t, .3f, .75f)), ease(pr(t, .6f, 1.05f)), ease(pr(t, .9f, 1.4f))), rootScale = ease(pr(t, .15f, .4f)))
         val flash = HashMap<Int, Float>()
-        if (!reduceMotion) {
-            // A dot runs from the root to a random leaf every 1.2 s, then the leaf flashes.
-            var n = max(0, ceil((t - 2f - .9f * 1.35f) / 1.2f).toInt())
-            while (true) {
-                val start = 2 + n * 1.2f
-                if (start > t) break
-                val q = (t - start) / .9f
-                if (q < 1.35f) {
-                    var leaf = (n * 37 + 11) % 64
-                    if (leaf == yourIndex) leaf = (leaf + 5) % 64
-                    if (q < 1f) { val p = along(pathOf(welcomeTree.leaves[leaf]), ease(q)); dot(p.x, p.y, 1.9f, base, .85f) }
-                    else flash[leaf] = 1 - (q - 1) / .35f
-                }
-                n++
-            }
+        if (!reduceMotion) runners(t, flash)
+        welcomeLeaves(t, flash)
+        val s = pr(t, 1.55f, 1.95f)
+        if (s > 0f) ring(you.x, you.y, 3.4f * ease(s) * (if (reduceMotion || t < 1.95f) 1f else 1 + .18f * sin((t - 1.95f) * 3.6f)), Pen(orange, 1f, 1.4f))
+    }
+
+    /** A dot runs from the root to a random leaf every 1.2 s, then the leaf [flash]es. */
+    private fun runners(t: Float, flash: MutableMap<Int, Float>) {
+        var n = max(0, ceil((t - 2f - .9f * 1.35f) / 1.2f).toInt())
+        while (true) {
+            val start = 2 + n * 1.2f
+            if (start > t) break
+            val q = (t - start) / .9f
+            if (q < 1.35f) runner(n, q, flash)
+            n++
         }
+    }
+
+    private fun runner(n: Int, q: Float, flash: MutableMap<Int, Float>) {
+        var leaf = (n * 37 + 11) % 64
+        if (leaf == yourIndex) leaf = (leaf + 5) % 64
+        if (q < 1f) { val p = along(pathOf(welcomeTree.leaves[leaf]), ease(q)); dot(p.x, p.y, 1.9f, base, .85f) }
+        else flash[leaf] = 1 - (q - 1) / .35f
+    }
+
+    /** Every leaf but yours pops in from the middle out, twinkling, brighter while it flashes. */
+    private fun welcomeLeaves(t: Float, flash: Map<Int, Float>) {
         welcomeTree.leaves.forEachIndexed { i, leaf ->
             if (i == yourIndex) return@forEachIndexed
             val k = abs(i - 31.5f) * .006f
@@ -242,8 +262,6 @@ private class ScenePainter(val g: DrawScope, val base: Color, val reduceMotion: 
             val f = flash[i] ?: 0f
             dot(leaf.x, leaf.y, 1.5f * ease(pop) + 1.2f * f, base, .38f + twinkle + .45f * f)
         }
-        val s = pr(t, 1.55f, 1.95f)
-        if (s > 0f) ring(you.x, you.y, 3.4f * ease(s) * (if (reduceMotion || t < 1.95f) 1f else 1 + .18f * sin((t - 1.95f) * 3.6f)), orange, 1f, 1.4f)
     }
 
     fun create(t: Float) {
@@ -255,25 +273,30 @@ private class ScenePainter(val g: DrawScope, val base: Color, val reduceMotion: 
             val f = if (wave > 0 && !reduceMotion) exp(-((abs(leaf.x - you.x) - wave * 260) / 14).pow(2)) * clamp(1 - wave / 1.4f) else 0f
             dot(leaf.x, leaf.y, 1.5f + f * 1.4f, base, .38f + .5f * f)
         }
-        specks.forEachIndexed { i, s ->
-            val q = pr(t, .15f + i * .06f, .7f + i * .06f)
-            if (q <= 0f || q >= 1f) return@forEachIndexed
-            val e = q * q
-            dot(s.x + (you.x - s.x) * e, s.y + (you.y - s.y) * e, 1.8f, orange, .95f)
-        }
+        specks(t)
         val fill = pr(t, 1f, 1.3f)
-        ring(you.x, you.y, 3.4f, orange, 1f, 1.4f)
+        ring(you.x, you.y, 3.4f, Pen(orange, 1f, 1.4f))
         if (fill > 0f) dot(you.x, you.y, 4.2f * ease(fill), orange, 1f)
         val segments = listOf(1.4f to 1.75f, 1.75f to 2.1f, 2.1f to 2.45f)
         if (pr(t, 1.4f, 1.75f) > 0f) dot(yourPath[0].x, yourPath[0].y, 4.4f, orange, 1f)
         for (k in 0 until 3) {
             val u = ease(pr(t, segments[k].first, segments[k].second))
-            link(yourPath[k], yourPath[k + 1], 0f, u, orange, .95f, 1.6f)
+            link(yourPath[k], yourPath[k + 1], 0f, u, Pen(orange, .95f, 1.6f))
             if (u >= 1f && k < 2) dot(yourPath[k + 1].x, yourPath[k + 1].y, 2.6f, orange, 1f)
         }
         if (!reduceMotion) for (k in 0 until 2) {
             val q = pr(t, 2.55f + k * .22f, 3.45f + k * .22f)
-            if (q > 0f && q < 1f) ring(you.x, you.y, 4 + 30 * ease(q), orange, .7f * (1 - q), 1.2f)
+            if (q > 0f && q < 1f) ring(you.x, you.y, 4 + 30 * ease(q), Pen(orange, .7f * (1 - q), 1.2f))
+        }
+    }
+
+    /** Orange specks gather into your leaf, one after another. */
+    private fun specks(t: Float) {
+        specks.forEachIndexed { i, s ->
+            val q = pr(t, .15f + i * .06f, .7f + i * .06f)
+            if (q <= 0f || q >= 1f) return@forEachIndexed
+            val e = q * q
+            dot(s.x + (you.x - s.x) * e, s.y + (you.y - s.y) * e, 1.8f, orange, .95f)
         }
     }
 
@@ -282,30 +305,42 @@ private class ScenePainter(val g: DrawScope, val base: Color, val reduceMotion: 
         tree(welcomeTree, listOf(1f, 1f, 1f))
         if (off) { welcomeTree.leaves.forEach { dot(it.x, it.y, 1.5f, base, .38f) }; return }
         val bandX = 20 + 353 * pr(t, bandStart, bandEnd)
-        if (!reduceMotion && t > bandStart && t < bandEnd + .15f) {
-            g.drawRect(Brush.horizontalGradient(listOf(orange.copy(alpha = 0f), orange.copy(alpha = .18f), orange.copy(alpha = 0f)),
-                bandX - 28, bandX + 28), Offset(bandX - 28, 196f), Size(56f, 300f))
-        }
+        if (!reduceMotion && t > bandStart && t < bandEnd + .15f) band(bandX)
+        restoreLeaves(t, bandX)
+        // The final ripples wait for the real restore to finish.
+        val rippleStart = readyAt?.let { max(it, bandEnd + .3f) }
+        if (!reduceMotion && rippleStart != null && t > rippleStart) ripples(clamp((t - rippleStart) / .9f))
+    }
+
+    /** Every leaf, with yours lit up once the scan at [bandX] has passed them. */
+    private fun restoreLeaves(t: Float, bandX: Float) {
         welcomeTree.leaves.forEachIndexed { i, leaf ->
             if (i in found && leaf.x <= bandX) return@forEachIndexed
             dot(leaf.x, leaf.y, 1.5f, base, .38f)
         }
-        for (i in found) {
-            val leaf = welcomeTree.leaves[i]
-            if (leaf.x > bandX) continue
-            val at = foundAt(i)
-            val u = ease(pr(t, at, at + .45f))
-            val path = pathOf(leaf)
-            for (k in 2 downTo 0) { val su = clamp(u * 3 - (2 - k)); if (su > 0f) link(path[k], path[k + 1], 1 - su, 1f, orange, .9f, 1.4f) }
-            if (u >= 1f) dot(path[0].x, path[0].y, 4.4f, orange, 1f)
-            dot(leaf.x, leaf.y, 3.6f, orange, 1f)
-        }
-        // The final ripples wait for the real restore to finish.
-        val rippleStart = readyAt?.let { max(it, bandEnd + .3f) }
-        if (!reduceMotion && rippleStart != null && t > rippleStart) {
-            val q = clamp((t - rippleStart) / .9f)
-            for (i in found) welcomeTree.leaves[i].let { ring(it.x, it.y, 4 + 18 * ease(q), orange, .6f * (1 - q), 1.1f) }
-        }
+        for (i in found) if (welcomeTree.leaves[i].x <= bandX) foundLeaf(i, t)
+    }
+
+    /** The scan's soft band at [x]. */
+    private fun band(x: Float) {
+        g.drawRect(Brush.horizontalGradient(listOf(orange.copy(alpha = 0f), orange.copy(alpha = .18f), orange.copy(alpha = 0f)),
+            x - 28, x + 28), Offset(x - 28, 196f), Size(56f, 300f))
+    }
+
+    /** Ripples from each of your leaves once the restore is ready, [q] of the way out. */
+    private fun ripples(q: Float) {
+        for (i in found) welcomeTree.leaves[i].let { ring(it.x, it.y, 4 + 18 * ease(q), Pen(orange, .6f * (1 - q), 1.1f)) }
+    }
+
+    /** One of your leaves the scan has reached: its path back to the root lights up, leaf first. */
+    private fun foundLeaf(i: Int, t: Float) {
+        val leaf = welcomeTree.leaves[i]
+        val at = foundAt(i)
+        val u = ease(pr(t, at, at + .45f))
+        val path = pathOf(leaf)
+        for (k in 2 downTo 0) { val su = clamp(u * 3 - (2 - k)); if (su > 0f) link(path[k], path[k + 1], 1 - su, 1f, Pen(orange, .9f, 1.4f)) }
+        if (u >= 1f) dot(path[0].x, path[0].y, 4.4f, orange, 1f)
+        dot(leaf.x, leaf.y, 3.6f, orange, 1f)
     }
 
     fun conveyor(t: Float) {
@@ -327,11 +362,15 @@ private class ScenePainter(val g: DrawScope, val base: Color, val reduceMotion: 
         val from = pathOf(expiring.leaves[conveyorLeaf])
         val to = pathOf(next.leaves[conveyorLeaf])
         val fade = (if (u < 1.1f) 1f else 1 - pr(u, 1.1f, 1.5f)) * (1 - sweep)
-        for (s in 0 until 2) link(from[s], from[s + 1], 0f, 1f, color, .9f * fade * a, 1.4f)
+        for (s in 0 until 2) link(from[s], from[s + 1], 0f, 1f, Pen(color, .9f * fade * a, 1.4f))
         val trace = ease(pr(u, 1.8f, 2.2f))
-        for (s in 0 until 2) link(to[s], to[s + 1], 0f, clamp(trace * 2 - s), color, .9f * a, 1.4f)
-        val start = expiring.leaves[conveyorLeaf]
-        val end = next.leaves[conveyorLeaf]
+        for (s in 0 until 2) link(to[s], to[s + 1], 0f, clamp(trace * 2 - s), Pen(color, .9f * a, 1.4f))
+        hop(u, expiring.leaves[conveyorLeaf], next.leaves[conveyorLeaf], Pen(color, a, 0f))
+    }
+
+    /** Your leaf hops from the expiring round to the next one, with a short trail; [pen]'s width is unused. */
+    private fun hop(u: Float, start: TreeNode, end: TreeNode, pen: Pen) {
+        val (color, a) = pen
         fun hop(h: Float) = TreePoint(start.x + (end.x - start.x) * h, start.y + (end.y - start.y) * h - sin(PI.toFloat() * h) * 46)
         val h = ease(pr(u, 1.1f, 1.8f))
         if (h > 0f && h < 1f && !reduceMotion) for (i in 1..3) {
