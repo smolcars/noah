@@ -240,11 +240,11 @@ class WidgetDataWriterTest {
         for ((chain, blocks) in cases) {
             val home = HomeRules.renew(chain.items.map { vtxoModel(it, chain.tipHeight, chain.due) })
             assertEquals(home?.blocks, blocks)
-            assertEquals(blocks, WidgetDataWriter.extras(WidgetHandles(chain), "regtest").renewBlocks)
+            assertEquals(blocks, WidgetDataWriter.extras(WidgetHandles(chain), "regtest", WidgetHandles.empty).renewBlocks)
         }
         // A failed read is no Renew line, and doesn't stop the wave.
         val broken = object : OnchainWalletAccess { override val walletID = "x"; override suspend fun tip() = 100L }
-        assertEquals(WidgetDataWriter.Extras(emptyList(), 100, null, balance = WidgetHandles.empty), WidgetDataWriter.extras(WidgetHandles(broken), "regtest"))
+        assertEquals(WidgetDataWriter.Extras(emptyList(), 100, null), WidgetDataWriter.extras(WidgetHandles(broken), "regtest", WidgetHandles.empty))
     }
 }
 
@@ -252,12 +252,13 @@ internal fun vtxo(id: String, expiry: UInt = 200u, state: VtxoState = VtxoState.
     Vtxo("server", 144u, OutPoint("anchor", 0u), OutPoint("point", 0u), id, amount, expiry, "pubkey", state, 1u, 500u, true)
 
 /**
- * A wallet for the widget's reads: each read returns the next of its list, the last one repeated, so a payment can
- * settle between them. A null receives entry is a failed read.
+ * A wallet for the widget's reads: each read returns the next of its list, the last one repeated. A null balance or
+ * receives entry is a failed read; [balanceDelay] a slow balance read (bark's fetches the chain tip).
  */
-internal class WidgetHandles(override val m6: OnchainWalletAccess, val balances: List<WalletBalance> = listOf(empty),
+@Suppress("LongParameterList")
+internal class WidgetHandles(override val m6: OnchainWalletAccess, val balances: List<WalletBalance?> = listOf(empty),
     val histories: List<List<Movement>> = listOf(emptyList()), val receives: List<List<LightningReceive>?> = listOf(emptyList()),
-    val boards: List<List<String>> = listOf(emptyList())) : WalletSession.Handles {
+    val boards: List<List<String>> = listOf(emptyList()), val balanceDelay: Long = 0) : WalletSession.Handles {
     companion object {
         val empty = WalletBalance(WalletBalance.Ark(0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u), WalletBalance.Onchain(0u, 0u, 0u))
     }
@@ -266,7 +267,10 @@ internal class WidgetHandles(override val m6: OnchainWalletAccess, val balances:
     private var receiveReads = 0
     private var boardReads = 0
     private fun <T> List<T>.read(index: Int) = this[minOf(index, lastIndex)]
-    override suspend fun balance() = balances.read(balanceReads++)
+    override suspend fun balance(): WalletBalance {
+        kotlinx.coroutines.delay(balanceDelay)
+        return balances.read(balanceReads++) ?: error("unavailable")
+    }
     override suspend fun history() = histories.read(historyReads++)
     override suspend fun transactions(): List<WalletTransaction> = emptyList()
     override suspend fun pendingLightningReceives() = receives.read(receiveReads++) ?: error("unavailable")

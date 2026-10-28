@@ -81,7 +81,7 @@ class WalletSession internal constructor(
         suspend fun peekPublicKey(index: UInt): String
         suspend fun peekAddress(index: UInt): String
         suspend fun summary(): Summary
-        /** The balances alone, without the summary's history read (the widget checks them around its reads). */
+        /** The balances alone, without the summary's history read (the widget checks them after its reads). */
         suspend fun balance(): WalletBalance = summary().balance
         suspend fun pendingLightningReceives(): List<io.github.niteshbalusu11.bark.LightningReceive> = throw UnsupportedOperationException()
         suspend fun pendingBoardVtxos(): List<io.github.niteshbalusu11.bark.Vtxo> = throw UnsupportedOperationException()
@@ -417,9 +417,9 @@ class WalletSession internal constructor(
     suspend fun maintenanceDelegated() = withOpen { it.maintenanceDelegated() }
     suspend fun bolt11Invoice(amountSats: ULong): String = withOpen { it.bolt11Invoice(amountSats) }
     suspend fun claimLightningReceives() = withOpen { it.claimLightningReceives() }
-    /** The widget's wave history and Home's Renew, best effort, beside a summary. */
-    suspend fun widgetExtras(): com.noahwallet.services.push.WidgetDataWriter.Extras =
-        withOpen { com.noahwallet.services.push.WidgetDataWriter.extras(it, variant) }
+    /** The widget's wave history and Home's Renew, best effort, beside a summary with the balance [shown]. */
+    suspend fun widgetExtras(shown: WalletBalance?): com.noahwallet.services.push.WidgetDataWriter.Extras =
+        withOpen { com.noahwallet.services.push.WidgetDataWriter.extras(it, variant, shown) }
 
     internal suspend fun <T> withOpen(block: suspend (Handles) -> T): T {
         val caller = currentCoroutineContext()

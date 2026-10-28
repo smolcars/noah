@@ -41,7 +41,7 @@ class RecurringRuntime private constructor(context: Context) {
                 statusMessage = "Recurring ${schedule.id}, occurrence ${schedule.inFlight?.occurrenceIndex ?: schedule.nextOccurrenceIndex}"))
         }, refresh = {
             val ticket = com.noahwallet.services.push.WidgetDataWriter.ticket()
-            runCatching { services.session.summary()?.let { it to services.session.widgetExtras() } }
+            runCatching { services.session.summary()?.let { it to services.session.widgetExtras(it.balance) } }
                 .getOrNull()?.let { (summary, extras) ->
                     com.noahwallet.services.push.WidgetDataWriter.write(context, summary.balance, extras, services::widgetDisplay, BuildConfig.APP_VARIANT,
                         ticket)

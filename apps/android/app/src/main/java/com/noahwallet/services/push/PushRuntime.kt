@@ -71,7 +71,7 @@ class PushRuntime(private val context: Context, private val services: AppService
                 val ticket = WidgetDataWriter.ticket()
                 val summary = handles.summary()
                 admitted()
-                val extras = WidgetDataWriter.extras(handles, BuildConfig.APP_VARIANT)
+                val extras = WidgetDataWriter.extras(handles, BuildConfig.APP_VARIANT, summary.balance)
                 admitted()
                 WidgetDataWriter.write(context, summary.balance, extras, services::widgetDisplay, BuildConfig.APP_VARIANT, ticket)
             }

@@ -149,60 +149,67 @@ class WidgetPendingPaymentsTest {
 
     private val tip = object : OnchainWalletAccess { override val walletID = "x"; override suspend fun tip() = 100L }
     private fun receive(id: UInt, state: String) = LightningReceive(emptyList(), id, "hash", "invoice", 20_000uL, state, "preimage", null, null)
-    private fun write(extras: WidgetDataWriter.Extras, balance: WalletBalance = WidgetHandles.empty, previous: WidgetSnapshot? = null) =
+    private fun write(extras: WidgetDataWriter.Extras, balance: WalletBalance, previous: WidgetSnapshot? = null) =
         WidgetDataWriter.snapshot(balance, extras, display, null, emptyMap(), now, utc, previous)
 
+    /** Yesterday's snapshot: 100,000 since ten days back. */
+    private val previous get() = write(WidgetDataWriter.Extras(rows(earlier)), balance(spendable = 100_000)).copy(writtenAt = now - day)
+
     /**
-     * A receive settles between the history read and the pending read: the first read has it pending, the second no
-     * longer claimable, so neither counts it. The balances around them differ, so the writer reads again.
+     * A receive settles between the history read and the pending read: the history has it pending, the pending read no
+     * longer claimable, so neither counts it. The balance after the reads no longer matches the one shown: the earlier
+     * days stay as last written.
      */
-    @Test fun aReceiveSettlingBetweenTheReadsIsReadAgain() = runBlocking {
+    @Test fun aReceiveSettlingBetweenTheReadsKeepsTheEarlierDays() = runBlocking {
         val claimable = movement("bark.lightning_receive:receive", 20_000, now - 600_000, "pending", 2u)
-        val wallet = WidgetHandles(tip, listOf(balance(spendable = 100_000, claimable = 20_000), balance(spendable = 120_000)),
-            listOf(listOf(movement("bark.arkoor:receive", 100_000, now - 10 * day), claimable),
-                listOf(movement("bark.arkoor:receive", 100_000, now - 10 * day), claimable.copy(status = "successful"))))
-        val extras = WidgetDataWriter.extras(wallet, "regtest")
-        assertEquals(2, wallet.historyReads); assertEquals(WidgetWave.Pending(), extras.pending)
-        assertEquals(before + 120_000L, write(extras).daily)
-        // Read once, the wave would have lifted every earlier day by the receive.
-        val once = WidgetDataWriter.Extras(rows(movement("bark.arkoor:receive", 100_000, now - 10 * day), claimable), balance = balance(spendable = 120_000))
-        assertEquals(List(20) { 20_000L } + List(10) { 120_000L } + 120_000L, write(once).daily)
+        val shown = balance(spendable = 100_000, claimable = 20_000)
+        val wallet = WidgetHandles(tip, listOf(balance(spendable = 120_000)), listOf(listOf(earlier, claimable)))
+        val extras = WidgetDataWriter.extras(wallet, "regtest", shown)
+        assertEquals(1, wallet.historyReads); assertEquals(1, wallet.balanceReads); assertNull(extras.pending); assertNotNull(extras.rows)
+        assertEquals(previous.daily!!.drop(1).dropLast(1) + 100_000L + 120_000L, write(extras, shown, previous).daily)
+        // Taken as read, the wave would have lifted every earlier day by the receive.
+        assertEquals(List(20) { 20_000L } + List(10) { 120_000L } + 120_000L,
+            write(extras.copy(pending = WidgetWave.Pending()), balance(spendable = 120_000)).daily)
     }
 
     /** A board completes between the reads: its VTXO has left pendingBoardVtxos while the history still has it pending. */
-    @Test fun aBoardSettlingBetweenTheReadsIsReadAgain() = runBlocking {
+    @Test fun aBoardSettlingBetweenTheReadsKeepsTheEarlierDays() = runBlocking {
         val board = movement("bark.board:board", 50_000, now - 600_000, "pending", 6u, listOf("board-vtxo"))
-        val wallet = WidgetHandles(tip, listOf(balance(spendable = 100_000, boarding = 50_000), balance(spendable = 150_000)),
-            listOf(listOf(earlier, board), listOf(earlier, board.copy(status = "successful"))), boards = listOf(emptyList()))
-        val extras = WidgetDataWriter.extras(wallet, "regtest")
-        assertEquals(2, wallet.historyReads); assertEquals(balance(spendable = 150_000), extras.balance)
-        assertEquals(before + 150_000L, write(extras).daily)
+        val shown = balance(spendable = 100_000, boarding = 50_000)
+        val wallet = WidgetHandles(tip, listOf(balance(spendable = 150_000)), listOf(listOf(earlier, board)))
+        val extras = WidgetDataWriter.extras(wallet, "regtest", shown)
+        assertNull(extras.pending)
+        assertEquals(previous.daily!!.drop(1).dropLast(1) + 100_000L + 150_000L, write(extras, shown, previous).daily)
     }
 
-    /** Still moving on the second read, or a pending read that fails: the earlier days stay as last written, today is the balance. */
-    @Test fun inconsistentOrFailedReadsKeepTheEarlierDays() = runBlocking {
-        val previous = write(WidgetDataWriter.Extras(rows(earlier)), balance(spendable = 100_000), null).copy(writtenAt = now - day)
-        val moving = WidgetHandles(tip, (1..4).map { balance(spendable = 100_000, claimable = it * 1_000L) }, listOf(listOf(earlier)))
-        val extras = WidgetDataWriter.extras(moving, "regtest")
-        assertEquals(2, moving.historyReads); assertNull(extras.pending); assertNull(extras.balance); assertNotNull(extras.rows)
-        val kept = write(extras, balance(spendable = 104_000), previous).daily!!
-        assertEquals(previous.daily!!.drop(1).dropLast(1) + 100_000L + 104_000L, kept)
-
-        val failing = WidgetHandles(tip, listOf(balance(spendable = 100_000)), listOf(listOf(earlier)), receives = listOf(null))
-        val unread = WidgetDataWriter.extras(failing, "regtest")
-        assertEquals(1, failing.historyReads); assertNull(unread.pending)
-        assertEquals(kept, write(unread, balance(spendable = 104_000), previous).daily)
-        // Without an earlier snapshot: calm water.
-        assertNull(write(unread, balance(spendable = 104_000)).daily)
+    /** The balance read after the records is capped: slow, it falls back at once rather than holding push work. */
+    @Test fun aSlowOrFailingBalanceAfterTheReadsFallsBackWithoutBlocking() = runBlocking {
+        val shown = balance(spendable = 100_000)
+        val slow = WidgetHandles(tip, listOf(shown), listOf(listOf(earlier)), balanceDelay = 60_000)
+        val started = System.nanoTime()
+        val extras = WidgetDataWriter.extras(slow, "regtest", shown, settledRead = 100)
+        assertTrue((System.nanoTime() - started) / 1_000_000 < 5_000)
+        assertNull(extras.pending); assertNotNull(extras.rows); assertEquals(100L, extras.tip)
+        assertEquals(previous.daily!!.drop(1) + 100_000L, write(extras, shown, previous).daily)
+        // Failing, the same; without an earlier snapshot, calm water.
+        val failing = WidgetDataWriter.extras(WidgetHandles(tip, listOf(null), listOf(listOf(earlier))), "regtest", shown)
+        assertNull(failing.pending)
+        assertEquals(previous.daily!!.drop(1) + 100_000L, write(failing, shown, previous).daily)
+        assertNull(write(failing, shown).daily)
+        // A pending read that fails, or no balance shown to compare with: no balance read at all.
+        val unread = WidgetHandles(tip, listOf(shown), listOf(listOf(earlier)), receives = listOf(null))
+        assertNull(WidgetDataWriter.extras(unread, "regtest", shown).pending); assertEquals(0, unread.balanceReads)
+        assertNull(WidgetDataWriter.extras(WidgetHandles(tip, listOf(shown), listOf(listOf(earlier))), "regtest", null).pending)
     }
 
-    /** A claimable receive in the first read and preimage-revealed in pendingLightningReceives: counted, read once. */
+    /** The balance after the reads matches the one shown: a claimable receive counts, the balance read once. */
     @Test fun aConsistentReadCountsWhatTheBalanceHolds() = runBlocking {
         val claimable = movement("bark.lightning_receive:receive", 20_000, now - 600_000, "pending", 2u)
-        val wallet = WidgetHandles(tip, listOf(balance(spendable = 100_000, claimable = 20_000)), listOf(listOf(earlier, claimable)),
+        val shown = balance(spendable = 100_000, claimable = 20_000)
+        val wallet = WidgetHandles(tip, listOf(shown), listOf(listOf(earlier, claimable)),
             receives = listOf(listOf(receive(2u, "preimage-revealed"), receive(3u, "htlcs-ready"))))
-        val extras = WidgetDataWriter.extras(wallet, "regtest")
-        assertEquals(1, wallet.historyReads); assertEquals(WidgetWave.Pending(setOf(2u)), extras.pending)
-        assertEquals(before + 120_000L, write(extras).daily)
+        val extras = WidgetDataWriter.extras(wallet, "regtest", shown)
+        assertEquals(1, wallet.balanceReads); assertEquals(WidgetWave.Pending(setOf(2u)), extras.pending)
+        assertEquals(before + 120_000L, write(extras, shown).daily)
     }
 }

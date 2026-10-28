@@ -22,6 +22,7 @@ import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.serialization.builtins.MapSerializer
 import kotlinx.serialization.builtins.serializer
 import kotlinx.serialization.json.booleanOrNull
@@ -36,11 +37,11 @@ object WidgetDataWriter {
     /**
      * The rows Activity reads, before it merges them (the wave's changes; merged, Home's Arriving rule), the chain tip
      * they're dated against and Home's Renew (blocks to the soonest due expiry); each null when unreadable or none.
-     * [pending]: what bark reports pending, null when unread or not consistent with the rows (the wave then keeps the
-     * earlier days); [balance]: the balance the rows and [pending] were read against, which the snapshot then shows.
+     * [pending]: what bark reports pending, null when unread or not consistent with the balance shown (the wave then
+     * keeps the earlier days).
      */
     data class Extras(val rows: List<com.noahwallet.history.HistoryTransaction>? = null, val tip: Long? = null,
-        val renewBlocks: Long? = null, val pending: WidgetWave.Pending? = WidgetWave.Pending(), val balance: WalletBalance? = null)
+        val renewBlocks: Long? = null, val pending: WidgetWave.Pending? = WidgetWave.Pending())
 
     /** Home's persisted keys the widget follows. */
     data class Display(val unit: BitcoinAmountUnit, val hidden: Boolean, val currency: String) {
@@ -89,9 +90,28 @@ object WidgetDataWriter {
     private suspend fun <T> optional(read: suspend () -> T): T? = try { read() }
     catch (cancelled: CancellationException) { throw cancelled } catch (_: Exception) { null }
 
-    /** Reads [Extras] inside the caller's counted session call. */
-    internal suspend fun extras(handles: WalletSession.Handles, variant: String): Extras {
-        val records = records(handles)
+    /** How long the balance read after the records may take; bark's balance fetches the chain tip. */
+    private const val SETTLED_READ_MILLIS = 2_000L
+
+    /**
+     * Reads [Extras] inside the caller's counted session call, after it read [shown] for the snapshot. A payment that
+     * settles during the records' reads would be counted by neither, so the balance is read once more after them:
+     * unless it agrees with [shown] in time, [Extras.pending] is null.
+     */
+    internal suspend fun extras(handles: WalletSession.Handles, variant: String, shown: WalletBalance?,
+        settledRead: Long = SETTLED_READ_MILLIS): Extras {
+        // Every movement, so one that only names a transaction (a free renewal) still claims it, as on iOS.
+        val rows = optional {
+            handles.history().map { HistoryMapping.transaction(it) } +
+                handles.transactions().filter { it.balanceChangeSats != 0L }.map { HistoryMapping.transaction(it) }
+        }
+        val pending = rows?.let {
+            optional {
+                WidgetWave.Pending(handles.pendingLightningReceives().filter { it.state == "preimage-revealed" }.mapNotNull { it.movementId }.toSet(),
+                    handles.pendingBoardVtxos().map { it.id }.toSet())
+            }
+        }
+        val after = if (pending == null || shown == null) null else optional { withTimeoutOrNull(settledRead) { handles.balance() } }
         val tip = optional { handles.m6.tip() }
         val renew = optional {
             // Home's Renew rule: refreshable VTXOs in bark's expiring set for the refresh threshold.
@@ -100,33 +120,7 @@ object WidgetDataWriter {
             val expiring = handles.m6.expiring(threshold)
             HomeRules.renew(handles.m6.vtxos().map { com.noahwallet.onchain.vtxoModel(it, height, expiring) })?.blocks
         }
-        return Extras(records?.rows, tip, renew, records?.pending, records?.balance)
-    }
-
-    /**
-     * The rows and what bark reports pending, between two balance reads that agree on what the changes depend on: a
-     * receive or board settling in between would be counted by neither read. Collected once more if they don't; then,
-     * or if a read fails, [Extras.pending] is null. Null when the history can't be read.
-     */
-    private suspend fun records(handles: WalletSession.Handles): Extras? {
-        var records: Extras? = null
-        repeat(2) {
-            val before = optional { handles.balance() }
-            // Every movement, so one that only names a transaction (a free renewal) still claims it, as on iOS.
-            val rows = optional {
-                handles.history().map { HistoryMapping.transaction(it) } +
-                    handles.transactions().filter { it.balanceChangeSats != 0L }.map { HistoryMapping.transaction(it) }
-            } ?: return records
-            val pending = optional {
-                WidgetWave.Pending(handles.pendingLightningReceives().filter { it.state == "preimage-revealed" }.mapNotNull { it.movementId }.toSet(),
-                    handles.pendingBoardVtxos().map { it.id }.toSet())
-            }
-            val after = optional { handles.balance() }
-            records = Extras(rows, pending = null)
-            if (pending == null || before == null || after == null) return records
-            if (settled(before, after)) return Extras(rows, pending = pending, balance = after)
-        }
-        return records
+        return Extras(rows, tip, renew, pending?.takeIf { shown != null && after != null && settled(shown, after) })
     }
 
     /** The buckets the wave's pending rules read, and the total, are the same in both reads. */
@@ -135,17 +129,16 @@ object WidgetDataWriter {
         before.ark.pendingOffboard == after.ark.pendingOffboard
 
     /**
-     * The snapshot for [balance], or for the balance [extras] were read against. Without the wave's records the earlier
-     * days stay as [previous] wrote them and today takes the balance; with neither, calm water.
+     * The snapshot for [balance]. Without the wave's records the earlier days stay as [previous] wrote them and today
+     * takes the balance; with neither, calm water.
      */
     @Suppress("LongParameterList") // now and zone are test seams
     internal fun snapshot(balance: WalletBalance, extras: Extras?, display: Display, quote: Quote?, chainDates: Map<String, Long> = emptyMap(),
         now: Long = System.currentTimeMillis(), zone: TimeZone = TimeZone.getDefault(), previous: WidgetSnapshot? = null): WidgetSnapshot {
-        val shown = extras?.balance ?: balance
-        val total = shown.totalSats.toLong()
+        val total = balance.totalSats.toLong()
         val changes = extras?.rows?.let { rows ->
             extras.pending?.let {
-                WidgetWave.changes(rows, chainDates, it) + WidgetWave.offboarded(WidgetWave.offboards(rows), shown.ark.pendingOffboard.toLong())
+                WidgetWave.changes(rows, chainDates, it) + WidgetWave.offboarded(WidgetWave.offboards(rows), balance.ark.pendingOffboard.toLong())
             }
         }
         val kept = previous?.daily?.let { days ->
@@ -153,7 +146,7 @@ object WidgetDataWriter {
         }
         val price = quote?.takeIf { it.currency == display.currency && it.price.isFinite() && it.price > 0 }?.price
         // Home counts what's arriving in Activity's merged rows.
-        return WidgetSnapshot(balance = total, arriving = HomeRules.arriving(shown, HistoryRules.unified(extras?.rows.orEmpty())).toLong(),
+        return WidgetSnapshot(balance = total, arriving = HomeRules.arriving(balance, HistoryRules.unified(extras?.rows.orEmpty())).toLong(),
             daily = changes?.let { WidgetWave.dailyBalances(total, it, now, zone) } ?: kept, writtenAt = now,
             amountUnit = display.unit.name, hidden = display.hidden,
             fiatCurrency = price?.let { display.currency }, fiatPrice = price,
