@@ -72,7 +72,7 @@ internal object WidgetViews {
         // Padding, the longship and three 44 dp buttons with their gaps.
         WidgetLayout.wide -> Triple(widthDp - 32f - 42f - 3 * 52f, 28f, 24f)
         WidgetLayout.narrow -> Triple(widthDp - 32f - 30f, 28f, 24f)
-        WidgetLayout.empty -> error("No balance without a wallet")
+        WidgetLayout.empty -> error("""No balance without a wallet""")
     }
 
     @Suppress("LongParameterList") // one slot: its content and flat geometry inputs
