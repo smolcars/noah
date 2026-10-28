@@ -222,8 +222,8 @@ internal fun ActivityBlockRow(tip: Long, confirmedAt: Long?, needed: Long, local
     Canvas(Modifier.padding(top = 20.dp).size(188.dp, 62.dp).testTag("activity-block-row").clearAndSetSemantics { }) {
         val tipShown = slidTip ?: return@Canvas
         scale(density.density, density.density, Offset.Zero) {
-            blockStrip(0f, 0f, 38f, tipShown, confirmedAt, 1f, slide, pop, BlockRow.blink(elapsed, confirmedAt == null, reduceMotion), palette,
-                { height -> measurer.measure(format.format(height), style) }, nextLabel)
+            val frame = BlockRow.Frame(tipShown, confirmedAt, 1f, slide, pop, BlockRow.blink(elapsed, confirmedAt == null, reduceMotion))
+            blockStrip(Offset.Zero, 38f, frame, palette, BlockRow.Labels({ height -> measurer.measure(format.format(height), style) }, nextLabel))
         }
     }
     val confirmations = BlockRow.confirmations(shownTip, confirmedAt)

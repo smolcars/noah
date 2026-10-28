@@ -39,6 +39,7 @@ internal object StageArt {
     }
 
     /** A 24-unit icon drawn [side] units wide, centred on [center]. */
+    @Suppress("LongParameterList") // a DrawScope primitive like drawCircle: geometry and paint are its parameters
     fun DrawScope.icon(path: Path, center: Offset, side: Float, color: Color, width: Float = 1.8f, alpha: Float = 1f) {
         translate(center.x - side / 2, center.y - side / 2) {
             scale(side / 24f, side / 24f, Offset.Zero) {
@@ -48,8 +49,9 @@ internal object StageArt {
     }
 
     /** You (orange) or the Ark server: a circle badge with its icon (prototype `badge`). */
-    fun DrawScope.badge(me: Boolean, center: Offset, alpha: Float, scale: Float, palette: com.noahwallet.ui.design.NoahTokens.Palette, r: Float = 20f) {
+    fun DrawScope.badge(me: Boolean, center: Offset, alpha: Float, scale: Float, palette: com.noahwallet.ui.design.NoahTokens.Palette) {
         if (alpha <= 0f) return
+        val r = 20f
         scale(scale, scale, center) {
             drawCircle(palette.background, r, center, alpha = alpha.coerceIn(0f, 1f))
             drawCircle(if (me) palette.orange else palette.hairline, r, center, alpha = alpha.coerceIn(0f, 1f), style = Stroke(if (me) 2f else 1.5f))
@@ -60,6 +62,7 @@ internal object StageArt {
     }
 
     /** Your coin (soft fill, orange ring), the refund (the same, thinner ring) or the payment (solid, with ₿). */
+    @Suppress("LongParameterList") // a DrawScope primitive like drawCircle: geometry and paint are its parameters
     fun DrawScope.coin(center: Offset, r: Float, kind: Coin, alpha: Float, scale: Float, palette: com.noahwallet.ui.design.NoahTokens.Palette,
         glyph: TextLayoutResult? = null) {
         if (alpha <= 0f) return
@@ -95,6 +98,7 @@ internal object StageArt {
     }
 
     /** A stroke drawn from [from] towards [to] up to [fraction]; dashed lines fade in instead. */
+    @Suppress("LongParameterList") // a DrawScope primitive like drawLine: geometry and paint are its parameters
     fun DrawScope.line(from: Offset, to: Offset, color: Color, fraction: Float, alpha: Float = 1f, dashed: Boolean = false) {
         if (alpha <= 0f || fraction <= 0f) return
         val end = if (dashed) to else Offset(from.x + (to.x - from.x) * fraction.coerceIn(0f, 1f), from.y + (to.y - from.y) * fraction.coerceIn(0f, 1f))

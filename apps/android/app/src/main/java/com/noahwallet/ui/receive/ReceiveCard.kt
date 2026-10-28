@@ -373,9 +373,9 @@ internal fun ReceiveBlockRow(arrival: ReceiveArrival?, tip: Long?, confirmedAt: 
         val k = size.width / 300f
         scale(k, k, Offset.Zero) {
             val dot = if (reduceMotion) 1f else step(elapsed, 200, SpringCurve.bouncy).coerceIn(0f, 1f)
-            blockStrip(72f, 6f, 30f, shownTip, confirmedAt, dot, slide, pop,
-                BlockRow.blink(elapsed - 900, elapsed > 900 && confirmedAt == null, reduceMotion), palette,
-                { height -> measurer.measure(format.format(height), style) }, next, fade)
+            val frame = BlockRow.Frame(shownTip, confirmedAt, dot, slide, pop, BlockRow.blink(elapsed - 900, elapsed > 900 && confirmedAt == null, reduceMotion),
+                fade)
+            blockStrip(Offset(72f, 6f), 30f, frame, palette, BlockRow.Labels({ height -> measurer.measure(format.format(height), style) }, next))
         }
     }
 }

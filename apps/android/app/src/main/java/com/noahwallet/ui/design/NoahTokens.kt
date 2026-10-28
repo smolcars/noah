@@ -15,7 +15,7 @@ import com.noahwallet.R
 
 /** Redesign tokens. */
 object NoahTokens {
-    class Palette(
+    data class Palette(
         val background: Color,
         val foreground: Color,
         val muted: Color,

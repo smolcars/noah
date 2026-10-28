@@ -28,7 +28,7 @@ import io.github.niteshbalusu11.bark.PendingRoundStatus
 import kotlinx.coroutines.*
 
 /** Today's Home inputs: app version, backup status, pending rounds, background work and the renew check. */
-internal class HomeSignals(
+internal data class HomeSignals(
     val version: AppVersionInfo?, val backup: PersistedBackupState, val background: String?,
     val rounds: List<PendingRoundStatus>, val now: Long, val retrying: Boolean,
     val retry: () -> Unit,

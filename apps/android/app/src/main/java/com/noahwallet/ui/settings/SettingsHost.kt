@@ -52,7 +52,7 @@ import kotlinx.coroutines.withContext
  * How a page moves: push a page, leave this one, open My code, or close Settings for Home; [hold] is [save]'s. [replace]
  * shows a page with only its parents beneath, as a deep link does (a started exit leaves its review for its progress).
  */
-internal class SettingsNav(val back: (() -> Unit)?, val open: (NavKey) -> Unit, val pop: () -> Unit, val myCode: () -> Unit, val home: () -> Unit,
+internal data class SettingsNav(val back: (() -> Unit)?, val open: (NavKey) -> Unit, val pop: () -> Unit, val myCode: () -> Unit, val home: () -> Unit,
     val hold: (Boolean) -> Unit = {}, val replace: (NavKey) -> Unit = {}, val map: () -> Unit = {})
 
 /**

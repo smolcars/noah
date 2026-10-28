@@ -4,6 +4,7 @@ import androidx.compose.animation.core.Animatable
 import androidx.compose.runtime.*
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.drawscope.DrawScope
@@ -29,38 +30,54 @@ internal object BlockRow {
      * One frame of the strip. [slide] runs 0 → 1 after the tip moves up one block: the row slides one block
      * along, the oldest fades and a new dashed block appears. [pop] is the newly mined block's bounce.
      */
-    fun DrawScope.blockStrip(x0: Float, y: Float, size: Float, tip: Long, confirmedAt: Long?, dot: Float, slide: Float, pop: Float,
-        blink: Float, palette: NoahTokens.Palette, label: (Long) -> TextLayoutResult, next: TextLayoutResult, alpha: Float = 1f) {
+    data class Frame(val tip: Long, val confirmedAt: Long?, val dot: Float, val slide: Float, val pop: Float, val blink: Float, val alpha: Float = 1f)
+
+    /** The strip's measured words: each block's [height] label and the waiting block's [next]. */
+    class Labels(val height: (Long) -> TextLayoutResult, val next: TextLayoutResult)
+
+    /** The strip of [size]-unit blocks from [at], the block row's top left. */
+    fun DrawScope.blockStrip(at: Offset, size: Float, frame: Frame, palette: NoahTokens.Palette, labels: Labels) {
         val gap = size + 12
-        val s = slide.coerceIn(0f, 1f)
+        val s = frame.slide.coerceIn(0f, 1f)
         val shift = gap * (1 - s)
-        fun x(slot: Int) = x0 + slot * gap + shift
+        fun x(slot: Int) = at.x + slot * gap + shift
         // Mined blocks, the one that just left on the left during a slide.
-        for (slot in -1..2) {
-            val height = tip - 2 + slot
-            val settled = if (slot < 0) 0f else .55f + .15f * slot
-            val before = if (slot == 2) 1f else .55f + .15f * (slot + 1)
-            val shade = StageArt.lerp(before, settled, s) * alpha
-            if (shade <= 0f || height < 0) continue
-            val scale = if (slot == 2) StageArt.lerp(1.22f, 1f, pop) else 1f
-            val left = x(slot)
-            scale(scale, scale, Offset(left + size / 2, y + size / 2)) {
-                drawRoundRect(palette.foreground, Offset(left, y), Size(size, size), CornerRadius(7f), alpha = shade)
-            }
-            val text = label(height)
-            drawText(text, color = if (slot == 2 && s < 1f) palette.foreground else palette.muted, alpha = (if (slot < 0) 1 - s else 1f) * alpha,
-                topLeft = Offset(left + size / 2 - text.size.width / 2f, y + size + 14 - text.size.height / 2f))
-            if (confirmedAt == height && dot > 0f) drawCircle(palette.background, 6f, Offset(left + size / 2, y + size / 2),
-                alpha = dot.coerceIn(0f, 1f) * alpha)
-        }
+        for (slot in -1..2) minedBlock(Rect(Offset(x(slot), at.y), Size(size, size)), slot, frame, palette, labels)
         // The next block, waiting for your transaction.
         val left = x(3)
+        val y = at.y
+        val alpha = frame.alpha
         val appear = if (shift > 0f) s else 1f
-        drawRoundRect(palette.foreground, Offset(left, y), Size(size, size), CornerRadius(6f), alpha = appear * blink * alpha,
+        drawRoundRect(palette.foreground, Offset(left, y), Size(size, size), CornerRadius(6f), alpha = appear * frame.blink * alpha,
             style = Stroke(2f, pathEffect = PathEffect.dashPathEffect(floatArrayOf(4f, 4f))))
-        drawText(next, color = palette.muted, alpha = appear * alpha,
-            topLeft = Offset(left + size / 2 - next.size.width / 2f, y + size + 14 - next.size.height / 2f))
-        if (confirmedAt == null && dot > 0f) drawCircle(palette.orange, 6f, Offset(left + size / 2, y + size / 2), alpha = dot.coerceIn(0f, 1f) * alpha)
+        drawText(labels.next, color = palette.muted, alpha = appear * alpha,
+            topLeft = Offset(left + size / 2 - labels.next.size.width / 2f, y + size + 14 - labels.next.size.height / 2f))
+        if (frame.confirmedAt == null && frame.dot > 0f) {
+            drawCircle(palette.orange, 6f, Offset(left + size / 2, y + size / 2), alpha = frame.dot.coerceIn(0f, 1f) * alpha)
+        }
+    }
+
+    /** The mined block in [slot] (−1 is the one leaving during a slide, 2 the newest) at [box], its height and any confirmed dot. */
+    private fun DrawScope.minedBlock(box: Rect, slot: Int, frame: Frame, palette: NoahTokens.Palette, labels: Labels) {
+        val s = frame.slide.coerceIn(0f, 1f)
+        val height = frame.tip - 2 + slot
+        val settled = if (slot < 0) 0f else .55f + .15f * slot
+        val before = if (slot == 2) 1f else .55f + .15f * (slot + 1)
+        val shade = StageArt.lerp(before, settled, s) * frame.alpha
+        if (shade <= 0f || height < 0) return
+        val scale = if (slot == 2) StageArt.lerp(1.22f, 1f, frame.pop) else 1f
+        val left = box.left
+        val y = box.top
+        val size = box.width
+        scale(scale, scale, Offset(left + size / 2, y + size / 2)) {
+            drawRoundRect(palette.foreground, Offset(left, y), Size(size, size), CornerRadius(7f), alpha = shade)
+        }
+        val text = labels.height(height)
+        drawText(text, color = if (slot == 2 && s < 1f) palette.foreground else palette.muted, alpha = (if (slot < 0) 1 - s else 1f) * frame.alpha,
+            topLeft = Offset(left + size / 2 - text.size.width / 2f, y + size + 14 - text.size.height / 2f))
+        if (frame.confirmedAt == height && frame.dot > 0f) {
+            drawCircle(palette.background, 6f, Offset(left + size / 2, y + size / 2), alpha = frame.dot.coerceIn(0f, 1f) * frame.alpha)
+        }
     }
 
     /** The waiting block's slow blink (prototype: 650 ms each way); still under Reduce Motion. */

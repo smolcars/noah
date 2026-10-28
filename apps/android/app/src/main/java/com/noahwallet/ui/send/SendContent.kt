@@ -55,7 +55,7 @@ import java.util.Locale
 
 /** What Send shows beyond SendModel and SendController: formatting, history and the chain, from the app or a fixture. */
 @Immutable
-class SendEnv(
+data class SendEnv(
     val unit: BitcoinAmountUnit,
     val locale: Locale,
     val network: String,

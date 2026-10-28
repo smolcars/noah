@@ -110,7 +110,7 @@ class HomeToasts {
     fun retext(tag: String, text: String) { current?.takeIf { it.tag == tag && it.text != text }?.let { current = it.copy(text = text) } }
 }
 
-class HomeActions(
+data class HomeActions(
     val scan: () -> Unit = {}, val settings: () -> Unit = {},
     /** The suspended state's "Open Settings": Advanced, where Suspend wallet is. */
     val suspended: () -> Unit = settings,
