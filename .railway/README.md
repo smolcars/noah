@@ -18,8 +18,8 @@ railway config apply --environment signet
 
 The active configuration runs Postgres 18, persistent Redis with AOF and
 `noeviction`, the API, and one Barkd 0.8.0 instance with its restored `/data`
-volume. The API is built from uploaded source using the root Dockerfile; Barkd
-remains pinned by digest with automatic image updates disabled. The API checks
+volume. The API is built from uploaded source using the root Dockerfile; Barkd's
+dedicated [Dockerfile](barkd/Dockerfile) pins its existing image by digest. The API checks
 `/health`; Barkd has a 30-second shutdown grace period.
 Daily, weekly, and monthly volume backups are enabled. The
 [migration runbook](../docs/railway_signet_migration_plan.md) records the verified
@@ -49,7 +49,7 @@ configuration applies from restoring an old image. No infrastructure graph is
 applied during an application release. `.railwayignore` excludes the mobile app
 and documentation from the upload.
 
-The job uses GitHub secret `RAILWAY_SIGNET_TOKEN`, passed to the CLI as
+Both deployment workflows use GitHub secret `RAILWAY_SIGNET_TOKEN`, passed to the CLI as
 `RAILWAY_TOKEN`, scoped to only this project's signet environment. The CLI is
 pinned to 5.71.0. Set that secret before merging the deployment workflow; without
 it, the deployment job fails before changing Railway. Releases are serialized,
@@ -59,15 +59,29 @@ repository root, which includes the Cargo workspace and server migrations.
 
 Existing image publication continues independently for mainnet and manual image
 consumers. `v*` tags keep their existing mainnet Fly deployment and do not deploy
-signet. The Fly signet API job and manual Barkd Fly workflow are removed. Keep
+signet. The Fly signet API job is removed and the manual Barkd workflow now deploys
+to Railway. Keep
 `SIGNET_DEPLOY_TARGET=railway` as a fence for historical workflow versions.
 
-**Barkd upgrades remain manual:** build and review the new image, update only
-Barkd's image digest in `railway.ts`, inspect `railway config plan --environment
-signet`, then apply the reviewed change. Keep its service, single replica, `/data`
-volume, and shutdown grace period. Take a fresh wallet backup and check wallet
-format compatibility before an upgrade; verify a Lightning receive afterward.
-Normal API releases never restart Barkd or modify Postgres, Redis, or volumes.
+**Barkd upgrades remain manual:** build and review the new image, update its digest
+in [barkd/Dockerfile](barkd/Dockerfile), and merge the reviewed change. Take a fresh
+wallet backup and check wallet-format compatibility, then dispatch the workflow
+from the CLI:
+
+```sh
+gh workflow run barkd-signet-deploy.yml --repo smolcars/noah --ref master
+```
+
+This runs `railway up .railway/barkd --path-as-root` against the existing Barkd
+service, using a build context containing only its Dockerfile. The single `FROM`
+instruction inherits the pinned image's entrypoint and command. The workflow
+shares the API's deployment concurrency group and preserves Barkd's single
+replica, `/data` volume, authentication, and shutdown grace period. Verify wallet
+identity, balance, and a Lightning receive afterward; deployment success alone
+does not prove wallet-format compatibility. Changes to the Barkd Dockerfile do
+not trigger API deployments, and neither API merges nor image publication deploy
+Barkd automatically. Normal API releases never restart Barkd or modify Postgres,
+Redis, or volumes.
 
 For an API rollback, check out a previous known-good commit and deploy it with
 the same `railway up` command. This rebuilds that revision; it does not undo

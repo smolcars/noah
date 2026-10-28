@@ -1,4 +1,4 @@
-import { defineRailway, image, postgres, preserve, project, redis, service, volume } from "railway/iac";
+import { defineRailway, postgres, preserve, project, redis, service, volume } from "railway/iac";
 
 export default defineRailway((ctx) => {
   if (
@@ -21,10 +21,8 @@ export default defineRailway((ctx) => {
 
   // The complete stopped Fly wallet volume has been restored and verified.
   const barkd = service("noah-barkd-signet", {
-    source: image(
-      "niteshbalusu/noah-barkd@sha256:e1d9dff674ff1c548d27a5c6f2c84e0a690921867ec2b49aacc6a82cb5b78e6d",
-      { autoUpdates: { type: "disabled" } },
-    ),
+    // Uploaded separately by the manual Barkd workflow; its Dockerfile pins the image.
+    build: { builder: "DOCKERFILE", dockerfilePath: "Dockerfile" },
     replicas: { [region]: 1 },
     deploy: {
       requiredMountPath: "/data",

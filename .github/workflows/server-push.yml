@@ -18,6 +18,7 @@ on:
       - ".dockerignore"
       - ".github/workflows/server.yml"
       - ".github/workflows/server-push.yml"
+      - "!.railway/barkd/**"
       - "!fly/barkd.Dockerfile"
       - "!fly/barkd-entrypoint.sh"
       - "!fly/*.barkd.fly.toml"
