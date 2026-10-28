@@ -1,6 +1,7 @@
 package com.noahwallet.services.push
 
 /** Re-read the gates for every retry/token refresh; no registration before onboarding completes. */
+@Suppress("LongParameterList") // dependency seams: tests inject a fake for each gate
 class PushRegistration(
     private val onboarded: () -> Boolean,
     private val serverRegistered: () -> Boolean,

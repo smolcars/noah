@@ -28,8 +28,7 @@ object RNStoreCodec {
         "serverSyncPending", "isRegisteredWithServer", "isBackupEnabled", "isEmailVerified", "isEmailPromptDismissed",
         "isMailboxAuthorizationEnabled", "isAutoBoardingEnabled", "hasAttemptedAutoBoarding")
     private val nullableStrings = setOf("displayName", "preferredCurrency", "bitcoinAmountUnit", "staticVtxoPubkey", "endpointOverride", "lastBackupError",
-        "lastBackupId",
-        "lastUploadedSnapshotSha256", "lightningAddress", "nostrPubkey", "emailAddress", "lastReportedDeviceFingerprint")
+        "lastBackupId", "lastUploadedSnapshotSha256", "lightningAddress", "nostrPubkey", "emailAddress", "lastReportedDeviceFingerprint")
     private val strings = setOf("lastBackupStatus")
     private val numbers = setOf("lastBackupAt", "lastBackupAttemptAt", "mailboxAuthorizationExpiry", "lastDeviceReportAt")
 
@@ -39,21 +38,24 @@ object RNStoreCodec {
         val version = root["version"]
         require(version == null || version is JsonPrimitive && !version.isString &&
             (version.content == "0" || versions.getValue(key) == 1 && version.content == "1"))
-        state.forEach { (field, value) ->
-            val primitive = value as? JsonPrimitive
-            require(when (field) {
-                !in fields.getValue(key) -> true
-                in booleans -> primitive != null && !primitive.isString && primitive.booleanOrNull != null
-                in nullableStrings -> value == JsonNull || primitive?.isString == true
-                in strings -> primitive?.isString == true
-                in numbers -> value == JsonNull || (primitive != null && !primitive.isString && primitive.doubleOrNull?.isFinite() == true)
-                "schedules" -> value is JsonObject
-                else -> true
-            })
+        state.forEach { (field, value) -> require(field !in fields.getValue(key) || validField(field, value)) }
+        if (key == "backup-storage") {
+            state["lastBackupStatus"]?.let { require(it.jsonPrimitive.content in setOf("idle", "in_progress", "success", "failed")) }
         }
-        if (key == "backup-storage") state["lastBackupStatus"]?.let { require(it.jsonPrimitive.content in setOf("idle", "in_progress", "success", "failed")) }
         root
     } catch (_: Exception) { throw Unreadable() }
+
+    private fun validField(field: String, value: JsonElement): Boolean {
+        val primitive = value as? JsonPrimitive
+        return when (field) {
+            in booleans -> primitive != null && !primitive.isString && primitive.booleanOrNull != null
+            in nullableStrings -> value == JsonNull || primitive?.isString == true
+            in strings -> primitive?.isString == true
+            in numbers -> value == JsonNull || (primitive != null && !primitive.isString && primitive.doubleOrNull?.isFinite() == true)
+            "schedules" -> value is JsonObject
+            else -> true
+        }
+    }
 
     /** Admission uses the recurring reader too; unsupported rows remain visible and stopped. */
     internal fun validateStoredValue(key: String, raw: String) {

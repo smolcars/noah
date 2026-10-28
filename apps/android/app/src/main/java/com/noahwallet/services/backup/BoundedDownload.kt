@@ -20,18 +20,20 @@ object BoundedDownload {
             if (body.contentLength() > limit) throw TooLarge()
             check(destination.createNewFile()) { "Download destination exists" }
             destination.outputStream().use { output ->
-                body.byteStream().use { input ->
-                    var received = 0L
-                    val buffer = ByteArray(65536)
-                    while (true) {
-                        val count = input.read(buffer)
-                        if (count < 0) break
-                        if (count > limit - received) throw TooLarge()
-                        received += count
-                        output.write(buffer, 0, count)
-                    }
-                }
+                body.byteStream().use { input -> copyBounded(input, output, limit) }
             }
+        }
+    }
+
+    private fun copyBounded(input: java.io.InputStream, output: java.io.OutputStream, limit: Long) {
+        var received = 0L
+        val buffer = ByteArray(65536)
+        while (true) {
+            val count = input.read(buffer)
+            if (count < 0) break
+            if (count > limit - received) throw TooLarge()
+            received += count
+            output.write(buffer, 0, count)
         }
     }
 

@@ -3,6 +3,7 @@ package com.noahwallet.services.storage
 import android.content.Context
 import android.os.Build
 import android.system.Os
+import com.noahwallet.services.wallet.EsploraSettings
 import com.tencent.mmkv.MMKV
 import com.tencent.mmkv.MMKVLogLevel
 import kotlinx.serialization.json.*
@@ -45,15 +46,14 @@ class SettingsStorage(context: Context, private val sync: (File) -> Unit = ::syn
                             })
                         } finally { snapshot.close() }
                     }
-                }.getOrElse { NativeSettingsFile.State(values = mapOf(com.noahwallet.services.wallet.EsploraSettings.historyUnavailableKey to "1"),
-                    settingsNoticePending = true) }
+                }.getOrElse { unreadableDefaults() }
                 fallback = state
                 persist(state)
             }
             if (fallback != null) persist(load())
             finishCleanup()
         } catch (_: Exception) {
-            if (fallback == null) fallback = NativeSettingsFile.State(values = mapOf(com.noahwallet.services.wallet.EsploraSettings.historyUnavailableKey to "1"), settingsNoticePending = true)
+            if (fallback == null) fallback = unreadableDefaults()
         }
     } }
 
@@ -72,8 +72,7 @@ class SettingsStorage(context: Context, private val sync: (File) -> Unit = ::syn
         cached?.takeIf { !verify && stamp != null && it.first == stamp }?.let { return it.second }
         return try { nativeFile.load().also { cached = stamp?.let { s -> s to it } } } catch (_: Exception) {
             cached = null
-            val defaults = NativeSettingsFile.State(values = mapOf(com.noahwallet.services.wallet.EsploraSettings.historyUnavailableKey to "1"),
-                settingsNoticePending = true)
+            val defaults = unreadableDefaults()
             fallback = defaults
             runCatching { persist(defaults) }
             defaults
@@ -90,16 +89,21 @@ class SettingsStorage(context: Context, private val sync: (File) -> Unit = ::syn
     fun set(value: String, key: String) = synchronized(openLock) {
         val state = load(verify = true)
         val preserved = if (key in RNStoreCodec.versions) RNStoreCodec.merge(key, state.values[key], value) else value
-        try { persist(state.copy(values = state.values + (key to preserved))) }
-        catch (failure: Exception) { fallback = state; throw failure }
+        persistOrFallBack(state, state.copy(values = state.values + (key to preserved)))
+    }
+    /** A failed write leaves [previous] in effect for this process and rethrows. */
+    private fun persistOrFallBack(previous: NativeSettingsFile.State, next: NativeSettingsFile.State) {
+        var saved = false
+        try { persist(next); saved = true } finally { if (!saved) fallback = previous }
     }
     /** User-selected safe fallback stays effective in foreground when disk writes fail. */
     fun useDefaultEsplora(variant: String) = synchronized(openLock) {
-        val record = com.noahwallet.services.wallet.EsploraSettings.Record(com.noahwallet.services.wallet.EsploraSettings.Selection(variant = variant))
+        val record = EsploraSettings.Record(EsploraSettings.Selection(variant = variant))
         val state = load(verify = true).let {
-            val retained = com.noahwallet.services.wallet.EsploraSettings.retainingLogPrivacy(it.values)
-            val previous = retained[com.noahwallet.services.wallet.EsploraSettings.key]?.let { raw -> Json.decodeFromString<com.noahwallet.services.wallet.EsploraSettings.Record>(raw) }
-            it.copy(values = it.values + (com.noahwallet.services.wallet.EsploraSettings.key to Json.encodeToString(record.copy(logEndpoints = previous?.logEndpoints.orEmpty()))))
+            val retained = EsploraSettings.retainingLogPrivacy(it.values)
+            val previous = retained[EsploraSettings.key]?.let { raw -> Json.decodeFromString<EsploraSettings.Record>(raw) }
+            val selected = record.copy(logEndpoints = previous?.logEndpoints.orEmpty())
+            it.copy(values = it.values + (EsploraSettings.key to Json.encodeToString(selected)))
         }
         try { persist(state) } catch (_: Exception) { fallback = state }
     }
@@ -119,9 +123,7 @@ class SettingsStorage(context: Context, private val sync: (File) -> Unit = ::syn
     }
     fun removeAll() = synchronized(openLock) {
         val state = load(verify = true)
-        try { persist(NativeSettingsFile.State(values = com.noahwallet.services.wallet.EsploraSettings.retainingLogPrivacy(state.values),
-            cleanupPending = true)) }
-        catch (failure: Exception) { fallback = state; throw failure }
+        persistOrFallBack(state, NativeSettingsFile.State(values = EsploraSettings.retainingLogPrivacy(state.values), cleanupPending = true))
         finishCleanup()
     }
     private fun finishCleanup() {
@@ -129,7 +131,8 @@ class SettingsStorage(context: Context, private val sync: (File) -> Unit = ::syn
         check(!root.exists() || root.deleteRecursively())
         sync(root.parentFile!!)
         MMKVUpgradeBackup(root, instanceID, backupRoot = backupRoot, sync = sync).deleteSnapshot()
-        persist(NativeSettingsFile.State(values = com.noahwallet.services.wallet.EsploraSettings.retainingLogPrivacy(load(verify = true).values))) // Keep log protection through re-onboarding.
+        // Keep log protection through re-onboarding.
+        persist(NativeSettingsFile.State(values = EsploraSettings.retainingLogPrivacy(load(verify = true).values)))
     }
     /** Committed wallet recovery may publish flags in memory; durable completion retries later. */
     fun completeRestore(): Boolean = synchronized(openLock) {
@@ -149,10 +152,15 @@ class SettingsStorage(context: Context, private val sync: (File) -> Unit = ::syn
 
     companion object {
         const val instanceID = "noah-wallet-storage"
-        const val settingsNotice = "Some settings couldn't be carried over from the previous version, so they're back to their defaults: biometric lock is off, balances are visible, and currency and display settings are reset. Please review Settings."
+        const val settingsNotice = "Some settings couldn't be carried over from the previous version, so they're back to their defaults: " +
+            "biometric lock is off, balances are visible, and currency and display settings are reset. Please review Settings."
         internal fun settingsNotice(values: Map<String, String>): String {
             val wallet = values[PersistedWalletState.key]?.let { PersistedStateCodec.decode<PersistedWalletState>(it) }
-            val privacy = values["privacy-storage"]?.let { runCatching { Json.parseToJsonElement(it).jsonObject["state"]?.jsonObject?.get("isHomeBalanceHidden")?.jsonPrimitive?.booleanOrNull }.getOrNull() }
+            val privacy = values["privacy-storage"]?.let {
+                runCatching {
+                    Json.parseToJsonElement(it).jsonObject["state"]?.jsonObject?.get("isHomeBalanceHidden")?.jsonPrimitive?.booleanOrNull
+                }.getOrNull()
+            }
             val defaults = mutableListOf<String>()
             if (wallet?.isBiometricsEnabled == null) defaults += "biometric lock is off"
             if (privacy == null) defaults += "balances are visible"
@@ -162,6 +170,8 @@ class SettingsStorage(context: Context, private val sync: (File) -> Unit = ::syn
                 (if (defaults.size > 2) ", and " else " and ") + defaults.last()
             return "Some settings couldn't be carried over from the previous version, so they're back to their defaults: $descriptions. Please review Settings."
         }
+        private fun unreadableDefaults() = NativeSettingsFile.State(values = mapOf(EsploraSettings.historyUnavailableKey to "1"),
+            settingsNoticePending = true)
         const val recurringNotice = "Recurring payments need to be set up again after this update."
         const val emptyRecurring = """{"state":{"schedules":{},"serverSyncPending":true},"version":0}"""
         private val openLock = Any()
@@ -173,7 +183,9 @@ class SettingsStorage(context: Context, private val sync: (File) -> Unit = ::syn
             var recurringNotice = false
             source.forEach { (key, raw) ->
                 if (key == "recurring-payment-storage") {
-                    val schedules = runCatching { Json.parseToJsonElement(checkNotNull(raw)).jsonObject.getValue("state").jsonObject.getValue("schedules").jsonObject }.getOrNull()
+                    val schedules = runCatching {
+                        Json.parseToJsonElement(checkNotNull(raw)).jsonObject.getValue("state").jsonObject.getValue("schedules").jsonObject
+                    }.getOrNull()
                     if (schedules?.isEmpty() != true) { recurringNotice = true; values[key] = emptyRecurring }
                 } else if (raw == null || key in RNStoreCodec.versions && runCatching { RNStoreCodec.validateStoredValue(key, raw) }.isFailure) {
                     settingsNotice = true

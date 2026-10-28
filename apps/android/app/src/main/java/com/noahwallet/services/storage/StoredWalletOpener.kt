@@ -7,7 +7,7 @@ internal class StoredWalletOpener(
     private val open: suspend (String) -> Unit,
 ) {
     private suspend fun read(): String = (seed.read() as? SecretResult.Found)?.value
-        ?: throw IllegalStateException("""Wallet seed unavailable""")
+        ?: error("""Wallet seed unavailable""")
 
     class OnboardingIncomplete : Exception("""Finish onboarding before background wallet work""")
 

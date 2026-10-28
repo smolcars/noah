@@ -47,7 +47,7 @@ internal object EndpointLogPrivacy {
     private val malformedPercent = Regex("%(?![0-9a-fA-F]{2})")
     private fun allowed(value: String, registered: Set<String>, hosts: Set<String>): Boolean {
         val authority = authority(value) ?: return false
-        if (value.indexOf("://") != value.lastIndexOf("://") || '\\' in value || malformedPercent.containsMatchIn(value) || !plainAuthority.matches(authority)) return false
+        if (!plain(value, authority)) return false
         val origin = origin(value) ?: return false
         if (origin in registered || origin !in publicOrigins) return false
         // Only the canonical IP spelling may inherit an allowlisted origin.
@@ -56,10 +56,12 @@ internal object EndpointLogPrivacy {
         return rawHost.lowercase().trimEnd('.') == host(value) && redactHosts(tail, hosts) == tail
     }
 
+    private fun plain(value: String, authority: String): Boolean = value.indexOf("://") == value.lastIndexOf("://") && '\\' !in value &&
+        !malformedPercent.containsMatchIn(value) && plainAuthority.matches(authority)
+
     @Synchronized fun register(endpoint: String?) {
         if (endpoint == null) return
-        if (hasExcessiveCombiningRun(endpoint)) { failClosed(); return }
-        val url = endpoint.toHttpUrlOrNull()
+        val url = endpoint.takeUnless(::hasExcessiveCombiningRun)?.toHttpUrlOrNull()
         if (url == null) { failClosed(); return }
         // Selection validation rejects credentials/query; protect them in legacy registrations too.
         val base = url.newBuilder().username("").password("").query(null).fragment(null).build().toString()
@@ -67,36 +69,48 @@ internal object EndpointLogPrivacy {
         val host = host(base)
         if (origin == null || host == null) { failClosed(); return }
         val sensitive = mutableSetOf<String>()
-        fun add(value: String, opaque: Boolean = false) {
-            for (view in LogFile.decodedViews(value, percentEncoded = true, compatibility = true) ?: listOf(value)) {
-                val token = SecretMatcher.normalize(view) ?: run { failClosed(); return }
-                if (token.isNotEmpty() && (!opaque || token.length >= 6 && token.lowercase(java.util.Locale.ROOT) !in commonWords)) sensitive += view
-            }
-        }
-        add(host)
-        // OkHttp preserves IDNA2008 deviation characters; JDK IDNA2003 cannot decode them.
-        val info = IDNA.Info()
-        val unicodeHost = if (':' in host) host else IDNA.getUTS46Instance(IDNA.NONTRANSITIONAL_TO_UNICODE)
-            .nameToUnicode(host, StringBuilder(), info).toString()
-        if (info.hasErrors()) { failClosed(); return }
-        add(unicodeHost)
+        addSensitive(sensitive, host)
+        val unicodeHost = unicodeHost(host)
+        if (unicodeHost == null) { failClosed(); return }
+        addSensitive(sensitive, unicodeHost)
         for (name in listOf(host, unicodeHost).filter { ':' !in it }) {
-            name.split('.').dropLast(1).filter { it.length >= 6 && it !in publicNames }.forEach { add(it) }
+            name.split('.').dropLast(1).filter { it.length >= 6 && it !in publicNames }.forEach { addSensitive(sensitive, it) }
         }
-        add("$host:${url.port}")
-        listOf(url.encodedUsername, url.encodedPassword).filter { it.length >= 6 }.forEach { add(it) }
-        if (url.encodedUsername.isNotEmpty() && url.encodedPassword.isNotEmpty() && url.encodedUsername.length + url.encodedPassword.length + 1 >= 6) add("${url.encodedUsername}:${url.encodedPassword}")
+        addSensitive(sensitive, "$host:${url.port}")
+        addCredentials(sensitive, url)
         for (view in LogFile.decodedViews(url.encodedPath, percentEncoded = true, compatibility = true) ?: listOf(url.encodedPath)) {
-            view.split('/').forEach { add(it, opaque = true) }
+            view.split('/').forEach { addSensitive(sensitive, it, opaque = true) }
         }
-        url.encodedQuery?.split('&')?.filter { '=' in it }?.forEach { add(it.substringAfter('='), opaque = true) }
+        url.encodedQuery?.split('&')?.filter { '=' in it }?.forEach { addSensitive(sensitive, it.substringAfter('='), opaque = true) }
         if (tokens.addAll(sensitive)) matcher = null
         hosts += host
         origins += origin
         policy = null
     }
-    private val commonWords = setOf("api", "block", "blocks", "tip", "height", "hash", "tx", "txs", "transaction", "transactions", "address", "scripthash",
-        "mempool", "v0", "v1", "v2", "testnet", "signet", "mainnet", "regtest", "esplora", "fee-estimates", "outspend", "outspends", "status", "hex", "raw", "merkle-proof", "merkleblock-proof", "utxo", "broadcast")
+    /** Adds each view of [value]; a view that can't be normalized fails closed (and registration continues). */
+    private fun addSensitive(sensitive: MutableSet<String>, value: String, opaque: Boolean = false) {
+        for (view in LogFile.decodedViews(value, percentEncoded = true, compatibility = true) ?: listOf(value)) {
+            val token = SecretMatcher.normalize(view) ?: run { failClosed(); return }
+            if (token.isNotEmpty() && (!opaque || opaqueSecret(token))) sensitive += view
+        }
+    }
+    private fun opaqueSecret(token: String) = token.length >= 6 && token.lowercase(java.util.Locale.ROOT) !in commonWords
+    // OkHttp preserves IDNA2008 deviation characters; JDK IDNA2003 cannot decode them.
+    private fun unicodeHost(host: String): String? {
+        val info = IDNA.Info()
+        val unicodeHost = if (':' in host) host else IDNA.getUTS46Instance(IDNA.NONTRANSITIONAL_TO_UNICODE)
+            .nameToUnicode(host, StringBuilder(), info).toString()
+        return if (info.hasErrors()) null else unicodeHost
+    }
+    private fun addCredentials(sensitive: MutableSet<String>, url: okhttp3.HttpUrl) {
+        val user = url.encodedUsername
+        val password = url.encodedPassword
+        listOf(user, password).filter { it.length >= 6 }.forEach { addSensitive(sensitive, it) }
+        if (user.isNotEmpty() && password.isNotEmpty() && user.length + password.length + 1 >= 6) addSensitive(sensitive, "$user:$password")
+    }
+    private val commonWords = setOf("api", "block", "blocks", "tip", "height", "hash", "tx", "txs", "transaction", "transactions", "address",
+        "scripthash", "mempool", "v0", "v1", "v2", "testnet", "signet", "mainnet", "regtest", "esplora", "fee-estimates", "outspend", "outspends",
+        "status", "hex", "raw", "merkle-proof", "merkleblock-proof", "utxo", "broadcast")
     private val publicNames by lazy {
         setOf("example", "localhost", "com", "org", "net", "edu", "gov", "co", "ac") +
             publicOrigins.flatMap { authority(it).orEmpty().split('.') }
@@ -153,8 +167,8 @@ internal object EndpointLogPrivacy {
             return false
         }
         companion object {
-            private fun fold(text: String) = text.lowercase(java.util.Locale.ROOT).uppercase(java.util.Locale.ROOT)
-            private fun withoutMarks(text: String) = buildString {
+            internal fun fold(text: String) = text.lowercase(java.util.Locale.ROOT).uppercase(java.util.Locale.ROOT)
+            internal fun withoutMarks(text: String) = buildString {
                 var index = 0
                 while (index < text.length) {
                     val scalar = text.codePointAt(index)
@@ -204,22 +218,28 @@ internal object EndpointLogPrivacy {
         var urlIndex = 0
         return hostTokens.replace(text) { match ->
             while (urlIndex < urlRanges.size && urlRanges[urlIndex].last < match.range.first) urlIndex++
-            if (urlIndex < urlRanges.size && urlRanges[urlIndex].first <= match.range.last) return@replace match.value
-            val token = match.value
-            if (token.none { it.isLetterOrDigit() || it.code > 127 }) return@replace token
-            val address = token.substringBefore('%')
-            if (("::" in address || address.count { it == ':' } == 7) &&
-                address.all { it in "0123456789abcdefABCDEF:." }) return@replace "[custom-esplora]"
-            val authority = token.substringAfterLast('@')
-            val rawHost = if (authority.startsWith('[')) authority.substringBefore(']') + "]" else authority.substringBefore(':')
-            if (rawHost.isEmpty()) return@replace token
-            // Plain words need a registration; authority-shaped and encoded tokens require inspection.
-            if (rawHost.lowercase() !in registered && '.' !in token && ':' !in token && '%' !in token &&
-                !rawHost.all { it in '0'..'9' } && !rawHost.startsWith("0x", ignoreCase = true) &&
-                token.none { it.code > 127 }) return@replace token
-            val canonical = host("https://$rawHost")
-            if (canonical == null && failClosed || canonical != null && canonical in registered) "[custom-esplora]" else token
+            if (urlIndex < urlRanges.size && urlRanges[urlIndex].first <= match.range.last) match.value
+            else redactHost(match.value, registered, failClosed)
         }
+    }
+    private fun ipv6Literal(address: String) =
+        ("::" in address || address.count { it == ':' } == 7) && address.all { it in "0123456789abcdefABCDEF:." }
+    private fun needsInspection(token: String, rawHost: String): Boolean {
+        val shaped = '.' in token || ':' in token || '%' in token || token.any { it.code > 127 }
+        return shaped || rawHost.all { it in '0'..'9' } || rawHost.startsWith("0x", ignoreCase = true)
+    }
+    /** One host-shaped token outside a URL. */
+    private fun redactHost(token: String, registered: Set<String>, failClosed: Boolean): String {
+        if (token.none { it.isLetterOrDigit() || it.code > 127 }) return token
+        if (ipv6Literal(token.substringBefore('%'))) return "[custom-esplora]"
+        val authority = token.substringAfterLast('@')
+        val rawHost = if (authority.startsWith('[')) authority.substringBefore(']') + "]" else authority.substringBefore(':')
+        if (rawHost.isEmpty()) return token
+        // Plain words need a registration; authority-shaped and encoded tokens require inspection.
+        if (rawHost.lowercase() !in registered && !needsInspection(token, rawHost)) return token
+        val canonical = host("https://$rawHost")
+        val replace = if (canonical == null) failClosed else canonical in registered
+        return if (replace) "[custom-esplora]" else token
     }
     fun redact(text: String): String = sanitize(text) ?: "[redacted]"
 
@@ -272,47 +292,60 @@ internal object EndpointLogPrivacy {
     fun redactRecord(text: String): String {
         if (unavailable) return "[custom-esplora]"
         val snapshot = snapshot()
-        if (snapshot.first.isEmpty()) return text
-        if (hasExcessiveCombiningRun(text)) return "[custom-esplora]"
-        if (text.toByteArray(Charsets.UTF_8).size > 2 * 16 * 1024 + 128) return "[redacted]"
-        val views = LogFile.decodedViews(text, percentEncoded = true, compatibility = true) ?: return "[redacted]"
-        return if (views.any(snapshot.second::contains)) "[custom-esplora]" else text
+        return when {
+            snapshot.first.isEmpty() -> text
+            hasExcessiveCombiningRun(text) -> "[custom-esplora]"
+            text.toByteArray(Charsets.UTF_8).size > 2 * 16 * 1024 + 128 -> "[redacted]"
+            else -> {
+                val views = LogFile.decodedViews(text, percentEncoded = true, compatibility = true) ?: return "[redacted]"
+                if (views.any(snapshot.second::contains)) "[custom-esplora]" else text
+            }
+        }
     }
 
     // Explicit snapshots also let tests cover a clean installation without resetting global history.
     internal fun sanitize(text: String, registered: Set<String>, matcher: SecretMatcher = SecretMatcher(emptySet()),
         hosts: Set<String> = emptySet()): String? = sanitize(text, registered, matcher, hosts, recordReadBack = false)
 
-    private fun sanitize(text: String, registered: Set<String>, matcher: SecretMatcher, hosts: Set<String>, recordReadBack: Boolean): String? {
+    private fun sanitize(text: String, registered: Set<String>, matcher: SecretMatcher, hosts: Set<String>,
+        recordReadBack: Boolean): String? {
         if (registered.isNotEmpty() && hasExcessiveCombiningRun(text)) return "[custom-esplora]"
         // Exported lines include a bounded tag and timestamp as well as the message.
         if (text.toByteArray(Charsets.UTF_8).size > 2 * 16 * 1024 + 128) return "[oversized log message omitted]"
-        fun summary(value: String) = if (matcher.contains(value)) "[custom-esplora]" else value
-        responseStatus.find(text)?.let {
-            return summary("HttpResponse { status: ${it.groupValues[1]} }")
-        }
         val views = LogFile.decodedViews(text, percentEncoded = true, compatibility = registered.isNotEmpty())
-            ?: return if (text.contains("HttpResponse")) summary("HttpResponse") else null
-        for (view in views) {
-            responseStatus.find(view)?.let {
-                return summary("HttpResponse { status: ${it.groupValues[1]} }")
-            }
+        responseSummary(text, views)?.let { return if (matcher.contains(it)) "[custom-esplora]" else it }
+        return when {
+            views == null -> null
+            registered.isEmpty() -> text
+            else -> redactViews(text, views) { redactEndpoints(it, registered, matcher, hosts, recordReadBack) }
         }
-        if (views.any { it.contains("HttpResponse") }) return summary("HttpResponse")
-        if (registered.isEmpty()) return text
+    }
+
+    /** Of a response, a log keeps only the SDK type and status. */
+    private fun responseSummary(text: String, views: List<String>?): String? {
+        val status = responseStatus.find(text) ?: views?.firstNotNullOfOrNull { responseStatus.find(it) }
+        return when {
+            status != null -> "HttpResponse { status: ${status.groupValues[1]} }"
+            (views ?: listOf(text)).any { it.contains("HttpResponse") } -> "HttpResponse"
+            else -> null
+        }
+    }
+
+    private fun redactViews(text: String, views: List<String>, endpoints: (String) -> String): String {
         var result = text
         for ((index, view) in views.withIndex()) {
-            val endpointOnly = redactEndpoints(view, registered, matcher, hosts, recordReadBack)
+            val endpointOnly = endpoints(view)
             if (endpointOnly == "[custom-esplora]" || index > 0 && endpointOnly != view) return "[custom-esplora]"
             // Host replacement must not hide credential labels or break mnemonic runs.
             val plain = LogFile.redactPlain(view)
             if (index > 0 && plain != view) return "[redacted]"
-            if (index == 0) result = if (plain == view) endpointOnly else redactEndpoints(plain, registered, matcher, hosts, recordReadBack)
+            if (index == 0) result = if (plain == view) endpointOnly else endpoints(plain)
         }
         return result
     }
 
-    private fun redactEndpoints(text: String, registered: Set<String>, matcher: SecretMatcher, hosts: Set<String>, recordReadBack: Boolean): String {
+    private fun redactEndpoints(text: String, registered: Set<String>, matcher: SecretMatcher, hosts: Set<String>,
+        recordReadBack: Boolean): String {
         // Match complete raw/decoded views before authority replacement can hide a boundary token.
         if (recordReadBack && matcher.contains(text)) return "[custom-esplora]"
         val prefix = if (recordReadBack) recordHeader.find(text)?.value.orEmpty() else ""

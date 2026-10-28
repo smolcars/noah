@@ -50,7 +50,7 @@ enum class LaunchState {
             failure is com.noahwallet.services.wallet.WalletSession.OpenError &&
                 failure.reason == com.noahwallet.services.wallet.WalletSession.OpenFailure.seedConflict -> seedConflict
             failure is io.github.niteshbalusu11.bark.BarkError &&
-                failure.message?.contains("incorrect mnemonic for existing wallet") == true -> seedConflict
+                failure.message.contains("incorrect mnemonic for existing wallet") -> seedConflict
             else -> secureStorageUnavailable
         }
 

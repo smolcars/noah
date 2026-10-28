@@ -52,6 +52,7 @@ class BackupService(
     suspend fun exportEncryptedBackup(fileName: String): Export {
         require(fileName.isNotBlank() && '/' !in fileName && fileName != "." && fileName != "..") { """Invalid export name""" }
         val shared = scratch.makeFolder("share-backup")
+        var exported = false
         try {
             val archive = scratch.withFolder("export") { folder ->
                 val snapshotFile = File(folder, "snapshot.sqlite")
@@ -60,10 +61,9 @@ class BackupService(
                     BackupArchive.seal(snapshotFile, manifest(snapshot), mnemonic, File(shared, fileName), folder)
                 }
             }
-            return Export(archive, shared, scratch)
-        } catch (failure: Throwable) {
-            scratch.discard(shared)
-            throw failure
+            return Export(archive, shared, scratch).also { exported = true }
+        } finally {
+            if (!exported) scratch.discard(shared)
         }
     }
     companion object {

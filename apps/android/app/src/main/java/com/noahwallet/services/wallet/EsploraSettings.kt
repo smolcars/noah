@@ -60,7 +60,7 @@ class EsploraSettings(private val read: (String) -> String?, private val write: 
         try {
             reopen(candidate) { commitCandidate { save(Record(candidate)) } }
         }
-        catch (failure: Exception) {
+        catch (_: Exception) {
             runCatching { save(Record(previous)) }
             try { reopen(previous) {} }
             catch (_: Exception) { throw EsploraEndpoint.Failure("Endpoint not changed. Restart Noah to reopen the previous endpoint.") }

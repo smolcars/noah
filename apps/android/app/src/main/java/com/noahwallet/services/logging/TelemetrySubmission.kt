@@ -17,8 +17,8 @@ internal object TelemetrySubmission {
     fun prepare(hint: Hint, timeoutMillis: Long) {
         val current = HintUtils.getSentrySdkHint(hint)
         // DirectoryProcessor reuses one non-resettable hint; OutboxSender resets after each item.
-        if (current is Cached && current is Enqueable && current is Flushable &&
-            current is SubmissionResult && current is Retryable && current !is Resettable) {
+        val reused = current is Cached && current is Flushable && current is SubmissionResult && current !is Resettable
+        if (reused && current is Enqueable && current is Retryable) {
             HintUtils.setTypeCheckHint(hint, ReplayHint(current, current, timeoutMillis))
         }
         (HintUtils.getSentrySdkHint(hint) as? ReplayHint)?.setRetry(true)

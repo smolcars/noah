@@ -12,6 +12,7 @@ import java.util.Locale
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.Executor
 import java.util.concurrent.Executors
+import java.util.regex.Matcher
 import kotlin.coroutines.resume
 
 /** Never pass secrets. Redaction is a backstop for accidental mnemonic-shaped text. */
@@ -86,18 +87,20 @@ class LogFile(
             val formatted = "${formatter.format(date)} ${level.symbol} [$tag] $cleaned"
             val record = EndpointLogPrivacy.redactRecord(formatted + "\n")
             val line = if (record.endsWith("\n")) record else "$record\n"
-            if (active.length() + line.toByteArray(Charsets.UTF_8).size > maxFileSizeBytes) {
-                for (index in maxFiles downTo 1) {
-                    val source = File(directory, if (index == 1) fileName else "$fileName.${index - 1}")
-                    if (!source.exists()) continue
-                    val target = File(directory, "$fileName.$index")
-                    check(!target.exists() || target.delete())
-                    check(source.renameTo(target))
-                }
-            }
+            if (active.length() + line.toByteArray(Charsets.UTF_8).size > maxFileSizeBytes) rotate()
             active.appendText(line)
         } catch (_: Exception) {
             // Logging must not fail a wallet operation or include a provider exception's secrets.
+        }
+    }
+
+    private fun rotate() {
+        for (index in maxFiles downTo 1) {
+            val source = File(directory, if (index == 1) fileName else "$fileName.${index - 1}")
+            if (!source.exists()) continue
+            val target = File(directory, "$fileName.$index")
+            check(!target.exists() || target.delete())
+            check(source.renameTo(target))
         }
     }
 
@@ -193,40 +196,51 @@ class LogFile(
             val escapes = if (percentEncoded) encodedEscapes else jsonEscapes
             val views = mutableListOf(message)
             repeat(4) {
-                if (compatibility && EndpointLogPrivacy.hasExcessiveCombiningRun(views.last())) return null
-                val view = if (compatibility) Normalizer.normalize(views.last(), Normalizer.Form.NFKC) else views.last()
-                if (compatibility && EndpointLogPrivacy.hasExcessiveCombiningRun(view)) return null
-                if (view != views.last()) views += view
-                var uncertain = false
-                val decoded = escapes.replace(view) { match ->
-                    try {
-                        if (match.value.startsWith("%")) java.net.URLDecoder.decode(match.value, Charsets.UTF_8).also {
-                            if (it.contains('\uFFFD')) uncertain = true
-                        } else if (match.value.startsWith("&")) {
-                            val entity = match.value.drop(1).removeSuffix(";")
-                            val code = when {
-                                entity.startsWith("#x", true) -> entity.drop(2).toIntOrNull(16)
-                                entity.startsWith("#") -> entity.drop(1).toIntOrNull()
-                                else -> mapOf("amp" to 38, "quot" to 34, "apos" to 39, "lt" to 60, "gt" to 62, "colon" to 58, "sol" to 47)[entity]
-                            }
-                            require(code != null && Character.isValidCodePoint(code) && code !in 0xD800..0xDFFF)
-                            String(Character.toChars(code))
-                        } else kotlinx.serialization.json.Json.decodeFromString<String>("\"${match.value}\"")
-                    } catch (_: Exception) {
-                        uncertain = true
-                        ""
-                    }
-                }
-                if (uncertain || !wellFormedUTF16(decoded)) return null
-                if (decoded == view) return views
+                if (!addCompatibilityView(views, compatibility)) return null
+                val decoded = decodeEscapes(escapes, views.last()) ?: return null
+                if (decoded == views.last()) return views
                 views += decoded
             }
-            if (compatibility && EndpointLogPrivacy.hasExcessiveCombiningRun(views.last())) return null
-            val last = if (compatibility) Normalizer.normalize(views.last(), Normalizer.Form.NFKC) else views.last()
-            if (compatibility && EndpointLogPrivacy.hasExcessiveCombiningRun(last)) return null
-            if (last != views.last()) views += last
-            if (escapes.containsMatchIn(last)) return null
-            return views
+            val settled = addCompatibilityView(views, compatibility) && !escapes.containsMatchIn(views.last())
+            return if (settled) views else null
+        }
+
+        /** Appends the NFKC view when [compatibility] asks for it; false rejects an excessive combining run. */
+        private fun addCompatibilityView(views: MutableList<String>, compatibility: Boolean): Boolean {
+            if (compatibility && EndpointLogPrivacy.hasExcessiveCombiningRun(views.last())) return false
+            val view = if (compatibility) Normalizer.normalize(views.last(), Normalizer.Form.NFKC) else views.last()
+            if (compatibility && EndpointLogPrivacy.hasExcessiveCombiningRun(view)) return false
+            if (view != views.last()) views += view
+            return true
+        }
+
+        /** One decoding pass; null when any escape is uncertain or the result isn't well-formed UTF-16. */
+        private fun decodeEscapes(escapes: Regex, view: String): String? {
+            var uncertain = false
+            val decoded = escapes.replace(view) { match -> decodeEscape(match.value) ?: "".also { uncertain = true } }
+            return if (uncertain || !wellFormedUTF16(decoded)) null else decoded
+        }
+
+        private fun decodeEscape(value: String): String? = try {
+            when {
+                // The charset-name overload: URLDecoder.decode(String, Charset) needs API 33.
+                value.startsWith("%") -> java.net.URLDecoder.decode(value, "UTF-8").takeUnless { it.contains('\uFFFD') }
+                value.startsWith("&") -> decodeEntity(value)
+                else -> kotlinx.serialization.json.Json.decodeFromString<String>("\"$value\"")
+            }
+        } catch (_: Exception) {
+            null
+        }
+
+        private fun decodeEntity(value: String): String {
+            val entity = value.drop(1).removeSuffix(";")
+            val code = when {
+                entity.startsWith("#x", true) -> entity.drop(2).toIntOrNull(16)
+                entity.startsWith("#") -> entity.drop(1).toIntOrNull()
+                else -> mapOf("amp" to 38, "quot" to 34, "apos" to 39, "lt" to 60, "gt" to 62, "colon" to 58, "sol" to 47)[entity]
+            }
+            require(code != null && Character.isValidCodePoint(code) && code !in 0xD800..0xDFFF)
+            return String(Character.toChars(code))
         }
 
         private fun wellFormedUTF16(text: String): Boolean {
@@ -244,13 +258,19 @@ class LogFile(
             val joined = parts.joinToString(" ")
             if (joined.toByteArray(Charsets.UTF_8).size > maxMessageBytes) return true
             val views = decodedViews(joined) ?: return true
-            fun normalized(text: String) = detectionSkeleton(Normalizer.normalize(text, Normalizer.Form.NFKD).lowercase(Locale.ROOT).replace("ß", "ss"))
-            if (views.any { containsMnemonic(normalized(it)) }) return true
-            // Individually mnemonic-only leaves can be interspersed with structural metadata.
+            if (views.any { containsMnemonic(mnemonicSkeleton(it)) }) return true
+            return containsMnemonicLeaves(parts)
+        }
+
+        private fun mnemonicSkeleton(text: String) =
+            detectionSkeleton(Normalizer.normalize(text, Normalizer.Form.NFKD).lowercase(Locale.ROOT).replace("ß", "ss"))
+
+        // Individually mnemonic-only leaves can be interspersed with structural metadata.
+        private fun containsMnemonicLeaves(parts: List<String>): Boolean {
             var count = 0
             for (part in parts) {
                 val decoded = decodedViews(part)?.last() ?: return true
-                val tokens = words.findAll(normalized(decoded)).map { it.value }.toList()
+                val tokens = words.findAll(mnemonicSkeleton(decoded)).map { it.value }.toList()
                 if (tokens.isNotEmpty() && tokens.all { it in bip39 }) {
                     count += tokens.size
                     if (count >= 12) return true
@@ -273,6 +293,10 @@ class LogFile(
                     result = pushTokens.replace(result) { if (it.value.endsWith(']')) "[redacted]" else it.value }
                 }
             }
+            return redactMnemonicRuns(result)
+        }
+
+        private fun redactMnemonicRuns(result: String): String {
             val decomposed = Normalizer.normalize(result, Normalizer.Form.NFKD)
             val normalized = decomposed.lowercase(Locale.ROOT).replace("ß", "ss")
             val skeleton = detectionSkeleton(normalized)
@@ -313,17 +337,19 @@ class LogFile(
             val match = pattern.toPattern().matcher(text).useTransparentBounds(true)
             var offset = 0
             while (candidates.find()) {
-                if (candidates.start() < offset) continue
-                if (tokens === schemeTokens && !text.startsWith("://", candidates.end())) continue
-                beginning.region(candidates.start(), candidates.end())
-                if (!beginning.find()) continue
-                match.region(beginning.start(), text.length)
-                if (!match.lookingAt()) continue
+                if (candidates.start() < offset || !tokenMatches(text, tokens, candidates, beginning, match)) continue
                 append(text, offset, match.start())
                 append(replacement(match))
                 offset = match.end()
             }
             append(text, offset, text.length)
+        }
+        private fun tokenMatches(text: String, tokens: Regex, candidates: Matcher, beginning: Matcher, match: Matcher): Boolean {
+            if (tokens === schemeTokens && !text.startsWith("://", candidates.end())) return false
+            beginning.region(candidates.start(), candidates.end())
+            if (!beginning.find()) return false
+            match.region(beginning.start(), text.length)
+            return match.lookingAt()
         }
 
         private fun replaceEmails(text: String): String = buildString {
@@ -334,31 +360,37 @@ class LogFile(
             val tld = domainTLD.toPattern().matcher(text).useTransparentBounds(true)
             var consumed = 0
             while (candidates.find()) {
-                if (candidates.start() < consumed) continue
-                beginning.region(candidates.start(), candidates.end())
-                if (!beginning.find()) continue
-                local.region(beginning.start(), text.length)
-                if (!local.lookingAt()) continue
-                var offset = local.end()
-                var end: Int? = null
-                var first = true
-                while (true) {
-                    part.region(offset, text.length)
-                    if (!part.lookingAt()) break
-                    tld.region(offset, text.length)
-                    if (!first && tld.lookingAt()) end = tld.end()
-                    first = false
-                    offset = part.end()
-                    if (offset >= text.length || text[offset] != '.') break
-                    offset++
-                }
-                if (end != null) {
-                    append(text, consumed, beginning.start())
-                    append("[redacted]")
-                    consumed = end
-                }
+                val localEnd = if (candidates.start() < consumed) null else emailLocalEnd(text, candidates, beginning, local)
+                val end = localEnd?.let { domainEnd(text, part, tld, it) } ?: continue
+                append(text, consumed, beginning.start())
+                append("[redacted]")
+                consumed = end
             }
             append(text, consumed, text.length)
+        }
+        private fun emailLocalEnd(text: String, candidates: Matcher, beginning: Matcher, local: Matcher): Int? {
+            beginning.region(candidates.start(), candidates.end())
+            if (!beginning.find()) return null
+            local.region(beginning.start(), text.length)
+            return if (local.lookingAt()) local.end() else null
+        }
+        /** The end of a dotted domain after an email's local part, if it ends in a TLD. */
+        private fun domainEnd(text: String, part: Matcher, tld: Matcher, start: Int): Int? {
+            var offset = start
+            var end: Int? = null
+            var first = true
+            var more = true
+            while (more) {
+                part.region(offset, text.length)
+                if (!part.lookingAt()) break
+                tld.region(offset, text.length)
+                if (!first && tld.lookingAt()) end = tld.end()
+                first = false
+                offset = part.end()
+                more = offset < text.length && text[offset] == '.'
+                offset++
+            }
+            return end
         }
 
         private fun redactLabels(text: String, addresses: Boolean): String {
@@ -373,17 +405,7 @@ class LogFile(
             while (candidates.find()) {
                 beginning.region(candidates.start(), candidates.end())
                 if (!beginning.find()) continue
-                val label = candidates.group().lowercase(Locale.ROOT)
-                val ends = mutableListOf<Int>()
-                for ((left, right) in pairs) if (label.endsWith(left)) {
-                    val end = candidates.end()
-                    if (end < text.length && text[end] == ' ') {
-                        next.region(end + 1, text.length)
-                        if (next.lookingAt() && next.group().startsWith(right, ignoreCase = true)) ends += next.end()
-                    }
-                }
-                if (keyword.containsMatchIn(label)) ends += candidates.end()
-                for (end in ends) {
+                for (end in labelEnds(text, candidates, next, pairs, keyword)) {
                     tail.region(end, text.length)
                     if (tail.lookingAt()) return text.take(beginning.start()) + "[redacted]"
                 }
@@ -397,8 +419,26 @@ class LogFile(
             return text
         }
 
+        /** Where a label (one token, or a pair such as "seed phrase") ends, for the tail check. */
+        private fun labelEnds(text: String, candidates: Matcher, next: Matcher, pairs: List<Pair<String, String>>, keyword: Regex): List<Int> {
+            val label = candidates.group().lowercase(Locale.ROOT)
+            val ends = mutableListOf<Int>()
+            for ((left, right) in pairs) if (label.endsWith(left)) {
+                val end = candidates.end()
+                if (end < text.length && text[end] == ' ') {
+                    next.region(end + 1, text.length)
+                    if (next.lookingAt() && next.group().startsWith(right, ignoreCase = true)) ends += next.end()
+                }
+            }
+            if (keyword.containsMatchIn(label)) ends += candidates.end()
+            return ends
+        }
+
         // Unicode Default_Ignorable_Code_Point ranges, including supplementary format controls.
-        private val ignorableOrMark = Regex("""[\p{M}\u00AD\u061C\u115F-\u1160\u17B4-\u17B5\u180B-\u180F\u200B-\u200F\u202A-\u202E\u2060-\u206F\u3164\uFE00-\uFE0F\uFEFF\uFFA0\uFFF0-\uFFF8\x{1BCA0}-\x{1BCA3}\x{1D173}-\x{1D17A}\x{E0000}-\x{E0FFF}]""")
+        private val ignorableOrMark = Regex(
+            """[\p{M}\u00AD\u061C\u115F-\u1160\u17B4-\u17B5\u180B-\u180F\u200B-\u200F\u202A-\u202E\u2060-\u206F\u3164\uFE00-\uFE0F\uFEFF""" +
+                """\uFFA0\uFFF0-\uFFF8\x{1BCA0}-\x{1BCA3}\x{1D173}-\x{1D17A}\x{E0000}-\x{E0FFF}]""",
+        )
         private val latinConfusables = mapOf(
             'a' to "аα", 'b' to "ьβ", 'c' to "сϲςσ", 'd' to "ԁ", 'e' to "еε", 'f' to "ғ",
             'g' to "ɡ", 'h' to "һн", 'i' to "іι", 'j' to "ј", 'k' to "κк", 'l' to "ӏ",

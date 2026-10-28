@@ -28,7 +28,9 @@ class WalletSession internal constructor(
     private val sendWarn: (String) -> Unit = {},
     private val opener: suspend (String, String, Boolean, String, Boolean) -> Handles = sdkOpener(variant, sendWarn),
 ) {
-    enum class OpenFailure { walletDatabaseMissing, notABarkWallet, networkMismatch, busy, walletDatabaseExists, restorePending, teardownFailed, suspended, seedConflict }
+    enum class OpenFailure {
+        walletDatabaseMissing, notABarkWallet, networkMismatch, busy, walletDatabaseExists, restorePending, teardownFailed, suspended, seedConflict,
+    }
     class OpenError(val reason: OpenFailure, val found: String? = null) : Exception(reason.name)
     class SessionError : Exception("Wallet not open")
 
@@ -96,7 +98,9 @@ class WalletSession internal constructor(
                 observer.job = scope.launch(start = CoroutineStart.ATOMIC) {
                     try {
                         while (isActive) { events.send(holder.next() ?: break) }
-                    } catch (failure: Exception) { events.close(failure) }
+                    } catch (@Suppress("TooGenericExceptionCaught") failure: Exception) { // the collector rethrows what ended it
+                        events.close(failure)
+                    }
                     finally {
                         synchronized(holder) { holder.stop(); holder.close(); observer.closed = true }
                         events.close()
@@ -274,26 +278,36 @@ class WalletSession internal constructor(
         val caller = currentCoroutineContext()
         caller.checkWalletAdmission()
         return withContext(NonCancellable + Dispatchers.IO) {
-            synchronized(lock) {
-                checkHeld(reservation)
-                if (location.restorePending) throw OpenError(OpenFailure.restorePending)
-                if (location.databaseExists) throw OpenError(OpenFailure.walletDatabaseExists)
-                check(location.directory.isDirectory || location.directory.mkdirs()) { """Cannot create wallet directory""" }
-                daemon = runDaemon
-            }
+            synchronized(lock) { prepareCreate(reservation, runDaemon) }
             caller.checkWalletAdmission()
             val handles = opener(mnemonic, location.directory.path, runDaemon, appVersion, true)
             synchronized(lock) { openingSeedDigest = seedDigest(mnemonic) }
-            try { handles.initializeAddress() }
-            catch (failure: Throwable) {
-                try { handles.stopDaemonWait(); handles.close() }
-                catch (_: Throwable) {
-                    synchronized(lock) { state = State.Open(handles); walletChanged() }
-                    throw OpenError(OpenFailure.teardownFailed)
-                }
-                throw failure
+            var initialized = false
+            try {
+                handles.initializeAddress()
+                initialized = true
+            } finally {
+                if (!initialized) tearDownCreated(handles)
             }
             synchronized(lock) { state = State.Open(handles); walletChanged() }
+        }
+    }
+
+    /** Called holding [lock]. */
+    private fun prepareCreate(reservation: Reservation, runDaemon: Boolean) {
+        checkHeld(reservation)
+        if (location.restorePending) throw OpenError(OpenFailure.restorePending)
+        if (location.databaseExists) throw OpenError(OpenFailure.walletDatabaseExists)
+        check(location.directory.isDirectory || location.directory.mkdirs()) { """Cannot create wallet directory""" }
+        daemon = runDaemon
+    }
+
+    /** A creation that failed after opening: handles that can't be torn down stay published. */
+    private suspend fun tearDownCreated(handles: Handles) {
+        try { handles.stopDaemonWait(); handles.close() }
+        catch (_: Throwable) {
+            synchronized(lock) { state = State.Open(handles); walletChanged() }
+            throw OpenError(OpenFailure.teardownFailed)
         }
     }
 
@@ -304,30 +318,24 @@ class WalletSession internal constructor(
         caller.checkWalletAdmission()
         return withContext(Dispatchers.IO) {
             synchronized(lock) {
-                if (isSuspended()) throw OpenError(OpenFailure.suspended)
+                requireNotSuspended()
                 when (val current = state) {
-                    is State.Open -> if (join) {
-                        if (openingSeedDigest?.contentEquals(seedDigest(mnemonic)) != true) throw OpenError(OpenFailure.seedConflict)
-                        return@synchronized null
-                    } else throw OpenError(OpenFailure.busy)
-                    is State.Opening -> if (join) {
-                        if (openingSeedDigest?.contentEquals(seedDigest(mnemonic)) != true) throw OpenError(OpenFailure.seedConflict)
-                        return@synchronized current.attempt
-                    } else throw OpenError(OpenFailure.busy)
+                    is State.Open -> return@synchronized joined(join, mnemonic, null)
+                    is State.Opening -> return@synchronized joined(join, mnemonic, current.attempt)
                     State.Closed -> Unit
                     else -> throw OpenError(OpenFailure.busy)
                 }
-                if (location.restorePending) throw OpenError(OpenFailure.restorePending)
-                checkExistingDatabase()
+                checkOpenable()
                 caller.checkWalletAdmission()
                 val attempt = scope.async(start = CoroutineStart.LAZY) {
+                    var opened = false
                     try {
                         caller.checkWalletAdmission()
                         val handles = opener(mnemonic, location.directory.path, runDaemon, appVersion, create)
                         synchronized(lock) { state = State.Open(handles); walletChanged() }
-                    } catch (failure: Throwable) {
-                        synchronized(lock) { state = State.Closed }
-                        throw failure
+                        opened = true
+                    } finally {
+                        if (!opened) synchronized(lock) { state = State.Closed }
                     }
                 }
                 openingSeedDigest = seedDigest(mnemonic)
@@ -339,14 +347,32 @@ class WalletSession internal constructor(
         }
     }
 
+    /** Called holding [lock]: joining needs the same seed as the session already opening or open. */
+    private fun <T> joined(join: Boolean, mnemonic: String, attempt: T): T {
+        if (!join) throw OpenError(OpenFailure.busy)
+        if (openingSeedDigest?.contentEquals(seedDigest(mnemonic)) != true) throw OpenError(OpenFailure.seedConflict)
+        return attempt
+    }
+
+    private fun requireNotSuspended() {
+        if (isSuspended()) throw OpenError(OpenFailure.suspended)
+    }
+
+    private fun checkOpenable() {
+        if (location.restorePending) throw OpenError(OpenFailure.restorePending)
+        checkExistingDatabase()
+    }
+
     private fun checkExistingDatabase() {
         if (!location.databaseExists) throw OpenError(OpenFailure.walletDatabaseMissing)
-        val properties = try { inspect(location.database) } catch (_: Exception) {
-            throw OpenError(OpenFailure.notABarkWallet)
-        }
+        val properties = inspectDatabase()
         if (properties.network != WalletConfiguration.base(variant).networkName) {
             throw OpenError(OpenFailure.networkMismatch, properties.network)
         }
+    }
+
+    private fun inspectDatabase() = try { inspect(location.database) } catch (_: Exception) {
+        throw OpenError(OpenFailure.notABarkWallet)
     }
 
     suspend fun summary(): Summary? = if (isOpen) withOpen { it.summary() } else null
@@ -379,7 +405,7 @@ class WalletSession internal constructor(
         caller.checkWalletAdmission()
         return withContext(NonCancellable + Dispatchers.IO) {
             val handles = synchronized(lock) {
-                if (isSuspended()) throw OpenError(OpenFailure.suspended)
+                requireNotSuspended()
                 if (exclusiveSend) throw OpenError(OpenFailure.busy)
                 val handles = (state as? State.Open)?.handles ?: throw SessionError()
                 if (runningCalls++ == 0) drained = CompletableDeferred()
@@ -417,17 +443,23 @@ class WalletSession internal constructor(
         onchainOperations(it).quote(action, ids, amount, destination, automatic)
     }
     /** [kept]: each wallet's coins claimed to this phone, which auto-board never moves. */
-    suspend fun autoBoardFunding(kept: (String) -> Set<String> = { emptySet() }): AutoBoardFunding.Snapshot? = withM6 { onchainOperations(it).autoBoardFunding(kept) }
+    suspend fun autoBoardFunding(kept: (String) -> Set<String> = { emptySet() }): AutoBoardFunding.Snapshot? =
+        withM6 { onchainOperations(it).autoBoardFunding(kept) }
     suspend fun autoBoardQuote(kept: (String) -> Set<String> = { emptySet() }): OnchainQuote? = withM6 { onchainOperations(it).autoBoardQuote(kept) }
-    /** [renewal]: Home's Renew, whose VTXOs must all still be due when it's submitted, checked under these locks. */
-    /** [keepOnchain]: where a claim to this wallet records its outputs, so auto-board leaves them on-chain. */
+    /**
+     * [renewal]: Home's Renew, whose VTXOs must all still be due when it's submitted, checked under these locks.
+     * [keepOnchain]: where a claim to this wallet records its outputs, so auto-board leaves them on-chain.
+     */
+    @Suppress("LongParameterList") // optional hooks; each caller passes only the ones it records
     suspend fun executeOnchain(quote: OnchainQuote, funding: AutoBoardFunding.Snapshot? = null, renewal: Boolean = false,
         keepOnchain: (Set<String>) -> Unit = {}, kept: (String) -> Set<String> = { emptySet() },
         recordClaim: (com.noahwallet.onchain.ExitClaimRecords.Record) -> Unit = {},
         newRun: (List<String>) -> Unit = {}, shortOfFunds: (Map<String, Long>) -> Unit = {}): String = withM6 { handles ->
         val threshold = if (renewal) WalletConfiguration.base(variant).vtxoRefreshExpiryThreshold.toUInt() else null
-        onchainMutation.withLock { onchainOperations(handles).execute(quote, funding, renewalThreshold = threshold, keepOnchain = keepOnchain, kept = kept,
-            recordClaim = recordClaim, newRun = newRun, shortOfFunds = shortOfFunds) }
+        onchainMutation.withLock {
+            onchainOperations(handles).execute(quote, funding, renewalThreshold = threshold, keepOnchain = keepOnchain, kept = kept,
+                recordClaim = recordClaim, newRun = newRun, shortOfFunds = shortOfFunds)
+        }
     }
     internal suspend fun exitCosts(ids: List<String>): Map<String, com.noahwallet.onchain.ExitCosts.Cost?> = withM6 { onchainOperations(it).exitCosts(ids) }
     internal suspend fun exitExcluded(): Set<String> = withM6 { onchainOperations(it).exitExcluded() }
@@ -441,9 +473,15 @@ class WalletSession internal constructor(
      */
     suspend fun progressPendingExits(failed: (String) -> Unit) {
         val caller = currentCoroutineContext()
-        try { withOpen { handles -> onchainMutation.withLock { onchainOperations(handles).progressPending(ExitFunding.shared) { caller.checkWalletAdmission() } } } }
-        catch (cancelled: CancellationException) { throw cancelled }
-        catch (error: Exception) { failed(com.noahwallet.services.logging.SafeErrorDescription.of(error)) }
+        try {
+            withOpen { handles ->
+                onchainMutation.withLock { onchainOperations(handles).progressPending(ExitFunding.shared) { caller.checkWalletAdmission() } }
+            }
+        } catch (cancelled: CancellationException) {
+            throw cancelled
+        } catch (@Suppress("TooGenericExceptionCaught") error: Exception) { // documented: never throws but for cancellation
+            failed(com.noahwallet.services.logging.SafeErrorDescription.of(error))
+        }
     }
     suspend fun refreshOnchainReceiptFees() = withM6 { onchainOperations(it).refreshReceiptFees() }
 
@@ -526,59 +564,83 @@ class WalletSession internal constructor(
     }
 
     private suspend fun close(refuseRunning: Boolean, reservation: Reservation?) = withContext(NonCancellable + Dispatchers.IO) {
-        var quarantined = false
-        val handles = synchronized(lock) {
-            if (refuseRunning && (runningCalls != 0 || exclusiveSend)) {
-                throw EsploraEndpoint.Failure("Wait for the current wallet operation to finish before changing the endpoint.")
-            }
-            if (exclusiveSend) throw OpenError(OpenFailure.busy)
-            when (val current = state) {
-                State.Closed -> {
-                    if (reservation != null) state = State.Reserved(reservation)
-                    return@withContext
-                }
-                is State.Open -> current.handles.also { state = State.Closing }
-                is State.Quarantined -> current.handles.also { quarantined = true; state = State.Closing }
-                else -> throw OpenError(OpenFailure.busy)
-            }
-        }
+        val (handles, quarantined) = synchronized(lock) {
+            checkClosable(refuseRunning)
+            beginClose(reservation)
+        } ?: return@withContext
         withContext(NonCancellable + Dispatchers.IO) {
-            val changes = synchronized(lock) { stateObservers.toList() }
-            changes.forEach { stopStateObserver(it) }
-            synchronized(lock) { stateObservers.removeAll(changes.toSet()) }
-            val running = synchronized(lock) { observers.toList() }
-            running.forEach { stopObserver(it) }
-            synchronized(lock) { observers.removeAll(running.toSet()) }
+            stopObservers()
             synchronized(lock) { drained }.await()
-            run {
-                try {
-                    handles.discardSendReviews()
-                    handles.stopDaemonWait()
-                } catch (failure: Throwable) {
-                    synchronized(lock) { state = if (quarantined || location.restorePending) State.Quarantined(handles) else State.Open(handles) }
-                    throw failure
-                }
-                try { handles.close() }
-                catch (failure: Throwable) {
-                    synchronized(lock) { state = State.Quarantined(handles) }
-                    throw failure
-                }
-                synchronized(lock) { state = reservation?.let { State.Reserved(it) } ?: State.Closed; walletChanged() }
-            }
+            finishClose(handles, quarantined, reservation)
         }
+    }
+
+    /** Called holding [lock]. */
+    private fun checkClosable(refuseRunning: Boolean) {
+        if (refuseRunning && (runningCalls != 0 || exclusiveSend)) {
+            throw EsploraEndpoint.Failure("Wait for the current wallet operation to finish before changing the endpoint.")
+        }
+        if (exclusiveSend) throw OpenError(OpenFailure.busy)
+    }
+
+    /** Called holding [lock]: the handles to close and whether they were quarantined; null when already closed. */
+    private fun beginClose(reservation: Reservation?): Pair<Handles, Boolean>? = when (val current = state) {
+        State.Closed -> {
+            if (reservation != null) state = State.Reserved(reservation)
+            null
+        }
+        is State.Open -> current.handles.also { state = State.Closing } to false
+        is State.Quarantined -> current.handles.also { state = State.Closing } to true
+        else -> throw OpenError(OpenFailure.busy)
+    }
+
+    private suspend fun stopObservers() {
+        val changes = synchronized(lock) { stateObservers.toList() }
+        changes.forEach { stopStateObserver(it) }
+        synchronized(lock) { stateObservers.removeAll(changes.toSet()) }
+        val running = synchronized(lock) { observers.toList() }
+        running.forEach { stopObserver(it) }
+        synchronized(lock) { observers.removeAll(running.toSet()) }
+    }
+
+    /** A handle that fails to stop stays usable (or quarantined); one that fails to close is quarantined. */
+    private suspend fun finishClose(handles: Handles, quarantined: Boolean, reservation: Reservation?) {
+        var stopped = false
+        try {
+            handles.discardSendReviews()
+            handles.stopDaemonWait()
+            stopped = true
+        } finally {
+            if (!stopped) synchronized(lock) { state = if (quarantined || location.restorePending) State.Quarantined(handles) else State.Open(handles) }
+        }
+        var closed = false
+        try {
+            handles.close()
+            closed = true
+        } finally {
+            if (!closed) synchronized(lock) { state = State.Quarantined(handles) }
+        }
+        synchronized(lock) { state = reservation?.let { State.Reserved(it) } ?: State.Closed; walletChanged() }
     }
 
     /** Reservation remains exclusive until the settings commit has completed. */
     internal suspend fun reopen(reservation: Reservation, mnemonic: String, appVersion: String, commit: () -> Unit) {
         synchronized(lock) { checkHeld(reservation); checkExistingDatabase() }
         val handles = opener(mnemonic, location.directory.path, true, appVersion, false)
-        try { commit() }
-        catch (failure: Exception) {
-            try { handles.stopDaemonWait(); handles.close() }
-            catch (_: Exception) { synchronized(lock) { state = State.Quarantined(handles) }; throw OpenError(OpenFailure.teardownFailed) }
-            throw failure
+        var committed = false
+        try {
+            commit()
+            committed = true
+        } finally {
+            if (!committed) tearDownReopened(handles)
         }
         synchronized(lock) { openingSeedDigest = seedDigest(mnemonic); daemon = true; state = State.Open(handles); walletChanged() }
+    }
+
+    /** Handles that can't be torn down after a failed commit are quarantined. */
+    private suspend fun tearDownReopened(handles: Handles) {
+        try { handles.stopDaemonWait(); handles.close() }
+        catch (_: Exception) { synchronized(lock) { state = State.Quarantined(handles) }; throw OpenError(OpenFailure.teardownFailed) }
     }
 
     companion object {
@@ -591,7 +653,9 @@ class WalletSession internal constructor(
                 opener = sdkOpener(BuildConfig.APP_VARIANT, com.noahwallet.services.logging.AppLog(context, "send")::w,
                     EsploraSettings(com.noahwallet.services.storage.SettingsStorage(context))),
                 isSuspended = {
-                    com.noahwallet.services.storage.SettingsStorage(context).persistedState<com.noahwallet.services.storage.PersistedWalletState>(com.noahwallet.services.storage.PersistedWalletState.key)?.isWalletSuspended == true
+                    com.noahwallet.services.storage.SettingsStorage(context)
+                        .persistedState<com.noahwallet.services.storage.PersistedWalletState>(com.noahwallet.services.storage.PersistedWalletState.key)
+                        ?.isWalletSuspended == true
                 })
                 .also { instance = it }
         }
@@ -613,12 +677,13 @@ class WalletSession internal constructor(
                 // Existing wallets go through the SDK's read-only identity check (properties,
                 // network, seed fingerprint) before anything writes; only creation may use default.
                 val onchain = openOnchain(configuration.network, mnemonic, config, datadir, create)
+                var opened = false
                 val wallet = try {
                     Wallet.openWithOnchain(configuration.network, mnemonic, config,
                         WalletOpenArgs(runDaemon = runDaemon, datadir = datadir, createIfNotExists = create), onchain)
-                } catch (failure: Throwable) {
-                    onchain.close()
-                    throw failure
+                        .also { opened = true }
+                } finally {
+                    if (!opened) onchain.close()
                 }
                 SdkHandles(wallet, onchain, variant, warn)
             }

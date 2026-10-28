@@ -2,6 +2,7 @@ package com.noahwallet.services.storage
 
 import android.content.Context
 import android.content.SharedPreferences
+import androidx.core.content.edit
 import java.io.File
 import java.io.IOException
 import java.util.UUID
@@ -20,20 +21,24 @@ class ExpoInstallationID internal constructor(
     fun read(): String? {
         cached?.let { return it }
         readFile(File(directory, fileName))?.let { cached = it; return it }
-        legacy.getString("uuid", null)?.let { value ->
-            cached = value
-            try {
-                save(value)
-                legacy.edit().remove("uuid").apply()
-            } catch (_: IOException) { /* Expo keeps the ID in memory and legacy storage on failure. */ }
-            return value
-        }
-        readFile(File(directory, "expo_installation_uuid.txt"))?.let { value ->
-            cached = value
-            try { save(value) } catch (_: IOException) { /* Keep the legacy file. */ }
-            return value
-        }
-        return null
+        return migrateLegacyPreference() ?: migrateLegacyFile()
+    }
+
+    private fun migrateLegacyPreference(): String? {
+        val value = legacy.getString("uuid", null) ?: return null
+        cached = value
+        try {
+            save(value)
+            legacy.edit { remove("uuid") }
+        } catch (_: IOException) { /* Expo keeps the ID in memory and legacy storage on failure. */ }
+        return value
+    }
+
+    private fun migrateLegacyFile(): String? {
+        val value = readFile(File(directory, "expo_installation_uuid.txt")) ?: return null
+        cached = value
+        try { save(value) } catch (_: IOException) { /* Keep the legacy file. */ }
+        return value
     }
 
     @Synchronized

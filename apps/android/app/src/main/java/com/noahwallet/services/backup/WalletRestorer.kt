@@ -13,6 +13,7 @@ import kotlinx.coroutines.sync.withLock
 import okhttp3.Request
 import java.io.File
 
+@Suppress("LongParameterList") // dependency seams: tests inject transaction, validation, download and rounds
 class WalletRestorer(
     private val variant: String, private val session: WalletSession, private val location: WalletDataLocation,
     private val seed: SecretItem, private val makeClient: suspend (String) -> HttpClient,
@@ -20,10 +21,9 @@ class WalletRestorer(
     private val validate: suspend (File, BackupArchive.Manifest) -> Unit = { file, manifest ->
         val snapshot = validateWalletSnapshot(file.path,
             WalletSnapshotExpectation(manifest.network, manifest.walletFingerprint, manifest.serverPubkey))
-        if (snapshot.sha256 != manifest.snapshotSha256 || snapshot.schemaVersion.toInt() != manifest.barkSchemaVersion ||
-            snapshot.serverPubkey != manifest.serverPubkey || snapshot.mailboxPubkey != manifest.mailboxPubkey) {
-            throw Failure(Reason.identityMismatch)
-        }
+        val matches = snapshot.sha256 == manifest.snapshotSha256 && snapshot.schemaVersion.toInt() == manifest.barkSchemaVersion &&
+            snapshot.serverPubkey == manifest.serverPubkey && snapshot.mailboxPubkey == manifest.mailboxPubkey
+        if (!matches) throw Failure(Reason.identityMismatch)
     },
     private val download: suspend (String, File, Long) -> Unit = { url, file, limit ->
         try { BoundedDownload.fetch(Request.Builder().url(url).build(), file, limit) }
@@ -50,49 +50,57 @@ class WalletRestorer(
                     throw Failure(Reason.secureStorageUnavailable)
                 }
                 transaction.prepare()
+                var installed = false
                 try {
                     progress(Step.fetching)
                     val outcome = makeClient(mnemonic).use { fetchAndStage(it, mnemonic, progress) }
                     // Once installation starts, cancellation must not interrupt native verification or seed read-back.
-                    withContext(NonCancellable) {
-                        try {
-                            beginOnboarding()
-                            beforeInstall(outcome)
-                            transaction.begin(mnemonic)
-                            progress(Step.loading)
-                            session.verify(reservation, mnemonic, "restore")
-                            progress(Step.finalizing)
-                            transaction.markCommitting()
-                        } catch (failure: Throwable) {
-                            // A failed native teardown retains handles: leave the journal for next process recovery.
-                            if (failure !is WalletSession.OpenError || failure.reason != WalletSession.OpenFailure.teardownFailed) undo()
-                            throw failure
-                        }
-                        try { seed.save(mnemonic) }
-                        catch (failure: Exception) {
-                            when (val current = seed.read()) {
-                                is SecretResult.Unavailable -> throw Failure(Reason.seedStateUnknown)
-                                is SecretResult.Found -> if (current.value != mnemonic) { undo(); throw failure }
-                                SecretResult.NotFound -> { undo(); throw failure }
-                            }
-                        }
-                        val finished = runCatching { transaction.finish() }.isSuccess || runCatching { transaction.finish() }.isSuccess
-                        outcome.copy(cleanupPending = !finished)
-                    }
-                } catch (failure: Throwable) {
-                    runCatching { transaction.removeScratch() }
-                    throw failure
+                    withContext(NonCancellable) { install(reservation, mnemonic, outcome, beforeInstall, progress) }
+                        .also { installed = true }
+                } finally {
+                    if (!installed) runCatching { transaction.removeScratch() }
                 }
             }
         } finally { session.release(reservation) }
+    }
+    private suspend fun install(reservation: WalletSession.Reservation, mnemonic: String, outcome: Outcome,
+        beforeInstall: (Outcome) -> Unit, progress: (Step) -> Unit): Outcome {
+        var verified = false
+        var keepJournal = false
+        try {
+            beginOnboarding()
+            beforeInstall(outcome)
+            transaction.begin(mnemonic)
+            progress(Step.loading)
+            session.verify(reservation, mnemonic, "restore")
+            progress(Step.finalizing)
+            transaction.markCommitting()
+            verified = true
+        } catch (failure: WalletSession.OpenError) {
+            // A failed native teardown retains handles: leave the journal for next process recovery.
+            keepJournal = failure.reason == WalletSession.OpenFailure.teardownFailed
+            throw failure
+        } finally { if (!verified && !keepJournal) undo() }
+        saveSeed(mnemonic)
+        val finished = runCatching { transaction.finish() }.isSuccess || runCatching { transaction.finish() }.isSuccess
+        return outcome.copy(cleanupPending = !finished)
+    }
+    private suspend fun saveSeed(mnemonic: String) {
+        try { seed.save(mnemonic) }
+        catch (@Suppress("TooGenericExceptionCaught") failure: Exception) { // whatever the keystore threw, the read-back decides
+            val current = seed.read()
+            if (current is SecretResult.Unavailable) throw Failure(Reason.seedStateUnknown)
+            if ((current as? SecretResult.Found)?.value != mnemonic) { undo(); throw failure }
+        }
     }
     private fun undo() {
         if (!transaction.isPending) return
         try { transaction.undo() } catch (_: Exception) { throw Failure(Reason.rollbackFailed) }
     }
+    private suspend fun listBackups(client: HttpClient) = try { V0BackupV2ListClient(client).listBackupObjects().value() }
+    catch (failure: ServerFailure) { if (failure.status == 404) emptyList() else throw failure }
     private suspend fun fetchAndStage(client: HttpClient, mnemonic: String, progress: (Step) -> Unit): Outcome {
-        val backups = try { V0BackupV2ListClient(client).listBackupObjects().value() }
-        catch (failure: ServerFailure) { if (failure.status == 404) emptyList() else throw failure }
+        val backups = listBackups(client)
         if (backups.isEmpty()) {
             val url = V0BackupDownloadUrlClient(client).getDownloadUrl(GetDownloadUrlPayload()).value().downloadUrl
             val file = File(transaction.work, "legacy.txt")
@@ -105,7 +113,7 @@ class WalletRestorer(
             if (backup.formatVersion != 2) { firstError = firstError ?: Failure(Reason.unsupportedFormat); continue }
             try { return stageV2(client, backup.backupId, mnemonic, progress) }
             catch (cancelled: CancellationException) { throw cancelled }
-            catch (failure: Exception) {
+            catch (@Suppress("TooGenericExceptionCaught") failure: Exception) { // any unusable backup moves on to the next
                 transaction.removeScratch(); check(transaction.work.mkdir())
                 firstError = firstError ?: failure
             }
@@ -115,12 +123,8 @@ class WalletRestorer(
     private suspend fun stageV2(client: HttpClient, id: String, mnemonic: String, progress: (Step) -> Unit): Outcome {
         val response = V0BackupV2DownloadClient(client).getBackupObjectDownloadUrl(GetBackupObjectDownloadPayload(id)).value()
         val backup = response.backup
-        if (backup.formatVersion != 2 || backup.encryptedSize !in 1..maxEncryptedBytes) throw Failure(Reason.downloadMismatch)
         val file = File(transaction.work, "backup.noahbackup")
-        download(response.downloadUrl, file, backup.encryptedSize)
-        if (file.length() != backup.encryptedSize || BackupArchive.sha256(file) != backup.encryptedSha256.lowercase()) {
-            throw Failure(Reason.downloadMismatch)
-        }
+        downloadVerified(response.downloadUrl, backup, file)
         progress(Step.validating)
         val opened = BackupArchive.open(file, mnemonic, File(transaction.work, "unpacked"), rounds)
         if (opened.manifest.network != if (variant == "mainnet") "bitcoin" else variant) throw Failure(Reason.wrongNetwork)
@@ -128,6 +132,13 @@ class WalletRestorer(
         check(transaction.staged.mkdir())
         check(opened.snapshot.renameTo(File(transaction.staged, "db.sqlite"))) { "Cannot stage restored snapshot" }
         return Outcome(backup.backupId, opened.manifest.snapshotSha256)
+    }
+    private suspend fun downloadVerified(url: String, backup: BackupObjectInfo, file: File) {
+        if (backup.formatVersion != 2 || backup.encryptedSize !in 1..maxEncryptedBytes) throw Failure(Reason.downloadMismatch)
+        download(url, file, backup.encryptedSize)
+        if (file.length() != backup.encryptedSize || BackupArchive.sha256(file) != backup.encryptedSha256.lowercase()) {
+            throw Failure(Reason.downloadMismatch)
+        }
     }
     companion object {
         const val maxEncryptedBytes = 256L * 1024 * 1024

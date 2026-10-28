@@ -36,23 +36,25 @@ object AppTelemetry {
         val variant = Variant.entries.firstOrNull { it.name == BuildConfig.APP_VARIANT } ?: return
         if (!enabled(variant, BuildConfig.DEBUG, BuildConfig.SENTRY_DSN)) return
         SentryAndroid.init(context) { configure(it, variant, BuildConfig.SENTRY_DSN,
-            BuildConfig.APPLICATION_ID, BuildConfig.VERSION_NAME, BuildConfig.VERSION_CODE) }
+            release(BuildConfig.APPLICATION_ID, BuildConfig.VERSION_NAME, BuildConfig.VERSION_CODE), BuildConfig.VERSION_CODE) }
     }
 
     internal fun enabled(variant: Variant, debug: Boolean, dsn: String) =
         !debug && variant != Variant.regtest && dsn.isNotBlank()
 
+    @Suppress("LongParameterList") // the BuildConfig fields, passed one by one so tests can vary each
     internal fun options(variant: Variant, debug: Boolean, dsn: String,
         applicationId: String, versionName: String, versionCode: Int): SentryAndroidOptions? {
         if (!enabled(variant, debug, dsn)) return null
-        return SentryAndroidOptions().also { configure(it, variant, dsn, applicationId, versionName, versionCode) }
+        return SentryAndroidOptions().also { configure(it, variant, dsn, release(applicationId, versionName, versionCode), versionCode) }
     }
 
-    private fun configure(options: SentryAndroidOptions, variant: Variant, dsn: String,
-        applicationId: String, versionName: String, versionCode: Int) = with(options) {
+    private fun release(applicationId: String, versionName: String, versionCode: Int) = "$applicationId@$versionName+$versionCode"
+
+    private fun configure(options: SentryAndroidOptions, variant: Variant, dsn: String, release: String, versionCode: Int) = with(options) {
         this.dsn = dsn
         environment = "production"
-        release = "$applicationId@$versionName+$versionCode"
+        this.release = release
         dist = versionCode.toString()
         setTag("app.variant", variant.name)
         isSendDefaultPii = false
@@ -69,6 +71,18 @@ object AppTelemetry {
         setTransportFactory { configured, details ->
             TelemetryTransport(io.sentry.AsyncHttpTransportFactory().create(configured, details), configured)
         }
+        disableCollection()
+        setBeforeBreadcrumb { breadcrumb, _ -> scrub(breadcrumb) }
+        setBeforeSend { event, hint ->
+            clearAttachments(hint)
+            scrub(event, proguardUuid, this.release).also { clean ->
+                if (clean == null) TelemetrySubmission.drop(hint, event.eventId, flushTimeoutMillis)
+            }
+        }
+    }
+
+    /** Everything but errors stays off: attachments, logs, metrics, tracing, profiling, replay and feedback. */
+    private fun SentryAndroidOptions.disableCollection() {
         setAttachServerName(false)
         isAttachScreenshot = false
         isAttachViewHierarchy = false
@@ -108,13 +122,6 @@ object AppTelemetry {
         setBeforeSendTransaction { _, _ -> null }
         setBeforeSendReplay { _, _ -> null }
         setBeforeSendFeedback { _, hint -> clearAttachments(hint); null }
-        setBeforeBreadcrumb { breadcrumb, _ -> scrub(breadcrumb) }
-        setBeforeSend { event, hint ->
-            clearAttachments(hint)
-            scrub(event, proguardUuid, release).also { clean ->
-                if (clean == null) TelemetrySubmission.drop(hint, event.eventId, flushTimeoutMillis)
-            }
-        }
     }
 
     private fun clearAttachments(hint: Hint) {
@@ -135,54 +142,65 @@ object AppTelemetry {
             release = event.release
             dist = event.dist
             environment = event.environment
-            message = event.message?.formatted?.let(LogFile::redactForTelemetry)?.let { text ->
-                Message().apply { formatted = text }
-            }
+            message = event.message?.formatted?.let(LogFile::redactForTelemetry)?.let(::message)
             sdk = event.sdk?.let(::sdk)
             // Only this build's mapping identifier; no incoming debug image has admission.
             // Cached errors from another release must never use the current build's mapping.
-            if (mappingUuid != null && (mappingRelease == null || event.release == mappingRelease)) {
-                require(UUID.fromString(mappingUuid).toString() == mappingUuid)
-                debugMeta = DebugMeta().apply { images = listOf(DebugImage().apply {
-                    type = DebugImage.PROGUARD; uuid = mappingUuid
-                }) }
-            }
+            if (mappingUuid != null && (mappingRelease == null || event.release == mappingRelease)) debugMeta = debugMeta(mappingUuid)
             tags = event.tags?.filter { (key, value) -> key == "app.variant" && Variant.entries.any { it.name == value } }
-            threads = event.threads?.map { thread -> SentryThread().apply {
-                id = thread.id; name = thread.name
-                isCurrent = thread.isCurrent; isCrashed = thread.isCrashed; isMain = thread.isMain
-                stacktrace = thread.stacktrace?.let(::stacktrace)
-            } }
-            exceptions = event.exceptions?.map { exception -> SentryException().apply {
-                type = exception.type; module = exception.module; threadId = exception.threadId
-                value = exception.value?.let(LogFile::redactForTelemetry)
-                stacktrace = exception.stacktrace?.let(::stacktrace)
-                mechanism = exception.mechanism?.let { original -> Mechanism().apply {
-                    type = original.type; isHandled = original.isHandled; synthetic = original.synthetic
-                } }
-            } }
+            threads = event.threads?.map(::thread)
+            exceptions = event.exceptions?.map(::exception)
             breadcrumbs = event.breadcrumbs?.mapNotNull(::scrub)
-            event.contexts.app?.let { original -> contexts.setApp(App().apply {
-                appIdentifier = original.appIdentifier; appVersion = original.appVersion; appBuild = original.appBuild
-                appStartTime = original.appStartTime; buildType = original.buildType; inForeground = original.inForeground
-            }) }
-            event.contexts.device?.let { original -> contexts.setDevice(Device().apply {
-                family = original.family; model = original.model; modelId = original.modelId
-                archs = original.archs?.clone(); batteryLevel = original.batteryLevel; isCharging = original.isCharging
-                isSimulator = original.isSimulator; memorySize = original.memorySize; freeMemory = original.freeMemory
-                usableMemory = original.usableMemory; storageSize = original.storageSize; freeStorage = original.freeStorage
-                bootTime = original.bootTime; processorCount = original.processorCount; cpuDescription = original.cpuDescription
-                screenWidthPixels = original.screenWidthPixels; screenHeightPixels = original.screenHeightPixels
-                screenDensity = original.screenDensity; screenDpi = original.screenDpi
-                orientation = original.orientation; isLowMemory = original.isLowMemory
-            }) }
-            event.contexts.operatingSystem?.let { original -> contexts.setOperatingSystem(OperatingSystem().apply {
-                name = original.name; version = original.version; build = original.build
-                kernelVersion = original.kernelVersion; isRooted = original.isRooted
-            }) }
+            copyContexts(event.contexts, contexts)
         }
         clean.takeIf { isSafePayload(json(it)) }
     } catch (_: Throwable) { null } // Inspection errors fail closed, without logging the payload.
+
+    private fun message(text: String) = Message().apply { formatted = text }
+
+    private fun debugMeta(mappingUuid: String): DebugMeta {
+        require(UUID.fromString(mappingUuid).toString() == mappingUuid)
+        return DebugMeta().apply { images = listOf(DebugImage().apply {
+            type = DebugImage.PROGUARD; uuid = mappingUuid
+        }) }
+    }
+
+    private fun thread(thread: SentryThread) = SentryThread().apply {
+        id = thread.id; name = thread.name
+        isCurrent = thread.isCurrent; isCrashed = thread.isCrashed; isMain = thread.isMain
+        stacktrace = thread.stacktrace?.let(::stacktrace)
+    }
+
+    private fun exception(exception: SentryException) = SentryException().apply {
+        type = exception.type; module = exception.module; threadId = exception.threadId
+        value = exception.value?.let(LogFile::redactForTelemetry)
+        stacktrace = exception.stacktrace?.let(::stacktrace)
+        mechanism = exception.mechanism?.let { original -> Mechanism().apply {
+            type = original.type; isHandled = original.isHandled; synthetic = original.synthetic
+        } }
+    }
+
+    /** Only the app, device and OS contexts, field by field. */
+    private fun copyContexts(from: io.sentry.protocol.Contexts, to: io.sentry.protocol.Contexts) {
+        from.app?.let { original -> to.setApp(App().apply {
+            appIdentifier = original.appIdentifier; appVersion = original.appVersion; appBuild = original.appBuild
+            appStartTime = original.appStartTime; buildType = original.buildType; inForeground = original.inForeground
+        }) }
+        from.device?.let { original -> to.setDevice(Device().apply {
+            family = original.family; model = original.model; modelId = original.modelId
+            archs = original.archs?.clone(); batteryLevel = original.batteryLevel; isCharging = original.isCharging
+            isSimulator = original.isSimulator; memorySize = original.memorySize; freeMemory = original.freeMemory
+            usableMemory = original.usableMemory; storageSize = original.storageSize; freeStorage = original.freeStorage
+            bootTime = original.bootTime; processorCount = original.processorCount; cpuDescription = original.cpuDescription
+            screenWidthPixels = original.screenWidthPixels; screenHeightPixels = original.screenHeightPixels
+            screenDensity = original.screenDensity; screenDpi = original.screenDpi
+            orientation = original.orientation; isLowMemory = original.isLowMemory
+        }) }
+        from.operatingSystem?.let { original -> to.setOperatingSystem(OperatingSystem().apply {
+            name = original.name; version = original.version; build = original.build
+            kernelVersion = original.kernelVersion; isRooted = original.isRooted
+        }) }
+    }
 
     internal fun scrub(breadcrumb: Breadcrumb): Breadcrumb? = try {
         Breadcrumb(breadcrumb.timestamp).apply {
@@ -216,43 +234,51 @@ object AppTelemetry {
     }
 
     internal fun isSafePayload(payload: Map<String, *>): Boolean = try {
+        val scan = PayloadScan()
+        // Severity is typed metadata; exclude it only from aggregate mnemonic detection.
+        val level = payload["level"]
+        when {
+            !scan.visit(payload.filterKeys { it != "level" }, 0) -> false
+            LogFile.containsMnemonicIn(scan.keys) || LogFile.containsMnemonicIn(scan.values) -> false
+            level != null && !scan.visit(level, 0) -> false
+            !EndpointLogPrivacy.requiresSerializedGuard -> true
+            else -> {
+                // Inspect the wire form too: numeric fields and joins are not string leaves.
+                val json = if (payload is JsonObject) payload.toString()
+                else StringWriter().also { serializer.serialize(payload, it) }.toString()
+                EndpointLogPrivacy.redactRecord(json) == json
+            }
+        }
+    } catch (_: Throwable) { false }
+
+    /** Collects every key and string leaf while checking each one, within a total size and depth. */
+    private class PayloadScan {
         val keys = mutableListOf<String>()
         val values = mutableListOf<String>()
-        var size = 0
-        fun string(value: String, destination: MutableList<String>): Boolean {
+        private var size = 0
+
+        private fun string(value: String, destination: MutableList<String>): Boolean {
             size += value.length
             if (size > 16 * 1024 || LogFile.redactForTelemetry(value) != value) return false
             destination += value
             return true
         }
-        fun visit(value: Any?, depth: Int): Boolean {
-            if (depth >= 32) return false
-            return when (value) {
-                null, JsonNull -> true
-                is JsonPrimitive -> if (value.isString) string(value.content, values)
-                else value.booleanOrNull != null || value.doubleOrNull?.isFinite() == true
-                is String -> string(value, values)
-                is Boolean, is Byte, is Short, is Int, is Long -> true
-                is Float -> value.isFinite()
-                is Double -> value.isFinite()
-                is Map<*, *> -> value.keys.all { it is String } && value.keys.filterIsInstance<String>().sorted().all { key ->
-                    string(key, keys) && visit(value[key], depth + 1)
-                }
-                is List<*> -> value.all { visit(it, depth + 1) }
-                else -> false
+
+        fun visit(value: Any?, depth: Int): Boolean = if (depth >= 32) false else visitValue(value, depth)
+
+        private fun visitValue(value: Any?, depth: Int): Boolean = when (value) {
+            null, JsonNull -> true
+            is JsonPrimitive -> if (value.isString) string(value.content, values)
+            else value.booleanOrNull != null || value.doubleOrNull?.isFinite() == true
+            is String -> string(value, values)
+            is Boolean, is Byte, is Short, is Int, is Long -> true
+            is Float -> value.isFinite()
+            is Double -> value.isFinite()
+            is Map<*, *> -> value.keys.all { it is String } && value.keys.filterIsInstance<String>().sorted().all { key ->
+                string(key, keys) && visit(value[key], depth + 1)
             }
+            is List<*> -> value.all { visit(it, depth + 1) }
+            else -> false
         }
-        // Severity is typed metadata; exclude it only from aggregate mnemonic detection.
-        val level = payload["level"]
-        if (!visit(payload.filterKeys { it != "level" }, 0)) false
-        else if (LogFile.containsMnemonicIn(keys) || LogFile.containsMnemonicIn(values) ||
-            (level != null && !visit(level, 0))) false
-        else if (!EndpointLogPrivacy.requiresSerializedGuard) true
-        else {
-            // Inspect the wire form too: numeric fields and joins are not string leaves.
-            val json = if (payload is JsonObject) payload.toString()
-            else StringWriter().also { serializer.serialize(payload, it) }.toString()
-            EndpointLogPrivacy.redactRecord(json) == json
-        }
-    } catch (_: Throwable) { false }
+    }
 }

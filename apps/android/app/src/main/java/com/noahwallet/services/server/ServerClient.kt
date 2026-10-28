@@ -78,7 +78,8 @@ object ServerClient {
             if (call.response.status != HttpStatusCode.Unauthorized) return@intercept call
             val code = runCatching { json.decodeFromString<ApiErrorResponse>(call.response.bodyAsText()).code }.getOrNull()
             if (code !in retryCodes) return@intercept call
-            request.headers[HttpHeaders.Authorization] = "Bearer ${kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { tokens.token(forceRefresh = true, rejectedToken = token) }}"
+            val refreshed = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { tokens.token(forceRefresh = true, rejectedToken = token) }
+            request.headers[HttpHeaders.Authorization] = "Bearer $refreshed"
             execute(request)
         }
         return client

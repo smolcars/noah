@@ -12,25 +12,29 @@ sealed interface ReceiveCompletion {
         fun matching(movement: Movement, request: ReceiveRequest): ReceiveCompletion? {
             if (!movement.subsystemKind.equals("receive", ignoreCase = true)) return null
             return when (movement.subsystemName.lowercase(java.util.Locale.ROOT)) {
-                "bark.arkoor" -> {
-                    if (movement.status != "successful") return null
-                    val destinations = movement.receivedOnAddresses.filter { it.paymentMethod.value == request.arkAddress }
-                    if (destinations.isEmpty()) return null
-                    var total = 0uL
-                    for (destination in destinations) {
-                        if (destination.amountSats > Long.MAX_VALUE.toULong() - total) return null
-                        total += destination.amountSats
-                    }
-                    if (total > 0uL) Received(total.toLong(), Rail.ark) else request.amountSat?.let { Received(it, Rail.ark) }
-                }
-                "bark.lightning_receive" -> {
-                    if (request.paymentHash == null || movement.paymentHash != request.paymentHash) return null
-                    when (movement.status) {
-                        "failed", "canceled" -> LightningFailed(movement.status == "canceled")
-                        "successful" -> request.amountSat?.let { Received(it, Rail.lightning) }
-                        else -> null
-                    }
-                }
+                "bark.arkoor" -> arkoor(movement, request)
+                "bark.lightning_receive" -> lightning(movement, request)
+                else -> null
+            }
+        }
+
+        private fun arkoor(movement: Movement, request: ReceiveRequest): ReceiveCompletion? {
+            if (movement.status != "successful") return null
+            val destinations = movement.receivedOnAddresses.filter { it.paymentMethod.value == request.arkAddress }
+            if (destinations.isEmpty()) return null
+            var total = 0uL
+            for (destination in destinations) {
+                if (destination.amountSats > Long.MAX_VALUE.toULong() - total) return null
+                total += destination.amountSats
+            }
+            return if (total > 0uL) Received(total.toLong(), Rail.ark) else request.amountSat?.let { Received(it, Rail.ark) }
+        }
+
+        private fun lightning(movement: Movement, request: ReceiveRequest): ReceiveCompletion? {
+            if (request.paymentHash == null || movement.paymentHash != request.paymentHash) return null
+            return when (movement.status) {
+                "failed", "canceled" -> LightningFailed(movement.status == "canceled")
+                "successful" -> request.amountSat?.let { Received(it, Rail.lightning) }
                 else -> null
             }
         }

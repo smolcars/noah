@@ -5,6 +5,8 @@ import com.google.firebase.messaging.RemoteMessage
 import com.noahwallet.services.logging.AppLog
 
 class NoahFirebaseMessagingService : FirebaseMessagingService() {
+    // Still delivered with getToken() (see PushRuntime); FCM 26's onRegistered comes with that migration.
+    @Suppress("OVERRIDE_DEPRECATION")
     override fun onNewToken(token: String) {
         // Fetch the latest token in the worker; never persist a stale callback token in its input.
         PushWork.register(applicationContext)

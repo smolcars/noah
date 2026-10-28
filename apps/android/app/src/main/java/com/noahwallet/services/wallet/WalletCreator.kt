@@ -13,7 +13,7 @@ class WalletCreator(private val dependencies: Dependencies) {
         class SecureStorageUnavailable(val reason: SecretFailure) : Failure("Secure storage unavailable")
     }
 
-    class Dependencies(
+    data class Dependencies(
         val readSeed: suspend () -> SecretResult,
         val saveSeed: suspend (String) -> Unit,
         val deleteSeed: suspend (String) -> Unit,
@@ -67,12 +67,16 @@ class WalletCreator(private val dependencies: Dependencies) {
         dependencies.beginOnboarding()
         val mnemonic = dependencies.generateMnemonic()
         dependencies.saveSeed(mnemonic)
+        var created = false
+        var teardownFailed = false
         try {
             dependencies.createNew(reservation, mnemonic)
-        } catch (failure: Throwable) {
-            if (failure is WalletSession.OpenError && failure.reason == WalletSession.OpenFailure.teardownFailed) throw failure
-            if (dependencies.removeAttemptFiles(datadirExisted)) dependencies.deleteSeed(mnemonic)
+            created = true
+        } catch (failure: WalletSession.OpenError) {
+            teardownFailed = failure.reason == WalletSession.OpenFailure.teardownFailed
             throw failure
+        } finally {
+            if (!created && !teardownFailed && dependencies.removeAttemptFiles(datadirExisted)) dependencies.deleteSeed(mnemonic)
         }
     }
 
@@ -102,13 +106,14 @@ class WalletCreator(private val dependencies: Dependencies) {
                 openExisting = { session.ensureOpen(it, true, BuildConfig.VERSION_NAME) },
                 reserve = {
                     val reservation = session.reserve()
+                    var removed = false
                     try {
                         // The reservation excludes deletion while staging is checked and removed.
                         location.removeDiscardedDeletionData()
+                        removed = true
                         reservation
-                    } catch (failure: Exception) {
-                        session.release(reservation)
-                        throw failure
+                    } finally {
+                        if (!removed) session.release(reservation)
                     }
                 },
                 release = session::release,

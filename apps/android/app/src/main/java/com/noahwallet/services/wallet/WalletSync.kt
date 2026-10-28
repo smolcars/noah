@@ -23,7 +23,8 @@ internal class WalletSync {
             var failure: Exception? = null
             for (stage in stages) {
                 caller.checkWalletAdmission()
-                try { stage() } catch (error: Exception) { if (failure == null) failure = error }
+                // Every stage runs; the first failure is rethrown once all have tried.
+                try { stage() } catch (@Suppress("TooGenericExceptionCaught") error: Exception) { if (failure == null) failure = error }
             }
             failure?.let { throw it }
         }

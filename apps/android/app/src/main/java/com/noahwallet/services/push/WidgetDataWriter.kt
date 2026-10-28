@@ -3,6 +3,7 @@ package com.noahwallet.services.push
 import android.content.ComponentName
 import android.content.Context
 import android.content.Intent
+import com.noahwallet.services.storage.commitEdit
 import com.noahwallet.services.wallet.WalletBalance
 import com.noahwallet.services.wallet.WalletConfiguration
 import com.noahwallet.widgets.NoahWidgetProvider
@@ -22,7 +23,7 @@ object WidgetDataWriter {
     )
 
     suspend fun clear(context: Context, variant: String): Unit = withContext(NonCancellable + Dispatchers.IO) {
-        check(context.getSharedPreferences("com.noahwallet.$variant", Context.MODE_PRIVATE).edit().clear().commit())
+        check(context.getSharedPreferences("com.noahwallet.$variant", Context.MODE_PRIVATE).commitEdit { clear() })
         broadcast(context, variant)
     }
 
@@ -33,14 +34,16 @@ object WidgetDataWriter {
             "com.noahwallet.widgets.NoahWidget${name}Provider")))
     }
 
+    @Suppress("LongParameterList") // preserveExpiry and checkStage are optional per caller
     suspend fun write(context: Context, balance: WalletBalance, closestExpiryBlocks: Long?, variant: String, preserveExpiry: Boolean = false,
         checkStage: () -> Unit = {}): Unit = withContext(NonCancellable + Dispatchers.IO) {
-        val editor = context.getSharedPreferences("com.noahwallet.$variant", Context.MODE_PRIVATE).edit()
-        values(balance, closestExpiryBlocks, variant).forEach { (key, value) ->
-            if (!preserveExpiry || key != "closestExpiryBlocks") editor.putLong(key, value)
+        val committed = context.getSharedPreferences("com.noahwallet.$variant", Context.MODE_PRIVATE).commitEdit {
+            values(balance, closestExpiryBlocks, variant).forEach { (key, value) ->
+                if (!preserveExpiry || key != "closestExpiryBlocks") putLong(key, value)
+            }
+            checkStage()
         }
-        checkStage()
-        check(editor.commit()) { "Widget preferences could not be saved" }
+        check(committed) { "Widget preferences could not be saved" }
         broadcast(context, variant)
     }
 }

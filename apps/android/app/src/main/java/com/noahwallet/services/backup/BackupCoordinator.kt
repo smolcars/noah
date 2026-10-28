@@ -9,7 +9,7 @@ import kotlinx.coroutines.flow.asStateFlow
 class BackupCoordinator(private val dependencies: Dependencies) {
     enum class Reason { appForeground, databaseChanged, manual, push, resyncRequired, startup }
     class NotReady : Exception("""Wallet is not ready for backup""")
-    class Dependencies(
+    data class Dependencies(
         val perform: suspend (String?, () -> Unit) -> BackupService.Outcome,
         val canBackup: (Boolean) -> Boolean,
         val loadState: () -> PersistedBackupState,
@@ -32,6 +32,7 @@ class BackupCoordinator(private val dependencies: Dependencies) {
 
     fun reloadStatus() = synchronized(lock) { status.value = dependencies.loadState().copy() }
 
+    @Suppress("UnusedParameter") // mirrors the Swift API: callers name the trigger
     fun schedule(reason: Reason, immediate: Boolean = false, requireEnabled: Boolean = true) = synchronized(lock) {
         if (!dependencies.canBackup(requireEnabled)) return@synchronized
         request(requireEnabled)
@@ -40,6 +41,7 @@ class BackupCoordinator(private val dependencies: Dependencies) {
         else trailing()
         Unit
     }
+    @Suppress("UnusedParameter") // mirrors the Swift API: callers name the trigger
     suspend fun flush(reason: Reason, requireEnabled: Boolean = true) {
         val target = synchronized(lock) {
             if (!dependencies.canBackup(requireEnabled)) throw NotReady()
@@ -105,22 +107,26 @@ class BackupCoordinator(private val dependencies: Dependencies) {
                 if (requested > completed) trailing()
             }
             Result.success(Unit)
-        } catch (failure: Exception) {
-            val cancelled = failure is CancellationException || !currentCoroutineContext().isActive
-            synchronized(lock) {
-                pendingRequireEnabled = pendingRequireEnabled && requireEnabled
-                if (cancelled) {
-                    update { it.markPending(); it.lastBackupStatus = "idle" }
-                    return Result.failure(failure)
-                }
-                // Exception messages from HTTP/SDK providers can contain secrets or presigned URLs.
-                update { it.markFailed("An unknown error occurred while backing up.") }
-                if (retry == null && debounce == null && dependencies.canBackup(pendingRequireEnabled)) {
-                    val delay = retryDelay(retryAttempt, dependencies.jitter()); retryAttempt = minOf(retryAttempt + 1, 10)
-                    retry = timer(delay, false)
-                }
-            }
+        } catch (cancelled: CancellationException) {
+            synchronized(lock) { passCancelled(requireEnabled) }
+            Result.failure(cancelled)
+        } catch (@Suppress("TooGenericExceptionCaught") failure: Exception) { // any backup failure is retried with backoff
+            val cancelled = !currentCoroutineContext().isActive
+            synchronized(lock) { if (cancelled) passCancelled(requireEnabled) else passFailed(requireEnabled) }
             Result.failure(failure)
+        }
+    }
+    private fun passCancelled(requireEnabled: Boolean) {
+        pendingRequireEnabled = pendingRequireEnabled && requireEnabled
+        update { it.markPending(); it.lastBackupStatus = "idle" }
+    }
+    private fun passFailed(requireEnabled: Boolean) {
+        pendingRequireEnabled = pendingRequireEnabled && requireEnabled
+        // Exception messages from HTTP/SDK providers can contain secrets or presigned URLs.
+        update { it.markFailed("An unknown error occurred while backing up.") }
+        if (retry == null && debounce == null && dependencies.canBackup(pendingRequireEnabled)) {
+            val delay = retryDelay(retryAttempt, dependencies.jitter()); retryAttempt = minOf(retryAttempt + 1, 10)
+            retry = timer(delay, false)
         }
     }
     private fun trailing() { if (debounce == null) debounce = timer(5000, true) }

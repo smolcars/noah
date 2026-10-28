@@ -3,6 +3,7 @@ package com.noahwallet.services.push
 import android.content.Context
 import android.content.SharedPreferences
 import com.noahwallet.BuildConfig
+import com.noahwallet.services.storage.commitEdit
 import org.unifiedpush.android.connector.UnifiedPush
 
 /** Connector 3.1.2 itself reads/migrates its RN SQLite and legacy preferences in place. */
@@ -14,11 +15,11 @@ class UnifiedPushRegistration(context: Context, variant: String = BuildConfig.AP
     fun endpoint(): String? = endpoint(prefs, instance)
 
     fun saveEndpoint(value: String) {
-        check(prefs.edit().putString("endpoint_$instance", value).putString("endpoint", value).commit())
+        check(prefs.commitEdit { putString("endpoint_$instance", value).putString("endpoint", value) })
     }
 
     fun clearEndpoint() {
-        check(prefs.edit().remove("endpoint_$instance").remove("endpoint").commit())
+        check(prefs.commitEdit { remove("endpoint_$instance").remove("endpoint") })
     }
 
     data class Distributor(val id: String, val name: String, val saved: Boolean, val connected: Boolean)
