@@ -73,6 +73,7 @@ final class AppModel {
         try settings.setPersistedState(profile, key: PersistedProfileState.key, version: PersistedProfileState.version)
         amountUnit = profile.amountUnit
         preferredCurrency = profile.currency
+        WidgetDataWriter.republish(variant: variant, settings: settings)
     }
 
     func setLanguage(_ code: String) {
@@ -342,9 +343,9 @@ extension AppModel {
         }
         do {
             guard let latest = try await ForegroundWidgetRefresh.read(
-                summary: { try await session.summary() }, expiry: { try await session.closestExpiryBlocks() },
+                summary: { try await session.summary() }, widget: { try await session.widgetFacts() },
                 checkStage: checkStage,
-                publish: { WidgetDataWriter.write(balance: $0, closestExpiryBlocks: $1, variant: variant) }) else {
+                publish: { WidgetDataWriter.write(balance: $0, facts: $1, variant: variant) }) else {
                 // Not open (e.g. the first open failed): try again rather than
                 // clearing the error with nothing to show.
                 await openExistingWallet()
@@ -641,5 +642,6 @@ extension AppModel {
         try? settings.setPersistedState(
             PersistedPrivacyState(isHomeBalanceHidden: isBalanceHidden),
             key: PersistedPrivacyState.key, version: PersistedPrivacyState.version)
+        WidgetDataWriter.republish(variant: variant, settings: settings)
     }
 }

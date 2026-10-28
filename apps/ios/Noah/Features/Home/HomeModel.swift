@@ -68,6 +68,8 @@ final class HomeModel {
         var sleep: (Duration) async throws -> Void = { try await Task.sleep(for: $0) }
         var now: () -> Date = { Date() }
         var renewal: () async throws -> HomeRenewal? = { nil }
+        /// A fresh quote reaches the widgets.
+        var publishQuote: (String, Double) -> Void = { _, _ in }
 
         static var live: Self {
             Self(
@@ -100,7 +102,8 @@ final class HomeModel {
                 },
                 backupChanges: { AppServices.shared.backupCoordinator.statusUpdates.stream() },
                 boardingChanges: { OnchainOperationJournal.shared.changes.stream() },
-                renewal: { try await WalletSession.shared.homeRenewal() })
+                renewal: { try await WalletSession.shared.homeRenewal() },
+                publishQuote: { WidgetDataWriter.publishQuote(currency: $0, btcPrice: $1, variant: .current) })
         }
     }
 
@@ -140,6 +143,7 @@ final class HomeModel {
               generation == priceGeneration else { return }
         quotes[currency] = (price, dependencies.now())
         btcPrice = price
+        dependencies.publishQuote(currency, price)
     }
 
     func refreshRounds(force: Bool = false) async {

@@ -24,3 +24,25 @@ extension WalletSession {
         }
     }
 }
+
+extension WalletSession {
+    /// What the widgets show besides the balance, read-only: settled balance changes for the wave and Home's
+    /// Renew rule. Without the chain tip neither is read, and the widgets keep what they have.
+    func widgetFacts(now: Date = Date()) async throws -> WidgetDataWriter.Facts {
+        try await withOpenWallet { handles in
+            var facts = WidgetDataWriter.Facts()
+            guard let tip = try? await handles.onchain.tipHeight() else {
+                AppLog("widget").w("Chain tip unavailable; the widget keeps its wave and Renew line")
+                return facts
+            }
+            if let movements = try? await handles.wallet.history(), let chain = try? await handles.onchain.transactions() {
+                facts.changes = WidgetBalanceHistory.changes(movements: movements, chain: chain, tip: tip, now: now)
+            } else { AppLog("widget").w("History unavailable; the widget keeps its wave") }
+            if let expiring = try? await handles.wallet.getExpiringVtxos(
+                thresholdBlocks: UInt32(WalletConfiguration.base(for: .current).vtxoRefreshExpiryThreshold)) {
+                facts.renewal = HomeRenewal.select(expiring.map(Self.renewalCoin), tip: tip).map { .blocks($0.blocksLeft) } ?? .notDue
+            } else { AppLog("widget").w("Expiring VTXOs unavailable; the widget keeps its Renew line") }
+            return facts
+        }
+    }
+}

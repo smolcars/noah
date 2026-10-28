@@ -37,7 +37,7 @@ extension RecurringExecutor.Dependencies {
                      notifications: { await RecurringNotifications.refresh($0, result: $1) },
                      refresh: {
                          guard let summary = try? await services.session.summary() else { return }
-                         WidgetDataWriter.write(balance: summary.balance, closestExpiryBlocks: nil, variant: services.variant, preserveExpiry: true)
+                         WidgetDataWriter.write(balance: summary.balance, facts: .init(), variant: services.variant)
                      })
     }
 }

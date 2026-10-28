@@ -105,9 +105,9 @@ extension BackgroundScheduler.Dependencies {
                          widget: {
                              guard let summary = try await services.session.summary() else { return }
                              try BackgroundExecution.checkActive()
-                             let expiry = try? await services.session.closestExpiryBlocks()
+                             let facts = (try? await services.session.widgetFacts()) ?? .init()
                              try BackgroundExecution.checkActive()
-                             WidgetDataWriter.write(balance: summary.balance, closestExpiryBlocks: expiry, variant: services.variant)
+                             WidgetDataWriter.write(balance: summary.balance, facts: facts, variant: services.variant)
                          },
                          progressExits: {
                              await services.session.progressPendingExits { AppLog("backgroundTasks").w("Background exit progress failed: \($0)") }

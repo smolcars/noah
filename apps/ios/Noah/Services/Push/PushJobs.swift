@@ -167,9 +167,9 @@ extension PushJobs.Dependencies {
             refreshWidget: {
                 guard let summary = try? await session.summary() else { return }
                 guard (try? BackgroundExecution.checkActive()) != nil else { return }
-                let expiry = try? await session.closestExpiryBlocks()
+                let facts = (try? await session.widgetFacts()) ?? .init()
                 guard (try? BackgroundExecution.checkActive()) != nil else { return }
-                WidgetDataWriter.write(balance: summary.balance, closestExpiryBlocks: expiry, variant: services.variant)
+                WidgetDataWriter.write(balance: summary.balance, facts: facts, variant: services.variant)
             },
             recurring: { await RecurringExecutor.shared.execute() },
             progressExits: { await session.progressPendingExits { AppLog("pushJobs").w("Background exit progress failed: \($0)") } },

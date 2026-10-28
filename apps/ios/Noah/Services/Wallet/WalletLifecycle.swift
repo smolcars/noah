@@ -1,5 +1,4 @@
 import Foundation
-import WidgetKit
 
 /// Settings' danger-zone actions, ported from RN `useSuspendWallet` and
 /// `useDeleteWallet`, run through the session's lifecycle rules.
@@ -235,8 +234,7 @@ struct WalletLifecycle: Sendable {
         dependencies.authToken.remove()
         try dependencies.settings.removeAllDurably()
         if let appGroup = dependencies.appGroup, let defaults = UserDefaults(suiteName: appGroup) {
-            defaults.removeObject(forKey: "widgetBalance")
-            WidgetCenter.shared.reloadAllTimelines()
+            WidgetDataWriter.clear(defaults)
         }
     }
 

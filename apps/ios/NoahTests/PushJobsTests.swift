@@ -101,7 +101,7 @@ struct PushJobsTests {
             let balance = WalletBalance(ark: .init(spendable: 1234, needsRefresh: 0, pendingLightningSend: 0,
                                                    claimableLightningReceive: 0, pendingInRound: 0, pendingExit: 0, pendingBoard: 0,
                                                    pendingArkoorSend: 0, pendingOffboard: 0), onchain: .init(confirmed: 0, pending: 0, total: 0))
-            WidgetDataWriter.write(balance: balance, closestExpiryBlocks: 123, variant: .regtest)
+            WidgetDataWriter.write(balance: balance, facts: .init(changes: [], renewal: .blocks(123)), variant: .regtest)
             recorder.add("widget")
         }
         try await PushJobs(dependencies: dependencies).handle(decode(#"{"notification_type":"recurring_payment_due","due_count":1}"#))

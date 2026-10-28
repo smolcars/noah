@@ -6,7 +6,7 @@ import Testing
 /// Opt-in on an owned simulator; the loopback host pays only this fresh regtest invoice.
 @Suite(.enabled(if: ProcessInfo.processInfo.environment["NOAH_WIDGET_FUNDING_URL"] != nil))
 @MainActor struct ForegroundWidgetDeviceTests {
-    @Test func fundedForegroundRefreshPublishesExpiry() async throws {
+    @Test func fundedForegroundRefreshPublishesTheSnapshot() async throws {
         try #require(AppVariant.current == .regtest)
         let root = FileManager.default.temporaryDirectory.appending(path: "widget-\(UUID())")
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
@@ -32,17 +32,14 @@ import Testing
             await ForegroundExecution.run {
                 do {
                     _ = try await ForegroundWidgetRefresh.read(summary: { try await session.summary() },
-                                                               expiry: { try await session.closestExpiryBlocks() }, checkStage: {
+                                                               widget: { try await session.widgetFacts() }, checkStage: {
                                                                    try BackgroundExecution.checkActive(); try ForegroundExecution.checkActiveNow()
-                                                               }, publish: { balance, expiry in
+                                                               }, publish: { balance, facts in
                                                                    #expect(balance.ark.spendable > 0)
-                                                                   #expect(expiry != nil)
-                                                                   WidgetDataWriter.write(balance: balance, closestExpiryBlocks: expiry, variant: .regtest)
-                                                                   WidgetDataWriter.write(
-                                                                       balance: balance,
-                                                                       closestExpiryBlocks: nil,
-                                                                       variant: .regtest,
-                                                                       preserveExpiry: true)
+                                                                   // The receive is today's one settled change, so the wave starts at zero.
+                                                                   #expect(facts.changes?.map(\.delta).reduce(0, +) == Int64(balance.totalSats))
+                                                                   #expect(facts.renewal != .unknown)
+                                                                   WidgetDataWriter.write(balance: balance, facts: facts, variant: .regtest)
                                                                    published = true
                                                                })
                 } catch { Issue.record("Foreground widget refresh failed") }

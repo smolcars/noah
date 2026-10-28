@@ -527,16 +527,6 @@ extension WalletSession {
         try await withOpenWallet { _ = try await $0.wallet.tryClaimAllLightningReceives(wait: false) }
     }
 
-    /// Blocks until the soonest VTXO expiry, as the widget shows it.
-    func closestExpiryBlocks() async throws -> Int? {
-        try await withOpenWallet { handles in
-            let vtxos = try await handles.wallet.vtxos()
-            guard !vtxos.isEmpty else { return nil }
-            let tip = Int(try await handles.onchain.tipHeight())
-            return vtxos.map { Int($0.expiryHeight) - tip }.min()
-        }
-    }
-
     // MARK: Receive
 
     /// Fresh Ark and onchain addresses, kept paired while an amount is edited.

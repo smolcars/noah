@@ -1,21 +1,21 @@
 import Foundation
 
-/// Summary and expiry share the caller's foreground admission, never payment settlement.
+/// Summary and the widget's facts share the caller's foreground admission, never payment settlement.
 @MainActor enum ForegroundWidgetRefresh {
     static func read(summary: () async throws -> WalletSession.Summary?,
-                     expiry: () async throws -> Int?,
+                     widget: () async throws -> WidgetDataWriter.Facts,
                      checkStage: () throws -> Void,
-                     publish: (WalletBalance, Int?) -> Void) async throws -> WalletSession.Summary? {
+                     publish: (WalletBalance, WidgetDataWriter.Facts) -> Void) async throws -> WalletSession.Summary? {
         try checkStage()
         let latest = try await summary()
         try checkStage()
         guard let latest else { return nil }
         do {
-            let blocks = try await expiry()
+            let facts = try await widget()
             try checkStage()
-            publish(latest.balance, blocks)
+            publish(latest.balance, facts)
         } catch is CancellationError { throw CancellationError() }
-        catch { try checkStage() } // An unavailable tip must not hide a known expiry or the balance.
+        catch { try checkStage() } // An unreadable wallet keeps the widget as it is and the balance for Home.
         return latest
     }
 }
