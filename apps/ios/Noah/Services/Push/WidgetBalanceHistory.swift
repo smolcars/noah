@@ -1,5 +1,6 @@
 import BarkBoltFFI
 import Foundation
+import os
 
 /// The balance changes behind the widgets' wave (docs/native-rewrite/design/widgets.md, "The wave"), from the records
 /// Activity reads: bark's movements and the on-chain wallet's transactions. A change is anything the displayed total
@@ -71,21 +72,27 @@ enum WidgetBalanceHistory {
             && read.ark.pendingBoard == shown.ark.pendingBoard && read.ark.pendingOffboard == shown.ark.pendingOffboard
     }
 
-    /// `records` read between two readings of the balance that agree, read once more if it moved meanwhile (a receive or a
-    /// board settling); nil if it couldn't be read. The balance is nil if it moved again or couldn't be read: the records
-    /// still tell what's arriving, but not the wave.
-    static func consistent<Records>(balance: () async -> WalletBalance?,
-                                    records: () async -> Records?) async -> (records: Records, balance: WalletBalance?)? {
-        var before = await balance()
-        var last: Records?
-        for _ in 0..<2 {
-            guard let read = await records() else { return nil }
-            last = read
-            let after = await balance()
-            if let before, let after, agrees(before, after) { return (read, after) }
-            before = after
+    /// `read`'s value, or nil once `limit` has passed: the wait stops there and a late value is dropped. The read itself
+    /// isn't stopped (native work can't be), so it must be counted work on its own (`WalletSession.currentBalance`).
+    static func within<Value: Sendable>(_ limit: Duration, _ read: @escaping @Sendable () async -> Value?) async -> Value? {
+        let waiting = OSAllocatedUnfairLock<CheckedContinuation<Value?, Never>?>(initialState: nil)
+        return await withCheckedContinuation { continuation in
+            waiting.withLock { $0 = continuation }
+            let finish: @Sendable (Value?) -> Void = { value in
+                waiting.withLock { held in
+                    defer { held = nil }
+                    return held
+                }?.resume(returning: value)
+            }
+            let timer = Task {
+                try? await Task.sleep(for: limit)
+                finish(nil)
+            }
+            Task {
+                finish(await read())
+                timer.cancel()
+            }
         }
-        return last.map { ($0, nil) }
     }
 
     /// A first estimate of when a transaction confirmed: ten minutes a block before the tip.

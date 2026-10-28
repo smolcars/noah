@@ -21,7 +21,7 @@ enum WidgetDataWriter {
         var changes: [WidgetWave.Change]? // swiftlint:disable:this discouraged_optional_collection - nil: not read, unlike no changes
         /// Pending offboards, a change as far as the balance written no longer holds them (`WidgetBalanceHistory.offboarded`).
         var offboards: [WidgetWave.Change] = []
-        /// The balance the records were read against; the wave uses them only if the balance written agrees
+        /// The balance read just after the records; the wave uses them only if the balance written, read before them, agrees
         /// (`WidgetBalanceHistory.agrees`), else it keeps the earlier days. Nil: not given, the caller vouches for them.
         var balance: WalletBalance?
         var renewal = Renewal.unknown

@@ -596,24 +596,22 @@ struct WidgetBalanceHistoryTests {
         #expect(try Self.days(Self.balance(spendable: 100_000), [Self.earlier, older("canceled", 0), newer("failed", 0)]) == Self.before + [100_000])
     }
 
-    private struct Records: Equatable {
+    private struct Records {
         var movements: [Movement]
         var chain: [WalletTransaction] = []
         var pending = WidgetBalanceHistory.Pending()
     }
 
-    /// `consistent` over scripted readings, as `widgetFacts` makes them: the balance, then the records, then the balance.
-    private static func consistent(_ balances: [WalletBalance?], _ records: [Records]) async -> (records: Records, balance: WalletBalance?)? {
-        var balances = balances[...], records = records[...]
-        return await WidgetBalanceHistory.consistent(balance: { balances.popFirst().flatMap(\.self) }, records: { records.popFirst() })
-    }
-
-    /// What the writer draws for `shown` from a read, after a snapshot written earlier today with `earlier`.
-    private static func written(_ shown: WalletBalance, _ read: (records: Records, balance: WalletBalance?), earlier: [Int64],
+    /// What the writer draws for `shown` (the summary's balance, read before the records) from `records` and the reading
+    /// after them, as `widgetFacts` hands them on (none when it was late or failed), after a snapshot written earlier today.
+    private static func written(_ shown: WalletBalance, _ records: Records, after: WalletBalance?, earlier: [Int64],
                                 dated: [String: Date] = [:]) throws -> [Int64] {
-        let facts = WidgetDataWriter.Facts(changes: WidgetBalanceHistory.changes(movements: read.records.movements, chain: read.records.chain,
-                                                                                 chainDates: dated, pending: read.records.pending, now: now),
-                                           balance: read.balance)
+        var facts = WidgetDataWriter.Facts()
+        if let after {
+            facts.changes = WidgetBalanceHistory.changes(movements: records.movements, chain: records.chain, chainDates: dated,
+                                                         pending: records.pending, now: now)
+            facts.balance = after
+        }
         let previous = WidgetSnapshot(writtenAt: now.addingTimeInterval(-300), balance: shown.totalSats, arriving: 0, dailyBalances: earlier,
                                       amountUnit: .bip177, hidden: false, fiat: nil, renewBy: nil, variant: "regtest")
         let snapshot = WidgetDataWriter.snapshot(balance: shown, facts: facts, previous: previous,
@@ -622,41 +620,43 @@ struct WidgetBalanceHistoryTests {
         return try #require(snapshot.dailyBalances)
     }
 
-    /// The records are read between two readings of the balance that agree, once more if it moved (two moves: no wave).
-    @Test func recordsAreReadBetweenAgreeingBalances() async throws {
-        let steady = Self.balance(spendable: 100_000), moved = Self.balance(spendable: 100_000, claimable: 30_000)
-        let first = Records(movements: [Self.earlier]), second = Records(movements: [])
-        let once = try #require(await Self.consistent([steady, steady], [first, second]))
-        #expect(once.records == first && once.balance == steady)
-        let again = try #require(await Self.consistent([steady, moved, moved], [first, second]))
-        #expect(again.records == second && again.balance == moved)
-        let unsettled = try #require(await Self.consistent([steady, moved, steady], [first, second]))
-        #expect(unsettled.records == second && unsettled.balance == nil)
-        #expect(try #require(await Self.consistent([nil, steady, steady], [first, second])).balance == steady)
-        #expect(await Self.consistent([steady, steady], []) == nil)
+    /// The reading after the records is capped (bark's balance waits on the chain tip): a slow one stops the wait at the
+    /// limit and a failed one gives nothing, and either way the writer keeps the earlier days.
+    @Test func aSlowOrFailingAfterReadFallsBackWithoutBlocking() async throws {
+        let shown = Self.balance(spendable: 130_000)
+        let clock = ContinuousClock(), start = clock.now
+        let slow = await WidgetBalanceHistory.within(.milliseconds(100)) { () async -> WalletBalance? in
+            try? await Task.sleep(for: .seconds(1))
+            return shown
+        }
+        #expect(slow == nil)
+        #expect(clock.now - start < .milliseconds(800))
+        #expect(await WidgetBalanceHistory.within(.seconds(2)) { WalletBalance?.none } == nil)
+        #expect(await WidgetBalanceHistory.within(.seconds(2)) { shown } == shown)
+        let earlier = Self.before + [130_000]
+        #expect(try Self.written(shown, Records(movements: [Self.earlier]), after: nil, earlier: earlier) == earlier)
     }
 
-    /// A claimable receive settles between the reads: its movement read pending, its pending entry read gone. The records
-    /// are read again; the summary's balance from before it settled doesn't agree, so the earlier days stay; with one
-    /// from after, the records draw the same days.
-    @Test func aReceiveSettlingBetweenTheReadsNeverMovesTheEarlierDays() async throws {
+    /// A claimable receive settles between the summary and the records, or within the records (its movement read pending,
+    /// its pending entry gone): the reading after them doesn't agree with the summary's, so the earlier days stay; with a
+    /// summary from after it settled, the records draw the same days.
+    @Test func aReceiveSettlingBetweenTheReadsNeverMovesTheEarlierDays() throws {
         let receive = { (status: String) in
             Self.movement("bark.lightning_receive", "receive", metadata: "{}", effective: 30_000, created: Self.now.addingTimeInterval(-600),
                           status: status, id: 2)
         }
         let claimable = Self.balance(spendable: 100_000, claimable: 30_000), settled = Self.balance(spendable: 130_000)
         let omitted = Records(movements: [Self.earlier, receive("pending")]), done = Records(movements: [Self.earlier, receive("successful")])
-        let read = try #require(await Self.consistent([claimable, settled, settled], [omitted, done]))
-        #expect(read.records == done && read.balance == settled)
         let earlier = Self.before + [130_000]
-        #expect(try Self.written(claimable, read, earlier: earlier) == earlier)
-        #expect(try Self.written(settled, read, earlier: earlier) == earlier)
+        #expect(try Self.written(claimable, omitted, after: settled, earlier: earlier) == earlier)
+        #expect(try Self.written(claimable, done, after: settled, earlier: earlier) == earlier)
+        #expect(try Self.written(settled, done, after: settled, earlier: earlier) == earlier)
         // Unchecked, the omitted read would have lifted every earlier day by 30,000.
-        #expect(try Self.written(claimable, (omitted, nil), earlier: earlier) != earlier)
+        #expect(try Self.written(claimable, omitted, after: claimable, earlier: earlier) != earlier)
     }
 
     /// The same for a board whose VTXO is registered between the reads.
-    @Test func aBoardSettlingBetweenTheReadsNeverMovesTheEarlierDays() async throws {
+    @Test func aBoardSettlingBetweenTheReadsNeverMovesTheEarlierDays() throws {
         let deposit = WalletTransaction(txid: "deposit-txid", txHex: "", onchainFeeSats: nil, balanceChangeSats: 50_500,
                                         confirmation: .init(height: 900, hash: "d"), isCpfp: false)
         let funding = WalletTransaction(txid: "funding-txid", txHex: "", onchainFeeSats: 500, balanceChangeSats: -50_500,
@@ -669,11 +669,9 @@ struct WidgetBalanceHistoryTests {
         let confirming = Self.balance(boarding: 50_000), registered = Self.balance(spendable: 50_000)
         let omitted = Records(movements: [board("pending")], chain: [deposit, funding])
         let done = Records(movements: [board("successful")], chain: [deposit, funding])
-        let read = try #require(await Self.consistent([confirming, registered, registered], [omitted, done]))
-        #expect(read.records == done && read.balance == registered)
         let earlier = Array(repeating: Int64(0), count: 20) + Array(repeating: 50_500, count: 10) + [50_000]
-        #expect(try Self.written(confirming, read, earlier: earlier, dated: dated) == earlier)
-        #expect(try Self.written(registered, read, earlier: earlier, dated: dated) == earlier)
-        #expect(try Self.written(confirming, (omitted, nil), earlier: earlier, dated: dated) != earlier)
+        #expect(try Self.written(confirming, omitted, after: registered, earlier: earlier, dated: dated) == earlier)
+        #expect(try Self.written(registered, done, after: registered, earlier: earlier, dated: dated) == earlier)
+        #expect(try Self.written(confirming, omitted, after: confirming, earlier: earlier, dated: dated) != earlier)
     }
 }

@@ -32,16 +32,14 @@ extension WalletSession {
     func widgetFacts(readsTip: Bool = true, dates: WidgetChainDates = .shared, now: Date = Date()) async throws -> WidgetDataWriter.Facts {
         try await withOpenWallet { handles in
             var facts = WidgetDataWriter.Facts()
-            // The wave's records must match the balance the writer shows (`WidgetDataWriter.snapshot`): with the tip, they're
-            // read between two readings of it that agree.
-            let read = readsTip
-                ? await WidgetBalanceHistory.consistent(balance: { try? await Self.balance(handles) },
-                                                        records: { await Self.widgetRecords(handles, pending: true) })
-                : await Self.widgetRecords(handles, pending: false).map { (records: $0, balance: WalletBalance?.none) }
-            if let read {
+            let records = await Self.widgetRecords(handles, pending: readsTip)
+            // The records hold for the balance the writer shows (the summary's, read before them) only if a reading after
+            // them agrees (`WidgetDataWriter.snapshot`). bark's balance waits on the chain tip, so the wait is capped.
+            let after = records?.pending == nil ? nil : await WidgetBalanceHistory.within(.seconds(2)) { try? await self.currentBalance() }
+            if let records {
                 // Activity's rows, merged as History merges them, so the amount is Home's.
-                let rows = HistoryRules.merge(read.records.movements.filter(HistoryMapping.include).map { HistoryMapping.transaction($0, now: now) },
-                                              onchain: read.records.chain.filter { $0.balanceChangeSats != 0 }.map { HistoryMapping.transaction($0) })
+                let rows = HistoryRules.merge(records.movements.filter(HistoryMapping.include).map { HistoryMapping.transaction($0, now: now) },
+                                              onchain: records.chain.filter { $0.balanceChangeSats != 0 }.map { HistoryMapping.transaction($0) })
                 facts.incomingOnchain = HomeStatusLine.incomingOnchain(rows)
             } else { AppLog("widget").w(#"History unavailable; the widget keeps its wave"#) }
             guard readsTip else { return facts }
@@ -49,10 +47,10 @@ extension WalletSession {
                 AppLog("widget").w(#"Chain tip unavailable; the widget keeps its wave and Renew line"#)
                 return facts
             }
-            if let read, let pending = read.records.pending {
-                if let balance = read.balance {
-                    Self.addWave(to: &facts, read.records, pending: pending, balance: balance, tip: tip, dates: dates, now: now)
-                } else { AppLog("widget").w(#"Balance moving or unavailable while the widget read its records; it keeps its wave"#) }
+            if let records, let pending = records.pending {
+                if let after {
+                    Self.addWave(to: &facts, records, pending: pending, balance: after, tip: tip, dates: dates, now: now)
+                } else { AppLog("widget").w(#"Balance late or unavailable after the widget read its records; it keeps its wave"#) }
             }
             if let expiring = try? await handles.wallet.getExpiringVtxos(
                 thresholdBlocks: UInt32(WalletConfiguration.base(for: .current).vtxoRefreshExpiryThreshold)) {
@@ -60,6 +58,11 @@ extension WalletSession {
             } else { AppLog("widget").w(#"Expiring VTXOs unavailable; the widget keeps its Renew line"#) }
             return facts
         }
+    }
+
+    /// `balance(_:)` as counted work of its own, so a caller can stop waiting for it while close still does.
+    func currentBalance() async throws -> WalletBalance {
+        try await withOpenWallet { try await Self.balance($0) }
     }
 
     /// What the wave reads: bark's movements, the on-chain wallet's transactions and which pending items the total counts.
