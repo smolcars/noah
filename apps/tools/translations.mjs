@@ -151,7 +151,7 @@ export async function inventory(base = root) {
         const uiFile = /Service[s]?\/(?:Wallet\/(?:WalletBalance|WalletSession|WalletBackgroundActivity)|Server\/ServerRegistration)|services\/wallet\/(?:WalletBalance|WalletSession|WalletBackgroundActivity)/.test(file) || /\/(Features|DesignSystem|ui|btcmap|onchain|recurring|send|history)\//.test(file) || /Screen\.kt$/.test(file);
         const context = code.slice(Math.max(0, index - 200), index);
         const uiLiteral = uiFile && /(?:Text|Button|Label|Link|Tab|LabeledContent|Section|TextField|navigationTitle|accessibilityLabel|row|detail|\w*Row|DetailValue|SettingToggle|SectionTitle|NoahForm|NoahButton|settingsStyle|title:|detail:)\s*\(?\s*(?:(?:tr|LocalizedStringKey)\(\s*)?$/.test(context);
-        const localized = /(?:L10n\.(?:text|plural)\((?:context,\s*)?(?:[^(),\n]*(?:\?\?|\?:)\s*)?|\btr(?:Plural)?\(\s*)$/.test(context);
+        const localized = /(?:L10n\.(?:text|plural)\(\s*(?:context,\s*)?(?:[^(),\n]*(?:\?\?|\?:)\s*)?|\btr(?:Plural)?\(\s*)$/.test(context);
         const notification = /\/NotificationCopy\.(swift|kt)$/.test(file) && /^[A-Z]/.test(text);
         const visible = text.replace(/\{[\w]+\}/g, '');
         const human = /^(?:["©]\s*)?(?:[A-Z][a-z]*(?:$|[\s'’….,!?:/(-])|[A-Z][A-Za-z0-9]+\s|[A-Z0-9]{2,}$)/.test(text);
@@ -162,7 +162,7 @@ export async function inventory(base = root) {
         if (!result[platform].has(text)) result[platform].set(text, new Set());
         const occurrences = result[platform].get(text);
         occurrences.add(file.slice(base.length + 1));
-        if (/(?:L10n\.plural\((?:context,\s*)?|\btrPlural\(\s*)$/.test(context)) occurrences.plural = true;
+        if (/(?:L10n\.plural\(\s*(?:context,\s*)?|\btrPlural\(\s*)$/.test(context)) occurrences.plural = true;
       }
     }
   }

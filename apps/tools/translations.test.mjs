@@ -118,6 +118,15 @@ test('the iOS widget extension is inventoried with the app', async () => {
   });
 });
 
+test('L10n calls wrapped onto the next line are still inventoried', async () => {
+  await fixture(async (base, put) => {
+    await put('apps/ios/Noah/Services/Wrapped.swift', 'let body = L10n.text(\n    "Wrapped copy",\n    locale: locale)');
+    await put('apps/android/app/src/main/java/com/noahwallet/services/Wrapped.kt', 'val body = L10n.text(\n    context,\n    "Wrapped copy")');
+    const { used } = await extract(base);
+    expect(used.ios.has('Wrapped copy') && used.android.has('Wrapped copy')).toBe(true);
+  });
+});
+
 test('stale checks detect English edits, code additions/removals, locale edits and compiled resource drift', async () => {
   await fixture(async (base, put) => {
     await generate(false, base);
