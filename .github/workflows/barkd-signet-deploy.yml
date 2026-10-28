@@ -1,7 +1,12 @@
-name: Barkd Signet Fly Deploy
+name: Barkd Signet Railway Deploy
 
 on:
   workflow_dispatch:
+    inputs:
+      image_digest:
+        description: "Reviewed noah-barkd image digest (sha256:...)"
+        required: true
+        type: string
 
 permissions:
   contents: read
@@ -9,22 +14,23 @@ permissions:
 jobs:
   deploy:
     name: Deploy signet Barkd
-    if: ${{ vars.SIGNET_DEPLOY_TARGET != 'railway' }}
+    if: github.ref == 'refs/heads/master'
     runs-on: blacksmith-4vcpu-ubuntu-2404
-    concurrency: fly-barkd-signet-deploy
+    timeout-minutes: 15
+    concurrency:
+      group: railway-signet-deploy
+      cancel-in-progress: false
     steps:
-      - name: 🏗 Checkout code
-        uses: actions/checkout@v6
-
-      - name: 🛇 Set up flyctl
-        uses: superfly/flyctl-actions/setup-flyctl@master
-
-      - name: 🔎 Validate Fly config
-        run: flyctl config validate --strict --config fly/signet.barkd.fly.toml
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+      - name: Install pinned Railway CLI
+        run: npm install --global @railway/cli@5.71.0
+      - name: Deploy the reviewed image on the existing wallet volume
         env:
-          FLY_API_TOKEN: ${{ secrets.FLY_BARKD_SIGNET_API_TOKEN }}
-
-      - name: 🚀 Deploy signet Barkd
-        run: flyctl deploy --config fly/signet.barkd.fly.toml --remote-only --ha=false
-        env:
-          FLY_API_TOKEN: ${{ secrets.FLY_BARKD_SIGNET_API_TOKEN }}
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_SIGNET_TOKEN }}
+          DIGEST: ${{ inputs.image_digest }}
+        run: |
+          test -n "$RAILWAY_TOKEN"
+          python3 .railway/deploy.py barkd "niteshbalusu/noah-barkd@$DIGEST" | tee -a "$GITHUB_STEP_SUMMARY"

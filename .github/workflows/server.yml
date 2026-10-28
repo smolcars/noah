@@ -2,17 +2,7 @@ name: Server CI
 
 on:
   pull_request:
-  push:
-    branches:
-      - master
-    paths:
-      - "server/**"
-      - "Cargo.toml"
-      - "Cargo.lock"
-      - "rust-toolchain.toml"
-      - "Dockerfile"
-      - ".github/workflows/server.yml"
-      - "!**/*.md"
+  workflow_call:
 
 jobs:
   changes:
