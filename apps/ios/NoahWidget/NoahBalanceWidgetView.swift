@@ -138,6 +138,7 @@ private struct MediumView: View {
         GeometryReader { proxy in
             VStack(alignment: .leading, spacing: 0) {
                 summary(width: proxy.size.width)
+                status(width: proxy.size.width)
                 Spacer(minLength: 0)
                 actions.waveFloor()
             }
@@ -161,14 +162,6 @@ private struct MediumView: View {
             VStack(alignment: .leading, spacing: 0) {
                 BalanceText(presentation: presentation, size: 34, look: look)
                 FiatLine(presentation: presentation, look: look).padding(.top, 2)
-                if let status = presentation.status {
-                    // One line ("Renew · Expires in 18 hours"); two only when a language doesn't fit.
-                    ViewThatFits(in: .horizontal) {
-                        StatusLine(status: status, renewTitle: presentation.renewTitle, layout: .oneLine, look: look)
-                        StatusLine(status: status, renewTitle: presentation.renewTitle, layout: .twoLines, look: look)
-                    }
-                    .padding(.top, 5)
-                }
             }
             .frame(width: max(0, width * 0.57 - 16), alignment: .leading)
             HStack(spacing: 6) {
@@ -180,6 +173,20 @@ private struct MediumView: View {
         }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(presentation.accessibilityLabel)
+    }
+
+    @ViewBuilder private func status(width: CGFloat) -> some View {
+        if let status = presentation.status {
+            // One line ("Renew · Expires in 18 hours") over the faded sea, clear of the boat;
+            // two only when a language doesn't fit.
+            ViewThatFits(in: .horizontal) {
+                StatusLine(status: status, renewTitle: presentation.renewTitle, layout: .oneLine, look: look)
+                StatusLine(status: status, renewTitle: presentation.renewTitle, layout: .twoLines, look: look)
+            }
+            .frame(width: max(0, width - 32 - 48), alignment: .leading)
+            .padding(.top, 5)
+            .accessibilityHidden(true)
+        }
     }
 
     private var actions: some View {
@@ -351,7 +358,7 @@ private struct StatusLine: View {
                 case .twoLines:
                     VStack(alignment: .leading, spacing: 0) {
                         HStack(spacing: 5) { glyph; Text(verbatim: renewTitle).fontWeight(.semibold).foregroundStyle(look.foreground) }
-                        Text(verbatim: expiry).foregroundStyle(look.muted).lineLimit(2)
+                        Text(verbatim: expiry).foregroundStyle(look.muted).lineLimit(1).minimumScaleFactor(0.75)
                     }
                 case .oneLine:
                     HStack(spacing: 5) {
@@ -359,7 +366,7 @@ private struct StatusLine: View {
                         Text(oneLine(expiry)).lineLimit(1)
                     }
                 case .short:
-                    HStack(spacing: 4) { glyph; Text(verbatim: expiry).foregroundStyle(look.muted).lineLimit(1) }
+                    HStack(spacing: 4) { glyph; Text(verbatim: expiry).foregroundStyle(look.muted).lineLimit(1).minimumScaleFactor(0.8) }
                 }
             case .arriving(let text):
                 HStack(alignment: .firstTextBaseline, spacing: 5) {
