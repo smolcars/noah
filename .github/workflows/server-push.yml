@@ -75,6 +75,8 @@ jobs:
   create-manifest:
     needs: server-build-and-push
     runs-on: blacksmith-4vcpu-ubuntu-2404
+    outputs:
+      signet_digest: ${{ steps.signet_image.outputs.digest }}
     steps:
       - name: 🔐 Login to GitHub Container Registry
         uses: docker/login-action@v4
@@ -103,9 +105,18 @@ jobs:
             ${{ secrets.DOCKERHUB_USERNAME }}/noah-server:sha-${{ github.sha }}-amd64 \
             ${{ secrets.DOCKERHUB_USERNAME }}/noah-server:sha-${{ github.sha }}-arm64
 
+      - name: Resolve the published signet image digest
+        id: signet_image
+        if: github.ref == 'refs/heads/master'
+        shell: bash
+        run: |
+          digest=$(docker buildx imagetools inspect "niteshbalusu/noah-server:sha-$GITHUB_SHA" --format '{{json .Manifest}}' | jq -er '.digest')
+          [[ "$digest" =~ ^sha256:[a-f0-9]{64}$ ]]
+          echo "digest=$digest" >> "$GITHUB_OUTPUT"
+
   railway-signet-deploy:
     name: Deploy signet API to Railway
-    needs: server-checks
+    needs: [server-checks, create-manifest]
     if: github.ref == 'refs/heads/master'
     runs-on: blacksmith-4vcpu-ubuntu-2404
     timeout-minutes: 45
@@ -136,16 +147,21 @@ jobs:
       - name: Install pinned Railway CLI
         if: steps.current.outputs.deploy == 'true'
         run: npm install --global @railway/cli@5.71.0
-      - name: Deploy signet from the checked-out source
+      - name: Deploy the published signet image
         if: steps.current.outputs.deploy == 'true'
         env:
           RAILWAY_TOKEN: ${{ secrets.RAILWAY_SIGNET_TOKEN }}
           RAILWAY_PROJECT: 8847a6a1-bf07-4321-a62b-9839e9954e46
           RAILWAY_ENVIRONMENT: 37880684-30ae-4242-af12-ddba1ba620ad
           RAILWAY_SERVICE: 2dac716c-bcd0-4c2c-ab77-6f3226548ca8
+          SIGNET_IMAGE_DIGEST: ${{ needs.create-manifest.outputs.signet_digest }}
         run: |
           test -n "$RAILWAY_TOKEN"
-          railway up --project "$RAILWAY_PROJECT" --environment "$RAILWAY_ENVIRONMENT" --service "$RAILWAY_SERVICE" --ci --message "$GITHUB_SHA"
+          [[ "$SIGNET_IMAGE_DIGEST" =~ ^sha256:[a-f0-9]{64}$ ]]
+          deploy_context=$(mktemp -d "$RUNNER_TEMP/noah-signet-image.XXXXXX")
+          trap 'rm -rf "$deploy_context"' EXIT
+          printf 'FROM niteshbalusu/noah-server@%s\n' "$SIGNET_IMAGE_DIGEST" > "$deploy_context/Dockerfile"
+          railway up "$deploy_context" --path-as-root --project "$RAILWAY_PROJECT" --environment "$RAILWAY_ENVIRONMENT" --service "$RAILWAY_SERVICE" --ci --message "$GITHUB_SHA"
           curl --fail --silent --show-error https://signet.noahwallet.io/health
 
   mainnet-fly-deploy:

@@ -32,32 +32,34 @@ reapply an older preparation config that replaces Barkd with the importer image.
 
 ## Releases
 
-Backend changes merged to `master` run Server CI, then deploy the existing API
-with the native Railway CLI:
+Backend changes merged to `master` run Server CI and publish the multiarch server
+image. The API release waits for both, resolves the digest of that commit's
+`sha-<commit>` image, and uploads a temporary directory containing only:
 
-```sh
-railway up --project 8847a6a1-bf07-4321-a62b-9839e9954e46 \
-  --environment signet --service api --ci --message "$(git rev-parse HEAD)"
+```dockerfile
+FROM niteshbalusu/noah-server@sha256:<published-digest>
 ```
 
-Railway builds the checked-out code with the existing root Dockerfile and waits
-for deployment success; CI then checks public `/health`. Service-source changes
-are handled separately from CI deployments. IaC leaves the API's
+The native CLI deploys this directory with `railway up --path-as-root --ci`.
+Railway imports the existing image; it does not upload the Rust source or compile
+the server again. The single `FROM` inherits the image's entrypoint and command.
+CI waits for deployment success, then checks public `/health`. Service-source
+changes are handled separately from CI deployments. IaC leaves the API's
 image/repository source unset, preventing later
 configuration applies from restoring an old image. No infrastructure graph is
-applied during an application release. `.railwayignore` excludes the mobile app
-and documentation from the upload.
+applied during an application release.
 
 Both deployment workflows use GitHub secret `RAILWAY_SIGNET_TOKEN`, passed to the CLI as
 `RAILWAY_TOKEN`, scoped to only this project's signet environment. The CLI is
 pinned to 5.71.0. Set that secret before merging the deployment workflow; without
 it, the deployment job fails before changing Railway. Releases are serialized,
 and builds superseded by a newer signet build are skipped. Client-only and
-documentation changes do not release the API. Source uploads are made from the
-repository root, which includes the Cargo workspace and server migrations.
+documentation changes do not release the API. The image built in GitHub includes
+the server and its embedded migrations; the Railway upload contains only the
+wrapper Dockerfile.
 
-Existing image publication continues independently for mainnet and manual image
-consumers. `v*` tags keep their existing mainnet Fly deployment and do not deploy
+Existing image publication also serves mainnet and manual image consumers.
+`v*` tags keep their existing mainnet Fly deployment and do not deploy
 signet. The Fly signet API job is removed and the manual Barkd workflow now deploys
 to Railway. Keep
 `SIGNET_DEPLOY_TARGET=railway` as a fence for historical workflow versions.
@@ -82,10 +84,12 @@ not trigger API deployments, and neither API merges nor image publication deploy
 Barkd automatically. Normal API releases never restart Barkd or modify Postgres,
 Redis, or volumes.
 
-For an API rollback, check out a previous known-good commit and deploy it with
-the same `railway up` command. This rebuilds that revision; it does not undo
-database migrations. The API keeps running its existing SQLx migrations at
-startup, so automatic releases require compatible schema changes.
+For an API rollback, resolve a known-good commit's published image digest, create
+the same single-`FROM` Dockerfile, and upload its directory with `railway up
+--path-as-root --project 8847a6a1-bf07-4321-a62b-9839e9954e46 --environment signet
+--service api --ci`. This imports the known-good image; it does not undo database
+migrations. The API keeps running its existing SQLx migrations at startup, so
+automatic releases require compatible schema changes.
 
 Existing application secrets are installed privately and declared with
 `preserve()`. Declare any new manually installed setting before the next apply:
