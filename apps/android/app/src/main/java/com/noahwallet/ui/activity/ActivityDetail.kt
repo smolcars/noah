@@ -140,27 +140,43 @@ private fun Header(ui: ActivityUi, row: ActivityRules.Row, wide: Boolean, shared
     Column(Modifier.padding(top = 6.dp)) {
         RowAvatar(home, new = false, pop = false, large = true, modifier = Modifier.shared("avatar-${row.id}", shared)
             .graphicsLayer { scaleX = pop.value; scaleY = pop.value; alpha = ((pop.value - .6f) / .4f).coerceIn(0f, 1f) })
-        val amount = rowAmount(home, ui.hidden, ui.unit, ui.locale)
-        val color = if (struck) palette.muted else palette.foreground
-        val style = ActivityType.big.copy(textDecoration = if (struck) TextDecoration.LineThrough else null, color = color)
-        Box(Modifier.padding(top = 18.dp).fillMaxWidth().shared("amount-${row.id}", shared).semantics(mergeDescendants = true) { contentDescription = amount }
-            .testTag("activity-detail-amount")) {
-            if (wide && !struck && !ui.hidden && !reduceMotion) RollingText(amount, style, color, rollFromZero = true)
-            else BasicText(amount, style = style, maxLines = 1, autoSize = TextAutoSize.StepBased(minFontSize = 24.sp, maxFontSize = 46.sp))
-        }
-        val (status, tone) = ActivityRules.status(row)
-        Row(Modifier.padding(top = 12.dp).enter(1, wide, shared, elapsed).testTag("activity-detail-status"), verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            if (tone == ActivityRules.Tone.pending) PulseDot(palette.orange)
-            Text(statusText(status, record),
-                style = ActivityType.status, color = when (tone) {
-                    ActivityRules.Tone.failed -> palette.failure; ActivityRules.Tone.muted -> palette.muted; else -> palette.foreground
-                })
-        }
+        HeaderAmount(ui, row, wide, shared)
+        HeaderStatus(row, Modifier.padding(top = 12.dp).enter(1, wide, shared, elapsed).testTag("activity-detail-status"))
         fiatLine(ui, row)?.let { Text(it, Modifier.padding(top = 3.dp).enter(2, wide, shared, elapsed), style = HomeType.line, color = palette.muted) }
         blockWait(ui, record, home)?.let { (tip, confirmedAt, needed) ->
             Column(Modifier.enter(3, wide, shared, elapsed)) { ActivityBlockRow(tip, confirmedAt, needed, ui.locale) }
         }
+    }
+}
+
+/** The amount, struck through when it never moved; it rolls in on wide windows. */
+@Composable
+private fun HeaderAmount(ui: ActivityUi, row: ActivityRules.Row, wide: Boolean, shared: Shared?) {
+    val palette = LocalPalette.current
+    val reduceMotion = LocalReduceMotion.current
+    val struck = ActivityRules.struck(row.home)
+    val amount = rowAmount(row.home, ui.hidden, ui.unit, ui.locale)
+    val color = if (struck) palette.muted else palette.foreground
+    val style = ActivityType.big.copy(textDecoration = if (struck) TextDecoration.LineThrough else null, color = color)
+    val rolls = wide && !struck && !ui.hidden
+    Box(Modifier.padding(top = 18.dp).fillMaxWidth().shared("amount-${row.id}", shared).semantics(mergeDescendants = true) { contentDescription = amount }
+        .testTag("activity-detail-amount")) {
+        if (rolls && !reduceMotion) RollingText(amount, style, color, rollFromZero = true)
+        else BasicText(amount, style = style, maxLines = 1, autoSize = TextAutoSize.StepBased(minFontSize = 24.sp, maxFontSize = 46.sp))
+    }
+}
+
+/** The status line, pulsing while pending, in the failure colour when it failed. */
+@Composable
+private fun HeaderStatus(row: ActivityRules.Row, modifier: Modifier) {
+    val palette = LocalPalette.current
+    val (status, tone) = ActivityRules.status(row)
+    Row(modifier, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        if (tone == ActivityRules.Tone.pending) PulseDot(palette.orange)
+        Text(statusText(status, row.record),
+            style = ActivityType.status, color = when (tone) {
+                ActivityRules.Tone.failed -> palette.failure; ActivityRules.Tone.muted -> palette.muted; else -> palette.foreground
+            })
     }
 }
 
@@ -175,8 +191,9 @@ private fun fiatLine(ui: ActivityUi, row: ActivityRules.Row): String? {
     val home = row.home
     if (ActivityRules.struck(home)) return null
     if (ui.hidden) return "••••"
-    val currency = ui.currency.takeIf { it in FiatCurrency.supported } ?: return null
-    val amount = home.amount ?: return null
+    val currency = ui.currency.takeIf { it in FiatCurrency.supported }
+    val amount = home.amount
+    if (currency == null || amount == null) return null
     val date = home.date
     val today = date != null && HomeDays.day(date, ui.now) == HomeDays.Day.Today
     return if (!home.pending && date != null && !today) row.record.btcPrice?.takeIf { it.isFinite() && it > 0 }?.let {
@@ -243,13 +260,9 @@ internal fun DetailRow(label: String, value: String, kind: ValueKind = ValueKind
     glyph: Int? = null, small: Boolean = false, toasts: HomeToasts, onExplorer: (String) -> Unit = {}, last: Boolean = false,
     dot: Boolean = false, ok: Boolean = false, failed: Boolean = false, onClick: (() -> Unit)? = null) {
     val palette = LocalPalette.current
-    val style = when (kind) {
-        ValueKind.text -> ActivityType.value; ValueKind.number -> ActivityType.number; ValueKind.mono -> ActivityType.mono
-    }.let { if (small) it.copy(fontSize = if (kind == ValueKind.mono) 13.5.sp else 15.sp) else it }
-    Row(Modifier.fillMaxWidth().heightIn(min = if (small) 44.dp else 48.dp)
-        .then(if (onClick != null) Modifier.clickable(role = Role.Button, onClick = onClick) else Modifier)
-        .drawBehind { if (!last) drawRect(palette.hairline, Offset(0f, size.height - 1.dp.toPx()), Size(size.width, 1.dp.toPx())) }
-        .semantics(mergeDescendants = onClick != null) {}, verticalAlignment = Alignment.CenterVertically,
+    val style = valueStyle(kind, small)
+    Row(Modifier.fillMaxWidth().heightIn(min = if (small) 44.dp else 48.dp).detailRow(palette.hairline, last, onClick),
+        verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(18.dp)) {
         Text(tr(label), style = ActivityType.label.let { if (small) it.copy(fontSize = 15.sp) else it }, color = palette.muted, maxLines = 1)
         Row(Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.End), verticalAlignment = Alignment.CenterVertically) {
@@ -259,17 +272,9 @@ internal fun DetailRow(label: String, value: String, kind: ValueKind = ValueKind
                 Text(value, style = style, color = if (failed) palette.failure else palette.foreground, maxLines = 1, overflow = TextOverflow.Ellipsis,
                     textAlign = TextAlign.End)
             }
-            if (ok) Box(Modifier.size(16.dp).background(palette.orange, CircleShape), contentAlignment = Alignment.Center) {
-                Icon(painterResource(R.drawable.ic_activity_check), null, Modifier.size(11.dp), tint = androidx.compose.ui.graphics.Color.White)
-            }
+            if (ok) OkMark()
             copy?.let { CopyIcon(label, it, toasts) }
-            explorer?.let { url ->
-                val view = tr("View in explorer")
-                Box(Modifier.offset(x = 4.dp).size(30.dp).clip(CircleShape).clickable(onClickLabel = view, role = Role.Button) { onExplorer(url) }
-                    .semantics { contentDescription = view }, contentAlignment = Alignment.Center) {
-                    Icon(painterResource(R.drawable.ic_activity_external), null, Modifier.size(17.dp), tint = palette.muted)
-                }
-            }
+            explorer?.let { url -> ExplorerButton { onExplorer(url) } }
             if (onClick != null) Icon(painterResource(HomeIcons.chevron), null, Modifier.size(18.dp), tint = palette.muted)
         }
     }
@@ -318,12 +323,21 @@ private val railGlyph = mapOf(ActivityRules.Rail.ark to SendIcons.ark, ActivityR
 /** The rows table, each only when it applies (activity.md, Detail). */
 @Composable
 private fun MainRows(ui: ActivityUi, row: ActivityRules.Row, actions: ActivityActions, toasts: HomeToasts) {
-    val record = row.record
-    val home = row.home
-    fun money(sats: Long) = if (ui.hidden) "₿••••" else BitcoinAmount.format(sats, ui.unit, ui.locale)
     val noBrowser = tr("No browser available to open the explorer.")
     val explore: (String) -> Unit = { if (!actions.explorer(it)) toasts.show(noBrowser) }
-    val rows = mutableListOf<@Composable (Boolean) -> Unit>()
+    val rows = paymentRows(ui, row, toasts) + whenRows(ui, row, toasts) + linkRows(ui, row.record, actions, toasts, explore)
+    rows.forEachIndexed { i, content -> content(i == rows.lastIndex) }
+}
+
+private typealias DetailLine = @Composable (last: Boolean) -> Unit
+
+private fun money(ui: ActivityUi, sats: Long) = if (ui.hidden) "₿••••" else BitcoinAmount.format(sats, ui.unit, ui.locale)
+
+/** Who it went to, the rail, the fees and the total. */
+private fun paymentRows(ui: ActivityUi, row: ActivityRules.Row, toasts: HomeToasts): List<DetailLine> {
+    val record = row.record
+    val home = row.home
+    val rows = mutableListOf<DetailLine>()
     ActivityRules.recipient(record)?.let { to ->
         rows += { last -> if (ActivityRules.readable(to)) DetailRow("To", to, copy = to, toasts = toasts, last = last)
         else DetailRow("To", short(to, 10, 6), ValueKind.mono, copy = to, toasts = toasts, last = last) }
@@ -332,13 +346,23 @@ private fun MainRows(ui: ActivityUi, row: ActivityRules.Row, actions: ActivityAc
     rows += { last -> DetailRow("Via", tr(rail.label), glyph = railGlyph.getValue(rail), toasts = toasts, last = last) }
     for (line in ActivityRules.fees(record, home)) rows += { last ->
         when (val value = line.value) {
-            is ActivityRules.FeeValue.Sats -> DetailRow(line.label, money(value.sats), ValueKind.number, toasts = toasts, last = last)
-            is ActivityRules.FeeValue.UpTo -> DetailRow(line.label, tr("Up to {amount}", money(value.sats)), ValueKind.number, toasts = toasts, last = last)
+            is ActivityRules.FeeValue.Sats -> DetailRow(line.label, money(ui, value.sats), ValueKind.number, toasts = toasts, last = last)
+            is ActivityRules.FeeValue.UpTo -> DetailRow(line.label, tr("Up to {amount}", money(ui, value.sats)), ValueKind.number, toasts = toasts,
+                last = last)
             ActivityRules.FeeValue.Free -> DetailRow(line.label, tr("Free"), toasts = toasts, last = last)
             ActivityRules.FeeValue.None -> DetailRow(line.label, tr("None"), toasts = toasts, last = last)
         }
     }
-    ActivityRules.total(record, home)?.let { total -> rows += { last -> DetailRow("Total", money(total), ValueKind.number, toasts = toasts, last = last) } }
+    ActivityRules.total(record, home)?.let { total -> rows += { last -> DetailRow("Total", money(ui, total), ValueKind.number, toasts = toasts, last = last) } }
+    return rows
+}
+
+/** When it happened, the block it confirmed in, what you typed in fiat and its note. */
+@Composable
+private fun whenRows(ui: ActivityUi, row: ActivityRules.Row, toasts: HomeToasts): List<DetailLine> {
+    val record = row.record
+    val home = row.home
+    val rows = mutableListOf<DetailLine>()
     // A confirmed payment whose block time isn't known yet has no date; Confirmed names its block.
     if (home.date != null || record.hasConfirmation != true) {
         val date = longDate(home.date, ui)
@@ -356,6 +380,12 @@ private fun MainRows(ui: ActivityUi, row: ActivityRules.Row, actions: ActivityAc
     }
     val note = record.repeatPayment?.comment?.takeIf { it.isNotEmpty() } ?: record.description
     note?.let { rows += { last -> DetailRow("Note", it, toasts = toasts, last = last) } }
+    return rows
+}
+
+/** Where it leads: its schedule, its exit, its proof and its transaction. */
+private fun linkRows(ui: ActivityUi, record: HistoryTransaction, actions: ActivityActions, toasts: HomeToasts, explore: (String) -> Unit): List<DetailLine> {
+    val rows = mutableListOf<DetailLine>()
     record.recurring?.takeIf { record.direction == "outgoing" }?.let { recurring ->
         rows += { last -> DetailRow("Repeats", tr(recurring.interval.description), toasts = toasts, last = last) { actions.recurring(recurring.scheduleID) } }
     }
@@ -369,7 +399,7 @@ private fun MainRows(ui: ActivityUi, row: ActivityRules.Row, actions: ActivityAc
         rows += { last -> DetailRow("Transaction ID", short(txid), ValueKind.mono, copy = txid, explorer = url, toasts = toasts, onExplorer = explore,
             last = last) }
     }
-    rows.forEachIndexed { i, content -> content(i == rows.lastIndex) }
+    return rows
 }
 
 @Composable
@@ -428,41 +458,92 @@ private fun TechnicalRows(ui: ActivityUi, record: HistoryTransaction, actions: A
     fun money(sats: Long) = if (ui.hidden) "₿••••" else BitcoinAmount.format(sats, ui.unit, ui.locale)
     fun signed(sats: Long) = if (ui.hidden) "₿••••" else (if (sats > 0) "+" else if (sats < 0) "−" else "") + BitcoinAmount.format(kotlin.math.abs(sats),
         ui.unit, ui.locale)
-    @Composable fun section(title: String) = Text(tr(title), Modifier.padding(top = 18.dp, bottom = 2.dp), style = HomeType.header, color = palette.muted)
-    record.paymentHash?.let { DetailBlock("Payment hash", it, toasts) }
-    record.preimage?.takeIf { record.direction == "incoming" }?.let { DetailBlock("Preimage", it, toasts) }
-    (record.receivedOn?.singleOrNull()?.destination?.takeIf { it.isNotEmpty() &&
-        record.direction == "incoming" } ?: record.invoice?.takeIf { record.direction == "incoming" })
-        ?.let { DetailBlock("Invoice", it, toasts) }
-    record.offer?.let { DetailBlock("Offer", it, toasts) }
+    LightningBlocks(record, toasts)
     DetailBlock("Payment ID", record.id, toasts)
-    if (record.source == "onchain-wallet" || record.balanceChangeSat != null) {
-        DetailRow("Chain status", tr(if (record.hasConfirmation == true) "Confirmed" else "Unconfirmed"), small = true, toasts = toasts)
-        record.balanceChangeSat?.let { DetailRow("Balance change", signed(it), ValueKind.number, small = true, toasts = toasts) }
-        record.confirmationHeight?.let { DetailRow("Block height", java.text.NumberFormat.getIntegerInstance(ui.locale).format(it.toLong()), small = true,
-            toasts = toasts) }
-        record.confirmationHash?.let { DetailBlock("Block hash", it, toasts) }
-        record.txHex?.let { DetailBlock("Raw transaction", it, toasts) }
-    }
-    record.movementKindLabel?.let { DetailRow("Movement type", tr(it), small = true, toasts = toasts) }
-    record.movementId?.let { DetailRow("Movement ID", it.toString(), copy = it.toString(), small = true, toasts = toasts) }
-    record.subsystemName?.let { DetailRow("Subsystem", "$it (${record.subsystemKind.orEmpty()})", small = true, toasts = toasts) }
-    record.intendedBalanceSat?.let { DetailRow("Intended change", signed(it), ValueKind.number, small = true, toasts = toasts) }
-    record.effectiveBalanceSat?.let { DetailRow("Effective change", signed(it), ValueKind.number, small = true, toasts = toasts) }
+    if (record.source == "onchain-wallet" || record.balanceChangeSat != null) ChainRows(ui, record, toasts, ::signed)
+    MovementRows(record, toasts, ::signed)
     // As in React Native: the anchor only when it isn't the transaction already shown.
     record.chainAnchor?.takeIf { it.substringBefore(':') != record.txid?.substringBefore(':') }?.let { DetailBlock("Chain anchor", it, toasts) }
     listOf("Sent to" to record.sentTo, "Received on" to record.receivedOn).forEach { (label, values) ->
         if (!values.isNullOrEmpty()) DetailBlock(label, values.joinToString("\n") { "${it.destination} · ${money(it.amountSat)}" }, toasts,
             copy = values.size == 1)
     }
+    CoinSections(record, actions, toasts)
+    record.metadataJson?.takeIf { it.isNotEmpty() && it != "{}" }?.let { Section("Metadata"); DetailBlock("JSON", it, toasts) }
+}
+
+/** The Lightning record: its hash, a receive's preimage and invoice, and any offer. */
+@Composable
+private fun LightningBlocks(record: HistoryTransaction, toasts: HomeToasts) {
+    val incoming = record.direction == "incoming"
+    record.paymentHash?.let { DetailBlock("Payment hash", it, toasts) }
+    record.preimage?.takeIf { incoming }?.let { DetailBlock("Preimage", it, toasts) }
+    (record.receivedOn?.singleOrNull()?.destination?.takeIf { it.isNotEmpty() && incoming } ?: record.invoice?.takeIf { incoming })
+        ?.let { DetailBlock("Invoice", it, toasts) }
+    record.offer?.let { DetailBlock("Offer", it, toasts) }
+}
+
+/** bark's movement: its type, ID, subsystem and intended and effective changes. */
+@Composable
+private fun MovementRows(record: HistoryTransaction, toasts: HomeToasts, signed: (Long) -> String) {
+    record.movementKindLabel?.let { DetailRow("Movement type", tr(it), small = true, toasts = toasts) }
+    record.movementId?.let { DetailRow("Movement ID", it.toString(), copy = it.toString(), small = true, toasts = toasts) }
+    record.subsystemName?.let { DetailRow("Subsystem", "$it (${record.subsystemKind.orEmpty()})", small = true, toasts = toasts) }
+    record.intendedBalanceSat?.let { DetailRow("Intended change", signed(it), ValueKind.number, small = true, toasts = toasts) }
+    record.effectiveBalanceSat?.let { DetailRow("Effective change", signed(it), ValueKind.number, small = true, toasts = toasts) }
+}
+
+@Composable
+private fun Section(title: String) =
+    Text(tr(title), Modifier.padding(top = 18.dp, bottom = 2.dp), style = HomeType.header, color = LocalPalette.current.muted)
+
+/** The on-chain record: its status, balance change, block and raw transaction. */
+@Composable
+private fun ChainRows(ui: ActivityUi, record: HistoryTransaction, toasts: HomeToasts, signed: (Long) -> String) {
+    DetailRow("Chain status", tr(if (record.hasConfirmation == true) "Confirmed" else "Unconfirmed"), small = true, toasts = toasts)
+    record.balanceChangeSat?.let { DetailRow("Balance change", signed(it), ValueKind.number, small = true, toasts = toasts) }
+    record.confirmationHeight?.let { DetailRow("Block height", java.text.NumberFormat.getIntegerInstance(ui.locale).format(it.toLong()), small = true,
+        toasts = toasts) }
+    record.confirmationHash?.let { DetailBlock("Block hash", it, toasts) }
+    record.txHex?.let { DetailBlock("Raw transaction", it, toasts) }
+}
+
+/** The coins it spent, made and exited, each opening its VTXO. */
+@Composable
+private fun CoinSections(record: HistoryTransaction, actions: ActivityActions, toasts: HomeToasts) {
     listOf("Spent coins" to record.inputVtxos, "New coins" to record.outputVtxos, "Exited coins" to record.exitedVtxos).forEach { (title, coins) ->
         if (coins.isNullOrEmpty()) return@forEach
-        section(title)
+        Section(title)
         coins.forEachIndexed { i, coin ->
             DetailRow(tr("Coin {n}", (i + 1).toString()), short(coin, 10, 8), ValueKind.mono, small = true, toasts = toasts) { actions.coin(coin) }
         }
     }
-    record.metadataJson?.takeIf { it.isNotEmpty() && it != "{}" }?.let { section("Metadata"); DetailBlock("JSON", it, toasts) }
+}
+
+private fun valueStyle(kind: ValueKind, small: Boolean) = when (kind) {
+    ValueKind.text -> ActivityType.value; ValueKind.number -> ActivityType.number; ValueKind.mono -> ActivityType.mono
+}.let { if (small) it.copy(fontSize = if (kind == ValueKind.mono) 13.5.sp else 15.sp) else it }
+
+/** A detail row's tap (one merged button when it has one) and its hairline unless it's [last]. */
+private fun Modifier.detailRow(hairline: androidx.compose.ui.graphics.Color, last: Boolean, onClick: (() -> Unit)?) =
+    then(if (onClick != null) Modifier.clickable(role = Role.Button, onClick = onClick) else Modifier)
+        .drawBehind { if (!last) drawRect(hairline, Offset(0f, size.height - 1.dp.toPx()), Size(size.width, 1.dp.toPx())) }
+        .semantics(mergeDescendants = onClick != null) {}
+
+@Composable
+private fun OkMark() {
+    Box(Modifier.size(16.dp).background(LocalPalette.current.orange, CircleShape), contentAlignment = Alignment.Center) {
+        Icon(painterResource(R.drawable.ic_activity_check), null, Modifier.size(11.dp), tint = androidx.compose.ui.graphics.Color.White)
+    }
+}
+
+@Composable
+private fun ExplorerButton(open: () -> Unit) {
+    val view = tr("View in explorer")
+    Box(Modifier.offset(x = 4.dp).size(30.dp).clip(CircleShape).clickable(onClickLabel = view, role = Role.Button, onClick = open)
+        .semantics { contentDescription = view }, contentAlignment = Alignment.Center) {
+        Icon(painterResource(R.drawable.ic_activity_external), null, Modifier.size(17.dp), tint = LocalPalette.current.muted)
+    }
 }
 
 /** The plain-text receipt Share sends (see [ActivityRules.receipt]). */

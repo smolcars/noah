@@ -135,19 +135,22 @@ data class ActivityActions(
  */
 @Stable
 class ActivityState internal constructor(
-    selected: MutableState<String?>, filter: MutableState<String>, query: MutableState<String>, searching: MutableState<Boolean>,
-    details: MutableState<Boolean>, exporting: MutableState<Boolean>, val list: LazyListState, val results: LazyListState,
+    saved: Saved, val list: LazyListState, val results: LazyListState,
     /** When the list first appeared (elapsed realtime): its entrance plays once, not again on the way back from a payment. */
     val enteredAt: Long,
 ) {
-    var selected by selected
-    private var filterName by filter
+    /** The saveable part: the selection, the filter, the search and which sheets are open. */
+    internal class Saved(val selected: MutableState<String?>, val filter: MutableState<String>, val query: MutableState<String>,
+        val searching: MutableState<Boolean>, val details: MutableState<Boolean>, val exporting: MutableState<Boolean>)
+
+    var selected by saved.selected
+    private var filterName by saved.filter
     var filter: HistoryFilter get() = HistoryFilter.valueOf(filterName); set(value) { filterName = value.name }
-    var query by query
-    var searching by searching
-    var details by details
+    var query by saved.query
+    var searching by saved.searching
+    var details by saved.details
     /** The export sheet is open. */
-    var exporting by exporting
+    var exporting by saved.exporting
     /** The list showing: search results scroll on their own, so closing search returns the list to its place. */
     val shownList get() = if (searching && query.isNotBlank()) results else list
     fun open(id: String) {
@@ -167,7 +170,7 @@ fun rememberActivityState(): ActivityState {
     val list = rememberLazyListState()
     val results = rememberLazyListState()
     val enteredAt = rememberSaveable { android.os.SystemClock.elapsedRealtime() }
-    return remember { ActivityState(selected, filter, query, searching, details, exporting, list, results, enteredAt) }
+    return remember { ActivityState(ActivityState.Saved(selected, filter, query, searching, details, exporting), list, results, enteredAt) }
 }
 
 private val navHeight = 56.dp
@@ -185,8 +188,10 @@ fun ActivityContent(ui: ActivityUi, actions: ActivityActions, state: ActivitySta
     val rows = remember(ui.records, ui.ownDomain) { ActivityRules.rows(ui.records, ui.ownDomain) }
     val selected = rows.firstOrNull { it.id == state.selected }
     // A payment that's gone from the wallet's records (a wallet reset) closes; a loading list keeps the selection.
-    LaunchedEffect(selected == null,
-        ui.loading) { if (state.selected != null && selected == null && !ui.loading && ui.records.isNotEmpty()) state.selected = null }
+    LaunchedEffect(selected == null, ui.loading) {
+        val loaded = !ui.loading && ui.records.isNotEmpty()
+        if (state.selected != null && selected == null && loaded) state.selected = null
+    }
     // A pending offboard's record doesn't change at its first confirmation; history reads still come (wallet events,
     // pull to refresh, resume), so the block row re-reads the chain then. No polling.
     LaunchedEffect(selected?.record, ui.revision) { selected?.record?.let(actions.shown) }
@@ -195,36 +200,8 @@ fun ActivityContent(ui: ActivityUi, actions: ActivityActions, state: ActivitySta
         actions.barHidden(compact && state.selected != null)
         onDispose { actions.barHidden(false) }
     }
-    if (compact) {
-        val seekable = remember { SeekableTransitionState(state.selected) }
-        val scope = rememberCoroutineScope()
-        LaunchedEffect(state.selected) { if (seekable.targetState != state.selected ||
-            seekable.currentState != state.selected) seekable.animateTo(state.selected) }
-        // The back gesture previews the way back: the detail shrinks into its row as the finger moves.
-        androidx.activity.compose.PredictiveBackHandler(enabled = state.selected != null) { progress ->
-            try {
-                progress.collect { event -> seekable.seekTo(event.progress.coerceIn(0f, 1f), targetState = null) }
-                state.selected = null
-            } catch (cancelled: kotlin.coroutines.cancellation.CancellationException) {
-                scope.launch { seekable.animateTo(state.selected) }
-                throw cancelled
-            }
-        }
-        val transition = rememberTransition(seekable, label = "activity")
-        SharedTransitionLayout(Modifier.fillMaxSize()) {
-            transition.AnimatedContent(Modifier.fillMaxSize(), transitionSpec = {
-                // The list stays put underneath; the payment grows out of its row (or shrinks back into it) in the overlay.
-                // No size transform: the tab bar hiding resizes the pane, and an animated size would slide the list down.
-                (if (reduceMotion) fadeIn(tween(NoahTokens.Motion.REDUCE_MOTION_FADE_MS)) togetherWith fadeOut(tween(NoahTokens.Motion.REDUCE_MOTION_FADE_MS))
-                else EnterTransition.None togetherWith ExitTransition.KeepUntilTransitionsFinished) using null
-            }, contentKey = { it }) { id ->
-                val shared = if (reduceMotion) null else Shared(this@SharedTransitionLayout, this)
-                val row = rows.firstOrNull { it.id == id }
-                if (id == null || row == null) ActivityListPane(ui, actions, state, rows, toasts, wide = false, shared = shared)
-                else ActivityDetail(ui, row, actions, state, toasts, wide = false, shared = shared) { state.selected = null }
-            }
-        }
-    } else {
+    if (compact) CompactActivity(ui, actions, state, rows, toasts)
+    else {
         BackHandler(state.selected != null) { state.selected = null }
         when (pose) {
             is OnboardingPose.Wide -> Row(Modifier.fillMaxSize()) {
@@ -243,8 +220,123 @@ fun ActivityContent(ui: ActivityUi, actions: ActivityActions, state: ActivitySta
     if (state.exporting) ExportSheet(ui, state, actions) { state.exporting = false }
 }
 
+/** One column: the detail grows out of its row over the list, and the back gesture previews the way back. */
+@OptIn(ExperimentalSharedTransitionApi::class)
+@Composable
+private fun CompactActivity(ui: ActivityUi, actions: ActivityActions, state: ActivityState, rows: List<ActivityRules.Row>, toasts: HomeToasts) {
+    val reduceMotion = LocalReduceMotion.current
+    val seekable = remember { SeekableTransitionState(state.selected) }
+    val scope = rememberCoroutineScope()
+    LaunchedEffect(state.selected) { if (seekable.targetState != state.selected ||
+        seekable.currentState != state.selected) seekable.animateTo(state.selected) }
+    // The back gesture previews the way back: the detail shrinks into its row as the finger moves.
+    androidx.activity.compose.PredictiveBackHandler(enabled = state.selected != null) { progress ->
+        try {
+            progress.collect { event -> seekable.seekTo(event.progress.coerceIn(0f, 1f), targetState = null) }
+            state.selected = null
+        } catch (cancelled: kotlin.coroutines.cancellation.CancellationException) {
+            scope.launch { seekable.animateTo(state.selected) }
+            throw cancelled
+        }
+    }
+    val transition = rememberTransition(seekable, label = "activity")
+    SharedTransitionLayout(Modifier.fillMaxSize()) {
+        transition.AnimatedContent(Modifier.fillMaxSize(), transitionSpec = {
+            // The list stays put underneath; the payment grows out of its row (or shrinks back into it) in the overlay.
+            // No size transform: the tab bar hiding resizes the pane, and an animated size would slide the list down.
+            (if (reduceMotion) fadeIn(tween(NoahTokens.Motion.REDUCE_MOTION_FADE_MS)) togetherWith fadeOut(tween(NoahTokens.Motion.REDUCE_MOTION_FADE_MS))
+            else EnterTransition.None togetherWith ExitTransition.KeepUntilTransitionsFinished) using null
+        }, contentKey = { it }) { id ->
+            val shared = if (reduceMotion) null else Shared(this@SharedTransitionLayout, this)
+            val row = rows.firstOrNull { it.id == id }
+            if (id == null || row == null) ActivityListPane(ui, actions, state, rows, toasts, wide = false, shared = shared)
+            else ActivityDetail(ui, row, actions, state, toasts, wide = false, shared = shared) { state.selected = null }
+        }
+    }
+}
+
 @Composable
 private fun BackHandler(enabled: Boolean, onBack: () -> Unit) = androidx.activity.compose.BackHandler(enabled, onBack)
+
+/** The open search: Close, the field (focused only when Search was tapped) and Clear. */
+@Composable
+private fun RowScope.SearchField(state: ActivityState, focus: FocusRequester, focusOnOpen: Boolean, close: () -> Unit) {
+    val palette = LocalPalette.current
+    val haptics = rememberHaptics()
+    val reduceMotion = LocalReduceMotion.current
+    val keyboard = LocalSoftwareKeyboardController.current
+    val open = remember { Animatable(if (reduceMotion) 1f else 0f) }
+    LaunchedEffect(Unit) { open.animateTo(1f, if (reduceMotion) tween(NoahTokens.Motion.REDUCE_MOTION_FADE_MS) else NoahTokens.Motion.snappy()) }
+    LaunchedEffect(Unit) { if (focusOnOpen) focus.requestFocus() }
+    Row(Modifier.weight(1f).height(48.dp).graphicsLayer { alpha = .4f + .6f * open.value.coerceIn(0f, 1f) }
+        .tonal(RoundedCornerShape(24.dp), palette.soft).padding(start = 0.dp, end = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+        BarButton(R.drawable.ic_activity_back, tr("Close search")) { haptics.light(); close() }
+        BasicTextField(state.query, { state.query = it }, Modifier.weight(1f).focusRequester(focus).testTag("activity-search-field"),
+            textStyle = ActivityType.search.copy(color = palette.foreground), singleLine = true,
+            cursorBrush = SolidColor(palette.orange), keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+            keyboardActions = KeyboardActions(onSearch = { keyboard?.hide() }), decorationBox = { field ->
+                Box(contentAlignment = Alignment.CenterStart) {
+                    if (state.query.isEmpty()) Text(tr("Search"), style = ActivityType.search, color = palette.muted)
+                    field()
+                }
+            })
+        if (state.query.isNotEmpty()) Box(Modifier.size(30.dp).clip(CircleShape).clickable(onClickLabel = tr("Clear search"), role = Role.Button) {
+            // show(): an already focused field (keyboard hidden by back or Search) doesn't bring it back on focus.
+            state.query = ""; focus.requestFocus(); keyboard?.show()
+        }, contentAlignment = Alignment.Center) { Icon(painterResource(HomeIcons.close), tr("Clear search"), Modifier.size(16.dp),
+            tint = palette.muted) }
+    }
+}
+
+/** Compact's large title with the filter chip; 1 dp while searching, so the list stays anchored to it. */
+@Composable
+private fun ListTitle(state: ActivityState, entered: Long) {
+    val reduceMotion = LocalReduceMotion.current
+    if (state.searching) Spacer(Modifier.height(1.dp))
+    else Row(Modifier.fillMaxWidth().height(46.dp).padding(horizontal = 24.dp).rise(entered, 40, 10f, reduceMotion),
+        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        Text(tr("Activity"), Modifier.semantics { heading() }, style = ActivityType.large, color = LocalPalette.current.foreground)
+        FilterChip(state)
+    }
+}
+
+/** Nothing matches the search, or nothing in the filter (with Show all). */
+@Composable
+private fun NoneShown(state: ActivityState) {
+    val palette = LocalPalette.current
+    val haptics = rememberHaptics()
+    Column(Modifier.fillMaxWidth().padding(top = 56.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        if (state.searching && state.query.isNotBlank()) Text(tr("No matches"), style = HomeType.line, color = palette.muted)
+        else {
+            Text(tr(ActivityRules.noneMessage(state.filter)), style = HomeType.line, color = palette.muted)
+            Text(tr("Show all"), Modifier.padding(top = 4.dp).clip(RoundedCornerShape(8.dp)).clickable(role = Role.Button) {
+                haptics.selection(); state.filter = HistoryFilter.All
+            }.padding(horizontal = 10.dp, vertical = 6.dp), style = ActivityType.link, color = palette.foreground)
+        }
+    }
+}
+
+/** How a list row reads: [new] and whether it's fully [onScreen] (its dot fades then), [selected] beside the detail, its divider. */
+private data class ListRowLook(val new: Boolean, val onScreen: Boolean, val selected: Boolean, val divider: Boolean)
+
+/** Row [i] of a day's [items], selected when it's the [open] payment beside the list; no divider beside a selection. */
+private fun rowLook(items: List<ActivityRules.Row>, i: Int, open: String?, new: Boolean, onScreen: Boolean): ListRowLook {
+    val selected = open != null && open == items[i].id
+    val nextSelected = open != null && items.getOrNull(i + 1)?.id == open
+    return ListRowLook(new, onScreen, selected, divider = i < items.lastIndex && !selected && !nextSelected)
+}
+
+/** A list row; a new one's dot fades 1.4 s after it's fully on screen, then [seen]. */
+@Composable
+private fun ListRow(ui: ActivityUi, row: ActivityRules.Row, look: ListRowLook, shared: Shared?, seen: () -> Unit, open: () -> Unit) {
+    val id = row.id
+    var fading by remember(id) { mutableStateOf(false) }
+    LaunchedEffect(look.new, look.onScreen) { if (look.new && look.onScreen) { delay(1_400); fading = true } }
+    ActivityRow(row.home, ui.hidden, ui.unit, ui.locale, ui.now, new = look.new, pop = false, divider = look.divider,
+        modifier = Modifier.shared("row-$id", shared, container = true).testTag("activity-row-$id"), selected = look.selected,
+        fading = fading, onSeen = seen,
+        avatarModifier = Modifier.shared("avatar-$id", shared), amountModifier = Modifier.shared("amount-$id", shared), onClick = open)
+}
 
 /** The trailing pane: the payment, or "Select a payment". */
 @Composable
@@ -335,29 +427,12 @@ private fun ActivityList(ui: ActivityUi, actions: ActivityActions, state: Activi
     LazyColumn(Modifier.fillMaxSize().testTag("activity-list"), listState, contentPadding = PaddingValues(bottom = if (wide) 36.dp else 24.dp)) {
         // Searching shrinks it to 1 dp rather than dropping it, so the list stays anchored to it and closing search shows the
         // title again (a dropped or 0-size first item moves the anchor to the next row, which leaves the title scrolled off).
-        if (!wide) item(key = "title") {
-            if (state.searching) Spacer(Modifier.height(1.dp))
-            else Row(Modifier.fillMaxWidth().height(46.dp).padding(horizontal = 24.dp).rise(entered, 40, 10f, reduceMotion),
-                verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text(tr("Activity"), Modifier.semantics { heading() }, style = ActivityType.large, color = palette.foreground)
-                FilterChip(state)
-            }
-        }
+        if (!wide) item(key = "title") { ListTitle(state, entered) }
         when {
             ui.loading && rows.isEmpty() -> skeleton(reduceMotion)
             ui.error != null && rows.isEmpty() -> item(key = "error") { ErrorState(ui.error, actions.retry) }
             rows.isEmpty() -> item(key = "empty") { EmptyState { haptics.light(); actions.receive() } }
-            visible.isEmpty() -> item(key = "none") {
-                Column(Modifier.fillMaxWidth().padding(top = 56.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                    if (state.searching && state.query.isNotBlank()) Text(tr("No matches"), style = HomeType.line, color = palette.muted)
-                    else {
-                        Text(tr(ActivityRules.noneMessage(state.filter)), style = HomeType.line, color = palette.muted)
-                        Text(tr("Show all"), Modifier.padding(top = 4.dp).clip(RoundedCornerShape(8.dp)).clickable(role = Role.Button) {
-                            haptics.selection(); state.filter = HistoryFilter.All
-                        }.padding(horizontal = 10.dp, vertical = 6.dp), style = ActivityType.link, color = palette.foreground)
-                    }
-                }
-            }
+            visible.isEmpty() -> item(key = "none") { NoneShown(state) }
             else -> {
                 var order = 0
                 for ((group, items) in groups) {
@@ -370,18 +445,11 @@ private fun ActivityList(ui: ActivityUi, actions: ActivityActions, state: Activi
                     val start = order
                     itemsIndexed(items, key = { _, row -> row.id }) { i, row ->
                         val id = row.id
-                        val isNew = id in ui.newRows && faded[id] != true
-                        var fading by remember(id) { mutableStateOf(false) }
-                        val onScreen = id in fullyVisible
-                        LaunchedEffect(isNew, onScreen) { if (isNew && onScreen) { delay(1_400); fading = true } }
-                        val isSelected = wide && state.selected == id
-                        val nextSelected = wide && items.getOrNull(i + 1)?.id == state.selected
                         Box(Modifier.padding(horizontal = 24.dp).rise(entered, 100L + (start + i).coerceAtMost(14) * 40, 10f, reduceMotion)) {
-                            ActivityRow(row.home, ui.hidden, ui.unit, ui.locale, ui.now, new = isNew, pop = false,
-                                divider = i < items.lastIndex && !isSelected && !nextSelected,
-                                modifier = Modifier.shared("row-$id", shared, container = true).testTag("activity-row-$id"), selected = isSelected,
-                                fading = fading, onSeen = { faded[id] = true; actions.seen(id) },
-                                avatarModifier = Modifier.shared("avatar-$id", shared), amountModifier = Modifier.shared("amount-$id", shared)) {
+                            val look = rowLook(items, i, state.selected.takeIf { wide }, new = id in ui.newRows && faded[id] != true,
+                                onScreen = id in fullyVisible)
+                            ListRow(ui, row, look,
+                                shared, seen = { faded[id] = true; actions.seen(id) }) {
                                 haptics.light(); faded[id] = true; actions.seen(id); state.open(id)
                             }
                         }
@@ -452,27 +520,7 @@ private fun BoxScope.ActivityBar(state: ActivityState, wide: Boolean, tucked: Bo
     Row(Modifier.align(Alignment.TopCenter).fillMaxWidth().height(navHeight).background(palette.background)
         .padding(start = if (wide && !state.searching) 24.dp else 4.dp, end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
         if (state.searching) {
-            val open = remember { Animatable(if (reduceMotion) 1f else 0f) }
-            LaunchedEffect(Unit) { open.animateTo(1f, if (reduceMotion) tween(NoahTokens.Motion.REDUCE_MOTION_FADE_MS) else NoahTokens.Motion.snappy()) }
-            LaunchedEffect(Unit) { if (focusOnOpen) focus.requestFocus() }
-            Row(Modifier.weight(1f).height(48.dp).graphicsLayer { alpha = .4f + .6f * open.value.coerceIn(0f, 1f) }
-                .tonal(RoundedCornerShape(24.dp), palette.soft).padding(start = 0.dp, end = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-                BarButton(R.drawable.ic_activity_back, tr("Close search")) { haptics.light(); close() }
-                BasicTextField(state.query, { state.query = it }, Modifier.weight(1f).focusRequester(focus).testTag("activity-search-field"),
-                    textStyle = ActivityType.search.copy(color = palette.foreground), singleLine = true,
-                    cursorBrush = SolidColor(palette.orange), keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-                    keyboardActions = KeyboardActions(onSearch = { keyboard?.hide() }), decorationBox = { field ->
-                        Box(contentAlignment = Alignment.CenterStart) {
-                            if (state.query.isEmpty()) Text(tr("Search"), style = ActivityType.search, color = palette.muted)
-                            field()
-                        }
-                    })
-                if (state.query.isNotEmpty()) Box(Modifier.size(30.dp).clip(CircleShape).clickable(onClickLabel = tr("Clear search"), role = Role.Button) {
-                    // show(): an already focused field (keyboard hidden by back or Search) doesn't bring it back on focus.
-                    state.query = ""; focus.requestFocus(); keyboard?.show()
-                }, contentAlignment = Alignment.Center) { Icon(painterResource(HomeIcons.close), tr("Clear search"), Modifier.size(16.dp),
-                    tint = palette.muted) }
-            }
+            SearchField(state, focus, focusOnOpen, ::close)
             return@Row
         }
         if (wide) {
