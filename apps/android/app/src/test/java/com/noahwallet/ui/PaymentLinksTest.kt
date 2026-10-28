@@ -200,8 +200,8 @@ class PaymentLinksTest {
     /** The widget's explicit intent: the same URI iOS opens, as the data of an intent to MainActivity. */
     private fun widget(route: String, variant: String = "regtest") =
         Intent(Intent.ACTION_VIEW, Uri.parse("com.noahwallet.$variant://widget/$route")).setClassName("com.noahwallet.regtest", "com.noahwallet.MainActivity")
-    private fun PaymentLinks.route(send: SendController, reviews: Int = 0, preparing: Int = 0): List<WidgetRoute> =
-        mutableListOf<WidgetRoute>().also { opened -> deliverRoute(send, mutableIntStateOf(reviews), mutableIntStateOf(preparing)) { opened += it } }
+    private fun PaymentLinks.route(send: SendController, sendBusy: Int = 0, approvals: Int = 0): List<WidgetRoute> =
+        mutableListOf<WidgetRoute>().also { opened -> deliverRoute(send, mutableIntStateOf(sendBusy), mutableIntStateOf(approvals)) { opened += it } }
 
     @Test fun widgetRoutesAreTheirOwnAndNeverPaymentLinks() {
         for (route in WidgetRoute.entries) {
@@ -238,8 +238,10 @@ class PaymentLinksTest {
     }
 
     /**
-     * No route leaves a Send that's preparing or reviewing a payment, holds one in flight, or a recurring approval: the
-     * app just comes forward where it is, and the route is used up (iOS review). Home and Receive as well as Scan and Send.
+     * Widget routes never discard or replace a payment, review or approval (widgets.md, Opening the app from a widget,
+     * as iOS's `WidgetRoute.tab`). Under a recurring approval nothing moves. While Send is preparing, reviewing or holding
+     * a payment (a cold launch with an unresolved saved one included), Send and Scan open the Send tab as it is and Home
+     * and Receive leave the app where it is. Each route is used up either way.
      */
     @Test fun aWidgetRouteNeverLeavesAPaymentReviewOrApproval() {
         // Send hasn't read its saved payment yet: the route waits.
@@ -247,16 +249,22 @@ class PaymentLinksTest {
         links.receive(widget("scan"))
         assertEquals(emptyList<WidgetRoute>(), links.route(send().apply { invalidateForWalletChange() }))
         assertEquals(WidgetRoute.scan, links.route)
-        val inFlight = send(SendAttempt(payment = arkPayment))
-        assertTrue(inFlight.locked && !inFlight.loading)
+        val saved = send(SendAttempt(payment = arkPayment))
+        assertTrue(saved.locked && !saved.loading)
+        val toSend = mapOf(WidgetRoute.home to null, WidgetRoute.receive to null, WidgetRoute.scan to WidgetRoute.send, WidgetRoute.send to WidgetRoute.send)
         for (route in WidgetRoute.entries) {
             for ((label, opened) in listOf(
-                "payment in flight" to { links.receive(widget(route.name)); links.route(inFlight) },
-                "review or approval open" to { links.receive(widget(route.name)); links.route(send(), reviews = 1) },
-                "Send preparing" to { links.receive(widget(route.name)); links.route(send(), preparing = 1) },
+                "unresolved saved payment" to { links.receive(widget(route.name)); links.route(saved) },
+                "Send preparing or reviewing" to { links.receive(widget(route.name)); links.route(send(), sendBusy = 1) },
             )) {
-                assertEquals("$route, $label", emptyList<WidgetRoute>(), opened())
+                assertEquals("$route, $label", listOfNotNull(toSend.getValue(route)), opened())
                 assertNull("$route, $label: used up", links.route)
+            }
+            // A recurring approval on screen: nothing moves, whatever Send is doing.
+            for (send in listOf(send(), saved)) {
+                links.receive(widget(route.name))
+                assertEquals("$route under an approval", emptyList<WidgetRoute>(), links.route(send, approvals = 1))
+                assertNull(links.route)
             }
             // Nothing under way: it goes where it says.
             links.receive(widget(route.name))

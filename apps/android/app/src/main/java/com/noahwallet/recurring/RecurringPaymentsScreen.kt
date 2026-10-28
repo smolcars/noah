@@ -200,7 +200,9 @@ internal fun ScheduleScreen(app: AppModel, nav: SettingsNav, id: String,
     var review by remember { mutableStateOf<RecurringExecutor.Review?>(null) }
     var preparing by remember { mutableStateOf(false) }
     // An approval being prepared or open: an OS link can't replace it.
-    com.noahwallet.ui.ReviewOpen(app.openReviews, review != null || preparing)
+    val approving = review != null || preparing
+    com.noahwallet.ui.ReviewOpen(app.openReviews, approving)
+    com.noahwallet.ui.ReviewOpen(app.recurringApprovals, approving)
     var actionError by remember { mutableStateOf<String?>(null) }
     LaunchedEffect(Unit) { executor.reload(); loaded = true }
     val s = findSchedule(executor.schedules, id)

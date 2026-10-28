@@ -146,8 +146,10 @@ class AppModel(application: Application, val settings: SettingsStorage = Setting
     var scannedDestination by mutableStateOf<String?>(null)
     /** Send reviews and recurring approvals on screen ([ReviewOpen]); an OS link is rejected while any is open. */
     val openReviews = mutableIntStateOf(0)
-    /** Send preparing a review on screen ([ReviewOpen]); a widget route leaves the app where it is meanwhile. */
-    val sendPreparing = mutableIntStateOf(0)
+    /** Send preparing or showing a review on screen ([ReviewOpen]); widget routes keep the app on Send meanwhile. */
+    val sendBusy = mutableIntStateOf(0)
+    /** A recurring payment's approval on screen ([ReviewOpen]); widget routes move nothing meanwhile. */
+    val recurringApprovals = mutableIntStateOf(0)
     var repeatPayment by mutableStateOf<com.noahwallet.history.RepeatPayment?>(null)
     /** The expiring VTXOs Home's Renew nudge hands to today's VTXO refresh review; consumed once. */
     var renewVtxos by mutableStateOf<List<String>?>(null)

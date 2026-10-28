@@ -34,15 +34,15 @@ class PaymentLinks : ViewModel() {
     fun drop() { pending = null; route = null }
 
     /**
-     * Opens the widget's [route] once Send has read its saved payment, then forgets it. While Send is preparing or
-     * reviewing a payment, holds one in flight, or a recurring approval is open ([reviews], [preparing]), the app just
-     * comes forward where it is: nothing is left, discarded or replaced. Nothing pays from a widget.
+     * Opens the widget's [route] once Send has read its saved payment, then forgets it. Nothing is left, discarded or
+     * replaced ([WidgetRoute.target]): Send preparing or showing a review on screen ([sendBusy]) or holding a payment,
+     * and a recurring approval on screen ([approvals]), keep their place. Nothing pays from a widget.
      */
-    fun deliverRoute(send: SendController, reviews: IntState, preparing: IntState, open: (WidgetRoute) -> Unit) {
+    fun deliverRoute(send: SendController, sendBusy: IntState, approvals: IntState, open: (WidgetRoute) -> Unit) {
         val next = route ?: return
         if (send.loading) return
         route = null
-        WidgetRoute.target(next, busy = send.locked || reviews.intValue > 0 || preparing.intValue > 0)?.let(open)
+        WidgetRoute.target(next, sendBusy = send.locked || sendBusy.intValue > 0, approvalOpen = approvals.intValue > 0)?.let(open)
     }
 
     /**
@@ -88,7 +88,16 @@ enum class WidgetRoute {
             return entries.firstOrNull { "/${it.name}" == data.path }
         }
 
-        /** Where [route] may go: nowhere while a payment, review or approval is under way ([busy]). */
-        fun target(route: WidgetRoute, busy: Boolean): WidgetRoute? = route.takeUnless { busy }
+        /**
+         * Where [route] goes, or null to leave the app where it is (widgets.md, Opening the app from a widget). Nothing
+         * moves under a recurring approval. While Send is preparing, reviewing or holding a payment, Send and Scan open
+         * the Send tab as it is (no scanner, no new request) and Home and Receive stay put.
+         */
+        fun target(route: WidgetRoute, sendBusy: Boolean, approvalOpen: Boolean): WidgetRoute? = when {
+            approvalOpen -> null
+            !sendBusy -> route
+            route == scan || route == send -> send
+            else -> null
+        }
     }
 }
