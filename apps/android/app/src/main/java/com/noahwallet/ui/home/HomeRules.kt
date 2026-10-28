@@ -17,14 +17,17 @@ object HomeRules {
     fun backup(state: PersistedBackupState, now: Long, locale: Locale): Banner? = when {
         state.lastBackupStatus == "in_progress" -> Banner("Backing up wallet", "Running in background")
         state.lastBackupStatus == "failed" -> Banner("Backup failed", "An unknown error occurred while backing up.", failed = true, retry = true)
-        !state.backupPending && state.lastBackupStatus == "success" && state.lastBackupAt != null && now - state.lastBackupAt!! < successMillis ->
-            Banner("Backup completed",
-                """Last backup ${DateFormat.getTimeInstance(DateFormat.SHORT, locale).format(Date(state.lastBackupAt!!.toLong()))}""") // Never shown: Home toasts only the title.
+        !state.backupPending && state.lastBackupStatus == "success" && state.lastBackupAt != null && now - state.lastBackupAt!! < successMillis -> {
+            // Never shown: Home toasts only the title.
+            val time = DateFormat.getTimeInstance(DateFormat.SHORT, locale).format(Date(state.lastBackupAt!!.toLong()))
+            Banner("Backup completed", """Last backup $time""")
+        }
         else -> null
     }
     /** The title is the toast's key; the toast itself says "{amount} available in Ark". */
-    fun boarding(amount: Long, createdAt: Long, now: Long, locale: Locale): Banner? =
-        if (now - createdAt < successMillis) Banner("""Boarding completed""", "${java.text.NumberFormat.getIntegerInstance(locale).format(amount)} sats available in Ark") else null
+    fun boarding(amount: Long, createdAt: Long, now: Long, locale: Locale): Banner? = if (now - createdAt < successMillis) {
+        Banner("""Boarding completed""", "${java.text.NumberFormat.getIntegerInstance(locale).format(amount)} sats available in Ark")
+    } else null
     fun activeRound(final: Boolean, status: String) = !final || status in setOf("pending", "unconfirmed")
     fun updateURL(variant: String) = "https://play.google.com/store/apps/details?id=com.noahwallet.${if (variant == "mainnet") "mainnet" else "signet"}"
 
@@ -59,6 +62,7 @@ object HomeRules {
         data object Email : Nudge { override val key get() = "email" }
         data object Update : Nudge { override val key get() = "update" }
     }
+    @Suppress("LongParameterList") // a pure rule over Home's state, which HomeRulesTest drives argument by argument
     fun nudge(notices: List<String>, renew: Renew?, backup: Banner?, backedUp: Boolean, emailPrompt: Boolean, updateRequired: Boolean): Nudge? = when {
         notices.isNotEmpty() -> Nudge.Notice(notices.first())
         renew != null -> Nudge.Renewal(renew)

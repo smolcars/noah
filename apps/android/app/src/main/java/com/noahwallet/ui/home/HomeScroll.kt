@@ -76,7 +76,8 @@ class HomeScroll internal constructor(val compact: ScrollState, val leading: Scr
     internal fun compactAnchor(state: HomeRules.State, items: ActivityItems, recent: List<String>): Anchor {
         val y = compact.value
         if (state == HomeRules.State.fresh) return into(compactCard, y) ?: Anchor.Above(y)
-        if (state != HomeRules.State.everyday || recent.isEmpty() || recentTop < 0 || rowHeight <= 0 || y <= recentTop) return Anchor.Above(y)
+        if (state != HomeRules.State.everyday || recent.isEmpty()) return Anchor.Above(y)
+        if (recentTop < 0 || rowHeight <= 0 || y <= recentTop) return Anchor.Above(y)
         val k = ((y - recentTop) / rowHeight).coerceAtMost(recent.lastIndex)
         return row(recent[k], y - recentTop - k * rowHeight, items)
     }
