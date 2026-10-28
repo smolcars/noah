@@ -79,7 +79,7 @@ data class HistoryTransaction(
     val timestamp get() = HistoryRules.parseDate(date)
     val statusLabel get() = movementStatus?.replaceFirstChar { it.titlecase(Locale.ROOT) }
     val receiptStatus get() = if (movementStatus == "successful" || hasConfirmation == true) "Completed"
-        else statusLabel ?: if (source == "onchain-wallet" || balanceChangeSat != null) "Unconfirmed" else "Recorded"
+    else statusLabel ?: if (source == "onchain-wallet" || balanceChangeSat != null) "Unconfirmed" else "Recorded"
     fun explorerURL(variant: String): String? {
         if (type != "Onchain" && source != "onchain-wallet" && balanceChangeSat == null) return null
         val id = txid?.substringBefore(':')?.takeIf { it.isNotEmpty() } ?: return null

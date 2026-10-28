@@ -1,9 +1,5 @@
 package com.noahwallet.onchain
 
-import com.noahwallet.ui.WalletAlertDialog
-import com.noahwallet.ui.WalletModalBottomSheet
-
-import com.noahwallet.localization.tr
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
@@ -24,10 +20,13 @@ import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
 import com.noahwallet.BuildConfig
 import com.noahwallet.formatting.BitcoinAmount
+import com.noahwallet.localization.tr
 import com.noahwallet.services.storage.PersistedWalletState
 import com.noahwallet.services.wallet.WalletBackgroundActivity
-import com.noahwallet.ui.readableWidth
 import com.noahwallet.ui.AppModel
+import com.noahwallet.ui.WalletAlertDialog
+import com.noahwallet.ui.WalletModalBottomSheet
+import com.noahwallet.ui.readableWidth
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.drop
 
@@ -49,8 +48,8 @@ internal fun onchainDependencies(app: AppModel) =
 
 /** The model's calls on [session], each mutation under [lifecycle]'s gate; a device test runs them on a fake wallet. */
 internal fun onchainDependencies(session: com.noahwallet.services.wallet.WalletSession, lifecycle: com.noahwallet.services.wallet.WalletLifecycle,
-                                 funding: AutoBoardFunding, claims: ExitClaimRecords, seen: ExitSeen, settle: suspend () -> Boolean = { false },
-                                 shared: SharedOverview? = null, ready: () -> Boolean) = OnchainModel.Dependencies(
+    funding: AutoBoardFunding, claims: ExitClaimRecords, seen: ExitSeen, settle: suspend () -> Boolean = { false },
+    shared: SharedOverview? = null, ready: () -> Boolean) = OnchainModel.Dependencies(
     ready = ready, settle = settle, overview = session::onchainOverview,
     quote = { action, ids, amount, destination -> session.quoteOnchain(action, ids, amount, destination) },
     execute = { quote -> lifecycle.withWalletMutation {

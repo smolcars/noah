@@ -1,5 +1,5 @@
-import Testing
 @testable import Noah
+import Testing
 
 /// Profile → Name keeps its draft, its save and its error outside the sheet, which a rotation rebuilds.
 @MainActor struct ProfileNameDraftTests {

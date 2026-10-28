@@ -48,7 +48,8 @@ struct ExitVtxoDetailView: View {
                             .padding(.horizontal, settings.wide ? -12 : -NoahTokens.Space.screen)
                     }
                     Text(verbatim: text.phase).noahText(NoahTokens.Typography.control).monospacedDigit()
-                        .foregroundStyle(text.statusKind == .failure ? NoahTokens.Colors.failure : text.statusKind == .live ? NoahTokens.Colors.muted : NoahTokens.Colors.foreground)
+                        .foregroundStyle(text.statusKind == .failure ? NoahTokens.Colors.failure : text.statusKind == .live ? NoahTokens.Colors
+                            .muted : NoahTokens.Colors.foreground)
                         .multilineTextAlignment(.center).frame(maxWidth: .infinity)
                         .id(text.phase).transition(.homeRise(reduceMotion, 6))
                         .accessibilityAddTraits(.updatesFrequently)
@@ -63,11 +64,18 @@ struct ExitVtxoDetailView: View {
                         ExitStatusLine(text: text.status, kind: text.statusKind)
                     }
                     if progress.phase == .needsFunds, let need = text.need {
-                        ExitWarning(text: L10n.text("Add about {amount} on-chain. Noah sends the next transaction once it confirms.", money(need), locale: language))
+                        ExitWarning(text: L10n.text(
+                            "Add about {amount} on-chain. Noah sends the next transaction once it confirms.",
+                            money(need),
+                            locale: language))
                     }
                     if progress.stale {
-                        ExitWarning(text: L10n.text("This exit is behind the current chain height. Move it forward to catch up; this can also send exit transactions.", locale: language),
-                                    symbol: "clock", muted: true)
+                        ExitWarning(
+                            text: L10n.text(
+                                "This exit is behind the current chain height. Move it forward to catch up; this can also send exit transactions.",
+                                locale: language),
+                            symbol: "clock",
+                            muted: true)
                     }
                     VStack(spacing: 0) {
                         ForEach(Array(text.rows.enumerated()), id: \.offset) { index, row in
@@ -143,7 +151,7 @@ struct ExitVtxoDetailView: View {
         }
     }
 
-    @ViewBuilder private func footer(_ exit: ExitModel, _ progress: ExitProgress, _ text: ExitText) -> some View {
+    @ViewBuilder private func footer(_: ExitModel, _ progress: ExitProgress, _ text: ExitText) -> some View {
         switch progress.phase {
         case .claimable:
             Button(L10n.text("Claim {amount}", ExitMoney(app: app, locale: locale)(text.claimable), locale: language)) {
@@ -199,7 +207,9 @@ struct ExitVtxoDetailView: View {
 
     private func checkSheet(_ money: ExitMoney) -> some View {
         SettingsSheetBody(title: L10n.text("Move your exit forward?", locale: language),
-                          line: L10n.text("Sends the next step of your exit, or raises the fee on a step that’s stuck. Fees come from your on-chain bitcoin. Noah also does this on its own, including in the background when the system lets it.", locale: language)) {
+                          line: L10n.text(
+                              "Sends the next step of your exit, or raises the fee on a step that’s stuck. Fees come from your on-chain bitcoin. Noah also does this on its own, including in the background when the system lets it.",
+                              locale: language)) {
             if let quote = model.quote, quote.action == .progress, let chainFee = quote.chainFee {
                 SettingsDetailRow(label: L10n.text("Estimated fees", locale: language), value: money.about(chainFee), numeric: true, hairline: false)
                     .padding(.top, 8)
@@ -236,7 +246,10 @@ struct ExitVtxoDetailView: View {
         }
         SettingsSection(title: "Exit")
         if let delta = model.overview?.exitDelta {
-            SettingsDetailRow(label: L10n.text("Timelock", locale: language), value: L10n.plural("{n} blocks", count: Int(delta), locale: language), compact: true)
+            SettingsDetailRow(
+                label: L10n.text("Timelock", locale: language),
+                value: L10n.plural("{n} blocks", count: Int(delta), locale: language),
+                compact: true)
         }
         if let checked = progress.checked {
             SettingsDetailRow(label: L10n.text("Last checked", locale: language),
@@ -244,10 +257,10 @@ struct ExitVtxoDetailView: View {
         }
         SettingsSection(title: "Timeline")
         ForEach(Array(exit.timeline.enumerated()), id: \.offset) { index, item in
-            SettingsDetailRow(label: L10n.text(item.label, locale: language), value: [item.startHeight, item.endHeight].compactMap { $0 }
-                                .map { $0.formatted(.number.locale(locale)) }.reduce(into: [String]()) { if !$0.contains($1) { $0.append($1) } }
-                                .joined(separator: "–"),
-                              compact: true, hairline: index < exit.timeline.count - 1)
+            SettingsDetailRow(label: L10n.text(item.label, locale: language), value: [item.startHeight, item.endHeight].compactMap(\.self)
+                .map { $0.formatted(.number.locale(locale)) }.reduce(into: [String]()) { if !$0.contains($1) { $0.append($1) } }
+                .joined(separator: "–"),
+                compact: true, hairline: index < exit.timeline.count - 1)
         }
     }
 
@@ -397,9 +410,9 @@ struct ExitStatusLine: View {
             return tr("Waiting for block {height} · {n} of {total}", block(tip + 1), n, total)
         case .shared: return tr("Already sent by someone else · {n} of {total}", n, total)
         case .confirmed:
-            let last = progress.heights.prefix(progress.confirmed).compactMap { $0 }.last ?? tip
+            let last = progress.heights.prefix(progress.confirmed).compactMap(\.self).last ?? tip
             return tr("Confirmed in block {height} · {n} of {total}", block(last), progress.confirmed, total)
-        case .onchain: return tr("On-chain in block {height}", block(progress.heights.compactMap { $0 }.last ?? tip))
+        case .onchain: return tr("On-chain in block {height}", block(progress.heights.compactMap(\.self).last ?? tip))
         case .waiting:
             let left = progress.left(tip: tip) ?? 0
             guard left > 0 else { return tr("Unlocks at block {height}", block(progress.claimableHeight ?? tip)) }
@@ -418,8 +431,10 @@ struct ExitStatusLine: View {
         if progress.stale { return tr("Noah hasn’t checked on this exit in a while. Moving it forward can also send its next step or raise a fee.") }
         switch progress.phase {
         case .starting: return tr("Your VTXO leaves Ark. Nothing from here on needs Ark’s server.")
-        case .publishing: return L10n.plural("Your VTXO is a leaf of the round’s tree. To reach it, the {n} transactions on your branch go to the chain, root first.",
-                                             count: max(progress.total, 1), locale: language)
+        case .publishing: return L10n.plural(
+                "Your VTXO is a leaf of the round’s tree. To reach it, the {n} transactions on your branch go to the chain, root first.",
+                count: max(progress.total, 1),
+                locale: language)
         case .sending: return tr("Each one is sent only after the one before it is in a block.")
         case .needsFunds: return tr("Each transaction’s fee comes from your confirmed on-chain bitcoin. Noah sends the next one once a deposit confirms.")
         case .mempool:
@@ -448,7 +463,9 @@ struct ExitStatusLine: View {
             rows.append(feesRow)
             if let fee = claimFee { rows.append(.init(label: tr("Claim fee"), value: money(fee), numeric: true)) }
             if let took {
-                rows.append(.init(label: tr("Took"), value: L10n.plural("{n} blocks · {time}", count: Int(took), ExitText.about(took, language), locale: language)))
+                rows.append(.init(
+                    label: tr("Took"),
+                    value: L10n.plural("{n} blocks · {time}", count: Int(took), ExitText.about(took, language), locale: language)))
             }
             return rows
         case .canceled:
@@ -495,7 +512,7 @@ struct ExitStatusLine: View {
         return end - start
     }
 
-    func status(of tx: ExitDetails.Transaction, index: Int) -> String {
+    func status(of tx: ExitDetails.Transaction, index _: Int) -> String {
         if let height = tx.status.block?.height { return tr("Block {height}", block(height)) }
         // Later states don't list transactions: the last list bark recorded can predate the last one's block (as Android).
         if [.onchain, .waiting, .claimable, .claiming, .claimed].contains(progress.phase) { return tr("In a block") }
@@ -529,17 +546,18 @@ struct ExitStatusLine: View {
         let path = exit.path
         // Before bark lists the path (Start), a round's usual four; past Processing they're all in blocks.
         let settled = [.lock, .unlocked, .claim, .claimed].contains(progress.picture)
-        let levels: [ExitStageScene.Level] = progress.total == 0 ? Array(repeating: settled ? .mined(nil) : .unsent, count: 4) : (0..<progress.total).map { index in
-            if index < progress.confirmed { return .mined(progress.heights[safe: index] ?? nil) }
-            guard index == progress.confirmed else { return .unsent }
-            switch progress.phase {
-            case .sending: return .ready
-            case .needsFunds: return .needsFunds
-            case .mempool: return .pending(theirs: false, bumped: progress.bumped)
-            case .shared: return .pending(theirs: true, bumped: false)
-            default: return .unsent
+        let levels: [ExitStageScene.Level] = progress.total == 0 ? Array(repeating: settled ? .mined(nil) : .unsent, count: 4) : (0..<progress.total)
+            .map { index in
+                if index < progress.confirmed { return .mined(progress.heights[safe: index] ?? nil) }
+                guard index == progress.confirmed else { return .unsent }
+                switch progress.phase {
+                case .sending: return .ready
+                case .needsFunds: return .needsFunds
+                case .mempool: return .pending(theirs: false, bumped: progress.bumped)
+                case .shared: return .pending(theirs: true, bumped: false)
+                default: return .unsent
+                }
             }
-        }
         var scene = ExitStageScene(picture: progress.picture, levels: levels)
         // Your other live exits: what they share with this one, and where their branches leave it.
         let others = (overview?.exits ?? []).filter { $0.id != exit.id && ExitRules.live($0.state) }.sorted { $0.amount > $1.amount }
@@ -560,7 +578,7 @@ struct ExitStatusLine: View {
         scene.balance = overview.map { money($0.confirmed) }
         scene.delta = overview?.exitDelta ?? 144
         scene.unlock = progress.claimableHeight
-        scene.leaf = progress.heights.last.flatMap { $0 } ?? progress.claimableHeight.map { $0 - min($0, scene.delta) }
+        scene.leaf = progress.heights.last.flatMap(\.self) ?? progress.claimableHeight.map { $0 - min($0, scene.delta) }
         scene.claimFee = batchFee.map(money.callAsFunction)
         scene.claimHeight = progress.claimedHeight
         // Where the claim went: this phone, or another wallet and its address.

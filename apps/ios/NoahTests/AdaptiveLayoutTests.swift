@@ -1,8 +1,8 @@
+@testable import Noah
 import Observation
 import SwiftUI
 import Testing
 import UIKit
-@testable import Noah
 
 @Suite(.serialized)
 @MainActor
@@ -154,5 +154,4 @@ struct AdaptiveLayoutTests {
         coordinator.textFieldDidBeginEditing(field)
         #expect(focus.index == 0)
     }
-
 }

@@ -9,22 +9,22 @@ struct SendOutcomeView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.sendReceiveFixture) private var fixture
     @Bindable var controller: SendPaymentController
-    var btcPrice: Double? = nil
+    var btcPrice: Double?
     var fiatCurrency = "USD"
     let done: () -> Void
-    var clock: SendMotionClock? = nil
+    var clock: SendMotionClock?
     var unit: BitcoinAmountUnit = .bip177
-    var recipient: SendRecipientLabel? = nil
+    var recipient: SendRecipientLabel?
     /// Nil measures its own window (a host without Send around it).
-    var wide: Bool? = nil
+    var wide: Bool?
     var sideInsets: (leading: CGFloat, trailing: CGFloat) = (0, 0)
     /// Done while Lightning is still paying, or Close on an unresolved result: leave, keeping
     /// the attempt and the send lock. Required, so no host can leave it doing nothing.
     let onLeave: () -> Void
     /// The payment just confirmed, until the controller has saved its attempt.
-    var reviewed: SendPayment? = nil
+    var reviewed: SendPayment?
     /// The chain tip, read by Send with each receipt check.
-    var chainTip: UInt32? = nil
+    var chainTip: UInt32?
     @State private var ownClock = SendMotionClock()
     @State private var history: [HistoryTransaction] = []
     @State private var refund: SendRefund?
@@ -265,13 +265,17 @@ struct SendOutcomeView: View {
 
     @ViewBuilder private var result: some View {
         if let line { Text(verbatim: line).noahText(NoahTokens.Typography.sub).foregroundStyle(NoahTokens.Colors.muted)
-            .fixedSize(horizontal: false, vertical: true).accessibilityIdentifier("send-result-line") }
+            .fixedSize(horizontal: false, vertical: true).accessibilityIdentifier("send-result-line")
+        }
         switch kind {
         case .sending: EmptyView()
         case .stillSending:
             rows {
                 SendDetailRow("Via", text: Self.railName(rail), glyph: Self.railGlyph(rail))
-                SendDetailRow("Fee", number: L10n.text("up to {amount}", format(attempt?.existingLightning?.fee ?? attempt?.quote?.fee ?? 0), locale: locale.identifier), last: true)
+                SendDetailRow(
+                    "Fee",
+                    number: L10n.text("up to {amount}", format(attempt?.existingLightning?.fee ?? attempt?.quote?.fee ?? 0), locale: locale.identifier),
+                    last: true)
             }
             existingLightning
         case .sent:
@@ -359,7 +363,7 @@ struct SendOutcomeView: View {
         }
     }
 
-    private func rows<Content: View>(@ViewBuilder _ content: () -> Content) -> some View {
+    private func rows(@ViewBuilder _ content: () -> some View) -> some View {
         VStack(spacing: 0) { content() }.padding(.top, 18)
     }
 
@@ -422,7 +426,11 @@ struct SendOutcomeView: View {
                 .noahText(HomeText.footnote).foregroundStyle(NoahTokens.Colors.muted).padding(.top, 6)
         }
         if let receipt = attempt?.receipt {
-            fine(L10n.text(receipt.conflictDescription ?? "Noah can’t find this transaction right now. Its confirmation may no longer be trackable in-app. Check a block explorer.", locale: locale.identifier))
+            fine(L10n.text(
+                receipt
+                    .conflictDescription ??
+                    "Noah can’t find this transaction right now. Its confirmation may no longer be trackable in-app. Check a block explorer.",
+                locale: locale.identifier))
             if let status = receipt.chainStatus { fine(L10n.text(status.message, locale: locale.identifier)) }
             if let txid = receipt.txid {
                 Text(verbatim: txid).noahText(SendText.mono).foregroundStyle(NoahTokens.Colors.foreground).textSelection(.enabled).padding(.top, 8)
@@ -447,7 +455,7 @@ struct SendOutcomeView: View {
 
     // MARK: Actions
 
-    @ViewBuilder private var actions: some View {
+    private var actions: some View {
         VStack(spacing: 10) {
             ForEach(Self.actions(kind: kind, uncertain: controller.state == .uncertain, resultShown: resultShown), id: \.self) { action in
                 switch action {
@@ -559,7 +567,8 @@ struct SendOutcomeView: View {
         if !Task.isCancelled { refund = read }
     }
 
-    private var resultKey: String { "\(rail)-\(shownOutcome)-\(motion.submittedAt?.timeIntervalSince1970 ?? 0)-\(motion.outcomeAt?.timeIntervalSince1970 ?? 0)" }
+    private var resultKey: String { "\(rail)-\(shownOutcome)-\(motion.submittedAt?.timeIntervalSince1970 ?? 0)-\(motion.outcomeAt?.timeIntervalSince1970 ?? 0)"
+    }
 
     /// The result appears when the motion reaches it; Lightning that's still paying after about 10 s shows its pending result.
     private func revealResult() async {

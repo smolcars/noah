@@ -1,6 +1,6 @@
+@testable import Noah
 import Testing
 import UserNotifications
-@testable import Noah
 
 @MainActor
 struct PushPermissionTests {
@@ -14,7 +14,8 @@ struct PushPermissionTests {
     @Test func matchesRNPermissionGate() async throws {
         let statuses: [String: UNAuthorizationStatus] = [
             "notDetermined": .notDetermined, "denied": .denied, "authorized": .authorized,
-            "provisional": .provisional, "ephemeral": .ephemeral]
+            "provisional": .provisional, "ephemeral": .ephemeral,
+        ]
         let cases = try Fixtures.load("push-gate", input: Input.self, expected: Bool.self)
         #expect(cases.count == 24)
         for fixture in cases {

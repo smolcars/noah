@@ -3,10 +3,10 @@ package com.noahwallet.services
 import com.noahwallet.fixtures.SharedFixtures
 import com.noahwallet.services.launch.LaunchState
 import com.noahwallet.services.storage.*
-import java.nio.file.Files
 import kotlinx.serialization.json.*
 import org.junit.Assert.*
 import org.junit.Test
+import java.nio.file.Files
 
 class LaunchAndSettingsTest {
     @Test fun sharedLaunchDecisions() {
@@ -35,8 +35,7 @@ class LaunchAndSettingsTest {
         assertEquals(LaunchState.SeedStatus.invalid, LaunchState.SeedStatus.from(SecretResult.Found("")))
         assertEquals(LaunchState.SeedStatus.unavailable,
             LaunchState.SeedStatus.from(SecretResult.Unavailable(SecretFailure.missingKey)))
-        assertEquals(LaunchState.seedConflict, LaunchState.openFailure(io.github.niteshbalusu11.bark.BarkError(
-            "incorrect mnemonic for existing wallet", io.github.niteshbalusu11.bark.BarkErrorCode.OTHER)))
+        assertEquals(LaunchState.seedConflict, LaunchState.openFailure(io.github.niteshbalusu11.bark.BarkError("incorrect mnemonic for existing wallet", io.github.niteshbalusu11.bark.BarkErrorCode.OTHER)))
     }
 
     @Test fun optionalFieldsUnknownFieldsAndEnvelopes() {
@@ -47,8 +46,7 @@ class LaunchAndSettingsTest {
         val encoded = PersistedStateCodec.encode(state, 0)
         assertEquals(state, PersistedStateCodec.decode<PersistedWalletState>(encoded))
         assertEquals(0, Json.parseToJsonElement(encoded).jsonObject.getValue("version").jsonPrimitive.int)
-        assertEquals(true, PersistedStateCodec.decode<PersistedWalletState>(
-            """{"state":{"isInitialized":true,"futureFlag":42}}""")?.isInitialized)
+        assertEquals(true, PersistedStateCodec.decode<PersistedWalletState>("""{"state":{"isInitialized":true,"futureFlag":42}}""")?.isInitialized)
         for (invalid in listOf("bad json", "{}", """{"state":null}""", """{"state":{"isInitialized":{}}}""")) {
             assertNull(PersistedStateCodec.decode<PersistedWalletState>(invalid))
         }

@@ -1,10 +1,9 @@
 import BarkBoltFFI
 import Foundation
+@testable import Noah
 import OpenAPIRuntime
 import OpenAPIURLSession
 import Testing
-
-@testable import Noah
 
 /// Opt-in, owned simulator only. The host keeps phrases/encrypted files in memory.
 @Suite(.enabled(if: ProcessInfo.processInfo.environment["NOAH_FUNDED_BACKUP_URL"] != nil), .serialized)
@@ -74,17 +73,18 @@ struct FundedCrossPlatformBackupTests {
                 try #require(funded.movementCount >= 2 && funded.balance.onchain.confirmed == 10_000)
                 let before = try await state(session)
                 let service = BackupService(session: session, client: Client(serverURL: base, transport: URLSessionTransport()),
-                    readMnemonic: { phrase }, scratch: ScratchSpace(root: root.appending(path: "scratch")))
+                                            readMnemonic: { phrase }, scratch: ScratchSpace(root: root.appending(path: "scratch")))
                 let export = try await service.exportEncryptedBackup(to: root.appending(path: "ios.noahbackup"))
                 try await session.close()
                 _ = try await request("export/ios", ["phrase": phrase, "state": before,
-                    "fileBase64": Data(contentsOf: export.url).base64EncodedString()])
+                                                     "fileBase64": Data(contentsOf: export.url).base64EncodedString()])
             } else {
                 let input = try #require(try JSONSerialization.jsonObject(with: await request("input/android")) as? [String: Any])
                 // Never use #require/#expect on the phrase: assertion diagnostics must stay public.
                 guard let phrase = input["phrase"] as? String else { throw CocoaError(.fileReadCorruptFile) }
                 let restorer = WalletRestorer(variant: .regtest, session: session, location: location, seed: seed,
-                    makeClient: { _ in Client(serverURL: base.appending(path: "android"), transport: URLSessionTransport()) }, walletChanged: {})
+                                              makeClient: { _ in Client(serverURL: base.appending(path: "android"), transport: URLSessionTransport()) },
+                                              walletChanged: {})
                 let outcome = try await restorer.restore(mnemonic: phrase)
                 try #require(!outcome.cleanupPending && !location.restorePending)
                 let seedMatches = seed.read() == .found(phrase)

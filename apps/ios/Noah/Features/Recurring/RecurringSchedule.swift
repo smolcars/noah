@@ -79,7 +79,7 @@ struct RecurringPayment: Codable, Equatable, Identifiable, Sendable {
     static let amountLimitMessage = "This amount exceeds 21 million BTC. Cancel this schedule and approve a new payment within the limit."
     static var now: Double { floor(Date().timeIntervalSince1970 * 1000) }
     private var wholeMillisecondTimes: Bool {
-        let times = [startAt, endAt, nextRunAt, createdAt, updatedAt, retryNotBefore, inFlight?.startedAt].compactMap { $0 }
+        let times = [startAt, endAt, nextRunAt, createdAt, updatedAt, retryNotBefore, inFlight?.startedAt].compactMap(\.self)
             + runs.flatMap { [$0.scheduledFor, $0.attemptedAt] }
         return times.allSatisfy { $0.isFinite && $0.rounded(.towardZero) == $0 }
     }
@@ -94,9 +94,11 @@ struct RecurringPayment: Codable, Equatable, Identifiable, Sendable {
     }
     func validateInput(now: Double) throws {
         guard !unsupportedStorage, wholeMillisecondTimes else { throw RecurringError.message(Self.unsupportedMessage) }
-        guard !label.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty, label.utf16.count <= 64 else { throw RecurringError.message("Give this payment a short name (max 64 characters).") }
+        guard !label.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+              label.utf16.count <= 64 else { throw RecurringError.message("Give this payment a short name (max 64 characters).") }
         guard amountSat > 0, amountSat <= Self.maximumAmount else { throw RecurringError.message("Enter a whole amount in sats, up to 21 million BTC.") }
-        guard ["ark", "lnurl", "offer"].contains(destinationType), !destination.isEmpty else { throw RecurringError.message("Enter an Ark address, Lightning address or BOLT12 offer.") }
+        guard ["ark", "lnurl", "offer"].contains(destinationType),
+              !destination.isEmpty else { throw RecurringError.message("Enter an Ark address, Lightning address or BOLT12 offer.") }
         guard interval.valid else { throw RecurringError.message("Custom intervals must be between 1 and 365 days.") }
         guard startAt.isFinite, startAt >= now - 300_000 else { throw RecurringError.message("The first payment can't be in the past.") }
         guard endAt == nil || (endAt!.isFinite && endAt! >= startAt) else { throw RecurringError.message("The end date must be after the first payment.") }
@@ -159,17 +161,29 @@ struct RecurringPayment: Codable, Equatable, Identifiable, Sendable {
         lastError = nil; issue = nil; consecutiveFailures = 0; updatedAt = now
     }
     mutating func success(_ plan: Plan, now: Double, zone: TimeZone = .current) {
-        let additions = (plan.skippedIndices ?? []).map { Run(occurrenceIndex: $0, scheduledFor: occurrence($0, zone: zone), attemptedAt: now, status: "skipped", amountSat: amountSat) }
+        let additions = (plan.skippedIndices ?? []).map { Run(
+            occurrenceIndex: $0,
+            scheduledFor: occurrence($0, zone: zone),
+            attemptedAt: now,
+            status: "skipped",
+            amountSat: amountSat) }
             + [Run(occurrenceIndex: plan.occurrenceIndex!, scheduledFor: plan.scheduledFor!, attemptedAt: now, status: "success", amountSat: amountSat)]
         runs = Array((additions.reversed() + runs).prefix(24))
         occurrencesPaid += 1; consecutiveFailures = 0; lastError = nil; issue = nil; retryNotBefore = nil; inFlight = nil; updatedAt = now
         advance(plan.occurrenceIndex! + 1, zone: zone)
     }
     mutating func failure(_ plan: Plan, message: String, retryable: Bool, now: Double, issue: RecurringIssue? = nil) {
-        inFlight = nil; consecutiveFailures += 1; lastError = message; self.issue = issue ?? .init(code: retryable ? .retryableFailure : .uncertain); updatedAt = now
+        inFlight = nil; consecutiveFailures += 1; lastError = message; self
+            .issue = issue ?? .init(code: retryable ? .retryableFailure : .uncertain); updatedAt = now
         if !retryable { status = "needs_attention" }
         retryNotBefore = retryable ? now + min(900_000 * pow(2, Double(max(0, min(consecutiveFailures, 16) - 1))), 21_600_000) : nil
-        runs = Array(([Run(occurrenceIndex: plan.occurrenceIndex!, scheduledFor: plan.scheduledFor!, attemptedAt: now, status: "failed", amountSat: amountSat, error: message)] + runs).prefix(24))
+        runs = Array(([Run(
+            occurrenceIndex: plan.occurrenceIndex!,
+            scheduledFor: plan.scheduledFor!,
+            attemptedAt: now,
+            status: "failed",
+            amountSat: amountSat,
+            error: message)] + runs).prefix(24))
     }
 }
 

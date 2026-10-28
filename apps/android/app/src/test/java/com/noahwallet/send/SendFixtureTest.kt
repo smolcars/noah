@@ -54,7 +54,9 @@ class SendFixtureTest(private val domain: String, private val case: FixtureCase)
         }
     }
     companion object {
-        @JvmStatic @Parameterized.Parameters(name = "{0} {index}") fun cases() =
+        @JvmStatic
+        @Parameterized.Parameters(name = "{0} {index}")
+        fun cases() =
             listOf("send-utils", "send-flow", "onchain-send", "lightning-invoice").flatMap { domain -> SharedFixtures.load(domain).map { arrayOf(domain, it) } }
     }
 }

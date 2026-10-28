@@ -1,6 +1,6 @@
 import Foundation
-import Testing
 @testable import Noah
+import Testing
 
 struct NativeSettingsFileTests {
     @Test func interruptionsOnBothSidesOfRenameKeepOneWholeGeneration() throws {
@@ -39,7 +39,7 @@ struct NativeSettingsFileTests {
             try Data(bad.utf8).write(to: file)
             #expect(throws: (any Error).self) { try store.load() }
         }
-        try Data([0xc3, 0x28]).write(to: file)
+        try Data([0xC3, 0x28]).write(to: file)
         #expect(throws: (any Error).self) { try store.load() }
     }
 }

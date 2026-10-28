@@ -1,6 +1,6 @@
 import Foundation
-import Testing
 @testable import Noah
+import Testing
 
 struct BtcMapLimitsTests {
     struct Input: Decodable { let operation: String; let text: String }
@@ -45,7 +45,8 @@ struct BtcMapLimitsTests {
         let folder = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: folder) }
-        let raw = Data(#"{"schemaVersion":1,"generatedAt":"today","source":"btcmap.org","places":[{"id":1,"lat":1,"lon":2,"icon":"cafe","name":"Cafe","updated_at":"today"}]}"#.utf8)
+        let raw = Data(#"{"schemaVersion":1,"generatedAt":"today","source":"btcmap.org","places":[{"id":1,"lat":1,"lon":2,"icon":"cafe","name":"Cafe","updated_at":"today"}]}"#
+            .utf8)
         let cache = folder.appending(path: "places")
         try raw.write(to: cache)
         let clock = Clock()
@@ -76,7 +77,9 @@ struct BtcMapLimitsTests {
         #expect(throws: (any Error).self) { try BtcMapLimits.check(String(repeating: "x", count: BtcMapLimits.stringBytes + 1)) }
         let array = "[" + Array(repeating: "1", count: BtcMapLimits.records + 1).joined(separator: ",") + "]"
         #expect(throws: (any Error).self) { try BtcMapLimits.decodeRecords(Int.self, from: Data(array.utf8)) }
-        let place = "{\"id\":1,\"lat\":1,\"lon\":2,\"icon\":\"cafe\",\"updated_at\":\"2026-01-01\",\"name\":\"" + String(repeating: "x", count: BtcMapLimits.stringBytes + 1) + "\"}"
+        let place = "{\"id\":1,\"lat\":1,\"lon\":2,\"icon\":\"cafe\",\"updated_at\":\"2026-01-01\",\"name\":\"" + String(
+            repeating: "x",
+            count: BtcMapLimits.stringBytes + 1) + "\"}"
         #expect(throws: (any Error).self) { try BtcMapLimits.decodeRecords(BtcMapPatch.self, from: Data("[\(place)]".utf8)) }
         #expect(throws: (any Error).self) { try BtcMapDetail.parse(place: Data(place.utf8), comments: Data("[]".utf8)) }
     }
@@ -98,7 +101,8 @@ struct BtcMapLimitsTests {
     }
 
     @Test func encodedSizeMatchesFullEncodingIncludingUTF8EscapesAndMetadata() throws {
-        let raw = Data(#"{"schemaVersion":1,"generatedAt":"é\n","source":"é\\\"","places":[{"id":1,"lat":1,"lon":2,"icon":"cafe","name":"é🚀\"\n","updated_at":"today"}]}"#.utf8)
+        let raw = Data(#"{"schemaVersion":1,"generatedAt":"é\n","source":"é\\\"","places":[{"id":1,"lat":1,"lon":2,"icon":"cafe","name":"é🚀\"\n","updated_at":"today"}]}"#
+            .utf8)
         var snapshot = try BtcMapSnapshot.parse(raw)
         let place = try #require(snapshot.places.first)
         for count in [0, 1, 3] {
@@ -142,7 +146,7 @@ struct BtcMapLimitsTests {
     @Test func oversizedSyncDoesNotRetryOrReplaceCacheAndHasCooldown() async throws {
         actor Requests {
             var count = 0
-            func fetch(_ url: URL) throws -> Data { count += 1; throw BtcMapError.resourceLimit }
+            func fetch(_: URL) throws -> Data { count += 1; throw BtcMapError.resourceLimit }
         }
         let folder = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
@@ -160,4 +164,5 @@ struct BtcMapLimitsTests {
         #expect(!FileManager.default.fileExists(atPath: cache.path))
         await #expect(throws: (any Error).self) { try await repository.sync(now: now.addingTimeInterval(300)) }
         #expect(await requests.count == 2)
-    }}
+    }
+}

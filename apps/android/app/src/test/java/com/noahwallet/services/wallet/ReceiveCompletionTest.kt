@@ -9,7 +9,7 @@ class ReceiveCompletionTest {
     private fun movement(subsystem: String = "bark.arkoor", status: String = "successful", kind: String = "receive",
         destinations: List<MovementDestination> = listOf(destination("ark-mine", 200u), destination("ark-mine", 300u)),
         hash: String? = null) = Movement(1u, status, subsystem, kind, "{}", 500, 500, 0u,
-            emptyList(), destinations, emptyList(), emptyList(), emptyList(), "now", "now", null, hash, null, null)
+        emptyList(), destinations, emptyList(), emptyList(), emptyList(), "now", "now", null, hash, null, null)
     private fun destination(address: String, sats: ULong) = MovementDestination(PaymentMethod("ark", address), sats)
 
     @Test fun sumsOnlyMatchingArkDestinations() {

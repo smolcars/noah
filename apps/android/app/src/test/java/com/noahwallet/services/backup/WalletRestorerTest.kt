@@ -1,17 +1,17 @@
 package com.noahwallet.services.backup
 
+import com.noahwallet.services.server.ServerClient
 import com.noahwallet.services.storage.*
 import com.noahwallet.services.testRounds
 import com.noahwallet.services.wallet.*
-import com.noahwallet.services.server.ServerClient
 import io.github.niteshbalusu11.bark.*
 import io.ktor.client.engine.mock.*
 import io.ktor.http.*
-import java.io.File
-import java.nio.file.Files
 import kotlinx.coroutines.*
 import org.junit.Assert.*
 import org.junit.Test
+import java.io.File
+import java.nio.file.Files
 
 class WalletRestorerTest {
     companion object {
@@ -74,8 +74,7 @@ class WalletRestorerTest {
                     zip.putNextEntry(java.util.zip.ZipEntry("backup_staging/noah-data-regtest/db.sqlite"))
                     zip.write("new wallet".toByteArray()); zip.closeEntry()
                 }
-                legacyFile.writeBytes(java.util.Base64.getEncoder().encode(
-                    BackupCrypto.encrypt(bytes.toByteArray(), validSeed, BackupCrypto.Version.legacyDirectory, testRounds)))
+                legacyFile.writeBytes(java.util.Base64.getEncoder().encode(BackupCrypto.encrypt(bytes.toByteArray(), validSeed, BackupCrypto.Version.legacyDirectory, testRounds)))
             }
             val info = """{"backup_id":"b1","created_at":"x","encrypted_sha256":"${reportedHash ?: BackupArchive.sha256(encrypted)}","encrypted_size":${reportedSize ?: encrypted.length()},"format_version":2}"""
             return WalletRestorer("regtest", session, location, seed,

@@ -17,6 +17,9 @@ class RecurringRaceTest(private val action: String, private val preparation: Boo
         if (action == "pause") assertEquals("paused", w.schedule!!.status)
         assertFalse(w.journal.consumed(w.binding, "rent", 1000))
     }
-    companion object { @JvmStatic @Parameterized.Parameters(name = "{0}, after preparation={1}") fun cases() =
-        listOf("pause", "cancel", "edit", "suspend", "replace", "restore").flatMap { action -> listOf(false, true).map { arrayOf<Any>(action, it) } } }
+    companion object {
+        @JvmStatic
+        @Parameterized.Parameters(name = "{0}, after preparation={1}")
+        fun cases() =
+            listOf("pause", "cancel", "edit", "suspend", "replace", "restore").flatMap { action -> listOf(false, true).map { arrayOf<Any>(action, it) } } }
 }

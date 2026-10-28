@@ -1,11 +1,22 @@
 import Foundation
-import Testing
 @testable import Noah
+import Testing
 
 struct RecurringScheduleTests {
     struct CalendarInput: Decodable { var zone: String; var startAt: Double; var interval: RecurringInterval; var index: Int }
     static func schedule(start: Double = 0) -> RecurringPayment {
-        .init(id: "rent", label: "Rent", destination: "landlord@example.com", destinationType: "lnurl", amountSat: 50_000, comment: "", interval: .init(unit: "month", every: 1), startAt: start, nextRunAt: start, createdAt: 0, updatedAt: 0)
+        .init(
+            id: "rent",
+            label: "Rent",
+            destination: "landlord@example.com",
+            destinationType: "lnurl",
+            amountSat: 50_000,
+            comment: "",
+            interval: .init(unit: "month", every: 1),
+            startAt: start,
+            nextRunAt: start,
+            createdAt: 0,
+            updatedAt: 0)
     }
     @Test func calendarMatchesRN() throws {
         for fixture in try Fixtures.load("recurring-schedule", input: CalendarInput.self, expected: Double.self) {

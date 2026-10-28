@@ -24,6 +24,8 @@ class SendAmountTest(private val case: FixtureCase) {
         assertNull(SendDestination.parse("bitcoin:?amount=$encoded", "mainnet").destinationType)
     }
     companion object {
-        @JvmStatic @Parameterized.Parameters(name = "{index}") fun cases() = SharedFixtures.load("send-amount-safety").map { arrayOf(it) }
+        @JvmStatic
+        @Parameterized.Parameters(name = "{index}")
+        fun cases() = SharedFixtures.load("send-amount-safety").map { arrayOf(it) }
     }
 }

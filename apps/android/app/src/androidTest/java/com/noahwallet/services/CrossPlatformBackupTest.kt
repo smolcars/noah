@@ -7,8 +7,6 @@ import com.noahwallet.services.server.ServerClient
 import com.noahwallet.services.storage.*
 import com.noahwallet.services.wallet.*
 import io.github.niteshbalusu11.bark.*
-import java.io.File
-import java.util.UUID
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.builtins.ListSerializer
 import kotlinx.serialization.json.*
@@ -16,6 +14,8 @@ import org.junit.Assert.*
 import org.junit.Assume.assumeTrue
 import org.junit.Test
 import org.junit.runner.RunWith
+import java.io.File
+import java.util.UUID
 
 @RunWith(AndroidJUnit4::class)
 class CrossPlatformBackupTest {
@@ -80,17 +80,17 @@ class CrossPlatformBackupTest {
         try {
             // Loopback serves the exact committed file; production download/validation/transaction/opener run.
             FixtureServer(encrypted).use { server ->
-            val restorer = WalletRestorer("regtest", session, location, seed,
-                makeClient = { ServerClient.make(server.url) })
-            val outcome = restorer.restore(input["mnemonic"]!!.jsonPrimitive.content)
-            assertEquals("ios", outcome.backupId); assertFalse(outcome.cleanupPending)
-            assertTrue(seed.value == input["mnemonic"]!!.jsonPrimitive.content); assertFalse(location.restorePending)
-            session.ensureOpen(seed.value!!, false, "cross-backup")
-            val summary = session.summary()!!
-            assertEquals(expected["fingerprint"]!!.jsonPrimitive.content, summary.fingerprint)
-            assertEquals(expected["movements"]!!.jsonPrimitive.int, summary.movementCount)
-            assertTrue(session.withOpen { it.history() }.isEmpty())
-            assertEquals(expected["balance"], Json.encodeToJsonElement(ListSerializer(WalletBalance.Detail.serializer()), summary.balance.details))
+                val restorer = WalletRestorer("regtest", session, location, seed,
+                    makeClient = { ServerClient.make(server.url) })
+                val outcome = restorer.restore(input["mnemonic"]!!.jsonPrimitive.content)
+                assertEquals("ios", outcome.backupId); assertFalse(outcome.cleanupPending)
+                assertTrue(seed.value == input["mnemonic"]!!.jsonPrimitive.content); assertFalse(location.restorePending)
+                session.ensureOpen(seed.value!!, false, "cross-backup")
+                val summary = session.summary()!!
+                assertEquals(expected["fingerprint"]!!.jsonPrimitive.content, summary.fingerprint)
+                assertEquals(expected["movements"]!!.jsonPrimitive.int, summary.movementCount)
+                assertTrue(session.withOpen { it.history() }.isEmpty())
+                assertEquals(expected["balance"], Json.encodeToJsonElement(ListSerializer(WalletBalance.Detail.serializer()), summary.balance.details))
             }
         } finally { session.close(); root.deleteRecursively() }
     }
@@ -183,5 +183,4 @@ class CrossPlatformBackupTest {
         }.apply { isDaemon = true; start() }
         override fun close() { listener.close(); thread.join(6000); check(!thread.isAlive) }
     }
-
 }

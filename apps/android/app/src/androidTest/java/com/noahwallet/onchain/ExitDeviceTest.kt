@@ -239,7 +239,7 @@ class ExitDeviceTest {
             }
         } } }
         for (phase in listOf(f.start, f.publish, f.mempool, f.bump, f.confirm, f.onchain, f.wait, f.claimable, f.claiming, f.claimed, f.nofunds,
-                f.feesrose, f.stuck, f.shared, f.stale, f.canceled)) {
+            f.feesrose, f.stuck, f.shared, f.stale, f.canceled)) {
             compose.runOnUiThread { exit = phase }
             // Every move is a 180 ms fade to the next rest pose; the picture keeps its full size throughout.
             compose.mainClock.advanceTimeBy(90)

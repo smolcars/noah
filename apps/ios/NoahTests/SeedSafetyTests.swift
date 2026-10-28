@@ -1,10 +1,9 @@
 import BarkBoltFFI
 import Foundation
+@testable import Noah
 import Security
 import SQLite3
 import Testing
-
-@testable import Noah
 
 struct SeedSafetyTests {
     @Test func validatesWordsChecksumCountAndNormalization() throws {
@@ -65,8 +64,8 @@ struct SeedSafetyTests {
             let config = WalletConfiguration.base(for: .regtest).sdkConfig(userAgent: "test")
             let onchain = try await OnchainWallet.default(network: .regtest, mnemonic: mnemonic, config: config, datadir: datadir)
             let wallet = try await Wallet.openWithOnchain(network: .regtest, mnemonicOrSeed: mnemonic, config: config,
-                args: WalletOpenArgs(runDaemon: false, datadir: datadir, createIfNotExists: create,
-                                     createWithoutServer: true, skipRecovery: true), onchain: onchain)
+                                                          args: WalletOpenArgs(runDaemon: false, datadir: datadir, createIfNotExists: create,
+                                                                               createWithoutServer: true, skipRecovery: true), onchain: onchain)
             return .init(wallet: wallet, onchain: onchain)
         }
         try await session.createNew(mnemonic: cases[0].input.raw, runDaemon: false, appVersion: "test")
@@ -74,7 +73,8 @@ struct SeedSafetyTests {
         for vector in cases where vector.input.exerciseCrypto {
             // The same normalized input used by the live opener must pass real SDK fingerprint preflight.
             let onchain = try await OnchainWallet.openExisting(network: .regtest, mnemonic: StoredSeed.normalized(vector.input.raw),
-                config: WalletConfiguration.base(for: .regtest).sdkConfig(userAgent: "test"), datadir: location.directory.path)
+                                                               config: WalletConfiguration.base(for: .regtest).sdkConfig(userAgent: "test"),
+                                                               datadir: location.directory.path)
             _ = onchain
         }
     }
@@ -95,7 +95,7 @@ struct SeedSafetyTests {
         try second.save(try generateMnemonic())
         let blocked = first.read() == .unavailable(errSecDuplicateItem)
         #expect(blocked)
-        #expect({ LaunchState.SeedStatus(first.read()) == .conflict }())
+        #expect(LaunchState.SeedStatus(first.read()) == .conflict)
         second.remove()
         let preserved: Bool
         if case .found = first.read() { preserved = true } else { preserved = false }
@@ -121,7 +121,7 @@ struct SeedSafetyTests {
         defer { item.remove() }
         try item.save("")
         let restorer = WalletRestorer(variant: .regtest, session: WalletSession(variant: .regtest, location: location),
-            location: location, seed: item, makeClient: { _ in preconditionFailure("Invalid seed must not authenticate") })
+                                      location: location, seed: item, makeClient: { _ in preconditionFailure("Invalid seed must not authenticate") })
         let phrase = try generateMnemonic()
         await #expect(throws: StoredSeed.Failure.invalid) { try await restorer.restore(mnemonic: phrase) }
         let unchanged = item.read() == .found("")
@@ -133,9 +133,9 @@ struct SeedSafetyTests {
         let item = KeychainPassword(service: "com.noah.mnemonic.test-\(UUID().uuidString)", account: "noah")
         defer { item.remove() }
         let attributes: [String: Any] = [kSecClass as String: kSecClassGenericPassword,
-            kSecAttrService as String: item.service, kSecAttrAccount as String: item.account,
-            kSecUseDataProtectionKeychain as String: true, kSecAttrSynchronizable as String: false,
-            kSecValueData as String: Data([0xff, 0xfe])]
+                                         kSecAttrService as String: item.service, kSecAttrAccount as String: item.account,
+                                         kSecUseDataProtectionKeychain as String: true, kSecAttrSynchronizable as String: false,
+                                         kSecValueData as String: Data([0xFF, 0xFE])]
         #expect(SecItemAdd(attributes as CFDictionary, nil) == errSecSuccess)
         #expect(LaunchState.SeedStatus(item.read()) == .invalid)
         #expect(throws: StoredSeed.Failure.invalid) { try StoredSeed.requireUsable(item.read()) }
@@ -161,7 +161,12 @@ struct SeedSafetyTests {
         try FileManager.default.createDirectory(at: location.directory, withIntermediateDirectories: true)
         var db: OpaquePointer?
         #expect(sqlite3_open(location.database.path, &db) == SQLITE_OK)
-        #expect(sqlite3_exec(db, "CREATE TABLE bark_properties (id INTEGER PRIMARY KEY, network TEXT, fingerprint TEXT); INSERT INTO bark_properties VALUES (1, 'regtest', '00000000');", nil, nil, nil) == SQLITE_OK)
+        #expect(sqlite3_exec(
+            db,
+            "CREATE TABLE bark_properties (id INTEGER PRIMARY KEY, network TEXT, fingerprint TEXT); INSERT INTO bark_properties VALUES (1, 'regtest', '00000000');",
+            nil,
+            nil,
+            nil) == SQLITE_OK)
         sqlite3_close(db)
         let before = try Data(contentsOf: location.database)
         let seed = try generateMnemonic()

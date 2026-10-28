@@ -7,9 +7,8 @@ struct OnchainAmountRow: View {
     let sats: UInt64
     var body: some View {
         LabeledContent(
-            title, value: BitcoinAmount.format(sats: Int64(clamping: sats), unit: app.amountUnit, locale: locale)
-        )
-        .monospacedDigit()
+            title, value: BitcoinAmount.format(sats: Int64(clamping: sats), unit: app.amountUnit, locale: locale))
+            .monospacedDigit()
     }
 }
 
@@ -23,8 +22,7 @@ struct OnchainStatusSection: View {
         ForEach(model.attempts) { attempt in
             Section(
                 attempt.overrideAudit != nil ? "Overridden attempt"
-                    : attempt.receipt == nil ? "Check operation status" : "Submitted"
-            ) {
+                    : attempt.receipt == nil ? "Check operation status" : "Submitted") {
                 Text(LocalizedStringKey(attempt.quote.action.title)).font(NoahFont.headline)
                 OnchainAmountRow(title: "Reviewed amount", sats: attempt.quote.amount)
                 Text(attempt.quote.createdAt, style: .date).font(NoahFont.footnote)
@@ -78,11 +76,11 @@ struct OnchainStatusSection: View {
             }
             .alert(OnchainOperationJournal.OverrideAudit.titleText, isPresented: Binding(
                 get: { discardID == attempt.id }, set: { if !$0 { discardID = nil } })) {
-                Button("Keep attempt", role: .cancel) { discardID = nil }
-                Button(LocalizedStringKey(OnchainOperationJournal.OverrideAudit.confirmationText), role: .destructive) {
-                    discardID = nil
-                    Task { await model.discardUncertain(attempt.id) }
-                }
+                    Button("Keep attempt", role: .cancel) { discardID = nil }
+                    Button(LocalizedStringKey(OnchainOperationJournal.OverrideAudit.confirmationText), role: .destructive) {
+                        discardID = nil
+                        Task { await model.discardUncertain(attempt.id) }
+                    }
             } message: {
                 Text(LocalizedStringKey(OnchainOperationJournal.OverrideAudit.warningText))
             }
@@ -103,7 +101,7 @@ struct OnchainReviewSheet: View {
     let quote: OnchainQuote
     let confirm: () -> Void
     var cancelTitle = "Cancel"
-    var onCancel: (() -> Void)? = nil
+    var onCancel: (() -> Void)?
     @Environment(\.dismiss) private var dismiss
     var body: some View {
         NavigationStack {
@@ -146,7 +144,8 @@ struct OnchainReviewSheet: View {
                 }
                 Section {
                     if quote.feesUnknown {
-                        Text("Fee estimate unavailable. Fees and amount to receive are unknown. Continue without an estimate only if you accept this uncertainty.")
+                        Text(
+                            "Fee estimate unavailable. Fees and amount to receive are unknown. Continue without an estimate only if you accept this uncertainty.")
                             .foregroundStyle(NoahColor.destructive)
                         if quote.action == .startExit {
                             Text("Broadcast funding status is unknown; confirmed onchain funds are required.")
@@ -156,23 +155,21 @@ struct OnchainReviewSheet: View {
                     if quote.action == .startExit || quote.action == .progress || quote.action == .claim {
                         if let fee = quote.fee, quote.chainFee != nil, let warning = ExitRules.warning(
                             amount: quote.amount, claimFee: fee, totalFee: quote.totalFee,
-                            claimOnly: quote.action == .claim)
-                        {
+                            claimOnly: quote.action == .claim) {
                             Text(LocalizedStringKey(warning)).foregroundStyle(NoahColor.destructive)
                         }
                         if !quote.feesUnknown && !quote.fundable {
                             Text(
-                                "Additional confirmed onchain funds required. You are starting tracking anyway; fund the wallet before progressing."
-                            )
+                                "Additional confirmed onchain funds required. You are starting tracking anyway; fund the wallet before progressing.")
                         }
                     }
                     Button(
                         role: quote.action == .startExit || quote.action == .progress || quote.action == .claim
-                            ? .destructive : nil
-                    ) {
+                            ? .destructive : nil) {
                         confirm()
                     } label: {
-                        Text(LocalizedStringKey(quote.feesUnknown ? (quote.action == .claim ? "Broadcast without estimate" : "Start Selected Exit") : quote.action.title))
+                        Text(LocalizedStringKey(quote.feesUnknown ? (quote.action == .claim ? "Broadcast without estimate" : "Start Selected Exit") : quote
+                                .action.title))
                     }
                     .accessibilityIdentifier("onchain-confirm")
                 }
@@ -196,7 +193,10 @@ struct OnchainReviewSheet: View {
                 + (quote.boardAll == true ? " MAX uses confirmed funds only and deducts the onchain fee from that balance." : "")
         case .refresh: "This refreshes the selected VTXOs in a delegated Ark round."
         case .startExit:
-            quote.feesUnknown ? "Once started, Noah progresses the exit on its own, including in the background when the system lets it, broadcasting and fee-bumping exit transactions and paying fees from your onchain balance. Only the claim fee is deducted from the recovered value. Cancellation is possible only until the final exit transaction is broadcast." : "Once started, Noah progresses the exit on its own, including in the background when the system lets it, broadcasting and fee-bumping exit transactions and paying fees from your onchain balance. The fees shown are estimates and may change. Only the claim fee is deducted from the recovered value. Cancellation is possible only until the final exit transaction is broadcast."
+            quote
+                .feesUnknown ?
+                "Once started, Noah progresses the exit on its own, including in the background when the system lets it, broadcasting and fee-bumping exit transactions and paying fees from your onchain balance. Only the claim fee is deducted from the recovered value. Cancellation is possible only until the final exit transaction is broadcast." :
+                "Once started, Noah progresses the exit on its own, including in the background when the system lets it, broadcasting and fee-bumping exit transactions and paying fees from your onchain balance. The fees shown are estimates and may change. Only the claim fee is deducted from the recovered value. Cancellation is possible only until the final exit transaction is broadcast."
         case .progress:
             "This may broadcast or fee-bump Bitcoin transactions required by the emergency exit process. Fees are paid from your onchain balance. Cancellation is possible only before the final exit transaction is broadcast."
         case .claim:

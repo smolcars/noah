@@ -70,7 +70,7 @@ struct SettingsScroll<Content: View>: View {
 
 extension View {
     /// The page's bottom actions over a fade (Activity's Pay again bar).
-    func settingsFooter<Buttons: View>(@ViewBuilder _ buttons: () -> Buttons) -> some View {
+    func settingsFooter(@ViewBuilder _ buttons: () -> some View) -> some View {
         modifier(SettingsFooter(buttons: buttons()))
     }
 }
@@ -427,8 +427,8 @@ struct SettingsSheetBody<Content: View, Actions: View>: View {
 extension View {
     /// Phones: a system sheet sized to its content. Wide windows: a sheet inside the trailing
     /// pane, so it never crosses the fold. `locked` stops dismissal while something runs.
-    func settingsSheet<Item: Identifiable & Equatable, Sheet: View>(
-        item: Binding<Item?>, locked: Bool = false, @ViewBuilder content: @escaping (Item) -> Sheet) -> some View {
+    func settingsSheet<Item: Identifiable & Equatable>(
+        item: Binding<Item?>, locked: Bool = false, @ViewBuilder content: @escaping (Item) -> some View) -> some View {
         modifier(SettingsSheetModifier(item: item, locked: locked, sheet: content))
     }
 }

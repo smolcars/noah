@@ -30,7 +30,7 @@ class RecurringVersionTest {
         val fixture = javaClass.getResource("/recurring-rn-range.json")!!.readText()
         for (version in listOf("0", " 0 \n", "absent")) {
             var raw = if (version == "absent") fixture.replace(",\n  \"version\": 0", "")
-                else fixture.replace("\"version\": 0", "\"version\": $version")
+            else fixture.replace("\"version\": 0", "\"version\": $version")
             val original = raw
             val store = RecurringStore({ raw }, { raw = it })
             assertEquals(11, store.load().schedules.size)

@@ -1,7 +1,7 @@
 import BarkBoltFFI
 import Foundation
-import Testing
 @testable import Noah
+import Testing
 
 struct WalletSyncTests {
     @Test(.regtestStack) func suspensionOrCloseRevokesLaterStagesAndDrainsThePass() async throws {

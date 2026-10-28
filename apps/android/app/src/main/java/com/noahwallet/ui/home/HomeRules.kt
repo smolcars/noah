@@ -1,10 +1,10 @@
 package com.noahwallet.ui.home
 
+import com.noahwallet.formatting.FiatCurrency
 import com.noahwallet.services.storage.PersistedBackupState
 import java.text.DateFormat
 import java.util.Date
 import java.util.Locale
-import com.noahwallet.formatting.FiatCurrency
 
 object HomeRules {
     private val symbols = mapOf("USD" to "$", "EUR" to "€", "GBP" to "£", "CAD" to "CA$", "CHF" to "CHF", "AUD" to "A$",
@@ -87,7 +87,7 @@ object HomeRules {
     }
     enum class StatusTap { Balance, Rounds }
     fun status(error: String?, balance: com.noahwallet.services.wallet.WalletBalance?, rows: List<com.noahwallet.history.HistoryTransaction>,
-               activeRounds: Int): Status? = when {
+        activeRounds: Int): Status? = when {
         error != null -> Status.Error(error)
         balance != null && arriving(balance, rows) > 0uL -> Status.Arriving(arriving(balance, rows))
         balance != null && balance.ark.pendingInRound > 0uL -> Status.InRound(balance.ark.pendingInRound)

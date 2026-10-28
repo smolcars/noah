@@ -28,5 +28,4 @@ class RecurringSettlementRepeatTest {
         assertTrue(w.journal.load().getValue("rent").policyApplied)
         assertFalse(w.controller.locked); assertEquals(1, w.wallet.calls)
     }
-
 }

@@ -108,14 +108,14 @@ final class ReceiveModel {
                     let events = try await dependencies.completions(request)
                     for try await event in events {
                         guard let self, !Task.isCancelled, self.generation == generation else { return }
-                        self.stop()
+                        stop()
                         switch event {
                         case .received(let sats, let rail):
-                            self.receivedRail = rail
-                            self.receivedSats = sats
+                            receivedRail = rail
+                            receivedSats = sats
                         case .lightningFailed(let canceled):
-                            self.baseErrorTitle = canceled ? L10n.text("Lightning Receive Canceled") : L10n.text("Lightning Receive Failed")
-                            self.baseError = L10n.text("The Lightning payment could not be received. Generate a new payment request and try again.")
+                            baseErrorTitle = canceled ? L10n.text("Lightning Receive Canceled") : L10n.text("Lightning Receive Failed")
+                            baseError = L10n.text("The Lightning payment could not be received. Generate a new payment request and try again.")
                         }
                         return
                     }
@@ -124,8 +124,8 @@ final class ReceiveModel {
                     self?.recordFailure(error)
                     if error is WalletSession.SessionError {
                         guard let self, self.generation == generation else { return }
-                        self.stop()
-                        self.baseError = L10n.text("Your wallet isn't ready. Please try again.")
+                        stop()
+                        baseError = L10n.text("Your wallet isn't ready. Please try again.")
                         return
                     }
                 }

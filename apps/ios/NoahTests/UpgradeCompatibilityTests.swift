@@ -1,7 +1,6 @@
 import Foundation
-import Testing
-
 @testable import Noah
+import Testing
 
 /// Only runs over a real RN sandbox prepared by UpgradeTests/run.sh.
 /// Checkpoints contain public identity/counters, never phrases or tokens.
@@ -80,14 +79,18 @@ struct UpgradeCompatibilityTests {
         }
         let loginKey = try ServerClient.loginKey(variant: .current, mnemonic: mnemonic)
         let report: [String: Any] = ["loginKey": loginKey, "fingerprint": summary.fingerprint, "movements": summary.movementCount,
-            "spendable": summary.spendableSats, "onchainConfirmed": summary.balance.onchain.confirmed,
-            "expoContinuityVerified": false,
-            "displayUnit": SettingsStorage.shared.persistedState(PersistedProfileState.self, key: PersistedProfileState.key)?.amountUnit.rawValue ?? "missing",
-            "currency": SettingsStorage.shared.persistedState(PersistedProfileState.self, key: PersistedProfileState.key)?.preferredCurrency ?? "missing",
-            "language": LegacyLocale.read() ?? "default",
-            "hiddenBalance": SettingsStorage.shared.persistedState(PersistedPrivacyState.self, key: PersistedPrivacyState.key)?.isHomeBalanceHidden ?? false,
-            "biometrics": SettingsStorage.shared.persistedState(PersistedWalletState.self, key: PersistedWalletState.key)?.isBiometricsEnabled ?? false,
-            "autoBoarding": PersistedTransactionState.load(from: .shared).isAutoBoardingEnabled]
+                                     "spendable": summary.spendableSats, "onchainConfirmed": summary.balance.onchain.confirmed,
+                                     "expoContinuityVerified": false,
+                                     "displayUnit": SettingsStorage.shared.persistedState(PersistedProfileState.self, key: PersistedProfileState.key)?
+                                         .amountUnit.rawValue ?? "missing",
+                                     "currency": SettingsStorage.shared.persistedState(PersistedProfileState.self, key: PersistedProfileState.key)?
+                                         .preferredCurrency ?? "missing",
+                                     "language": LegacyLocale.read() ?? "default",
+                                     "hiddenBalance": SettingsStorage.shared.persistedState(PersistedPrivacyState.self, key: PersistedPrivacyState.key)?
+                                         .isHomeBalanceHidden ?? false,
+                                     "biometrics": SettingsStorage.shared.persistedState(PersistedWalletState.self, key: PersistedWalletState.key)?
+                                         .isBiometricsEnabled ?? false,
+                                     "autoBoarding": PersistedTransactionState.load(from: .shared).isAutoBoardingEnabled]
         try JSONSerialization.data(withJSONObject: report, options: [.sortedKeys]).write(to: URL.documentsDirectory.appending(path: "noah-upgrade-result.json"))
     }
 
@@ -100,7 +103,9 @@ struct UpgradeCompatibilityTests {
         #expect(profile.amountUnit == .sats)
         #expect(profile.preferredCurrency == "EUR")
         #expect(profile.displayName == "Upgrade safety")
-        #expect(storage.persistedState(PersistedPrivacyState.self, key: PersistedPrivacyState.key) == before.persistedState(PersistedPrivacyState.self, key: PersistedPrivacyState.key))
+        #expect(storage.persistedState(PersistedPrivacyState.self, key: PersistedPrivacyState.key) == before.persistedState(
+            PersistedPrivacyState.self,
+            key: PersistedPrivacyState.key))
         #expect(storage.persistedState(PersistedPrivacyState.self, key: PersistedPrivacyState.key)?.isHomeBalanceHidden == true)
         #expect(PersistedTransactionState.load(from: storage) == PersistedTransactionState.load(from: before))
         #expect(!PersistedTransactionState.load(from: storage).isAutoBoardingEnabled)

@@ -4,14 +4,14 @@ import android.database.sqlite.SQLiteDatabase
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.noahwallet.services.storage.WalletDataLocation
-import com.noahwallet.services.wallet.WalletSession
 import com.noahwallet.services.wallet.WalletDatabase
-import java.io.File
-import java.util.UUID
+import com.noahwallet.services.wallet.WalletSession
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.*
 import org.junit.Test
 import org.junit.runner.RunWith
+import java.io.File
+import java.util.UUID
 
 @RunWith(AndroidJUnit4::class)
 class WalletDatabaseDeviceTest {
@@ -63,7 +63,7 @@ class WalletDatabaseDeviceTest {
             File(location.database.path + "-wal").delete()
             File(location.database.path + "-shm").delete()
             val bytes = location.database.readBytes()
-            assertEquals(2, bytes[18].toInt())  // still a WAL-mode file
+            assertEquals(2, bytes[18].toInt()) // still a WAL-mode file
 
             assertEquals(WalletDatabase.Properties("regtest", "abcd1234"), WalletDatabase.properties(location.database))
             assertFalse(File(location.database.path + "-shm").exists())
@@ -98,7 +98,7 @@ class WalletDatabaseDeviceTest {
             }
             listOf("-wal", "-shm", "-journal").forEach { File(location.database.path + it).delete() }
             scratch.mkdirs()
-            File(scratch, "wallet.sqlite").writeBytes(ByteArray(16))  // a killed run's copy
+            File(scratch, "wallet.sqlite").writeBytes(ByteArray(16)) // a killed run's copy
             assertEquals("regtest", WalletDatabase.properties(location.database).network)
             assertTrue(scratch.listFiles().orEmpty().isEmpty())
         } finally { root.deleteRecursively() }

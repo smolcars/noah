@@ -25,12 +25,12 @@ import com.noahwallet.ui.home.SpringCurve
 import com.noahwallet.ui.home.step
 import com.noahwallet.ui.onboarding.LocalPalette
 import com.noahwallet.ui.onboarding.LocalReduceMotion
+import com.noahwallet.ui.send.BlockRow.blockStrip
 import com.noahwallet.ui.send.StageArt.badge
 import com.noahwallet.ui.send.StageArt.coin
 import com.noahwallet.ui.send.StageArt.icon
 import com.noahwallet.ui.send.StageArt.line
 import com.noahwallet.ui.send.StageArt.padlock
-import com.noahwallet.ui.send.BlockRow.blockStrip
 import kotlin.math.min
 
 /** Who the payment goes to on the stage and in the titles: an initial for people and addresses, a rail glyph otherwise. */
@@ -175,7 +175,7 @@ internal fun SendStage(motion: SendMotion, elapsed: Long, who: SendWho, tip: Lon
                     badge(false, serverAt, server.coerceIn(0f, 1f) * fade * stageAlpha, if (reduceMotion) 1f else StageArt.lerp(.4f, 1f, server), palette)
                     local(SendPhase.sign)?.let { t ->
                         fun drawn(delay: Long) = if (reduceMotion) step(t, 420 + delay, SpringCurve.snappy, reduceMotion = true)
-                            else ((t - 420 - delay) / 320f).coerceIn(0f, 1f).let { 1 - (1 - it) * (1 - it) }
+                        else ((t - 420 - delay) / 320f).coerceIn(0f, 1f).let { 1 - (1 - it) * (1 - it) }
                         line(Offset(pay.x - 58, pay.y - 58), Offset(pay.x - 17, pay.y - 24), palette.orange, drawn(0), fade * stageAlpha)
                         line(Offset(pay.x + 58, pay.y - 58), Offset(pay.x + 17, pay.y - 24), palette.foreground, drawn(160), fade * stageAlpha)
                     }

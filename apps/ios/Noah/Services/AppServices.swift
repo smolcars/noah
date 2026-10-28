@@ -118,7 +118,7 @@ final class AppServices: Sendable {
         } else { endpoint = nil }
         guard variant != .regtest else { throw EsploraEndpoint.Failure(message: "Regtest wallets use Bitcoin Core instead of Esplora.") }
         let candidate = EsploraSettings.Selection(endpoint: endpoint == WalletConfiguration.base(for: variant).esplora ? nil : endpoint,
-            variant: variant.rawValue)
+                                                  variant: variant.rawValue)
         // Background owners finish before acquiring the lifecycle gate; new jobs wait here.
         try await Self.configurationAccess.withLock { [self] in
             try await restoreRecovery.withSettled { [self] in
@@ -167,7 +167,7 @@ final class AppServices: Sendable {
                     do {
                         do {
                             try await EsploraOpening.$selection.withValue(selection) {
-                                try await session.reopen(reservation, mnemonic: mnemonic, appVersion: appVersion, commit: { try wait.commit({}) })
+                                try await session.reopen(reservation, mnemonic: mnemonic, appVersion: appVersion, commit: { try wait.commit {} })
                             }
                         } catch {
                             guard wait.timedOut else { throw error }

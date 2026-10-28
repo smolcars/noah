@@ -75,8 +75,7 @@ struct KeychainPassword: Sendable {
         let data = Data(value.utf8)
         let updateStatus = SecItemUpdate(
             baseQuery as CFDictionary,
-            [kSecValueData as String: data] as CFDictionary
-        )
+            [kSecValueData as String: data] as CFDictionary)
         switch updateStatus {
         case errSecSuccess:
             return

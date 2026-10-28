@@ -71,7 +71,7 @@ internal object ReceiveArrivals {
      * with no arrival (null). Null when nothing is waiting.
      */
     fun next(rows: List<HistoryTransaction>, records: ReceiveRecords, address: String?, ownArk: Set<String>, ownHashes: Set<String>,
-             amount: (String, String) -> Long?, spends: (String) -> List<String>?, now: Long): Pair<ReceiveRecords, ReceiveArrival?>? {
+        amount: (String, String) -> Long?, spends: (String) -> List<String>?, now: Long): Pair<ReceiveRecords, ReceiveArrival?>? {
         val seen = replaced(rows, records, spends)
         onchain(rows, seen.known, address, amount)?.let { (row, sats) ->
             val inputs = row.txHex?.let(spends).orEmpty()

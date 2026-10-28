@@ -1,10 +1,10 @@
 package com.noahwallet.onchain
 
 import com.noahwallet.fixtures.SharedFixtures
-import com.noahwallet.services.wallet.ChainStatus
 import com.noahwallet.send.SendReceipt
-import kotlinx.serialization.json.*
+import com.noahwallet.services.wallet.ChainStatus
 import io.github.niteshbalusu11.bark.*
+import kotlinx.serialization.json.*
 import org.junit.Assert.*
 import org.junit.Test
 

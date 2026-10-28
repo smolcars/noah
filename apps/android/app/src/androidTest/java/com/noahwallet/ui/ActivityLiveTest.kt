@@ -7,13 +7,13 @@ import com.noahwallet.send.*
 import com.noahwallet.services.storage.*
 import com.noahwallet.services.wallet.*
 import io.github.niteshbalusu11.bark.*
-import java.io.File
 import kotlinx.coroutines.*
 import kotlinx.serialization.json.*
 import org.junit.Assert.*
 import org.junit.Assume.assumeTrue
 import org.junit.Test
 import org.junit.runner.RunWith
+import java.io.File
 
 /**
  * Opt-in stages that give a disposable regtest wallet the payments Activity must show, against a Bark 0.8 stack

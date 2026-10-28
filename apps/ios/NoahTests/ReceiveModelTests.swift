@@ -1,6 +1,6 @@
 import Foundation
-import Testing
 @testable import Noah
+import Testing
 
 @Suite(.timeLimit(.minutes(1)))
 @MainActor
@@ -17,7 +17,7 @@ struct ReceiveModelTests {
         let gate = InvoiceGate()
         let request = request
         let model = ReceiveModel(dependencies: .init(addresses: { request }, invoice: { _, _, _ in await gate.wait() },
-                                                      completions: { _ in AsyncThrowingStream { _ in } }))
+                                                     completions: { _ in AsyncThrowingStream { _ in } }))
         await model.start()
         let save = Task { await model.save(amountSat: 500, description: "test") }
         while !(await gate.started) { await Task.yield() }
@@ -35,7 +35,7 @@ struct ReceiveModelTests {
         let request = request
         let (stream, continuation) = AsyncThrowingStream<ReceiveCompletion, Error>.makeStream()
         let model = ReceiveModel(dependencies: .init(addresses: { request }, invoice: { _, _, _ in await gate.wait() },
-                                                      completions: { _ in stream }))
+                                                     completions: { _ in stream }))
         await model.start()
         let save = Task { await model.save(amountSat: 500, description: "test") }
         while !(await gate.started) { await Task.yield() }
@@ -56,7 +56,7 @@ struct ReceiveModelTests {
         initial.description = "note"
         let request = initial
         let model = ReceiveModel(dependencies: .init(addresses: { request }, invoice: { request, _, _ in request },
-                                                      completions: { _ in AsyncThrowingStream { _ in } }))
+                                                     completions: { _ in AsyncThrowingStream { _ in } }))
         await model.start()
         model.removeAmount()
         #expect(model.request == self.request)
@@ -66,9 +66,9 @@ struct ReceiveModelTests {
     @Test func canceledLightningClearsRequestAndShowsFailure() async {
         let request = request
         let model = ReceiveModel(dependencies: .init(addresses: { request }, invoice: { request, _, _ in request },
-                                                      completions: { _ in AsyncThrowingStream {
-                                                          $0.yield(.lightningFailed(canceled: true)); $0.finish()
-                                                      } }))
+                                                     completions: { _ in AsyncThrowingStream {
+                                                         $0.yield(.lightningFailed(canceled: true)); $0.finish()
+                                                     } }))
         await model.start()
         while model.baseError == nil { await Task.yield() }
         #expect(model.request == nil)
@@ -78,8 +78,8 @@ struct ReceiveModelTests {
 
     @Test func unavailableWalletShowsRetryError() async {
         let model = ReceiveModel(dependencies: .init(addresses: { throw WalletSession.SessionError.notOpen },
-                                                      invoice: { request, _, _ in request },
-                                                      completions: { _ in AsyncThrowingStream { _ in } }))
+                                                     invoice: { request, _, _ in request },
+                                                     completions: { _ in AsyncThrowingStream { _ in } }))
         await model.start()
         #expect(model.baseError != nil)
         #expect(model.request == nil)

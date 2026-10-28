@@ -1,7 +1,6 @@
 import Foundation
-import Testing
-
 @testable import Noah
+import Testing
 
 struct WalletObserverStopTests {
     private final class Wait: @unchecked Sendable {
@@ -27,7 +26,7 @@ struct WalletObserverStopTests {
         }
     }
 
-    @Test(.timeLimit(.minutes(1))) func stopRetriesRegistrationGapWithoutCancellingReader() async throws {
+    @Test(.timeLimit(.minutes(1))) func stopRetriesRegistrationGapWithoutCancellingReader() async {
         let wait = Wait()
         let stop = WalletObserverStop { wait.cancelWait() }
         let closing = Task { await stop.stop() }

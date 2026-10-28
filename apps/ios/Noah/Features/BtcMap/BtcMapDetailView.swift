@@ -29,7 +29,11 @@ struct BtcMapDetailView: View {
                         if let location {
                             Text(BtcMapDistance.format(BtcMapDistance.kilometers(from: location, to: place.center), locale: locale)).font(NoahFont.footnote)
                         }
-                        if let verified = merchant.verified_at { Text(L10n.text("Verified {date}", dateLabel(verified), locale: locale.identifier)).font(NoahFont.footnote).foregroundStyle(.secondary) }
+                        if let verified = merchant
+                            .verified_at {
+                            Text(L10n.text("Verified {date}", dateLabel(verified), locale: locale.identifier)).font(NoahFont.footnote)
+                                .foregroundStyle(.secondary)
+                        }
                     }
                     Spacer(minLength: 4)
                     Button("Close", systemImage: "xmark", action: onClose)
@@ -49,7 +53,10 @@ struct BtcMapDetailView: View {
                     } label: {
                         Label(address, systemImage: copied ? "checkmark" : "doc.on.doc")
                             .multilineTextAlignment(.leading)
-                    }.buttonStyle(.plain).accessibilityLabel(Text(LocalizedStringKey(copied ? "Address copied" : L10n.text("Copy address: {value1}", address, locale: locale.identifier))))
+                    }.buttonStyle(.plain).accessibilityLabel(Text(LocalizedStringKey(copied ? "Address copied" : L10n.text(
+                        "Copy address: {value1}",
+                        address,
+                        locale: locale.identifier))))
                 }
                 if let hours = fields["opening_hours"] { Label(hours, systemImage: "clock").font(NoahFont.callout) }
                 if let description = fields["description"] { Text(description).font(NoahFont.callout) }
@@ -108,7 +115,7 @@ struct BtcMapDetailView: View {
 
     private var paymentMethods: [String] {
         [("osm:payment:lightning", "Lightning"), ("osm:payment:lightning_contactless", "Contactless"), ("osm:payment:onchain", "On-chain")]
-            .compactMap { fields[$0.0] == "yes" ? $0.1 : nil } + [fields["payment_provider"]].compactMap { $0 }
+            .compactMap { fields[$0.0] == "yes" ? $0.1 : nil } + [fields["payment_provider"]].compactMap(\.self)
     }
     private func open(_ text: String) {
         guard let url = BtcMapLinks.web(text) else { linkFailed = true; return }

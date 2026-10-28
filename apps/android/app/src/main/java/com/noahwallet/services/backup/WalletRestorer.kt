@@ -7,11 +7,11 @@ import com.noahwallet.services.storage.*
 import com.noahwallet.services.wallet.WalletSession
 import io.github.niteshbalusu11.bark.*
 import io.ktor.client.HttpClient
-import java.io.File
 import kotlinx.coroutines.*
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import okhttp3.Request
+import java.io.File
 
 class WalletRestorer(
     private val variant: String, private val session: WalletSession, private val location: WalletDataLocation,
@@ -40,7 +40,7 @@ class WalletRestorer(
     data class Outcome(val backupId: String?, val snapshotSha256: String?, val cleanupPending: Boolean = false, val typedPhrase: Boolean = false)
 
     suspend fun restore(mnemonic: String, beforeInstall: (Outcome) -> Unit = {},
-                        progress: (Step) -> Unit = {}): Outcome = withContext(Dispatchers.IO) {
+        progress: (Step) -> Unit = {}): Outcome = withContext(Dispatchers.IO) {
         if (StoredMnemonic.normalize(mnemonic) == null) throw SeedItem.Unavailable()
         val reservation = session.reserve()
         try {

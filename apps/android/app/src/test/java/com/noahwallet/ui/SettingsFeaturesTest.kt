@@ -1,8 +1,8 @@
 package com.noahwallet.ui
 
-import com.noahwallet.ui.settings.*
-import com.noahwallet.services.storage.SettingsPreferences
 import com.noahwallet.api.generated.models.DeviceInfo
+import com.noahwallet.services.storage.SettingsPreferences
+import com.noahwallet.ui.settings.*
 import kotlinx.serialization.json.*
 import org.junit.Assert.*
 import org.junit.Test

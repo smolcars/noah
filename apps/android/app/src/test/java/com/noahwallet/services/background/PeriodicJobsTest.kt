@@ -5,8 +5,8 @@ import com.noahwallet.services.launch.LaunchState
 import com.noahwallet.services.storage.PersistedWalletState
 import com.noahwallet.services.wallet.WalletBackgroundActivity
 import kotlinx.coroutines.*
-import org.junit.Assert.*
 import org.junit.After
+import org.junit.Assert.*
 import org.junit.Test
 
 class PeriodicJobsTest {
@@ -14,7 +14,7 @@ class PeriodicJobsTest {
 
     @Test fun homeAdmissionRefusesEveryUnsafeState() {
         fun allowed(launch: LaunchState = LaunchState.existingWallet, wallet: PersistedWalletState? = null,
-                    onboarded: Boolean = true, restore: Boolean = false, deletion: Boolean = false, failed: Boolean = false) =
+            onboarded: Boolean = true, restore: Boolean = false, deletion: Boolean = false, failed: Boolean = false) =
             BackgroundWalletAdmission.allowed(launch, wallet, onboarded, restore, deletion, failed)
         assertTrue(allowed()) // RN upgrades need not have an initialization flag.
         assertTrue(allowed(wallet = PersistedWalletState(isInitialized = true)))
@@ -125,7 +125,7 @@ class PeriodicJobsTest {
 
     companion object {
         internal fun dependencies(eligible: Boolean = true, due: Boolean = true, backupEnabled: Boolean = true,
-                                  stage: suspend (String) -> Unit = {}) = PeriodicJobs.Dependencies(
+            stage: suspend (String) -> Unit = {}) = PeriodicJobs.Dependencies(
             eligible = { stage("eligible"); eligible }, recurringDue = { stage("due"); due },
             ensureWalletOpen = { stage("open") }, sync = { stage("sync") }, recurring = { stage("recurring") },
             widgetSummary = { stage("summary") }, widgetExpiry = { stage("expiry") }, publishWidget = { stage("widget") },

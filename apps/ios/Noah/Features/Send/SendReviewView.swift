@@ -4,8 +4,8 @@ import SwiftUI
 /// at most one line of today's fine print, and Hold to send. Once the controller holds
 /// the payment it becomes the sending stage and result.
 struct SendConfirmation: View {
-    var confirm: (() -> Void)? = nil
-    var btcPrice: Double? = nil
+    var confirm: (() -> Void)?
+    var btcPrice: Double?
     var fiatCurrency = "USD"
     let payment: SendPayment
     let quote: SendQuote
@@ -15,15 +15,15 @@ struct SendConfirmation: View {
     /// Leaving an unresolved result (see `SendOutcomeView.onLeave`).
     let onLeave: () -> Void
     var unit: BitcoinAmountUnit = .bip177
-    var recipient: SendRecipientLabel? = nil
+    var recipient: SendRecipientLabel?
     /// "The invoice sets the amount to ₿X", when you had typed a different amount.
-    var invoiceNote: String? = nil
+    var invoiceNote: String?
     /// Nil measures its own window (a host without Send around it).
-    var wide: Bool? = nil
+    var wide: Bool?
     var sideInsets: (leading: CGFloat, trailing: CGFloat) = (0, 0)
-    var clock: SendMotionClock? = nil
-    var gate: SendHoldGate? = nil
-    var chainTip: UInt32? = nil
+    var clock: SendMotionClock?
+    var gate: SendHoldGate?
+    var chainTip: UInt32?
     @State private var ownGate = SendHoldGate()
     @State private var window = OnboardingLayout(size: .zero, insets: EdgeInsets())
     @Environment(\.locale) private var locale

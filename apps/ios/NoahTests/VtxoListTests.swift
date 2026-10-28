@@ -1,5 +1,5 @@
-import Testing
 @testable import Noah
+import Testing
 
 /// Settings → VTXOs: grouped Expiring / Spendable / Locked, the ⋯ filter, and the renew selection.
 struct VtxoListTests {

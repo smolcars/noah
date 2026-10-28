@@ -85,24 +85,29 @@ struct RecurringJournal {
         }
         func scope(_ binding: RecurringStore.Binding, _ id: String) throws {
             try require(!id.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                        && !binding.wallet.fingerprint.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
-                        && !binding.wallet.network.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
+                && !binding.wallet.fingerprint.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+                && !binding.wallet.network.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             // Binding.instance and policyRevision are decoded as UUIDs.
         }
         for (id, entry) in state.attempts {
             try scope(entry.binding, id)
             try require(id == entry.scheduleID && entry.plan.kind == "pay"
-                        && entry.plan.occurrenceIndex.map { $0 >= 0 } == true
-                        && entry.plan.scheduledFor?.isFinite == true && entry.markedAt.isFinite
-                        && (entry.consumed != true || entry.resolved) && (entry.policyApplied != true || entry.resolved))
+                && entry.plan.occurrenceIndex.map { $0 >= 0 } == true
+                && entry.plan.scheduledFor?.isFinite == true && entry.markedAt.isFinite
+                && (entry.consumed != true || entry.resolved) && (entry.policyApplied != true || entry.resolved))
             if let terminal = entry.terminal {
                 try require(terminal.attempt.recurringOccurrenceKey == entry.key && terminal.attempt.walletIdentity == entry.binding.wallet
-                            && terminal.generation >= 0 && terminal.walletGeneration >= 0 && terminal.recordedAt.isFinite)
+                    && terminal.generation >= 0 && terminal.walletGeneration >= 0 && terminal.recordedAt.isFinite)
                 if terminal.outcome == .succeeded {
-                    try require(terminal.attempt.receipt.map { !$0.isUnresolved && $0.broadcastRetryPending != true && $0.isProven(for: terminal.attempt.payment, knownHash: terminal.attempt.paymentHash) } == true)
+                    try require(terminal.attempt.receipt.map { !$0.isUnresolved && $0.broadcastRetryPending != true && $0.isProven(
+                        for: terminal.attempt.payment,
+                        knownHash: terminal.attempt.paymentHash) } == true)
                 }
                 if terminal.outcome == .alreadyPaid {
-                    try require(terminal.attempt.alreadyPaid.map { $0.isProven(for: terminal.attempt.payment, knownHash: terminal.attempt.paymentHash, alreadyPaid: true) } == true)
+                    try require(terminal.attempt.alreadyPaid.map { $0.isProven(
+                        for: terminal.attempt.payment,
+                        knownHash: terminal.attempt.paymentHash,
+                        alreadyPaid: true) } == true)
                 }
                 try require(terminal.outcome != .failed || terminal.attempt.failed)
             }
@@ -110,8 +115,9 @@ struct RecurringJournal {
             try require(entry.released != true || entry.historyApplied == true)
             if complete, entry.consumed == true {
                 try require(state.consumed.contains { $0.binding == entry.binding && $0.scheduleID == id && $0.through >= entry.plan.scheduledFor! }
-                            && state.consumedIndices.contains { $0.binding == entry.binding && $0.scheduleID == id
-                                && $0.policyRevision == entry.policyRevision && $0.indices.contains(entry.plan.occurrenceIndex!) })
+                    && state.consumedIndices.contains { $0.binding == entry.binding && $0.scheduleID == id
+                        && $0.policyRevision == entry.policyRevision && $0.indices.contains(entry.plan.occurrenceIndex!)
+                    })
             }
         }
         for watermark in state.consumed {
@@ -121,7 +127,7 @@ struct RecurringJournal {
         for indices in state.consumedIndices {
             try scope(indices.binding, indices.scheduleID)
             try require(!indices.indices.isEmpty && indices.indices.allSatisfy { $0 >= 0 }
-                        && indices.indices == Array(Set(indices.indices)).sorted())
+                && indices.indices == Array(Set(indices.indices)).sorted())
         }
         for uncertain in state.legacyUncertainty { try scope(uncertain.binding, uncertain.scheduleID) }
     }
@@ -155,7 +161,9 @@ struct RecurringJournal {
                 migrated = try decoder.decode(State.self, from: bytes)
                 migrated.version = 3
                 // Old consumption claimed history before writing it: preserve it, never guess.
-                migrated.legacyUncertainty += migrated.attempts.values.filter { $0.resolved || $0.consumed == true || $0.policyApplied == true }.map { Scope(binding: $0.binding, scheduleID: $0.scheduleID) }
+                migrated.legacyUncertainty += migrated.attempts.values.filter { $0.resolved || $0.consumed == true || $0.policyApplied == true }.map { Scope(
+                    binding: $0.binding,
+                    scheduleID: $0.scheduleID) }
             case 1:
                 let old = try decoder.decode(V1.self, from: bytes)
                 migrated = State(attempts: old.attempts, consumed: old.consumed)
@@ -193,8 +201,14 @@ struct RecurringJournal {
             let encoder = JSONEncoder(); encoder.outputFormatting = .sortedKeys
             if old.outcome == outcome, try encoder.encode(old.attempt) == encoder.encode(attempt) { return }
         }
-        entry.terminal = .init(settlementID: entry.terminal?.settlementID ?? UUID(), attempt: attempt, generation: generation, walletGeneration: walletGeneration,
-                               outcome: outcome, message: message, recordedAt: now)
+        entry.terminal = .init(
+            settlementID: entry.terminal?.settlementID ?? UUID(),
+            attempt: attempt,
+            generation: generation,
+            walletGeneration: walletGeneration,
+            outcome: outcome,
+            message: message,
+            recordedAt: now)
         try save(entry)
     }
     func load() throws -> [String: Entry] { try withLock { try state().attempts } }

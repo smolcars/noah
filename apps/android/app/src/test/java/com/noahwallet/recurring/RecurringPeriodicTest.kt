@@ -11,8 +11,7 @@ class RecurringPeriodicTest {
         val w = RecurringWorld(this)
         try {
             val due = w.add()
-            fun has(schedule: RecurringPayment) = RecurringRuntime.hasDuePayments(
-                RecurringStore.State(mapOf(schedule.id to schedule), false, w.binding), w.now)
+            fun has(schedule: RecurringPayment) = RecurringRuntime.hasDuePayments(RecurringStore.State(mapOf(schedule.id to schedule), false, w.binding), w.now)
             assertTrue(has(due))
             assertTrue(has(due.copy(nextRunAt = w.now - 1)))
             assertFalse(has(due.copy(nextRunAt = w.now + 1)))

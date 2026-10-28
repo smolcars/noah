@@ -1,14 +1,13 @@
 import Foundation
-import Testing
-
 @testable import Noah
+import Testing
 
 @MainActor struct SendRecipientSafetyTests {
     private func freshController() -> SendPaymentController {
         SendPaymentTests().make(SendPaymentTests.Backend(), SendPaymentTests.Storage())
     }
     let quote = SendQuote(amount: 1000, fee: 208, total: 1208, feeRate: 1, approximate: true)
-    @Test func scannedArkAfterLightningRouteNeverRedirects() async throws {
+    @Test func scannedArkAfterLightningRouteNeverRedirects() async {
         // RN Ark decoder fixture re-encoded with the testnet HRP; never submitted to the SDK.
         let ark = "tark1pwh9vsmezqqpjy9akejayl2vvcse6he97rn40g84xrlvrlnhayuuyefrp9nse2yspqqkm2rpd"
         var reviewed: SendPayment?
@@ -57,7 +56,7 @@ import Testing
         model.progress.recipientConfirmed = true
         model.progress.railConfirmed = true
         model.source = .offchain
-        model.destination = "b@example.com"  // Same setter for typing, paste, scan and repeat prefill.
+        model.destination = "b@example.com" // Same setter for typing, paste, scan and repeat prefill.
         #expect(model.route == nil && model.payment == nil && model.quote == nil)
         #expect(model.parsed.destinationType == nil && model.source == nil)
         #expect(model.amount.isEmpty && !model.showReview)

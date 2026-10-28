@@ -4,19 +4,19 @@ import android.content.Context
 import kotlinx.coroutines.*
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import okhttp3.Call
+import okhttp3.Callback
 import okhttp3.HttpUrl
 import okhttp3.HttpUrl.Companion.toHttpUrl
 import okhttp3.OkHttpClient
 import okhttp3.Request
-import okhttp3.Call
-import okhttp3.Callback
 import okhttp3.Response
-import kotlin.coroutines.resume
-import kotlin.coroutines.resumeWithException
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
 import java.util.concurrent.TimeUnit
+import kotlin.coroutines.resume
+import kotlin.coroutines.resumeWithException
 
 /** Owns public map data only; the cache filename and format match RN/iOS. */
 class BtcMapRepository(

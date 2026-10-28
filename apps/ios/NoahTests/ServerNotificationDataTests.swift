@@ -1,7 +1,6 @@
 import Foundation
-import Testing
-
 @testable import Noah
+import Testing
 
 /// Decodes the push payloads the server actually produces
 /// (`apps/fixtures/server-notification-data.json`, written by

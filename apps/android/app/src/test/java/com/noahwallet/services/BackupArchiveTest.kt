@@ -1,15 +1,15 @@
 package com.noahwallet.services
 
 import com.noahwallet.services.backup.*
-import java.io.*
-import java.nio.file.Files
-import java.util.Base64
-import java.util.zip.*
 import kotlinx.coroutines.*
 import kotlinx.serialization.json.*
 import okhttp3.*
 import org.junit.Assert.*
 import org.junit.Test
+import java.io.*
+import java.nio.file.Files
+import java.util.Base64
+import java.util.zip.*
 
 class BackupArchiveTest {
     private val phrase = "test phrase"

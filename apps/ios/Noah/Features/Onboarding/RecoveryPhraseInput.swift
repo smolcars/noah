@@ -6,7 +6,7 @@ struct RecoveryPhraseInput {
     private(set) var wrongWordCount = false
 
     var phrase: String { words.joined(separator: " ") }
-    var wordCount: Int { words.filter { !$0.isEmpty }.count }
+    var wordCount: Int { words.count(where: { !$0.isEmpty }) }
     var isComplete: Bool { wordCount == words.count && !wrongWordCount }
 
     static func normalizedWords(_ text: String) -> [String] {
@@ -50,7 +50,7 @@ struct RecoveryPhraseInput {
     // bundled locally so suggestions never send entered words to a server.
     static let wordList: [String] = {
         guard let url = Bundle.main.url(forResource: "bip39-english", withExtension: "txt"),
-            let text = try? String(contentsOf: url, encoding: .utf8) else { return [] }
+              let text = try? String(contentsOf: url, encoding: .utf8) else { return [] }
         return text.split(whereSeparator: \.isWhitespace).map(String.init)
     }()
     static let wordSet = Set(wordList)

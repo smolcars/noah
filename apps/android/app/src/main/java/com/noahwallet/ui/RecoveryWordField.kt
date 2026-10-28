@@ -105,8 +105,8 @@ internal class RecoveryWordEditText(context: Context, private val index: Int) : 
 
 @Composable
 internal fun RecoveryWordField(word: String, index: Int, onChange: (String) -> Unit,
-                               onFocus: (Boolean) -> Unit, onNext: () -> Unit, wordCount: Int = 12, textColor: Color = Color.Unspecified,
-                               cursorColor: Color = Color.Unspecified, textSize: Float = 17f, enabled: Boolean = true, modifier: Modifier) {
+    onFocus: (Boolean) -> Unit, onNext: () -> Unit, wordCount: Int = 12, textColor: Color = Color.Unspecified,
+    cursorColor: Color = Color.Unspecified, textSize: Float = 17f, enabled: Boolean = true, modifier: Modifier) {
     AndroidView(modifier = modifier, factory = { context ->
         RecoveryWordEditText(context, index).apply {
             doAfterTextChanged { onChange(it?.toString().orEmpty()) }

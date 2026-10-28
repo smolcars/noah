@@ -1,10 +1,9 @@
 import BarkBoltFFI
 import Foundation
-import Testing
-import SwiftUI
-import UIKit
-
 @testable import Noah
+import SwiftUI
+import Testing
+import UIKit
 
 /// Opt-in, real regtest payment on a dedicated funded simulator. The resolver alone is faked;
 /// import, review, durable submission, the SDK send and history verification are production code.
@@ -41,7 +40,7 @@ struct SendLiveTests {
         model.destination = "stale-route@example.com"
         await model.acceptRecipient()
         #expect(model.matchingRoute?.arkAddress == routeA)
-        await model.importRecipient(recipientB)  // Same import as the scanner callback.
+        await model.importRecipient(recipientB) // Same import as the scanner callback.
         let payment = try #require(model.payment)
         let quote = try #require(model.quote)
         #expect(payment.destination == recipientB && payment.method == "ark")
@@ -53,8 +52,7 @@ struct SendLiveTests {
         }
         guard case .succeeded = controller.state else {
             Issue.record(
-                "Live payment did not settle; inspect the persisted attempt before any further send"
-            )
+                "Live payment did not settle; inspect the persisted attempt before any further send")
             return
         }
         let saved = try #require(controller.attempt)
@@ -62,7 +60,7 @@ struct SendLiveTests {
             try await handles.wallet.history().filter {
                 !saved.snapshot.movementIDs.contains($0.id)
             }
-            .flatMap(\.sentToAddresses).map { $0.paymentMethod.value }
+            .flatMap(\.sentToAddresses).map(\.paymentMethod.value)
         }
         #expect(destinations == [recipientB])
         controller.acknowledge()

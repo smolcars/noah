@@ -53,7 +53,8 @@ private struct RoundTransactionRow: View {
                         copied = false
                     }
                 }
-                if let url = URL(string: app.variant == .mainnet ? "https://mempool.space/tx/" : "https://mempool.space/signet/tx/")?.appendingPathComponent(txid) {
+                if let url = URL(string: app.variant == .mainnet ? "https://mempool.space/tx/" : "https://mempool.space/signet/tx/")?
+                    .appendingPathComponent(txid) {
                     Link(destination: url) { Image(systemName: "arrow.up.right.square") }
                         .accessibilityLabel(L10n.text("Open {value1} in browser", label, locale: locale.identifier))
                 }

@@ -1,7 +1,7 @@
 package com.noahwallet.services.push
 
-import android.annotation.SuppressLint
 import android.Manifest
+import android.annotation.SuppressLint
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.app.PendingIntent
@@ -12,10 +12,10 @@ import android.graphics.Color
 import android.os.Build
 import androidx.core.app.NotificationCompat
 import androidx.work.ForegroundInfo
-import com.noahwallet.localization.L10n
-import com.noahwallet.localization.NotificationCopy
 import com.noahwallet.MainActivity
 import com.noahwallet.R
+import com.noahwallet.localization.L10n
+import com.noahwallet.localization.NotificationCopy
 import com.noahwallet.notifications.NotificationChannels
 
 object PushNotifications {

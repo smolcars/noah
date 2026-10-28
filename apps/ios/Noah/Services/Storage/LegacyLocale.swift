@@ -12,7 +12,7 @@ enum LegacyLocale {
     static let supported = ["en", "es", "ja", "ko", "sv"]
 
     static func resolve(preference: String?, system: [String]) -> String {
-        for candidate in [preference].compactMap({ $0 }) + system {
+        for candidate in [preference].compactMap(\.self) + system {
             let language = candidate.replacingOccurrences(of: "_", with: "-").split(separator: "-").first.map(String.init)?.lowercased() ?? ""
             if supported.contains(language) { return language }
         }

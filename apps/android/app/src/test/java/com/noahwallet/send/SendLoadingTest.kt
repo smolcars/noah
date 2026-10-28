@@ -86,5 +86,4 @@ class SendLoadingTest {
             assertEquals(0, wallet.calls)
         } finally { release.countDown(); override.await() }
     }
-
 }

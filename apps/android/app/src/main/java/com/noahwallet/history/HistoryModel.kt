@@ -120,7 +120,7 @@ class HistoryModel(private val dependencies: Dependencies) {
     }
 
     private suspend fun <T> optional(body: suspend () -> T): T? = try { body() }
-        catch (cancelled: CancellationException) { throw cancelled } catch (_: Exception) { null }
+    catch (cancelled: CancellationException) { throw cancelled } catch (_: Exception) { null }
     private fun Double?.validRate() = this?.takeIf { it.isFinite() && it > 0 }
 
     suspend fun refresh(currency: String, sync: Boolean = false) {
@@ -144,7 +144,7 @@ class HistoryModel(private val dependencies: Dependencies) {
             if (failure is WalletSession.SessionError || failure is AppServices.WalletSuspended) {
                 transactions = emptyList()
                 error = if (failure is AppServices.WalletSuspended) "Your wallet is suspended. Resume it to view transactions."
-                    else "Your wallet isn't ready. Please try again."
+                else "Your wallet isn't ready. Please try again."
             } else {
                 error = "Couldn't load transactions. Please try again."
                 dependencies.warn("History read failed")

@@ -1,7 +1,7 @@
 import BarkBoltFFI
 import Foundation
-import Testing
 @testable import Noah
+import Testing
 
 /// Opt-in on an owned simulator; the loopback host pays only this fresh regtest invoice.
 @Suite(.enabled(if: ProcessInfo.processInfo.environment["NOAH_WIDGET_FUNDING_URL"] != nil))
@@ -30,15 +30,19 @@ import Testing
             await ForegroundExecution.run {
                 do {
                     _ = try await ForegroundWidgetRefresh.read(summary: { try await session.summary() },
-                        expiry: { try await session.closestExpiryBlocks() }, checkStage: {
-                            try BackgroundExecution.checkActive(); try ForegroundExecution.checkActiveNow()
-                        }, publish: { balance, expiry in
-                            #expect(balance.ark.spendable > 0)
-                            #expect(expiry != nil)
-                            WidgetDataWriter.write(balance: balance, closestExpiryBlocks: expiry, variant: .regtest)
-                            WidgetDataWriter.write(balance: balance, closestExpiryBlocks: nil, variant: .regtest, preserveExpiry: true)
-                            published = true
-                        })
+                                                               expiry: { try await session.closestExpiryBlocks() }, checkStage: {
+                                                                   try BackgroundExecution.checkActive(); try ForegroundExecution.checkActiveNow()
+                                                               }, publish: { balance, expiry in
+                                                                   #expect(balance.ark.spendable > 0)
+                                                                   #expect(expiry != nil)
+                                                                   WidgetDataWriter.write(balance: balance, closestExpiryBlocks: expiry, variant: .regtest)
+                                                                   WidgetDataWriter.write(
+                                                                       balance: balance,
+                                                                       closestExpiryBlocks: nil,
+                                                                       variant: .regtest,
+                                                                       preserveExpiry: true)
+                                                                   published = true
+                                                               })
                 } catch { Issue.record("Foreground widget refresh failed") }
             }
             #expect(published)

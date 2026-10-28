@@ -1,8 +1,7 @@
 import BarkBoltFFI
 import Foundation
-import Testing
-
 @testable import Noah
+import Testing
 
 struct BoardPreparedTests {
     struct FundingInput: Decodable {
@@ -22,10 +21,10 @@ struct BoardPreparedTests {
             })
             do {
                 _ = try await session.submitBoard(quote, walletID: "wallet", journal: journal, confirmed: { quote.confirmed },
-                    funding: funding, readFunding: {
-                        if state == "read-error" { throw URLError(.notConnectedToInternet) }
-                        return state == "same" ? funding : .init(walletID: "wallet", outpoints: ["other:0"])
-                    })
+                                                  funding: funding, readFunding: {
+                                                      if state == "read-error" { throw URLError(.notConnectedToInternet) }
+                                                      return state == "same" ? funding : .init(walletID: "wallet", outpoints: ["other:0"])
+                                                  })
                 #expect(state == "same")
             } catch { #expect(state != "same") }
             #expect(try await session.abandonUnsubmittedAutoBoard(quote, journal: journal) == (state != "same"))
@@ -59,7 +58,7 @@ struct BoardPreparedTests {
             try store.markHandled(.init(walletID: "wallet", outpoints: ["old:0"]))
             let funding = AutoBoardFunding.Snapshot(walletID: "wallet", outpoints: ["old:0", "new:0"])
             let quote = try #require(try await review.prepare(allowed: { true }, funding: { funding },
-                quote: { Self.quote }, discard: { _ in }))
+                                                              quote: { Self.quote }, discard: { _ in }))
             try await review.failedConfirm(quote, changed: changed) { true }
             #expect(try store.hasUnhandled(funding))
             #expect(try !store.hasUnhandled(.init(walletID: "wallet", outpoints: ["old:0"])))
@@ -155,10 +154,10 @@ struct BoardPreparedTests {
             .local(outpoint: .init(txid: "pending", vout: 0), amountSats: 150_529, confirmationHeight: nil),
             .local(outpoint: .init(txid: "change", vout: 0), amountSats: 5_000, confirmationHeight: 100),
             .local(outpoint: .init(txid: "unknown", vout: 0), amountSats: 150_529, confirmationHeight: 100),
-            .exit(vtxoId: "exit", amountSats: 100_000, height: 100)
+            .exit(vtxoId: "exit", amountSats: 100_000, height: 100),
         ], transactions: [
             .init(txid: "deposit", txHex: "", onchainFeeSats: nil, balanceChangeSats: 150_529, confirmation: nil, isCpfp: false),
-            .init(txid: "change", txHex: "", onchainFeeSats: 155, balanceChangeSats: -140_000, confirmation: nil, isCpfp: false)
+            .init(txid: "change", txHex: "", onchainFeeSats: 155, balanceChangeSats: -140_000, confirmation: nil, isCpfp: false),
         ])
         #expect(funding.outpoints == ["deposit:1"])
     }
@@ -244,8 +243,8 @@ struct BoardPreparedTests {
         .init(action: .board, walletID: "wallet", ids: [], amount: 30_000, fee: 100,
               chainFee: 1543, confirmed: 40_000, feeRate: 1,
               prepared: .init(PreparedBoard(id: "board", txid: "exact", grossSats: 30_000,
-                  netSats: 29_900, arkFeeSats: 100, onchainFeeSats: 1543, vsize: 1543,
-                  inputs: [.init(txid: "funding", vout: 0)])))
+                                            netSats: 29_900, arkFeeSats: 100, onchainFeeSats: 1543, vsize: 1543,
+                                            inputs: [.init(txid: "funding", vout: 0)])))
     }
     actor Calls {
         var discarded: [UUID] = []
@@ -404,7 +403,7 @@ struct BoardPreparedTests {
         })
         let work = Task {
             try await session.submitBoard(quote, walletID: "wallet", journal: journal,
-                confirmed: { await balance.confirmed() })
+                                          confirmed: { await balance.confirmed() })
         }
         for _ in 0..<1000 where await balance.continuation == nil { await Task.yield() }
         #expect(await balance.continuation != nil)
@@ -580,8 +579,13 @@ struct BoardPreparedTests {
         return (journal, file, attempt.id)
     }
 
-    func check(_ journal: OnchainOperationJournal, _ id: UUID, ids: Set<String> = [], vtxoAnchors: Set<String> = [], chain: @escaping @Sendable () throws -> ChainTransactionStatus? = { .notFound },
-               unspent: @escaping @Sendable () throws -> Set<String> = { ["funding:0", "other:1"] }) async throws -> Bool {
+    func check(
+        _ journal: OnchainOperationJournal,
+        _ id: UUID,
+        ids: Set<String> = [],
+        vtxoAnchors: Set<String> = [],
+        chain: @escaping @Sendable () throws -> ChainTransactionStatus? = { .notFound },
+        unspent: @escaping @Sendable () throws -> Set<String> = { ["funding:0", "other:1"] }) async throws -> Bool {
         try await WalletSession.checkOnchainAttempt(id, journal: journal, reads: .init(
             walletID: "wallet", transactionIDs: { ids }, vtxoState: { _ in "Spendable" }, exitState: { _ in nil },
             transactionStatus: { _ in try chain() }, vtxoAnchors: { vtxoAnchors }, unspent: { try unspent() }))
@@ -756,8 +760,8 @@ struct BoardPreparedTests {
             quote.amount = amount == 0 ? balance - chainFee : amount
             quote.chainFee = chainFee; quote.fee = arkFee; quote.feeRate = 10
             quote.prepared = .init(PreparedBoard(id: quote.id.uuidString, txid: "exact",
-                grossSats: quote.amount, netSats: quote.net, arkFeeSats: arkFee, onchainFeeSats: chainFee,
-                vsize: chainFee / 10, inputs: (0..<20).map { .init(txid: "funding", vout: UInt32($0)) }))
+                                                 grossSats: quote.amount, netSats: quote.net, arkFeeSats: arkFee, onchainFeeSats: chainFee,
+                                                 vsize: chainFee / 10, inputs: (0..<20).map { .init(txid: "funding", vout: UInt32($0)) }))
             active.append(quote.id)
             if amounts.count == cancelAt { withUnsafeCurrentTask { $0?.cancel() } }
             return quote
@@ -769,7 +773,7 @@ struct BoardPreparedTests {
         }
         func review() async throws -> OnchainQuote? {
             try await WalletSession.reserveBoardReview(minimum: 20_000, feeRate: 10,
-                discard: { try await self.discard($0) }, prepare: { amount, _ in try await self.prepare(amount) })
+                                                       discard: { try await self.discard($0) }, prepare: { amount, _ in try await self.prepare(amount) })
         }
     }
     @Test func manyInputsAtHighFeeReachAnAffordableReview() async throws {
@@ -824,7 +828,6 @@ struct BoardPreparedTests {
         #expect(await calls.amounts == [0])
         #expect(await calls.discarded.count == 1)
     }
-
 }
 
 @MainActor struct BoardReviewLifetimeTests {

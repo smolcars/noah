@@ -3,13 +3,13 @@ import Foundation
 /// Register before entering Rust: endpoint paths can be opaque credentials.
 enum EndpointLogPrivacy {
     private static let lock = NSLock()
-    nonisolated(unsafe) private static var unavailable = false
+    private nonisolated(unsafe) static var unavailable = false
     static func failClosed() { lock.withLock { unavailable = true } }
     static var requiresSerializedGuard: Bool { lock.withLock { unavailable || !origins.isEmpty } }
-    nonisolated(unsafe) private static var origins = Set<String>()
-    nonisolated(unsafe) private static var tokens = Set<String>()
-    nonisolated(unsafe) private static var matcher: SecretMatcher?
-    nonisolated(unsafe) private static var hosts = Set<String>()
+    private nonisolated(unsafe) static var origins = Set<String>()
+    private nonisolated(unsafe) static var tokens = Set<String>()
+    private nonisolated(unsafe) static var matcher: SecretMatcher?
+    private nonisolated(unsafe) static var hosts = Set<String>()
     private static let urls = try! NSRegularExpression(pattern: #"(?i)(?<![a-z0-9+.-])[0-9+.-]*+[a-z][a-z0-9+.-]*+://[^\s<>"']*"#)
     // Admit only the SDK error type/status, never provider-controlled response text.
     private static let responseStatus = try! NSRegularExpression(
@@ -24,7 +24,7 @@ enum EndpointLogPrivacy {
         for variant in AppVariant.allCases {
             let config = WalletConfiguration.base(for: variant)
             endpoints += [ServerEndpoint.baseURL(for: variant).absoluteString, config.arkServer]
-            endpoints += [config.esplora, config.bitcoind].compactMap { $0 }
+            endpoints += [config.esplora, config.bitcoind].compactMap(\.self)
         }
         return Set(endpoints.compactMap(origin))
     }()
@@ -33,7 +33,7 @@ enum EndpointLogPrivacy {
         guard let endpoint else { return }
         guard !hasExcessiveCombiningRun(endpoint) else { failClosed(); return }
         guard var url = URLComponents(string: endpoint) else { failClosed(); return }
-        let credentials = [url.percentEncodedUser, url.percentEncodedPassword].compactMap { $0 }
+        let credentials = [url.percentEncodedUser, url.percentEncodedPassword].compactMap(\.self)
         let query = url.percentEncodedQuery
         // Selection validation rejects credentials/query; protect them in legacy registrations too.
         url.user = nil; url.password = nil; url.query = nil; url.fragment = nil
@@ -69,9 +69,41 @@ enum EndpointLogPrivacy {
         }
     }
 
-    private static let commonWords: Set<String> = ["api", "block", "blocks", "tip", "height", "hash", "tx", "txs", "transaction", "transactions", "address", "scripthash", "mempool", "v0", "v1", "v2", "testnet", "signet", "mainnet", "regtest", "esplora", "fee-estimates", "outspend", "outspends", "status", "hex", "raw", "merkle-proof", "merkleblock-proof", "utxo", "broadcast"]
+    private static let commonWords: Set<String> = [
+        "api",
+        "block",
+        "blocks",
+        "tip",
+        "height",
+        "hash",
+        "tx",
+        "txs",
+        "transaction",
+        "transactions",
+        "address",
+        "scripthash",
+        "mempool",
+        "v0",
+        "v1",
+        "v2",
+        "testnet",
+        "signet",
+        "mainnet",
+        "regtest",
+        "esplora",
+        "fee-estimates",
+        "outspend",
+        "outspends",
+        "status",
+        "hex",
+        "raw",
+        "merkle-proof",
+        "merkleblock-proof",
+        "utxo",
+        "broadcast",
+    ]
     private static let publicNames: Set<String> = {
-        var names: Set<String> = ["example", "localhost", "com", "org", "net", "edu", "gov", "co", "ac"]
+        var names: Set = ["example", "localhost", "com", "org", "net", "edu", "gov", "co", "ac"]
         for origin in publicOrigins {
             if let host = authority(origin) { names.formUnion(host.split(separator: ".").map(String.init)) }
         }
@@ -209,7 +241,7 @@ enum EndpointLogPrivacy {
             let token = source.substring(with: match.range)
             guard token.contains(where: { $0.isLetter || $0.isNumber || !$0.isASCII }) else { continue }
             let address = token.prefix { $0 != "%" }
-            if (address.contains("::") || address.filter({ $0 == ":" }).count == 7),
+            if address.contains("::") || address.count(where: { $0 == ":" }) == 7,
                address.allSatisfy({ "0123456789abcdefABCDEF:.".contains($0) }) {
                 replacements.append(match.range); continue
             }
@@ -310,7 +342,8 @@ enum EndpointLogPrivacy {
         if let match = responseStatus.firstMatch(in: text, range: NSRange(text.startIndex..., in: text)) {
             return summary("HttpResponse { status: " + (text as NSString).substring(with: match.range(at: 1)) + " }")
         }
-        guard let views = LogFile.decodedViews(text, percentEncoded: true, compatibility: !registered.isEmpty) else { return text.contains("HttpResponse") ? summary("HttpResponse") : nil }
+        guard let views = LogFile.decodedViews(text, percentEncoded: true, compatibility: !registered.isEmpty)
+        else { return text.contains("HttpResponse") ? summary("HttpResponse") : nil }
         for view in views {
             if let match = responseStatus.firstMatch(in: view, range: NSRange(view.startIndex..., in: view)) {
                 return summary("HttpResponse { status: " + (view as NSString).substring(with: match.range(at: 1)) + " }")
@@ -326,7 +359,12 @@ enum EndpointLogPrivacy {
             let plain = LogFile.redactPlain(view)
             if index > 0 && plain != view { return "[redacted]" }
             if index == 0 {
-                result = plain == view ? endpointOnly : redactEndpoints(plain, registered: registered, matcher: matcher, hosts: hosts, recordReadBack: recordReadBack)
+                result = plain == view ? endpointOnly : redactEndpoints(
+                    plain,
+                    registered: registered,
+                    matcher: matcher,
+                    hosts: hosts,
+                    recordReadBack: recordReadBack)
             }
         }
         return result

@@ -189,7 +189,7 @@ private struct QRDots: Shape {
     let matrix: QRMatrix
     let geometry: QRGeometry
 
-    func path(in rect: CGRect) -> Path {
+    func path(in _: CGRect) -> Path {
         var path = Path()
         let module = geometry.module, radius = module * 0.44
         for row in 0..<matrix.count {
@@ -207,7 +207,7 @@ private struct QRDots: Shape {
 private struct QREye: Shape {
     let module: CGFloat
 
-    func path(in rect: CGRect) -> Path {
+    func path(in _: CGRect) -> Path {
         var path = Path()
         func add(_ inset: CGFloat, _ size: CGFloat, _ radius: CGFloat) {
             path.addRoundedRect(in: CGRect(x: inset * module, y: inset * module, width: size * module, height: size * module),

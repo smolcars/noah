@@ -438,7 +438,7 @@ struct EmailPage: View {
         EmailHints(email: email, haptics: haptics).padding(.top, 10)
         if let error = email.error { SettingsFine(text: L10n.text(error, locale: language), failure: true) }
         SettingsFine(text: L10n.text(server.isEmailVerified == true ? "Your current email stays until the new one is verified."
-                                     : "Optional. We only write when your bitcoin needs you.", locale: language))
+                : "Optional. We only write when your bitcoin needs you.", locale: language))
     }
 
     @ViewBuilder private func code(_ email: EmailVerification) -> some View {

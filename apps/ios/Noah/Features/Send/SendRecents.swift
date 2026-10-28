@@ -11,7 +11,7 @@ struct SendRecent: Equatable, Identifiable {
         var seen: Set<String> = []
         var recents: [Self] = []
         for row in transactions.sorted(by: HistoryRules.precedes)
-        where row.direction == "outgoing" && row.movementStatus == "successful" {
+            where row.direction == "outgoing" && row.movementStatus == "successful" {
             guard let destination = reusable(row), seen.insert(destination.lowercased()).inserted else { continue }
             recents.append(Self(destination: destination, label: .of(destination: destination, ownDomain: ownDomain)))
             if recents.count == limit { break }

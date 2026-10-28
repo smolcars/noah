@@ -72,5 +72,4 @@ class SendOverrideAuditTest {
             }
         } finally { directory.deleteRecursively() }
     }
-
 }

@@ -123,7 +123,7 @@ internal data class ExitScene(
          * the next fee comes from; [destination]: a claim's address when it went to another wallet.
          */
         fun of(exit: ExitModel, stage: ExitStage, tip: Long, others: List<ExitModel> = emptyList(), confirmed: Long? = null,
-               claimFee: Long? = null, destination: String? = null): ExitScene {
+            claimFee: Long? = null, destination: String? = null): ExitScene {
             val n = stage.total.coerceAtLeast(1)
             val txs = exit.path
             val done = stage.phase in setOf(ExitStage.Phase.onchain, ExitStage.Phase.wait, ExitStage.Phase.claimable, ExitStage.Phase.claiming, ExitStage.Phase.claimed)
@@ -362,9 +362,9 @@ internal object TreeLabels {
      * claim's), else the column. [top] and [bottom] are set once placed.
      */
     data class Item(val y: Float, val lines: List<Line>, val priority: Float, val pill: Pill? = null, val head: Int = 1,
-                    val shrinks: Boolean = false, val size: Float = 1f, val fallbacks: List<Item> = emptyList(), val blocks: LongRange? = null,
-                    val x: Float? = null, val brace: Pair<Float, Float>? = null, val key: String = lines.joinToString("|") { it.text },
-                    val top: Float = 0f, val bottom: Float = 0f) {
+        val shrinks: Boolean = false, val size: Float = 1f, val fallbacks: List<Item> = emptyList(), val blocks: LongRange? = null,
+        val x: Float? = null, val brace: Pair<Float, Float>? = null, val key: String = lines.joinToString("|") { it.text },
+        val top: Float = 0f, val bottom: Float = 0f) {
         val right get() = x != null
     }
 
@@ -521,7 +521,7 @@ internal object ExitGutter {
         fun fold(group: List<Int>, from: Int, budget: Int) {
             val p = parting(group, from); val parts = branches(group, p)
             val trunk = if (depth <= fit) (from until p).map { it..it }
-                else ExitFold.spans(kinds(group, from, p), max(1, budget - (parts.maxOfOrNull { least(it, p) } ?: 0))).map { it.first + from..it.last + from }
+            else ExitFold.spans(kinds(group, from, p), max(1, budget - (parts.maxOfOrNull { least(it, p) } ?: 0))).map { it.first + from..it.last + from }
             for (r in group) columns[r] += trunk
             for (part in parts) fold(part, p, budget - trunk.size)
         }

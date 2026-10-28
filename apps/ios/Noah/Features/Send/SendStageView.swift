@@ -235,7 +235,8 @@ struct SendStagePainter {
             lines.context.opacity *= fade
             let first = time.timed(1.57, 0.32), second = time.timed(1.73, 0.32)
             if first > 0 { lines.stroke(lines.line(CGPoint(x: x - 58, y: y - 58), CGPoint(x: x - 17, y: y - 24), progress: first), lines.colors.orange, 2) }
-            if second > 0 { lines.stroke(lines.line(CGPoint(x: x + 58, y: y - 58), CGPoint(x: x + 17, y: y - 24), progress: second), lines.colors.foreground, 2) }
+            if second >
+                0 { lines.stroke(lines.line(CGPoint(x: x + 58, y: y - 58), CGPoint(x: x + 17, y: y - 24), progress: second), lines.colors.foreground, 2) }
             // The seal: a ring settles around the payment; while the call runs it pulses gently.
             if t >= 2.05 {
                 var ring = lines

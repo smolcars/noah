@@ -35,7 +35,9 @@ class SendDestinationNativeTest(private val case: FixtureCase) {
         assertEquals(case.name, expected.string("url") != null, route.isSuccess)
     }
     companion object {
-        @JvmStatic @Parameterized.Parameters(name = "{index}") fun cases() = SharedFixtures.load("send-destination-native").map { arrayOf(it) }
+        @JvmStatic
+        @Parameterized.Parameters(name = "{index}")
+        fun cases() = SharedFixtures.load("send-destination-native").map { arrayOf(it) }
     }
 }
 

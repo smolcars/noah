@@ -24,9 +24,9 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.Layout
@@ -304,8 +304,7 @@ fun ReceiveContent(ui: ReceiveUi, actions: ReceiveActions, toasts: HomeToasts = 
 @Composable
 private fun TonalSheet(onDismiss: () -> Unit, content: @Composable ColumnScope.() -> Unit) {
     val palette = LocalPalette.current
-    androidx.compose.material3.MaterialTheme(colorScheme = androidx.compose.material3.MaterialTheme.colorScheme.copy(
-        surfaceContainerLow = palette.soft, surfaceContainer = palette.soft, surfaceContainerHigh = palette.soft)) {
+    androidx.compose.material3.MaterialTheme(colorScheme = androidx.compose.material3.MaterialTheme.colorScheme.copy(surfaceContainerLow = palette.soft, surfaceContainer = palette.soft, surfaceContainerHigh = palette.soft)) {
         OnboardingSheet(onDismiss, rememberModalBottomSheetState(skipPartiallyExpanded = true), content = content)
     }
 }

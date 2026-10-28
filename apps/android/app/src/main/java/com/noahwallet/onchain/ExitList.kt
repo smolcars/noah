@@ -69,9 +69,9 @@ internal fun ExitListPage(app: AppModel, nav: SettingsNav) {
 
 @Composable
 internal fun ExitListContent(exits: List<ExitModel>, tip: Long, needsFunds: Set<String>, ready: Boolean, loading: Boolean, suspended: Boolean,
-                             money: (Long) -> String, back: (() -> Unit)?, open: (String) -> Unit, claim: () -> Unit, more: () -> Unit,
-                             claims: Map<String, String> = emptyMap(), seen: Map<String, Long> = emptyMap(), stalled: Boolean = false,
-                             status: @Composable () -> Unit = {}) {
+    money: (Long) -> String, back: (() -> Unit)?, open: (String) -> Unit, claim: () -> Unit, more: () -> Unit,
+    claims: Map<String, String> = emptyMap(), seen: Map<String, Long> = emptyMap(), stalled: Boolean = false,
+    status: @Composable () -> Unit = {}) {
     val palette = LocalPalette.current
     val haptics = rememberHaptics()
     var filter by rememberSaveable { mutableStateOf<String?>(null) }
@@ -167,7 +167,7 @@ internal fun ExitListRow(exit: ExitModel, stage: ExitStage, tip: Long, money: (L
 /** An exit's words beside its gutter (prototype `.xr`): amount, then its line, then the chevron; muted once canceled. */
 @Composable
 private fun RowText(exit: ExitModel, stage: ExitStage, tip: Long, money: (Long) -> String, gutter: Float, divider: Boolean, modifier: Modifier,
-                    shared: Boolean = false, onClick: () -> Unit) {
+    shared: Boolean = false, onClick: () -> Unit) {
     val palette = LocalPalette.current
     val failed = stage.attention == ExitStage.Attention.needsFunds
     val muted = stage.phase in setOf(ExitStage.Phase.canceled, ExitStage.Phase.spent, ExitStage.Phase.swept)

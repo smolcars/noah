@@ -11,7 +11,7 @@ import java.util.Date
 class HomeRowsTest {
     private val now = Calendar.getInstance().apply { set(2026, Calendar.OCTOBER, 22, 15, 0, 0); set(Calendar.MILLISECOND, 0) }.time
     private fun row(type: String, direction: String, destination: String = "", status: String = "successful", kind: String? = null,
-                    effective: Long = 1, source: String = "ark", confirmed: Boolean? = null, dateLabel: String? = null) =
+        effective: Long = 1, source: String = "ark", confirmed: Boolean? = null, dateLabel: String? = null) =
         HistoryTransaction("id", type, 2_100, HistoryRules.isoDate(now), direction, dateLabel = dateLabel, source = source,
             destination = destination, movementStatus = status, movementKind = kind, effectiveBalanceSat = effective, hasConfirmation = confirmed)
 

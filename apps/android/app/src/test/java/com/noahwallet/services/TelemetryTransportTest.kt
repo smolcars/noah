@@ -8,14 +8,14 @@ import io.sentry.protocol.Mechanism
 import io.sentry.protocol.SentryException
 import io.sentry.transport.ITransport
 import io.sentry.util.HintUtils
+import kotlinx.serialization.json.*
+import org.junit.Assert.*
+import org.junit.Test
 import java.io.ByteArrayInputStream
 import java.io.StringReader
 import java.nio.file.Files
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.TimeUnit
-import kotlinx.serialization.json.*
-import org.junit.Assert.*
-import org.junit.Test
 
 class TelemetryTransportTest {
     private val serializer = JsonSerializer(SentryOptions.empty())
@@ -182,7 +182,8 @@ class TelemetryTransportTest {
         }
     }
 
-    @Test(timeout = 2000) fun droppedCachedEnvelopeCompletesSubmissionAndDisablesRetry() {
+    @Test(timeout = 2000)
+    fun droppedCachedEnvelopeCompletesSubmissionAndDisablesRetry() {
         val callback = object : Cached, SubmissionResult, Retryable, Flushable {
             val submitted = CountDownLatch(1)
             var succeeded = false
@@ -201,7 +202,8 @@ class TelemetryTransportTest {
         assertFalse(callback.isRetry())
     }
 
-    @Test(timeout = 2000) fun droppedCrashEnvelopeCompletesSDKDiskFlushHint() {
+    @Test(timeout = 2000)
+    fun droppedCrashEnvelopeCompletesSDKDiskFlushHint() {
         val event = failure("UncaughtExceptionHandler", false).apply { release = "preimage=fake-token" }
         val callback = UncaughtExceptionHandlerIntegration.UncaughtExceptionHint(15_000, NoOpLogger.getInstance())
         callback.setFlushable(event.eventId!!)
@@ -210,7 +212,8 @@ class TelemetryTransportTest {
         assertTrue(callback.waitFlush())
     }
 
-    @Test(timeout = 2000) fun rejectedCacheBatchDoesNotWaitForSDKDefaultTimeoutOrReachDelegate() {
+    @Test(timeout = 2000)
+    fun rejectedCacheBatchDoesNotWaitForSDKDefaultTimeoutOrReachDelegate() {
         val cache = Files.createTempDirectory("noah-rejected-cache").toFile()
         val options = options()
         val received = RecordingTransport()

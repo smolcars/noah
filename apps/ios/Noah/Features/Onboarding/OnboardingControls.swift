@@ -73,7 +73,7 @@ private struct OnboardingAppear: ViewModifier {
             .onAppear {
                 guard !shown else { return }
                 withAnimation(reduceMotion ? NoahTokens.Motion.reduceMotionFade.delay(delay * 0.3)
-                                           : NoahTokens.Motion.snappy.delay(delay)) { shown = true }
+                    : NoahTokens.Motion.snappy.delay(delay)) { shown = true }
             }
     }
 }
@@ -256,14 +256,14 @@ struct WrapLayout: Layout {
         return rows
     }
 
-    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache _: inout ()) -> CGSize {
         let width = proposal.width ?? .infinity
         let rows = rows(width, subviews)
         let height = rows.reduce(0) { $0 + $1.ascent + $1.descent } + CGFloat(max(0, rows.count - 1)) * lineSpacing
         return CGSize(width: proposal.width ?? rows.map(\.width).max() ?? 0, height: height)
     }
 
-    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+    func placeSubviews(in bounds: CGRect, proposal _: ProposedViewSize, subviews: Subviews, cache _: inout ()) {
         var y = bounds.minY
         for row in rows(bounds.width, subviews) {
             var x = bounds.minX

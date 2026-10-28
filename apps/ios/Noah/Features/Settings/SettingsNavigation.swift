@@ -201,7 +201,7 @@ extension View {
     /// The page's bar. Phones: the system bar with a large title (inline and empty for pages
     /// with their own header). Wide: the pane's own bar. Modifiers don't branch on the layout,
     /// so the page keeps its identity and state through a pose change.
-    func settingsChrome<Trailing: View>(_ title: LocalizedStringKey?, @ViewBuilder trailing: () -> Trailing = { EmptyView() }) -> some View {
+    func settingsChrome(_ title: LocalizedStringKey?, @ViewBuilder trailing: () -> some View = { EmptyView() }) -> some View {
         modifier(SettingsChrome(title: title, trailing: trailing()))
     }
 }

@@ -85,8 +85,7 @@ struct BearerAuthMiddleware: ClientMiddleware {
         body: HTTPBody?,
         baseURL: URL,
         operationID: String,
-        next: @Sendable (HTTPRequest, HTTPBody?, URL) async throws -> (HTTPResponse, HTTPBody?)
-    ) async throws -> (HTTPResponse, HTTPBody?) {
+        next: @Sendable (HTTPRequest, HTTPBody?, URL) async throws -> (HTTPResponse, HTTPBody?)) async throws -> (HTTPResponse, HTTPBody?) {
         guard !ServerClient.publicOperations.contains(operationID) else {
             return try await next(request, body, baseURL)
         }

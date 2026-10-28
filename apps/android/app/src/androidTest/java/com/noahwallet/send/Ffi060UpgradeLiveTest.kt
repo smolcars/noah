@@ -7,15 +7,15 @@ import com.noahwallet.BuildConfig
 import com.noahwallet.services.storage.*
 import com.noahwallet.services.wallet.*
 import io.github.niteshbalusu11.bark.*
-import java.io.File
-import java.security.MessageDigest
-import java.util.UUID
 import kotlinx.coroutines.*
 import kotlinx.serialization.json.*
 import org.junit.Assert.*
 import org.junit.Assume.assumeTrue
 import org.junit.Test
 import org.junit.runner.RunWith
+import java.io.File
+import java.security.MessageDigest
+import java.util.UUID
 
 /** In-place 0.5.0 → 0.6.0 upgrade on an owned disposable emulator. Uses only APIs both SDKs share, so the same
  *  file runs in the previous build (create, fund, send, baseline) and in this one (`upgrade-verify`). */

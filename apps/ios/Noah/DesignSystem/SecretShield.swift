@@ -48,7 +48,8 @@ struct SecretShield: ViewModifier {
             .background(CaptureStateReader(capture: $capture))
             .onChange(of: capture == nil ? nil : hidden) { _, hidden in
                 guard let hidden, let capture else { return }
-                Self.log.i(#"Secret \#(hidden ? "hidden" : "shown"): scenePhase=\#(scenePhase) sceneCaptureState=\#(capture.stateName) hold=\#(capture.holding)"#)
+                Self.log
+                    .i(#"Secret \#(hidden ? "hidden" : "shown"): scenePhase=\#(scenePhase) sceneCaptureState=\#(capture.stateName) hold=\#(capture.holding)"#)
             }
     }
 }
@@ -115,7 +116,7 @@ final class SceneCapture {
 struct CaptureStateReader: UIViewRepresentable {
     @Binding var capture: SceneCapture?
 
-    func makeUIView(context: Context) -> CaptureView {
+    func makeUIView(context _: Context) -> CaptureView {
         let view = CaptureView()
         view.onScene = { found in
             if capture !== found { capture = found }
@@ -123,7 +124,7 @@ struct CaptureStateReader: UIViewRepresentable {
         return view
     }
 
-    func updateUIView(_ uiView: CaptureView, context: Context) {}
+    func updateUIView(_: CaptureView, context _: Context) {}
 
     final class CaptureView: UIView {
         var onScene: ((SceneCapture) -> Void)?
@@ -133,7 +134,8 @@ struct CaptureStateReader: UIViewRepresentable {
             isUserInteractionEnabled = false
         }
 
-        required init?(coder: NSCoder) { fatalError("init(coder:) is not supported") }
+        @available(*, unavailable)
+        required init?(coder _: NSCoder) { fatalError("init(coder:) is not supported") }
 
         /// Arrivals only. When the content's identity changes (Restore's fields restart on a paste), SwiftUI makes a new
         /// reader and removes the old one after the new one arrives; clearing on that removal left the shield hidden for good.

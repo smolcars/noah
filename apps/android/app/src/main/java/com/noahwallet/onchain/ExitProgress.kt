@@ -3,22 +3,22 @@ package com.noahwallet.onchain
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.draw.clip
-import androidx.compose.foundation.clickable
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.LiveRegionMode
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
@@ -48,9 +48,9 @@ import kotlinx.coroutines.withContext
  * claim transaction's whole fee and every exit it claimed.
  */
 internal data class ExitContext(val tip: Long, val confirmed: Long?, val delta: Long?, val claimFee: Long? = null, val claimIds: List<String> = emptyList(),
-                                val claimedTo: String? = null, val claimEstimate: Long? = null, val cancelable: Boolean = false,
-                                /** The part of the exit's network fees ([ExitStage.feesPaid]) for steps its other exits share ([ExitFees.paid]). */
-                                val sharedFees: Long = 0) {
+    val claimedTo: String? = null, val claimEstimate: Long? = null, val cancelable: Boolean = false,
+    /** The part of the exit's network fees ([ExitStage.feesPaid]) for steps its other exits share ([ExitFees.paid]). */
+    val sharedFees: Long = 0) {
     /** This exit's part of [claimFee]; see [ExitClaim.share]. */
     fun claimShare(id: String) = claimFee?.let { ExitClaim.share(it, claimIds, id) }
 
@@ -92,7 +92,7 @@ internal fun ExitProgressPage(app: AppModel, nav: SettingsNav, id: String) {
     val claim = model.attempts.firstOrNull { it.quote.action == OnchainAction.claim && id in it.quote.ids && (stage?.claimTxid == null || it.receipt?.txid == stage.claimTxid) }
     val claimEstimate by produceState<Long?>(null, stage?.phase == ExitStage.Phase.claimable) {
         if (stage?.phase == ExitStage.Phase.claimable) value = try { withContext(Dispatchers.IO) { app.session.exitCosts(listOf(id))[id]?.claim } }
-            catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled } catch (_: Exception) { null }
+        catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled } catch (_: Exception) { null }
     }
     var deposit by remember { mutableStateOf<Long?>(null) }
     val context = ExitContext(overview?.tip ?: 0, overview?.confirmed, rememberExitDelta(app), claimEstimate = claimEstimate,
@@ -127,8 +127,8 @@ internal fun ExitProgressPage(app: AppModel, nav: SettingsNav, id: String) {
 
 @Composable
 internal fun ExitProgressContent(exit: ExitModel?, stage: ExitStage?, context: ExitContext, busy: Boolean, suspended: Boolean, money: (Long) -> String,
-                                 back: (() -> Unit)?, check: () -> Unit, cancel: () -> Unit, claim: () -> Unit, addFunds: (Long) -> Unit, done: () -> Unit,
-                                 loaded: Boolean = true, others: List<ExitModel> = emptyList(), status: @Composable () -> Unit = {}) {
+    back: (() -> Unit)?, check: () -> Unit, cancel: () -> Unit, claim: () -> Unit, addFunds: (Long) -> Unit, done: () -> Unit,
+    loaded: Boolean = true, others: List<ExitModel> = emptyList(), status: @Composable () -> Unit = {}) {
     val palette = LocalPalette.current
     val haptics = rememberHaptics()
     val scroll = rememberScrollState()

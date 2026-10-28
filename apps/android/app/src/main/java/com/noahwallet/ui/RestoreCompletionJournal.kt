@@ -3,10 +3,10 @@ package com.noahwallet.ui
 import com.noahwallet.services.backup.WalletRestorer
 import com.noahwallet.services.storage.WalletDataLocation
 import com.noahwallet.services.storage.syncDirectory
-import java.io.File
-import java.io.FileOutputStream
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import java.io.File
+import java.io.FileOutputStream
 
 /** Metadata only. Written before installation so even death before the engine returns is replayable. */
 class RestoreCompletionJournal(location: WalletDataLocation, private val sync: (File) -> Unit = ::syncDirectory) {

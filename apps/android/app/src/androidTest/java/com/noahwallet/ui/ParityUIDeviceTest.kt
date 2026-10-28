@@ -292,8 +292,7 @@ class ParityUIDeviceTest {
         val services = AppServices.shared(context)
         services.ensureWalletOpen()
         val settings = SettingsStorage(context)
-        settings.set(SettingsPreferences.update(settings.string("transaction-storage"), mapOf(
-            "isAutoBoardingEnabled" to JsonPrimitive(true), "hasAttemptedAutoBoarding" to JsonPrimitive(true)), 1), "transaction-storage")
+        settings.set(SettingsPreferences.update(settings.string("transaction-storage"), mapOf("isAutoBoardingEnabled" to JsonPrimitive(true), "hasAttemptedAutoBoarding" to JsonPrimitive(true)), 1), "transaction-storage")
         settings.sync()
         File(context.cacheDir, "auto-board-address.txt").writeText(services.session.exitDepositAddress())
     }

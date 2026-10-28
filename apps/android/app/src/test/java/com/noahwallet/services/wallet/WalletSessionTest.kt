@@ -3,12 +3,12 @@ package com.noahwallet.services.wallet
 import com.noahwallet.services.storage.WalletDataLocation
 import io.github.niteshbalusu11.bark.Network
 import io.github.niteshbalusu11.bark.WalletSnapshotInfo
-import java.io.File
-import java.nio.file.Files
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.collect
 import org.junit.Assert.*
 import org.junit.Test
+import java.io.File
+import java.nio.file.Files
 
 class WalletSessionTest {
     @Test fun cancelledOrExpiredCallerCannotCreateOrVerify() = runBlocking {
@@ -152,7 +152,8 @@ class WalletSessionTest {
     }
 
     @OptIn(DelicateCoroutinesApi::class, ExperimentalCoroutinesApi::class)
-    @Test fun reservationWaitsForSuspensionReadOffCallerThreadAndFailsClosed() = runBlocking {
+    @Test
+    fun reservationWaitsForSuspensionReadOffCallerThreadAndFailsClosed() = runBlocking {
         withLocation { location ->
             val handles = Handles()
             val entered = java.util.concurrent.CountDownLatch(1)
@@ -275,8 +276,7 @@ class WalletSessionTest {
         override suspend fun summary(): WalletSession.Summary {
             summaryEntered?.complete(Unit); summaryGate?.await()
             assertFalse(closed)
-            return WalletSession.Summary(Network.REGTEST, "abcd", WalletBalance(
-                WalletBalance.Ark(1u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u), WalletBalance.Onchain(0u, 0u, 0u)), 2)
+            return WalletSession.Summary(Network.REGTEST, "abcd", WalletBalance(WalletBalance.Ark(1u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u), WalletBalance.Onchain(0u, 0u, 0u)), 2)
         }
         override suspend fun sync() { assertFalse(closed) }
         override suspend fun maintenanceDelegated() { assertFalse(closed) }
@@ -807,5 +807,4 @@ class WalletSessionTest {
             suspended = false; session.close()
         }
     }
-
 }

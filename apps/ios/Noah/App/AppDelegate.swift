@@ -19,9 +19,8 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
     }
 
     func application(
-        _ application: UIApplication,
-        didFinishLaunchingWithOptions launchOptions: [UIApplication.LaunchOptionsKey: Any]? = nil
-    ) -> Bool {
+        _: UIApplication,
+        didFinishLaunchingWithOptions _: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
         do { try EsploraSettings().restoreLogPrivacy() }
         catch { EndpointLogPrivacy.failClosed() }
         BarkLog.install()
@@ -61,10 +60,10 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         }
         guard identifier != .invalid else { return }
         lifecycleDrain = BackgroundExecution(timeout: .seconds(min(logFile.drainLimit, application.backgroundTimeRemaining)),
-            logFile: logFile, completion: { [weak self] _ in
-                application.endBackgroundTask(identifier)
-                self?.lifecycleDrain = nil
-            }, operation: {})
+                                             logFile: logFile, completion: { [weak self] _ in
+                                                 application.endBackgroundTask(identifier)
+                                                 self?.lifecycleDrain = nil
+                                             }, operation: {})
     }
 
     func applicationWillResignActive(_ application: UIApplication) {
@@ -76,20 +75,20 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         beginLifecycleLogDrain(application)
     }
 
-    func applicationWillEnterForeground(_ application: UIApplication) {
+    func applicationWillEnterForeground(_: UIApplication) {
         BackgroundExecution.foregroundWillEnter()
     }
 
-    nonisolated func userNotificationCenter(_ center: UNUserNotificationCenter, didReceive response: UNNotificationResponse) async {
+    nonisolated func userNotificationCenter(_: UNUserNotificationCenter, didReceive response: UNNotificationResponse) async {
         guard SettingsRoute.opensSchedules(response.notification.request.content.userInfo) else { return }
         await MainActor.run { SettingsRoute.shared.page = .recurring }
     }
 
-    nonisolated func userNotificationCenter(_ center: UNUserNotificationCenter, willPresent notification: UNNotification) async -> UNNotificationPresentationOptions {
+    nonisolated func userNotificationCenter(_: UNUserNotificationCenter, willPresent _: UNNotification) async -> UNNotificationPresentationOptions {
         [.banner, .list, .sound, .badge]
     }
 
-    func applicationSignificantTimeChange(_ application: UIApplication) {
+    func applicationSignificantTimeChange(_: UIApplication) {
         Task { await RecurringExecutor.shared.timeChanged() }
     }
 
@@ -100,15 +99,15 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
     /// Restore words stay visible for RN parity. System VoiceOver can read visible content;
     /// iOS has no third-party accessibility services, but keyboard extensions could log it.
     /// Block those app-wide so a non-secure recovery field never hands them keystrokes.
-    func application(_ application: UIApplication, shouldAllowExtensionPointIdentifier identifier: UIApplication.ExtensionPointIdentifier) -> Bool {
+    func application(_: UIApplication, shouldAllowExtensionPointIdentifier identifier: UIApplication.ExtensionPointIdentifier) -> Bool {
         identifier != .keyboard
     }
 
-    func application(_ application: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
+    func application(_: UIApplication, didRegisterForRemoteNotificationsWithDeviceToken deviceToken: Data) {
         PushRegistration.shared.deliver(.success(deviceToken))
     }
 
-    func application(_ application: UIApplication, didFailToRegisterForRemoteNotificationsWithError error: Error) {
+    func application(_: UIApplication, didFailToRegisterForRemoteNotificationsWithError error: Error) {
         PushRegistration.shared.deliver(.failure(error))
     }
 
@@ -116,9 +115,8 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
     /// get 25 s and a report under way at the deadline up to 3 s more, so the
     /// completion handler is always called in time.
     func application(
-        _ application: UIApplication,
-        didReceiveRemoteNotification userInfo: [AnyHashable: Any]
-    ) async -> UIBackgroundFetchResult {
+        _: UIApplication,
+        didReceiveRemoteNotification userInfo: [AnyHashable: Any]) async -> UIBackgroundFetchResult {
         guard let notification = PushPayload.parse(userInfo) else { return .noData }
         let jobs = PushJobs(dependencies: .live(.shared))
         return await Self.completeWithin(.seconds(25)) { try await jobs.handle(notification) }
@@ -126,7 +124,8 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
 
     /// Unstructured workers may settle native work after this callback has returned.
     /// A task group would wait for that work even after cancelling it.
-    static func completeWithin(_ timeout: Duration, logFile: LogFile = .shared, operation: @escaping @Sendable () async throws -> Void) async -> UIBackgroundFetchResult {
+    static func completeWithin(_ timeout: Duration, logFile: LogFile = .shared,
+                               operation: @escaping @Sendable () async throws -> Void) async -> UIBackgroundFetchResult {
         await withCheckedContinuation { continuation in
             _ = BackgroundExecution(timeout: timeout, logFile: logFile, completion: {
                 continuation.resume(returning: $0 ? .newData : .failed)

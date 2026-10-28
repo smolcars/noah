@@ -4,11 +4,11 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.noahwallet.formatting.BitcoinAmount
 import com.noahwallet.formatting.BitcoinAmountUnit
-import java.util.Locale
 import kotlinx.serialization.json.*
 import org.junit.Assert.*
 import org.junit.Test
 import org.junit.runner.RunWith
+import java.util.Locale
 
 /** java.text on the host JVM is not evidence for Android ICU grouping. */
 @RunWith(AndroidJUnit4::class)

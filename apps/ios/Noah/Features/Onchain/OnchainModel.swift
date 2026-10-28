@@ -22,7 +22,7 @@ final class OnchainModel {
         var estimate: @Sendable ([String]) async throws -> EmergencyExitFeeEstimate = { _ in throw OnchainFailure.unavailable }
         var exclusions: @Sendable () async throws -> [ExcludedExitVtxo] = { [] }
         /// Where Noah keeps when it first saw each exit transaction in its status (in memory unless given).
-        var sightings: ExitSightings.Store? = nil
+        var sightings: ExitSightings.Store?
         /// Something these pages show may have changed: the wallet committed (a round or renew, an exit step, an
         /// on-chain sync that found funds) or an on-chain operation moved. Coalesced to the latest.
         var changes: @Sendable () async -> AsyncStream<Void> = { AsyncStream { $0.finish() } }
@@ -30,7 +30,7 @@ final class OnchainModel {
         /// it's ready.
         var settle: @Sendable () async -> Bool = { false }
         /// Where every page's reads and submissions meet, so a page Back returns to never shows an older read.
-        var shared: SharedOverview? = nil
+        var shared: SharedOverview?
         static func live(session: WalletSession = .shared) -> Self {
             @Sendable func wallet(_ rule: (Bool, Bool, Bool, Bool) -> Bool) async -> Bool {
                 let state = SettingsStorage.shared.persistedState(PersistedWalletState.self, key: PersistedWalletState.key)
@@ -228,12 +228,11 @@ final class OnchainModel {
         } catch {
             self.error =
                 (error as? OnchainFailure)?.errorDescription
-                ?? "Couldn't read wallet status. Pull to refresh."
+                    ?? "Couldn't read wallet status. Pull to refresh."
         }
     }
     func review(
-        _ action: OnchainAction, ids: [String] = [], amount: UInt64 = 0, destination: String? = nil
-    ) async {
+        _ action: OnchainAction, ids: [String] = [], amount: UInt64 = 0, destination: String? = nil) async {
         guard !busy else { return }
         invalidate()
         error = nil
@@ -265,7 +264,7 @@ final class OnchainModel {
             Self.remember(ExitRefusal(error))
             self.error =
                 (error as? OnchainFailure)?.errorDescription ?? ExitRefusal.message(error)
-                ?? "Couldn't prepare the review. Nothing was submitted. Try again when the wallet is ready."
+                    ?? "Couldn't prepare the review. Nothing was submitted. Try again when the wallet is ready."
         }
     }
     /// Explicit first consent opens a separate confirmation for this exact, expiring review.
@@ -418,7 +417,6 @@ final class OnchainModel {
             message = "Repeat protection overridden. The original attempt is still saved. Review the current wallet state before submitting again."
         } catch { self.error = (error as? OnchainFailure)?.errorDescription ?? OnchainFailure.uncertain.errorDescription }
     }
-
 }
 
 /// Native equivalent of RN's isBackgroundJobRunning query gate; counts overlapping pushes.

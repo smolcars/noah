@@ -245,5 +245,4 @@ class RecurringSettlementTest {
             assertEquals("$outcome must not retry A or pay the edited policy", 1, w.wallet.calls)
         }
     }
-
 }

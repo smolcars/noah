@@ -8,12 +8,12 @@ import com.noahwallet.services.logging.TelemetryTransport
 import io.sentry.*
 import io.sentry.android.core.SentryAndroidOptions
 import io.sentry.protocol.*
-import java.io.ByteArrayInputStream
-import java.io.StringReader
-import java.io.StringWriter
 import kotlinx.serialization.json.*
 import org.junit.Assert.*
 import org.junit.Test
+import java.io.ByteArrayInputStream
+import java.io.StringReader
+import java.io.StringWriter
 
 class AppTelemetryTest {
     private val serializer = JsonSerializer(SentryOptions.empty())

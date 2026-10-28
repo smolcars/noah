@@ -1,8 +1,7 @@
 import Foundation
+@testable import Noah
 import Sentry
 import Testing
-
-@testable import Noah
 
 struct EndpointPrivacyRound9Tests {
     private func cases(_ kind: String) throws -> [[String: Any]] {

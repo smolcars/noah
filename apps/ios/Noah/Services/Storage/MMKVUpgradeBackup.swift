@@ -69,8 +69,6 @@ struct MMKVUpgradeBackup {
     }
 
     private func manifest() throws -> Manifest {
-        let value = try JSONDecoder().decode(Manifest.self, from: Data(contentsOf: directory.appending(path: "manifest.json")))
-        return value
+        try JSONDecoder().decode(Manifest.self, from: Data(contentsOf: directory.appending(path: "manifest.json")))
     }
-
 }

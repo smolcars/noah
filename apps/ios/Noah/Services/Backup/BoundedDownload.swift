@@ -55,9 +55,8 @@ enum BoundedDownload {
         }
 
         func urlSession(
-            _ session: URLSession, dataTask: URLSessionDataTask, didReceive response: URLResponse,
-            completionHandler: @escaping (URLSession.ResponseDisposition) -> Void
-        ) {
+            _: URLSession, dataTask _: URLSessionDataTask, didReceive response: URLResponse,
+            completionHandler: @escaping (URLSession.ResponseDisposition) -> Void) {
             if let http = response as? HTTPURLResponse, !(200..<300).contains(http.statusCode) {
                 fail(URLError(.badServerResponse), completionHandler)
             } else if response.expectedContentLength > limit {
@@ -67,7 +66,7 @@ enum BoundedDownload {
             }
         }
 
-        func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, didReceive data: Data) {
+        func urlSession(_: URLSession, dataTask: URLSessionDataTask, didReceive data: Data) {
             guard lock.withLock({ failure == nil }) else { return }
             received += Int64(data.count)
             do {
@@ -79,7 +78,7 @@ enum BoundedDownload {
             }
         }
 
-        func urlSession(_ session: URLSession, task: URLSessionTask, didCompleteWithError error: Error?) {
+        func urlSession(_: URLSession, task _: URLSessionTask, didCompleteWithError error: Error?) {
             let (continuation, result): (CheckedContinuation<Void, Error>?, Result<Void, Error>) = lock.withLock {
                 let result: Result<Void, Error> = (failure ?? error).map { .failure($0) } ?? .success(())
                 outcome = result

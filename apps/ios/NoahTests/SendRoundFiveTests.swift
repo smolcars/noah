@@ -1,8 +1,7 @@
 import BarkBoltFFI
 import Foundation
-import Testing
-
 @testable import Noah
+import Testing
 
 @MainActor struct SendWalletIdentityTests {
     final class Identity {
@@ -15,11 +14,14 @@ import Testing
             reconcile: { _ in Issue.record("Must not reconcile another or unbound wallet"); return .uncertain },
             read: { storage.attempt }, write: { try storage.write($0) }, identity: { identity.value }))
     }
-    @Test func invalidationWinsOverAStatusCheckWaitingForTheSession() async throws {
+    @Test func invalidationWinsOverAStatusCheckWaitingForTheSession() async {
         let storage = SendPaymentTests.Storage()
         let identity = Identity()
         let gate = WalletRestorerTests.Gate()
-        storage.attempt = .init(walletIdentity: identity.value, payment: .init(destination: "ark", method: "ark", amount: 1000), snapshot: .init(movementIDs: []))
+        storage.attempt = .init(
+            walletIdentity: identity.value,
+            payment: .init(destination: "ark", method: "ark", amount: 1000),
+            snapshot: .init(movementIDs: []))
         let subject = SendPaymentController(dependencies: .init(
             prepare: { _, _ in .init(movementIDs: []) }, pay: { _, _, _ in throw SendFailure.unresolved },
             reconcile: { _ in Issue.record("Stale status check"); return .uncertain },
@@ -36,7 +38,7 @@ import Testing
         #expect(subject.state == .ready && subject.attempt == nil && !subject.checking)
     }
     @Test(arguments: ["fingerprint", "network"])
-    func foreignAttemptDiscardedBeforeReceiptOrReconciliation(field: String) async throws {
+    func foreignAttemptDiscardedBeforeReceiptOrReconciliation(field: String) async {
         let storage = SendPaymentTests.Storage()
         let identity = Identity()
         storage.attempt = .init(walletIdentity: identity.value, payment: .init(destination: "ark", method: "ark", amount: 1000),
@@ -58,14 +60,17 @@ import Testing
     @Test func sameWalletRestartRetainsLock() throws {
         let storage = SendPaymentTests.Storage()
         let identity = Identity()
-        storage.attempt = .init(walletIdentity: identity.value, payment: .init(destination: "ark", method: "ark", amount: 1000), snapshot: .init(movementIDs: []))
+        storage.attempt = .init(
+            walletIdentity: identity.value,
+            payment: .init(destination: "ark", method: "ark", amount: 1000),
+            snapshot: .init(movementIDs: []))
         storage.attempt = try SendSafetyTests().roundTrip(#require(storage.attempt))
         let restarted = controller(storage, identity)
         #expect(restarted.state == .uncertain && restarted.attempt?.walletIdentity == identity.value)
         restarted.acknowledge()
         #expect(restarted.locked)
     }
-    @Test func legacyWithoutIdentityNeverClaimsOwnershipOrSuccess() async throws {
+    @Test func legacyWithoutIdentityNeverClaimsOwnershipOrSuccess() async {
         let storage = SendPaymentTests.Storage()
         let identity = Identity()
         storage.attempt = .init(payment: .init(destination: "old", method: "ark", amount: 1000), snapshot: .init(movementIDs: []),
@@ -91,7 +96,7 @@ import Testing
         var pays = 0
         var status = LightningSendStatus.unknown
         var fail = false
-        func check(_ hash: String) throws -> LightningSendStatus {
+        func check(_: String) throws -> LightningSendStatus {
             checks += 1
             if fail { throw URLError(.timedOut) }
             return status
@@ -127,7 +132,7 @@ import Testing
         let backend = Backend()
         do {
             _ = try await SendLightningCheckpoint(original).advance(invoice: payment.destination, payment: payment, quote: bound,
-                state: .inProgress(send: pending), check: { try await backend.check($0) })
+                                                                    state: .inProgress(send: pending), check: { try await backend.check($0) })
             Issue.record("Mismatched checkpoint advanced")
         } catch is SendExistingLightning {}
         #expect(await backend.checks == 0)
@@ -142,14 +147,15 @@ import Testing
         reviewed.checkpoint = checkpoint
         #expect(SendLightningCheckpoint.prepared(reviewed: reviewed, inspected: .unknown) == checkpoint)
         let status = try await SendLightningSubmission.submit(payment: payment, state: .inProgress(send: try send(payment)), movements: [],
-            checkpoint: checkpoint, quote: quote, check: { try await backend.check($0) }, pay: { await backend.pay() })
+                                                              checkpoint: checkpoint, quote: quote, check: { try await backend.check($0) },
+                                                              pay: { await backend.pay() })
         #expect(throws: SendFailure.unresolved) { try checkpoint.receipt(status: status, movements: [], payment: payment, quote: quote) }
         #expect(await backend.checks == 1)
         #expect(await backend.pays == 0)
         // On the next refresh it is unknown already; neither API may create a new payment.
         await #expect(throws: SendFailure.unresolved) {
             try await SendLightningSubmission.submit(payment: payment, state: .unknown, movements: [],
-                checkpoint: checkpoint, quote: quote, check: { try await backend.check($0) }, pay: { await backend.pay() })
+                                                     checkpoint: checkpoint, quote: quote, check: { try await backend.check($0) }, pay: { await backend.pay() })
         }
         #expect(await backend.checks == 1)
         #expect(await backend.pays == 0)
@@ -168,16 +174,16 @@ import Testing
         func make() -> SendPaymentController {
             SendPaymentController(dependencies: .init(
                 prepare: { _, _ in snapshot },
-                pay: { payment, quote, saved in
+                pay: { payment, quote, _ in
                     _ = try await checkpoint.advance(invoice: payment.destination, payment: payment, quote: quote,
-                        state: .inProgress(send: send), check: { try await backend.check($0) })
+                                                     state: .inProgress(send: send), check: { try await backend.check($0) })
                     throw SendFailure.unresolved
                 },
                 reconcile: { attempt in
                     let saved = try #require(attempt.snapshot.checkpoint)
                     let quote = try #require(attempt.quote)
                     let status = try await saved.advance(invoice: payment.destination, payment: payment, quote: quote,
-                        state: .inProgress(send: send), check: { try await backend.check($0) })
+                                                         state: .inProgress(send: send), check: { try await backend.check($0) })
                     return .paid(try saved.receipt(status: status, movements: [movement], payment: payment, quote: quote))
                 }, read: { storage.attempt }, write: { try storage.write($0) }, identity: { identity }))
         }
@@ -261,7 +267,8 @@ import Testing
         await backend.configure(.unknown, fail: true)
         await #expect(throws: URLError.self) {
             try await SendLightningSubmission.submit(payment: payment, state: .inProgress(send: send), movements: [],
-                checkpoint: .init(send), quote: quote, check: { try await backend.check($0) }, pay: { await backend.pay() })
+                                                     checkpoint: .init(send), quote: quote, check: { try await backend.check($0) },
+                                                     pay: { await backend.pay() })
         }
         #expect(await backend.checks == 1)
         #expect(await backend.pays == 0)

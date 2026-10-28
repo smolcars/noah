@@ -1,9 +1,8 @@
 import BarkBoltFFI
 import Foundation
+@testable import Noah
 import SQLite3
 import Testing
-
-@testable import Noah
 
 struct WalletSessionTests {
     private let documents = FileManager.default.temporaryDirectory.appending(path: "session-\(UUID().uuidString)")
@@ -17,9 +16,9 @@ struct WalletSessionTests {
         #expect(sqlite3_open(location.database.path, &db) == SQLITE_OK)
         defer { sqlite3_close(db) }
         let sql = """
-            CREATE TABLE bark_properties (id TEXT PRIMARY KEY, network TEXT NOT NULL, fingerprint TEXT NOT NULL);
-            INSERT INTO bark_properties (id, network, fingerprint) VALUES ('1', '\(network)', 'abcd1234');
-            """
+        CREATE TABLE bark_properties (id TEXT PRIMARY KEY, network TEXT NOT NULL, fingerprint TEXT NOT NULL);
+        INSERT INTO bark_properties (id, network, fingerprint) VALUES ('1', '\(network)', 'abcd1234');
+        """
         #expect(sqlite3_exec(db, sql, nil, nil, nil) == SQLITE_OK)
     }
 
@@ -28,7 +27,12 @@ struct WalletSessionTests {
         try writeBarkProperties(network: network)
         var db: OpaquePointer?
         #expect(sqlite3_open(location.database.path, &db) == SQLITE_OK)
-        #expect(sqlite3_exec(db, "PRAGMA journal_mode=WAL; INSERT INTO bark_properties VALUES ('2', 'x', 'y'); DELETE FROM bark_properties WHERE id = '2';", nil, nil, nil) == SQLITE_OK)
+        #expect(sqlite3_exec(
+            db,
+            "PRAGMA journal_mode=WAL; INSERT INTO bark_properties VALUES ('2', 'x', 'y'); DELETE FROM bark_properties WHERE id = '2';",
+            nil,
+            nil,
+            nil) == SQLITE_OK)
         sqlite3_close(db)
         #expect(!FileManager.default.fileExists(atPath: location.database.path + "-wal"))
         #expect(!FileManager.default.fileExists(atPath: location.database.path + "-shm"))
@@ -109,7 +113,8 @@ struct WalletSessionTests {
         #expect(sqlite3_open(location.database.path, &writer) == SQLITE_OK)
         defer { sqlite3_close(writer) }
         // Committed only to the WAL while the writer stays open.
-        #expect(sqlite3_exec(writer, "PRAGMA journal_mode=WAL; PRAGMA wal_autocheckpoint=0; UPDATE bark_properties SET network = 'signet';", nil, nil, nil) == SQLITE_OK)
+        #expect(sqlite3_exec(writer, "PRAGMA journal_mode=WAL; PRAGMA wal_autocheckpoint=0; UPDATE bark_properties SET network = 'signet';", nil, nil, nil) ==
+            SQLITE_OK)
         #expect(FileManager.default.fileExists(atPath: location.database.path + "-wal"))
         #expect(try WalletDatabase.properties(at: location.database).network == "signet")
     }
@@ -253,7 +258,7 @@ struct WalletSessionTests {
                 do {
                     do {
                         try await EsploraOpening.$selection.withValue(candidate) {
-                            try await session.reopen(reservation, mnemonic: mnemonic, appVersion: "test", commit: { try wait.commit({}) })
+                            try await session.reopen(reservation, mnemonic: mnemonic, appVersion: "test", commit: { try wait.commit {} })
                         }
                     } catch {
                         guard wait.timedOut else { throw error }

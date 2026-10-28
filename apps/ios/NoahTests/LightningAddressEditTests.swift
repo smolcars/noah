@@ -1,12 +1,12 @@
-import Testing
 @testable import Noah
+import Testing
 
 /// Settings → Lightning address keeps a migrated wallet's name exactly as the server has it.
 @MainActor struct LightningAddressEditTests {
     static let long = "satoshi.nakamoto.the.first.miner"
     static let npub = "npub1" + String(repeating: "q", count: 58)
 
-    @Test func theAssignedNameIsKeptWhateverItsLength() async {
+    @Test func theAssignedNameIsKeptWhateverItsLength() {
         for assigned in [Self.long, "ab", "Ab"] {
             let name = NameAvailability(debounce: .zero, rules: .edit) { _ in true }
             name.assigned = assigned

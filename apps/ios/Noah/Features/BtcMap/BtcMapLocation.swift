@@ -56,12 +56,12 @@ final class BtcMapLocation: NSObject, @preconcurrency CLLocationManagerDelegate 
         }
     }
 
-    func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) { request() }
-    func locationManager(_ manager: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
+    func locationManagerDidChangeAuthorization(_: CLLocationManager) { request() }
+    func locationManager(_: CLLocationManager, didUpdateLocations locations: [CLLocation]) {
         guard let location = locations.last, location.horizontalAccuracy >= 0 else { return }
         finish(.success([location.coordinate.longitude, location.coordinate.latitude]))
     }
-    func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
+    func locationManager(_: CLLocationManager, didFailWithError _: Error) {
         finish(.failure(Failure.unavailable))
     }
     private func finish(_ result: Result<[Double], Error>) {

@@ -1,19 +1,19 @@
 package com.noahwallet.services
 
 import com.noahwallet.fixtures.SharedFixtures
-import kotlinx.serialization.json.jsonPrimitive
 import com.noahwallet.services.logging.AppLog
 import com.noahwallet.services.logging.LogFile
-import java.lang.management.ManagementFactory
-import java.nio.file.Files
-import java.util.Date
-import org.junit.Assert.*
-import org.junit.Test
-import java.util.ArrayDeque
-import java.util.concurrent.Executor
 import kotlinx.coroutines.CoroutineStart
 import kotlinx.coroutines.async
 import kotlinx.coroutines.runBlocking
+import kotlinx.serialization.json.jsonPrimitive
+import org.junit.Assert.*
+import org.junit.Test
+import java.lang.management.ManagementFactory
+import java.nio.file.Files
+import java.util.ArrayDeque
+import java.util.Date
+import java.util.concurrent.Executor
 
 class AppLogTest {
     @Test fun redactionPerformance() {

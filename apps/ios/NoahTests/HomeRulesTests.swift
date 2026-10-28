@@ -1,6 +1,6 @@
 import Foundation
-import Testing
 @testable import Noah
+import Testing
 
 /// Home's layout, nudge, status and row rules (docs/native-rewrite/design/home.md).
 @MainActor
@@ -188,16 +188,16 @@ struct HomeRulesTests {
         #expect(line(Self.balance(ark: 20_000, arkoorSend: 1, offboard: 2, exit: 3, board: 4)) == nil)
         // An unconfirmed deposit is; so is a Lightning payment waiting to be claimed.
         #expect(line(Self.balance(ark: 20_000, onchainPending: 100_000), [Self.deposit("in", 100_000, confirmed: false)])
-                == .arriving(100_000))
+            == .arriving(100_000))
         #expect(line(Self.balance(ark: 20_000, claimable: 2_100)) == .arriving(2_100))
         // Unconfirmed change from your own send, and confirmed deposits, are not.
         #expect(line(Self.balance(ark: 20_000, onchainPending: 40_000), [Self.deposit("send", -10_000, confirmed: false),
-                                                                          Self.deposit("old", 5_000, confirmed: true)]) == nil)
+                                                                         Self.deposit("old", 5_000, confirmed: true)]) == nil)
         // The records never claim more than the wallet's own on-chain pending total.
         #expect(line(Self.balance(ark: 20_000, onchainPending: 60_000), [Self.deposit("in", 100_000, confirmed: false)])
-                == .arriving(60_000))
+            == .arriving(60_000))
         #expect(line(Self.balance(ark: 20_000, claimable: 2_100), [Self.deposit("in", 100_000, confirmed: false)])
-                == .arriving(2_100))
+            == .arriving(2_100))
     }
 
     // MARK: Rows

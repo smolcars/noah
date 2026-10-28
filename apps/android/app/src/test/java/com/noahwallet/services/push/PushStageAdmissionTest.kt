@@ -3,10 +3,10 @@ package com.noahwallet.services.push
 import com.noahwallet.api.generated.models.*
 import com.noahwallet.recurring.RecurringBudget
 import com.noahwallet.services.wallet.WalletExecutionBudget
-import java.util.Collections
 import kotlinx.coroutines.*
 import org.junit.Assert.*
 import org.junit.Test
+import java.util.Collections
 
 class PushStageAdmissionTest {
     @Test fun cancelledMaintenanceCannotStartReportOrWidget() = runBlocking {

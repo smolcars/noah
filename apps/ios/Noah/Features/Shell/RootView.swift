@@ -22,7 +22,8 @@ struct RootView: View {
                 case .launching:
                     if model.customServerUnresponsive {
                         VStack(spacing: 16) {
-                            Text(model.switchingToDefaultServer ? L10n.text("The server isn't responding; switching back…") : L10n.text("The custom server isn't responding."))
+                            Text(model.switchingToDefaultServer ? L10n.text("The server isn't responding; switching back…") : L10n
+                                .text("The custom server isn't responding."))
                             Button("Use default server") { model.useDefaultEsploraServer() }
                                 .disabled(model.switchingToDefaultServer)
                         }.padding()
@@ -40,7 +41,9 @@ struct RootView: View {
                 case .restoreIncomplete:
                     LaunchMessageView(
                         title: model.walletError == nil ? "Restore didn't finish" : "Wallet cleanup didn't finish",
-                        message: LocalizedStringKey(model.walletError ?? "Noah couldn't finish or undo an interrupted restore. Your wallet files were left as they are. Restart Noah to try again."))
+                        message: LocalizedStringKey(model
+                            .walletError ??
+                            "Noah couldn't finish or undo an interrupted restore. Your wallet files were left as they are. Restart Noah to try again."))
                 }
             }
         }

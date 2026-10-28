@@ -1,7 +1,7 @@
 import Foundation
 import MMKV
-import Testing
 @testable import Noah
+import Testing
 
 @MainActor struct RecurringSettlementRepeatTests {
     @Test(arguments: [false, true]) func repeatedStatusAfterAckFailureMustNotRecordSameOccurrenceTwice(legacy: Bool) async throws {
@@ -29,5 +29,4 @@ import Testing
         #expect(!h.controller.locked)
         #expect(h.calls.withLock { $0 } == 1)
     }
-
 }

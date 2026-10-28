@@ -1,7 +1,6 @@
 import Foundation
-import Testing
-
 @testable import Noah
+import Testing
 
 /// Reviews time out on the continuous clock: moving the device clock back or forward during a review never
 /// lengthens it. A review read back from storage has no continuous-clock reading and keeps its wall-clock cap.

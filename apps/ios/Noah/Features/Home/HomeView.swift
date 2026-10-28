@@ -478,7 +478,7 @@ struct HomeView: View {
                      visible: visible, wallet: summary?.fingerprint, revision: fixture == nil ? model.summaryRevision : nil,
                      historyBusy: history.isLoading || history.isRefreshing,
                      caughtUp: fixture != nil || (history.error == nil && model.catchUp.isCaughtUp(
-                        summaryRevision: model.summaryRevision, historyReloadedFor: historyCatchUp)))
+                         summaryRevision: model.summaryRevision, historyReloadedFor: historyCatchUp)))
     }
 
     // MARK: Actions

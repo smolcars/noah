@@ -1,6 +1,6 @@
 import Foundation
-import Testing
 @testable import Noah
+import Testing
 
 struct BtcMapFixtureTests {
     typealias JSON = HistoryFixtureTests.JSON
@@ -41,7 +41,8 @@ struct BtcMapFixtureTests {
                 let ids = snapshot.places.map(\.id)
                 actual = try .object([
                     "count": .value(ids.count), "unique": .value(Set(ids).count == ids.count),
-                    "sorted": .value(ids == ids.sorted()), "bounded": .value(snapshot.places.allSatisfy { (-90...90).contains($0.lat) && (-180...180).contains($0.lon) }),
+                    "sorted": .value(ids == ids.sorted()),
+                    "bounded": .value(snapshot.places.allSatisfy { (-90...90).contains($0.lat) && (-180...180).contains($0.lon) }),
                     "schemaVersion": .value(snapshot.schemaVersion), "source": .value(snapshot.source),
                 ])
             default: Issue.record("Unknown BTC Map fixture"); continue
@@ -99,8 +100,10 @@ struct BtcMapRepositoryTests {
     static func smallRepository(in folder: URL, fetch: @escaping BtcMapRepository.Fetch = { _ in Data("[]".utf8) }) throws -> BtcMapRepository {
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
         let places = folder.appending(path: "bundled.btcmap"), cities = folder.appending(path: "bundled.geonames")
-        try Data(#"{"schemaVersion":1,"generatedAt":"2026-07-14T14:24:58.314Z","source":"btcmap.org","places":[{"id":1,"lat":33.75,"lon":-84.39,"icon":"cafe","name":"Peachtree Coffee","updated_at":"2026-01-01"},{"id":2,"lat":33.76,"lon":-84.38,"icon":"local_pizza","name":"Pizza Place","updated_at":"2026-01-01"},{"id":3,"lat":51.5,"lon":-0.12,"icon":"storefront","name":"London Shop","updated_at":"2026-01-01"}]}"#.utf8).write(to: places)
-        try Data(#"{"schemaVersion":1,"generatedAt":"2026-07-14T14:24:58.314Z","license":"CC BY 4.0","countries":{"CA":"Canada","GB":"United Kingdom","US":"United States"},"admin1":{"CA.08":"Ontario","GB.ENG":"England","US.GA":"Georgia"},"cities":[[4180439,"Atlanta","",33.749,-84.38798,"US","GA",463878],[2643743,"London","",51.50853,-0.12574,"GB","ENG",8961989],[6058560,"London","",42.98339,-81.23304,"CA","08",346765]]}"#.utf8).write(to: cities)
+        try Data(#"{"schemaVersion":1,"generatedAt":"2026-07-14T14:24:58.314Z","source":"btcmap.org","places":[{"id":1,"lat":33.75,"lon":-84.39,"icon":"cafe","name":"Peachtree Coffee","updated_at":"2026-01-01"},{"id":2,"lat":33.76,"lon":-84.38,"icon":"local_pizza","name":"Pizza Place","updated_at":"2026-01-01"},{"id":3,"lat":51.5,"lon":-0.12,"icon":"storefront","name":"London Shop","updated_at":"2026-01-01"}]}"#
+            .utf8).write(to: places)
+        try Data(#"{"schemaVersion":1,"generatedAt":"2026-07-14T14:24:58.314Z","license":"CC BY 4.0","countries":{"CA":"Canada","GB":"United Kingdom","US":"United States"},"admin1":{"CA.08":"Ontario","GB.ENG":"England","US.GA":"Georgia"},"cities":[[4180439,"Atlanta","",33.749,-84.38798,"US","GA",463878],[2643743,"London","",51.50853,-0.12574,"GB","ENG",8961989],[6058560,"London","",42.98339,-81.23304,"CA","08",346765]]}"#
+            .utf8).write(to: cities)
         return BtcMapRepository(cacheURL: folder.appending(path: "places"), bundleURL: places, citiesURL: cities, fetch: fetch)
     }
 
@@ -203,7 +206,8 @@ extension BtcMapRepositoryTests {
     }
 
     @Test func detailsFetchCommentsOnlyWhenNeededAndCacheForFifteenMinutes() async throws {
-        let raw = Data("{\"id\":1,\"name\":\"Cafe\",\"icon\":\"cafe\",\"lat\":1,\"lon\":2,\"updated_at\":\"2026-01-01\",\"comments\":1,\"website\":\"https://example.com\",\"address\":\"Example Street\",\"osm:payment:lightning\":\"yes\"}".utf8)
+        let raw = Data("{\"id\":1,\"name\":\"Cafe\",\"icon\":\"cafe\",\"lat\":1,\"lon\":2,\"updated_at\":\"2026-01-01\",\"comments\":1,\"website\":\"https://example.com\",\"address\":\"Example Street\",\"osm:payment:lightning\":\"yes\"}"
+            .utf8)
         let place = try JSONDecoder().decode(BtcMapPlace.self, from: raw)
         let requests = DetailRequests(raw)
         let repository = BtcMapRepository(fetch: { await requests.fetch($0) })

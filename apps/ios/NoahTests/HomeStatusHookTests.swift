@@ -1,6 +1,6 @@
 import Foundation
-import Testing
 @testable import Noah
+import Testing
 
 @Suite(.timeLimit(.minutes(1)))
 struct HomeStatusHookTests {

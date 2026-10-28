@@ -1,6 +1,6 @@
 import BarkBoltFFI
-import Testing
 @testable import Noah
+import Testing
 
 struct RecurringFeePolicyTests {
     struct Schedule: Decodable {
@@ -36,17 +36,17 @@ struct RecurringFeePolicyTests {
     }
     @Test(arguments: [UInt64(1_000_001), UInt64.max]) func proportionalOverflowSaturates(ppm: UInt64) {
         let result = RecurringFeePolicy.evaluate(amount: .max, method: "lightning", quoteFee: 0,
-            schedule: .init(minFeeSats: 0, baseFeeSats: 0, ppmExpiryTable: [.init(expiryBlocksThreshold: 0, ppm: ppm)]))
+                                                 schedule: .init(minFeeSats: 0, baseFeeSats: 0, ppmExpiryTable: [.init(expiryBlocksThreshold: 0, ppm: ppm)]))
         #expect(result.worstCaseFee == .max && result.cap == UInt64.max / 50)
         #expect(!result.autoPay && result.reason == .scheduleExceedsCap)
     }
     @Test func baseAdditionAndDoublingSaturate() {
         let result = RecurringFeePolicy.evaluate(amount: .max, method: "lightning", quoteFee: .max,
-            schedule: .init(minFeeSats: 0, baseFeeSats: .max, ppmExpiryTable: [.init(expiryBlocksThreshold: 0, ppm: 1)]))
+                                                 schedule: .init(minFeeSats: 0, baseFeeSats: .max, ppmExpiryTable: [.init(expiryBlocksThreshold: 0, ppm: 1)]))
         #expect(result.worstCaseFee == .max && result.cap == UInt64.max / 50)
         #expect(!result.autoPay && result.reason == .quoteExceedsCap)
         let doubled = RecurringFeePolicy.evaluate(amount: .max, method: "lightning", quoteFee: 0,
-            schedule: .init(minFeeSats: UInt64.max / 2 + 1, baseFeeSats: 0, ppmExpiryTable: []))
+                                                  schedule: .init(minFeeSats: UInt64.max / 2 + 1, baseFeeSats: 0, ppmExpiryTable: []))
         #expect(doubled.cap == UInt64.max / 50 && !doubled.autoPay)
     }
 }

@@ -54,7 +54,9 @@ enum ExitPulsePainter {
                              cornerRadius: size.height / 2)
             context.stroke(shape, with: .color(colors.orange.opacity(0.6 + 0.4 * breathe)), lineWidth: 1.4)
         case .dot:
-            context.fill(Path(ellipseIn: CGRect(x: p.x - 3.4, y: p.y - 3.4, width: 6.8, height: 6.8)), with: .color(colors.orange.opacity(0.55 + 0.45 * breathe)))
+            context.fill(
+                Path(ellipseIn: CGRect(x: p.x - 3.4, y: p.y - 3.4, width: 6.8, height: 6.8)),
+                with: .color(colors.orange.opacity(0.55 + 0.45 * breathe)))
         case .alarm(let r):
             context.stroke(Path(ellipseIn: CGRect(x: p.x - r, y: p.y - r, width: 2 * r, height: 2 * r)),
                            with: .color(NoahTokens.Colors.failure.opacity(0.55 + 0.45 * breathe)), style: StrokeStyle(lineWidth: 1.5, dash: [3, 3]))

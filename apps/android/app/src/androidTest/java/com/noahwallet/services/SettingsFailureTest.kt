@@ -3,14 +3,14 @@ package com.noahwallet.services
 import android.content.ContextWrapper
 import android.system.Os
 import androidx.test.platform.app.InstrumentationRegistry
-import com.noahwallet.services.storage.*
 import com.noahwallet.recurring.*
 import com.noahwallet.send.*
-import java.io.File
-import java.util.UUID
+import com.noahwallet.services.storage.*
 import kotlinx.coroutines.*
 import org.junit.Assert.*
 import org.junit.Test
+import java.io.File
+import java.util.UUID
 
 class SettingsFailureTest {
     private val restoreSteps = listOf("journal", "previousMoved", "installed", "committing", "seed", "markerRemoved", "previousRemoved", "journalRemoved", "flags", "markerOnly", "stateOnly", "corrupt") +
@@ -146,8 +146,8 @@ class SettingsFailureTest {
             val services = isolatedServices(context)
             val recovery = services.recoverRestore()
             val expected = if (step in listOf("journalRemoved", "flags", "settling9")) com.noahwallet.services.backup.RestoreTransaction.Recovery.nothingPending
-                else if (committed(step)) com.noahwallet.services.backup.RestoreTransaction.Recovery.completed
-                else com.noahwallet.services.backup.RestoreTransaction.Recovery.rolledBack
+            else if (committed(step)) com.noahwallet.services.backup.RestoreTransaction.Recovery.completed
+            else com.noahwallet.services.backup.RestoreTransaction.Recovery.rolledBack
             assertEquals(step, expected, recovery)
             tx.completeSettings(settings)
             assertFalse(step, location.restorePending)

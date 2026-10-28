@@ -555,5 +555,4 @@ class OnchainModelTest {
             OnchainQuote(action, "wallet", ids, destination)
         }, { f.calls++; "submitted" }, { emptyList() }, {}, { false }, {}, { null }, {},
         claimAddress = address, claimOwnership = { false })
-
 }

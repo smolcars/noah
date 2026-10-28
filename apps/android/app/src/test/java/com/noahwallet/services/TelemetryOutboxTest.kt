@@ -6,13 +6,13 @@ import io.sentry.*
 import io.sentry.hints.*
 import io.sentry.transport.ITransport
 import io.sentry.util.HintUtils
+import org.junit.Assert.*
+import org.junit.Test
 import java.nio.file.Files
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.LinkedBlockingQueue
 import java.util.concurrent.TimeUnit
 import java.util.concurrent.atomic.AtomicReference
-import org.junit.Assert.*
-import org.junit.Test
 
 class TelemetryOutboxTest {
     private val serializer = JsonSerializer(SentryOptions.empty())
@@ -45,8 +45,8 @@ class TelemetryOutboxTest {
         pendingUpload(listOf(sessionItem(), eventItem()), processDeath = true, dieAt = 0)
 
     private fun pendingUpload(items: List<SentryEnvelopeItem>, processDeath: Boolean = false,
-                              acceptedTypes: List<SentryItemType> = items.filter { it.header.type != SentryItemType.Attachment }.map { it.header.type },
-                              dieAt: Int = acceptedTypes.lastIndex) {
+        acceptedTypes: List<SentryItemType> = items.filter { it.header.type != SentryItemType.Attachment }.map { it.header.type },
+        dieAt: Int = acceptedTypes.lastIndex) {
         Replay(items).use { replay ->
             for ((index, type) in acceptedTypes.withIndex()) {
                 val pending = replay.transport.take()
@@ -90,8 +90,7 @@ class TelemetryOutboxTest {
         }
     }
 
-    @Test fun rejectedEventBeforeAcceptedSessionDoesNotCompleteItsUpload() = pendingUpload(listOf(
-        SentryEnvelopeItem.fromEvent(serializer, event(rejected = true)), sessionItem()), acceptedTypes = listOf(SentryItemType.Session))
+    @Test fun rejectedEventBeforeAcceptedSessionDoesNotCompleteItsUpload() = pendingUpload(listOf(SentryEnvelopeItem.fromEvent(serializer, event(rejected = true)), sessionItem()), acceptedTypes = listOf(SentryItemType.Session))
 
     @Test fun acceptedSessionBeforeRejectedEventDoesNotWaitForTimeout() {
         Replay(listOf(sessionItem(), SentryEnvelopeItem.fromEvent(serializer, event(rejected = true)))).use { replay ->
@@ -102,7 +101,8 @@ class TelemetryOutboxTest {
         }
     }
 
-    @Test(timeout = 2_000) fun rejectedNativeEventCompletesCrashFlushWithoutTimeout() {
+    @Test(timeout = 2_000)
+    fun rejectedNativeEventCompletesCrashFlushWithoutTimeout() {
         val event = event(rejected = true)
         val callback = UncaughtExceptionHandlerIntegration.UncaughtExceptionHint(1_000, NoOpLogger.getInstance())
         callback.setFlushable(event.eventId!!)

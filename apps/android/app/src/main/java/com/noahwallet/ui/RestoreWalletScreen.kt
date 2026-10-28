@@ -1,6 +1,5 @@
 package com.noahwallet.ui
 
-import com.noahwallet.localization.tr
 import android.app.Activity
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.Animatable
@@ -33,6 +32,7 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.noahwallet.localization.tr
 import com.noahwallet.ui.design.NoahTokens
 import com.noahwallet.ui.onboarding.*
 import kotlinx.coroutines.delay
@@ -75,7 +75,7 @@ internal fun rememberRestoreClipboard(activity: Activity) = remember {
 /** Onboarding passes its [clipboard], shared with its restore shield so clearing outlasts this screen. */
 @Composable
 internal fun RestoreWalletScreen(model: AppModel, clipboard: RestoreClipboard = rememberRestoreClipboard(LocalContext.current as Activity),
-                                 useStoredSeed: Boolean = false) {
+    useStoredSeed: Boolean = false) {
     if (useStoredSeed) StoredSeedRestoreScreen(model) else PhraseRestoreScreen(model, clipboard)
 }
 
@@ -296,7 +296,7 @@ private fun androidx.compose.ui.layout.LayoutCoordinates.positionInParent() =
 
 @Composable
 private fun WordCell(word: String, index: Int, count: Int, bad: Boolean, focused: Boolean, enabled: Boolean, stagger: Int,
-                     requester: FocusRequester, onChange: (String) -> Unit, onFocus: (Boolean) -> Unit, onNext: () -> Unit, modifier: Modifier) {
+    requester: FocusRequester, onChange: (String) -> Unit, onFocus: (Boolean) -> Unit, onNext: () -> Unit, modifier: Modifier) {
     val palette = LocalPalette.current
     val reduceMotion = LocalReduceMotion.current
     val appear = remember(stagger) { Animatable(if (stagger == 0) 1f else 0f) }

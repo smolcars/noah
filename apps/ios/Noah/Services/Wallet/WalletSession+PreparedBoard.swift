@@ -76,7 +76,7 @@ extension WalletSession {
 
     /// A missing preparation alone is never evidence. Retire a known unclaimed one first.
     func abandonUnsubmittedAutoBoard(_ quote: OnchainQuote,
-        journal: OnchainOperationJournal = .shared) async throws -> Bool {
+                                     journal: OnchainOperationJournal = .shared) async throws -> Bool {
         guard quote.automatic, quote.action == .board, let id = quote.prepared?.id else { return false }
         if let held = boardPreparations[id] {
             guard held.quote == quote, !held.claimed else { return false }
@@ -85,7 +85,8 @@ extension WalletSession {
         guard unsubmittedBoardReviews[quote.id] == quote else { return false }
         let attempts = try await journal.loadAll()
         guard !attempts.contains(where: { $0.id == quote.id || $0.quote.prepared?.id == id ||
-            $0.txid == quote.prepared?.txid || $0.quote.prepared?.txid == quote.prepared?.txid }) else { return false }
+                $0.txid == quote.prepared?.txid || $0.quote.prepared?.txid == quote.prepared?.txid
+        }) else { return false }
         unsubmittedBoardReviews.removeValue(forKey: quote.id)
         return true
     }

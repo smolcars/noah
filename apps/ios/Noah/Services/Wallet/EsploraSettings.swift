@@ -32,7 +32,7 @@ struct EsploraSettings: Sendable {
     }
     private func endpoints(_ record: Record?) -> Set<String> {
         guard let record else { return [] }
-        return Set((record.logEndpoints ?? []) + [record.active.endpoint, record.pending?.endpoint].compactMap { $0 })
+        return Set((record.logEndpoints ?? []) + [record.active.endpoint, record.pending?.endpoint].compactMap(\.self))
     }
     func save(_ record: Record) throws {
         var protected = record
@@ -59,7 +59,7 @@ struct EsploraSettings: Sendable {
         retained[historyUnavailableKey] = values[historyUnavailableKey]
         guard let raw = values[key] else { return retained }
         let old = try JSONDecoder().decode(Record.self, from: Data(raw.utf8))
-        let history = Set((old.logEndpoints ?? []) + [old.active.endpoint, old.pending?.endpoint].compactMap { $0 })
+        let history = Set((old.logEndpoints ?? []) + [old.active.endpoint, old.pending?.endpoint].compactMap(\.self))
         let record = Record(active: Selection(variant: old.active.variant), logEndpoints: history.sorted())
         retained[key] = String(decoding: try JSONEncoder().encode(record), as: UTF8.self)
         return retained
@@ -73,7 +73,7 @@ struct EsploraSettings: Sendable {
     func selection(for variant: AppVariant) -> Selection {
         guard let record = try? record(), record.active.variant == variant.rawValue else {
             return Selection(variant: variant.rawValue, input: importedInput,
-                attention: importedInput == nil ? nil : "This imported endpoint needs attention. Test and save it before use.")
+                             attention: importedInput == nil ? nil : "This imported endpoint needs attention. Test and save it before use.")
         }
         return record.active
     }
@@ -108,7 +108,7 @@ struct EsploraSettings: Sendable {
         } catch {
             // Keep pending if rollback storage fails: cold launch still selects active.
             try? save(Record(active: previous))
-            do { try await reopen(previous, {}) }
+            do { try await reopen(previous) {} }
             catch { throw EsploraEndpoint.Failure(message: "Endpoint not changed. Restart Noah to reopen the previous endpoint.") }
             throw EsploraEndpoint.Failure(message: "Endpoint not changed. The wallet is using the previous endpoint.")
         }

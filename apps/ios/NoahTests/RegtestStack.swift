@@ -1,7 +1,7 @@
 import Foundation
 import Network
-import Testing
 @testable import Noah
+import Testing
 
 /// Whether the regtest bitcoind the wallet opens against is up. Opening a real bark wallet
 /// checks it, so tests that do fail without the regtest stack (e.g. on CI).

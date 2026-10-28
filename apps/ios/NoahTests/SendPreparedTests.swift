@@ -1,8 +1,7 @@
 import BarkBoltFFI
 import Foundation
-import Testing
-
 @testable import Noah
+import Testing
 
 @MainActor struct SendPreparedTests {
     @MainActor final class Journal {
@@ -67,7 +66,7 @@ import Testing
     }
     @Test func crashRecoveryBindsOnlyExactTxidAndAbsenceStaysUncertain() throws {
         var attempt = SendPaymentController.Attempt(broadcastingTxid: "exact", payment: Self.payment,
-                                                   snapshot: .init(movementIDs: []), quote: Self.quote)
+                                                    snapshot: .init(movementIDs: []), quote: Self.quote)
         let tx = try SendSafetyTests().transaction(id: "exact")
         guard case .paid(let receipt) = try SendReconciliation.onchain(attempt, transactions: [tx]) else {
             Issue.record("Exact prepared transaction must establish receipt"); return

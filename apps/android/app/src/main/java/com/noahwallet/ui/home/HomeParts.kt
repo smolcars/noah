@@ -21,10 +21,10 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.drawscope.Stroke
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.*
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
@@ -205,7 +205,7 @@ internal fun ActivityGlyph(running: String?, backedUpAt: Long?) {
         }
         androidx.compose.animation.AnimatedVisibility(checked,
             enter = androidx.compose.animation.fadeIn(fade) + if (reduceMotion) androidx.compose.animation.EnterTransition.None
-                else androidx.compose.animation.scaleIn(spring(.5f, 400f), initialScale = .3f),
+            else androidx.compose.animation.scaleIn(spring(.5f, 400f), initialScale = .3f),
             exit = androidx.compose.animation.fadeOut(fade)) {
             val label = tr("Backup completed")
             // Today's success green (Send's ✓, the widget).
@@ -219,7 +219,7 @@ internal fun ActivityGlyph(running: String?, backedUpAt: Long?) {
 /** One nudge card: icon, two lines, an action pill and (for dismissible nudges) ×. */
 @Composable
 internal fun NudgeCard(icon: Int, title: String, subtitle: String?, action: String?, dismissLabel: String?,
-                       enabled: Boolean = true, onAction: () -> Unit, onDismiss: () -> Unit, modifier: Modifier = Modifier) {
+    enabled: Boolean = true, onAction: () -> Unit, onDismiss: () -> Unit, modifier: Modifier = Modifier) {
     val palette = LocalPalette.current
     Row(modifier.fillMaxWidth().tonal(RoundedCornerShape(22.dp), palette.soft).padding(start = 16.dp, top = 12.dp, end = 12.dp, bottom = 12.dp),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -241,7 +241,7 @@ internal fun NudgeCard(icon: Int, title: String, subtitle: String?, action: Stri
 /** Black pill (white in dark); compact height for nudges. */
 @Composable
 internal fun Pill(title: String, modifier: Modifier = Modifier, height: Dp = 36.dp, outlined: Boolean = false, enabled: Boolean = true,
-                  style: TextStyle = HomeType.strong, container: Color? = null, content: Color? = null, onClick: () -> Unit) {
+    style: TextStyle = HomeType.strong, container: Color? = null, content: Color? = null, onClick: () -> Unit) {
     val palette = LocalPalette.current
     val interaction = remember { androidx.compose.foundation.interaction.MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
@@ -261,7 +261,7 @@ internal fun Pill(title: String, modifier: Modifier = Modifier, height: Dp = 36.
  */
 @Composable
 internal fun RowAvatar(row: HomeRow, new: Boolean, pop: Boolean, large: Boolean = false, fading: Boolean = false, onSeen: () -> Unit = {},
-                       modifier: Modifier = Modifier) {
+    modifier: Modifier = Modifier) {
     val palette = LocalPalette.current
     val reduceMotion = LocalReduceMotion.current
     val turn = if (row.pending && !reduceMotion) rememberInfiniteTransition(label = "pending").animateFloat(0f, 360f,
@@ -352,9 +352,9 @@ internal fun rowAmount(row: HomeRow, hidden: Boolean, unit: com.noahwallet.forma
  */
 @Composable
 internal fun ActivityRow(row: HomeRow, hidden: Boolean, unit: com.noahwallet.formatting.BitcoinAmountUnit, locale: java.util.Locale, now: java.util.Date,
-                         new: Boolean, pop: Boolean, divider: Boolean, modifier: Modifier = Modifier, selected: Boolean = false,
-                         fading: Boolean = false, onSeen: () -> Unit = {}, avatarModifier: Modifier = Modifier, titleModifier: Modifier = Modifier,
-                         amountModifier: Modifier = Modifier, onClick: () -> Unit) {
+    new: Boolean, pop: Boolean, divider: Boolean, modifier: Modifier = Modifier, selected: Boolean = false,
+    fading: Boolean = false, onSeen: () -> Unit = {}, avatarModifier: Modifier = Modifier, titleModifier: Modifier = Modifier,
+    amountModifier: Modifier = Modifier, onClick: () -> Unit) {
     val palette = LocalPalette.current
     val (subtitle, failed) = rowSubtitle(row, locale, now)
     val amount = rowAmount(row, hidden, unit, locale)

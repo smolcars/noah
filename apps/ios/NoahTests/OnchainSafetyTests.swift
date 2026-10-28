@@ -1,8 +1,7 @@
 import BarkBoltFFI
 import Foundation
-import Testing
-
 @testable import Noah
+import Testing
 
 struct OnchainJournalTests {
     static var quote: OnchainQuote {
@@ -20,8 +19,7 @@ struct OnchainJournalTests {
             try await journal.perform(Self.quote) {
                 #expect(
                     try JSONDecoder().decode(
-                        [OnchainOperationJournal.Attempt].self, from: Data(contentsOf: file)
-                    ).first?.quote.amount == 20000)
+                        [OnchainOperationJournal.Attempt].self, from: Data(contentsOf: file)).first?.quote.amount == 20000)
                 throw OnchainFailure.unavailable
             }
         }
@@ -403,8 +401,8 @@ struct ExitFallbackModelTests {
             estimates += 1
             if !fails { throw OnchainFailure.unavailable }
             throw ExitEstimateUnavailable(review: .init(action: action, walletID: "wallet", ids: ids,
-                destination: destination, amount: 30000, fee: nil, chainFee: nil, confirmed: 0,
-                createdAt: expired ? .distantPast : Date()))
+                                                        destination: destination, amount: 30000, fee: nil, chainFee: nil, confirmed: 0,
+                                                        createdAt: expired ? .distantPast : Date()))
         }
         func execute(_ quote: OnchainQuote) -> String {
             #expect(quote.hasUnknownFeeConsent)
@@ -413,8 +411,8 @@ struct ExitFallbackModelTests {
     }
     func model(_ calls: Calls, expired: Bool = false, fails: Bool = true) -> OnchainModel {
         .init(dependencies: .init(ready: { true }, overview: { throw OnchainFailure.unavailable },
-            quote: { action, ids, _, destination in try await calls.quote(action, ids, destination, expired: expired, fails: fails) },
-            execute: { await calls.execute($0) }, attempt: { [] }, acknowledge: { _ in }))
+                                  quote: { action, ids, _, destination in try await calls.quote(action, ids, destination, expired: expired, fails: fails) },
+                                  execute: { await calls.execute($0) }, attempt: { [] }, acknowledge: { _ in }))
     }
     @Test func fallbackNeedsSeparateConfirmationAndInvalidatesWithInputs() async {
         for action in [OnchainAction.startExit, .claim] {
@@ -440,12 +438,12 @@ struct ExitFallbackModelTests {
         original.action = action; original.createdAt = Date().addingTimeInterval(-29)
         let reviewed = original
         let model = OnchainModel(dependencies: .init(ready: { true }, overview: { throw OnchainFailure.unavailable },
-            quote: { _, _, _, _ in reviewed }, execute: { quote in
-                var unknown = quote
-                unknown.id = UUID(); unknown.createdAt = Date()
-                unknown.fee = nil; unknown.chainFee = nil; unknown.feeRate = nil
-                throw ExitEstimateUnavailable(review: unknown)
-            }, attempt: { [] }, acknowledge: { _ in }))
+                                                     quote: { _, _, _, _ in reviewed }, execute: { quote in
+                                                         var unknown = quote
+                                                         unknown.id = UUID(); unknown.createdAt = Date()
+                                                         unknown.fee = nil; unknown.chainFee = nil; unknown.feeRate = nil
+                                                         throw ExitEstimateUnavailable(review: unknown)
+                                                     }, attempt: { [] }, acknowledge: { _ in }))
         await model.review(action, ids: original.ids)
         await model.confirm()
         #expect(model.estimateFallback?.id == original.id)

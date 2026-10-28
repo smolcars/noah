@@ -9,8 +9,8 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.key
 import androidx.compose.runtime.remember
-import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.ViewModelProvider
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -32,7 +32,8 @@ class AdaptiveLayoutDeviceTest {
     private val context get() = instrumentation.targetContext
 
     @OptIn(ExperimentalMaterial3Api::class)
-    @Test fun capturePresentationGallery() {
+    @Test
+    fun capturePresentationGallery() {
         assumeTrue(args.getString("noahAdaptive") == "owned-disposable-avd")
         args.getString("rotation")?.toInt()?.let { instrumentation.uiAutomation.setRotation(it) }
         val activity = instrumentation.startActivitySync(Intent(context, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)) as MainActivity
@@ -119,8 +120,7 @@ class AdaptiveLayoutDeviceTest {
             }
             val executor = com.noahwallet.recurring.RecurringRuntime.shared(context).executor
             show("recurring-editor") { com.noahwallet.recurring.RecurringPaymentEditorScreen(executor, null) {} }
-            val controller = com.noahwallet.send.SendController(com.noahwallet.send.SendController.Dependencies(
-                read = { null }, write = {}, reservation = { error("Gallery never submits payments") }))
+            val controller = com.noahwallet.send.SendController(com.noahwallet.send.SendController.Dependencies(read = { null }, write = {}, reservation = { error("Gallery never submits payments") }))
             show("send-approval") { com.noahwallet.ui.onboarding.OnboardingFrame(null) { com.noahwallet.ui.send.SendApproval(
                 SendPresentation(com.noahwallet.send.SendModel(controller, "regtest", { error("Gallery never resolves") }, { error("Gallery never quotes") }, {})),
                 com.noahwallet.send.SendPayment("ark1" + "q".repeat(180), "ark", 12345), com.noahwallet.send.SendQuote(12345, 5, 12350),
@@ -128,8 +128,7 @@ class AdaptiveLayoutDeviceTest {
             show("dialog") { WalletAlertDialog({}, { TextButton({}) { Text("Confirm") } },
                 title = { Text("Confirm payment") }, text = { Text("Layout verification ".repeat(60)) }) }
             show("debug-tools", chrome = false) { com.noahwallet.ui.onboarding.OnboardingFrame(null) { DebugPage(model, SettingsNav(null, {}, {}, {}, {})) } }
-            show("lock-cover", chrome = false) { androidx.compose.ui.window.Dialog({}, properties = androidx.compose.ui.window.DialogProperties(
-                usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
+            show("lock-cover", chrome = false) { androidx.compose.ui.window.Dialog({}, properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
                 Surface(Modifier.fillMaxSize()) { Box(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing).avoidHinge()) { NoahForm("Noah is Locked") { Text("Authenticate to access your wallet"); NoahButton("Unlock") {} } } }
             } }
         } finally { instrumentation.runOnMainSync { activity.finish() } }

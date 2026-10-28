@@ -1,11 +1,10 @@
 import BarkBoltFFI
 import Foundation
 import HTTPTypes
+@testable import Noah
 import OpenAPIRuntime
 import SQLite3
 import Testing
-
-@testable import Noah
 
 /// Restore against a fake Noah server with a real bark snapshot. The open
 /// check uses the real SDK opener (local regtest config) unless a test
@@ -23,7 +22,7 @@ struct WalletRestorerTests {
         var reportedSha256: String?
         var reportedSize: Int?
 
-        func send(_ request: HTTPRequest, body: HTTPBody?, baseURL: URL, operationID: String) async throws -> (HTTPResponse, HTTPBody?) {
+        func send(_: HTTPRequest, body _: HTTPBody?, baseURL _: URL, operationID: String) async throws -> (HTTPResponse, HTTPBody?) {
             let data = try Data(contentsOf: encrypted)
             let info: [String: Any] = [
                 "backup_id": backupId, "created_at": "2026-10-19T00:00:00Z",
@@ -86,14 +85,13 @@ struct WalletRestorerTests {
         try await wallet.stopDaemonWait()
         return try BackupArchive.seal(
             snapshot: snapshotURL, manifest: BackupService.manifest(for: snapshot), mnemonic: mnemonic,
-            to: root.appending(path: "backup.noahbackup"), workDirectory: root
-        ).url
+            to: root.appending(path: "backup.noahbackup"), workDirectory: root).url
     }
 
     /// Device B already has a wallet; returns a restorer for it.
     private func setUp(
-        seed: FakeSeed, session: WalletSession? = nil, reportedSha256: String? = nil, reportedSize: Int? = nil
-    ) async throws -> (restorer: WalletRestorer, mnemonic: String) {
+        seed: FakeSeed, session: WalletSession? = nil, reportedSha256: String? = nil,
+        reportedSize: Int? = nil) async throws -> (restorer: WalletRestorer, mnemonic: String) {
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
         let mnemonic = try generateMnemonic()
         let backup = try await makeBackup(mnemonic: mnemonic)
@@ -146,7 +144,7 @@ struct WalletRestorerTests {
 
     private func expectPreviousWalletBack(_ seed: FakeSeed) throws {
         #expect(deviceBWallet == "previous wallet")
-        #expect({ seed.current == Self.previousSeed }())
+        #expect(seed.current == Self.previousSeed)
         try expectNoRestoreLeftovers()
     }
 
@@ -179,8 +177,8 @@ struct WalletRestorerTests {
         let mutation = WalletMutationGate()
         let settings = try SettingsStorage(rootPath: root.appending(path: "mmkv").path, instanceID: UUID().uuidString)
         let dependencies = WalletLifecycle.Dependencies(session: session, location: deviceB, seed: seed, authToken: token,
-            settings: settings, scratch: ScratchSpace(root: root.appending(path: "scratch")), appGroup: nil,
-            mutation: mutation, deregister: {}, walletChanged: {})
+                                                        settings: settings, scratch: ScratchSpace(root: root.appending(path: "scratch")), appGroup: nil,
+                                                        mutation: mutation, deregister: {}, walletChanged: {})
         var lockedDependencies = dependencies
         lockedDependencies.seed = UnavailableDeletionSeed()
         let locked = WalletLifecycle(dependencies: lockedDependencies)
@@ -191,13 +189,15 @@ struct WalletRestorerTests {
         if pending { try await lifecycle.recoverDeletion() }
         else { try FileManager.default.removeItem(at: deviceB.deletionMarker) } // Older app left staging and seed.
         let restorer = WalletRestorer(mutation: mutation, variant: .regtest, session: session, location: deviceB, seed: seed,
-            makeClient: { _ in Client(serverURL: URL(string: "http://fake")!, transport: FakeServer(backupId: "b1", encrypted: backup)) },
-            walletChanged: {})
+                                      makeClient: { _ in
+                                          Client(serverURL: URL(string: "http://fake")!, transport: FakeServer(backupId: "b1", encrypted: backup))
+                                      },
+                                      walletChanged: {})
         _ = try await restorer.restore(mnemonic: mnemonic)
-        #expect({ deviceB.databaseExists }()); #expect({ seed.read() == .found(mnemonic) }())
+        #expect(deviceB.databaseExists); #expect(seed.read() == .found(mnemonic))
         #expect(!FileManager.default.fileExists(atPath: deviceB.deletionDirectory.path))
         try await lifecycle.delete()
-        #expect({ seed.read() == .notFound }())
+        #expect(seed.read() == .notFound)
         #expect(!deviceB.databaseExists)
         #expect(!FileManager.default.fileExists(atPath: deviceB.deletionMarker.path))
     }
@@ -211,7 +211,12 @@ struct WalletRestorerTests {
             let config = WalletConfiguration.base(for: .regtest).sdkConfig(userAgent: "send-identity-test")
             let onchain = try await OnchainWallet.default(network: .regtest, mnemonic: mnemonic, config: config, datadir: datadir)
             let wallet = try await Wallet.openWithOnchain(network: .regtest, mnemonicOrSeed: mnemonic, config: config,
-                args: WalletOpenArgs(runDaemon: false, datadir: datadir, createIfNotExists: create, createWithoutServer: true, skipRecovery: true), onchain: onchain)
+                                                          args: WalletOpenArgs(
+                                                              runDaemon: false,
+                                                              datadir: datadir,
+                                                              createIfNotExists: create,
+                                                              createWithoutServer: true,
+                                                              skipRecovery: true), onchain: onchain)
             return .init(wallet: wallet, onchain: onchain)
         }
         let oldSeed = try generateMnemonic()
@@ -230,17 +235,19 @@ struct WalletRestorerTests {
         #expect(controller.attempt?.receipt?.proof == .submitReturnedArkSuccess)
         let settings = try SettingsStorage(rootPath: root.appending(path: "mmkv").path, instanceID: UUID().uuidString)
         let lifecycle = WalletLifecycle(dependencies: .init(session: session, location: deviceB, seed: seed, authToken: token,
-            settings: settings, scratch: ScratchSpace(root: root.appending(path: "scratch")), appGroup: nil,
-            deregister: {}, walletChanged: { await controller.reloadForWalletChange() }))
+                                                            settings: settings, scratch: ScratchSpace(root: root.appending(path: "scratch")), appGroup: nil,
+                                                            deregister: {}, walletChanged: { await controller.reloadForWalletChange() }))
         try await lifecycle.delete()
         #expect(controller.state == .ready && controller.attempt == nil)
         let restorer = WalletRestorer(variant: .regtest, session: session, location: deviceB, seed: seed,
-            makeClient: { _ in Client(serverURL: URL(string: "http://fake")!, transport: FakeServer(backupId: "new", encrypted: backup)) },
-            walletChanged: { await controller.reloadForWalletChange() })
+                                      makeClient: { _ in Client(
+                                          serverURL: URL(string: "http://fake")!,
+                                          transport: FakeServer(backupId: "new", encrypted: backup)) },
+                                      walletChanged: { await controller.reloadForWalletChange() })
         _ = try await restorer.restore(mnemonic: replacementSeed)
         try await session.openExisting(mnemonic: replacementSeed, runDaemon: false, appVersion: "test")
         #expect(try await session.summary()?.fingerprint != oldFingerprint)
-        #expect({ seed.read() == .found(replacementSeed) }())
+        #expect(seed.read() == .found(replacementSeed))
         #expect(controller.state == .ready && controller.attempt == nil)
         try await session.close()
     }
@@ -251,7 +258,9 @@ struct WalletRestorerTests {
         let backup = try await makeBackup(mnemonic: mnemonic)
         let session = WalletSession(variant: .regtest, location: deviceB)
         let restorer = WalletRestorer(variant: .regtest, session: session, location: deviceB, seed: FakeSeed(nil),
-            makeClient: { _ in Client(serverURL: URL(string: "http://fake")!, transport: FakeServer(backupId: "b", encrypted: backup)) })
+                                      makeClient: { _ in
+                                          Client(serverURL: URL(string: "http://fake")!, transport: FakeServer(backupId: "b", encrypted: backup))
+                                      })
         _ = try await restorer.restore(mnemonic: mnemonic)
         try await session.openExisting(mnemonic: mnemonic, runDaemon: false, appVersion: "test")
         let gate = Gate()
@@ -452,9 +461,9 @@ struct WalletRestorerTests {
         guard sqlite3_open(location.database.path, &db) == SQLITE_OK else { throw OpenRefused() }
         defer { sqlite3_close(db) }
         let sql = """
-            CREATE TABLE bark_properties (id TEXT PRIMARY KEY, network TEXT NOT NULL, fingerprint TEXT NOT NULL);
-            INSERT INTO bark_properties (id, network, fingerprint) VALUES ('1', 'regtest', 'abcd1234');
-            """
+        CREATE TABLE bark_properties (id TEXT PRIMARY KEY, network TEXT NOT NULL, fingerprint TEXT NOT NULL);
+        INSERT INTO bark_properties (id, network, fingerprint) VALUES ('1', 'regtest', 'abcd1234');
+        """
         guard sqlite3_exec(db, sql, nil, nil, nil) == SQLITE_OK else { throw OpenRefused() }
     }
 
@@ -466,7 +475,7 @@ struct WalletRestorerTests {
 
         let outcome = try await restorer.restore(mnemonic: mnemonic)
         #expect(outcome.backupId == "b1")
-        #expect({ seed.current == mnemonic }())
+        #expect(seed.current == mnemonic)
         #expect(deviceBWallet != "previous wallet")
         try expectNoRestoreLeftovers(settingsPending: true)
         // The open check released the datadir lock.
@@ -492,7 +501,7 @@ struct WalletRestorerTests {
         let (restorer, mnemonic) = try await setUp(seed: seed)
 
         _ = try await restorer.restore(mnemonic: mnemonic)
-        #expect({ seed.current == mnemonic }())
+        #expect(seed.current == mnemonic)
         #expect(deviceBWallet != "previous wallet")
         try expectNoRestoreLeftovers(settingsPending: true)
     }

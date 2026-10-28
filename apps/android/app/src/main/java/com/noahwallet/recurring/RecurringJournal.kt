@@ -1,7 +1,7 @@
 package com.noahwallet.recurring
 
-import com.noahwallet.services.storage.syncDirectory
 import com.noahwallet.send.*
+import com.noahwallet.services.storage.syncDirectory
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.*
 import java.io.File
@@ -180,8 +180,7 @@ class RecurringJournal internal constructor(val file: File, private val read: ()
             if (attempt.alreadyPaid != null || attempt.recurringOccurrenceKey?.let { it != entry.key } == true) return null
             val receipt = attempt.receipt?.takeIf { !it.isUnresolved && it.isProven(attempt.payment, attempt.paymentHash) } ?: return null
             val policy = schedule ?: entry.policy ?: return null
-            return com.noahwallet.history.HistoryMapping.RecurringLink(
-                com.noahwallet.history.HistoryTransaction.Recurring(entry.scheduleID, policy.label, policy.interval), receipt.movementID, receipt.paymentHash)
+            return com.noahwallet.history.HistoryMapping.RecurringLink(com.noahwallet.history.HistoryTransaction.Recurring(entry.scheduleID, policy.label, policy.interval), receipt.movementID, receipt.paymentHash)
         }
         private val journals = mutableMapOf<String, RecurringJournal>()
         /** One monitor and migration owner per canonical file, retained across all entry points. */

@@ -1,13 +1,15 @@
 import Foundation
-import Testing
 @testable import Noah
+import Testing
 
 @MainActor struct RecurringParityTests {
     @Test(arguments: ["", "Rent for April", " ", "Thank you 🌱"])
     func lnurlNotesKeepLightningRoute(comment: String) throws {
         let route = SendRecipientRoute(destination: "recipient@example.com", minMsat: 1_000,
-            maxMsat: 100_000_000, commentAllowed: 140, arkAddress: "ark-recipient")
-        let payment = try RecurringRecipient.lnurlPayment(.init(destination: route.destination, method: "lnurl", amount: 50_000, comment: comment), route: route)
+                                       maxMsat: 100_000_000, commentAllowed: 140, arkAddress: "ark-recipient")
+        let payment = try RecurringRecipient.lnurlPayment(
+            .init(destination: route.destination, method: "lnurl", amount: 50_000, comment: comment),
+            route: route)
         #expect(payment.method == (comment.isEmpty ? "ark" : "lnurl"))
         #expect(payment.destination == (comment.isEmpty ? "ark-recipient" : route.destination))
         #expect(payment.comment == comment && payment.amount == 50_000)
@@ -18,7 +20,7 @@ import Testing
     @Test(arguments: [UInt64(0), 101, UInt64.max])
     func lnurlAmountBoundsStillApply(amount: UInt64) {
         let route = SendRecipientRoute(destination: "recipient@example.com", minMsat: 1_000,
-            maxMsat: 100_000, commentAllowed: 140, arkAddress: "ark-recipient")
+                                       maxMsat: 100_000, commentAllowed: 140, arkAddress: "ark-recipient")
         #expect(throws: (any Error).self) {
             try RecurringRecipient.lnurlPayment(.init(destination: route.destination, method: "lnurl", amount: amount, comment: "Note"), route: route)
         }
@@ -103,8 +105,8 @@ import Testing
         let payload = ["notification_type": type]
         let text = String(decoding: try JSONSerialization.data(withJSONObject: payload), as: UTF8.self)
         let variants: [[AnyHashable: Any]] = [payload, ["body": text], ["body": payload],
-            ["dataString": text], ["data": payload], ["data": ["body": text]],
-            ["UIApplicationLaunchOptionsRemoteNotificationKey": ["body": text]]]
+                                              ["dataString": text], ["data": payload], ["data": ["body": text]],
+                                              ["UIApplicationLaunchOptionsRemoteNotificationKey": ["body": text]]]
         for variant in variants {
             route.page = nil
             route.receive(variant)

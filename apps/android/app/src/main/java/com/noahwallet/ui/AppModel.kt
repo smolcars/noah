@@ -7,10 +7,10 @@ import androidx.lifecycle.viewModelScope
 import com.noahwallet.BuildConfig
 import com.noahwallet.formatting.BitcoinAmountUnit
 import com.noahwallet.services.AppServices
+import com.noahwallet.services.backup.*
 import com.noahwallet.services.launch.LaunchState
 import com.noahwallet.services.storage.*
 import com.noahwallet.services.wallet.*
-import com.noahwallet.services.backup.*
 import kotlinx.coroutines.*
 import kotlinx.serialization.json.*
 
@@ -284,7 +284,7 @@ class AppModel(application: Application, val settings: SettingsStorage = Setting
                 if (recovering) launchState = LaunchState.restoreIncomplete
                 else if (launchState == LaunchState.existingWallet) launchState = LaunchState.openFailure(failure)
                 error = if (failure is WalletLifecycle.TemporaryFiles || failure is WalletLifecycle.BackupBusy || failure is WalletLifecycle.WaitingForSecureStorage) failure.message else if (recovering) "Couldn't finish wallet recovery. Your wallet files have been kept. Please try again."
-                    else "Couldn't open your wallet. Please try again."
+                else "Couldn't open your wallet. Please try again."
             }
             finally { withContext(Dispatchers.IO) { refreshRecoveryFiles() }; starting = false }
         }
@@ -308,7 +308,7 @@ class AppModel(application: Application, val settings: SettingsStorage = Setting
             catch (cancelled: CancellationException) { throw cancelled }
             catch (failure: Exception) {
                 val message = if (failure is WalletLifecycle.TemporaryFiles || failure is WalletLifecycle.BackupBusy || failure is WalletLifecycle.WaitingForSecureStorage || failure is WalletLifecycle.RestoreSettingsUnavailable) failure.message
-                    else if (useServerMessage) com.noahwallet.services.server.ServerFailure.message(failure, fallback) else fallback
+                else if (useServerMessage) com.noahwallet.services.server.ServerFailure.message(failure, fallback) else fallback
                 if (inline != null) inline(message) else error = message
             }
             finally { busy = false }

@@ -11,10 +11,9 @@ import com.noahwallet.BuildConfig
 import com.noahwallet.MainActivity
 import com.noahwallet.api.generated.client.V0BackupV2DeleteClient
 import com.noahwallet.api.generated.client.V0BackupV2ListClient
-import com.noahwallet.services.backup.RestoreTransaction
-import java.io.File
 import com.noahwallet.api.generated.models.DeleteBackupObjectPayload
 import com.noahwallet.services.backup.BackupCoordinator
+import com.noahwallet.services.backup.RestoreTransaction
 import com.noahwallet.services.launch.LaunchState
 import com.noahwallet.services.server.*
 import com.noahwallet.services.storage.*
@@ -25,6 +24,7 @@ import org.junit.Assert.*
 import org.junit.Assume.assumeTrue
 import org.junit.Test
 import org.junit.runner.RunWith
+import java.io.File
 
 /** Opt in only on an agent-owned disposable emulator. No phrase is logged, exported or captured. */
 @RunWith(AndroidJUnit4::class)
@@ -318,7 +318,6 @@ class RestoreUIDeviceTest {
             runCatching { shell("cmd deviceidle whitelist -${context.packageName}") }
         }
     }
-
 
     @Test fun seedOnlyLaunchCanConfirmDeletionAndStartOver() = runBlocking<Unit> {
         optIn()

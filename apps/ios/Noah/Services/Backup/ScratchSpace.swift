@@ -16,7 +16,7 @@ final class ScratchSpace: Sendable {
     }
     private let state = Mutex(State())
 
-    func withOperation<T>(isolation: isolated (any Actor)? = #isolation, _ body: () async throws -> T) async throws -> T {
+    func withOperation<T>(isolation _: isolated (any Actor)? = #isolation, _ body: () async throws -> T) async throws -> T {
         try state.withLock { value in
             guard !value.deleting else { throw CocoaError(.fileWriteNoPermission) }
             value.operations += 1

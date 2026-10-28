@@ -146,7 +146,7 @@ private class ScenePainter(val g: DrawScope, val base: Color, val reduceMotion: 
         val box = if (target.fill) boxes.pane else boxes.column
         // One column: fit the width, sitting low so the chain line is just above the words. A pane: fill it and centre.
         val scale = if (target.fill) minOf(slot.width * boxes.overflow / box.width, slot.height / box.height, 3f * g.density)
-            else minOf(slot.width / box.width, slot.height / box.height, 2.2f * g.density)
+        else minOf(slot.width / box.width, slot.height / box.height, 2.2f * g.density)
         val x = slot.left + (slot.width - box.width * scale) / 2 - box.left * scale
         val y = slot.top + (slot.height - box.height * scale) * (if (target.fill) .5f else .72f) - box.top * scale
         left = (slot.left - x) / scale; right = (slot.right - x) / scale

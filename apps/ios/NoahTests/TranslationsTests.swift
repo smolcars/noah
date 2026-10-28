@@ -1,6 +1,6 @@
 import Foundation
-import Testing
 @testable import Noah
+import Testing
 
 @Suite(.serialized)
 struct TranslationsTests {
@@ -40,7 +40,7 @@ struct TranslationsTests {
         let preference = defaults.string(forKey: LegacyLocale.key)
         defer { defaults.set(preference, forKey: LegacyLocale.key) }
         let fixture = try #require(Fixtures.load("send-utils", input: SendFixtureTests.ParseInput.self,
-                                                expected: SendFixtureTests.ParseExpected.self).first { $0.name == "destination 5" })
+                                                 expected: SendFixtureTests.ParseExpected.self).first { $0.name == "destination 5" })
         let uri = "bitcoin:1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa?lightning=\(fixture.input.destination)"
         let expected = SendDestinationError.invalidMethods([.networkMismatch(expected: "mainnet", actual: "testnet")])
         for language in LegacyLocale.supported {
@@ -115,7 +115,10 @@ struct TranslationsTests {
         #expect(cases.count == 25)
         for item in cases {
             let template = L10n.localizedBundle(item.input.locale).localizedString(forKey: item.input.source, value: nil, table: nil)
-            let actual = item.input.args.isEmpty ? template : String(format: template, locale: Locale(identifier: item.input.locale), arguments: item.input.args)
+            let actual = item.input.args.isEmpty ? template : String(
+                format: template,
+                locale: Locale(identifier: item.input.locale),
+                arguments: item.input.args)
             #expect(actual == item.expected, "\(item.name)")
         }
     }
@@ -173,8 +176,16 @@ struct TranslationsTests {
         #expect(NotificationCopy.received(sats: 1234, usd: nil, unit: .bip177, defaults: defaults).body == "₿\u{00a0}1,234を受け取りました")
         for locale in LegacyLocale.supported {
             defaults.set(locale, forKey: LegacyLocale.key)
-            #expect(NotificationCopy.reminder(amount: "1,234 sats", recipient: "Alice", upcoming: true, defaults: defaults).body == L10n.text("{amount} to {recipient} will be sent tomorrow.", "1,234 sats", "Alice", locale: locale))
-            #expect(NotificationCopy.reminder(amount: "1,234 sats", recipient: "Alice", upcoming: false, defaults: defaults).body == L10n.text("Open Noah to send {amount} to {recipient}.", "1,234 sats", "Alice", locale: locale))
+            #expect(NotificationCopy.reminder(amount: "1,234 sats", recipient: "Alice", upcoming: true, defaults: defaults).body == L10n.text(
+                "{amount} to {recipient} will be sent tomorrow.",
+                "1,234 sats",
+                "Alice",
+                locale: locale))
+            #expect(NotificationCopy.reminder(amount: "1,234 sats", recipient: "Alice", upcoming: false, defaults: defaults).body == L10n.text(
+                "Open Noah to send {amount} to {recipient}.",
+                "1,234 sats",
+                "Alice",
+                locale: locale))
         }
     }
 

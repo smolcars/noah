@@ -1,9 +1,9 @@
 package com.noahwallet.services.storage
 
-import java.io.File
-import java.nio.file.Files
 import org.junit.Assert.*
 import org.junit.Test
+import java.io.File
+import java.nio.file.Files
 
 class MMKVUpgradeBackupTest {
     @Test fun snapshotIsImmutableAndInspectionDisposable() {

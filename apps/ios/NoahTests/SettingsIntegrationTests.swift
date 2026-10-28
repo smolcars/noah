@@ -1,7 +1,7 @@
 import BarkBoltFFI
 import Foundation
-import Testing
 @testable import Noah
+import Testing
 
 /// Opt-in live M5 acceptance against the existing server, never starts infrastructure.
 @Suite(.enabled(if: ProcessInfo.processInfo.environment["NOAH_SETTINGS_IT"] == "1"))
@@ -50,7 +50,10 @@ struct SettingsIntegrationTests {
                 #expect(try Data(contentsOf: exported.url).first == 2)
                 let opened = try BackupArchive.open(encrypted: exported.url, mnemonic: phrase, into: root.appending(path: "opened"))
                 #expect(opened.manifest.network == "regtest")
-                let feedback = try FeedbackDraft(name: "Noah iOS Settings acceptance", subject: "Regtest native Settings verification", body: "Automated acceptance test of the native iOS feedback payload. No action required.").payload(device: DeviceInfo.current())
+                let feedback = try FeedbackDraft(
+                    name: "Noah iOS Settings acceptance",
+                    subject: "Regtest native Settings verification",
+                    body: "Automated acceptance test of the native iOS feedback payload. No action required.").payload(device: DeviceInfo.current())
                 _ = try await client.submitSupportTicket(body: .json(feedback)).ok
             } catch {
                 try await session.close()

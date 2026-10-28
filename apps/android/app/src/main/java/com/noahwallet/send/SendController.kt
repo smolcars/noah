@@ -137,7 +137,7 @@ class SendController(private val dependencies: Dependencies,
                     }
                     try {
                         val receipt = if (beforeSubmit == null) wallet.pay(payment, quote, attempt!!.snapshot)
-                            else wallet.payGuarded(payment, quote, attempt!!.snapshot, beforeSubmit)
+                        else wallet.payGuarded(payment, quote, attempt!!.snapshot, beforeSubmit)
                         if (current != generation) return@reserve
                         if (finish(SendResolution.Paid(receipt)) && receipt.txid != null) {
                             try {
@@ -243,7 +243,7 @@ class SendController(private val dependencies: Dependencies,
                 originalEvidence = evidence, warning = warning, confirmation = confirmation, status = status, statusMessage = statusMessage))
         }
     }
-    private suspend fun clear( beforeRemove: (() -> Unit)? = null) {
+    private suspend fun clear(beforeRemove: (() -> Unit)? = null) {
         if (checking) return
         val current = generation
         val identity = journalIdentity ?: attempt?.walletIdentity

@@ -10,7 +10,9 @@ import org.junit.runners.Parameterized
 @RunWith(Parameterized::class)
 class RecurringTimestampTest(private val field: String) {
     companion object {
-        @JvmStatic @Parameterized.Parameters(name = "{0}") fun fields() = listOf(
+        @JvmStatic
+        @Parameterized.Parameters(name = "{0}")
+        fun fields() = listOf(
             "startAt", "endAt", "nextRunAt", "createdAt", "updatedAt", "retryNotBefore",
             "inFlight.startedAt", "runs.scheduledFor", "runs.attemptedAt")
     }

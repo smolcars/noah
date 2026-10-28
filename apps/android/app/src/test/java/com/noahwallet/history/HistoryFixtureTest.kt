@@ -12,7 +12,9 @@ import org.junit.runners.Parameterized
 class HistoryFixtureTest(private val name: String, private val input: JsonObject, private val expected: JsonElement) {
     companion object {
         val json = Json { ignoreUnknownKeys = true; encodeDefaults = true; explicitNulls = false }
-        @JvmStatic @Parameterized.Parameters(name = "{0}") fun cases() =
+        @JvmStatic
+        @Parameterized.Parameters(name = "{0}")
+        fun cases() =
             (SharedFixtures.load("transaction-history") + SharedFixtures.load("history-regressions")).map { arrayOf(it.name, it.input.jsonObject, it.expected) } +
                 SharedFixtures.load("bark-movement").map { arrayOf(it.name, JsonObject(it.input.jsonObject + ("operation" to JsonPrimitive("status"))), it.expected) }
     }

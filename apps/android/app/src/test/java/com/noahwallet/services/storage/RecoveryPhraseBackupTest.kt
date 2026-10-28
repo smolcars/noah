@@ -5,12 +5,10 @@ import android.content.ContextWrapper
 import com.noahwallet.fixtures.SharedFixtures
 import com.noahwallet.services.backup.RestoreTransaction
 import com.noahwallet.services.backup.WalletRestorer
+import com.noahwallet.ui.OnboardingNavigation
 import com.noahwallet.ui.RestoreCompletion
 import com.noahwallet.ui.RestoreCompletionJournal
 import kotlinx.coroutines.runBlocking
-import com.noahwallet.ui.OnboardingNavigation
-import java.io.File
-import java.nio.file.Files
 import kotlinx.serialization.json.*
 import org.junit.After
 import org.junit.Assert.*
@@ -19,6 +17,8 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
+import java.io.File
+import java.nio.file.Files
 
 /**
  * The backup flag is a new native key; missing means not backed up. Existing and migrated wallets

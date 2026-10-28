@@ -24,8 +24,7 @@ enum ExpoInstallationID {
     /// Inspect continuity without manufacturing an ID on unsupported devices.
     static func existing(
         bundleIdentifier: String = Bundle.main.bundleIdentifier ?? "",
-        defaults: UserDefaults = .standard
-    ) throws -> String? {
+        defaults: UserDefaults = .standard) throws -> String? {
         try lock.withLock { try read(bundleIdentifier: bundleIdentifier) ?? defaults.string(forKey: key) }
     }
 
@@ -34,8 +33,7 @@ enum ExpoInstallationID {
     /// replacement when the Keychain is unreadable (e.g. before first unlock).
     static func getOrCreate(
         bundleIdentifier: String = Bundle.main.bundleIdentifier ?? "",
-        defaults: UserDefaults = .standard
-    ) throws(Failure) -> String {
+        defaults: UserDefaults = .standard) throws(Failure) -> String {
         lock.lock()
         defer { lock.unlock() }
 

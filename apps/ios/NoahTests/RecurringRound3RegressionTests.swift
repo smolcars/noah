@@ -1,6 +1,6 @@
 import Foundation
-import Testing
 @testable import Noah
+import Testing
 
 @MainActor struct RecurringRound3RegressionTests {
     @Test func confirmedSettlementDuringSuspensionRemainsResumable() async throws {

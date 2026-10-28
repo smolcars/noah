@@ -1,12 +1,11 @@
 import BarkBoltFFI
-import SwiftUI
-import UIKit
 import Foundation
-import OpenAPIRuntime
-import Testing
-import UniformTypeIdentifiers
-
 @testable import Noah
+import OpenAPIRuntime
+import SwiftUI
+import Testing
+import UIKit
+import UniformTypeIdentifiers
 
 struct RecoveryPhraseInputTests {
     // Public BIP39 test vector, never a funded wallet.
@@ -15,7 +14,7 @@ struct RecoveryPhraseInputTests {
     @Test func acceptsTwelveAndTwentyFourWordsByPasteAndIndividualEntry() {
         for count in [12, 24] {
             let vector = (Array(repeating: RecoveryPhraseInput.wordList[0], count: count - 1) +
-                          [RecoveryPhraseInput.wordList[count == 12 ? 3 : 102]]).joined(separator: " ")
+                [RecoveryPhraseInput.wordList[count == 12 ? 3 : 102]]).joined(separator: " ")
             let valid = RecoveryPhraseInput.isValid(vector)
             #expect(valid)
             var input = RecoveryPhraseInput()
@@ -203,7 +202,7 @@ struct RestoreIssueTests {
             #expect(RestoreIssue.from(BackupCrypto.Failure.newerVersion) == .newerBackup)
         }
         let manifest = BackupArchive.Manifest(formatVersion: 3, createdAt: "x", snapshotSha256: "sha",
-            network: "regtest", walletFingerprint: "abcd", serverPubkey: nil, mailboxPubkey: nil, barkSchemaVersion: 42)
+                                              network: "regtest", walletFingerprint: "abcd", serverPubkey: nil, mailboxPubkey: nil, barkSchemaVersion: 42)
         #expect(throws: BackupArchive.Failure.newerVersion) { try BackupArchive.parseManifest(BackupArchive.encode(manifest)) }
         #expect(RestoreIssue.from(BackupArchive.Failure.newerVersion) == .newerBackup)
         #expect(RestoreIssue.from(BarkError(message: "Snapshot schema version 9999 is newer than supported version 42")) == .newerBackup)
@@ -214,7 +213,7 @@ struct RestoreIssueTests {
         let generic = RestoreIssue.from(BarkError(message: "snapshot is damaged"))
         #expect(generic != .newerBackup && !generic.requiresRestart)
         for error: any Error in [BackupCrypto.Failure.unexpectedVersion(1), BackupArchive.Failure.invalidManifest,
-            ServerFailure(message: "Snapshot schema version 9999 is newer than supported version 42")] {
+                                 ServerFailure(message: "Snapshot schema version 9999 is newer than supported version 42")] {
             #expect(RestoreIssue.from(error) == generic)
         }
     }

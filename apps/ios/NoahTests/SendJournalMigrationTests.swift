@@ -1,7 +1,6 @@
 import Foundation
-import Testing
-
 @testable import Noah
+import Testing
 
 @MainActor struct SendJournalMigrationTests {
     /// Raw pre-proof journal shapes, rather than encoding today's model as a legacy journal.

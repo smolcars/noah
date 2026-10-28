@@ -2,10 +2,10 @@ package com.noahwallet.services
 
 import com.noahwallet.services.logging.*
 import io.sentry.*
-import java.io.StringReader
 import kotlinx.serialization.json.*
 import org.junit.Assert.*
 import org.junit.Test
+import java.io.StringReader
 
 class EndpointPrivacyRound9Test {
     private fun cases(kind: String) = Json.parseToJsonElement(javaClass.classLoader!!.getResource("esplora-log-privacy-r9.json")!!.readText())

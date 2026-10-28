@@ -1,8 +1,7 @@
 import BarkBoltFFI
 import Foundation
-import Testing
-
 @testable import Noah
+import Testing
 
 /// Live against the regtest Noah server (`just setup-everything`).
 /// Enabled with `TEST_RUNNER_NOAH_SERVER_IT=1`. Uses a throwaway mnemonic;
@@ -94,5 +93,4 @@ struct ServerIntegrationTests {
             throw LiveFailure()
         }
     }
-
 }

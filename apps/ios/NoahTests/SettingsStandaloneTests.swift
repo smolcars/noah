@@ -1,5 +1,5 @@
-import Testing
 @testable import Noah
+import Testing
 
 /// A Settings page pushed outside Home (Receive's Profile link) still navigates: My code included.
 @MainActor struct SettingsStandaloneTests {

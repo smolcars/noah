@@ -1,8 +1,7 @@
 import BarkBoltFFI
 import Foundation
-import Testing
-
 @testable import Noah
+import Testing
 
 /// Opt-in stages for bark-bolt-ffi 0.7.0 on a dedicated simulator, against a Bark 0.8 stack selected with
 /// NOAH_REGTEST_ARK_URL / NOAH_REGTEST_BITCOIND_URL / NOAH_REGTEST_SERVER_URL. The wallet was made by the
@@ -44,7 +43,7 @@ struct FFI070LiveTests {
         try await session.sync()
         try await check()
         try await evidence("upgrade", ["movements": UInt64((baseline["movements"] as? [Any])?.count ?? 0),
-                                      "spendable": try await session.summary()?.spendableSats ?? 0])
+                                       "spendable": try await session.summary()?.spendableSats ?? 0])
     }
 
     /// The biggest confirmed coin stands in for an exit claim to this phone, marked in auto-board's ledger
@@ -52,7 +51,7 @@ struct FFI070LiveTests {
     private func autoBoard() async throws {
         try await session.sync()
         let coins = try await session.withOpenWallet { try await $0.onchain.utxos() }.compactMap { utxo -> (String, UInt64)? in
-            guard case let .local(point, amount, height) = utxo, height != nil else { return nil }
+            guard case .local(let point, let amount, let height) = utxo, height != nil else { return nil }
             return ("\(point.txid):\(point.vout)", amount)
         }
         try #require(coins.count >= 2)
@@ -72,8 +71,8 @@ struct FFI070LiveTests {
         try write("autoboard-attempt.txt", quote.id.uuidString)
         try write("claim-outpoint.txt", claim.0)
         try await evidence("autoboard", ["claimSats": claim.1, "boardSats": quote.amount, "chainFee": quote.chainFee ?? 0,
-                                        "inputs": UInt64(inputs.count), "manualInputs": UInt64(manual.prepared?.inputs?.count ?? 0),
-                                        "coins": UInt64(coins.count)])
+                                         "inputs": UInt64(inputs.count), "manualInputs": UInt64(manual.prepared?.inputs?.count ?? 0),
+                                         "coins": UInt64(coins.count)])
     }
 
     /// After the board's confirmations: it resolved, the claimed coin is still on-chain, and the whole-wallet
@@ -121,7 +120,7 @@ struct FFI070LiveTests {
 
     private func utxos() async throws -> [String] {
         try await session.withOpenWallet { try await $0.onchain.utxos() }.compactMap { utxo -> String? in
-            guard case let .local(point, amount, height) = utxo else { return nil }
+            guard case .local(let point, let amount, let height) = utxo else { return nil }
             return "\(point.txid):\(point.vout)=\(amount)@\(height.map(String.init) ?? "-")"
         }.sorted()
     }

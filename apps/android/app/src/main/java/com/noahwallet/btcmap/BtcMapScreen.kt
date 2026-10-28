@@ -1,22 +1,16 @@
 package com.noahwallet.btcmap
 
-import com.noahwallet.ui.AdaptiveLayout
-import com.noahwallet.ui.WalletAlertDialog
-import com.noahwallet.ui.WalletModalBottomSheet
-
-import com.noahwallet.localization.trPlural
-import com.noahwallet.localization.tr
 import android.Manifest
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -33,7 +27,12 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.noahwallet.localization.tr
+import com.noahwallet.localization.trPlural
 import com.noahwallet.services.storage.SettingsStorage
+import com.noahwallet.ui.AdaptiveLayout
+import com.noahwallet.ui.WalletAlertDialog
+import com.noahwallet.ui.WalletModalBottomSheet
 import kotlinx.coroutines.*
 
 @OptIn(ExperimentalMaterial3Api::class)

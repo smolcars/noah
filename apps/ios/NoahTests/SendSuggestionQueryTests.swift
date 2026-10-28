@@ -1,6 +1,5 @@
-import Testing
-
 @testable import Noah
+import Testing
 
 /// When Send asks the server for Noah Lightning addresses: React Native's
 /// `useLightningAddressSuggestions` rules, and Android's `SendRecipientTest` cases.

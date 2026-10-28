@@ -8,7 +8,7 @@ import Foundation
 enum ApnsEnvironment {
     static func isDevelopment(profile: Data? = embeddedProfile()) -> Bool {
         guard let profile, let plist = plist(from: profile),
-            let entitlements = plist["Entitlements"] as? [String: Any]
+              let entitlements = plist["Entitlements"] as? [String: Any]
         else { return false }
         return entitlements["aps-environment"] as? String == "development"
     }
@@ -22,7 +22,7 @@ enum ApnsEnvironment {
     static func plist(from profile: Data) -> [String: Any]? {
         let text = String(decoding: profile, as: UTF8.self)
         guard let start = text.range(of: "<?xml version=\"1.0\" encoding=\"UTF-8\"?>"),
-            let end = text.range(of: "</plist>", range: start.upperBound..<text.endIndex)
+              let end = text.range(of: "</plist>", range: start.upperBound..<text.endIndex)
         else { return nil }
         let xml = Data(text[start.lowerBound..<end.upperBound].utf8)
         return try? PropertyListSerialization.propertyList(from: xml, format: nil) as? [String: Any]

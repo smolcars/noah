@@ -3,9 +3,9 @@ package com.noahwallet.ui.home
 import com.noahwallet.fixtures.SharedFixtures
 import com.noahwallet.services.storage.PersistedBackupState
 import kotlinx.serialization.json.*
-import java.util.Locale
 import org.junit.Assert.*
 import org.junit.Test
+import java.util.Locale
 
 class HomeRulesTest {
     @Test fun backupVisibilityMatchesRN() {
@@ -131,7 +131,7 @@ class HomeRulesTest {
 
     @Test fun arrivingCountsIncomingFundsOnly() {
         fun ark(claimable: ULong = 0u, lightningSend: ULong = 0u, inRound: ULong = 0u, exit: ULong = 0u, board: ULong = 0u, arkoorSend: ULong = 0u,
-                offboard: ULong = 0u, onchainPending: ULong = 0u) = com.noahwallet.services.wallet.WalletBalance(
+            offboard: ULong = 0u, onchainPending: ULong = 0u) = com.noahwallet.services.wallet.WalletBalance(
             com.noahwallet.services.wallet.WalletBalance.Ark(1_000u, 0u, pendingLightningSend = lightningSend, claimableLightningReceive = claimable,
                 pendingInRound = inRound, pendingExit = exit, pendingBoard = board, pendingArkoorSend = arkoorSend, pendingOffboard = offboard),
             com.noahwallet.services.wallet.WalletBalance.Onchain(0u, onchainPending, onchainPending))

@@ -13,7 +13,7 @@ struct AutoBoardFunding {
         // A board/send's change is not a new deposit. Unknown transactions are not eligible.
         let incoming = Set(transactions.filter { $0.balanceChangeSats > 0 }.map(\.txid))
         return .init(walletID: walletID, outpoints: Set(utxos.compactMap {
-            guard case let .local(point, _, height) = $0, height != nil, incoming.contains(point.txid) else { return nil }
+            guard case .local(let point, _, let height) = $0, height != nil, incoming.contains(point.txid) else { return nil }
             return "\(point.txid):\(point.vout)"
         }))
     }
@@ -83,7 +83,7 @@ struct AutoBoardFunding {
     /// confirmed. Once one is spent it no longer counts.
     static func held(_ claims: Set<String>, utxos: [OnchainUtxo]) -> UInt64 {
         utxos.reduce(0) { total, utxo in
-            guard case let .local(point, amount, height) = utxo, height != nil, claims.contains("\(point.txid):\(point.vout)") else { return total }
+            guard case .local(let point, let amount, let height) = utxo, height != nil, claims.contains("\(point.txid):\(point.vout)") else { return total }
             return total + amount
         }
     }
@@ -132,8 +132,8 @@ enum BitcoinTransaction {
             guard at < bytes.count else { return nil }
             let first = bytes[at]
             at += 1
-            if first < 0xfd { return Int(first) }
-            let width = first == 0xfd ? 2 : first == 0xfe ? 4 : 8
+            if first < 0xFD { return Int(first) }
+            let width = first == 0xFD ? 2 : first == 0xFE ? 4 : 8
             guard at + width <= bytes.count else { return nil }
             let value = bytes[at..<at + width].reversed().reduce(UInt64(0)) { $0 << 8 | UInt64($1) }
             at += width
@@ -182,7 +182,7 @@ enum BitcoinTransaction {
     }
     /// Proof also retires the preparation under the session's authority before releasing its deposits.
     func failedConfirm(_ quote: OnchainQuote, changed: Bool,
-        proveUnsubmitted: () async throws -> Bool) async throws {
+                       proveUnsubmitted: () async throws -> Bool) async throws {
         guard let (id, funding, _) = claimed, id == quote.id else { return }
         claimed = nil
         guard try await proveUnsubmitted() else { return }

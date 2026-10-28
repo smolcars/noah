@@ -9,8 +9,7 @@ extension WalletSession {
             let expiring = Set(
                 try await handles.wallet.getExpiringVtxos(
                     thresholdBlocks: UInt32(
-                        WalletConfiguration.base(for: .current).vtxoRefreshExpiryThreshold)
-                ).map(\.id))
+                        WalletConfiguration.base(for: .current).vtxoRefreshExpiryThreshold)).map(\.id))
             let vtxos = try await handles.wallet.vtxos().map {
                 Self.vtxoModel($0, tip: tip, expiring: expiring)
             }
@@ -135,8 +134,7 @@ extension WalletSession {
     }
 
     static func claimDestinationOwnership(
-        _ address: String, network: String, isMine: (String) async throws -> Bool
-    ) async throws -> Bool {
+        _ address: String, network: String, isMine: (String) async throws -> Bool) async throws -> Bool {
         guard ExitRules.acceptsClaimAddress(address, network: network) else { throw OnchainFailure.invalid }
         return try await isMine(address)
     }
@@ -147,8 +145,7 @@ extension WalletSession {
 
     func quoteOnchain(
         _ action: OnchainAction, ids: [String] = [], amount: UInt64 = 0, destination: String? = nil,
-        automatic: Bool = false
-    ) async throws -> OnchainQuote {
+        automatic: Bool = false) async throws -> OnchainQuote {
         try await withOpenWallet { handles in
             if action == .board {
                 guard let quote = try await self.prepareBoardReview(handles, requested: amount, automatic: automatic)
@@ -169,7 +166,7 @@ extension WalletSession {
         return try await withOpenWallet { handles in
             guard try await handles.wallet.pendingBoards().isEmpty else { return nil }
             let funding = try await AutoBoardFunding.confirmed(walletID: handles.wallet.fingerprint(),
-                utxos: handles.onchain.utxos(), transactions: handles.onchain.transactions())
+                                                               utxos: handles.onchain.utxos(), transactions: handles.onchain.transactions())
             // An exit claim to this phone is never a deposit, however its claim was recorded.
             let claims = Set(try await handles.wallet.listAllExits(includeHistory: false, includeTransactions: false)
                 .compactMap { Self.exitModel($0).details.claimTxid })
@@ -209,9 +206,9 @@ extension WalletSession {
                 amount: amount == 0 ? .drainAll : .amount(amountSats: amount),
                 feeRateSatPerVb: rate, confirmedOnly: true, excludedOutpoints: excluding.map(Self.outpoints))
             let quote = OnchainQuote(action: .board, walletID: walletID, ids: [], amount: board.grossSats,
-                fee: board.arkFeeSats, chainFee: board.onchainFeeSats, confirmed: balance, feeRate: rate,
-                reviewedAt: .now, automatic: automatic, boardAll: !automatic && requested == 0 ? true : nil, prepared: .init(board))
-            await self.retainBoardReview(quote, wallet: handles.wallet)
+                                     fee: board.arkFeeSats, chainFee: board.onchainFeeSats, confirmed: balance, feeRate: rate,
+                                     reviewedAt: .now, automatic: automatic, boardAll: !automatic && requested == 0 ? true : nil, prepared: .init(board))
+            await retainBoardReview(quote, wallet: handles.wallet)
             return quote
         }
         guard automatic else {
@@ -220,10 +217,10 @@ extension WalletSession {
             catch { throw OnchainSubmission.boardFailure(error) ?? error }
         }
         return try await Self.reserveBoardReview(minimum: minimum, feeRate: rate, claims: claims,
-            discard: { quote in
-                await self.discardBoard(quote)
-                guard await self.boardPreparations[quote.prepared!.id] == nil else { throw OnchainFailure.uncertain }
-            }, prepare: prepare)
+                                                 discard: { quote in
+                                                     await self.discardBoard(quote)
+                                                     guard await self.boardPreparations[quote.prepared!.id] == nil else { throw OnchainFailure.uncertain }
+                                                 }, prepare: prepare)
     }
 
     /// "txid:vout" outpoints for `prepareBoard`; bark ignores malformed and foreign ones.
@@ -241,8 +238,7 @@ extension WalletSession {
     static func reserveBoardReview(
         minimum: UInt64, feeRate: UInt64, claims: AutoBoardFunding.Claims = .init(),
         discard: @Sendable (OnchainQuote) async throws -> Void,
-        prepare: @Sendable (UInt64, Set<String>) async throws -> OnchainQuote
-    ) async throws -> OnchainQuote? {
+        prepare: @Sendable (UInt64, Set<String>) async throws -> OnchainQuote) async throws -> OnchainQuote? {
         do {
             // Confirmed-only DrainAll of every other coin can afford its own exact input fees.
             let probe = try await prepare(0, claims.outpoints)
@@ -333,8 +329,7 @@ extension WalletSession {
     }
 
     static func startQuote(
-        ids: [String], automatic: Bool = false, estimate: Bool = true, access: OnchainStartAccess
-    ) async throws -> OnchainQuote {
+        ids: [String], automatic: Bool = false, estimate: Bool = true, access: OnchainStartAccess) async throws -> OnchainQuote {
         let balance = try await access.confirmed()
         guard Set(ids).count == ids.count else { throw OnchainFailure.invalid }
         let spendable = try await access.spendable()
@@ -348,8 +343,7 @@ extension WalletSession {
     }
 
     static func executeStart(
-        _ quote: OnchainQuote, journal: OnchainOperationJournal, access: OnchainStartAccess
-    ) async throws -> String {
+        _ quote: OnchainQuote, journal: OnchainOperationJournal, access: OnchainStartAccess) async throws -> String {
         guard quote.action == .startExit, ExitRules.current(elapsed: quote.elapsed()) else { throw OnchainFailure.changed }
         guard !quote.feesUnknown || quote.hasUnknownFeeConsent else { throw OnchainFailure.changed }
         let fresh: OnchainQuote
@@ -366,8 +360,7 @@ extension WalletSession {
     }
 
     static func claimQuote(
-        ids: [String], destination: String?, automatic: Bool = false, estimate: Bool = true, access: OnchainClaimAccess
-    ) async throws -> OnchainQuote {
+        ids: [String], destination: String?, automatic: Bool = false, estimate: Bool = true, access: OnchainClaimAccess) async throws -> OnchainQuote {
         let balance = try await access.confirmed()
         guard Set(ids).count == ids.count else { throw OnchainFailure.invalid }
         let selected = try await access.exits().filter { $0.isClaimable && ids.contains($0.vtxoId) }
@@ -394,14 +387,13 @@ extension WalletSession {
     }
 
     static func executeClaim(
-        _ quote: OnchainQuote, journal: OnchainOperationJournal, access: OnchainClaimAccess
-    ) async throws -> String {
+        _ quote: OnchainQuote, journal: OnchainOperationJournal, access: OnchainClaimAccess) async throws -> String {
         guard quote.action == .claim, ExitRules.current(elapsed: quote.elapsed()) else { throw OnchainFailure.changed }
         guard !quote.feesUnknown || quote.hasUnknownFeeConsent else { throw OnchainFailure.changed }
         let fresh: OnchainQuote
         do {
             fresh = try await claimQuote(ids: quote.ids, destination: quote.destination, automatic: quote.automatic,
-                estimate: !quote.hasUnknownFeeConsent, access: access)
+                                         estimate: !quote.hasUnknownFeeConsent, access: access)
         } catch let failure as ExitEstimateUnavailable { throw try failure.preserving(quote) }
         guard quote.matches(fresh), ExitRules.current(elapsed: quote.elapsed()) else { throw OnchainFailure.changed }
         return try await journal.perform(quote) {
@@ -430,8 +422,7 @@ extension WalletSession {
 
     private static func onchainQuote(
         _ handles: Handles, action: OnchainAction, ids: [String], amount requested: UInt64,
-        destination: String?, automatic: Bool, estimate: Bool = true
-    ) async throws -> OnchainQuote {
+        destination: String?, automatic: Bool, estimate: Bool = true) async throws -> OnchainQuote {
         if action == .claim {
             return try await claimQuote(ids: ids, destination: destination, automatic: automatic, access: claimAccess(handles))
         }
@@ -478,9 +469,9 @@ extension WalletSession {
             throw OnchainFailure.invalid // Handled by the shared claim path above.
         case .cancel:
             guard ids.count == 1,
-                let exit = try await handles.wallet.getExitVtxos().first(where: { $0.vtxoId == ids[0] }),
-                let status = try await handles.wallet.getExitStatus(
-                    vtxoId: ids[0], includeHistory: false, includeTransactions: false)
+                  let exit = try await handles.wallet.getExitVtxos().first(where: { $0.vtxoId == ids[0] }),
+                  let status = try await handles.wallet.getExitStatus(
+                      vtxoId: ids[0], includeHistory: false, includeTransactions: false)
             else { throw OnchainFailure.changed }
             let state = Self.exitState(status.state)
             guard
@@ -493,7 +484,7 @@ extension WalletSession {
     }
 
     static func exitStartEstimate(_ validated: OnchainQuote, estimate: Bool = true,
-        fetch: () async throws -> EmergencyExitFeeEstimate) async throws -> OnchainQuote {
+                                  fetch: () async throws -> EmergencyExitFeeEstimate) async throws -> OnchainQuote {
         var quote = validated
         quote.fee = nil; quote.chainFee = nil; quote.feeRate = nil
         guard estimate else { return quote }
@@ -510,19 +501,20 @@ extension WalletSession {
     }
 
     func executeOnchain(_ quote: OnchainQuote, journal: OnchainOperationJournal = .shared,
-        funding: AutoBoardFunding.Snapshot? = nil)
-        async throws -> String
-    {
-        return try await withOpenWallet { handles in
+                        funding: AutoBoardFunding.Snapshot? = nil)
+        async throws -> String {
+        try await withOpenWallet { handles in
             if quote.action == .board {
                 return try await self.submitBoard(quote, walletID: handles.wallet.fingerprint(), journal: journal,
-                    confirmed: { try await handles.onchain.balance().confirmedSats }, claims: { try await Self.exitClaims(handles) },
-                    funding: funding,
-                    readFunding: {
-                        guard try await handles.wallet.pendingBoards().isEmpty else { return nil }
-                        return try await AutoBoardFunding.confirmed(walletID: handles.wallet.fingerprint(),
-                            utxos: handles.onchain.utxos(), transactions: handles.onchain.transactions())
-                    })
+                                                  confirmed: { try await handles.onchain.balance().confirmedSats },
+                                                  claims: { try await Self.exitClaims(handles) },
+                                                  funding: funding,
+                                                  readFunding: {
+                                                      guard try await handles.wallet.pendingBoards().isEmpty else { return nil }
+                                                      return try await AutoBoardFunding.confirmed(walletID: handles.wallet.fingerprint(),
+                                                                                                  utxos: handles.onchain.utxos(),
+                                                                                                  transactions: handles.onchain.transactions())
+                                                  })
             }
             if quote.action == .claim {
                 return try await Self.executeClaim(quote, journal: journal, access: Self.claimAccess(handles))
@@ -563,7 +555,8 @@ extension WalletSession {
                     return OnchainReceipt(
                         message: failures == 0
                             ? OnchainReceipt.progressedMessage
-                            : "Exit progression returned \(failures) errors. Transactions may have been broadcast or fee-bumped. Refresh exit details before continuing.")
+                            :
+                            "Exit progression returned \(failures) errors. Transactions may have been broadcast or fee-bumped. Refresh exit details before continuing.")
                 case .claim:
                     throw OnchainFailure.invalid // Handled by the shared claim path above.
                 case .cancel:
@@ -647,7 +640,7 @@ extension WalletSession {
         let needed = Dictionary(short.compactMap { status in status.error?.neededSats.map { (status.vtxoId, $0) } },
                                 uniquingKeysWith: { a, _ in a })
         return (Set((statuses.filter { $0.error == nil } + short).map(\.vtxoId)), needed,
-                statuses.filter { $0.error != nil }.count - short.count)
+                statuses.count(where: { $0.error != nil }) - short.count)
     }
 
     /// Home's Renew. The review is the existing refresh review; submission takes this path
@@ -684,8 +677,7 @@ extension WalletSession {
         requote: @escaping @Sendable () async throws -> OnchainQuote,
         expiring: @escaping @Sendable (UInt32) async throws -> [HomeRenewal.Coin],
         tip: @escaping @Sendable () async throws -> UInt32,
-        refresh: @escaping @Sendable ([String]) async throws -> OnchainReceipt
-    ) async throws -> String {
+        refresh: @escaping @Sendable ([String]) async throws -> OnchainReceipt) async throws -> String {
         guard quote.action == .refresh, ExitRules.current(elapsed: quote.elapsed()) else { throw OnchainFailure.changed }
         let message = Mutex<String?>(nil)
         try await flight.serialized {
@@ -749,7 +741,7 @@ extension WalletSession {
                 vtxoAnchors: { Set(try await handles.wallet.allVtxos().map(\.anchorPoint.txid)) },
                 unspent: {
                     Set(try await handles.onchain.utxos().compactMap {
-                        if case let .local(point, _, _) = $0 { "\(point.txid):\(point.vout)" } else { nil }
+                        if case .local(let point, _, _) = $0 { "\(point.txid):\(point.vout)" } else { nil }
                     })
                 }))
         }
@@ -769,10 +761,9 @@ extension WalletSession {
     }
 
     static func checkOnchainAttempt(
-        _ id: UUID, journal: OnchainOperationJournal, reads: OnchainAttemptReads
-    ) async throws -> Bool {
+        _ id: UUID, journal: OnchainOperationJournal, reads: OnchainAttemptReads) async throws -> Bool {
         guard let attempt = try await journal.loadAll().first(where: { $0.id == id }),
-            attempt.quote.walletID == reads.walletID else { throw OnchainFailure.changed }
+              attempt.quote.walletID == reads.walletID else { throw OnchainFailure.changed }
         var evidence = OnchainOperationJournal.Evidence(walletID: reads.walletID)
         evidence.transactionIDs = try await reads.transactionIDs()
         // A stored board VTXO outlives its checkpoint and BDK transaction.
@@ -859,28 +850,24 @@ extension WalletSession {
                             status = .init(kind: "confirmed", child_txid: child, block: block(ref), origin: origin(from))
                         }
                         return .init(txid: tx.txid, status: status)
-                    })
-            )
+                    }))
         case .awaitingDelta(let tip, let ref, let height):
             return (
                 "AwaitingDelta",
                 .init(
                     kind: "awaiting-delta", tip_height: tip, confirmed_block: block(ref),
-                    claimable_height: height)
-            )
+                    claimable_height: height))
         case .claimable(let tip, let since, let scanned):
             return (
                 "Claimable",
                 .init(
                     kind: "claimable", tip_height: tip, claimable_since: block(since),
-                    last_scanned_block: scanned.map(block))
-            )
+                    last_scanned_block: scanned.map(block)))
         case .claimInProgress(let tip, let since, let tx):
             return (
                 "ClaimInProgress",
                 .init(
-                    kind: "claim-in-progress", tip_height: tip, claimable_since: block(since), claim_txid: tx)
-            )
+                    kind: "claim-in-progress", tip_height: tip, claimable_since: block(since), claim_txid: tx))
         case .claimed(let tip, let tx, let ref):
             return ("Claimed", .init(kind: "claimed", tip_height: tip, block: block(ref), txid: tx))
         case .vtxoAlreadySpent(let tip):

@@ -1,7 +1,6 @@
 import Foundation
-import Testing
-
 @testable import Noah
+import Testing
 
 /// Opt-in checkpoints for RestoreTests/README.md on a disposable simulator.
 /// Never emits the phrase, JWT or download URLs.

@@ -166,7 +166,7 @@ struct VtxosView: View {
             })) {
                 ForEach(VtxoList.Filter.allCases) { Text(L10n.text($0.title, locale: language)).tag($0) }
             } label: { Text("Filter") }
-            .pickerStyle(.inline)
+                .pickerStyle(.inline)
             Section {
                 Button(L10n.text("Select VTXOs", locale: language), systemImage: "checkmark.circle") {
                     haptics.play(.light)
@@ -283,7 +283,11 @@ struct VtxoRow: View {
                 VStack(alignment: .leading, spacing: 1) {
                     Text(verbatim: VtxoList.status(vtxo, locale: locale.identifier)).noahText(SettingsText.value)
                         .foregroundStyle(vtxo.expired && vtxo.state != "Locked" ? NoahTokens.Colors.failure : NoahTokens.Colors.foreground)
-                    Text(verbatim: L10n.text("Block {height} · {id}", vtxo.expiry.formatted(.number.locale(locale)), String(vtxo.id.prefix(6)) + "…", locale: locale.identifier))
+                    Text(verbatim: L10n.text(
+                        "Block {height} · {id}",
+                        vtxo.expiry.formatted(.number.locale(locale)),
+                        String(vtxo.id.prefix(6)) + "…",
+                        locale: locale.identifier))
                         .noahText(HomeText.footnote).foregroundStyle(NoahTokens.Colors.muted)
                 }
                 .lineLimit(1)
@@ -423,7 +427,8 @@ struct VtxoDetailView: View {
                                       value: L10n.text("Block {height}", vtxo.expiry.formatted(.number.locale(locale)), locale: language))
                     if vtxo.tip > 0 {
                         SettingsDetailRow(label: L10n.text("Blocks left", locale: language),
-                                          value: vtxo.expiry <= vtxo.tip ? L10n.text("Expired", locale: language) : (vtxo.expiry - vtxo.tip).formatted(.number.locale(locale)),
+                                          value: vtxo.expiry <= vtxo.tip ? L10n.text("Expired", locale: language) : (vtxo.expiry - vtxo.tip)
+                                              .formatted(.number.locale(locale)),
                                           numeric: true)
                     }
                     SettingsDetailRow(label: L10n.text("VTXO ID", locale: language), value: vtxo.id, mono: true, copy: vtxo.id)
@@ -435,10 +440,21 @@ struct VtxoDetailView: View {
                     SettingsDetailRow(label: L10n.text("Type", locale: language), value: vtxo.kind, compact: true)
                     SettingsDetailRow(label: L10n.text("Status", locale: language),
                                       value: L10n.text(vtxo.registered ? "Registered" : "Not registered", locale: language), compact: true)
-                    SettingsDetailRow(label: L10n.text("Exit delta", locale: language), value: L10n.plural("{n} blocks", count: Int(vtxo.exitDelta), locale: language), compact: true)
+                    SettingsDetailRow(
+                        label: L10n.text("Exit delta", locale: language),
+                        value: L10n.plural("{n} blocks", count: Int(vtxo.exitDelta), locale: language),
+                        compact: true)
                     SettingsDetailRow(label: L10n.text("Exit depth", locale: language), value: "\(vtxo.exitDepth)", compact: true)
-                    SettingsDetailRow(label: L10n.text("Exit weight", locale: language), value: L10n.text("{n} wu", vtxo.exitWeight.formatted(.number.locale(locale)), locale: language), compact: true)
-                    SettingsDetailRow(label: L10n.text("Server key", locale: language), value: vtxo.serverPubkey, mono: true, compact: true, copy: vtxo.serverPubkey)
+                    SettingsDetailRow(
+                        label: L10n.text("Exit weight", locale: language),
+                        value: L10n.text("{n} wu", vtxo.exitWeight.formatted(.number.locale(locale)), locale: language),
+                        compact: true)
+                    SettingsDetailRow(
+                        label: L10n.text("Server key", locale: language),
+                        value: vtxo.serverPubkey,
+                        mono: true,
+                        compact: true,
+                        copy: vtxo.serverPubkey)
                     SettingsDetailRow(label: L10n.text("Point", locale: language), value: vtxo.point, mono: true, compact: true, copy: vtxo.point)
                     if vtxo.tip > 0 {
                         SettingsDetailRow(label: L10n.text("Current block", locale: language), value: vtxo.tip.formatted(.number.locale(locale)),
@@ -553,9 +569,9 @@ struct RenewReviewSheet: View {
 
     var body: some View {
         SettingsSheetBody(title: quote.ids.count == 1 ? L10n.text("Renew this VTXO", locale: language)
-                                                     : L10n.plural("Renew {n} VTXOs", count: quote.ids.count, locale: language),
-                          line: quote.ids.count == 1 ? L10n.text("Joins the next Ark round, so it stays spendable.", locale: language)
-                                                     : L10n.text("Joins the next Ark round, so they stay spendable.", locale: language)) {
+            : L10n.plural("Renew {n} VTXOs", count: quote.ids.count, locale: language),
+            line: quote.ids.count == 1 ? L10n.text("Joins the next Ark round, so it stays spendable.", locale: language)
+                : L10n.text("Joins the next Ark round, so they stay spendable.", locale: language)) {
             VStack(spacing: 0) {
                 SettingsDetailRow(label: L10n.text("Amount", locale: language), value: money(quote.amount), numeric: true)
                 SettingsDetailRow(label: L10n.text("VTXOs", locale: language), value: "\(quote.ids.count)", numeric: true)

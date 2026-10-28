@@ -99,7 +99,7 @@ struct BtcMapPlace: Codable, Identifiable, Equatable, Sendable {
         comments = (try? c.decode(Int.self, forKey: .comments)).flatMap { $0 >= 0 ? $0 : nil }
         boosted_until = (try? c.decode(String.self, forKey: .boosted_until)).flatMap { $0.isEmpty ? nil : $0 }
         verified_at = (try? c.decode(String.self, forKey: .verified_at)).flatMap { $0.isEmpty ? nil : $0 }
-        try [boosted_until, verified_at].compactMap { $0 }.forEach(BtcMapLimits.check)
+        try [boosted_until, verified_at].compactMap(\.self).forEach(BtcMapLimits.check)
     }
 }
 

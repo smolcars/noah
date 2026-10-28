@@ -1,6 +1,5 @@
 package com.noahwallet.btcmap
 
-import com.noahwallet.localization.tr
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
@@ -16,6 +15,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
+import com.noahwallet.localization.tr
 import kotlinx.coroutines.CancellationException
 
 @OptIn(ExperimentalLayoutApi::class)

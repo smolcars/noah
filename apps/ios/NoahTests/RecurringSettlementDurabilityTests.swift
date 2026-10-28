@@ -1,6 +1,6 @@
 import Foundation
-import Testing
 @testable import Noah
+import Testing
 
 @MainActor struct RecurringSettlementDurabilityTests {
     private func paidButUnsettled(_ h: RecurringExecutorTests.Harness) async throws -> RecurringPayment {
@@ -36,7 +36,7 @@ import Testing
         #expect(try h.store.load().schedules[s.id]?.occurrencesPaid == 1)
         await h.executor.execute(); await h.executor.checkStatus(s.id)
         #expect(h.calls.withLock { $0 } == 1)
-        #expect(try h.store.load().schedules[s.id]?.runs.filter { $0.status == "success" }.count == 1)
+        #expect(try h.store.load().schedules[s.id]?.runs.count(where: { $0.status == "success" }) == 1)
     }
 
     @Test func restoredSuccessIsPublishedOnlyAfterOccurrenceHandoff() async throws {
@@ -81,7 +81,7 @@ import Testing
         #expect(try h.store.load().schedules[s.id]?.occurrencesPaid == 1)
         await h.executor.execute(); await h.executor.checkStatus(s.id)
         #expect(h.calls.withLock { $0 } == 1)
-        #expect(try h.store.load().schedules[s.id]?.runs.filter { $0.status == "success" }.count == 1)
+        #expect(try h.store.load().schedules[s.id]?.runs.count(where: { $0.status == "success" }) == 1)
     }
 
     @Test func walletReloadAndOverrideMustReleaseOldAmbiguousResults() async throws {
@@ -147,7 +147,6 @@ import Testing
         #expect(try h.store.load().schedules[s.id]?.occurrencesPaid == 0)
         #expect(h.calls.withLock { $0 } == 1)
     }
-
 }
 
 @MainActor struct RecurringSettlementCrashTests {
@@ -161,7 +160,7 @@ import Testing
         for _ in 0..<3 { await h.executor.execute(); await h.executor.checkStatus(id) }
         let paid = try #require(h.store.load().schedules[id])
         #expect(paid.occurrencesPaid == 1)
-        #expect(paid.runs.filter { $0.status == "success" }.count == 1)
+        #expect(paid.runs.count(where: { $0.status == "success" }) == 1)
         let e = try #require(h.journal.load()[id])
         #expect(e.consumed == true && e.historyApplied == true && e.released == true)
         #expect(h.calls.withLock { $0 } == 1)

@@ -1,6 +1,6 @@
 import Foundation
-import Testing
 @testable import Noah
+import Testing
 
 struct OnboardingRestoreTests {
     static let vector = Array(repeating: "abandon", count: 11) + ["about"]

@@ -1,8 +1,8 @@
+@testable import Noah
 import Observation
 import SwiftUI
 import Testing
 import UIKit
-@testable import Noah
 
 @MainActor struct WalletContentProtectionTests {
     @Observable final class State {

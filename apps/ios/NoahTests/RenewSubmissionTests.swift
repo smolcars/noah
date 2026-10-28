@@ -1,7 +1,7 @@
 import Foundation
+@testable import Noah
 import Synchronization
 import Testing
-@testable import Noah
 
 /// Home's Renew rechecks eligibility at submission, under the sync flight and inside the
 /// journal's operation, so a tip that moves while execution waits can't refresh an
@@ -83,7 +83,7 @@ struct RenewSubmissionTests {
 
     @Test(arguments: [
         HomeRenewal.Coin(id: "a", sats: 20_000, expiryHeight: 1_010, spendable: false), // locked
-        HomeRenewal.Coin(id: "b", sats: 20_000, expiryHeight: 1_010, spendable: true),  // no longer in the set
+        HomeRenewal.Coin(id: "b", sats: 20_000, expiryHeight: 1_010, spendable: true), // no longer in the set
     ])
     func coinsThatStoppedBeingEligibleSubmitNothing(coin: HomeRenewal.Coin) async throws {
         let (journal, directory) = try journal()

@@ -229,25 +229,25 @@ struct HomeBalanceView: View {
     var body: some View {
         number
             .noahText(NoahTokens.Typography.balance)
-        .foregroundStyle(NoahTokens.Colors.foreground)
-        .lineLimit(1)
-        .minimumScaleFactor(0.5)
-        .opacity(1 - tuck)
-        .scaleEffect(1 - 0.06 * tuck, anchor: .bottomLeading)
-        .offset(y: -6 * tuck)
-        .contentShape(Rectangle())
-        .onTapGesture(perform: onDetails)
-        .onLongPressGesture(minimumDuration: 0.5, perform: onToggleHidden)
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel(Text("Balance"))
-        .accessibilityValue(Text(verbatim: hidden ? "••••" : formatted ?? ""))
-        .accessibilityAddTraits(.isButton)
-        .accessibilityAction(.default, onDetails)
-        .accessibilityAction(named: Text(LocalizedStringKey(hidden ? "Show wallet balance" : "Hide wallet balance")), onToggleHidden)
-        .accessibilityIdentifier("home-balance")
+            .foregroundStyle(NoahTokens.Colors.foreground)
+            .lineLimit(1)
+            .minimumScaleFactor(0.5)
+            .opacity(1 - tuck)
+            .scaleEffect(1 - 0.06 * tuck, anchor: .bottomLeading)
+            .offset(y: -6 * tuck)
+            .contentShape(Rectangle())
+            .onTapGesture(perform: onDetails)
+            .onLongPressGesture(minimumDuration: 0.5, perform: onToggleHidden)
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(Text("Balance"))
+            .accessibilityValue(Text(verbatim: hidden ? "••••" : formatted ?? ""))
+            .accessibilityAddTraits(.isButton)
+            .accessibilityAction(.default, onDetails)
+            .accessibilityAction(named: Text(LocalizedStringKey(hidden ? "Show wallet balance" : "Hide wallet balance")), onToggleHidden)
+            .accessibilityIdentifier("home-balance")
     }
 
-    @ViewBuilder private var number: some View {
+    private var number: some View {
         ZStack(alignment: .leading) {
             if let sats, let formatted {
                 if hidden {

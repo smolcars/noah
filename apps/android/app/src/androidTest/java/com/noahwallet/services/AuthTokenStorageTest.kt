@@ -9,13 +9,13 @@ import androidx.test.platform.app.InstrumentationRegistry
 import com.noahwallet.BuildConfig
 import com.noahwallet.services.server.DeviceInfo
 import com.noahwallet.services.storage.*
-import java.security.KeyStore
-import java.util.UUID
-import javax.crypto.KeyGenerator
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.*
 import org.junit.Test
 import org.junit.runner.RunWith
+import java.security.KeyStore
+import java.util.UUID
+import javax.crypto.KeyGenerator
 
 @RunWith(AndroidJUnit4::class)
 class AuthTokenStorageTest {

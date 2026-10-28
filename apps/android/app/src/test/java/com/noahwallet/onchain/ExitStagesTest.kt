@@ -11,7 +11,7 @@ class ExitStagesTest {
         ExitDetails.Transaction(id, ExitDetails.Status(kind, child, block?.let { ExitDetails.Block(it) }, origin))
     private fun processing(tip: Long, vararg txs: ExitDetails.Transaction) = ExitDetails(kind = "processing", tip_height = tip, transactions = txs.toList())
     private fun exit(state: String, details: ExitDetails, history: List<ExitDetails> = emptyList(), packages: List<ExitPackage> = emptyList(),
-                     fees: Map<String, Long> = emptyMap(), next: Long? = null, id: String = "v1") =
+        fees: Map<String, Long> = emptyMap(), next: Long? = null, id: String = "v1") =
         ExitModel(id, 31_000, state, details, history.map { it.kind ?: "" }, history, packages, fees, next)
     private val four = listOf("root", "l2", "l1", "leaf")
     private fun path(vararg kinds: String) = four.zip(kinds).map { (id, kind) -> tx(id, kind) }.toTypedArray()

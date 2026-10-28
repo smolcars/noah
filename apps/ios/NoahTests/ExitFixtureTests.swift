@@ -1,7 +1,6 @@
 import Foundation
-import Testing
-
 @testable import Noah
+import Testing
 
 struct ExitFixtureTests {
     struct FeeInput: Decodable {
@@ -18,8 +17,7 @@ struct ExitFixtureTests {
     }
     @Test func feesMatchRN() throws {
         for test in try Fixtures.load(
-            "exit-fee-estimate", input: FeeInput.self, expected: SendFixtureTests.JSON.self)
-        {
+            "exit-fee-estimate", input: FeeInput.self, expected: SendFixtureTests.JSON.self) {
             let i = test.input
             switch i.operation {
             case "eligible":
@@ -33,12 +31,12 @@ struct ExitFixtureTests {
             case "warning":
                 #expect(
                     try ExitRules.warning(
-                        amount: i.amount!, claimFee: i.claimFee!, totalFee: i.totalFee!, claimOnly: i.claimOnly!
-                    ) == test.expected.decode(String?.self), "\(test.name)")
+                        amount: i.amount!, claimFee: i.claimFee!, totalFee: i.totalFee!, claimOnly: i.claimOnly!) == test.expected.decode(String?.self),
+                    "\(test.name)")
             case "current":
                 let actual =
                     i.inputs!.matches(i.current!)
-                    && ExitRules.current(elapsed: .milliseconds(i.now! - i.reviewedAt!))
+                        && ExitRules.current(elapsed: .milliseconds(i.now! - i.reviewedAt!))
                 #expect(try actual == test.expected.decode(Bool.self), "\(test.name)")
             default: Issue.record("Unknown exit fixture")
             }
@@ -73,8 +71,7 @@ struct ExitFixtureTests {
     }
     @Test func timelinesMatchRN() throws {
         for test in try Fixtures.load(
-            "exit-timeline", input: TimelineInput.self, expected: [TimelineExpected].self)
-        {
+            "exit-timeline", input: TimelineInput.self, expected: [TimelineExpected].self) {
             let i = test.input
             let actual = ExitTimeline.build(
                 history: i.history, historyDetails: i.historyDetails, state: i.currentState,
@@ -103,8 +100,7 @@ struct ExitFixtureTests {
     }
     @Test func overviewCoordinationMatchesRN() throws {
         for test in try Fixtures.load(
-            "exit-overview-coordination", input: ReadyInput.self, expected: ReadyExpected.self)
-        {
+            "exit-overview-coordination", input: ReadyInput.self, expected: ReadyExpected.self) {
             let i = test.input
             let ready = ExitRules.ready(
                 initialized: i.isInitialized, loaded: i.isWalletLoaded, suspended: i.isWalletSuspended,

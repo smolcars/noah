@@ -12,9 +12,9 @@ import org.junit.Test
 /** Activity's data changes (docs/native-rewrite/design/activity.md, Data), shared with Home's rows. */
 class HistoryMappingTest {
     private fun movement(subsystem: String, status: String = "successful", intended: Long = 0, effective: Long = intended, fee: Long = 0,
-                         sentTo: List<Pair<String, String>> = emptyList(), receivedOn: List<Pair<String, String>> = emptyList(),
-                         inputs: List<String> = emptyList(), outputs: List<String> = emptyList(), exited: List<String> = emptyList(),
-                         metadata: String = "{}", id: UInt = 7u): Movement {
+        sentTo: List<Pair<String, String>> = emptyList(), receivedOn: List<Pair<String, String>> = emptyList(),
+        inputs: List<String> = emptyList(), outputs: List<String> = emptyList(), exited: List<String> = emptyList(),
+        metadata: String = "{}", id: UInt = 7u): Movement {
         val (name, kind) = subsystem.split(':')
         fun destinations(list: List<Pair<String, String>>) = list.map { (type, value) -> MovementDestination(PaymentMethod(type, value), 5_000uL) }
         return Movement(id, status, name, kind, metadata, intended, effective, fee.toULong(), destinations(sentTo), destinations(receivedOn),

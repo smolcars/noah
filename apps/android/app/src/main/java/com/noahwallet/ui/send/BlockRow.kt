@@ -12,9 +12,9 @@ import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.text.TextLayoutResult
 import androidx.compose.ui.text.drawText
 import com.noahwallet.ui.design.NoahTokens
+import kotlinx.coroutines.launch
 import kotlin.math.PI
 import kotlin.math.cos
-import kotlinx.coroutines.launch
 
 /**
  * The block row, mempool.space style: the three most recent blocks (darker towards the newest, heights
@@ -30,7 +30,7 @@ internal object BlockRow {
      * along, the oldest fades and a new dashed block appears. [pop] is the newly mined block's bounce.
      */
     fun DrawScope.blockStrip(x0: Float, y: Float, size: Float, tip: Long, confirmedAt: Long?, dot: Float, slide: Float, pop: Float,
-                             blink: Float, palette: NoahTokens.Palette, label: (Long) -> TextLayoutResult, next: TextLayoutResult, alpha: Float = 1f) {
+        blink: Float, palette: NoahTokens.Palette, label: (Long) -> TextLayoutResult, next: TextLayoutResult, alpha: Float = 1f) {
         val gap = size + 12
         val s = slide.coerceIn(0f, 1f)
         val shift = gap * (1 - s)

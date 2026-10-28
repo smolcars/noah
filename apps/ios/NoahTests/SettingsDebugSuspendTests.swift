@@ -1,6 +1,6 @@
 import Foundation
-import Testing
 @testable import Noah
+import Testing
 
 /// Advanced: five taps unlock debug mode, its switch turns it off again, and Suspend asks first.
 @MainActor struct SettingsDebugSuspendTests {

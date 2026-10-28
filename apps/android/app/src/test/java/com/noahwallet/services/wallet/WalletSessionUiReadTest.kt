@@ -26,5 +26,4 @@ class WalletSessionUiReadTest {
             release.countDown(); work.await(); ui.join(5000); root.deleteRecursively()
         }
     }
-
 }

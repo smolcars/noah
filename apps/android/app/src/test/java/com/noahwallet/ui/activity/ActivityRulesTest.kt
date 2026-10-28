@@ -19,7 +19,7 @@ class ActivityRulesTest {
     private fun at(zone: TimeZone, day: Int, hour: Int, minute: Int = 0) =
         Calendar.getInstance(zone).apply { clear(); set(2026, Calendar.OCTOBER, day, hour, minute) }.time
     private fun record(id: String, date: Date?, status: String = "successful", type: String = "Arkoor", direction: String = "outgoing",
-                       amount: Long = 2_500, destination: String = "", source: String = "ark", confirmed: Boolean? = null) =
+        amount: Long = 2_500, destination: String = "", source: String = "ark", confirmed: Boolean? = null) =
         HistoryTransaction(id, type, amount, if (date == null) HistoryRules.isoDate(Date(0)) else HistoryRules.isoDate(date), direction,
             dateLabel = if (date == null) "Unconfirmed" else null, sortTimestamp = date?.time?.toDouble(), source = source, txid = "tx-$id",
             destination = destination, movementId = id.hashCode().toUInt(), movementStatus = if (source == "ark") status else null,

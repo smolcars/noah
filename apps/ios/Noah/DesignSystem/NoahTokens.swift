@@ -5,18 +5,18 @@ import UIKit
 /// Redesign tokens.
 enum NoahTokens {
     enum Colors {
-        static let background = dynamic(light: 0xFFFFFFFF, dark: 0x000000FF)
-        static let foreground = dynamic(light: 0x000000FF, dark: 0xFFFFFFFF)
-        static let muted = dynamic(light: 0x707070FF, dark: 0x8F8F8FFF)
-        static let hairline = dynamic(light: 0x0000001F, dark: 0xFFFFFF29)
-        static let soft = dynamic(light: 0xF2F2F2FF, dark: 0x1C1C1EFF)
-        static let sheet = dynamic(light: 0xFFFFFFFF, dark: 0x1C1C1EFF)
-        static let orange = dynamic(light: 0xF7931AFF, dark: 0xF7931AFF)
-        static let orangeText = dynamic(light: 0xA85800FF, dark: 0xF7931AFF)
-        static let orangeTint = dynamic(light: 0xF7931A26, dark: 0xF7931A26)
-        static let failure = dynamic(light: 0xD0312DFF, dark: 0xFF453AFF)
-        static let qrCard = dynamic(light: 0xFFFFFFFF, dark: 0xFFFFFFFF)
-        static let qrInk = dynamic(light: 0x0A0A0AFF, dark: 0x0A0A0AFF)
+        static let background = dynamic(light: 0xFFFF_FFFF, dark: 0x0000_00FF)
+        static let foreground = dynamic(light: 0x0000_00FF, dark: 0xFFFF_FFFF)
+        static let muted = dynamic(light: 0x7070_70FF, dark: 0x8F8F_8FFF)
+        static let hairline = dynamic(light: 0x0000_001F, dark: 0xFFFF_FF29)
+        static let soft = dynamic(light: 0xF2F2_F2FF, dark: 0x1C1C_1EFF)
+        static let sheet = dynamic(light: 0xFFFF_FFFF, dark: 0x1C1C_1EFF)
+        static let orange = dynamic(light: 0xF793_1AFF, dark: 0xF793_1AFF)
+        static let orangeText = dynamic(light: 0xA858_00FF, dark: 0xF793_1AFF)
+        static let orangeTint = dynamic(light: 0xF793_1A26, dark: 0xF793_1A26)
+        static let failure = dynamic(light: 0xD031_2DFF, dark: 0xFF45_3AFF)
+        static let qrCard = dynamic(light: 0xFFFF_FFFF, dark: 0xFFFF_FFFF)
+        static let qrInk = dynamic(light: 0x0A0A_0AFF, dark: 0x0A0A_0AFF)
 
         /// 0xRRGGBBAA for light and dark appearance.
         private static func dynamic(light: UInt32, dark: UInt32) -> Color {
@@ -119,7 +119,7 @@ struct NoahTextModifier: ViewModifier {
     let style: NoahTokens.TextStyle
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
-    @ViewBuilder func body(content: Content) -> some View {
+    func body(content: Content) -> some View {
         let traits = UITraitCollection(preferredContentSizeCategory: UIContentSizeCategory(dynamicTypeSize))
         let metrics = UIFontMetrics(forTextStyle: style.textStyle)
         let size = metrics.scaledValue(for: style.size, compatibleWith: traits)

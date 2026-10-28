@@ -16,5 +16,4 @@ class HistoryExportFilesTest {
             assertFalse(recent.exists())
         } finally { root.deleteRecursively() }
     }
-
 }

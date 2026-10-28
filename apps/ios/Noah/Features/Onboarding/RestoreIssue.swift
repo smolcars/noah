@@ -30,9 +30,13 @@ struct RestoreIssue: Equatable {
             case .secureStorageUnavailable:
                 return Self(message: "Noah couldn't access secure storage. Unlock your device and try again.")
             case .rollbackFailed:
-                return Self(message: "Noah couldn't safely undo the restore. Do not retry. Close and restart Noah so it can recover your wallet.", requiresRestart: true)
+                return Self(
+                    message: "Noah couldn't safely undo the restore. Do not retry. Close and restart Noah so it can recover your wallet.",
+                    requiresRestart: true)
             case .seedStateUnknown:
-                return Self(message: "Noah couldn't confirm that your recovery phrase was saved. Do not retry. Unlock your device, then close and restart Noah to recover safely.", requiresRestart: true)
+                return Self(
+                    message: "Noah couldn't confirm that your recovery phrase was saved. Do not retry. Unlock your device, then close and restart Noah to recover safely.",
+                    requiresRestart: true)
             }
         }
         if error is RestoreTransaction.Failure || error is RestoreCompletion.RestartRequired {
@@ -43,8 +47,8 @@ struct RestoreIssue: Equatable {
         }
         // The SDK has no typed error code for a future snapshot schema yet.
         if let error = error as? BarkError,
-            error.message.range(of: #"^Snapshot schema version [0-9]+ is newer than supported version [0-9]+$"#,
-                options: .regularExpression) != nil {
+           error.message.range(of: #"^Snapshot schema version [0-9]+ is newer than supported version [0-9]+$"#,
+                               options: .regularExpression) != nil {
             return newerBackup
         }
         if error as? BackupCrypto.Failure == .authenticationFailed {

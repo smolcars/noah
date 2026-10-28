@@ -243,7 +243,7 @@ internal fun EmailPage(model: AppModel, nav: SettingsNav) {
             }
             EmailEntry(presentation, play = false, enabled = !model.busy) { send() }
             FinePrint(if (server.isEmailVerified == true) tr("Your current email stays until the new one is verified.")
-                else tr("Optional. We only write when your bitcoin needs you."))
+            else tr("Optional. We only write when your bitcoin needs you."))
         } else {
             CodeEntry(model, presentation, onTyped = { input ->
                 val (next, verifyNow) = presentation.otp.input(input, busy = model.busy)

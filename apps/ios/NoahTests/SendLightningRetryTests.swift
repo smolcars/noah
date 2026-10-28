@@ -1,8 +1,7 @@
 import BarkBoltFFI
 import Foundation
-import Testing
-
 @testable import Noah
+import Testing
 
 /// Paying a failed BOLT11 invoice again: bark 0.8 reuses the hash's finished movement, flipping it from failed to
 /// successful with its first fee field (async-payments.md, "Reused hashes"). The attempt is bound by bark's paid
@@ -190,7 +189,11 @@ import Testing
         // Bound by the paid record from before the attempt, even with the movement completing afterwards.
         let later = reused("successful", effective: -1083, completedAt: Date().addingTimeInterval(1), fee: 83)
         #expect(SendReconciliation.lightningAttempt([later], hash: hash, amount: 1000, snapshot: .init(movementIDs: [5], invoicePaid: true),
-                                                    startedAt: longAgo, fixed: false) == .alreadyPaid(.init(amount: 0, paymentHash: hash, movementID: 5, proof: .actualMovement)))
+                                                    startedAt: longAgo, fixed: false) == .alreadyPaid(.init(
+                amount: 0,
+                paymentHash: hash,
+                movementID: 5,
+                proof: .actualMovement)))
     }
 
     @Test func aFixedAmountInvoicePaidByARetryIsAlreadyPaidWithTheRetrysFee() async throws {
@@ -346,10 +349,16 @@ import Testing
                                                                amountSats: 1000, feeSats: 79, htlcVtxoCount: 1, hasFailedRevocation: false))
         let paid = LightningSendStatus.paid(paymentHash: hash, preimage: "proof")
         // The reused movement's fee field says 0; its effective balance took exactly this checkpoint's fee.
-        #expect(try checkpoint.receipt(status: paid, movements: [reused("successful", effective: -1079, completedAt: longAgo)], payment: payment, quote: quote).fee == 79)
+        #expect(try checkpoint.receipt(status: paid, movements: [reused("successful", effective: -1079, completedAt: longAgo)], payment: payment, quote: quote)
+            .fee == 79)
         // The effective balance decides, whatever the fee field says.
-        #expect(try checkpoint.receipt(status: paid, movements: [reused("successful", effective: -1079, completedAt: longAgo, fee: 79)], payment: payment, quote: quote).fee == 79)
-        #expect(try checkpoint.receipt(status: paid, movements: [reused("successful", effective: -1000, completedAt: longAgo)], payment: payment, quote: quote).fee == 0)
+        #expect(try checkpoint.receipt(
+            status: paid,
+            movements: [reused("successful", effective: -1079, completedAt: longAgo, fee: 79)],
+            payment: payment,
+            quote: quote).fee == 79)
+        #expect(try checkpoint.receipt(status: paid, movements: [reused("successful", effective: -1000, completedAt: longAgo)], payment: payment, quote: quote)
+            .fee == 0)
     }
 
     @Test func theReusedMovementMustMatchTheAmountAndShowARealFee() {
@@ -362,8 +371,13 @@ import Testing
                                                     snapshot: snapshot, startedAt: nil, fixed: false) == .uncertain)
         // A movement made by this attempt keeps today's reading.
         let fresh = reused("successful", effective: -1083, completedAt: longAgo, fee: 83)
-        guard case .paid(let receipt) = SendReconciliation.lightningAttempt([fresh], hash: hash, amount: 1000, snapshot: .init(movementIDs: [], invoicePaid: false),
-                                                                            startedAt: nil, fixed: false)
+        guard case .paid(let receipt) = SendReconciliation.lightningAttempt(
+            [fresh],
+            hash: hash,
+            amount: 1000,
+            snapshot: .init(movementIDs: [], invoicePaid: false),
+            startedAt: nil,
+            fixed: false)
         else { Issue.record("Expected Paid"); return }
         #expect(receipt.fee == 83)
         // A still-pending reused movement is nothing yet.

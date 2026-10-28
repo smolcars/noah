@@ -20,9 +20,8 @@ class RecurringSettlementDurabilityTest {
         return s
     }
 
-    private fun restartedExecutor(w: RecurringWorld, c: SendController) = RecurringExecutor(
-        RecurringExecutor.Dependencies(w.store, w.journal, c, ensureOpen = {}, binding = { w.binding }, allowed = {},
-            quote = { error("Recovery must not quote or pay") }, automationGeneration = { null }, now = { w.now }, zone = { w.zone }), w.scope)
+    private fun restartedExecutor(w: RecurringWorld, c: SendController) = RecurringExecutor(RecurringExecutor.Dependencies(w.store, w.journal, c, ensureOpen = {}, binding = { w.binding }, allowed = {},
+        quote = { error("Recovery must not quote or pay") }, automationGeneration = { null }, now = { w.now }, zone = { w.zone }), w.scope)
 
     @Test fun restartedDoneMustNotEraseUnsettledPaidEvidence() = runBlocking {
         val w = RecurringWorld(this)
@@ -133,7 +132,6 @@ class RecurringSettlementDurabilityTest {
             assertEquals(1, w.wallet.calls)
         } finally { w.policyDirectory.parentFile!!.deleteRecursively() }
     }
-
 }
 
 /** Each restarted instance reads only the durable doubles and the on-disk policy ledger. */

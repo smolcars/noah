@@ -1,9 +1,9 @@
 import BackgroundTasks
 import BarkBoltFFI
 import Foundation
+@testable import Noah
 import Synchronization
 import Testing
-@testable import Noah
 
 @MainActor struct BackgroundTaskTests {
     @MainActor final class SchedulerHarness {
@@ -38,7 +38,7 @@ import Testing
         #expect(Set(h.cancelled) == Set(BackgroundScheduler.Kind.allCases.map(\.identifier)))
     }
 
-    @Test(arguments: [true, false]) func launchRechecksForegroundAndWalletEligibility(foreground: Bool) async throws {
+    @Test(arguments: [true, false]) func launchRechecksForegroundAndWalletEligibility(foreground: Bool) async {
         let h = SchedulerHarness()
         h.foreground = foreground; h.eligible = !foreground ? false : true
         let done = await withCheckedContinuation { continuation in
@@ -109,7 +109,7 @@ import Testing
         #expect(completed == [false])
     }
 
-    @Test func deadlineRevokesSubmission() async throws {
+    @Test func deadlineRevokesSubmission() async {
         do {
             let gate = RecurringReservationTests.Gate()
             var complete: [Bool] = [], available: Bool?
@@ -161,8 +161,8 @@ import Testing
         let recorder = PushJobsTests.Recorder()
         try await BackgroundScheduler.run(kind, Self.stages(recorder))
         #expect(recorder.all == (kind == .maintenance
-            ? ["open", "sync", "maintenance", "recurring", "backup", "widget", "exits"]
-            : ["open", "sync", "recurring", "widget", "exits"]))
+                ? ["open", "sync", "maintenance", "recurring", "backup", "widget", "exits"]
+                : ["open", "sync", "recurring", "widget", "exits"]))
     }
 
     @Test func taskSkipsExitProgressOnceItsBudgetIsGone() async throws {
@@ -206,7 +206,7 @@ import Testing
         let episode = try #require(parked.parkedEpisode)
         let pending = finished + [ExitVtxo(vtxoId: "v", amountSats: 31_000, state: .start(tipHeight: 100), isClaimable: false)]
         let short = ExitProgressStatus(vtxoId: "v", state: .processing(tipHeight: 101, transactions: []),
-            error: BarkError(message: "private", code: .exitInsufficientConfirmedFunds, neededSats: 1_215, availableSats: 310))
+                                       error: BarkError(message: "private", code: .exitInsufficientConfirmedFunds, neededSats: 1_215, availableSats: 310))
         #expect(try await session.progressPendingExits(access: Self.exitAccess(calls, pending, statuses: [short], models: [parked])))
         #expect(calls.rates == [nil])
         let check = try #require(await session.exitChecks["w"])

@@ -3,11 +3,6 @@ package com.noahwallet.services.storage
 import android.app.Application
 import android.content.ContextWrapper
 import com.noahwallet.services.wallet.EsploraSettings
-import java.io.File
-import java.io.IOException
-import java.nio.file.Files
-import java.nio.file.attribute.FileTime
-import java.util.concurrent.TimeUnit
 import org.junit.Assert.*
 import org.junit.Assume.assumeFalse
 import org.junit.Assume.assumeTrue
@@ -16,6 +11,11 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
+import java.io.File
+import java.io.IOException
+import java.nio.file.Files
+import java.nio.file.attribute.FileTime
+import java.util.concurrent.TimeUnit
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35], application = Application::class)

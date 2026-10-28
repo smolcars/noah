@@ -42,14 +42,18 @@ struct ExitListView: View {
             ForEach(Self.sections(shown), id: \.title) { section in
                 SettingsSection(title: LocalizedStringKey(section.title))
                 ForEach(section.shared, id: \.first?.id) { members in
-                        ExitListGroup(rows: members.map { item($0, money) }, step: step) { settings.open(.exitProgress($0)) }
-                            .padding(.top, 4)
-                        let paths = members.reduce(0) { $0 + $1.path.count }, unique = Set(members.flatMap { $0.path.map(\.txid) }).count
-                        Text(verbatim: L10n.text("These {n} share part of their path: {count} transactions to send, not {total}. Shared ones are sent and paid once.",
-                                                 members.count.formatted(), unique.formatted(), paths.formatted(), locale: language))
-                            .noahText(HomeText.footnote).foregroundStyle(NoahTokens.Colors.muted)
-                            .fixedSize(horizontal: false, vertical: true)
-                            .padding(.leading, ExitListGroup.gutter(step)).padding(.top, 4).padding(.bottom, 2)
+                    ExitListGroup(rows: members.map { item($0, money) }, step: step) { settings.open(.exitProgress($0)) }
+                        .padding(.top, 4)
+                    let paths = members.reduce(0) { $0 + $1.path.count }, unique = Set(members.flatMap { $0.path.map(\.txid) }).count
+                    Text(verbatim: L10n.text(
+                        "These {n} share part of their path: {count} transactions to send, not {total}. Shared ones are sent and paid once.",
+                        members.count.formatted(),
+                        unique.formatted(),
+                        paths.formatted(),
+                        locale: language))
+                        .noahText(HomeText.footnote).foregroundStyle(NoahTokens.Colors.muted)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .padding(.leading, ExitListGroup.gutter(step)).padding(.top, 4).padding(.bottom, 2)
                 }
                 ForEach(Array(section.solo.enumerated()), id: \.element.id) { index, exit in
                     let row = item(exit, money)
@@ -93,7 +97,14 @@ struct ExitListView: View {
     private func item(_ exit: ExitModel, _ money: ExitMoney) -> ExitListGroup.Row {
         let progress = model.progress(exit), tip = model.overview?.tip ?? 0
         return .init(exit: exit, progress: progress,
-                     text: ExitText(progress: progress, exit: exit, tip: tip, overview: model.overview, attempts: model.attempts, money: money, language: language),
+                     text: ExitText(
+                         progress: progress,
+                         exit: exit,
+                         tip: tip,
+                         overview: model.overview,
+                         attempts: model.attempts,
+                         money: money,
+                         language: language),
                      coin: ExitGutterCoin(progress, tip: tip, delta: model.overview?.exitDelta ?? 144))
     }
 
@@ -117,9 +128,9 @@ struct ExitListView: View {
 
     /// "6 in progress · 1 ready to claim", leaving out the parts that are zero; nil when both are.
     nonisolated static func subtitle(_ exits: [ExitModel], language: String) -> String? {
-        let progress = exits.filter { ExitRules.live($0.state) && !$0.claimable }.count, ready = exits.filter(\.claimable).count
+        let progress = exits.count(where: { ExitRules.live($0.state) && !$0.claimable }), ready = exits.filter(\.claimable).count
         let parts = [progress > 0 ? L10n.plural("{n} in progress", count: progress, locale: language) : nil,
-                     ready > 0 ? L10n.plural("{n} ready to claim", count: ready, locale: language) : nil].compactMap { $0 }
+                     ready > 0 ? L10n.plural("{n} ready to claim", count: ready, locale: language) : nil].compactMap(\.self)
         return parts.isEmpty ? nil : parts.joined(separator: " · ")
     }
 }
@@ -143,7 +154,8 @@ struct ExitListRow: View {
                 VStack(alignment: .leading, spacing: 1) {
                     Text(verbatim: ExitMoney(app: app, locale: locale)(exit.amount)).noahText(HomeText.amount).monospacedDigit()
                     Text(verbatim: text.listLine).noahText(HomeText.footnote).monospacedDigit()
-                        .foregroundStyle(text.statusKind == .failure ? NoahTokens.Colors.failure : text.statusKind == .ready ? NoahTokens.Colors.foreground : NoahTokens.Colors.muted)
+                        .foregroundStyle(text.statusKind == .failure ? NoahTokens.Colors.failure : text.statusKind == .ready ? NoahTokens.Colors
+                            .foreground : NoahTokens.Colors.muted)
                         .fixedSize(horizontal: false, vertical: true)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
@@ -167,12 +179,18 @@ extension ExitText {
     /// The list's one line.
     var listLine: String {
         switch progress.phase {
-        case .claimed: return L10n.text("Claimed · block {height}", (progress.claimedHeight ?? tip).formatted(.number.locale(Locale(identifier: language))), locale: language)
+        case .claimed: return L10n.text(
+                "Claimed · block {height}",
+                (progress.claimedHeight ?? tip).formatted(.number.locale(Locale(identifier: language))),
+                locale: language)
         case .canceled: return L10n.text("Canceled · still in Ark", locale: language)
         case .waiting:
             let left = progress.left(tip: tip) ?? 0
             guard left > 0 else {
-                return L10n.text("Unlocks at block {height}", (progress.claimableHeight ?? tip).formatted(.number.locale(Locale(identifier: language))), locale: language)
+                return L10n.text(
+                    "Unlocks at block {height}",
+                    (progress.claimableHeight ?? tip).formatted(.number.locale(Locale(identifier: language))),
+                    locale: language)
             }
             return L10n.plural("Waiting · {n} blocks · {time}", count: Int(left), ExitText.about(left, language), locale: language)
         case .sending, .mempool, .shared, .confirmed:
@@ -445,7 +463,8 @@ struct ExitGutterTree: View {
         func runs(_ shown: Set<Int>) -> [ClosedRange<Int>] {
             var runs: [ClosedRange<Int>] = [], start: Int?
             for place in 0...places {
-                if place < places && !shown.contains(place) { start = start ?? place } else if let first = start { runs.append(first...(place - 1)); start = nil }
+                if place < places && !shown.contains(place) { start = start ?? place }
+                else if let first = start { runs.append(first...(place - 1)); start = nil }
             }
             return runs
         }

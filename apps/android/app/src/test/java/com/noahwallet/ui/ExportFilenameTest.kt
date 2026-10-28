@@ -1,10 +1,10 @@
 package com.noahwallet.ui
 
 import com.noahwallet.ui.settings.ExportFilename
-import java.util.Date
-import java.util.TimeZone
 import org.junit.Assert.*
 import org.junit.Test
+import java.util.Date
+import java.util.TimeZone
 
 class ExportFilenameTest {
     @Test fun filenameMatchesRNUtcTimestampWithMilliseconds() {

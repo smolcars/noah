@@ -53,7 +53,7 @@ import kotlinx.coroutines.withContext
  * shows a page with only its parents beneath, as a deep link does (a started exit leaves its review for its progress).
  */
 internal class SettingsNav(val back: (() -> Unit)?, val open: (NavKey) -> Unit, val pop: () -> Unit, val myCode: () -> Unit, val home: () -> Unit,
-                           val hold: (Boolean) -> Unit = {}, val replace: (NavKey) -> Unit = {}, val map: () -> Unit = {})
+    val hold: (Boolean) -> Unit = {}, val replace: (NavKey) -> Unit = {}, val map: () -> Unit = {})
 
 /**
  * A save whose completion navigates (the Lightning address, "I wrote it down"): [AppModel.action] that holds Back, list
@@ -105,8 +105,8 @@ internal fun rememberSettingsLive(model: AppModel): SettingsLive {
     }
     LaunchedEffect(model.isWalletSuspended, revision, model.summaryRevision) {
         live.overview = if (!com.noahwallet.onchain.onchainReady(model)) null
-            else try { withContext(Dispatchers.IO) { model.session.onchainOverview() } }
-            catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled } catch (_: Exception) { live.overview }
+        else try { withContext(Dispatchers.IO) { model.session.onchainOverview() } }
+        catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled } catch (_: Exception) { live.overview }
     }
     return live
 }
@@ -154,7 +154,7 @@ private fun pageTransition(forward: Boolean, reduceMotion: Boolean, split: Boole
  */
 @Composable
 internal fun SettingsHost(model: AppModel, stack: NavBackStack<NavKey>, close: () -> Unit, myCode: () -> Unit,
-                          preview: SettingsPreview? = null, hold: NavigationHold = remember { NavigationHold() }, map: () -> Unit = {}) {
+    preview: SettingsPreview? = null, hold: NavigationHold = remember { NavigationHold() }, map: () -> Unit = {}) {
     val initialSheet = preview?.sheet
     val entryScope = LocalEntryScope.current
     val entry = LocalSettingsEntry.current

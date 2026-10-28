@@ -37,8 +37,7 @@ struct SendLightningCheckpoint: Codable, Equatable, Sendable {
 
     func advance(
         invoice: String, payment: SendPayment, quote: SendQuote, state: LightningSendStatus,
-        check: @Sendable (String) async throws -> LightningSendStatus
-    ) async throws -> LightningSendStatus {
+        check: @Sendable (String) async throws -> LightningSendStatus) async throws -> LightningSendStatus {
         guard matches(invoice: invoice, payment: payment, quote: quote) else {
             throw SendExistingLightning(progress: .init(amount: amount, fee: fee))
         }
@@ -64,7 +63,7 @@ struct SendLightningCheckpoint: Codable, Equatable, Sendable {
         let matching = movements.filter { $0.paymentHash == hash && $0.subsystemName == "bark.lightning_send" && $0.subsystemKind == "send" }
         guard case .paid(let receipt) = SendReconciliation.lightning(
             matching, hash: hash, amount: payment.amount, snapshot: .init(movementIDs: []), fixed: SendReconciliation.fixesAmount(invoice)),
-              receipt.isProven(for: payment, knownHash: hash), let fee = receipt.fee else { throw SendFailure.unresolved }
+            receipt.isProven(for: payment, knownHash: hash), let fee = receipt.fee else { throw SendFailure.unresolved }
         let (total, overflow) = receipt.amount.addingReportingOverflow(fee)
         guard !overflow, fee <= quote.fee, total <= quote.total else { throw SendFailure.unresolved }
         return receipt

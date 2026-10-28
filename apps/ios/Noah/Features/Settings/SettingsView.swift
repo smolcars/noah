@@ -222,11 +222,22 @@ struct SettingsList: View {
         SettingsGroup(label: "Bitcoin") {
             let vtxos = summary.overview?.vtxos ?? []
             let due = !VtxoList.due(vtxos).isEmpty
-            row("VTXOs", icon: "cylinder.split.1x2", value: summary.overview == nil ? nil : due ? L10n.text("Renew", locale: language) : vtxos.count.formatted(.number.locale(locale)),
-                dot: due ? .attention : .none, page: .vtxos, id: "settings-vtxos")
-            row("On-chain", icon: "link", value: walletSummary.map { money($0.balance.onchain.confirmed) }, numeric: true, page: .onchain, id: "settings-onchain")
-            let approvals = executor.schedules.filter { $0.status == "needs_approval" }.count
-            let active = executor.schedules.filter { $0.status == "active" }.count
+            row(
+                "VTXOs",
+                icon: "cylinder.split.1x2",
+                value: summary.overview == nil ? nil : due ? L10n.text("Renew", locale: language) : vtxos.count.formatted(.number.locale(locale)),
+                dot: due ? .attention : .none,
+                page: .vtxos,
+                id: "settings-vtxos")
+            row(
+                "On-chain",
+                icon: "link",
+                value: walletSummary.map { money($0.balance.onchain.confirmed) },
+                numeric: true,
+                page: .onchain,
+                id: "settings-onchain")
+            let approvals = executor.schedules.count(where: { $0.status == "needs_approval" })
+            let active = executor.schedules.count(where: { $0.status == "active" })
             row("Recurring payments", icon: "arrow.triangle.2.circlepath",
                 value: approvals > 0 ? L10n.text("Approve", locale: language) : active > 0 ? L10n.text("{n} active", active, locale: language) : nil,
                 dot: approvals > 0 ? .attention : .none, page: .recurring, id: "settings-recurring-payments")
@@ -398,7 +409,10 @@ private struct SettingsUnitSheet: View {
                     Button { pick(unit) } label: {
                         HStack {
                             VStack(alignment: .leading, spacing: 4) {
-                                Text(verbatim: BitcoinAmount.format(sats: Int64(clamping: (fixture?.summary ?? app.summary)?.balance.totalSats ?? 0), unit: unit, locale: locale))
+                                Text(verbatim: BitcoinAmount.format(
+                                    sats: Int64(clamping: (fixture?.summary ?? app.summary)?.balance.totalSats ?? 0),
+                                    unit: unit,
+                                    locale: locale))
                                     .noahText(NoahTokens.Typography.code).monospacedDigit()
                                 Text(LocalizedStringKey(unit == .bip177 ? "Bitcoin (BIP-177)" : "Satoshis"))
                                     .noahText(NoahTokens.Typography.sub).foregroundStyle(NoahTokens.Colors.muted)
@@ -421,7 +435,7 @@ private struct SettingsUnitSheet: View {
             }
             .padding(.top, 16)
         } actions: { EmptyView() }
-        .onboardingHaptics(haptics)
+            .onboardingHaptics(haptics)
     }
 
     private func pick(_ unit: BitcoinAmountUnit) {
@@ -452,7 +466,7 @@ private struct SettingsCurrencySheet: View {
             }
             .padding(.top, 10)
         } actions: { EmptyView() }
-        .onboardingHaptics(haptics)
+            .onboardingHaptics(haptics)
     }
 
     private func symbol(_ code: String) -> String {
@@ -491,7 +505,7 @@ struct SettingsLanguageSheet: View {
             }
             .padding(.top, 10)
         } actions: { EmptyView() }
-        .onboardingHaptics(haptics)
+            .onboardingHaptics(haptics)
     }
 }
 

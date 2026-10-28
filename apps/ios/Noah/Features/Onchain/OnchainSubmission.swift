@@ -35,7 +35,7 @@ enum OnchainSubmission {
         case .uncertain: throw OnchainFailure.uncertain
         case .accepted, .failed:
             var receipt = OnchainReceipt(message: OnchainReceipt.boardingMessage(fee: quote.chainFee),
-                txid: result.txid, onchainFee: quote.chainFee)
+                                         txid: result.txid, onchainFee: quote.chainFee)
             receipt.arkFee = quote.fee
             if case .failed = result.broadcast {
                 receipt.broadcastRetryPending = true

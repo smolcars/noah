@@ -1,8 +1,5 @@
 package com.noahwallet.ui
 
-import com.noahwallet.ui.WalletAlertDialog
-
-import com.noahwallet.localization.tr
 import android.Manifest
 import android.content.ClipData
 import android.content.ClipboardManager
@@ -19,15 +16,17 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.role
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.noahwallet.localization.tr
+import com.noahwallet.ui.WalletAlertDialog
 import kotlinx.coroutines.delay
 
 /**
@@ -36,7 +35,7 @@ import kotlinx.coroutines.delay
  */
 @Composable
 fun QRHubScreen(lightningAddress: String?, displayName: String, onBack: () -> Unit, onProfile: () -> Unit, onScan: (String) -> Unit,
-                startScanning: Boolean = false) {
+    startScanning: Boolean = false) {
     val address = lightningAddress?.takeIf { it.isNotEmpty() }
     val context = LocalContext.current
     val clipboard = remember { context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager }

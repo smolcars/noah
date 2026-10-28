@@ -1,6 +1,6 @@
 import Foundation
-import Testing
 @testable import Noah
+import Testing
 
 @MainActor struct RecurringJournalValidationTests {
     @Test func malformedConsumedIndicesMustStopExecution() async throws {
@@ -47,7 +47,25 @@ import Testing
         #expect(h.calls.withLock { $0 } == 1)
         #expect(try h.store.load().schedules[a.id]?.status == "needs_attention")
     }
-    static let malformedKinds = ["negative", "duplicate", "unsorted", "empty", "scope", "wallet", "instance", "revision", "attemptID", "attemptKind", "attemptIndex", "attemptDate", "unresolvedConsumed", "missingIndices", "missingWatermark", "missingField", "legacy"]
+    static let malformedKinds = [
+        "negative",
+        "duplicate",
+        "unsorted",
+        "empty",
+        "scope",
+        "wallet",
+        "instance",
+        "revision",
+        "attemptID",
+        "attemptKind",
+        "attemptIndex",
+        "attemptDate",
+        "unresolvedConsumed",
+        "missingIndices",
+        "missingWatermark",
+        "missingField",
+        "legacy",
+    ]
     static func malformed(_ kind: String, _ journal: Data, scheduleID: String) throws -> Data {
         var raw = try #require(JSONSerialization.jsonObject(with: journal) as? [String: Any])
         var indices = try #require(raw["consumedIndices"] as? [[String: Any]])

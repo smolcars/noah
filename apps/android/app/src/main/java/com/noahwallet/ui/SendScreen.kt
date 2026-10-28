@@ -6,15 +6,16 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
-import androidx.lifecycle.viewmodel.compose.viewModel
-import androidx.lifecycle.ViewModel
-import androidx.lifecycle.viewModelScope
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.ViewModel
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.repeatOnLifecycle
+import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.noahwallet.BuildConfig
 import com.noahwallet.api.generated.client.V0LnAddressSuggestionsClient
 import com.noahwallet.api.generated.client.V0PricesClient
@@ -25,7 +26,6 @@ import com.noahwallet.services.server.value
 import com.noahwallet.services.wallet.WalletConfiguration
 import com.noahwallet.ui.send.*
 import kotlinx.coroutines.*
-import androidx.lifecycle.repeatOnLifecycle
 import kotlinx.serialization.json.JsonObject
 
 /**

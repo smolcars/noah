@@ -2,7 +2,6 @@ package com.noahwallet.ui
 
 import android.app.Activity
 import android.os.SystemClock
-import com.noahwallet.localization.tr
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -10,8 +9,11 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.repeatOnLifecycle
 import com.noahwallet.BuildConfig
 import com.noahwallet.history.RepeatPayment
+import com.noahwallet.localization.tr
+import com.noahwallet.services.server.value
 import com.noahwallet.ui.activity.*
 import com.noahwallet.ui.home.*
 import com.noahwallet.ui.onboarding.LocalPalette
@@ -19,10 +21,8 @@ import com.noahwallet.ui.onboarding.LocalPose
 import com.noahwallet.ui.onboarding.OnboardingPose
 import com.noahwallet.ui.settings.SettingsDestination
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.launch
 import kotlinx.coroutines.isActive
-import com.noahwallet.services.server.value
-import androidx.lifecycle.repeatOnLifecycle
+import kotlinx.coroutines.launch
 import java.util.Date
 import java.util.Locale
 
@@ -33,8 +33,8 @@ import java.util.Locale
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(model: AppModel, onViewAll: () -> Unit,
-               onRepeatPayment: (RepeatPayment) -> Unit, onSettings: (androidx.navigation3.runtime.NavKey) -> Unit, onScan: () -> Unit, onBackup: () -> Unit = {},
-               onProfile: () -> Unit = {}, onRenew: (List<String>) -> Unit = {}, settings: () -> Unit) {
+    onRepeatPayment: (RepeatPayment) -> Unit, onSettings: (androidx.navigation3.runtime.NavKey) -> Unit, onScan: () -> Unit, onBackup: () -> Unit = {},
+    onProfile: () -> Unit = {}, onRenew: (List<String>) -> Unit = {}, settings: () -> Unit) {
     val appColors = MaterialTheme.colorScheme
     val appTypography = MaterialTheme.typography
     val appShapes = MaterialTheme.shapes
@@ -53,7 +53,7 @@ fun HomeScreen(model: AppModel, onViewAll: () -> Unit,
         lifecycle.repeatOnLifecycle(androidx.lifecycle.Lifecycle.State.STARTED) {
             while (kotlinx.coroutines.currentCoroutineContext().isActive) {
                 try { price = com.noahwallet.api.generated.client.V0PricesClient(model.services.client)
-                .fiatPrices(kotlinx.serialization.json.JsonObject(emptyMap())).value().rates[currency]?.takeIf { it.isFinite() && it > 0 } }
+                    .fiatPrices(kotlinx.serialization.json.JsonObject(emptyMap())).value().rates[currency]?.takeIf { it.isFinite() && it > 0 } }
                 catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
                 catch (_: Exception) { }
                 kotlinx.coroutines.delay(300_000)

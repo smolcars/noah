@@ -1,7 +1,7 @@
 import Darwin
 import Foundation
-import Testing
 @testable import Noah
+import Testing
 
 struct SettingsFailureTests {
     @Test(arguments: [false, true])
@@ -12,7 +12,10 @@ struct SettingsFailureTests {
         let file = URL(fileURLWithPath: root.path + ".native-settings.json")
         let prior = existing ? try SettingsStorage(rootPath: root.path) : nil
         if let prior {
-            try prior.setPersistedState(PersistedWalletState(isInitialized: true, isBiometricsEnabled: true, isWalletSuspended: true), key: PersistedWalletState.key, version: 0)
+            try prior.setPersistedState(
+                PersistedWalletState(isInitialized: true, isBiometricsEnabled: true, isWalletSuspended: true),
+                key: PersistedWalletState.key,
+                version: 0)
         }
         let location = WalletDataLocation(variant: .regtest, documentsDirectory: directory.appending(path: "wallet"))
         try FileManager.default.createDirectory(at: location.directory, withIntermediateDirectories: true)

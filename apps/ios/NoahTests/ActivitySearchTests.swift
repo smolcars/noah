@@ -1,8 +1,8 @@
 import Foundation
+@testable import Noah
 import SwiftUI
 import Testing
 import UIKit
-@testable import Noah
 
 /// Activity's search in the real tab shell. There, on iOS 27, the system's minimized toolbar search
 /// reopened as soon as its × closed it, so the phone uses Noah's own field instead. Closing it is

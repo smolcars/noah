@@ -10,7 +10,7 @@ import kotlin.math.min
  * the text the picture draws. [money] formats amounts in the wallet's unit.
  */
 internal class TreeStrings(private val text: (String, Array<out String>) -> String, private val count: (String, Long) -> String,
-                           val number: (Long) -> String, val money: (Long) -> String, val japanese: Boolean = false) {
+    val number: (Long) -> String, val money: (Long) -> String, val japanese: Boolean = false) {
     fun tr(source: String, vararg arguments: String) = text(source, arguments)
     fun trPlural(source: String, n: Long) = count(source, n)
 
@@ -76,8 +76,8 @@ internal data class TreeShape(val kind: Kind, val group: String, val l: Float, v
  * branch or further out before they're left out), then the stubs.
  */
 internal class TreeLayout(val scene: ExitScene, val words: TreeStrings, val geo: TreeGeometry, val ys: FloatArray, val labels: List<TreeLabels.Item>,
-                          val stubs: List<Stub>, val siblings: List<Sibling>, val caption: List<String>?, val captionY: Float,
-                          val wallet: List<WalletLine>, val more: Map<Int, String>, val shapes: List<TreeShape>) {
+    val stubs: List<Stub>, val siblings: List<Sibling>, val caption: List<String>?, val captionY: Float,
+    val wallet: List<WalletLine>, val more: Map<Int, String>, val shapes: List<TreeShape>) {
     /** A stub's ring, [dy] from its level (so it follows the level as the picture moves). */
     data class Stub(val level: Int, val x: Float, val dy: Float)
     /** Your other exit [other] (an index in the scene's), the [slot]th at level [level]; [amount] is its text size, null when left out. */
@@ -93,7 +93,7 @@ internal class TreeLayout(val scene: ExitScene, val words: TreeStrings, val geo:
 
         /** The layout for [scene] (already folded to fit) at rest, in a [width] × [height] dp picture. */
         fun of(scene: ExitScene, width: Float, height: Float, scale: Float, wide: Boolean, words: TreeStrings, measure: TreeMeasure,
-               balance: Long? = null, received: Long? = null): TreeLayout {
+            balance: Long? = null, received: Long? = null): TreeLayout {
             val geo = TreeGeometry(width, height, scene.n, scale, wide)
             val lock = if (scene.locked && !scene.claiming) 1f else 0f
             val ys = geo.levels(lock, scene.docked, scene.ringed) { if (scene.mined(it)) 1f else 0f }
@@ -125,7 +125,7 @@ internal class TreeLayout(val scene: ExitScene, val words: TreeStrings, val geo:
                 // The claim transaction, beside its node on the stem.
                 val (x, y) = geo.claimNode
                 items += TreeLabels.Item(y, if (s.claimed) listOf(line(w.tr("Block {height}", w.number(s.claimedBlock ?: s.tip)), strong, true), line(w.tr("claim")))
-                    else listOfNotNull(line(w.tr("Next block"), strong, true), s.claimFee?.let { line(w.tr("claim fee {amount}", w.money(it))) }), 4f,
+                else listOfNotNull(line(w.tr("Next block"), strong, true), s.claimFee?.let { line(w.tr("claim fee {amount}", w.money(it))) }), 4f,
                     if (s.claimed) null else TreeLabels.Pill.orange, x = x - 16)
                 return items
             }
@@ -162,7 +162,7 @@ internal class TreeLayout(val scene: ExitScene, val words: TreeStrings, val geo:
             when {
                 s.locked -> items += TreeLabels.Item(geo.coinY, if (s.open) listOf(line(w.tr("Unlocked"), strong, true),
                     line(w.tr("since block {height}", w.number(s.unlockedAt ?: s.claimableHeight ?: s.tip))))
-                    else listOfNotNull(line(w.trPlural("Locked · {n} blocks", s.left), strong, true), s.claimableHeight?.let { line(w.tr("opens at {height}", w.number(it))) }), 3.5f)
+                else listOfNotNull(line(w.trPlural("Locked · {n} blocks", s.left), strong, true), s.claimableHeight?.let { line(w.tr("opens at {height}", w.number(it))) }), 3.5f)
                 s.coin == ExitScene.Mark.unsent -> items += TreeLabels.Item(geo.coinY, listOf(line(if (s.canceled) w.tr("Back in Ark") else w.tr("Your VTXO"), strong, true)), 3.5f)
                 else -> {}
             }
@@ -246,7 +246,7 @@ internal class TreeLayout(val scene: ExitScene, val words: TreeStrings, val geo:
          * amounts, and the caption.
          */
         fun arrange(s: ExitScene, geo: TreeGeometry, ys: FloatArray, lock: Float, labels: List<TreeLabels.Item>, server: Boolean, w: TreeStrings,
-                    measure: TreeMeasure, balance: Long?, received: Long?): TreeLayout {
+            measure: TreeMeasure, balance: Long?, received: Long?): TreeLayout {
             val n = s.n; val k = geo.scale; val tx = geo.trunk
             fun text(string: String, x: Float, y: Float, size: Float, bold: Boolean, right: Boolean, kind: TreeShape.Kind, group: String): TreeShape {
                 val width = measure.width(string, size, bold); val h = textHeight(size)

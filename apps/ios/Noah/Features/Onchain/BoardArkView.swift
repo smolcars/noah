@@ -167,12 +167,19 @@ private struct MoveToArkSheet: View {
                     }
                 }
                 .padding(.top, 8)
-                SettingsFine(text: L10n.text("Move onchain bitcoin into Ark using this exact signed funding transaction. The boarding amount includes the Ark fee; the onchain fee is paid in addition. Funds become spendable after the board completes. This review expires after two minutes.", locale: language)
-                             + (quote.boardAll == true ? " " + L10n.text("MAX uses confirmed funds only and deducts the onchain fee from that balance.", locale: language) : ""))
+                SettingsFine(text: L10n.text(
+                    "Move onchain bitcoin into Ark using this exact signed funding transaction. The boarding amount includes the Ark fee; the onchain fee is paid in addition. Funds become spendable after the board completes. This review expires after two minutes.",
+                    locale: language)
+                    + (quote.boardAll == true ? " " + L10n.text(
+                        "MAX uses confirmed funds only and deducts the onchain fee from that balance.",
+                        locale: language) : ""))
             } else if !amount.isEmpty && requested == nil {
                 SettingsFine(text: L10n.text("Enter whole sats.", locale: language), failure: true)
             } else if let minimum {
-                SettingsFine(text: L10n.text("At least {amount}.", BitcoinAmount.format(sats: Int64(clamping: minimum), unit: app.amountUnit, locale: locale), locale: language))
+                SettingsFine(text: L10n.text(
+                    "At least {amount}.",
+                    BitcoinAmount.format(sats: Int64(clamping: minimum), unit: app.amountUnit, locale: locale),
+                    locale: language))
             }
             if let error = model.error { SettingsFine(text: L10n.text(error, locale: language), failure: true) }
         } actions: {
@@ -192,8 +199,10 @@ private struct MoveToArkSheet: View {
     }
 
     private func row(_ label: String, _ sats: UInt64) -> some View {
-        SettingsDetailRow(label: L10n.text(label, locale: language), value: BitcoinAmount.format(sats: Int64(clamping: sats), unit: app.amountUnit, locale: locale),
-                          numeric: true)
+        SettingsDetailRow(
+            label: L10n.text(label, locale: language),
+            value: BitcoinAmount.format(sats: Int64(clamping: sats), unit: app.amountUnit, locale: locale),
+            numeric: true)
     }
 }
 
@@ -253,8 +262,8 @@ struct AutoBoardingService: View {
                         defer { SharedOverview.shared.changed() }
                         do {
                             guard !(await WalletBackgroundActivity.shared.isRunning),
-                                !app.isWalletSuspended, phase == .active,
-                                PersistedTransactionState.load(from: .shared).isAutoBoardingEnabled
+                                  !app.isWalletSuspended, phase == .active,
+                                  PersistedTransactionState.load(from: .shared).isAutoBoardingEnabled
                             else { throw OnchainFailure.unavailable }
                             report(try await app.session.executeOnchain(quote, funding: review.fundingFor(quote)))
                             // Retain the receipt independently of admission for a later board.
@@ -283,7 +292,7 @@ struct AutoBoardingService: View {
         guard !checking, !busy, plan == nil, !app.isWalletSuspended, phase == .active else { return }
         let state = PersistedTransactionState.load(from: .shared)
         guard state.isAutoBoardingEnabled,
-            (app.summary?.balance.onchain.confirmed ?? 0) >= 20_000
+              (app.summary?.balance.onchain.confirmed ?? 0) >= 20_000
         else { return }
         checking = true
         let token = generation
@@ -298,7 +307,7 @@ struct AutoBoardingService: View {
                 guard !(await WalletBackgroundActivity.shared.isRunning) else { return nil }
                 return try await app.session.autoBoardFunding()
             }, quote: { try await app.session.autoBoardQuote() }, discard: { await app.session.discardBoard($0) },
-                present: { plan = $0 })
+            present: { plan = $0 })
         } catch {
             if token == generation, !Task.isCancelled {
                 report((error as? OnchainFailure)?.errorDescription

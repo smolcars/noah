@@ -23,15 +23,17 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.BlurredEdgeTreatment
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.*
@@ -47,11 +49,9 @@ import com.noahwallet.localization.tr
 import com.noahwallet.services.wallet.WalletBalance
 import com.noahwallet.ui.design.NoahTokens
 import com.noahwallet.ui.onboarding.*
+import kotlinx.coroutines.launch
 import java.util.Date
 import java.util.Locale
-import kotlinx.coroutines.launch
-import androidx.compose.ui.draw.BlurredEdgeTreatment
-import androidx.compose.ui.draw.drawBehind
 
 /** Everything Home shows, from live wallet state or a fixture. */
 @Immutable
@@ -319,7 +319,7 @@ private fun BoxScope.TopBar(ui: HomeUi, actions: HomeActions, state: HomeRules.S
                     if (!suspended) CircleButton(HomeIcons.scan, tr("Scan")) { haptics.light(); actions.scan() }
                     val entry = com.noahwallet.ui.settings.LocalSettingsEntry.current
                     CircleButton(HomeIcons.settings, tr("Settings"), Modifier.testTag("home-settings-button").then(if (entry == null) Modifier
-                        else Modifier.onGloballyPositioned { entry.gear = it.boundsInWindow() })) { haptics.light(); actions.settings() }
+                    else Modifier.onGloballyPositioned { entry.gear = it.boundsInWindow() })) { haptics.light(); actions.settings() }
                 }
             },
         ), Modifier.fillMaxSize()) { (chip, mini, buttons), constraints ->
@@ -462,11 +462,11 @@ private fun StatusBlock(ui: HomeUi, onBalance: () -> Unit, onRounds: () -> Unit)
     if (ui.status != null) last = ui.status
     androidx.compose.animation.AnimatedVisibility(ui.status != null,
         enter = if (reduceMotion) androidx.compose.animation.EnterTransition.None
-            else androidx.compose.animation.expandVertically(NoahTokens.Motion.snappy(), Alignment.Top) +
-                androidx.compose.animation.fadeIn(NoahTokens.Motion.snappy()),
+        else androidx.compose.animation.expandVertically(NoahTokens.Motion.snappy(), Alignment.Top) +
+            androidx.compose.animation.fadeIn(NoahTokens.Motion.snappy()),
         exit = if (reduceMotion) androidx.compose.animation.ExitTransition.None
-            else androidx.compose.animation.shrinkVertically(NoahTokens.Motion.snappy(), Alignment.Top) +
-                androidx.compose.animation.fadeOut(NoahTokens.Motion.snappy())) {
+        else androidx.compose.animation.shrinkVertically(NoahTokens.Motion.snappy(), Alignment.Top) +
+            androidx.compose.animation.fadeOut(NoahTokens.Motion.snappy())) {
         val status = last ?: return@AnimatedVisibility
         val (text, failed, dot) = when (status) {
             is HomeRules.Status.Error -> Triple(tr(status.message), true, false)
@@ -563,7 +563,7 @@ private fun Suspended(settings: () -> Unit) {
 /** Wide and tabletop's second pane: the get-paid card centred, or the full activity list grouped by day. */
 @Composable
 private fun TrailingPane(ui: HomeUi, state: HomeRules.State, entered: Long, revealed: Long, memory: HomeMemory, actions: HomeActions,
-                         scroll: HomeScroll, card: @Composable () -> Unit) {
+    scroll: HomeScroll, card: @Composable () -> Unit) {
     val reduceMotion = LocalReduceMotion.current
     when (state) {
         HomeRules.State.fresh -> BoxWithConstraints(Modifier.fillMaxSize()) {
@@ -639,7 +639,7 @@ private fun Recent(ui: HomeUi, entered: Long, memory: HomeMemory, actions: HomeA
  */
 @Composable
 private fun GetPaidCard(ui: HomeUi, payment: HomeMemory.FirstPayment?, elapsed: Long, wide: Boolean, onCopy: (String) -> Unit,
-                        onShare: (String) -> Unit, onProfile: () -> Unit, modifier: Modifier = Modifier) {
+    onShare: (String) -> Unit, onProfile: () -> Unit, modifier: Modifier = Modifier) {
     val palette = LocalPalette.current
     val reduceMotion = LocalReduceMotion.current
     val address = ui.address
@@ -728,8 +728,7 @@ private fun GetPaidCard(ui: HomeUi, payment: HomeMemory.FirstPayment?, elapsed: 
 private fun BalanceSheet(ui: HomeUi, onDismiss: () -> Unit) {
     val palette = LocalPalette.current
     val balance = ui.balance
-    androidx.compose.material3.MaterialTheme(colorScheme = androidx.compose.material3.MaterialTheme.colorScheme.copy(
-        surfaceContainerLow = palette.soft, surfaceContainer = palette.soft, surfaceContainerHigh = palette.soft)) {
+    androidx.compose.material3.MaterialTheme(colorScheme = androidx.compose.material3.MaterialTheme.colorScheme.copy(surfaceContainerLow = palette.soft, surfaceContainer = palette.soft, surfaceContainerHigh = palette.soft)) {
         OnboardingSheet(onDismiss, rememberModalBottomSheetState(skipPartiallyExpanded = false)) {
             Text(tr("Balance"), Modifier.semantics { heading() }, style = NoahTokens.Typography.sheetTitle, color = palette.foreground)
             Text(if (balance == null) "" else if (ui.hidden) BitcoinAmount.format(0, ui.unit, ui.locale).replace("0", "••••••") else BitcoinAmount.format(balance.totalSats.toLong(), ui.unit, ui.locale),

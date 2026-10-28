@@ -176,8 +176,7 @@ internal fun ArkServerPage(model: AppModel, nav: SettingsNav) {
         DetailRow(tr("Block height API"), host(height), copy = height, toasts = toasts)
         val explorer = "https://mempool.space" + if (BuildConfig.APP_VARIANT == "mainnet") "" else "/signet"
         DetailRow(tr("Explorer"), host(explorer), copy = explorer, toasts = toasts)
-        val prices = com.noahwallet.services.server.ServerEndpoint.priceURLs(
-            com.noahwallet.services.server.ServerEndpoint.baseURL(BuildConfig.APP_VARIANT, BuildConfig.REGTEST_SERVER_URL))
+        val prices = com.noahwallet.services.server.ServerEndpoint.priceURLs(com.noahwallet.services.server.ServerEndpoint.baseURL(BuildConfig.APP_VARIANT, BuildConfig.REGTEST_SERVER_URL))
         DetailRow(tr("Price API"), host(prices.first), copy = prices.first, toasts = toasts)
         DetailRow(tr("Historical price API"), host(prices.second), copy = prices.second, toasts = toasts, last = true)
     }
@@ -205,7 +204,7 @@ internal fun EsploraPage(model: AppModel, nav: SettingsNav) {
                     withContext(Dispatchers.Main) {
                         selection = store.selection(BuildConfig.APP_VARIANT)
                         error = if (reopened) "Endpoint not changed. The wallet is using the previous endpoint."
-                            else "Endpoint not changed. Restart Noah to reopen the previous endpoint."
+                        else "Endpoint not changed. Restart Noah to reopen the previous endpoint."
                     }
                 }
                 selection = store.selection(BuildConfig.APP_VARIANT)

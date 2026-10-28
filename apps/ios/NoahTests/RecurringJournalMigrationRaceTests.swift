@@ -1,6 +1,6 @@
 import Foundation
-import Testing
 @testable import Noah
+import Testing
 
 @MainActor struct RecurringJournalMigrationRaceTests {
     @Test func separateStartupEntryPointsCannotOverwriteDurableProof() async throws {

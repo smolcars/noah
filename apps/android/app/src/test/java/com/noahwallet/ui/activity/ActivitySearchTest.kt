@@ -97,7 +97,8 @@ class ActivitySearchTest {
         compose.onNodeWithTag("activity-row-movement-3").assertExists()
     }
 
-    @Test @Config(qualifiers = "w900dp-h600dp-land")
+    @Test
+    @Config(qualifiers = "w900dp-h600dp-land")
     fun wideBackClosesThePaymentBeforeTheSearch() {
         show()
         search("coffee")

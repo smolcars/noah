@@ -1,13 +1,13 @@
 package com.noahwallet.services
 
+import com.noahwallet.fixtures.SharedFixtures
 import com.noahwallet.services.storage.*
 import kotlinx.coroutines.runBlocking
-import com.noahwallet.fixtures.SharedFixtures
 import kotlinx.serialization.json.*
-import javax.crypto.KeyGenerator
-import javax.crypto.SecretKey
 import org.junit.Assert.*
 import org.junit.Test
+import javax.crypto.KeyGenerator
+import javax.crypto.SecretKey
 
 class StoredMnemonicTest {
     private fun vector(count: Int) = List(count - 1) { StoredMnemonic.wordList[0] }
@@ -20,7 +20,7 @@ class StoredMnemonicTest {
             assertTrue(case.name, StoredMnemonic.normalize(raw) == expected)
             val result = StoredMnemonic.validate(SecretResult.Found(raw))
             assertTrue(case.name, if (expected == null) result is SecretResult.Unavailable
-                else result is SecretResult.Found && result.value == raw)
+            else result is SecretResult.Found && result.value == raw)
         }
     }
 
@@ -120,5 +120,4 @@ class StoredMnemonicTest {
             }
         }
     }
-
 }

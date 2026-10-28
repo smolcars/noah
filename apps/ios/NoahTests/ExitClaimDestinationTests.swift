@@ -1,8 +1,7 @@
 import BarkBoltFFI
 import Foundation
-import Testing
-
 @testable import Noah
+import Testing
 
 struct ExitClaimDestinationTests {
     @Test func validatesNetworkAndChecksOwnershipWithoutRejectingColdStorage() async throws {
@@ -228,8 +227,8 @@ struct ExitClaimExecutionTests {
         nonisolated func access() -> WalletSession.OnchainClaimAccess {
             .init(walletID: "wallet", network: "regtest", confirmed: { 100_000 }, exits: {
                 [.init(vtxoId: "a", amountSats: 30_000,
-                    state: .claimable(tipHeight: 100, claimableSince: .init(height: 100, hash: "hash"), lastScannedBlock: nil),
-                    isClaimable: true)]
+                       state: .claimable(tipHeight: 100, claimableSince: .init(height: 100, hash: "hash"), lastScannedBlock: nil),
+                       isClaimable: true)]
             }, isMine: { try await self.isMine($0) }, estimate: { _, _ in
                 try await self.estimate()
             }, drain: { await self.drain($0, $1) }, transaction: { _ in ExitClaimExecutionTests.claimTransaction }, broadcast: { await self.broadcast($0) })

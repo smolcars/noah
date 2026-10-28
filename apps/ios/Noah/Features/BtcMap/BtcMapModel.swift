@@ -144,7 +144,7 @@ final class BtcMapModel {
     }
 
     func record(_ viewport: BtcMapViewport, userInteraction: Bool) {
-        guard (canPersist || userInteraction), viewport.isValid else { return }
+        guard canPersist || userInteraction, viewport.isValid else { return }
         canPersist = true
         self.viewport = viewport
         if let data = try? JSONEncoder().encode(viewport) {

@@ -1,6 +1,6 @@
 import Foundation
-import Testing
 @testable import Noah
+import Testing
 
 struct ReceiveFixtureTests {
     struct RequestInput: Decodable {

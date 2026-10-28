@@ -1,8 +1,8 @@
 import BarkBoltFFI
 import Foundation
+@testable import Noah
 import Synchronization
 import Testing
-@testable import Noah
 
 /// Exit and VTXO pages reload when the wallet reports a change (a renew, an exit step, arriving funds),
 /// not at their next minute, and a change that lands during a load isn't dropped.

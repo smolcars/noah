@@ -12,7 +12,6 @@ import androidx.compose.ui.unit.sp
 import androidx.test.core.app.ApplicationProvider
 import com.noahwallet.formatting.BitcoinAmount
 import com.noahwallet.formatting.BitcoinAmountUnit
-import com.noahwallet.onchain.ExitScene.Mark as m
 import org.junit.Assert.*
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -22,6 +21,7 @@ import org.robolectric.annotation.GraphicsMode
 import java.util.Locale
 import kotlin.math.hypot
 import kotlin.math.min
+import com.noahwallet.onchain.ExitScene.Mark as m
 
 /**
  * exit-v2's one rule, swept (exit-v2-notes.md, The picture): in every layout no two drawn elements overlap and none leaves
@@ -94,7 +94,7 @@ class ExitTreeSweepTest {
     }
 
     private fun path(n: Int, mined: Int, current: ExitScene.Mark? = m.waiting, phase: ExitStage.Phase = ExitStage.Phase.bump,
-                     attention: ExitStage.Attention? = null, theirs: Boolean = false, others: List<ExitScene.Other> = emptyList()) = ExitScene(
+        attention: ExitStage.Attention? = null, theirs: Boolean = false, others: List<ExitScene.Other> = emptyList()) = ExitScene(
         n, phase, List(n) { when { it < mined -> m.mined; it == mined -> current ?: m.unsent; else -> m.unsent } },
         heights = List(n) { if (it < mined) 921_346L + it else null }, theirs = List(n) { theirs && it == mined },
         paid = List(n) { it < mined || (it == mined && current == m.waiting) }, shared = List(n) { i -> others.any { i < it.level } },

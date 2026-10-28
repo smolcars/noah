@@ -21,7 +21,7 @@ struct NotificationsPage: View {
                 SettingsStatusHeader(mark: on ? .on("bell") : .failedIcon,
                                      title: L10n.text(on ? "On" : "Off", locale: language),
                                      detail: L10n.text(on ? "Noah can receive and renew while closed."
-                                                       : "Noah can’t receive payments or renew your bitcoin.", locale: language),
+                                         : "Noah can’t receive payments or renew your bitcoin.", locale: language),
                                      failure: !on)
             }
             SettingsGroup {
@@ -94,7 +94,7 @@ struct AdvancedPage: View {
                 row("Ark server", icon: "server.rack", value: URL(string: configuration.arkServer)?.host() ?? configuration.arkServer, page: .arkServer,
                     id: "settings-ark-server")
                 row("Esplora", icon: "link", value: AppVariant.current == .regtest ? "Bitcoin Core"
-                        : esplora.endpoint == nil ? L10n.text("Noah default", locale: language) : L10n.text("Custom", locale: language),
+                    : esplora.endpoint == nil ? L10n.text("Noah default", locale: language) : L10n.text("Custom", locale: language),
                     page: .esplora, last: true, id: "settings-esplora")
             }
             SettingsGroup(label: "Diagnostics") {

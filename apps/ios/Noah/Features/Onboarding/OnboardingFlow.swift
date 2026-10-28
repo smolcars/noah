@@ -65,7 +65,7 @@ struct OnboardingFlow: View {
         _name = State(initialValue: NameAvailability(lookup: NameAvailability.liveLookup(variant: model.variant)))
         let server = model.server
         _email = State(initialValue: EmailVerification(send: { try await server.sendEmail($0) },
-                                                      verify: { try await server.verifyEmail(code: $0, email: $1) }))
+                                                       verify: { try await server.verifyEmail(code: $0, email: $1) }))
     }
 
     var body: some View {

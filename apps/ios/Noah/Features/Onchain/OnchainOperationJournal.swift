@@ -56,7 +56,7 @@ actor OnchainOperationJournal {
             if let txid = attempt.txid, transactionIDs.contains(txid) {
                 if attempt.quote.action == .board, attempt.quote.prepared != nil {
                     var receipt = OnchainReceipt(message: OnchainReceipt.boardingMessage(fee: attempt.quote.chainFee),
-                                                txid: txid, onchainFee: attempt.quote.chainFee)
+                                                 txid: txid, onchainFee: attempt.quote.chainFee)
                     receipt.arkFee = attempt.quote.fee
                     receipt.broadcastRetryPending = true
                     return receipt
@@ -82,7 +82,10 @@ actor OnchainOperationJournal {
                 }
             case .board: resolved = false // No ID means no safe correlation; never match by amount.
             }
-            return resolved ? .init(message: "The selected items have reached a state that resolves this attempt. Review their current status and history before continuing.") : nil
+            return resolved ?
+                .init(
+                    message: "The selected items have reached a state that resolves this attempt. Review their current status and history before continuing.") :
+                nil
         }
     }
     static let shared = OnchainOperationJournal(
@@ -202,7 +205,7 @@ actor OnchainOperationJournal {
     func reconcile(_ id: UUID, evidence: Evidence) throws -> Bool {
         guard !running else { throw OnchainFailure.busy }
         guard let attempt = try loadAll().first(where: { $0.id == id }), attempt.receipt == nil,
-            let receipt = evidence.receipt(for: attempt)
+              let receipt = evidence.receipt(for: attempt)
         else { return false }
         try update(id, receipt: receipt)
         return true
@@ -213,8 +216,8 @@ actor OnchainOperationJournal {
         var changed = false
         for index in attempts.indices {
             guard attempts[index].quote.walletID == walletID, attempts[index].quote.action == .board,
-                var receipt = attempts[index].receipt, receipt.onchainFee == nil,
-                let txid = receipt.txid, let fee = fees[txid] else { continue }
+                  var receipt = attempts[index].receipt, receipt.onchainFee == nil,
+                  let txid = receipt.txid, let fee = fees[txid] else { continue }
             receipt.onchainFee = fee
             receipt.message = OnchainReceipt.boardingMessage(fee: fee)
             attempts[index].receipt = receipt
@@ -226,7 +229,7 @@ actor OnchainOperationJournal {
         guard !running else { throw OnchainFailure.busy }
         var attempts = try loadAll()
         guard let index = attempts.firstIndex(where: { id == nil || $0.id == id }),
-            attempts[index].receipt != nil, attempts[index].receipt?.broadcastRetryPending != true
+              attempts[index].receipt != nil, attempts[index].receipt?.broadcastRetryPending != true
         else { throw OnchainFailure.uncertain }
         if attempts[index].overrideAudit != nil {
             attempts[index].overrideAudit?.acknowledgedAt = Date()
@@ -240,8 +243,8 @@ actor OnchainOperationJournal {
         guard !running else { throw OnchainFailure.busy }
         var attempts = try loadAll()
         guard let index = attempts.firstIndex(where: { $0.id == id }),
-            attempts[index].receipt == nil, attempts[index].overrideAudit == nil,
-            attempts[index].uncertainBoard != true else {
+              attempts[index].receipt == nil, attempts[index].overrideAudit == nil,
+              attempts[index].uncertainBoard != true else {
             throw OnchainFailure.busy
         }
         attempts[index].overrideAudit = .init(overriddenAt: now)

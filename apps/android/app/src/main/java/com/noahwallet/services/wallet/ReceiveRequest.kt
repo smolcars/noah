@@ -1,8 +1,8 @@
 package com.noahwallet.services.wallet
 
 import kotlinx.serialization.Serializable
-import java.net.URLEncoder
 import java.math.BigDecimal
+import java.net.URLEncoder
 
 /** BIP-321: the same address pair survives amount edits. */
 @Serializable

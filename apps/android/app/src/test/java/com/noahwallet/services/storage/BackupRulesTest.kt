@@ -1,10 +1,10 @@
 package com.noahwallet.services.storage
 
-import java.io.File
-import javax.xml.parsers.DocumentBuilderFactory
 import org.junit.Assert.*
 import org.junit.Test
 import org.w3c.dom.Element
+import java.io.File
+import javax.xml.parsers.DocumentBuilderFactory
 
 /** Android cloud backup and device transfer must never copy wallet files, staging included. */
 class BackupRulesTest {

@@ -27,8 +27,7 @@ internal class RecurringWorld(val scope: CoroutineScope, val wallet: FakeSendWal
         quarantine = { if (quarantineRaw == null) quarantineRaw = it })
     init { wallet.owner = SendIdentity("wallet-a", "regtest"); wallet.snapshot = SendSnapshot(walletIdentity = wallet.owner) }
     val sendJournal = TestJournal()
-    val controller = if (reservation == null) controller(wallet, sendJournal, scope) else SendController(SendController.Dependencies(
-        { sendJournal.attempt }, sendJournal::write, recurringReservation = reservation, reservation = reservation), scope)
+    val controller = if (reservation == null) controller(wallet, sendJournal, scope) else SendController(SendController.Dependencies({ sendJournal.attempt }, sendJournal::write, recurringReservation = reservation, reservation = reservation), scope)
     var binding = RecurringStore.Binding(wallet.owner, UUID.randomUUID().toString())
     var allowed = true; var generation: String? = null; var now = 1000L; var zone = TimeZone.getTimeZone("UTC")
     val sentEntries = mutableListOf<List<com.noahwallet.api.generated.models.RecurringPaymentScheduleEntry>>()

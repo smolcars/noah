@@ -14,16 +14,15 @@ enum Fixtures {
     }
 
     static func load<Input: Decodable, Expected: Decodable>(
-        _ name: String, input: Input.Type, expected: Expected.Type
-    ) throws -> [File<Input, Expected>.Case] {
+        _ name: String, input _: Input.Type, expected _: Expected.Type) throws -> [File<Input, Expected>.Case] {
         try decode(name, as: File<Input, Expected>.self).cases
     }
 
     static func decode<Value: Decodable>(_ name: String, as type: Value.Type) throws -> Value {
         let url = URL(fileURLWithPath: #filePath)
-            .deletingLastPathComponent()  // NoahTests
-            .deletingLastPathComponent()  // ios
-            .deletingLastPathComponent()  // apps
+            .deletingLastPathComponent() // NoahTests
+            .deletingLastPathComponent() // ios
+            .deletingLastPathComponent() // apps
             .appending(path: "fixtures/\(name).json")
         let data = try Data(contentsOf: url)
         return try JSONDecoder().decode(type, from: data)

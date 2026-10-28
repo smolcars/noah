@@ -1,8 +1,7 @@
 import BarkBoltFFI
 import Foundation
-import Testing
-
 @testable import Noah
+import Testing
 
 /// Opt-in stages for bark-bolt-ffi 0.6.0 on a dedicated simulator, against a Bark 0.8 stack selected with
 /// NOAH_REGTEST_ARK_URL / NOAH_REGTEST_BITCOIND_URL / NOAH_REGTEST_SERVER_URL. The host funds, pays,
@@ -23,7 +22,7 @@ struct FFI060LiveTests {
             try await session.createNew(mnemonic: mnemonic, runDaemon: false, appVersion: "ffi060-live")
             try seed.save(mnemonic)
             try SettingsStorage.shared.setPersistedState(PersistedWalletState(isInitialized: true),
-                key: PersistedWalletState.key, version: PersistedWalletState.version)
+                                                         key: PersistedWalletState.key, version: PersistedWalletState.version)
             try await write("onchain-address.txt", try await session.receiveRequest().onchainAddress)
             try await write("ark-info.json", try DebugJSON.ark(try await session.withOpenWallet { try await $0.wallet.arkInfo() }))
             try await session.close()
@@ -67,7 +66,7 @@ struct FFI060LiveTests {
         #expect(summary.spendableSats > 0 && summary.spendableSats == UInt64(movement.effectiveBalanceSats))
         #expect(summary.balance.onchain.confirmed >= 200_000)
         try await evidence("receive", ["arkSpendable": summary.spendableSats, "onchainConfirmed": summary.balance.onchain.confirmed,
-                                      "lightningReceiveMovementID": UInt64(movement.id), "lightningReceiveFee": movement.offchainFeeSats])
+                                       "lightningReceiveMovementID": UInt64(movement.id), "lightningReceiveFee": movement.offchainFeeSats])
     }
 
     /// Ark send to a second in-process wallet, which pays part of it back.
@@ -101,8 +100,8 @@ struct FFI060LiveTests {
             return try await history().contains { $0.subsystemName == "bark.arkoor" && $0.subsystemKind == "receive" }
         }
         try await evidence("ark", ["movementID": UInt64(id), "journalMovementID": UInt64(journal.receipt?.movementID ?? 0),
-                                  "peerSendMovementID": UInt64(peerMovement),
-                                  "spendable": try await session.summary()?.spendableSats ?? 0])
+                                   "peerSendMovementID": UInt64(peerMovement),
+                                   "spendable": try await session.summary()?.spendableSats ?? 0])
     }
 
     private func lightningSend() async throws {
@@ -146,8 +145,8 @@ struct FFI060LiveTests {
         }
         controller.acknowledge()
         try await evidence("ln-fail", ["movementID": UInt64(movement.id), "spendableBefore": before.spendableSats,
-                                      "spendableAfter": try await session.summary()?.spendableSats ?? 0,
-                                      "seconds": UInt64(elapsed.components.seconds)])
+                                       "spendableAfter": try await session.summary()?.spendableSats ?? 0,
+                                       "seconds": UInt64(elapsed.components.seconds)])
     }
 
     /// Ark → onchain (sendOnchain): the receipt keeps the returned txid and movement id.
@@ -166,7 +165,7 @@ struct FFI060LiveTests {
         #expect(controller.attempt?.receipt?.amount == 10_000 && controller.attempt?.receipt?.movementID == id)
         try await write("offboard-txid.txt", txid)
         try await evidence("offboard", ["movementID": UInt64(id), "amount": controller.attempt?.receipt?.amount ?? 0,
-                                       "fee": controller.attempt?.receipt?.fee ?? 0])
+                                        "fee": controller.attempt?.receipt?.fee ?? 0])
     }
 
     /// After the host mines a block, the restarted journal resolves by id and txid without resubmitting.
@@ -200,7 +199,7 @@ struct FFI060LiveTests {
         let logs = try await LogFile.shared.checkedLinesForExport()
         #expect(!logs.isEmpty && !logs.contains { $0.contains(info.vtxoXpub) })
         try await evidence("reopen", ["movements": UInt64(after.movementCount), "spendable": after.spendableSats,
-                                     "onchainConfirmed": after.balance.onchain.confirmed])
+                                      "onchainConfirmed": after.balance.onchain.confirmed])
     }
 
     /// In-place upgrade: a wallet funded and used by the bark-bolt-ffi 0.5.0 build opens unchanged.

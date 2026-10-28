@@ -61,7 +61,7 @@ struct OnchainOverview: Sendable {
     var pendingTotal: UInt64
     var claimableHeight: UInt32?
     /// The server's `vtxo_exit_delta`: blocks an exit waits after its last transaction confirms.
-    var exitDelta: UInt32? = nil
+    var exitDelta: UInt32?
     /// Fees this wallet paid for its exits, by fee-child txid.
     var childFees: [String: UInt64] = [:]
     /// What this wallet received, by claim txid (claims to this phone).

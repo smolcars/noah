@@ -65,7 +65,8 @@ class PaymentLinkScreensTest {
         compose.activityRule.scenario.onActivity { activity ->
             ViewModelProvider(activity, object : ViewModelProvider.Factory {
                 override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                    @Suppress("UNCHECKED_CAST") return SendPresentation(model) as T
+                    @Suppress("UNCHECKED_CAST")
+                    return SendPresentation(model) as T
                 }
             })["send-presentation", SendPresentation::class.java]
             activity.setContent { NoahTheme { SendScreen(app) {} } }

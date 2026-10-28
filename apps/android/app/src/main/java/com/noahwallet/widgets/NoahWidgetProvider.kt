@@ -11,11 +11,11 @@ import com.noahwallet.R
 import com.noahwallet.localization.L10n
 import com.noahwallet.services.logging.AppLog
 import com.noahwallet.services.logging.SafeErrorDescription
-import java.text.NumberFormat
-import java.util.Locale
 import kotlinx.coroutines.*
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import java.text.NumberFormat
+import java.util.Locale
 
 open class NoahWidgetProvider : AppWidgetProvider() {
 
@@ -169,29 +169,25 @@ open class NoahWidgetProvider : AppWidgetProvider() {
         }
     }
 
-    private fun formatSats(value: Long): String {
-        return numberFormatter.format(value)
-    }
+    private fun formatSats(value: Long): String = numberFormatter.format(value)
 
-    private fun formatSatsCompact(value: Long): String {
-        return when {
-            value >= 1_000_000 -> {
-                val millions = value / 1_000_000.0
-                String.format(Locale.US, "%.1fM", millions)
-            }
-
-            value >= 100_000 -> {
-                val thousands = value / 1_000.0
-                String.format(Locale.US, "%.0fK", thousands)
-            }
-
-            value >= 10_000 -> {
-                val thousands = value / 1_000.0
-                String.format(Locale.US, "%.1fK", thousands)
-            }
-
-            else -> formatSats(value)
+    private fun formatSatsCompact(value: Long): String = when {
+        value >= 1_000_000 -> {
+            val millions = value / 1_000_000.0
+            String.format(Locale.US, "%.1fM", millions)
         }
+
+        value >= 100_000 -> {
+            val thousands = value / 1_000.0
+            String.format(Locale.US, "%.0fK", thousands)
+        }
+
+        value >= 10_000 -> {
+            val thousands = value / 1_000.0
+            String.format(Locale.US, "%.1fK", thousands)
+        }
+
+        else -> formatSats(value)
     }
 
     override fun onEnabled(context: Context) {

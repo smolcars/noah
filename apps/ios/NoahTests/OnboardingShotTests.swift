@@ -1,8 +1,8 @@
 import Foundation
+@testable import Noah
 import SwiftUI
 import Testing
 import UIKit
-@testable import Noah
 
 /// Opt-in screenshot fixtures for every onboarding state, including ones the
 /// simulator can't reach (it never denies notifications). Write a state name
@@ -157,8 +157,10 @@ struct OnboardingShotTests {
         case "restore-error":
             return AnyView(ShotHost { layout in
                 RestoreBinding(draft: RestoreDraft()) { binding in
-                    RestoreWalletScreen(layout: layout, draft: binding,
-                                        issue: RestoreIssue(message: "No backup was found for this recovery phrase. Check the words and make sure this wallet had backups enabled."),
+                    RestoreWalletScreen(layout: layout,
+                                        draft: binding,
+                                        issue: RestoreIssue(
+                                            message: "No backup was found for this recovery phrase. Check the words and make sure this wallet had backups enabled."),
                                         haptics: haptics, onPaste: { _, _ in }, onRestore: {}, onBack: {})
                 }
             })

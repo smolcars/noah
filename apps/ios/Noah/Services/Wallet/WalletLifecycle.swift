@@ -37,7 +37,7 @@ struct WalletLifecycle: Sendable {
         var deregister: @Sendable () async throws -> Void
         var settleBackground: @Sendable (Duration) async throws -> Void = { _ in }
         var walletChanged: @Sendable () async -> Void = { await SendPaymentController.shared.reloadForWalletChange() }
-        var persistAutomationStop: (@Sendable (String) throws -> Void)? = nil
+        var persistAutomationStop: (@Sendable (String) throws -> Void)?
     }
 
     static let automationStopKey = "native-recurring-automation-stop-generation"
@@ -83,8 +83,7 @@ struct WalletLifecycle: Sendable {
 
     /// Called by launch and push recovery while RestoreRecovery owns the mutation gate.
     func recoverRestoreAndDeletionLocked(
-        recoverRestore: @Sendable () async throws -> RestoreTransaction.Recovery
-    ) async throws -> RestoreTransaction.Recovery {
+        recoverRestore: @Sendable () async throws -> RestoreTransaction.Recovery) async throws -> RestoreTransaction.Recovery {
         // Deletion refuses a restore journal, and restore refuses a deletion marker.
         // Coexistence proves the marker is stale, even if its seed tag matches.
         // Drop it durably before restore removes its journal: a crash after rollback

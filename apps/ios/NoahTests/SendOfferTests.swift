@@ -1,8 +1,7 @@
 import BarkBoltFFI
 import Foundation
-import Testing
-
 @testable import Noah
+import Testing
 
 /// BOLT12 offers that fix their amount (ffi-phase-b.md row 12): Bark's parser supplies the amount, the quote enforces it.
 @MainActor struct SendOfferTests {
@@ -150,8 +149,8 @@ import Testing
             mnemonic, datadir, _, _, create in
             let onchain = try await OnchainWallet.default(network: .regtest, mnemonic: mnemonic, config: config, datadir: datadir)
             let wallet = try await Wallet.openWithOnchain(network: .regtest, mnemonicOrSeed: mnemonic, config: config,
-                args: WalletOpenArgs(runDaemon: false, datadir: datadir, createIfNotExists: create,
-                    createWithoutServer: true, skipRecovery: true), onchain: onchain)
+                                                          args: WalletOpenArgs(runDaemon: false, datadir: datadir, createIfNotExists: create,
+                                                                               createWithoutServer: true, skipRecovery: true), onchain: onchain)
             return .init(wallet: wallet, onchain: onchain)
         }
         try await session.createNew(mnemonic: try generateMnemonic(), runDaemon: false, appVersion: "test")

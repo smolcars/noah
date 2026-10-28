@@ -24,12 +24,14 @@ extension RecurringExecutor.Dependencies {
                          guard location.databaseExists else { throw RecurringExecutor.NoWallet() }
                          guard !location.restorePending, !FileManager.default.fileExists(atPath: location.deletionMarker.path),
                                settings.persistedState(PersistedWalletState.self, key: PersistedWalletState.key)?.isInitialized != false,
-                               settings.persistedState(PersistedWalletState.self, key: PersistedWalletState.key)?.isWalletSuspended != true else { throw AppServices.WalletSuspended() }
+                               settings.persistedState(PersistedWalletState.self, key: PersistedWalletState.key)?.isWalletSuspended != true
+                         else { throw AppServices.WalletSuspended() }
                      },
                      quote: { try await RecurringRecipient.quote($0, session: services.session) },
                      automationGeneration: { settings.string(forKey: WalletLifecycle.automationStopKey) },
                      sync: { entries in
-                         guard settings.persistedState(PersistedServerState.self, key: PersistedServerState.key)?.isRegisteredWithServer == true else { throw RecurringError.message("Register this wallet before syncing recurring payments.") }
+                         guard settings.persistedState(PersistedServerState.self, key: PersistedServerState.key)?.isRegisteredWithServer == true
+                         else { throw RecurringError.message("Register this wallet before syncing recurring payments.") }
                          _ = try await services.client.syncRecurringPayments(body: .json(.init(schedules: entries))).ok
                      },
                      notifications: { await RecurringNotifications.refresh($0, result: $1) },
@@ -66,7 +68,11 @@ enum RecurringRecipient {
             let route = try await SendRecipientService.resolve(recipient.destination, session: session)
             payment = try lnurlPayment(payment, route: route)
         }
-        payment.repeatMetadata = try SendPayment.metadata(destination: schedule.destination, comment: schedule.comment, amount: String(schedule.amountSat), fiatCurrency: nil)
+        payment.repeatMetadata = try SendPayment.metadata(
+            destination: schedule.destination,
+            comment: schedule.comment,
+            amount: String(schedule.amountSat),
+            fiatCurrency: nil)
         let quote = try await session.quoteSend(payment)
         let fees = payment.method == "ark" ? nil : await lightningFees {
             try await session.withOpenWallet { try await $0.wallet.arkInfo()?.feeSchedule.lightningSend }
@@ -90,7 +96,6 @@ enum RecurringRecipient {
         AppLog("recurring").d(#"ArkInfo unavailable; using the published Lightning fee schedule"#)
         return RecurringFeePolicy.fallback
     }
-
 }
 
 /// iOS uses the same server wake + foreground execution and local reminder policy as RN.
@@ -105,13 +110,21 @@ enum RecurringNotifications {
             let amount = BitcoinAmount.format(sats: Int64(clamping: result.amountSat), unit: unit, locale: Locale(identifier: locale))
             if result.status == "needs_approval" {
                 content.title = L10n.text("Recurring payment needs approval", locale: locale)
-                content.body = L10n.text("Automatic payment to {recipient} was skipped. Open the schedule to review its fee and pay manually.", result.label, locale: locale)
+                content.body = L10n.text(
+                    "Automatic payment to {recipient} was skipped. Open the schedule to review its fee and pay manually.",
+                    result.label,
+                    locale: locale)
             } else if result.status == "needs_attention" {
                 content.title = L10n.text("Recurring payment needs your attention", locale: locale)
                 content.body = L10n.text("A payment to {recipient} was interrupted. Check your history, then resume it.", result.label, locale: locale)
             } else if result.runs.first?.status == "failed" {
                 content.title = L10n.text("Recurring payment will retry", locale: locale)
-                content.body = L10n.text("{amount} to {recipient} could not be sent yet: {error}", amount, result.label, result.issue?.message(locale: locale) ?? L10n.text(result.lastError ?? "unknown error", locale: locale), locale: locale)
+                content.body = L10n.text(
+                    "{amount} to {recipient} could not be sent yet: {error}",
+                    amount,
+                    result.label,
+                    result.issue?.message(locale: locale) ?? L10n.text(result.lastError ?? "unknown error", locale: locale),
+                    locale: locale)
             } else {
                 content.title = L10n.text("Recurring payment sent", locale: locale)
                 content.body = L10n.text("{amount} sent to {recipient}.", amount, result.label, locale: locale)
@@ -139,7 +152,7 @@ enum RecurringNotifications {
             guard let due = schedule.nextRunAt else { continue }
             for (suffix, at) in [
                 ("reminder", due - 86_400_000),
-                ("overdue", due + 7_200_000)
+                ("overdue", due + 7_200_000),
             ] where at > RecurringPayment.now {
                 let content = UNMutableNotificationContent()
                 let unit = SettingsStorage.shared.persistedState(PersistedProfileState.self, key: PersistedProfileState.key)?.amountUnit ?? .bip177
@@ -167,9 +180,10 @@ enum RecurringFeePolicy {
     static let fallback = LightningSendFees(minFeeSats: 20, baseFeeSats: 0, ppmExpiryTable: [
         .init(expiryBlocksThreshold: 0, ppm: 2000),
         .init(expiryBlocksThreshold: 1008, ppm: 4000),
-        .init(expiryBlocksThreshold: 2016, ppm: 5000)
+        .init(expiryBlocksThreshold: 2016, ppm: 5000),
     ])
-    enum Reason: String { case withinCap = "within_cap", quoteExceedsCap = "quote_exceeds_cap", scheduleExceedsCap = "schedule_exceeds_cap", arkFee = "ark_fee" }
+    enum Reason: String { case withinCap = "within_cap", quoteExceedsCap = "quote_exceeds_cap", scheduleExceedsCap = "schedule_exceeds_cap", arkFee = "ark_fee"
+    }
     struct Decision {
         let worstCaseFee: UInt64?
         let cap: UInt64?

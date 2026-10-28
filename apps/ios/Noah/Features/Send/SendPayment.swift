@@ -63,7 +63,8 @@ struct SendReceipt: Codable, Equatable, Sendable {
     enum Status: String, Codable, Sendable { case submitted, confirmed, unlocated, conflicted }
     var isUnresolved: Bool { status == .unlocated || status == .conflicted }
     var conflictDescription: String? {
-        confirmedConflictTxid.map { "This transaction cannot confirm on the current chain: a confirmed different transaction (\($0)) spends one of its inputs." }
+        confirmedConflictTxid
+            .map { "This transaction cannot confirm on the current chain: a confirmed different transaction (\($0)) spends one of its inputs." }
     }
     var amountDescription: String {
         amountIsPending == true ? "Recipient amount pending" : "\(amountIsEstimated == true ? "About " : "")\(amount) sats"
@@ -176,7 +177,7 @@ struct SendLightningProgress: Codable, Equatable, Sendable {
         var withReservation: @Sendable (@escaping @MainActor @Sendable () async -> Void) async throws -> Void = { await $0() }
         var auditOverride: (SendOverrideAudit) throws -> Void = { _ in }
         var withRecurringReservation: (@Sendable (@escaping @MainActor @Sendable () async -> Void) async throws -> Void)?
-        var recurringEvidence: ((Attempt, Int, Int, State, String?) throws -> Void)? = nil
+        var recurringEvidence: ((Attempt, Int, Int, State, String?) throws -> Void)?
         var guardedPay: (@Sendable (SendPayment, SendQuote, SendSnapshot, @escaping @Sendable () throws -> Void) async throws -> SendReceipt)?
     }
     enum Resolution: Sendable, Equatable {
@@ -249,11 +250,12 @@ struct SendLightningProgress: Codable, Equatable, Sendable {
                 }
                 let old = saved.safetyVersion != 3
                 let unsafeReceipt = saved.receipt.map { old || !$0.isProven(for: saved.payment, knownHash: saved.paymentHash) } ?? false
-                let unsafeAlreadyPaid = saved.alreadyPaid.map { old || !$0.isProven(for: saved.payment, knownHash: saved.paymentHash, alreadyPaid: true) } ?? false
+                let unsafeAlreadyPaid = saved.alreadyPaid
+                    .map { old || !$0.isProven(for: saved.payment, knownHash: saved.paymentHash, alreadyPaid: true) } ?? false
                 if old || unsafeReceipt || unsafeAlreadyPaid {
                     // v1 and early v2 could fabricate receipts. Their txids are evidence, never identity.
                     let txids = [unsafeReceipt ? saved.receipt?.txid : nil,
-                                 unsafeAlreadyPaid ? saved.alreadyPaid?.txid : nil].compactMap { $0 }
+                                 unsafeAlreadyPaid ? saved.alreadyPaid?.txid : nil].compactMap(\.self)
                     if !txids.isEmpty {
                         saved.possibleTxids = Array(Set((saved.possibleTxids ?? []) + txids)).sorted()
                     }
@@ -288,14 +290,13 @@ struct SendLightningProgress: Codable, Equatable, Sendable {
         recurringEvidenceDurable = false
         message = nil
         // This task belongs to the controller, not a sheet's cancellable .task.
-        let generation = self.generation
+        let generation = generation
         task = Task {
             let reserve = recurringKey == nil ? dependencies.withReservation : (dependencies.withRecurringReservation ?? dependencies.withReservation)
             do { try await reserve {
                 guard generation == self.generation else { return }
                 await self.performSubmit(payment, quote: quote, generation: generation, recurringKey: recurringKey, beforeSubmit: beforeSubmit)
-            } }
-            catch {
+            } } catch {
                 if generation == self.generation {
                     await dependencies.discard(quote)
                     state = .ready
@@ -313,7 +314,8 @@ struct SendLightningProgress: Codable, Equatable, Sendable {
         await submission?.value
     }
     func releaseRecurring(attemptID: UUID?, expectedGeneration: Int, expectedWalletGeneration: Int, retainReceipt: Bool) {
-        if generation == expectedGeneration, walletGeneration == expectedWalletGeneration, let attemptID, attempt?.recurringAttemptID == attemptID, !retainReceipt { acknowledge() }
+        if generation == expectedGeneration, walletGeneration == expectedWalletGeneration, let attemptID, attempt?.recurringAttemptID == attemptID,
+           !retainReceipt { acknowledge() }
     }
     private func performSubmit(_ payment: SendPayment, quote: SendQuote, generation: Int,
                                recurringKey: String?, beforeSubmit: (@Sendable () throws -> Void)?) async {
@@ -323,14 +325,28 @@ struct SendLightningProgress: Codable, Equatable, Sendable {
             let identity = try dependencies.identity?()
             // Lightning inspection errors must survive restart without granting permission to pay.
             if ["lightning", "lnurl"].contains(payment.method) {
-                let pending = Attempt(recurringAttemptID: recurringAttemptID, recurringOccurrenceKey: recurringKey, walletIdentity: identity, inspectionPending: true, payment: payment, snapshot: .init(movementIDs: []), quote: quote)
+                let pending = Attempt(
+                    recurringAttemptID: recurringAttemptID,
+                    recurringOccurrenceKey: recurringKey,
+                    walletIdentity: identity,
+                    inspectionPending: true,
+                    payment: payment,
+                    snapshot: .init(movementIDs: []),
+                    quote: quote)
                 try dependencies.write(pending)
                 attempt = pending
             }
             let snapshot = try await dependencies.prepare(payment, quote)
             guard generation == self.generation else { return }
-            let pending = Attempt(recurringAttemptID: recurringAttemptID, recurringOccurrenceKey: recurringKey, walletIdentity: identity, broadcastingTxid: quote.prepared?.txid, payment: payment, snapshot: snapshot,
-                                  paymentHash: PaymentEncoding.invoice(snapshot.resolvedInvoice ?? (payment.method == "lightning" ? payment.destination : ""))?.hash, quote: quote)
+            let pending = Attempt(
+                recurringAttemptID: recurringAttemptID,
+                recurringOccurrenceKey: recurringKey,
+                walletIdentity: identity,
+                broadcastingTxid: quote.prepared?.txid,
+                payment: payment,
+                snapshot: snapshot,
+                paymentHash: PaymentEncoding.invoice(snapshot.resolvedInvoice ?? (payment.method == "lightning" ? payment.destination : ""))?.hash,
+                quote: quote)
             try dependencies.write(pending)
             attempt = pending
         } catch {
@@ -380,18 +396,17 @@ struct SendLightningProgress: Codable, Equatable, Sendable {
         if state == .storageBlocked { loadAttempt(attempt); return }
         guard let attempt else { return }
         guard state == .uncertain || attempt.receipt?.txid != nil else { return }
-        let generation = self.generation
+        let generation = generation
         checking = true
         defer { if generation == self.generation { checking = false } }
         do { try await dependencies.withReservation {
             guard generation == self.generation else { return }
             await self.reconcileCurrentAttempt()
-        } }
-        catch { if generation == self.generation { message = "Couldn't check the latest status. Showing the last known status." } }
+        } } catch { if generation == self.generation { message = "Couldn't check the latest status. Showing the last known status." } }
     }
     private func reconcileCurrentAttempt() async {
         guard let attempt else { return }
-        let generation = self.generation
+        let generation = generation
         do {
             let resolution = try await dependencies.reconcile(attempt)
             guard generation == self.generation else { return }
@@ -464,18 +479,18 @@ struct SendLightningProgress: Codable, Equatable, Sendable {
         return false
     }
     var overrideWarning: String {
-        [attempt?.receipt?.conflictDescription, SendOverrideAudit.warningText].compactMap { $0 }.joined(separator: "\n\n")
+        [attempt?.receipt?.conflictDescription, SendOverrideAudit.warningText].compactMap(\.self).joined(separator: "\n\n")
     }
     func startNewPaymentAfterHistoryCheck(confirmed: Bool, confirmationText: String = SendOverrideAudit.confirmationText, warningText: String? = nil) {
         guard confirmed, canOverride else { return }
         let evidence = attempt ?? unboundJournal
         do {
             try dependencies.auditOverride(.init(txid: evidence?.receipt?.txid ?? evidence?.alreadyPaid?.txid ?? evidence?.broadcastingTxid,
-                                                walletIdentity: evidence?.walletIdentity,
-                                                ownershipUnverified: evidence?.walletIdentity == nil,
-                                                candidates: evidence?.candidates, possibleTxids: evidence?.possibleTxids,
-                                                warning: warningText ?? overrideWarning, confirmation: confirmationText,
-                                                statusMessage: message))
+                                                 walletIdentity: evidence?.walletIdentity,
+                                                 ownershipUnverified: evidence?.walletIdentity == nil,
+                                                 candidates: evidence?.candidates, possibleTxids: evidence?.possibleTxids,
+                                                 warning: warningText ?? overrideWarning, confirmation: confirmationText,
+                                                 statusMessage: message))
         } catch {
             message = "Unable to save the override confirmation. Sending remains locked."
             return

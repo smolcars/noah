@@ -1,7 +1,7 @@
 import BarkBoltFFI
 import Foundation
-import Testing
 @testable import Noah
+import Testing
 
 /// activity.md "Data": the shared mapping changes Home and Activity both read.
 struct ActivityMappingTests {

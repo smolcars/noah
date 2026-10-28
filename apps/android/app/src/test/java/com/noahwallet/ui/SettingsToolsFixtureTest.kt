@@ -1,13 +1,13 @@
 package com.noahwallet.ui
 
 import com.noahwallet.fixtures.SharedFixtures
-import com.noahwallet.ui.settings.*
 import com.noahwallet.services.wallet.DebugJSON
+import com.noahwallet.ui.settings.*
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.*
-import java.util.Date
 import org.junit.Assert.*
 import org.junit.Test
+import java.util.Date
 
 class SettingsToolsFixtureTest {
     @Test fun sharedToolsParity() = runBlocking {

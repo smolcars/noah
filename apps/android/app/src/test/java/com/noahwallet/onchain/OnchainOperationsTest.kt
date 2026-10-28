@@ -1,12 +1,12 @@
 package com.noahwallet.onchain
 
 import io.github.niteshbalusu11.bark.*
-import java.io.File
-import java.nio.file.Files
 import kotlinx.coroutines.*
 import kotlinx.coroutines.sync.withLock
 import org.junit.Assert.*
 import org.junit.Test
+import java.io.File
+import java.nio.file.Files
 
 class OnchainOperationsTest {
     @Test fun orphanBoardWithoutCheckpointLocalTransactionOrNetworkEvidenceAllowsExplicitOverride() = runBlocking { fixture { wallet, ops, journal, _ ->
@@ -1020,7 +1020,7 @@ class OnchainOperationsTest {
     }
     @Test fun typedPreparationFailuresCreateNoAttemptAndNotAttemptedAllowsFreshReview() = runBlocking { fixture { wallet, ops, journal, _ ->
         for (code in listOf(BarkErrorCode.BELOW_MINIMUM_BOARD_AMOUNT, BarkErrorCode.TOO_MANY_INPUTS,
-                BarkErrorCode.PREPARED_INPUTS_UNAVAILABLE, BarkErrorCode.UNSUPPORTED_OPERATION)) {
+            BarkErrorCode.PREPARED_INPUTS_UNAVAILABLE, BarkErrorCode.UNSUPPORTED_OPERATION)) {
             wallet.prepareError = BarkError("never display native diagnostics", code)
             val failure = runCatching { ops.quote(OnchainAction.board, amount = 30_000) }.exceptionOrNull() as OnchainException
             assertEquals(boardFailure(wallet.prepareError!!), failure.reason)
@@ -1215,5 +1215,4 @@ class OnchainOperationsTest {
         assertTrue(all.all { it.amount == 30_000L && it.timeline.first().state == "Start" })
         assertEquals(all, OnchainOperations(wallet, OnchainOperationJournal(OnchainFile(File(wallet.attemptFile.parentFile, "reopened")) {})).overview(24u).exits)
     } }
-
 }

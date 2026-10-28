@@ -1,7 +1,7 @@
 import BarkBoltFFI
 import Foundation
-import Testing
 @testable import Noah
+import Testing
 
 struct ReceiveCompletionTests {
     let request = ReceiveRequest(arkAddress: "ark-current", onchainAddress: "chain", amountSat: 500,
@@ -38,9 +38,15 @@ struct ReceiveCompletionTests {
         for status in ["pending", "successful", "failed", "canceled"] {
             #expect(ReceiveCompletion.matching(movement(subsystem: "bark.lightning_receive", status: status, hash: "old"), request: request) == nil)
         }
-        #expect(ReceiveCompletion.matching(movement(subsystem: "bark.lightning_receive", hash: "current-hash"), request: request) == .received(500, rail: .lightning))
-        #expect(ReceiveCompletion.matching(movement(subsystem: "bark.lightning_receive", status: "failed", hash: "current-hash"), request: request) == .lightningFailed(canceled: false))
-        #expect(ReceiveCompletion.matching(movement(subsystem: "bark.lightning_receive", status: "canceled", hash: "current-hash"), request: request) == .lightningFailed(canceled: true))
+        #expect(ReceiveCompletion.matching(movement(subsystem: "bark.lightning_receive", hash: "current-hash"), request: request) == .received(
+            500,
+            rail: .lightning))
+        #expect(ReceiveCompletion
+            .matching(movement(subsystem: "bark.lightning_receive", status: "failed", hash: "current-hash"), request: request) ==
+            .lightningFailed(canceled: false))
+        #expect(ReceiveCompletion
+            .matching(movement(subsystem: "bark.lightning_receive", status: "canceled", hash: "current-hash"), request: request) ==
+            .lightningFailed(canceled: true))
     }
 
     @Test func closedAndReservedSessionsRejectReceiveOperations() async throws {

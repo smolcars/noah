@@ -1,6 +1,6 @@
 import Foundation
-import Testing
 @testable import Noah
+import Testing
 
 /// Home asks for a backup until the user confirms one. Only a restore counts
 /// as backed up; RN and earlier native builds never recorded an acknowledgement.

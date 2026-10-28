@@ -2,6 +2,7 @@ package com.noahwallet.services.logging
 
 import android.content.Context
 import android.util.Log
+import kotlinx.coroutines.suspendCancellableCoroutine
 import java.io.File
 import java.text.Normalizer
 import java.text.SimpleDateFormat
@@ -11,7 +12,6 @@ import java.util.Locale
 import java.util.concurrent.CompletableFuture
 import java.util.concurrent.Executor
 import java.util.concurrent.Executors
-import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlin.coroutines.resume
 
 /** Never pass secrets. Redaction is a backstop for accidental mnemonic-shaped text. */
@@ -179,9 +179,7 @@ class LogFile(
         }
 
         /** Uncertain decoding and oversized messages have no telemetry admission path. */
-        internal fun redactForTelemetry(message: String): String? {
-            return redactForTelemetry(message, EndpointLogPrivacy::sanitize)
-        }
+        internal fun redactForTelemetry(message: String): String? = redactForTelemetry(message, EndpointLogPrivacy::sanitize)
 
         internal fun redactForTelemetry(message: String, endpointPrivacy: (String) -> String?): String? {
             if (message.toByteArray(Charsets.UTF_8).size > maxMessageBytes) return null
@@ -246,8 +244,7 @@ class LogFile(
             val joined = parts.joinToString(" ")
             if (joined.toByteArray(Charsets.UTF_8).size > maxMessageBytes) return true
             val views = decodedViews(joined) ?: return true
-            fun normalized(text: String) = detectionSkeleton(
-                Normalizer.normalize(text, Normalizer.Form.NFKD).lowercase(Locale.ROOT).replace("ß", "ss"))
+            fun normalized(text: String) = detectionSkeleton(Normalizer.normalize(text, Normalizer.Form.NFKD).lowercase(Locale.ROOT).replace("ß", "ss"))
             if (views.any { containsMnemonic(normalized(it)) }) return true
             // Individually mnemonic-only leaves can be interspersed with structural metadata.
             var count = 0

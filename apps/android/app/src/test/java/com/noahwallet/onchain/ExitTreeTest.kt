@@ -8,7 +8,7 @@ import com.noahwallet.onchain.ExitScene.Mark as m
 /** exit-v2-notes.md: the tree's geometry, its label column, the list's gutters, the counts and the motion's rest poses. */
 class ExitTreeTest {
     private fun scene(vararg marks: ExitScene.Mark, heights: List<Long?> = marks.mapIndexed { i, mark -> if (mark == m.mined) 921_346L + i else null },
-                      phase: ExitStage.Phase = ExitStage.Phase.bump) = ExitScene(marks.size, phase, marks.toList(), heights)
+        phase: ExitStage.Phase = ExitStage.Phase.bump) = ExitScene(marks.size, phase, marks.toList(), heights)
     private fun geometry(n: Int, width: Float = 412f, height: Float = 300f, scale: Float = 1f) = TreeGeometry(width, height, n, scale, wide = false)
     private fun place(items: List<TreeLabels.Item>, scale: Float = 1f) =
         TreeLabels.place(items, 14 * scale, scale, 4f, 1_000f, { it.copy(top = 0f) }) { a, b -> if (a == b) "Block $a" else "Blocks $a–$b" }

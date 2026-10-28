@@ -14,6 +14,10 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.filters.SdkSuppress
 import androidx.test.platform.app.InstrumentationRegistry
 import com.noahwallet.services.storage.*
+import kotlinx.coroutines.runBlocking
+import org.junit.Assert.*
+import org.junit.Test
+import org.junit.runner.RunWith
 import java.io.File
 import java.security.KeyStore
 import java.util.UUID
@@ -21,10 +25,6 @@ import javax.crypto.Cipher
 import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
 import javax.crypto.SecretKeyFactory
-import kotlinx.coroutines.runBlocking
-import org.junit.Assert.*
-import org.junit.Test
-import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
 class AndroidStorageTest {
@@ -138,7 +138,8 @@ class AndroidStorageTest {
 
     /** On a real filesystem the settings stamp works: unchanged reads never open the file; a same-size replacement is read. */
     @SdkSuppress(minSdkVersion = 28) // StrictMode's violation listener
-    @Test fun settingsReadsComeFromMemoryUntilTheFileIsReplaced() {
+    @Test
+    fun settingsReadsComeFromMemoryUntilTheFileIsReplaced() {
         val root = File(context.cacheDir, "settings-cache-${UUID.randomUUID()}").apply { check(mkdir()) }
         val isolated = object : ContextWrapper(context) {
             override fun getFilesDir() = root

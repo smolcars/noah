@@ -1,7 +1,6 @@
 import Foundation
-import Testing
-
 @testable import Noah
+import Testing
 
 struct ServerAuthTests {
     /// Unsigned test token with the given expiry.

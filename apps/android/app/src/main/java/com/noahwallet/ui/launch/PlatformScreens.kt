@@ -1,8 +1,5 @@
 package com.noahwallet.ui.launch
 
-import com.noahwallet.ui.WalletAlertDialog
-
-import com.noahwallet.localization.tr
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
@@ -14,13 +11,15 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
-import androidx.lifecycle.repeatOnLifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
-import com.noahwallet.services.push.UnifiedPushRegistration
+import androidx.lifecycle.repeatOnLifecycle
+import com.noahwallet.localization.tr
 import com.noahwallet.services.push.PushWork
+import com.noahwallet.services.push.UnifiedPushRegistration
 import com.noahwallet.services.server.value
 import com.noahwallet.services.storage.PersistedWalletState
 import com.noahwallet.ui.*
+import com.noahwallet.ui.WalletAlertDialog
 import kotlinx.coroutines.*
 
 /** The launch gate's notifications screen: the onboarding Notifications step, frozen in its required state. */

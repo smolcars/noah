@@ -39,8 +39,8 @@ enum WalletDatabase {
         }
         defer { sqlite3_finalize(statement) }
         guard sqlite3_step(statement) == SQLITE_ROW,
-            let network = sqlite3_column_text(statement, 0),
-            let fingerprint = sqlite3_column_text(statement, 1)
+              let network = sqlite3_column_text(statement, 0),
+              let fingerprint = sqlite3_column_text(statement, 1)
         else {
             throw .notABarkWallet
         }

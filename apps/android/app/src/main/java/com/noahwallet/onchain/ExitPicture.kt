@@ -51,6 +51,7 @@ import com.noahwallet.ui.onboarding.LocalPose
 import com.noahwallet.ui.onboarding.LocalReduceMotion
 import com.noahwallet.ui.onboarding.OnboardingPose
 import com.noahwallet.ui.send.StageArt
+import kotlinx.coroutines.flow.first
 import kotlin.math.PI
 import kotlin.math.cos
 import kotlin.math.max
@@ -58,7 +59,6 @@ import kotlin.math.min
 import kotlin.math.pow
 import kotlin.math.roundToInt
 import kotlin.math.sin
-import kotlinx.coroutines.flow.first
 
 /**
  * The exit picture (exit-v2-notes.md, The picture): your branch of the round's tree standing on a "Bitcoin" ground line,
@@ -70,7 +70,7 @@ import kotlinx.coroutines.flow.first
  */
 @Composable
 internal fun ExitPicture(scene: ExitScene, description: String, modifier: Modifier = Modifier, money: (Long) -> String = { it.toString() },
-                         balance: Long? = null, received: Long? = null) {
+    balance: Long? = null, received: Long? = null) {
     val palette = LocalPalette.current
     val reduceMotion = LocalReduceMotion.current
     val density = LocalDensity.current
@@ -185,7 +185,7 @@ private object TreeIcons {
 
 /** A branch link: onboarding's S-curve, handles at the middle; drawn from [u0] to [u1] of its length (prototype `link`). */
 internal fun DrawScope.treeLink(p: Offset, c: Offset, u0: Float, u1: Float, color: Color, width: Float, alpha: Float, dash: FloatArray? = null,
-                                horizontal: Boolean = false) {
+    horizontal: Boolean = false) {
     if (u1 <= u0 || alpha <= 0f) return
     fun at(u: Float) = linkAt(p.x, p.y, c.x, c.y, u, horizontal).let { (x, y) -> Offset(x, y) }
     val path = Path().apply { for (i in 0..20) { val q = at(u0 + (u1 - u0) * i / 20); if (i == 0) moveTo(q.x, q.y) else lineTo(q.x, q.y) } }
@@ -250,7 +250,7 @@ private fun DrawScope.text(layout: TextLayoutResult, x: Float, y: Float, color: 
  * Ink square: in a block, filled from the bottom as it's mined, settling from 1.22×, with one ripple.
  */
 private fun DrawScope.txNode(at: Offset, z: Float, mark: ExitScene.Mark, send: Float, mine: Float, stamp: Float, ripple: Float, alpha: Float,
-                             pop: Float, grey: Boolean, outline: Boolean, palette: NoahTokens.Palette, ready: Boolean = false) {
+    pop: Float, grey: Boolean, outline: Boolean, palette: NoahTokens.Palette, ready: Boolean = false) {
     if (alpha <= 0f) return
     val a = clamp(alpha)
     if (mine > 0f) {
@@ -281,7 +281,7 @@ private fun DrawScope.txNode(at: Offset, z: Float, mark: ExitScene.Mark, send: F
 }
 
 private fun DrawScope.drawTree(f: TreeFrame, palette: NoahTokens.Palette, measurer: TextMeasurer, styles: TreeStyles, layout: TreeLayout,
-                               before: TreeLayout?, stay: Set<String>) {
+    before: TreeLayout?, stay: Set<String>) {
     val geo = f.geo; val m = f.move; val s = m.to; val t = f.t; val n = s.n; val k = geo.scale
     val tx = geo.trunk; val gY = geo.ground; val rS = geo.block; val yC = geo.coinY; val rC = geo.coinR
     val wx = geo.walletX; val wy = geo.walletY; val w = geo.width
@@ -597,7 +597,7 @@ private fun Pulses(frame: () -> TreeFrame, breath: Breath, palette: NoahTokens.P
  */
 @Composable
 private fun Pill(item: TreeLabels.Item, layout: TreeLayout, measurer: TextMeasurer, styles: TreeStyles, measure: TreeMeasure, frame: () -> TreeFrame,
-                 breath: Breath, palette: NoahTokens.Palette, fixed: Float?, move: TreeMotion) {
+    breath: Breath, palette: NoahTokens.Palette, fixed: Float?, move: TreeMotion) {
     val geo = layout.geo
     val pill = checkNotNull(item.pill)
     val (l, t, r, b) = TreeLayout.pill(item, geo, measure)

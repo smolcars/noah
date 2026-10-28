@@ -1,6 +1,6 @@
 import Foundation
-import Testing
 @testable import Noah
+import Testing
 
 struct WalletScreenParityTests {
     struct Selection: Decodable {
@@ -13,7 +13,8 @@ struct WalletScreenParityTests {
         for item in try Fixtures.load("wallet-selection", input: Selection.self, expected: Selected.self) {
             let rows = item.input.vtxos.map { row in
                 VtxoModel(id: row.id, amount: row.amount, expiry: 200, state: "Spendable", kind: "Pubkey", exitDepth: 1,
-                    exitWeight: 400, registered: true, serverPubkey: "public", exitDelta: 144, anchorPoint: "anchor:0", point: "point:0", expiring: false, tip: 100)
+                          exitWeight: 400, registered: true, serverPubkey: "public", exitDelta: 144, anchorPoint: "anchor:0", point: "point:0", expiring: false,
+                          tip: 100)
             }
             let selected = OnchainDisplay.currentSelection(rows, ids: item.input.ids)
             #expect(selected.map(\.id) == item.expected.ids, "\(item.name)")
@@ -41,7 +42,10 @@ struct WalletScreenParityTests {
         payment.amountSat = 1234
         #expect(payment.formattedAmount(unit: .bip177, locale: Locale(identifier: "en_US")) == "₿\u{00A0}1,234")
         #expect(payment.formattedAmount(unit: .sats, locale: Locale(identifier: "en_US")) == "1,234 sats")
-        #expect(payment.formattedAmount(unit: .bip177, locale: Locale(identifier: "sv_SE")) == BitcoinAmount.format(sats: 1234, unit: .bip177, locale: Locale(identifier: "sv_SE")))
+        #expect(payment.formattedAmount(unit: .bip177, locale: Locale(identifier: "sv_SE")) == BitcoinAmount.format(
+            sats: 1234,
+            unit: .bip177,
+            locale: Locale(identifier: "sv_SE")))
         payment.amountSat = UInt64.max
         #expect(payment.formattedAmount(unit: .bip177, locale: Locale(identifier: "en_US")) == "₿\u{00A0}18,446,744,073,709,551,615")
         #expect(payment.amountSat == UInt64.max)

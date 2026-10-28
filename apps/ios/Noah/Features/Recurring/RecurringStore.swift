@@ -6,8 +6,8 @@ final class RecurringStore: @unchecked Sendable {
     static let key = "recurring-payment-storage"
     // createRecurringPayment in client/src/lib/recurringSchedule.ts (retryNotBefore is optional).
     private static let requiredRNFields = ["id", "label", "destination", "destinationType", "amountSat", "comment",
-        "interval", "startAt", "endAt", "maxOccurrences", "status", "nextOccurrenceIndex", "nextRunAt",
-        "occurrencesPaid", "consecutiveFailures", "lastError", "inFlight", "runs", "createdAt", "updatedAt"]
+                                           "interval", "startAt", "endAt", "maxOccurrences", "status", "nextOccurrenceIndex", "nextRunAt",
+                                           "occurrencesPaid", "consecutiveFailures", "lastError", "inFlight", "runs", "createdAt", "updatedAt"]
     struct Binding: Codable, Equatable, Sendable {
         var wallet: SendWalletIdentity
         var instance: UUID
@@ -24,9 +24,15 @@ final class RecurringStore: @unchecked Sendable {
     private var policyLedger: RecurringPolicyLedger?
     private var automation: RecurringAutomationAuthority?
     private var policyBinding: (@Sendable () throws -> Binding)?
-    func protectPolicies(file: URL, sync: @escaping @Sendable (URL) throws -> Void = RestoreTransaction.fullSync, binding: @escaping @Sendable () throws -> Binding) {
+    func protectPolicies(
+        file: URL,
+        sync: @escaping @Sendable (URL) throws -> Void = RestoreTransaction.fullSync,
+        binding: @escaping @Sendable () throws -> Binding) {
         lock.withLock {
-            if policyLedger == nil { policyLedger = RecurringPolicyLedger(file: file, sync: sync); policyBinding = binding; automation = RecurringAutomationAuthority(directory: file.deletingLastPathComponent(), sync: sync) }
+            if policyLedger ==
+                nil { policyLedger = RecurringPolicyLedger(file: file, sync: sync); policyBinding = binding; automation = RecurringAutomationAuthority(
+                directory: file.deletingLastPathComponent(),
+                sync: sync) }
         }
     }
     private func protected(_ state: State, automationOverlay: Bool = true) -> State {
@@ -98,10 +104,12 @@ final class RecurringStore: @unchecked Sendable {
             let fields = (try? JSONSerialization.jsonObject(with: Data(raw.utf8))) as? [String: Any]
             // Display only: the original row remains authoritative and is never encoded from this placeholder.
             schedule = decoded ?? RecurringPayment(id: id, label: fields?["label"] as? String ?? "Saved recurring payment",
-                destination: fields?["destination"] as? String ?? "", destinationType: fields?["destinationType"] as? String ?? "",
-                amountSat: (try? RawObject(raw)).flatMap { $0.fields["amountSat"] }
-                    .flatMap { UInt64($0.trimmingCharacters(in: .whitespacesAndNewlines)) } ?? 0, comment: fields?["comment"] as? String ?? "",
-                interval: .init(unit: "month", every: 1), startAt: 0, createdAt: 0, updatedAt: 0)
+                                                   destination: fields?["destination"] as? String ?? "",
+                                                   destinationType: fields?["destinationType"] as? String ?? "",
+                                                   amountSat: (try? RawObject(raw)).flatMap { $0.fields["amountSat"] }
+                                                       .flatMap { UInt64($0.trimmingCharacters(in: .whitespacesAndNewlines)) } ?? 0,
+                                                   comment: fields?["comment"] as? String ?? "",
+                                                   interval: .init(unit: "month", every: 1), startAt: 0, createdAt: 0, updatedAt: 0)
             schedule.id = id
             schedule.unsupportedStorage = true
             schedule.status = "needs_attention"
@@ -157,7 +165,7 @@ final class RecurringStore: @unchecked Sendable {
             guard !writeFailed else { throw RecurringError.message("Recurring payment storage failed. Restart Noah; sending is stopped.") }
             let state = try RawObject(envelope().fields["state"]!)
             let rows = try RawObject(state.fields["schedules"]!)
-            let schedules = Dictionary(uniqueKeysWithValues: rows.fields.map { (id, raw) in (id, Self.payment(id: id, raw: raw, migrateIssue: migrateIssue)) })
+            let schedules = Dictionary(uniqueKeysWithValues: rows.fields.map { id, raw in (id, Self.payment(id: id, raw: raw, migrateIssue: migrateIssue)) })
             let binding = try state.fields["nativeWalletBinding"].map {
                 try JSONDecoder().decode(Binding.self, from: Data($0.utf8))
             }
@@ -181,7 +189,9 @@ final class RecurringStore: @unchecked Sendable {
             for row in pending {
                 var value = try RawObject(rows.fields[row.id]!)
                 let encoded = try RawObject(String(decoding: JSONEncoder().encode(row), as: UTF8.self))
-                for key in ["endAt", "maxOccurrences", "nextRunAt", "lastError", "issue", "retryNotBefore", "inFlight", "nativeRevision"] { value.fields[key] = "null" }
+                for key in ["endAt", "maxOccurrences", "nextRunAt", "lastError", "issue", "retryNotBefore", "inFlight", "nativeRevision"] {
+                    value.fields[key] = "null"
+                }
                 value.fields.merge(encoded.fields) { _, new in new }
                 rows.fields[row.id] = try value.json()
             }
@@ -203,7 +213,11 @@ final class RecurringStore: @unchecked Sendable {
             return try policyLedger?.applied(binding: state.binding ?? policyBinding!(), schedules: state.schedules, id: id, token: token) == true
         }
     }
-    private func change(policyID: String? = nil, reapproval: Bool = false, settlementKey: String? = nil, _ mutate: (inout [String: String]) throws -> Void) throws {
+    private func change(
+        policyID: String? = nil,
+        reapproval: Bool = false,
+        settlementKey: String? = nil,
+        _ mutate: (inout [String: String]) throws -> Void) throws {
         try lock.withLock {
             try recoverSettlements()
             let before = try rawState()
@@ -213,8 +227,14 @@ final class RecurringStore: @unchecked Sendable {
             envelope.fields["state"] = try state.json()
             let raw = try envelope.json()
             let fields = try RawObject(state.fields["schedules"]!)
-            let after = Dictionary(uniqueKeysWithValues: fields.fields.map { (id, raw) in (id, Self.payment(id: id, raw: raw)) })
-            try policyLedger?.commit(binding: before.binding ?? policyBinding!(), before: before.schedules, after: after, policyID: policyID, reapproval: reapproval, settlementKey: settlementKey)
+            let after = Dictionary(uniqueKeysWithValues: fields.fields.map { id, raw in (id, Self.payment(id: id, raw: raw)) })
+            try policyLedger?.commit(
+                binding: before.binding ?? policyBinding!(),
+                before: before.schedules,
+                after: after,
+                policyID: policyID,
+                reapproval: reapproval,
+                settlementKey: settlementKey)
             do { try write(raw) }
             catch { writeFailed = true; throw error }
             if settlementKey != nil { try policyLedger?.finish(binding: before.binding ?? policyBinding!(), schedules: after) }
@@ -237,7 +257,9 @@ final class RecurringStore: @unchecked Sendable {
             // Merge known fields, retaining unknown RN/native fields and their original JSON tokens.
             var value = try RawObject(previous ?? "{}")
             let fields = try RawObject(String(decoding: JSONEncoder().encode(schedule), as: UTF8.self))
-            for key in ["endAt", "maxOccurrences", "nextRunAt", "lastError", "issue", "retryNotBefore", "inFlight", "nativeRevision"] { value.fields[key] = "null" }
+            for key in ["endAt", "maxOccurrences", "nextRunAt", "lastError", "issue", "retryNotBefore", "inFlight", "nativeRevision"] {
+                value.fields[key] = "null"
+            }
             value.fields.merge(fields.fields) { _, new in new }
             schedules.fields[schedule.id] = try value.json()
             state["schedules"] = try schedules.json()
@@ -265,12 +287,14 @@ final class RecurringStore: @unchecked Sendable {
     /// A restore replaces the datadir, including this backup-excluded token. Even a same-seed
     /// restore cannot inherit approval to spend from the previous local wallet instance.
     static func binding(location: WalletDataLocation) throws -> Binding {
-        guard !location.restorePending, !FileManager.default.fileExists(atPath: location.deletionMarker.path) else { throw WalletSession.OpenError.restorePending }
+        guard !location.restorePending,
+              !FileManager.default.fileExists(atPath: location.deletionMarker.path) else { throw WalletSession.OpenError.restorePending }
         let properties = try WalletDatabase.properties(at: location.database)
         let file = location.directory.appending(path: ".noah-recurring-instance")
         let id: UUID
         if FileManager.default.fileExists(atPath: file.path) {
-            guard let saved = UUID(uuidString: try String(contentsOf: file, encoding: .utf8)) else { throw RecurringError.message("Recurring wallet identity couldn't be read. Sending is stopped.") }
+            guard let saved = UUID(uuidString: try String(contentsOf: file, encoding: .utf8))
+            else { throw RecurringError.message("Recurring wallet identity couldn't be read. Sending is stopped.") }
             id = saved
         } else {
             id = UUID()

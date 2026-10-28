@@ -4,11 +4,11 @@ import com.noahwallet.services.logging.*
 import io.sentry.*
 import io.sentry.protocol.Message
 import io.sentry.protocol.SentryException
-import java.nio.file.Files
-import java.util.concurrent.Executor
 import kotlinx.serialization.json.*
 import org.junit.Assert.*
 import org.junit.Test
+import java.nio.file.Files
+import java.util.concurrent.Executor
 
 class EndpointPrivacyRound10Test {
     @Test fun reorderedAccentsCannotExposeEndpointTokens() {

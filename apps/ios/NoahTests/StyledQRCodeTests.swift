@@ -1,9 +1,9 @@
-import SwiftUI
-import Testing
 import CoreImage
 import CoreML
-import Vision
 @testable import Noah
+import SwiftUI
+import Testing
+import Vision
 
 /// The styled QR (dot modules, rounded eyes, logo hole) must still decode.
 @MainActor

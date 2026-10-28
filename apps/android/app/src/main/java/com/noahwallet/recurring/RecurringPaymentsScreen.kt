@@ -172,7 +172,7 @@ private fun EmptyRecurring(enabled: Boolean, create: () -> Unit) {
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun ScheduleScreen(app: AppModel, nav: SettingsNav, id: String, executor: RecurringExecutor = RecurringRuntime.shared(LocalContext.current).executor,
-                            approve: suspend (RecurringExecutor.Review) -> Unit = RecurringRuntime.shared(LocalContext.current).let { runtime -> { runtime.executeInForeground(manual = true, approval = it) } }) {
+    approve: suspend (RecurringExecutor.Review) -> Unit = RecurringRuntime.shared(LocalContext.current).let { runtime -> { runtime.executeInForeground(manual = true, approval = it) } }) {
     val palette = LocalPalette.current
     val context = LocalContext.current
     val haptics = rememberHaptics()
@@ -283,7 +283,7 @@ internal fun ScheduleScreen(app: AppModel, nav: SettingsNav, id: String, executo
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ApprovalSheet(app: AppModel, item: RecurringExecutor.Review, controller: SendController, close: () -> Unit, reload: () -> Unit,
-                          pay: (finished: () -> Unit) -> Unit, done: () -> Unit) {
+    pay: (finished: () -> Unit) -> Unit, done: () -> Unit) {
     val presentation = remember(item) { SendPresentation(SendModel(controller, BuildConfig.APP_VARIANT,
         app.session::resolveSendRecipient, app.session::quoteSend, app.session::discardSend)) }
     val refund = rememberSendProgress(presentation, app.session::movements)

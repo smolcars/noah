@@ -27,5 +27,4 @@ enum MMKVIntegrity {
         }
         return digest == u32(meta, 0)
     }
-
 }

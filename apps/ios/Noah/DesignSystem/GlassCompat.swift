@@ -49,7 +49,7 @@ struct GlassGroup<Content: View>: View {
 
 extension View {
     /// Apply after sizing and padding.
-    func glassCompat<S: Shape>(in shape: S, interactive: Bool = false, tint: Color? = nil) -> some View {
+    func glassCompat(in shape: some Shape, interactive: Bool = false, tint: Color? = nil) -> some View {
         modifier(GlassCompat(shape: shape, interactive: interactive, tint: tint))
     }
 

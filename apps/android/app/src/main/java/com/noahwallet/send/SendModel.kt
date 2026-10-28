@@ -46,7 +46,7 @@ class SendModel(val controller: SendController, private val network: String,
     var showReview by mutableStateOf(false)
     val isMax get() = progress.entry == "max"
     val sats: Long get() = if (isMax) SendFlow.maxBalance(source, onchainBalance, arkBalance)
-        else if (useFiat) btcPrice?.let { FiatCurrency.fiatToSats(amount.toDoubleOrNull() ?: Double.NaN, it) } ?: 0 else amount.toLongOrNull() ?: 0
+    else if (useFiat) btcPrice?.let { FiatCurrency.fiatToSats(amount.toDoubleOrNull() ?: Double.NaN, it) } ?: 0 else amount.toLongOrNull() ?: 0
     val matchingRoute get() = route?.takeIf { parsed.destinationType == "lnurl" && it.destination == SendDestination.cleaned(destination).lowercase() }
     val rails get() = if (parsed.destinationType == "lnurl" && matchingRoute?.arkAddress != null && comment.isEmpty()) listOf(SendRail.ark, SendRail.lightning) else SendFlow.rails(parsed.destinationType, parsed.bip321)
     val availability: Map<String, Boolean> get() {

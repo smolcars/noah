@@ -1,9 +1,9 @@
 import BarkBoltFFI
 import Foundation
+@testable import Noah
 import SwiftUI
 import Testing
 import UIKit
-@testable import Noah
 
 /// activity.md "Detail": the status line, the rows that apply and the Share receipt.
 @MainActor
@@ -292,7 +292,7 @@ struct ActivityDetailTests {
         chain.txHex = "0200000000010" + String(repeating: "f", count: 40)
         let onchain = ActivityDetail.receipt(chain, ownDomain: Self.own, unit: .bip177, locale: english, date: "Oct 16")
         #expect(onchain.contains("Transaction ID: \(Self.txid)") && onchain.contains("Via: On-chain")
-                && onchain.contains("To: bcrt1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh"))
+            && onchain.contains("To: bcrt1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh"))
         #expect(!onchain.contains("0200000000010"), "never the raw transaction")
         #expect(!onchain.contains("movement-8") && !onchain.contains("{"), "never Details or metadata")
 
@@ -331,7 +331,7 @@ struct ActivityDetailReadsTests {
         return row
     }
 
-    @Test func aLateReadNeverLandsOnTheNextSelection() async throws {
+    @Test func aLateReadNeverLandsOnTheNextSelection() async {
         let gate = Gate()
         let slow = String(repeating: "aa", count: 32), fast = String(repeating: "bb", count: 32)
         let history = HistoryModel(dependencies: .init(
@@ -361,7 +361,7 @@ struct ActivityDetailReadsTests {
     }
 
     /// A cancelled read writes nothing even when the selection didn't change.
-    @Test func aCancelledReadWritesNothing() async throws {
+    @Test func aCancelledReadWritesNothing() async {
         let gate = Gate()
         let slow = String(repeating: "cc", count: 32)
         let history = HistoryModel(dependencies: .init(
@@ -420,8 +420,8 @@ struct ActivitySharePlacementTests {
 @MainActor
 struct ActivityCoinReadTests {
     nonisolated static let coin = VtxoModel(id: "c:0", amount: 1_906, expiry: 1_317, state: "Spent", kind: "Arkoor", exitDepth: 1,
-                                exitWeight: 500, registered: true, serverPubkey: "02", exitDelta: 144, anchorPoint: "a:0",
-                                point: "c:0", expiring: false, tip: 900)
+                                            exitWeight: 500, registered: true, serverPubkey: "02", exitDelta: 144, anchorPoint: "a:0",
+                                            point: "c:0", expiring: false, tip: 900)
 
     static func history(_ coin: @escaping @Sendable (String) async throws -> VtxoModel?) -> HistoryModel {
         HistoryModel(dependencies: .init(load: { [] }, sync: {}, changes: { AsyncThrowingStream { $0.finish() } },

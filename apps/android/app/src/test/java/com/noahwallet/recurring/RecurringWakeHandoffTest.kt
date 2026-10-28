@@ -43,7 +43,8 @@ class RecurringWakeHandoffTest(private val outcome: String) {
         }
     }
     companion object {
-        @JvmStatic @Parameterized.Parameters(name = "{0}")
+        @JvmStatic
+        @Parameterized.Parameters(name = "{0}")
         fun cases() = listOf("revoked", "expired", "settled", "ambiguous")
     }
 }

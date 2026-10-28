@@ -28,7 +28,7 @@ class AutoBoardFunding(private val read: () -> String?, private val write: (Stri
     }
     /** [kept]: outpoints claimed to this phone from exits, per wallet; auto-board never moves their value. */
     private data class State(val handled: Map<String, Set<String>>, val retryAfter: Map<String, Long> = emptyMap(),
-                             val kept: Map<String, Set<String>> = emptyMap())
+        val kept: Map<String, Set<String>> = emptyMap())
     private fun load(): State {
         val root = read()?.let { Json.parseToJsonElement(it).jsonObject } ?: return State(emptyMap())
         val handled = root["handled"]?.jsonObject ?: root // Original outpoint-only ledger.

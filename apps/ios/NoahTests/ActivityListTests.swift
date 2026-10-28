@@ -1,8 +1,8 @@
 import Foundation
+@testable import Noah
+import SwiftUI
 import Testing
 import UIKit
-import SwiftUI
-@testable import Noah
 
 /// activity.md "List" and "Export": grouping, search, the filter, CSV rows, hidden amounts and
 /// the "new" dot shared with Home.

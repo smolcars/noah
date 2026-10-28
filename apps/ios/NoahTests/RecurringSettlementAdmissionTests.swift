@@ -1,6 +1,6 @@
 import Foundation
-import Testing
 @testable import Noah
+import Testing
 
 @MainActor struct RecurringSettlementAdmissionTests {
     @Test func doneBeforeReservationReturnStillRecordsPaidOccurrence() async throws {
@@ -55,7 +55,7 @@ import Testing
             h.beforePay = { throw SendNotSubmitted(reason: .recurringStopped) }
             let (payment, quote, _) = h.quoted(schedule, fees: RecurringFeePolicy.fallback)
             await h.controller.submitAndWait(payment, quote: quote,
-                recurringKey: change == "sameKeyReplacement" ? key : "another-occurrence", beforeSubmit: {})
+                                             recurringKey: change == "sameKeyReplacement" ? key : "another-occurrence", beforeSubmit: {})
         } else if change == "reload" { h.controller.reloadForWalletChange() }
         else if change == "foreignReload" {
             h.owner.withLock { $0.instance = UUID() }
@@ -133,9 +133,9 @@ import Testing
         }
         let owner = h.owner, clock = h.clock
         let executor = RecurringExecutor(dependencies: .init(store: h.store, journal: h.journal,
-            controller: h.controller, ensureOpen: {}, binding: { owner.withLock { $0 } }, allowed: {},
-            quote: { schedule in await h.quoted(schedule, fees: RecurringFeePolicy.fallback) },
-            now: { clock.withLock { $0 } }, mutation: gate))
+                                                             controller: h.controller, ensureOpen: {}, binding: { owner.withLock { $0 } }, allowed: {},
+                                                             quote: { schedule in await h.quoted(schedule, fees: RecurringFeePolicy.fallback) },
+                                                             now: { clock.withLock { $0 } }, mutation: gate))
         let review = attended ? try await executor.review(schedule.id) : nil
         let run = Task { await executor.execute(manual: true, approval: review) }
         while await gate.waitingCount == 0 { await Task.yield() }

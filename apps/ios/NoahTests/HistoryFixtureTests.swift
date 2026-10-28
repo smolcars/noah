@@ -1,7 +1,7 @@
 import BarkBoltFFI
 import Foundation
-import Testing
 @testable import Noah
+import Testing
 
 struct HistoryFixtureTests {
     /// Fixtures retain RN field names; only this test adapter knows the Nitro
@@ -99,7 +99,7 @@ struct HistoryFixtureTests {
             case .null: try c.encodeNil()
             }
         }
-        static func value<T: Encodable>(_ value: T) throws -> Self {
+        static func value(_ value: some Encodable) throws -> Self {
             try JSONDecoder().decode(Self.self, from: JSONEncoder().encode(value))
         }
         func decode<T: Decodable>(_ type: T.Type) throws -> T {
@@ -117,10 +117,17 @@ struct HistoryFixtureTests {
             case "csv": result = try .value(HistoryCSV(transactions: #require(input.transactions), currency: #require(input.currency)).content)
             case "date": result = try .value(HistoryRules.parseDate(#require(input.date)).map { Int64(($0.timeIntervalSince1970 * 1000).rounded()) })
             case "metadata": result = try .value(HistoryMetadata.parse(#require(input.metadataJson)))
-            case "transactionID": result = try .value(HistoryMapping.transactionID(#require(input.movement).sdk, metadata: #require(input.metadata).decode(HistoryMetadata.self), outgoing: #require((input.outgoing))))
+            case "transactionID": result = try .value(HistoryMapping.transactionID(
+                    #require(input.movement).sdk,
+                    metadata: #require(input.metadata).decode(HistoryMetadata.self),
+                    outgoing: #require(input.outgoing)))
             case "boardAmount": result = try .value(HistoryMapping.boardAmount(#require(input.movement).sdk))
             case "resolveRepeat":
-                result = try .value(RepeatPayment.resolve(metadata: input.metadata?.decode(RepeatPayment.self), destination: input.destination, paymentMethod: input.paymentMethod, amountSat: #require(input.amountSat)))
+                result = try .value(RepeatPayment.resolve(
+                    metadata: input.metadata?.decode(RepeatPayment.self),
+                    destination: input.destination,
+                    paymentMethod: input.paymentMethod,
+                    amountSat: #require(input.amountSat)))
             case "prefill": result = try .value(#require(input.details).prefill(preferredCurrency: #require(input.currency)))
             case "canRepeat": result = try .value(#require(input.transaction).canRepeat)
             case "presentation":
@@ -137,7 +144,11 @@ struct HistoryFixtureTests {
                 result = try .object(["included": .value(chain.balanceChangeSats != 0), "transaction": .value(HistoryMapping.transaction(chain))])
             case "repeatRoute": result = try .value(RepeatPayment.usesDirectArkRoute(method: #require(input.routeMethod), comment: input.comment))
             case "newMovement":
-                result = try .value(RepeatPayment.newArkoorMovementID(existing: Set(#require(input.existingMovementIds)), movements: #require(input.rawMovements).map(\.sdk), destination: #require(input.destination), amountSat: #require(input.amountSat)))
+                result = try .value(RepeatPayment.newArkoorMovementID(
+                    existing: Set(#require(input.existingMovementIds)),
+                    movements: #require(input.rawMovements).map(\.sdk),
+                    destination: #require(input.destination),
+                    amountSat: #require(input.amountSat)))
             case "sort": result = try .value(#require(input.transactions).sorted(by: HistoryRules.precedes).map(\.id))
             default: Issue.record("Unknown fixture operation: \(input.operation)"); continue
             }

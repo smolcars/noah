@@ -37,7 +37,7 @@ class SendLightningRetryTest {
         var checkpoint: LightningSend? = null
         var onPay: Bark.() -> Unit = {}
         val state: LightningSendStatus get() = if (paid) LightningSendStatus.Paid(hash, "proof")
-            else checkpoint?.let { LightningSendStatus.InProgress(it) } ?: LightningSendStatus.Unknown
+        else checkpoint?.let { LightningSendStatus.InProgress(it) } ?: LightningSendStatus.Unknown
         val movements get() = listOfNotNull(movement)
         override suspend fun prepare(payment: SendPayment, quote: SendQuote) =
             SendSnapshot(movements.map { it.id }.toSet(), walletIdentity = owner, invoicePaid = paid)

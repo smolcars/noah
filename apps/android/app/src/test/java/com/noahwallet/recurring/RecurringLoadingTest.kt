@@ -117,5 +117,4 @@ class RecurringLoadingTest {
             } finally { release.countDown(); run.await() }
         }
     }
-
 }

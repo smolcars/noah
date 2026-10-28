@@ -1,6 +1,6 @@
 import Foundation
-import Testing
 @testable import Noah
+import Testing
 
 @MainActor struct RecurringReapprovalTests {
     @Test(arguments: [false, true]) func explicitResumeAndEditRetainConsumption(edit: Bool) async throws {
@@ -20,7 +20,12 @@ import Testing
         #expect(approved.nativeRevision != original.nativeRevision)
         #expect(approved.status == "active")
         let entry = try #require(h.journal.load()[original.id])
-        #expect(try h.journal.consumed(binding: entry.binding, scheduleID: original.id, at: entry.plan.scheduledFor!, policyRevision: entry.policyRevision, occurrenceIndex: entry.plan.occurrenceIndex!))
+        #expect(try h.journal.consumed(
+            binding: entry.binding,
+            scheduleID: original.id,
+            at: entry.plan.scheduledFor!,
+            policyRevision: entry.policyRevision,
+            occurrenceIndex: entry.plan.occurrenceIndex!))
         await h.executor.execute(manual: true)
         #expect(h.calls.withLock { $0 } == 1)
     }

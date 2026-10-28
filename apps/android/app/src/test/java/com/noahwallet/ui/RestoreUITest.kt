@@ -1,17 +1,17 @@
 package com.noahwallet.ui
 
+import com.noahwallet.fixtures.SharedFixtures
 import com.noahwallet.services.backup.*
 import com.noahwallet.services.launch.LaunchState
-import com.noahwallet.services.server.value
 import com.noahwallet.services.server.ServerFailure
+import com.noahwallet.services.server.value
 import com.noahwallet.services.storage.PersistedWalletState
 import com.noahwallet.services.wallet.WalletSession
-import com.noahwallet.fixtures.SharedFixtures
-import java.io.IOException
 import kotlinx.coroutines.*
 import kotlinx.serialization.json.*
 import org.junit.Assert.*
 import org.junit.Test
+import java.io.IOException
 
 class RecoveryPhraseInputTest {
     private val phrase = List(11) { "abandon" }.plus("about").joinToString(" ")

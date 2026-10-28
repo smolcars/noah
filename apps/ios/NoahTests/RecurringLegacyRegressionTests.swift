@@ -1,6 +1,6 @@
 import Foundation
-import Testing
 @testable import Noah
+import Testing
 
 @MainActor struct RecurringLegacyRegressionTests {
     @Test func legacyUncertaintyMustStayStoppedAfterOverride() async throws {
@@ -8,7 +8,7 @@ import Testing
         defer { try? FileManager.default.removeItem(at: h.directory) }
         try h.store.bind(h.owner.withLock { $0 })
         let failed = RecurringJournal.Entry(binding: h.owner.withLock { $0 }, scheduleID: schedule.id,
-            plan: schedule.plan(now: h.now), markedAt: h.now, resolved: true, consumed: false)
+                                            plan: schedule.plan(now: h.now), markedAt: h.now, resolved: true, consumed: false)
         try JSONEncoder().encode([schedule.id: failed]).write(to: h.journal.file)
         await h.executor.execute()
         #expect(try h.store.load().schedules[schedule.id]?.status == "needs_attention")
@@ -18,7 +18,6 @@ import Testing
         #expect(h.calls.withLock { $0 } == 0)
     }
 
-
     @Test(arguments: ["resume", "edit", "override"])
     func legacyUncertaintyRejectsChangesBeforeDuePlanning(action: String) async throws {
         let h = try RecurringExecutorTests.Harness(); var schedule = try h.add()
@@ -26,7 +25,7 @@ import Testing
         let owner = h.owner.withLock { $0 }
         try h.store.bind(owner)
         let failed = RecurringJournal.Entry(binding: owner, scheduleID: schedule.id,
-            plan: schedule.plan(now: h.now), markedAt: h.now, resolved: true, consumed: false)
+                                            plan: schedule.plan(now: h.now), markedAt: h.now, resolved: true, consumed: false)
         try JSONEncoder().encode([schedule.id: failed]).write(to: h.journal.file)
         // A future or paused policy has no due plan, but its legacy history is still uncertain.
         schedule.startAt = h.now + 86_400_000; schedule.nextRunAt = schedule.startAt; schedule.status = action == "override" ? "needs_attention" : "paused"

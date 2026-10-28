@@ -49,7 +49,9 @@ struct BtcMapView: View {
                     .accessibilityIdentifier("map-place-pane")
                 }
             }
-            .onChange(of: AdaptiveLayout.expanded(width: geometry.size.width, minimumPaneWidth: minimumPaneWidth), initial: true) { _, expanded in wideLayout = expanded }
+            .onChange(of: AdaptiveLayout.expanded(width: geometry.size.width, minimumPaneWidth: minimumPaneWidth), initial: true) { _, expanded in
+                wideLayout = expanded
+            }
             .sheet(item: Binding(get: { wideLayout ? nil : model.selected }, set: { if !wideLayout { model.selected = $0 } })) { place in
                 BtcMapDetailView(place: place, location: model.userLocation, repository: model.repository) { model.selected = nil }
                     .presentationDetents([.height(390), .large])
@@ -67,7 +69,9 @@ struct BtcMapView: View {
                         placeFromList = place
                         showPlaces = false
                     } label: {
-                        Label { Text("\(place.name), \(L10n.text(place.category.label, locale: locale.identifier))") } icon: { Image(systemName: place.category.symbol) }
+                        Label { Text("\(place.name), \(L10n.text(place.category.label, locale: locale.identifier))") } icon: {
+                            Image(systemName: place.category.symbol)
+                        }
                     }
                 }
                 .overlay { if places.isEmpty { ContentUnavailableView("No places in view", systemImage: "mappin.slash") } }
@@ -114,7 +118,10 @@ struct BtcMapView: View {
         VStack(spacing: 10) {
             HStack(spacing: 10) {
                 Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
-                TextField("Search places or cities", text: Binding(get: { model.query }, set: { model.updateQuery($0) }), prompt: Text("Search places or cities").foregroundStyle(NoahColor.mutedForeground))
+                TextField(
+                    "Search places or cities",
+                    text: Binding(get: { model.query }, set: { model.updateQuery($0) }),
+                    prompt: Text("Search places or cities").foregroundStyle(NoahColor.mutedForeground))
                     .focused($searchFocused).autocorrectionDisabled().submitLabel(.search)
                     .onSubmit {
                         if let city = model.cities.first { model.select(city); searchFocused = false }
@@ -205,7 +212,8 @@ struct BtcMapView: View {
                             Button { model.select(place) } label: {
                                 VStack(alignment: .leading, spacing: 6) {
                                     Text(place.name).font(NoahFont.headline).lineLimit(1)
-                                    Text("\(L10n.text(place.category.label, locale: locale.identifier)) · \(BtcMapDistance.format(BtcMapDistance.kilometers(from: location, to: place.center), locale: locale))")
+                                    Text(
+                                        "\(L10n.text(place.category.label, locale: locale.identifier)) · \(BtcMapDistance.format(BtcMapDistance.kilometers(from: location, to: place.center), locale: locale))")
                                         .font(NoahFont.footnote).foregroundStyle(.secondary)
                                 }
                                 .frame(width: 220, alignment: .leading).padding(14)

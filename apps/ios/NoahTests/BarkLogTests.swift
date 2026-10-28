@@ -1,9 +1,8 @@
 import BarkBoltFFI
 import Foundation
+@testable import Noah
 import Sentry
 import Testing
-
-@testable import Noah
 
 struct BarkLogTests {
     @Test func customEndpointPathsAreRemovedAtSDKAppAndTelemetryBoundaries() {
@@ -84,7 +83,7 @@ struct BarkLogTests {
         #expect(lines.last?.hasSuffix("[dropped 19 log records]") == true)
     }
 
-    @Test func workerCallbacksAreSerializedAndRedacted() throws {
+    @Test func workerCallbacksAreSerializedAndRedacted() {
         let directory = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
         defer { try? FileManager.default.removeItem(at: directory) }
         let file = LogFile(directory: directory)

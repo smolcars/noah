@@ -1,8 +1,8 @@
 import Foundation
+@testable import Noah
 import SwiftUI
 import Testing
 import UIKit
-@testable import Noah
 
 /// Opt-in screenshot fixtures for Home: the real tab shell and Home with fake
 /// history, balance and status (no wallet, server writes or recovery phrase).

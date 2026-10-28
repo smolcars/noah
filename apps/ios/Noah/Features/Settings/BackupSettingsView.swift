@@ -61,7 +61,9 @@ struct BackupSettingsView: View {
                 .disabled(busy)
             }
             if let error { SettingsFine(text: L10n.text(error, locale: language), failure: true) }
-            SettingsFine(text: L10n.text("Encrypted with your recovery phrase before it leaves this phone. To restore, enter your recovery phrase when you set up Noah on a phone.", locale: language))
+            SettingsFine(text: L10n.text(
+                "Encrypted with your recovery phrase before it leaves this phone. To restore, enter your recovery phrase when you set up Noah on a phone.",
+                locale: language))
         }
         .settingsChrome("Backup")
         .onboardingHaptics(haptics)
@@ -123,7 +125,7 @@ struct BackupSettingsView: View {
 
     // MARK: Backups
 
-    @ViewBuilder private var list: some View {
+    private var list: some View {
         VStack(spacing: 0) {
             if let backups {
                 if backups.isEmpty {

@@ -60,5 +60,4 @@ internal class MMKVUpgradeBackup(private val root: File, private val id: String,
         check(lines.size == 2 && lines[0] in listOf("0", "1"))
         return lines[1].toLong().also { check(it in 0..0xffffffffL) }
     }
-
 }

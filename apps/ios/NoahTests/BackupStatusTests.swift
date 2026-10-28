@@ -1,6 +1,6 @@
 import Foundation
-import Testing
 @testable import Noah
+import Testing
 
 /// Backup's status mark and the root row's value, from today's backup state.
 struct BackupStatusTests {

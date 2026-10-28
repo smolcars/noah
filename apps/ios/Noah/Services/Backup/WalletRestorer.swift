@@ -85,8 +85,7 @@ struct WalletRestorer: Sendable {
     /// Settles a restore interrupted by a crash. Run at launch before the
     /// launch state is read.
     static func recoverInterruptedRestore(
-        session: WalletSession, location: WalletDataLocation, seed: any SecretItem
-    ) async throws -> RestoreTransaction.Recovery {
+        session: WalletSession, location: WalletDataLocation, seed: any SecretItem) async throws -> RestoreTransaction.Recovery {
         // Without a journal there is nothing to swap: drop abandoned plaintext
         // without reserving, so a launch opening the wallet right after its own
         // recovery never finds the session busy. A journal only appears under a
@@ -117,8 +116,7 @@ struct WalletRestorer: Sendable {
     }
 
     private func restore(
-        mnemonic: String, holding reservation: WalletSession.Reservation, progress: @Sendable (Step) -> Void
-    ) async throws -> Outcome {
+        mnemonic: String, holding reservation: WalletSession.Reservation, progress: @Sendable (Step) -> Void) async throws -> Outcome {
         let transaction = RestoreTransaction(location: location)
         if try transaction.recover(seed: seed) == .waitingForKeychain { throw Failure.secureStorageUnavailable }
         if case .unavailable = seed.read() { throw Failure.secureStorageUnavailable }
@@ -181,8 +179,7 @@ struct WalletRestorer: Sendable {
 
     /// Leaves the restored datadir in `transaction.staged`.
     private func fetchAndStage(
-        mnemonic: String, transaction: RestoreTransaction, progress: @Sendable (Step) -> Void
-    ) async throws -> Outcome {
+        mnemonic: String, transaction: RestoreTransaction, progress: @Sendable (Step) -> Void) async throws -> Outcome {
         let client = makeClient(mnemonic)
         let backups: [Components.Schemas.BackupObjectInfo]
         switch try await client.listBackupObjects() {
@@ -191,7 +188,7 @@ struct WalletRestorer: Sendable {
         case .undocumented(statusCode: 404, _):
             backups = []
         case let other:
-            _ = try other.ok  // throws with the server's response
+            _ = try other.ok // throws with the server's response
             backups = []
         }
         if backups.isEmpty {
@@ -219,8 +216,7 @@ struct WalletRestorer: Sendable {
 
     private func stageV2(
         _ backupId: String, mnemonic: String, client: Client, transaction: RestoreTransaction,
-        progress: @Sendable (Step) -> Void
-    ) async throws -> Outcome {
+        progress: @Sendable (Step) -> Void) async throws -> Outcome {
         let download = try await client.getBackupObjectDownloadUrl(body: .json(.init(backupId: backupId))).ok.body.json
         guard download.backup.encryptedSize > 0, download.backup.encryptedSize <= Self.maxEncryptedBytes else {
             throw Failure.downloadMismatch
@@ -230,7 +226,7 @@ struct WalletRestorer: Sendable {
         try await downloadFile(download.downloadUrl, to: encrypted, limit: download.backup.encryptedSize)
         let data = try Data(contentsOf: encrypted, options: .alwaysMapped)
         guard Int64(data.count) == download.backup.encryptedSize,
-            BackupArchive.sha256Hex(data) == download.backup.encryptedSha256.lowercased()
+              BackupArchive.sha256Hex(data) == download.backup.encryptedSha256.lowercased()
         else { throw Failure.downloadMismatch }
 
         progress(.validating)
@@ -241,9 +237,9 @@ struct WalletRestorer: Sendable {
             path: opened.snapshot.path,
             expected: .init(network: manifest.network, walletFingerprint: manifest.walletFingerprint, serverPubkey: manifest.serverPubkey))
         guard validated.sha256 == manifest.snapshotSha256,
-            Int(validated.schemaVersion) == manifest.barkSchemaVersion,
-            validated.serverPubkey == manifest.serverPubkey,
-            validated.mailboxPubkey == manifest.mailboxPubkey
+              Int(validated.schemaVersion) == manifest.barkSchemaVersion,
+              validated.serverPubkey == manifest.serverPubkey,
+              validated.mailboxPubkey == manifest.mailboxPubkey
         else { throw Failure.identityMismatch }
 
         // The restored datadir holds only db.sqlite, as in the RN app.

@@ -1,8 +1,7 @@
 import BarkBoltFFI
 import Foundation
-import Testing
-
 @testable import Noah
+import Testing
 
 @MainActor struct SendRoundSevenTests {
     @Test(arguments: [SendReceipt.Status.submitted, .unlocated, .conflicted], [false, true])
@@ -98,10 +97,10 @@ import Testing
         var quote = SendPreparedTests.quote
         quote.prepared?.inputs = try SendTransaction.parse(hex: original.txHex).inputs
         var saved = SendPaymentController.Attempt(broadcastingTxid: "exact", payment: SendPreparedTests.payment,
-                                                   snapshot: .init(movementIDs: []), quote: quote)
+                                                  snapshot: .init(movementIDs: []), quote: quote)
         if hasReceipt {
             saved.receipt = .init(amount: 1000, txid: "exact", status: .submitted,
-                                 proof: .preparedTxid, broadcastRetryPending: true)
+                                  proof: .preparedTxid, broadcastRetryPending: true)
         }
         let transactions = evicted ? [competing] : [original, competing]
         let storage = SendPaymentTests.Storage()
@@ -129,7 +128,7 @@ import Testing
         var competing = try SendSafetyTests().transaction(id: "replacement", confirmed: malformed)
         if malformed { competing.txHex = "0200000001" }
         var saved = SendPaymentController.Attempt(broadcastingTxid: "exact", payment: SendPreparedTests.payment,
-                                                   snapshot: .init(movementIDs: []), quote: SendPreparedTests.quote)
+                                                  snapshot: .init(movementIDs: []), quote: SendPreparedTests.quote)
         saved.quote?.prepared?.inputs = try SendTransaction.parse(hex: original.txHex).inputs
         guard case .paid(let receipt) = try SendReconciliation.onchain(saved, transactions: [original, competing]) else {
             Issue.record("Expected original receipt"); return
@@ -147,13 +146,13 @@ import Testing
         let end = tx.txHex.index(start, offsetBy: 72)
         tx.txHex.replaceSubrange(start..<end, with: wireTxid + "78563412")
         #expect(try SendTransaction.parse(hex: tx.txHex).inputs == [
-            .init(txid: (0..<32).reversed().map { String(format: "%02x", $0) }.joined(), vout: 0x12345678)
+            .init(txid: (0..<32).reversed().map { String(format: "%02x", $0) }.joined(), vout: 0x1234_5678),
         ])
     }
 
     @Test func oldQuoteUsesCachedOriginalInputsWithoutMistakingOtherOutpointsForConflict() throws {
         var saved = SendPaymentController.Attempt(broadcastingTxid: "exact", payment: SendPreparedTests.payment,
-                                                   snapshot: .init(movementIDs: []), quote: SendPreparedTests.quote)
+                                                  snapshot: .init(movementIDs: []), quote: SendPreparedTests.quote)
         saved.quote?.prepared?.inputs = nil
         let original = try SendSafetyTests().transaction(id: "exact")
         var competing = try SendSafetyTests().transaction(id: "replacement", confirmed: true)
@@ -177,7 +176,7 @@ import Testing
         var dependencies = SendPaymentController.Dependencies.live(location: location)
         dependencies.identity = nil
         try dependencies.write(.init(broadcastingTxid: "exact", payment: SendPreparedTests.payment,
-                                      snapshot: .init(movementIDs: []), quote: SendPreparedTests.quote))
+                                     snapshot: .init(movementIDs: []), quote: SendPreparedTests.quote))
         let controller = SendPaymentController(dependencies: dependencies)
         controller.startNewPaymentAfterHistoryCheck(confirmed: true)
         #expect(!controller.locked)

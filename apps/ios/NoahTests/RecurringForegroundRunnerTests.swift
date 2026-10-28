@@ -1,7 +1,7 @@
 import Foundation
+@testable import Noah
 import Testing
 import UIKit
-@testable import Noah
 
 @MainActor struct RecurringForegroundRunnerTests {
     @MainActor final class Minutes {
@@ -179,7 +179,9 @@ import UIKit
         let minutes = Minutes(), gate = RecurringReservationTests.Gate()
         var quotes = 0
         h.preflight = { quotes += 1; await gate.wait() }
-        let runner = RecurringForegroundRunner(center: NotificationCenter(), sleep: { try await minutes.sleep($0) }, isActive: { true }) { await h.executor.execute() }
+        let runner = RecurringForegroundRunner(center: NotificationCenter(), sleep: { try await minutes.sleep($0) }, isActive: { true }) {
+            await h.executor.execute()
+        }
         defer { runner.stop() }
         runner.start()
         try await waitUntil { minutes.waiting }
@@ -216,7 +218,9 @@ import UIKit
             }
         }
         let minutes = Minutes()
-        let runner = RecurringForegroundRunner(center: NotificationCenter(), sleep: { try await minutes.sleep($0) }, isActive: { true }) { await h.executor.execute() }
+        let runner = RecurringForegroundRunner(center: NotificationCenter(), sleep: { try await minutes.sleep($0) }, isActive: { true }) {
+            await h.executor.execute()
+        }
         defer { runner.stop() }
         let deadline: ContinuousClock.Instant? = guardKind == "budget" ? ContinuousClock.now - .seconds(1) : nil
         RecurringExecutionBudget.$deadline.withValue(deadline) { runner.start() }

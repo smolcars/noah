@@ -24,7 +24,8 @@ class ReceiveRequestTest(private val case: FixtureCase) {
         else assertEquals(case.name, expected.getValue("uri").jsonPrimitive.content, result.getOrThrow())
     }
     companion object {
-        @JvmStatic @Parameterized.Parameters(name = "{index}")
+        @JvmStatic
+        @Parameterized.Parameters(name = "{index}")
         fun fixtures() = SharedFixtures.load("receive-request").map { arrayOf(it) }
     }
 }

@@ -1,7 +1,7 @@
+@testable import Noah
 import SwiftUI
 import Testing
 import UIKit
-@testable import Noah
 
 /// Read-only public fixtures on an explicitly owned disposable simulator.
 @MainActor
@@ -12,9 +12,9 @@ struct WalletParityDeviceTests {
         for action in [OnchainAction.startExit, .claim] {
             let window = UIWindow(windowScene: scene)
             var quote = OnchainQuote(action: action, walletID: "public-fixture", ids: ["public-vtxo:0"],
-                destination: action == .claim ? ExitClaimExecutionTests.externalAddress : nil,
-                destinationIsMine: action == .claim ? false : nil,
-                amount: 30000, fee: nil, chainFee: nil, confirmed: 0)
+                                     destination: action == .claim ? ExitClaimExecutionTests.externalAddress : nil,
+                                     destinationIsMine: action == .claim ? false : nil,
+                                     amount: 30000, fee: nil, chainFee: nil, confirmed: 0)
             quote.unknownFeeConsent = quote.id
             window.rootViewController = UIHostingController(rootView: OnchainReviewSheet(quote: quote) {
                 Issue.record("Read-only fixture must not confirm")

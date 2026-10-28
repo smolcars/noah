@@ -47,7 +47,7 @@ extension WalletSession {
         }
         let available =
             payment.method == "onchain" && payment.source == .onchain
-            ? try await handles.onchain.balance().confirmedSats : try await handles.wallet.balance().spendableSats
+                ? try await handles.onchain.balance().confirmedSats : try await handles.wallet.balance().spendableSats
         var quote: SendQuote
         if payment.method == "onchain", payment.source == .onchain {
             let rate = SendFlow.sdkFeeRate(satsPerKwu: try await handles.onchain.feeRates().regularSatPerKwu)
@@ -101,7 +101,7 @@ extension WalletSession {
             var invoicePaid: Bool?
             if let hash = PaymentEncoding.invoice(resolved)?.hash {
                 checkpoint = SendLightningCheckpoint.prepared(reviewed: quote,
-                    inspected: try await handles.wallet.lightningSendState(paymentHash: hash))
+                                                              inspected: try await handles.wallet.lightningSendState(paymentHash: hash))
                 invoicePaid = try await handles.wallet.isInvoicePaid(paymentHash: hash)
             }
             if payment.method == "onchain", payment.source == .onchain {
@@ -120,7 +120,8 @@ extension WalletSession {
                                 walletIdentity: try await Self.sendIdentity(handles), checkpoint: checkpoint, invoicePaid: invoicePaid)
         }
     }
-    func submitSend(_ payment: SendPayment, quote: SendQuote, snapshot: SendSnapshot, beforeSubmit: @escaping @Sendable () throws -> Void = {}) async throws -> SendReceipt {
+    func submitSend(_ payment: SendPayment, quote: SendQuote, snapshot: SendSnapshot,
+                    beforeSubmit: @escaping @Sendable () throws -> Void = {}) async throws -> SendReceipt {
         do { try SendMaxValidation.available(payment) }
         catch let error as SendFailure { throw SendNotSubmitted(reason: error) }
         @Sendable func checkSubmission() async throws {
@@ -265,7 +266,7 @@ extension WalletSession {
                     resolution = try SendReconciliation.onchain(attempt, transactions: try await handles.onchain.transactions())
                 } else if let receipt = attempt.receipt {
                     resolution = .paid(SendReconciliation.offboardReceipt(receipt, payment: attempt.payment,
-                                                                         movements: try await handles.wallet.history()))
+                                                                          movements: try await handles.wallet.history()))
                 } else { return .uncertain }
                 return await SendReconciliation.chainEvidence(resolution, source: attempt.payment.source) { txid in
                     let status = attempt.payment.source == .onchain
@@ -389,8 +390,7 @@ enum SendLightningSubmission {
         payment: SendPayment, state: LightningSendStatus, movements: [Movement],
         checkpoint: SendLightningCheckpoint? = nil, quote: SendQuote? = nil,
         check: (@Sendable (String) async throws -> LightningSendStatus)? = nil,
-        pay: @Sendable () async throws -> LightningSendStatus
-    ) async throws -> LightningSendStatus {
+        pay: @Sendable () async throws -> LightningSendStatus) async throws -> LightningSendStatus {
         if let checkpoint {
             guard let quote, let check else { throw SendFailure.unresolved }
             return try await checkpoint.advance(invoice: payment.destination, payment: payment, quote: quote, state: state, check: check)

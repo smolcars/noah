@@ -1,6 +1,6 @@
 import Foundation
-import Testing
 @testable import Noah
+import Testing
 
 @MainActor struct RecurringWakeHandoffTests {
     private func waitUntil(_ condition: @MainActor () async -> Bool) async throws {

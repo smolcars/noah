@@ -1,8 +1,7 @@
 import Foundation
+@testable import Noah
 import Security
 import Testing
-
-@testable import Noah
 
 @Suite(.serialized)
 struct ExpoInstallationIDTests {
@@ -56,7 +55,7 @@ struct ExpoInstallationIDTests {
 
     @Test func concurrentFirstUseAgreesOnOneID() async throws {
         defer { deleteItem() }
-        let bundleID = self.bundleID
+        let bundleID = bundleID
         let suite = "com.noah.tests.expo.\(UUID().uuidString)"
         let ids = try await withThrowingTaskGroup(of: String.self) { group in
             for _ in 0..<8 {

@@ -5,13 +5,13 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.noahwallet.services.logging.AppLog
 import com.noahwallet.services.logging.LogFile
+import org.junit.Assert.*
+import org.junit.Test
+import org.junit.runner.RunWith
 import java.io.File
 import java.util.ArrayDeque
 import java.util.UUID
 import java.util.concurrent.Executor
-import org.junit.Assert.*
-import org.junit.Test
-import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
 class AppLogMainThreadTest {

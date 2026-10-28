@@ -318,13 +318,14 @@ import Observation
                     [
                         "ark": "arkAddress", "lightning": "lightningInvoice", "offer": "offer",
                         "onchain": "onchainAddress",
-                    ][selected]!]!
+                    ][selected]!
+                ]!
             }
             if method == "lnurl" {
                 guard let route = matchingRoute else { throw SendFailure.invalid }
                 let (msat, overflow) = sats.multipliedReportingOverflow(by: 1000)
                 guard !overflow, msat >= route.minMsat, msat <= route.maxMsat,
-                    comment.utf16.count <= route.commentAllowed
+                      comment.utf16.count <= route.commentAllowed
                 else { throw SendFailure.invalid }
                 if rail == .ark, comment.isEmpty, let ark = route.arkAddress {
                     method = "ark"
@@ -333,8 +334,7 @@ import Observation
             }
             // A BIP-321 invoice may carry an amount even when its URI does not.
             if method == "lightning", let fixed = PaymentEncoding.invoice(target)?.sats, fixed > 0,
-                fixed != Decimal(sats)
-            {
+               fixed != Decimal(sats) {
                 throw SendFailure.invalid
             }
             var payment = SendPayment(
@@ -358,7 +358,7 @@ import Observation
             guard !Task.isCancelled, generation == reviewGeneration else { return }
             self.error =
                 (error as? SendFailure)?.errorDescription
-                ?? "Unable to prepare this payment. Check the destination and available funds."
+                    ?? "Unable to prepare this payment. Check the destination and available funds."
             stage = .recipient
         }
     }

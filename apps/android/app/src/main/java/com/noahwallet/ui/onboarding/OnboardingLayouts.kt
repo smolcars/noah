@@ -74,8 +74,8 @@ private fun BoxScope.TopRow(leading: @Composable RowScope.() -> Unit = {}, trail
  */
 @Composable
 internal fun SceneLayout(clock: SceneClock, mode: SceneMode, topBar: @Composable RowScope.() -> Unit = {},
-                         welcomeGhost: String? = null,
-                         below: @Composable ColumnScope.() -> Unit, bottom: @Composable ColumnScope.() -> Unit) {
+    welcomeGhost: String? = null,
+    below: @Composable ColumnScope.() -> Unit, bottom: @Composable ColumnScope.() -> Unit) {
     val pad = NoahTokens.Space.screen
     val (belowMin, bottomMin) = sceneTextHeights()
     when (val pose = LocalPose.current) {
@@ -139,8 +139,8 @@ internal val LocalTabletopKeyboard = staticCompositionLocalOf { false }
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 internal fun FormLayout(leadingTop: @Composable RowScope.() -> Unit = {}, trailingTop: @Composable RowScope.() -> Unit = {},
-                        headline: @Composable (large: Boolean) -> Unit, form: @Composable ColumnScope.() -> Unit,
-                        actions: @Composable ColumnScope.() -> Unit, scroll: Boolean = true, accessory: Boolean = false) {
+    headline: @Composable (large: Boolean) -> Unit, form: @Composable ColumnScope.() -> Unit,
+    actions: @Composable ColumnScope.() -> Unit, scroll: Boolean = true, accessory: Boolean = false) {
     val pad = NoahTokens.Space.screen
     val keyboard = WindowInsets.isImeVisible
     val pose = LocalPose.current
@@ -219,10 +219,10 @@ internal fun OnboardingSheet(onDismissRequest: () -> Unit, sheetState: SheetStat
     val fold = com.noahwallet.ui.LocalFoldingFeatures.current.filter { it.width > it.height }.maxOfOrNull { it.bottom }
         ?.takeIf { LocalPose.current is OnboardingPose.Tabletop }
     WalletModalBottomSheet(onDismissRequest, modifier = when {
-            pane != null -> Modifier.padding(start = pane.start)
-            fold != null -> Modifier.padding(top = with(density) { fold.toDp() })
-            else -> Modifier
-        }, sheetState = sheetState, sheetMaxWidth = pane?.width ?: com.noahwallet.ui.AdaptiveLayout.readableWidth.dp,
+        pane != null -> Modifier.padding(start = pane.start)
+        fold != null -> Modifier.padding(top = with(density) { fold.toDp() })
+        else -> Modifier
+    }, sheetState = sheetState, sheetMaxWidth = pane?.width ?: com.noahwallet.ui.AdaptiveLayout.readableWidth.dp,
         capAboveHorizontalFold = fold == null) {
         Column(Modifier.fillMaxWidth().then(if (padded) Modifier.padding(start = NoahTokens.Space.screen, end = NoahTokens.Space.screen, bottom = NoahTokens.Space.xl) else Modifier), content = content)
     }

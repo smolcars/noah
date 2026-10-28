@@ -8,10 +8,10 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asAndroidBitmap
-import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.layout.positionOnScreen
-import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInWindow
+import androidx.compose.ui.layout.positionOnScreen
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.StateRestorationTester
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
@@ -141,7 +141,8 @@ class AdaptiveStateRestorationTest {
         compose.waitUntil(5_000) { button() != null }
         assertTrue(selectedDate(), selectedDate().contains("23"))
         val size = android.graphics.Point()
-        @Suppress("DEPRECATION") compose.activity.windowManager.defaultDisplay.getRealSize(size)
+        @Suppress("DEPRECATION")
+        compose.activity.windowManager.defaultDisplay.getRealSize(size)
         fun confirmVisiblePicker() {
             val action = checkNotNull(button())
             val bounds = android.graphics.Rect().also(action::getBoundsInScreen)
@@ -231,7 +232,8 @@ class AdaptiveStateRestorationTest {
     }
 
     @OptIn(ExperimentalMaterial3Api::class)
-    @Test fun sheetFieldsAvoidTheReportedFold() {
+    @Test
+    fun sheetFieldsAvoidTheReportedFold() {
         var hinges = emptyList<WindowRegion>()
         compose.setContent { NoahTheme {
             val reported = LocalFoldingFeatures.current
@@ -319,7 +321,8 @@ class AdaptiveStateRestorationTest {
         compose.activityRule.scenario.onActivity { activity ->
             presentation = ViewModelProvider(activity, object : ViewModelProvider.Factory {
                 override fun <T : ViewModel> create(modelClass: Class<T>): T {
-                    @Suppress("UNCHECKED_CAST") return SendPresentation(draft) as T
+                    @Suppress("UNCHECKED_CAST")
+                    return SendPresentation(draft) as T
                 }
             })["send-presentation", SendPresentation::class.java]
             activity.setContent { NoahTheme { SendScreen(app) {} } }

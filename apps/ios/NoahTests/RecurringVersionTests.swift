@@ -1,6 +1,6 @@
 import Foundation
-import Testing
 @testable import Noah
+import Testing
 
 @MainActor struct RecurringVersionTests {
     // Version parsing gates every read and write, so each spelling is checked here; the executor flow below samples them.
@@ -42,7 +42,7 @@ import Testing
     }
 
     @Test(arguments: ["0", " 0 \n", "absent"])
-    func writerAndLegacyVersionsRemainSupported(version: String) async throws {
+    func writerAndLegacyVersionsRemainSupported(version: String) throws {
         let h = try RecurringExecutorTests.Harness()
         defer { try? FileManager.default.removeItem(at: h.directory) }
         var raw = try RecurringRangeTests.fixture()

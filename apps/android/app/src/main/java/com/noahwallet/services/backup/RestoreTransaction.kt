@@ -3,18 +3,18 @@ package com.noahwallet.services.backup
 import android.system.Os
 import android.system.OsConstants
 import com.noahwallet.services.storage.*
-import java.io.File
-import java.io.FileOutputStream
-import java.security.MessageDigest
-import java.security.SecureRandom
-import kotlin.io.encoding.Base64
-import java.util.UUID
-import javax.crypto.Mac
-import javax.crypto.spec.SecretKeySpec
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.buildJsonObject
 import kotlinx.serialization.json.put
+import java.io.File
+import java.io.FileOutputStream
+import java.security.MessageDigest
+import java.security.SecureRandom
+import java.util.UUID
+import javax.crypto.Mac
+import javax.crypto.spec.SecretKeySpec
+import kotlin.io.encoding.Base64
 
 /** Journal is durable before renames; seed write is the sole commit point; journal is removed last. */
 class RestoreTransaction(
@@ -120,8 +120,7 @@ class RestoreTransaction(
     private fun establishStoppedAutomation() {
         val authority = com.noahwallet.recurring.RecurringAutomationAuthority(datadir)
         val instance = UUID.randomUUID().toString()
-        val state = com.noahwallet.recurring.RecurringAutomationAuthority.State(
-            instance = instance, generation = UUID.randomUUID().toString(), stopped = true)
+        val state = com.noahwallet.recurring.RecurringAutomationAuthority.State(instance = instance, generation = UUID.randomUUID().toString(), stopped = true)
         writeDurably(com.noahwallet.recurring.RecurringStore.json.encodeToString(state), authority.file)
         writeDurably(buildJsonObject { put("version", 1); put("instance", instance) }.toString(), authority.marker)
         com.noahwallet.recurring.RecurringAutomationAuthority.deleted(datadir)

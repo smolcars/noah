@@ -18,7 +18,7 @@ class BalanceProvider: TimelineProvider {
         self.appGroup = appGroup
     }
 
-    func placeholder(in context: Context) -> BalanceEntry {
+    func placeholder(in _: Context) -> BalanceEntry {
         BalanceEntry(
             date: Date(),
             totalBalance: 0,
@@ -26,24 +26,22 @@ class BalanceProvider: TimelineProvider {
             offchainBalance: 0,
             pendingBalance: 0,
             closestExpiryBlocks: -999,
-            expiryThreshold: 288
-        )
+            expiryThreshold: 288)
     }
 
-    func getSnapshot(in context: Context, completion: @escaping (BalanceEntry) -> Void) {
+    func getSnapshot(in _: Context, completion: @escaping (BalanceEntry) -> Void) {
         let entry = loadBalanceEntry()
         completion(entry)
     }
 
     func getTimeline(
-        in context: Context, completion: @escaping (Timeline<BalanceEntry>) -> Void
-    ) {
+        in _: Context, completion: @escaping (Timeline<BalanceEntry>) -> Void) {
         let entry = loadBalanceEntry()
 
         // Refresh every 15 minutes
         let nextUpdate =
             Calendar.current.date(byAdding: .minute, value: 15, to: Date())
-            ?? Date().addingTimeInterval(15 * 60)
+                ?? Date().addingTimeInterval(15 * 60)
         let timeline = Timeline(entries: [entry], policy: .after(nextUpdate))
 
         completion(timeline)
@@ -51,7 +49,7 @@ class BalanceProvider: TimelineProvider {
 
     private func loadBalanceEntry() -> BalanceEntry {
         guard let userDefaults = UserDefaults(suiteName: appGroup),
-            let balanceData = userDefaults.dictionary(forKey: "widgetBalance")
+              let balanceData = userDefaults.dictionary(forKey: "widgetBalance")
         else {
             return BalanceEntry(
                 date: Date(),
@@ -60,8 +58,7 @@ class BalanceProvider: TimelineProvider {
                 offchainBalance: 0,
                 pendingBalance: 0,
                 closestExpiryBlocks: -999,
-                expiryThreshold: 288
-            )
+                expiryThreshold: 288)
         }
 
         return BalanceEntry(
@@ -71,8 +68,7 @@ class BalanceProvider: TimelineProvider {
             offchainBalance: balanceData["offchainBalance"] as? Double ?? 0,
             pendingBalance: balanceData["pendingBalance"] as? Double ?? 0,
             closestExpiryBlocks: balanceData["closestExpiryBlocks"] as? Double ?? -999,
-            expiryThreshold: balanceData["expiryThreshold"] as? Double ?? 288
-        )
+            expiryThreshold: balanceData["expiryThreshold"] as? Double ?? 288)
     }
 }
 
@@ -118,13 +114,13 @@ struct NoahBalanceWidgetView: View {
 
     private var shouldShowExpiry: Bool {
         // Hide expiry section if no VTXOs (-999 sentinel value)
-        return entry.closestExpiryBlocks != -999
+        entry.closestExpiryBlocks != -999
     }
 
     private var shouldUseCompactSmallLayout: Bool {
         // When pending and/or expiry rows are visible we tighten spacing
         // so content stays comfortably within the small widget bounds.
-        return entry.pendingBalance > 0 || shouldShowExpiry
+        entry.pendingBalance > 0 || shouldShowExpiry
     }
 
     private var smallWidgetLayout: some View {
@@ -135,7 +131,7 @@ struct NoahBalanceWidgetView: View {
                     .fontWeight(.semibold)
                     .foregroundColor(.white)
                 Spacer(minLength: 4)
-                if let variantName = variantName, let variantColor = variantColor {
+                if let variantName, let variantColor {
                     Text(variantName)
                         .font(.caption2)
                         .fontWeight(.bold)
@@ -219,7 +215,7 @@ struct NoahBalanceWidgetView: View {
                     .fontWeight(.semibold)
                     .foregroundColor(.white)
                 Spacer()
-                if let variantName = variantName, let variantColor = variantColor {
+                if let variantName, let variantColor {
                     Text(variantName)
                         .font(.caption2)
                         .fontWeight(.bold)
@@ -289,7 +285,7 @@ struct NoahBalanceWidgetView: View {
     }
 
     private func formatSats(_ value: Double) -> String {
-        return Self.numberFormatter.string(from: NSNumber(value: value)) ?? "0"
+        Self.numberFormatter.string(from: NSNumber(value: value)) ?? "0"
     }
 
     private func formatSatsCompact(_ value: Double) -> String {
@@ -326,7 +322,7 @@ struct NoahBalanceWidgetView: View {
         }
     }
 
-    private func badgeForeground(color: Color) -> Color {
+    private func badgeForeground(color _: Color) -> Color {
         if #available(iOS 26.0, *) {
             switch renderingMode {
             case .fullColor:

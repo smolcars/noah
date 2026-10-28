@@ -12,11 +12,6 @@ import io.github.niteshbalusu11.bark.generateMnemonic
 import io.ktor.client.plugins.HttpSend
 import io.ktor.client.plugins.plugin
 import io.ktor.http.encodedPath
-import java.io.File
-import java.net.HttpURLConnection
-import java.net.URI
-import java.util.Base64
-import java.util.UUID
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.builtins.ListSerializer
@@ -25,6 +20,11 @@ import org.junit.Assert.*
 import org.junit.Assume.assumeTrue
 import org.junit.Test
 import org.junit.runner.RunWith
+import java.io.File
+import java.net.HttpURLConnection
+import java.net.URI
+import java.util.Base64
+import java.util.UUID
 
 /** Real regtest services/JNI, opt-in on a runner-owned disposable emulator. */
 @RunWith(AndroidJUnit4::class)

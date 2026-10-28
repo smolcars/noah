@@ -35,12 +35,12 @@ enum ActivityList {
             transaction.paymentDescription, transaction.recurring?.name, transaction.txid, transaction.paymentHash,
             transaction.id, transaction.movementId.map(String.init),
         ]
-        return (fields.compactMap { $0 } + words).contains { $0.lowercased().contains(needle) }
+        return (fields.compactMap(\.self) + words).contains { $0.lowercased().contains(needle) }
     }
 }
 
-extension Character {
-    fileprivate var isASCIIDigit: Bool { isASCII && isNumber }
+private extension Character {
+    var isASCIIDigit: Bool { isASCII && isNumber }
 }
 
 extension HistoryFilter {

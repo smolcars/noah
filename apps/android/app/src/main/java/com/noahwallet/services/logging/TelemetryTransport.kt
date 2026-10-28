@@ -9,8 +9,8 @@ import io.sentry.SentryItemType
 import io.sentry.SentryOptions
 import io.sentry.Session
 import io.sentry.transport.ITransport
-import java.io.StringReader
 import kotlinx.serialization.json.*
+import java.io.StringReader
 
 /** Also gates cached envelopes and legacy user feedback, which bypass beforeSend. */
 internal class TelemetryTransport(private val delegate: ITransport, private val options: SentryOptions) : ITransport by delegate {

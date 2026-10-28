@@ -1,7 +1,7 @@
 import Foundation
+@testable import Noah
 import Testing
 import UIKit
-@testable import Noah
 
 @MainActor struct RecurringBackgroundRegressionTests {
     private func waitUntil(_ condition: @MainActor () -> Bool) async throws {
@@ -43,7 +43,6 @@ import UIKit
         try await waitUntil { h.calls.withLock { $0 } == 1 && !h.executor.running }
         runner.stop()
     }
-
 
     @Test func deactivationAfterSubmissionStillSettlesOnce() async throws {
         let h = try RecurringExecutorTests.Harness(); let schedule = try h.add()

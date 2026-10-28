@@ -1,8 +1,7 @@
 import BarkBoltFFI
 import Foundation
-import Testing
-
 @testable import Noah
+import Testing
 
 /// Real backup round trip against a Noah server with S3 configured (run the
 /// server from the dev `.env`, then pass

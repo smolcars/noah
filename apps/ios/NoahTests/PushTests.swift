@@ -1,7 +1,6 @@
 import Foundation
-import Testing
-
 @testable import Noah
+import Testing
 
 struct PushPayloadTests {
     /// Server-serialized NotificationData (apps/fixtures/server-notification-data.json).
@@ -31,7 +30,7 @@ struct PushPayloadTests {
     @Test func parsesEveryEnvelopeShape() throws {
         for payload in try serverPayloads() {
             let shapes: [[AnyHashable: Any]] = [
-                ["aps": ["content-available": 1], "body": payload.json],  // Expo APNs
+                ["aps": ["content-available": 1], "body": payload.json], // Expo APNs
                 ["body": payload.object],
                 ["dataString": payload.json],
                 ["data": ["body": payload.json]],
@@ -59,7 +58,7 @@ struct ExpoPushTokenTests {
     @Test func requestMatchesExpoNotifications() throws {
         let request = ExpoPushToken.request(
             installationID: "0C2A6F0E-1B8D-4C7A-9E55-3F1D2B4A6C8E",
-            deviceToken: Data([0x0a, 0xff, 0x01]), appID: "com.noahwallet.regtest", development: true)
+            deviceToken: Data([0x0A, 0xFF, 0x01]), appID: "com.noahwallet.regtest", development: true)
         let json = try #require(
             try JSONSerialization.jsonObject(with: JSONEncoder().encode(request)) as? [String: Any])
         #expect(json["type"] as? String == "apns")
@@ -74,9 +73,10 @@ struct ExpoPushTokenTests {
         func profile(_ environment: String?) -> Data {
             let entitlements = environment.map { "<key>aps-environment</key><string>\($0)</string>" } ?? ""
             let xml = """
-                <?xml version="1.0" encoding="UTF-8"?><!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd"><plist version="1.0"><dict><key>Entitlements</key><dict>\(entitlements)</dict></dict></plist>
-                """
-            return Data([0x30, 0x82, 0x01]) + Data(xml.utf8) + Data([0x00, 0xa0])  // CMS bytes around it
+            <?xml version="1.0" encoding="UTF-8"?><!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd"><plist version="1.0"><dict><key>Entitlements</key><dict>\(
+                entitlements)</dict></dict></plist>
+            """
+            return Data([0x30, 0x82, 0x01]) + Data(xml.utf8) + Data([0x00, 0xA0]) // CMS bytes around it
         }
         #expect(ApnsEnvironment.isDevelopment(profile: profile("development")))
         #expect(!ApnsEnvironment.isDevelopment(profile: profile("production")))

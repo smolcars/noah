@@ -1,6 +1,6 @@
 import Foundation
-import Testing
 @testable import Noah
+import Testing
 
 /// The onboarding tree is built like bark's `Tree::new` (RADIX 4).
 struct OnboardingTreeTests {

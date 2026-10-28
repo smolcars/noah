@@ -1,9 +1,8 @@
 import BarkBoltFFI
 import Foundation
+@testable import Noah
 import SQLite3
 import Testing
-
-@testable import Noah
 
 struct OnchainOrphanBoardTests {
     @Test(.timeLimit(.minutes(1))) func orphanMovementRemainsUncertainAndExplicitOverrideReleasesBoarding() async throws {
@@ -16,8 +15,8 @@ struct OnchainOrphanBoardTests {
         let session = WalletSession(variant: .regtest, location: location) { mnemonic, datadir, _, _, create in
             let onchain = try await OnchainWallet.default(network: .regtest, mnemonic: mnemonic, config: config, datadir: datadir)
             let wallet = try await Wallet.openWithOnchain(network: .regtest, mnemonicOrSeed: mnemonic, config: config,
-                args: WalletOpenArgs(runDaemon: false, datadir: datadir, createIfNotExists: create,
-                    createWithoutServer: true, skipRecovery: true), onchain: onchain)
+                                                          args: WalletOpenArgs(runDaemon: false, datadir: datadir, createIfNotExists: create,
+                                                                               createWithoutServer: true, skipRecovery: true), onchain: onchain)
             return .init(wallet: wallet, onchain: onchain)
         }
         let mnemonic = try generateMnemonic()
@@ -28,13 +27,13 @@ struct OnchainOrphanBoardTests {
         var db: OpaquePointer?
         try #require(sqlite3_open(location.database.path, &db) == SQLITE_OK)
         let sql = """
-            INSERT INTO bark_movements (status, subsystem_name, movement_kind, metadata,
-                intended_balance, effective_balance, offchain_fee, created_at, updated_at)
-            VALUES ('pending', 'bark.board', 'board', '{"chain_anchor":"\(txid):0"}',
-                30000, 29900, 100, '2026-10-21 12:00:00.000', '2026-10-21 12:00:00.000');
-            INSERT INTO bark_movements_output_vtxos (movement_id, vtxo_id)
-            VALUES (last_insert_rowid(), '\(txid):0');
-            """
+        INSERT INTO bark_movements (status, subsystem_name, movement_kind, metadata,
+            intended_balance, effective_balance, offchain_fee, created_at, updated_at)
+        VALUES ('pending', 'bark.board', 'board', '{"chain_anchor":"\(txid):0"}',
+            30000, 29900, 100, '2026-10-21 12:00:00.000', '2026-10-21 12:00:00.000');
+        INSERT INTO bark_movements_output_vtxos (movement_id, vtxo_id)
+        VALUES (last_insert_rowid(), '\(txid):0');
+        """
         let inserted = sqlite3_exec(db, sql, nil, nil, nil)
         sqlite3_close(db)
         try #require(inserted == SQLITE_OK)
@@ -96,11 +95,11 @@ struct OnchainOrphanBoardTests {
             }
         }
         let reads = WalletSession.OnchainAttemptReads(walletID: "wallet",
-            transactionIDs: { ["checkpoint", "bdk"].contains(source) ? ["exact"] : [] },
-            vtxoState: { _ in Issue.record("No VTXO matching for boards"); return "Spendable" },
-            exitState: { _ in nil }, transactionStatus: { _ in
-                source == "chain" ? .confirmed(100) : source == "mempool" ? .inMempool : .notFound
-            })
+                                                      transactionIDs: { ["checkpoint", "bdk"].contains(source) ? ["exact"] : [] },
+                                                      vtxoState: { _ in Issue.record("No VTXO matching for boards"); return "Spendable" },
+                                                      exitState: { _ in nil }, transactionStatus: { _ in
+                                                          source == "chain" ? .confirmed(100) : source == "mempool" ? .inMempool : .notFound
+                                                      })
         #expect(try await WalletSession.checkOnchainAttempt(quote.id, journal: journal, reads: reads))
         let saved = try #require(try await journal.load())
         #expect(saved.receipt?.txid == "exact")

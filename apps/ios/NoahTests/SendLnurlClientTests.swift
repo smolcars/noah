@@ -1,7 +1,6 @@
 import Foundation
-import Testing
-
 @testable import Noah
+import Testing
 
 /// The LNURL client against a loopback server, as Android's: no redirects, and 64 KiB at most, enforced while reading.
 struct SendLnurlClientTests {
@@ -59,7 +58,7 @@ struct SendLnurlClientTests {
             "HTTP/1.1 302 Found\r\nLocation: /elsewhere\r\nContent-Length: 0\r\nConnection: close\r\n\r\n", close: true))
         defer { server.stop() }
         await #expect(throws: SendFailure.invalid) { try await resolve(server) }
-        try await Task.sleep(for: .milliseconds(300))  // A followed redirect would arrive by now.
+        try await Task.sleep(for: .milliseconds(300)) // A followed redirect would arrive by now.
         #expect(server.requests == [lookup])
     }
 

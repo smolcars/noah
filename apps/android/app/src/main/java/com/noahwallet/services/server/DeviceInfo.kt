@@ -2,12 +2,12 @@ package com.noahwallet.services.server
 
 import android.os.Build
 import com.noahwallet.BuildConfig
-import com.noahwallet.api.generated.models.DeviceInfo as Payload
 import com.noahwallet.api.generated.models.RegisterPayloadDeviceInfo
 import com.noahwallet.api.generated.models.ReportLastLoginPayloadDeviceInfo
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonNull
 import kotlinx.serialization.json.JsonPrimitive
+import com.noahwallet.api.generated.models.DeviceInfo as Payload
 
 object DeviceInfo {
     const val refreshIntervalMillis = 30L * 24 * 60 * 60 * 1000
@@ -20,7 +20,7 @@ object DeviceInfo {
         info.osName, info.osVersion, info.appVersion, info.appBuild).map { it?.let(::JsonPrimitive) ?: JsonNull }).toString()
 
     fun shouldReport(info: Payload, fingerprint: String?, reportedAt: Double?,
-                     now: Long = System.currentTimeMillis()): Boolean =
+        now: Long = System.currentTimeMillis()): Boolean =
         fingerprint != fingerprint(info) || reportedAt == null || !reportedAt.isFinite() ||
             reportedAt > now || now - reportedAt >= refreshIntervalMillis
 }

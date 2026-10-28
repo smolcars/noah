@@ -1,8 +1,7 @@
+@testable import Noah
 import Testing
 import UIKit
 import UserNotifications
-
-@testable import Noah
 
 /// The silent-push entry point, called directly (simulators do not run the
 /// background handler for `simctl push`; real delivery is checked on devices).
@@ -51,7 +50,7 @@ struct AppDelegatePushTests {
         #expect(Date().timeIntervalSince(started) < 26, "stays inside the background budget")
     }
     @Test(arguments: [true, false])
-    func backgroundCompletionDrainsAcceptedRecords(push: Bool) async throws {
+    func backgroundCompletionDrainsAcceptedRecords(push: Bool) async {
         let directory = FileManager.default.temporaryDirectory.appending(path: "lifecycle-log-\(UUID())")
         defer { try? FileManager.default.removeItem(at: directory) }
         let queue = DispatchQueue(label: "test.delayed-lifecycle-writer")
@@ -118,5 +117,4 @@ struct AppDelegatePushTests {
         while !settled, ContinuousClock.now < limit { await Task.yield() }
         #expect(settled)
     }
-
 }

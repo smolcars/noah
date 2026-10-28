@@ -1,6 +1,6 @@
 import Foundation
-import Testing
 @testable import Noah
+import Testing
 
 @MainActor struct RecurringProtectedReadRaceTests {
     @Test func reloadCannotPoisonReplacementAuthority() async throws {
@@ -20,7 +20,8 @@ import Testing
             return binding
         })
         let executor = RecurringExecutor(dependencies: .init(store: store, journal: h.journal, controller: h.controller,
-            ensureOpen: {}, binding: { owner.withLock { $0 } }, allowed: {}, quote: { _ in throw SendFailure.invalid }))
+                                                             ensureOpen: {}, binding: { owner.withLock { $0 } }, allowed: {},
+                                                             quote: { _ in throw SendFailure.invalid }))
         await executor.reload()
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: true)
         #expect(RecurringAutomationAuthority(directory: directory, sync: { _ in }).allowed(), "An old reload must not latch replacement authority off")
@@ -47,8 +48,8 @@ import Testing
         }
         store.protectPolicies(file: h.journal.file.appendingPathExtension("policies"), sync: { _ in }, binding: binding)
         let executor = RecurringExecutor(dependencies: .init(store: store, journal: h.journal, controller: h.controller,
-            ensureOpen: { Issue.record("Read paths must not open the wallet") }, binding: binding,
-            allowed: {}, quote: { _ in throw SendFailure.invalid }))
+                                                             ensureOpen: { Issue.record("Read paths must not open the wallet") }, binding: binding,
+                                                             allowed: {}, quote: { _ in throw SendFailure.invalid }))
         do {
             switch path {
             case "reload": await executor.reload()
@@ -88,10 +89,10 @@ import Testing
         }
         while !entered.withLock({ $0 }) { await Task.yield() }
         let executor = RecurringExecutor(dependencies: .init(store: h.store, journal: h.journal, controller: h.controller,
-            ensureOpen: { Issue.record("Read paths must not open the wallet") }, binding: {
-                bindings.withLock { $0 += 1 }
-                return owner.withLock { $0 }
-            }, allowed: {}, quote: { _ in throw SendFailure.invalid }, mutation: mutation))
+                                                             ensureOpen: { Issue.record("Read paths must not open the wallet") }, binding: {
+                                                                 bindings.withLock { $0 += 1 }
+                                                                 return owner.withLock { $0 }
+                                                             }, allowed: {}, quote: { _ in throw SendFailure.invalid }, mutation: mutation))
         let read = Task { await executor.reload() }
         while await mutation.waitingCount == 0 { await Task.yield() }
         #expect(bindings.withLock { $0 } == 0)
@@ -108,13 +109,13 @@ import Testing
         defer { try? FileManager.default.removeItem(at: h.directory) }
         let generation = RecurringExecutorTests.Locked(0), owner = h.owner
         let executor = RecurringExecutor(dependencies: .init(store: h.store, journal: h.journal, controller: h.controller,
-            ensureOpen: { Issue.record("Read paths must not open the wallet") }, binding: { owner.withLock { $0 } },
-            allowed: {}, quote: { _ in throw SendFailure.invalid }, automationGeneration: {
-                generation.withLock { value in value += 1; return String(value) }
-            }))
+                                                             ensureOpen: { Issue.record("Read paths must not open the wallet") },
+                                                             binding: { owner.withLock { $0 } },
+                                                             allowed: {}, quote: { _ in throw SendFailure.invalid }, automationGeneration: {
+                                                                 generation.withLock { value in value += 1; return String(value) }
+                                                             }))
         await executor.reload()
         #expect(executor.error == nil)
         #expect(!FileManager.default.fileExists(atPath: h.directory.appending(path: ".noah-recurring-automation.json").path))
     }
-
 }

@@ -1,8 +1,8 @@
 import Foundation
+@testable import Noah
 import SwiftUI
 import Testing
 import UIKit
-@testable import Noah
 
 /// Payment links through a real `AppModel` and mounted views: the launch and presentation paths the
 /// route-level tests in `PaymentLinkTests` can't see.

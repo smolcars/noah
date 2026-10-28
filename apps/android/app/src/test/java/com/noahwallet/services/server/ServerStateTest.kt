@@ -1,11 +1,11 @@
 package com.noahwallet.services.server
 
-import com.noahwallet.api.generated.models.DeviceInfo as DevicePayload
 import com.noahwallet.fixtures.SharedFixtures
 import com.noahwallet.services.storage.*
 import kotlinx.serialization.json.*
 import org.junit.Assert.*
 import org.junit.Test
+import com.noahwallet.api.generated.models.DeviceInfo as DevicePayload
 
 class ServerStateTest {
     companion object {

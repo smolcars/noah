@@ -29,8 +29,8 @@ data class ReceiveRecords(val known: Set<String>, val settled: Set<String>, val 
  */
 @Composable
 internal fun ReceiveRecordsWatcher(rows: List<HistoryTransaction>, loading: Boolean, request: ReceiveRequest?, ownArk: Set<String>, ownHashes: Set<String>,
-                                   records: MutableState<ReceiveRecords?>, arrival: MutableState<ReceiveArrival?>, chain: MutableState<ReceiveArrival?>,
-                                   onAddressPayment: () -> Unit = {}) {
+    records: MutableState<ReceiveRecords?>, arrival: MutableState<ReceiveArrival?>, chain: MutableState<ReceiveArrival?>,
+    onAddressPayment: () -> Unit = {}) {
     LaunchedEffect(rows, loading, request, ownArk, ownHashes, records.value, arrival.value == null, chain.value) {
         if (loading) return@LaunchedEffect
         val seen = records.value ?: run { records.value = ReceiveRecords.baseline(rows); return@LaunchedEffect }

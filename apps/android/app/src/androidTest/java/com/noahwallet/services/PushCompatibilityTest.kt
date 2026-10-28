@@ -5,7 +5,6 @@ import android.app.NotificationManager
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.ContextWrapper
-import java.io.File
 import android.content.Intent
 import android.database.sqlite.SQLiteDatabase
 import androidx.test.ext.junit.runners.AndroidJUnit4
@@ -16,6 +15,7 @@ import org.junit.Assert.*
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.unifiedpush.android.connector.UnifiedPush
+import java.io.File
 
 class TestDistributor : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) = Unit

@@ -1,10 +1,9 @@
 import BarkBoltFFI
 import Foundation
+@testable import Noah
 import SwiftUI
 import Testing
 import UIKit
-
-@testable import Noah
 
 /// Leaves the successful Ark journal unacknowledged for host-driven kill/relaunch verification.
 /// Only run on a fresh dedicated simulator; fund its published address exactly once.

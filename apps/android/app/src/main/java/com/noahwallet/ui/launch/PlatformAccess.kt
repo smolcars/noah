@@ -24,7 +24,7 @@ object PlatformAccess {
             return PlatformGateRules.Permission.granted
         return if (context.getSharedPreferences("expo.modules.permissions.asked", Context.MODE_PRIVATE)
                 .getBoolean(Manifest.permission.POST_NOTIFICATIONS, false)) PlatformGateRules.Permission.denied
-            else PlatformGateRules.Permission.undetermined
+        else PlatformGateRules.Permission.undetermined
     }
     fun batteryEnabled(context: Context) = !(context.getSystemService(PowerManager::class.java)?.isIgnoringBatteryOptimizations(context.packageName) ?: true)
     fun openBattery(context: Context): Boolean = listOf(

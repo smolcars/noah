@@ -6,7 +6,6 @@ let package = Package(
     name: "OpenAPIGeneratorTool",
     platforms: [.macOS(.v14)],
     dependencies: [
-        .package(url: "https://github.com/apple/swift-openapi-generator", exact: "1.14.2")
+        .package(url: "https://github.com/apple/swift-openapi-generator", exact: "1.14.2"),
     ],
-    targets: []
-)
+    targets: [])

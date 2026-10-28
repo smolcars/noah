@@ -1,8 +1,8 @@
 import BarkBoltFFI
 import Foundation
+@testable import Noah
 import SQLite3
 import Testing
-@testable import Noah
 
 @MainActor struct HeadlessWalletTests {
     private let phrase = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about"
@@ -40,7 +40,7 @@ import Testing
         }
         #expect(throws: (any Error).self) {
             _ = try HeadlessWalletGate.mnemonic(location: location, settings: settings, readSeed: {
-                return seed
+                seed
             })
         }
         if state == "missing" { #expect(!location.databaseExists) }
@@ -65,7 +65,11 @@ import Testing
         let session = WalletSession(variant: .regtest)
         let workGate = RecurringReservationTests.Gate(), settleGate = RecurringReservationTests.Gate()
         let work = Task {
-            try await session.withBackgroundAccess({ await workGate.wait() }, settle: { await settleGate.wait() })
+            try await session.withBackgroundAccess {
+                await workGate.wait()
+            } settle: {
+                await settleGate.wait()
+            }
         }
         let limit = ContinuousClock.now + .seconds(5)
         while !(await workGate.entered), ContinuousClock.now < limit { await Task.yield() }
@@ -107,7 +111,12 @@ import Testing
         try FileManager.default.createDirectory(at: location.directory, withIntermediateDirectories: true)
         var database: OpaquePointer?
         try #require(sqlite3_open(location.database.path, &database) == SQLITE_OK)
-        try #require(sqlite3_exec(database, "CREATE TABLE bark_properties (network TEXT, fingerprint TEXT); INSERT INTO bark_properties VALUES ('regtest', 'test');", nil, nil, nil) == SQLITE_OK)
+        try #require(sqlite3_exec(
+            database,
+            "CREATE TABLE bark_properties (network TEXT, fingerprint TEXT); INSERT INTO bark_properties VALUES ('regtest', 'test');",
+            nil,
+            nil,
+            nil) == SQLITE_OK)
         sqlite3_close(database)
         struct Opened: Error {}
         let session = WalletSession(variant: .regtest, location: location) { _, _, daemon, _, create in
@@ -135,8 +144,8 @@ import Testing
                 ? try await OnchainWallet.default(network: .regtest, mnemonic: mnemonic, config: config, datadir: datadir)
                 : try await OnchainWallet.openExisting(network: .regtest, mnemonic: mnemonic, config: config, datadir: datadir)
             let wallet = try await Wallet.openWithOnchain(network: .regtest, mnemonicOrSeed: mnemonic, config: config,
-                args: WalletOpenArgs(runDaemon: false, datadir: datadir, createIfNotExists: create,
-                                     createWithoutServer: true, skipRecovery: true), onchain: onchain)
+                                                          args: WalletOpenArgs(runDaemon: false, datadir: datadir, createIfNotExists: create,
+                                                                               createWithoutServer: true, skipRecovery: true), onchain: onchain)
             return .init(wallet: wallet, onchain: onchain)
         }
         // Foreground setup only. The tested background branch must open this existing DB.
@@ -164,7 +173,6 @@ import Testing
         try await session.close()
     }
 
-
     @Test func sharedActivityCoversJobAndCancelledSettlement() async throws {
         let services = AppServices(variant: .regtest, session: WalletSession(variant: .regtest))
         let gate = RecurringReservationTests.Gate()
@@ -190,7 +198,12 @@ import Testing
         try FileManager.default.createDirectory(at: location.directory, withIntermediateDirectories: true)
         var database: OpaquePointer?
         try #require(sqlite3_open(location.database.path, &database) == SQLITE_OK)
-        try #require(sqlite3_exec(database, "CREATE TABLE bark_properties (network TEXT, fingerprint TEXT); INSERT INTO bark_properties VALUES ('regtest', 'test');", nil, nil, nil) == SQLITE_OK)
+        try #require(sqlite3_exec(
+            database,
+            "CREATE TABLE bark_properties (network TEXT, fingerprint TEXT); INSERT INTO bark_properties VALUES ('regtest', 'test');",
+            nil,
+            nil,
+            nil) == SQLITE_OK)
         sqlite3_close(database)
         let recorder = PushJobsTests.Recorder()
         let session = WalletSession(variant: .regtest, location: location) { _, _, _, _, _ in
@@ -217,5 +230,4 @@ import Testing
         let reservation = try await session.reserve()
         await session.release(reservation)
     }
-
 }

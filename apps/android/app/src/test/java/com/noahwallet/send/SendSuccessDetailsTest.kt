@@ -1,11 +1,11 @@
 package com.noahwallet.send
 
-import com.noahwallet.history.HistoryTransaction
 import com.noahwallet.history.HistoryRules
-import java.util.Date
-import java.util.Locale
+import com.noahwallet.history.HistoryTransaction
 import org.junit.Assert.*
 import org.junit.Test
+import java.util.Date
+import java.util.Locale
 
 class SendSuccessDetailsTest {
     private val date = Date(1_700_000_000_000L)

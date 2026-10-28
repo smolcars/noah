@@ -5,8 +5,8 @@ import android.content.Intent
 import androidx.core.content.FileProvider
 import androidx.work.Worker
 import androidx.work.WorkerParameters
-import java.io.File
 import com.noahwallet.services.storage.syncDirectory
+import java.io.File
 
 /** Only encrypted backups and redacted logs belong here; plaintext stays in ScratchSpace. */
 class SettingsShareFiles(private val root: File, private val revoke: (File) -> Unit = {},

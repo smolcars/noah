@@ -61,7 +61,7 @@ extension View {
         frame(maxWidth: maximum).frame(maxWidth: .infinity)
     }
 
-    func scrollFocusedField<Field: Hashable>(_ field: Field?, using scroll: ScrollViewProxy) -> some View {
+    func scrollFocusedField(_ field: (some Hashable)?, using scroll: ScrollViewProxy) -> some View {
         modifier(FocusedFieldScroll(field: field, scroll: scroll))
     }
 }

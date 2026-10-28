@@ -5,15 +5,15 @@ import com.noahwallet.services.logging.AppLog
 import com.noahwallet.services.logging.BarkLog
 import com.noahwallet.services.logging.LogFile
 import io.github.niteshbalusu11.bark.LogLevel
+import kotlinx.serialization.json.jsonPrimitive
+import org.junit.Assert.*
+import org.junit.Test
 import java.nio.file.Files
 import java.util.ArrayDeque
 import java.util.concurrent.CountDownLatch
 import java.util.concurrent.Executor
 import java.util.concurrent.Executors
 import java.util.concurrent.TimeUnit
-import kotlinx.serialization.json.jsonPrimitive
-import org.junit.Assert.*
-import org.junit.Test
 
 class BarkLogTest {
     @Test fun customEndpointPathsAreRemovedAtSDKAppAndTelemetryBoundaries() {

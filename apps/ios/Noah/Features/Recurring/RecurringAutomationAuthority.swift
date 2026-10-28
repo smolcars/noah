@@ -25,7 +25,7 @@ final class RecurringAutomationAuthority: @unchecked Sendable {
     init(directory: URL, sync: @escaping @Sendable (URL) throws -> Void = RestoreTransaction.fullSync) {
         file = directory.appending(path: ".noah-recurring-automation.json"); self.sync = sync
     }
-    private func write<T: Encodable>(_ value: T, to file: URL) throws {
+    private func write(_ value: some Encodable, to file: URL) throws {
         try RecurringStore.durableWrite(JSONEncoder().encode(value), to: file, sync: sync)
     }
     private func state() throws -> State {

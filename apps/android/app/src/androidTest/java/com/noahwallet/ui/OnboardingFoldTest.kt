@@ -17,8 +17,8 @@ import androidx.compose.ui.semantics.getOrNull
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.compose.ui.test.onNodeWithTag
 import androidx.compose.ui.test.onNodeWithText
-import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.onRoot
+import androidx.compose.ui.test.performScrollTo
 import androidx.test.platform.app.InstrumentationRegistry
 import org.junit.Assert.*
 import org.junit.Rule
@@ -32,7 +32,7 @@ class OnboardingFoldTest {
     @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
 
     private fun show(step: String, stage: com.noahwallet.ui.onboarding.NotificationStage = com.noahwallet.ui.onboarding.NotificationStage.ask,
-                     words: List<String>? = null, hinge: (Int, Int) -> WindowRegion): WindowRegion {
+        words: List<String>? = null, hinge: (Int, Int) -> WindowRegion): WindowRegion {
         compose.mainClock.autoAdvance = false
         val app = InstrumentationRegistry.getInstrumentation().targetContext.applicationContext as Application
         lateinit var model: AppModel
@@ -46,7 +46,8 @@ class OnboardingFoldTest {
             val bounds = activity.window.decorView
             fold = hinge(bounds.width, bounds.height)
             // Host it as MainActivity and LaunchGateView do: adjustResize and the safe-drawing insets (keyboard included).
-            @Suppress("DEPRECATION") activity.window.setSoftInputMode(android.view.WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
+            @Suppress("DEPRECATION")
+            activity.window.setSoftInputMode(android.view.WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE)
             activity.setContent { NoahTheme { CompositionLocalProvider(LocalFoldingFeatures provides listOf(fold)) {
                 Box(Modifier.fillMaxSize().windowInsetsPadding(androidx.compose.foundation.layout.WindowInsets.safeDrawing)) { Onboarding(model) }
             } } }

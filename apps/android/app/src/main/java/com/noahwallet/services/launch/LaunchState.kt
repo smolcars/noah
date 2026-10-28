@@ -2,10 +2,10 @@ package com.noahwallet.services.launch
 
 import android.content.Context
 import com.noahwallet.BuildConfig
-import com.noahwallet.services.storage.SecretResult
 import com.noahwallet.services.storage.SecretFailure
-import com.noahwallet.services.storage.StoredMnemonic
+import com.noahwallet.services.storage.SecretResult
 import com.noahwallet.services.storage.SeedStorage
+import com.noahwallet.services.storage.StoredMnemonic
 import com.noahwallet.services.storage.WalletDataLocation
 
 enum class LaunchState {
@@ -32,7 +32,7 @@ enum class LaunchState {
 
     companion object {
         fun inspect(sources: List<SecretResult>, walletDatabaseExists: Boolean,
-                    fingerprintMatches: Boolean = true, multipleDatabases: Boolean = false): Inspection {
+            fingerprintMatches: Boolean = true, multipleDatabases: Boolean = false): Inspection {
             if (multipleDatabases) return Inspection(seedConflict, Diagnostic.multipleDatabases)
             val status = SeedStatus.from(StoredMnemonic.agree(sources.map(StoredMnemonic::validate)))
             if (status == SeedStatus.present && walletDatabaseExists && !fingerprintMatches)

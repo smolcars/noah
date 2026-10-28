@@ -15,7 +15,7 @@ struct RepeatPayment: Codable, Equatable, Sendable {
         var value = value.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
         if value.hasPrefix("lightning:") { value.removeFirst(10) }
         let parts = value.split(separator: "@", omittingEmptySubsequences: false)
-        return parts.count == 2 && parts.allSatisfy({ !$0.isEmpty }) ? value : nil
+        return parts.count == 2 && parts.allSatisfy { !$0.isEmpty } ? value : nil
     }
 
     static func parse(_ value: Any?) -> Self? {

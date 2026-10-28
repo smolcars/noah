@@ -1,12 +1,11 @@
 package com.noahwallet.ui
 
 import com.noahwallet.fixtures.SharedFixtures
+import com.noahwallet.services.storage.LegacyLocale
+import com.noahwallet.ui.settings.Preference
 import com.noahwallet.ui.settings.limitedProfileName
 import com.noahwallet.ui.settings.preferenceName
-import com.noahwallet.ui.settings.Preference
-import java.util.Locale
 import kotlinx.serialization.json.jsonPrimitive
-import com.noahwallet.services.storage.LegacyLocale
 import org.junit.Assert.*
 import org.junit.Before
 import org.junit.Test
@@ -14,6 +13,7 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
+import java.util.Locale
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35])

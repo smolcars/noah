@@ -1,6 +1,6 @@
 import Foundation
-import Testing
 @testable import Noah
+import Testing
 
 @MainActor @Suite(.serialized)
 struct ForegroundWidgetRefreshTests {
@@ -16,7 +16,7 @@ struct ForegroundWidgetRefreshTests {
         let previous = defaults.object(forKey: "widgetBalance")
         defer { defaults.set(previous, forKey: "widgetBalance") }
         _ = try await ForegroundWidgetRefresh.read(summary: { summary }, expiry: { 123 },
-            checkStage: {}, publish: { WidgetDataWriter.write(balance: $0, closestExpiryBlocks: $1, variant: .regtest) })
+                                                   checkStage: {}, publish: { WidgetDataWriter.write(balance: $0, closestExpiryBlocks: $1, variant: .regtest) })
         WidgetDataWriter.write(balance: summary.balance, closestExpiryBlocks: nil, variant: .regtest, preserveExpiry: true)
         let values = defaults.dictionary(forKey: "widgetBalance")
         #expect(values?["closestExpiryBlocks"] as? Double == 123)
@@ -32,7 +32,7 @@ struct ForegroundWidgetRefreshTests {
                     _ = try await ForegroundWidgetRefresh.read(summary: {
                         if revokeAfterSummary { budget.revoke() }; return summary
                     }, expiry: { expiryReads += 1; budget.revoke(); return 123 },
-                        checkStage: { try BackgroundExecution.checkActive() }, publish: { _, _ in writes += 1 })
+                    checkStage: { try BackgroundExecution.checkActive() }, publish: { _, _ in writes += 1 })
                     Issue.record("Revoked refresh returned successfully")
                 } catch is CancellationError {} catch { Issue.record("Unexpected error") }
             }
@@ -53,7 +53,7 @@ struct ForegroundWidgetRefreshTests {
         #expect(writes == 0)
         struct TipUnavailable: Error {}
         let latest = try await ForegroundWidgetRefresh.read(summary: { summary }, expiry: { throw TipUnavailable() },
-            checkStage: {}, publish: { _, _ in writes += 1 })
+                                                            checkStage: {}, publish: { _, _ in writes += 1 })
         #expect(latest == summary)
         #expect(writes == 0)
     }

@@ -1,6 +1,5 @@
-import Testing
-
 @testable import Noah
+import Testing
 
 struct WalletBalanceTests {
     struct Input: Decodable {

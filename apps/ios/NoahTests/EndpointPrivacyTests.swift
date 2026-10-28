@@ -1,9 +1,8 @@
 import BarkBoltFFI
 import Foundation
+@testable import Noah
 import Sentry
 import Testing
-
-@testable import Noah
 
 struct EndpointPrivacyTests {
     @Test func equivalentAuthoritiesUseSharedFixturesAtEveryBoundary() throws {
@@ -93,12 +92,20 @@ struct EndpointPrivacyTests {
         let origin = "https://fakehostcredential73.example.com:8443"
         EndpointLogPrivacy.register(origin + "/api")
         EndpointLogPrivacy.register("https://fakepunctcredential92.example.com/api")
-        let inputs = ["https://fakepunctcredential92.example.com:443)", origin, origin + "/api/blocks/tip/height", origin.uppercased(), origin + ")", origin + ",", origin + ".",
+        let inputs = [
+            "https://fakepunctcredential92.example.com:443)",
+            origin,
+            origin + "/api/blocks/tip/height",
+            origin.uppercased(),
+            origin + ")",
+            origin + ",",
+            origin + ".",
             origin.replacingOccurrences(of: "fake", with: #"\u0066ake"#),
             origin.replacingOccurrences(of: ":", with: "%3A").replacingOccurrences(of: "/", with: "%2F"),
             origin.replacingOccurrences(of: "/", with: "%2F"),
             origin.replacingOccurrences(of: "/", with: #"\/"#),
-            origin.replacingOccurrences(of: ":", with: "&#58;").replacingOccurrences(of: "/", with: "&#x2f;")]
+            origin.replacingOccurrences(of: ":", with: "&#58;").replacingOccurrences(of: "/", with: "&#x2f;"),
+        ]
         for input in inputs {
             #expect(LogFile.redact(input) == "[custom-esplora]")
             let event = Event(level: .error); event.message = SentryMessage(formatted: input)
@@ -125,8 +132,8 @@ struct EndpointPrivacyTests {
         let input = #"HttpResponse { status: 404, message: "Account: &#x66;akeBodyCredential83" }"#
         let expected = "HttpResponse { status: 404 }"
         for response in [input, #"HttpResponse { status: 404, message: "truncated fake"#,
-            #"HttpResponse { status: 404, message: "bad \uD800 escape" }"#,
-            input.replacingOccurrences(of: "{", with: "&#123;").replacingOccurrences(of: "}", with: "&#125;")] {
+                         #"HttpResponse { status: 404, message: "bad \uD800 escape" }"#,
+                         input.replacingOccurrences(of: "{", with: "&#123;").replacingOccurrences(of: "}", with: "&#125;")] {
             #expect(LogFile.redact(response) == expected)
             #expect(LogFile.redactForTelemetry(response) == expected)
         }
@@ -160,20 +167,20 @@ struct EndpointPrivacyTests {
         }
         for variant in AppVariant.allCases {
             let config = WalletConfiguration.base(for: variant)
-            for endpoint in [ServerEndpoint.baseURL(for: variant).absoluteString, config.arkServer, config.esplora].compactMap({ $0 }) {
+            for endpoint in [ServerEndpoint.baseURL(for: variant).absoluteString, config.arkServer, config.esplora].compactMap(\.self) {
                 let url = try #require(URLComponents(string: endpoint))
                 let origin = url.scheme! + "://" + url.host! + (url.port.map { ":" + String($0) } ?? "")
                 #expect(EndpointLogPrivacy.sanitize(endpoint, registered: ["https://fake-custom.example"]) == endpoint)
                 #expect(EndpointLogPrivacy.sanitize(endpoint, registered: [origin]) == "[custom-esplora]")
             }
         }
-        let hosts: Set<String> = ["abandon", "mnemonic", "preimage", "password"]
+        let hosts: Set = ["abandon", "mnemonic", "preimage", "password"]
         let registered = Set(hosts.map { "https://" + $0 })
         for test in try Fixtures.load("log-redaction", input: String.self, expected: String.self)
             where ["mnemonic-lower", "label-mnemonic", "label-preimage", "label-password"].contains(test.name) {
             #expect(EndpointLogPrivacy.sanitize(test.input, registered: registered, hosts: hosts) == test.expected)
-            #expect(EndpointLogPrivacy.sanitize("TransportError HTTP 503: " + test.input, registered: registered, hosts: hosts) == "TransportError HTTP 503: " + test.expected)
+            #expect(EndpointLogPrivacy
+                .sanitize("TransportError HTTP 503: " + test.input, registered: registered, hosts: hosts) == "TransportError HTTP 503: " + test.expected)
         }
-
     }
 }

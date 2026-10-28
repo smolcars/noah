@@ -1,8 +1,7 @@
 import BarkBoltFFI
 import Foundation
-import Testing
-
 @testable import Noah
+import Testing
 
 /// Dedicated, disposable simulator only. Explicit mutation stages authorize regtest broadcasts.
 @MainActor

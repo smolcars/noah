@@ -4,17 +4,17 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.work.*
 import androidx.work.impl.WorkManagerImpl
-import androidx.work.testing.TestListenableWorkerBuilder
-import com.noahwallet.services.background.PeriodicWalletWorker
-import kotlinx.coroutines.runBlocking
 import androidx.work.testing.SynchronousExecutor
+import androidx.work.testing.TestListenableWorkerBuilder
 import androidx.work.testing.WorkManagerTestInitHelper
+import com.noahwallet.services.background.PeriodicWalletWorker
 import com.noahwallet.services.background.PeriodicWork
 import com.noahwallet.services.storage.WalletDataLocation
-import java.util.concurrent.TimeUnit
+import kotlinx.coroutines.runBlocking
 import org.junit.Assert.*
 import org.junit.Test
 import org.junit.runner.RunWith
+import java.util.concurrent.TimeUnit
 
 /** Enqueues the production worker through WorkManager on an empty, disposable emulator. */
 @RunWith(AndroidJUnit4::class)

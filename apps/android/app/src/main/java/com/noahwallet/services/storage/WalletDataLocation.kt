@@ -1,13 +1,13 @@
 package com.noahwallet.services.storage
 
-import java.io.File
 import com.noahwallet.services.backup.RestoreTransaction
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
+import java.io.File
 import java.security.MessageDigest
 import java.security.SecureRandom
 import java.util.UUID
 import kotlin.io.encoding.Base64
-import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.Json
 
 class WalletDataLocation(filesDirectory: File, variant: String) {
     val directory = File(filesDirectory, "noah-data-$variant")
@@ -44,14 +44,13 @@ class WalletDataLocation(filesDirectory: File, variant: String) {
             }
         }.getOrNull() ?: return DeletionStatus.mismatched
         when (seed) {
-            is SecretResult.Found -> if (identity.seedTag == null || !MessageDigest.isEqual(
-                RestoreTransaction.tag(seed.value, Base64.decode(identity.seedSalt)), Base64.decode(identity.seedTag))) return DeletionStatus.mismatched
+            is SecretResult.Found -> if (identity.seedTag == null || !MessageDigest.isEqual(RestoreTransaction.tag(seed.value, Base64.decode(identity.seedSalt)), Base64.decode(identity.seedTag))) return DeletionStatus.mismatched
             is SecretResult.Unavailable -> return DeletionStatus.waitingForSecret
             SecretResult.NotFound -> Unit // Only non-seed cleanup remains.
         }
         if (!directory.exists()) return DeletionStatus.matching
         return if (instanceIdentity.exists() && instanceIdentity.readText() == identity.id) DeletionStatus.matching
-            else DeletionStatus.mismatched
+        else DeletionStatus.mismatched
     }
 
     /** Only unmarked staging belongs to an already committed, discarded deletion. Never touch a pending one. */

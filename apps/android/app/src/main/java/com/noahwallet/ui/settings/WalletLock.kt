@@ -1,12 +1,12 @@
 package com.noahwallet.ui.settings
 
-import androidx.biometric.BiometricManager
-import androidx.biometric.BiometricPrompt
-import androidx.core.content.ContextCompat
-import androidx.fragment.app.FragmentActivity
 import android.view.Window
 import android.view.WindowManager
+import androidx.biometric.BiometricManager
+import androidx.biometric.BiometricPrompt
 import androidx.compose.runtime.*
+import androidx.core.content.ContextCompat
+import androidx.fragment.app.FragmentActivity
 import com.noahwallet.services.storage.*
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlin.coroutines.resume

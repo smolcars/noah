@@ -60,7 +60,7 @@ struct SendHoldButton: View {
             .simultaneousGesture(SpatialEventGesture()
                 .onChanged { events in
                     let spoiled = press.spoiled
-                    press.touches(events.filter { $0.phase == .active }.count)
+                    press.touches(events.count(where: { $0.phase == .active }))
                     if press.spoiled && !spoiled { release() }
                 }
                 .onEnded { _ in press.touches(0) })

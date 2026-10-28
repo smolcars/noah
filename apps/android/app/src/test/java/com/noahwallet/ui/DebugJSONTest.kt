@@ -1,7 +1,7 @@
 package com.noahwallet.ui
 
-import com.noahwallet.services.wallet.DebugJSON
 import com.noahwallet.services.logging.SafeErrorDescription
+import com.noahwallet.services.wallet.DebugJSON
 import io.github.niteshbalusu11.bark.*
 import kotlinx.serialization.json.*
 import org.junit.Assert.*

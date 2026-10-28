@@ -25,5 +25,4 @@ internal object MMKVIntegrity {
         val crc = CRC32().apply { update(data, 4, size.toInt()) }.value
         return crc == u32(meta, 0)
     }
-
 }

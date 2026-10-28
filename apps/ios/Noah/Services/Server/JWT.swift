@@ -29,7 +29,7 @@ enum JWT {
         var base64 = segments[1].replacingOccurrences(of: "-", with: "+").replacingOccurrences(of: "_", with: "/")
         base64 += String(repeating: "=", count: (4 - base64.count % 4) % 4)
         guard let data = Data(base64Encoded: base64),
-            let payload = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
+              let payload = try? JSONSerialization.jsonObject(with: data) as? [String: Any]
         else { throw .malformed }
         return payload
     }

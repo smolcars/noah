@@ -795,7 +795,10 @@ struct SendView: View {
     private var sendingScreen: some View {
         SendOutcomeView(controller: model.controller, btcPrice: model.btcPrice, fiatCurrency: model.fiatCurrency,
                         done: finish, clock: clock, unit: unit,
-                        recipient: (model.controller.attempt?.payment ?? model.payment).map { .of(destination: model.destination, payment: $0, ownDomain: ownDomain) },
+                        recipient: (model.controller.attempt?.payment ?? model.payment).map { .of(
+                            destination: model.destination,
+                            payment: $0,
+                            ownDomain: ownDomain) },
                         wide: wide, sideInsets: (window.insets.leading, window.insets.trailing), onLeave: onLeave,
                         reviewed: model.payment, chainTip: chainTip)
     }

@@ -120,7 +120,7 @@ internal data class CardFace(val payload: String?, val title: String, val captio
  */
 @Composable
 internal fun ReceiveCard(face: CardFace, arrival: ReceiveArrival?, amount: String?, listening: Boolean, tilt: Float, width: Dp, qrSide: Dp,
-                         onProfile: () -> Unit, onTap: (() -> Unit)?, modifier: Modifier = Modifier) {
+    onProfile: () -> Unit, onTap: (() -> Unit)?, modifier: Modifier = Modifier) {
     val palette = LocalPalette.current
     val reduceMotion = LocalReduceMotion.current
     val ink = NoahTokens.Light.qrInk

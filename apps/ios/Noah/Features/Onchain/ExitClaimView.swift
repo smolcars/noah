@@ -63,7 +63,10 @@ struct ExitClaimView: View {
                 .disabled(model.busy)
             if !toPhone {
                 field.disabled(model.busy)
-                ExitWarning(text: L10n.text("Check the address. This can’t be undone.", locale: language), symbol: "exclamationmark.shield", muted: !(!address.isEmpty && !valid))
+                ExitWarning(
+                    text: L10n.text("Check the address. This can’t be undone.", locale: language),
+                    symbol: "exclamationmark.shield",
+                    muted: !(!address.isEmpty && !valid))
                 if !address.isEmpty && !valid {
                     SettingsFine(text: L10n.text("Enter an on-chain Bitcoin address for this network.", locale: language), failure: true)
                 }
@@ -74,12 +77,14 @@ struct ExitClaimView: View {
                 .padding(.top, toPhone ? 0 : 8)
             VStack(spacing: 0) {
                 ExitDetailRow(label: L10n.text("Claim fee", locale: language),
-                                  value: quote.map { $0.fee.map(money.about) ?? L10n.text("Unknown", locale: language) } ?? "—", numeric: true)
+                              value: quote.map { $0.fee.map(money.about) ?? L10n.text("Unknown", locale: language) } ?? "—", numeric: true)
                 ExitDetailRow(label: L10n.text("You get", locale: language), value: receive.map(money.about) ?? "—", numeric: true, hairline: false)
             }
             .padding(.top, 18)
             if quote?.feesUnknown == true {
-                ExitWarning(text: L10n.text("Fee estimate unavailable. Fees and amount to receive are unknown. Continue without an estimate only if you accept this uncertainty.", locale: language))
+                ExitWarning(text: L10n.text(
+                    "Fee estimate unavailable. Fees and amount to receive are unknown. Continue without an estimate only if you accept this uncertainty.",
+                    locale: language))
             } else if let quote, let fee = quote.fee, let warning = ExitRules.warning(amount: quote.amount, claimFee: fee, totalFee: fee, claimOnly: true) {
                 ExitWarning(text: L10n.text(warning, locale: language))
             }

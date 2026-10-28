@@ -81,7 +81,8 @@ class SettingsLifecycleDeviceTest {
     }
 
     @Suppress("DEPRECATION")
-    @Test fun prepareLegacySeedCopiesBeforeUiDeletion() = runBlocking {
+    @Test
+    fun prepareLegacySeedCopiesBeforeUiDeletion() = runBlocking {
         enabled("legacy")
         val seed = (SeedStorage(context, "regtest").read() as SecretResult.Found).value
         val service = "com.noah.mnemonic.regtest"

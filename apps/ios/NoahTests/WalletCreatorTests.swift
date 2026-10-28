@@ -1,8 +1,7 @@
 import BarkBoltFFI
 import Foundation
-import Testing
-
 @testable import Noah
+import Testing
 
 /// Mirrors `client/tests/integration/walletCreation.test.js`.
 struct WalletCreatorTests {
@@ -25,8 +24,7 @@ struct WalletCreatorTests {
             variant: .regtest,
             location: WalletDataLocation(
                 variant: .regtest,
-                documentsDirectory: FileManager.default.temporaryDirectory.appending(path: "creator-\(UUID().uuidString)"))
-        ) { _, _, _, _, _ in throw Boom() }
+                documentsDirectory: FileManager.default.temporaryDirectory.appending(path: "creator-\(UUID().uuidString)"))) { _, _, _, _, _ in throw Boom() }
 
         func withLock<T>(_ body: () throws -> T) rethrows -> T { lock.lock(); defer { lock.unlock() }; return try body() }
 
@@ -81,10 +79,10 @@ struct WalletCreatorTests {
         let creator = WalletCreator(dependencies: fake.dependencies())
         try await creator.createOrResume()
         try await creator.createOrResume()
-        #expect({ fake.generated == [Self.first] }())
-        #expect({ fake.created == [Self.first] }())
-        #expect({ fake.opened == [Self.first] }())
-        #expect({ fake.seed == .found(Self.first) }())
+        #expect(fake.generated == [Self.first])
+        #expect(fake.created == [Self.first])
+        #expect(fake.opened == [Self.first])
+        #expect(fake.seed == .found(Self.first))
     }
 
     @Test func resumesExistingWalletWithoutGeneratingASeed() async throws {
@@ -93,7 +91,7 @@ struct WalletCreatorTests {
         fake.database = true
         try await WalletCreator(dependencies: fake.dependencies()).createOrResume()
         #expect(fake.generated.isEmpty)
-        #expect({ fake.opened == [Self.first] }())
+        #expect(fake.opened == [Self.first])
     }
 
     @Test func failedResumePreservesSeedAndData() async {
@@ -102,7 +100,7 @@ struct WalletCreatorTests {
         fake.database = true
         fake.openFailure = Boom()
         await #expect(throws: Boom.self) { try await WalletCreator(dependencies: fake.dependencies()).createOrResume() }
-        #expect({ fake.seed == .found(Self.first) }())
+        #expect(fake.seed == .found(Self.first))
         #expect(fake.database)
         #expect(fake.generated.isEmpty)
     }
@@ -115,7 +113,7 @@ struct WalletCreatorTests {
             try await WalletCreator(dependencies: fake.dependencies()).createOrResume()
         }
         #expect(fake.generated.isEmpty)
-        #expect({ existing == "seed" ? fake.seed == .found(Self.first) : fake.database }())
+        #expect(existing == "seed" ? fake.seed == .found(Self.first) : fake.database)
     }
 
     @Test func unreadableKeychainTouchesNothing() async {
@@ -132,13 +130,13 @@ struct WalletCreatorTests {
         fake.createFailure = Boom()
         let creator = WalletCreator(dependencies: fake.dependencies())
         await #expect(throws: Boom.self) { try await creator.createOrResume() }
-        #expect({ fake.seed == .notFound }(), "the new seed was stored, then removed")
+        #expect(fake.seed == .notFound, "the new seed was stored, then removed")
         #expect(!fake.database && !fake.datadir)
 
         fake.withLock { fake.createFailure = nil }
         try await creator.createOrResume()
-        #expect({ fake.generated == [Self.first, Self.second] }())
-        #expect({ fake.seed == .found(Self.second) }())
+        #expect(fake.generated == [Self.first, Self.second])
+        #expect(fake.seed == .found(Self.second))
     }
 
     @Test func overlappingAcceptancesShareOneAttempt() async throws {
@@ -152,8 +150,8 @@ struct WalletCreatorTests {
         fake.withLock { fake.createGate?.resume(); fake.createGate = nil }
         try await first.value
         try await second.value
-        #expect({ fake.generated == [Self.first] }())
-        #expect({ fake.created == [Self.first] }())
+        #expect(fake.generated == [Self.first])
+        #expect(fake.created == [Self.first])
     }
 
     @Test func freshCreationWaitsOutAReservationWithoutTouchingAnything() async throws {
@@ -164,7 +162,7 @@ struct WalletCreatorTests {
             try await WalletCreator(dependencies: fake.dependencies()).createOrResume()
         }
         #expect(fake.generated.isEmpty)
-        #expect({ fake.seed == .notFound }())
+        #expect(fake.seed == .notFound)
         #expect(!fake.datadir)
         await fake.session.release(restore)
     }
@@ -183,7 +181,7 @@ struct WalletCreatorTests {
         await #expect(throws: Boom.self) { try await attempt.value }
 
         // Cleanup finished under the reservation, then released it.
-        #expect({ fake.seed == .notFound }())
+        #expect(fake.seed == .notFound)
         #expect(!fake.database && !fake.datadir)
         let next = try await fake.session.reserve()
         await fake.session.release(next)
@@ -194,7 +192,7 @@ struct WalletCreatorTests {
         fake.createFailure = Boom()
         fake.cleanupFails = true
         await #expect(throws: Boom.self) { try await WalletCreator(dependencies: fake.dependencies()).createOrResume() }
-        #expect({ fake.seed == .found(Self.first) }(), "leftover wallet files must keep their seed")
+        #expect(fake.seed == .found(Self.first), "leftover wallet files must keep their seed")
         #expect(fake.database)
     }
 }

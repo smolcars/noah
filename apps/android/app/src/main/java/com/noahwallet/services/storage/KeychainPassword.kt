@@ -1,17 +1,17 @@
 package com.noahwallet.services.storage
 
 import android.content.Context
-import android.util.Base64
-import androidx.datastore.preferences.core.stringPreferencesKey
-import androidx.datastore.preferences.core.edit
 import android.security.keystore.KeyInfo
-import javax.crypto.Cipher
-import javax.crypto.SecretKeyFactory
+import android.util.Base64
+import androidx.datastore.preferences.core.edit
+import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import androidx.security.crypto.EncryptedSharedPreferences
 import androidx.security.crypto.MasterKeys
-import java.io.File
 import kotlinx.coroutines.flow.first
+import java.io.File
+import javax.crypto.Cipher
+import javax.crypto.SecretKeyFactory
 
 // One instance per process/file. Deliberately NO SharedPreferencesMigration (which deletes legacy entries).
 internal val Context.rnKeychain by preferencesDataStore(name = "RN_KEYCHAIN")
@@ -90,10 +90,8 @@ class KeychainPassword private constructor(
 
     companion object {
         private val fields = listOf("u", "p", "c")
-        fun mnemonic(context: Context, variant: String) = KeychainPassword(
-            context.applicationContext, "com.noah.mnemonic.$variant", variant)
-        fun serverAuthToken(context: Context, variant: String) = KeychainPassword(
-            context.applicationContext, "com.noah.auth-token.$variant")
+        fun mnemonic(context: Context, variant: String) = KeychainPassword(context.applicationContext, "com.noah.mnemonic.$variant", variant)
+        fun serverAuthToken(context: Context, variant: String) = KeychainPassword(context.applicationContext, "com.noah.auth-token.$variant")
     }
 }
 

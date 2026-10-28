@@ -1,6 +1,6 @@
 import Foundation
-import Testing
 @testable import Noah
+import Testing
 
 @MainActor struct RecurringRNRequiredFieldsTests {
     struct Case: Decodable, Sendable { let name: String; let rowJSON: String; let classification: String }
@@ -8,9 +8,10 @@ import Testing
     nonisolated static func cases() throws -> [Case] {
         let directory = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent()
             .deletingLastPathComponent().appending(path: "fixtures")
-        return try ["recurring-rn-required-fields", "recurring-rn-numeric-types", "recurring-rn-numeric-ranges", "recurring-rn-duplicate-keys"].flatMap { name in
-            try JSONDecoder().decode(Fixture.self, from: Data(contentsOf: directory.appending(path: "\(name).json"))).cases
-        }
+        return try ["recurring-rn-required-fields", "recurring-rn-numeric-types", "recurring-rn-numeric-ranges", "recurring-rn-duplicate-keys"]
+            .flatMap { name in
+                try JSONDecoder().decode(Fixture.self, from: Data(contentsOf: directory.appending(path: "\(name).json"))).cases
+            }
     }
     /// The executor handles every unsupported row alike: one per fixture runs the full flow, with every supported row.
     nonisolated static let sampled: Set<String> = ["missing-amountSat", "quoted-amountSat", "overflow-amountSat", "duplicate-fraction-first-amount"]

@@ -24,7 +24,7 @@ struct FeedbackDraft {
         return .init(attachment: attachment, body: body, deviceInfo: .init(
             appBuild: device.appBuild, appVersion: device.appVersion, deviceManufacturer: device.deviceManufacturer,
             deviceModel: device.deviceModel, osName: device.osName, osVersion: device.osVersion),
-            email: email.isEmpty ? nil : email, name: name, subject: subject)
+        email: email.isEmpty ? nil : email, name: name, subject: subject)
     }
 
     static func attachment(_ data: Data) throws -> Components.Schemas.SubmitSupportTicketPayload.AttachmentPayload {

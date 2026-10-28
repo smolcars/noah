@@ -1,6 +1,6 @@
 import Foundation
-import Testing
 @testable import Noah
+import Testing
 
 @MainActor struct RecurringAdmissionRaceTests {
     @Test(arguments: [false, true])
@@ -34,7 +34,9 @@ import Testing
         #expect(!FileManager.default.fileExists(atPath: location.directory.appending(path: ".noah-recurring-automation.json").path))
         try FileManager.default.createDirectory(at: location.directory, withIntermediateDirectories: true)
         try Data().write(to: location.database)
-        #expect(RecurringAutomationAuthority(directory: location.directory).allowed(), "A completed deletion must not let old work poison the replacement wallet")
+        #expect(
+            RecurringAutomationAuthority(directory: location.directory).allowed(),
+            "A completed deletion must not let old work poison the replacement wallet")
     }
     @Test func waitingTriggerRevalidatesAfterDeletionReleasesLifecycleGate() async throws {
         let h = try RecurringExecutorTests.Harness()
@@ -78,5 +80,4 @@ import Testing
         try Data().write(to: location.database)
         #expect(RecurringAutomationAuthority(directory: location.directory).allowed())
     }
-
 }

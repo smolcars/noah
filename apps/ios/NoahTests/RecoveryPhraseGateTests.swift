@@ -1,7 +1,7 @@
 import Foundation
+@testable import Noah
 import Testing
 import UIKit
-@testable import Noah
 
 /// Settings → Recovery phrase: no word before authentication, every time; cleared on background;
 /// copy is local-only and expires after two minutes.

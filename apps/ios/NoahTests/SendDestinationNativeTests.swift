@@ -1,7 +1,6 @@
 import Foundation
-import Testing
-
 @testable import Noah
+import Testing
 
 /// Native-only vectors for what Bark accepts and RN refused; the RN-generated send-utils vectors still run in SendFixtureTests.
 struct SendDestinationNativeTests {
@@ -73,7 +72,9 @@ struct SendDestinationNativeTests {
         // lnurl-rs 0.10's own encode_test vector.
         let url = "https://service.com/api?q=3fc3645b439ce8e7f2553a69e5267081d96dcd340693afabe04be7b0ccd178df"
         let encoded = PaymentEncoding.encodeBech32("lnurl", Array(url.utf8))
-        #expect(encoded.uppercased() == "LNURL1DP68GURN8GHJ7UM9WFMXJCM99E3K7MF0V9CXJ0M385EKVCENXC6R2C35XVUKXEFCV5MKVV34X5EKZD3EV56NYD3HXQURZEPEXEJXXEPNXSCRVWFNV9NXZCN9XQ6XYEFHVGCXXCMYXYMNSERXFQ5FNS")
+        #expect(encoded
+            .uppercased() ==
+            "LNURL1DP68GURN8GHJ7UM9WFMXJCM99E3K7MF0V9CXJ0M385EKVCENXC6R2C35XVUKXEFCV5MKVV34X5EKZD3EV56NYD3HXQURZEPEXEJXXEPNXSCRVWFNV9NXZCN9XQ6XYEFHVGCXXCMYXYMNSERXFQ5FNS")
         let decoded = try #require(PaymentEncoding.bech32(encoded))
         #expect(PaymentEncoding.bytes(decoded.words).map { String(decoding: $0, as: UTF8.self) } == url)
     }

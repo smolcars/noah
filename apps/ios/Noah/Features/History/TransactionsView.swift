@@ -308,9 +308,9 @@ private struct ActivityListPane: View {
                 GlassGroup(spacing: 8) {
                     HStack(spacing: 8) {
                         Button(action: openSearch) { ActivityCircleIcon(systemName: "magnifyingglass") }
-                        .buttonStyle(HomePressStyle())
-                        .accessibilityLabel(Text("Search"))
-                        .accessibilityIdentifier("activity-search")
+                            .buttonStyle(HomePressStyle())
+                            .accessibilityLabel(Text("Search"))
+                            .accessibilityIdentifier("activity-search")
                         menu(label: ActivityCircleIcon(systemName: "ellipsis"))
                     }
                 }
@@ -361,7 +361,7 @@ private struct ActivityListPane: View {
             Picker(selection: Binding(get: { filter }, set: setFilter)) {
                 ForEach(HistoryFilter.allCases) { Text(LocalizedStringKey($0.title)).tag($0) }
             } label: { Text("Filter") }
-            .pickerStyle(.inline)
+                .pickerStyle(.inline)
             Section {
                 Button("Export CSV", systemImage: "square.and.arrow.up", action: onExport)
                     .disabled(history.isLoading || history.error != nil)
@@ -482,7 +482,7 @@ extension ActivityList {
         case .exiting: "Exiting"
         case .done: nil
         }
-        return [kind, status].compactMap { $0 }.flatMap { [$0, L10n.text($0, locale: locale)] }
+        return [kind, status].compactMap(\.self).flatMap { [$0, L10n.text($0, locale: locale)] }
     }
 }
 
@@ -588,7 +588,7 @@ private struct ActivityDayHeader: View {
 private struct ActivitySkeleton: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     private static let widths: [(CGFloat, CGFloat)] = [(0.58, 0.30), (0.44, 0.36), (0.66, 0.26), (0.50, 0.40), (0.38, 0.32),
-                                                      (0.62, 0.28), (0.47, 0.34), (0.55, 0.24), (0.41, 0.38)]
+                                                       (0.62, 0.28), (0.47, 0.34), (0.55, 0.24), (0.41, 0.38)]
 
     var body: some View {
         TimelineView(.animation(paused: reduceMotion)) { timeline in

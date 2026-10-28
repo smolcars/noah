@@ -25,7 +25,7 @@ object HomeFixtures {
 
     private fun at(now: Date, minutesAgo: Long) = HistoryRules.isoDate(Date(now.time - minutesAgo * minute))
     private fun ark(id: String, type: String, amount: Long, direction: String, now: Date, minutesAgo: Long, destination: String = "",
-                    status: String = "successful", kind: String? = null, effective: Long = if (direction == "outgoing") -amount else amount) =
+        status: String = "successful", kind: String? = null, effective: Long = if (direction == "outgoing") -amount else amount) =
         HistoryTransaction(id, type, amount, at(now, minutesAgo), direction, sortTimestamp = (now.time - minutesAgo * minute).toDouble(),
             source = "ark", destination = destination, movementStatus = status, movementKind = kind, effectiveBalanceSat = effective,
             intendedBalanceSat = if (status == "canceled") -amount else effective, offchainFeeSat = 0)
@@ -58,7 +58,7 @@ object HomeFixtures {
 
     /** [state]: fresh, fresh-no-address, everyday, busy, suspended, loading. */
     fun ui(state: String, hidden: Boolean = false, now: Date = Date(), variant: String = "regtest", newRows: Set<String> = emptySet(),
-           backedUp: Boolean = false, emailPrompt: Boolean = true, address: String = HomeFixtures.address): HomeUi {
+        backedUp: Boolean = false, emailPrompt: Boolean = true, address: String = HomeFixtures.address): HomeUi {
         val locale = Locale.US
         // In history's own order, as the wallet's records come (pending on-chain first, then newest): unsorted, a row
         // 18 hours old after a 27-hour-old one splits "Today" in two after 18:00.
@@ -89,7 +89,7 @@ object HomeFixtures {
  */
 @Composable
 fun HomePreviewHost(ui: HomeUi, memory: HomeMemory = remember { HomeMemory() }, toasts: HomeToasts = remember { HomeToasts() },
-                    actions: HomeActions = HomeActions(), sheets: @Composable () -> Unit = {}) {
+    actions: HomeActions = HomeActions(), sheets: @Composable () -> Unit = {}) {
     val chrome = remember { WindowChrome() }
     val insets = WindowInsets.safeDrawing
     CompositionLocalProvider(LocalWindowChrome provides chrome) {

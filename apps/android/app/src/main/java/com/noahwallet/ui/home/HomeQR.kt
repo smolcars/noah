@@ -50,7 +50,7 @@ private fun roundRect(x: Float, y: Float, side: Float, radius: Float) = RoundRec
  */
 @Composable
 internal fun StyledQR(content: String, modifier: Modifier = Modifier, reveal: Boolean = true, reduceMotion: Boolean = false,
-                      correction: ErrorCorrectionLevel = ErrorCorrectionLevel.H) {
+    correction: ErrorCorrectionLevel = ErrorCorrectionLevel.H) {
     val model = remember(content, correction) { StyledQRModel.encode(content, correction) } ?: return
     val logo = ImageBitmap.imageResource(R.drawable.qr_logo)
     val start = rememberSaveable(content) { if (reveal) android.os.SystemClock.elapsedRealtime() else 0L }

@@ -12,7 +12,7 @@ final class SharedFile: Sendable {
 struct FileShareSheet: UIViewControllerRepresentable {
     let file: SharedFile
     var completed: @MainActor @Sendable (Bool) -> Void = { _ in }
-    func makeUIViewController(context: Context) -> UIActivityViewController {
+    func makeUIViewController(context _: Context) -> UIActivityViewController {
         let controller = UIActivityViewController(activityItems: [file.url], applicationActivities: nil)
         controller.completionWithItemsHandler = { _, success, _, error in
             let shared = success && error == nil
@@ -20,7 +20,7 @@ struct FileShareSheet: UIViewControllerRepresentable {
         }
         return controller
     }
-    func updateUIViewController(_ controller: UIActivityViewController, context: Context) {}
+    func updateUIViewController(_: UIActivityViewController, context _: Context) {}
 }
 
 /// Advanced → Logs: today's redacted log, refreshed by pulling, shared as a file.

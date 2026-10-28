@@ -11,7 +11,8 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.RuntimeEnvironment
 import org.robolectric.annotation.Config
 
-@RunWith(RobolectricTestRunner::class) @Config(sdk = [35])
+@RunWith(RobolectricTestRunner::class)
+@Config(sdk = [35])
 class RecurringLocalizationTest {
     private val languages = listOf("en", "es", "ja", "ko", "sv")
     private val context get() = RuntimeEnvironment.getApplication()
@@ -167,5 +168,4 @@ class RecurringLocalizationTest {
             } finally { cleanup(failed) }
         }
     }
-
 }

@@ -278,7 +278,7 @@ internal fun Modifier.shared(key: String, shared: Shared?, container: Boolean = 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ActivityListPane(ui: ActivityUi, actions: ActivityActions, state: ActivityState, rows: List<ActivityRules.Row>,
-                             toasts: HomeToasts, wide: Boolean, shared: Shared?) {
+    toasts: HomeToasts, wide: Boolean, shared: Shared?) {
     val palette = LocalPalette.current
     val haptics = rememberHaptics()
     val words = activityWords(rows)
@@ -312,7 +312,7 @@ private fun activityWords(rows: List<ActivityRules.Row>): Map<String, List<Strin
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun ActivityList(ui: ActivityUi, actions: ActivityActions, state: ActivityState, rows: List<ActivityRules.Row>, visible: List<ActivityRules.Row>,
-                         listState: LazyListState, wide: Boolean, shared: Shared?) {
+    listState: LazyListState, wide: Boolean, shared: Shared?) {
     val palette = LocalPalette.current
     val haptics = rememberHaptics()
     val reduceMotion = LocalReduceMotion.current
@@ -499,7 +499,7 @@ internal fun BarButton(icon: Int, label: String, modifier: Modifier = Modifier, 
 /** ⋯: the filter as a checked list (All, Lightning, Ark, On-chain), then Export CSV and Refresh. */
 @Composable
 private fun ActivityMenu(open: Boolean, filter: HistoryFilter, onDismiss: () -> Unit, onFilter: (HistoryFilter) -> Unit,
-                         onExport: () -> Unit, onRefresh: () -> Unit) {
+    onExport: () -> Unit, onRefresh: () -> Unit) {
     val palette = LocalPalette.current
     val dark = palette === NoahTokens.Dark
     DropdownMenu(open, onDismiss, Modifier.width(220.dp).testTag("activity-menu"), offset = DpOffset((-4).dp, 0.dp),

@@ -1,7 +1,7 @@
 import CoreLocation
 import Foundation
-import Testing
 @testable import Noah
+import Testing
 
 struct BtcMapReviewTests {
     struct Input: Decodable {
@@ -57,5 +57,4 @@ struct BtcMapReviewTests {
         #expect(model.selected?.id == place.id)
         #expect(model.viewport.center == place.center)
     }
-
 }

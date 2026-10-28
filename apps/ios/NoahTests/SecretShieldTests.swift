@@ -1,7 +1,7 @@
+@testable import Noah
 import SwiftUI
 import Testing
 import UIKit
-@testable import Noah
 
 /// The recovery phrase's shield: hidden until the scene's capture state is known, and held for
 /// `SceneCapture.hold` after a recording, mirror or share ends, on a manual clock.

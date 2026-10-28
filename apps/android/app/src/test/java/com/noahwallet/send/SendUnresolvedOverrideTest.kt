@@ -31,19 +31,18 @@ class SendUnresolvedOverrideTest {
                 val file = java.io.File(directory, "$failure.json").apply { writeBytes(byteArrayOf(0, -1, 42)) }
                 val journal = SendJournal(file) { }
                 var audit: SendOverrideAudit? = null
-                val subject = SendController(SendController.Dependencies(
-                    read = { error("unreadable") }, write = {
-                        assertNotNull(audit)
-                        if (failure == "remove") error("remove")
-                        check(file.delete())
-                    }, quarantineUnreadable = {
-                        if (failure == "quarantine") error("quarantine")
-                        journal.quarantineUnreadable()
-                    }, auditOverride = {
-                        assertArrayEquals(file.readBytes(), directory.listFiles()!!.first { it.name.startsWith(file.name + ".unreadable-") }.readBytes())
-                        if (failure == "audit") error("audit")
-                        audit = it
-                    }) { it(FakeSendWallet()) }, this)
+                val subject = SendController(SendController.Dependencies(read = { error("unreadable") }, write = {
+                    assertNotNull(audit)
+                    if (failure == "remove") error("remove")
+                    check(file.delete())
+                }, quarantineUnreadable = {
+                    if (failure == "quarantine") error("quarantine")
+                    journal.quarantineUnreadable()
+                }, auditOverride = {
+                    assertArrayEquals(file.readBytes(), directory.listFiles()!!.first { it.name.startsWith(file.name + ".unreadable-") }.readBytes())
+                    if (failure == "audit") error("audit")
+                    audit = it
+                }) { it(FakeSendWallet()) }, this)
                 subject.reloadForWalletChange(); subject.acknowledge()
                 assertTrue(subject.locked); assertTrue(subject.canOverride)
                 subject.startNewPaymentAfterHistoryCheck(false); assertTrue(file.exists()); assertNull(audit)
@@ -68,5 +67,4 @@ class SendUnresolvedOverrideTest {
         assertFalse(subject.canOverride); subject.startNewPaymentAfterHistoryCheck(true); assertTrue(subject.locked)
         gate.complete(Unit); coroutineContext.job.children.toList().joinAll()
     }
-
 }

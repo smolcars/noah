@@ -7,13 +7,13 @@ import androidx.test.platform.app.InstrumentationRegistry
 import com.noahwallet.services.storage.*
 import com.noahwallet.services.wallet.EsploraSettings
 import com.tencent.mmkv.*
-import java.io.File
-import java.util.UUID
-import java.util.concurrent.Executors
+import kotlinx.serialization.json.*
 import org.junit.Assert.*
 import org.junit.Test
 import org.junit.runner.RunWith
-import kotlinx.serialization.json.*
+import java.io.File
+import java.util.UUID
+import java.util.concurrent.Executors
 
 /** Actual JNI importer; every test has its own files/no-backup directories. */
 @RunWith(AndroidJUnit4::class)

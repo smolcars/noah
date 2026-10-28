@@ -115,7 +115,7 @@ struct TransactionDetailView: View {
                 if detail.tone == .pending { ActivityOrangePulse() }
                 Text(verbatim: statusText).noahText(NoahTokens.Typography.label)
                     .foregroundStyle(detail.tone == .failure ? NoahTokens.Colors.failure
-                                     : detail.tone == .muted ? NoahTokens.Colors.muted : NoahTokens.Colors.foreground)
+                        : detail.tone == .muted ? NoahTokens.Colors.muted : NoahTokens.Colors.foreground)
             }
             .padding(.top, 12)
             .accessibilityIdentifier("transaction-detail-status")
@@ -138,7 +138,7 @@ struct TransactionDetailView: View {
         return ActivityDetail.fiat(transaction, current: reads.price(for: transaction.id), currency: app.preferredCurrency, locale: locale)
     }
 
-    @ViewBuilder private func blockRow(_ txid: String) -> some View {
+    @ViewBuilder private func blockRow(_: String) -> some View {
         let confirmed: UInt32? = if case .confirmed(let height) = reads.status(for: transaction.id) { height } else { transaction.confirmationHeight }
         let chainTip = reads.tip(for: transaction.id)
         let required = ActivityDetail.requiredConfirmations(transaction)

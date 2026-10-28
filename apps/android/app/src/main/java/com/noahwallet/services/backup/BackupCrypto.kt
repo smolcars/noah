@@ -1,7 +1,7 @@
 package com.noahwallet.services.backup
 
-import java.security.SecureRandom
 import java.security.NoSuchAlgorithmException
+import java.security.SecureRandom
 import javax.crypto.Cipher
 import javax.crypto.Mac
 import javax.crypto.SecretKeyFactory

@@ -1,9 +1,22 @@
 import Darwin
 import Foundation
-import Testing
 @testable import Noah
+import Testing
 
-private let restoreSettingsCheckpoints = ["journal", "previousMoved", "installed", "committing", "seed", "markerRemoved", "previousRemoved", "journalRemoved", "flags", "markerOnly", "stateOnly", "corrupt"]
+private let restoreSettingsCheckpoints = [
+    "journal",
+    "previousMoved",
+    "installed",
+    "committing",
+    "seed",
+    "markerRemoved",
+    "previousRemoved",
+    "journalRemoved",
+    "flags",
+    "markerOnly",
+    "stateOnly",
+    "corrupt",
+]
     + (1...6).map { "initializing\($0)" } + (1...9).map { "settling\($0)" }
 
 struct RestoreSettingsRecoveryTests {
@@ -27,8 +40,8 @@ struct RestoreSettingsRecoveryTests {
         let item = KeychainPassword(service: "com.noah.tests.restore-resume.\(UUID())", account: "noah")
         let session = WalletSession(variant: .regtest, location: location)
         let lifecycle = WalletLifecycle(dependencies: .init(session: session, location: location, seed: item,
-            authToken: item, settings: settings, scratch: ScratchSpace(root: root.appending(path: "scratch")),
-            appGroup: nil, deregister: {}))
+                                                            authToken: item, settings: settings, scratch: ScratchSpace(root: root.appending(path: "scratch")),
+                                                            appGroup: nil, deregister: {}))
         try await lifecycle.suspend()
         if stillFailing { #expect(chmod(preferences.path, 0o500) == 0) }
         do {
@@ -77,7 +90,8 @@ struct RestoreSettingsRecoveryTests {
     // Host runs stage, terminates the test host, then runs recover in a fresh process.
     @Test(.enabled(if: FileManager.default.fileExists(atPath: URL.documentsDirectory.appending(path: "restore-settings-control").path)))
     func processDeathRestoreWithFailedSettings() async throws {
-        let control = try String(contentsOf: URL.documentsDirectory.appending(path: "restore-settings-control"), encoding: .utf8).split(separator: " ").map(String.init)
+        let control = try String(contentsOf: URL.documentsDirectory.appending(path: "restore-settings-control"), encoding: .utf8).split(separator: " ")
+            .map(String.init)
         try #require(control.count == 2)
         try await exercise(step: control[0], root: URL.documentsDirectory.appending(path: "restore-settings-process"), mode: control[1])
     }
@@ -152,7 +166,7 @@ struct RestoreSettingsRecoveryTests {
         let settings = try SettingsStorage(rootPath: settingsRoot.path)
         let session = WalletSession(variant: .regtest, location: location)
         let result = try await WalletRestorer.recoverInterruptedRestore(session: session, location: location,
-            seed: FakeSeed(committed ? phrase : "old seed"))
+                                                                        seed: FakeSeed(committed ? phrase : "old seed"))
         #expect(result == (["journalRemoved", "flags", "settling9"].contains(step) ? .nothingPending : committed ? .completed : .rolledBack))
         tx.completeSettings(settings)
         #expect(!location.restorePending)

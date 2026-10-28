@@ -1,8 +1,7 @@
 import BarkBoltFFI
 import Foundation
-import Testing
-
 @testable import Noah
+import Testing
 
 @MainActor struct SendLnurlSafetyTests {
     // Decoder-only invoice; the payer is always a spy, never the SDK.
@@ -16,10 +15,10 @@ import Testing
     }
     func encode(prefix: String, words: [UInt8]) -> String {
         var check: UInt32 = 1
-        let generators: [UInt32] = [0x3b6a57b2, 0x26508e6d, 0x1ea119fa, 0x3d4233dd, 0x2a1462b3]
+        let generators: [UInt32] = [0x3B6A_57B2, 0x2650_8E6D, 0x1EA1_19FA, 0x3D42_33DD, 0x2A14_62B3]
         for word in prefix.utf8.map({ $0 >> 5 }) + [0] + prefix.utf8.map({ $0 & 31 }) + words + [UInt8](repeating: 0, count: 6) {
             let top = check >> 25
-            check = ((check & 0x1ffffff) << 5) ^ UInt32(word)
+            check = ((check & 0x1FFFFFF) << 5) ^ UInt32(word)
             for i in 0..<5 where (top >> i) & 1 != 0 { check ^= generators[i] }
         }
         check ^= 1
@@ -57,7 +56,10 @@ import Testing
                                     feeSats: 83, htlcVtxoCount: 1, hasFailedRevocation: false)
         let payer = SendLightningSafetyTests.Payer()
         do {
-            _ = try await SendLightningSubmission.submit(payment: .init(destination: resolved, method: "lightning", amount: 1000), state: .inProgress(send: pending), movements: []) { await payer.pay() }
+            _ = try await SendLightningSubmission.submit(
+                payment: .init(destination: resolved, method: "lightning", amount: 1000),
+                state: .inProgress(send: pending),
+                movements: []) { await payer.pay() }
             Issue.record("Resolved LNURL must inspect inherited checkpoints")
         } catch is SendExistingLightning {}
         #expect(await payer.calls == 0)
@@ -70,7 +72,8 @@ import Testing
         let amountless = encode(prefix: "lnbcrt", words: decoded.words)
         #expect(throws: SendFailure.invalid) { try SendRecipientService.validateInvoice(amountless, amount: 1000, metadata: nil) }
         let payer = SendLightningSafetyTests.Payer()
-        _ = try await SendLightningSubmission.submit(payment: .init(destination: invoice, method: "lightning", amount: 1000), state: .unknown, movements: []) { await payer.pay() }
+        _ = try await SendLightningSubmission
+            .submit(payment: .init(destination: invoice, method: "lightning", amount: 1000), state: .unknown, movements: []) { await payer.pay() }
         #expect(await payer.calls == 1)
     }
     @Test(arguments: [false, true])

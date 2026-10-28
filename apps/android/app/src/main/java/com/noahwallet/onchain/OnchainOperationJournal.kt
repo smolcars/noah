@@ -4,13 +4,13 @@ import com.noahwallet.services.storage.syncDirectory
 import com.noahwallet.services.wallet.ChainStatus
 import io.github.niteshbalusu11.bark.BarkError
 import io.github.niteshbalusu11.bark.BarkErrorCode
-import java.io.File
-import java.io.FileOutputStream
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.*
+import java.io.File
+import java.io.FileOutputStream
 
 /** Fsync, rename, fsync directory. A failed save must prevent SDK submission. */
 internal class OnchainFile(val file: File, private val syncParent: (File) -> Unit = ::syncDirectory) {
@@ -98,7 +98,7 @@ class OnchainOperationJournal internal constructor(private val storage: OnchainF
                 val status = chainStatuses[attempt.txid]
                 val retry = prepared != null && status?.kind != ChainStatus.Kind.confirmed
                 return OnchainReceipt(if (retry) "Boarding submitted, but delivery is unconfirmed. Noah will keep retrying the broadcast. Do not board again."
-                    else "The recorded transaction was found. Review its network status.", attempt.txid,
+                else "The recorded transaction was found. Review its network status.", attempt.txid,
                     prepared?.let { attempt.quote.chainFee }, retry, status)
             }
             val ids = attempt.quote.ids
@@ -121,12 +121,11 @@ class OnchainOperationJournal internal constructor(private val storage: OnchainF
         if (!storage.file.exists()) return emptyList()
         val element = json.parseToJsonElement(storage.file.readText())
         val saved = if (element is JsonObject) listOf(json.decodeFromJsonElement<Attempt>(element))
-            else json.decodeFromJsonElement<List<Attempt>>(element)
+        else json.decodeFromJsonElement<List<Attempt>>(element)
         return saved.map { it.copy(receipt = it.receipt?.copy(statusError = statusErrors[it.id])) }
     }
     private fun save(attempts: List<Attempt>) {
-        val retained = attempts.filter { it.overrideAudit != null }.sortedWith(
-            compareByDescending<Attempt> { it.overrideAudit!!.overriddenAt }.thenByDescending { it.id })
+        val retained = attempts.filter { it.overrideAudit != null }.sortedWith(compareByDescending<Attempt> { it.overrideAudit!!.overriddenAt }.thenByDescending { it.id })
             .take(maxOverriddenAttempts).map { it.id }.toSet()
         storage.write(json.encodeToString(attempts.filter { it.overrideAudit == null || it.id in retained }))
     }
@@ -150,7 +149,7 @@ class OnchainOperationJournal internal constructor(private val storage: OnchainF
             if (error is ExitNotPossible) { save(read().filter { it.id != quote.id }); throw error }
             if (error is BoardUncertain) { save(read().map { if (it.id == quote.id) it.copy(uncertainBoard = true) else it }); fail(OnchainFailure.uncertain) }
             val failure = if (quote.preparedBoard != null) (error as? BoardNotSubmitted)?.reason
-                else OnchainSubmission.preBroadcast(error, quote.action)
+            else OnchainSubmission.preBroadcast(error, quote.action)
             if (failure != null) { save(read().filter { it.id != quote.id }); fail(failure) }
             fail(OnchainFailure.uncertain)
         }
@@ -225,15 +224,15 @@ suspend fun checkOnchainAttempt(id: String, journal: OnchainOperationJournal, re
     val txid = attempt.receipt?.txid ?: attempt.txid
     var lookupError: Exception? = null
     val status = try { txid?.let { reads.transactionStatus(it) } }
-        catch (cancelled: CancellationException) { throw cancelled }
-        catch (error: Exception) { lookupError = error; null }
+    catch (cancelled: CancellationException) { throw cancelled }
+    catch (error: Exception) { lookupError = error; null }
     val transactions = reads.transactionIDs()
     val board = attempt.quote.action == OnchainAction.board && txid != null
     val boards = if (board) reads.boardTransactionIDs() else emptySet()
     val movements = if (board) reads.boardMovementTransactionIDs() else emptySet()
     // Unknown coins can't prove a board never happened, so it stays locked.
     val unspent = if (board && attempt.receipt == null) try { reads.unspentOutpoints() }
-        catch (cancelled: CancellationException) { throw cancelled } catch (_: Exception) { null } else null
+    catch (cancelled: CancellationException) { throw cancelled } catch (_: Exception) { null } else null
     val vtxos = mutableMapOf<String, String>()
     val exits = mutableMapOf<String, String?>()
     for (item in attempt.quote.ids) {

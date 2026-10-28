@@ -8,7 +8,7 @@ import org.junit.Test
 class RecurringMoneyPathTest {
     @Test fun suspendedWalletRollbackMustNotAuthorizeRecurring() = runBlocking {
         val w = RecurringWorld(this); w.add(); w.executor.timeChanged()
-        
+
         val location = com.noahwallet.services.storage.WalletDataLocation(w.policyDirectory.parentFile!!, "regtest")
         val session = com.noahwallet.services.wallet.WalletSession("regtest", location,
             inspect = { com.noahwallet.services.wallet.WalletDatabase.Properties("regtest", "wallet-a") },

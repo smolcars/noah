@@ -1,6 +1,6 @@
 import Foundation
-import Testing
 @testable import Noah
+import Testing
 
 struct SendSuccessDetailsTests {
     private let date = Date(timeIntervalSince1970: 1_700_000_000)
@@ -11,8 +11,8 @@ struct SendSuccessDetailsTests {
     @Test(arguments: ["lightning", "lnurl", "offer"])
     func lightningProofFromExactSuccessfulMovement(method: String) {
         let details = SendSuccessDetails(receipt: .init(amount: 1000, movementID: 7),
-                                        payment: .init(destination: "invoice", method: method, amount: 1000),
-                                        history: [history(id: 8, preimage: "unrelated"), history()], completedAt: .distantFuture)
+                                         payment: .init(destination: "invoice", method: method, amount: 1000),
+                                         history: [history(id: 8, preimage: "unrelated"), history()], completedAt: .distantFuture)
         #expect(details.proof == .init(label: "Payment preimage", value: "proof"))
         #expect(details.paidVia == "Lightning")
         #expect(details.destination == "invoice")
@@ -21,8 +21,8 @@ struct SendSuccessDetailsTests {
     @Test(arguments: ["onchain", "ark", "lightning"])
     func txidTakesPriority(method: String) {
         let details = SendSuccessDetails(receipt: .init(amount: 1000, txid: "txid", movementID: 7),
-                                        payment: .init(destination: "destination", method: method, amount: 1000),
-                                        history: [history()], completedAt: date)
+                                         payment: .init(destination: "destination", method: method, amount: 1000),
+                                         history: [history()], completedAt: date)
         #expect(details.proof == .init(label: "Transaction ID", value: "txid"))
         #expect(details.paidVia == (method == "ark" ? "Ark" : method == "onchain" ? "Onchain" : "Lightning"))
     }
@@ -48,7 +48,7 @@ struct SendSuccessDetailsTests {
         var chain = history()
         chain.txid = "txid"
         let details = SendSuccessDetails(receipt: .init(amount: 1000, txid: "txid"), payment: payment,
-                                        history: [chain], completedAt: .distantFuture)
+                                         history: [chain], completedAt: .distantFuture)
         #expect(details.completedAt == date)
     }
     @Test func truncatesOnlyOver32AndKeepsFullProof() {
@@ -57,8 +57,8 @@ struct SendSuccessDetailsTests {
         #expect(SendSuccessDetails.truncate(value) == "12345678901234…6789012345")
         #expect(SendSuccessDetails.truncate("") == "")
         let details = SendSuccessDetails(receipt: .init(amount: 1000, txid: value),
-                                        payment: .init(destination: value, method: "onchain", amount: 1000),
-                                        history: [], completedAt: date)
+                                         payment: .init(destination: value, method: "onchain", amount: 1000),
+                                         history: [], completedAt: date)
         #expect(details.proof?.value == value && details.destination == value)
         #expect(details.formattedCompletedAt(locale: Locale(identifier: "en_US")).contains("2023"))
     }

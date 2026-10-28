@@ -76,7 +76,7 @@ enum HistoryMapping {
         // Nitro's `time.created_at` corresponds to the SDK's `createdAt`.
         let date = HistoryRules.parseDate(movement.createdAt) ?? now
         let methods = movement.receivedOnAddresses + movement.sentToAddresses
-        let invoice = ([movement.lightningInvoice].compactMap { $0 } + methods.map(\.paymentMethod.value))
+        let invoice = ([movement.lightningInvoice].compactMap(\.self) + methods.map(\.paymentMethod.value))
             .lazy.compactMap(PaymentEncoding.invoice).first
         let offer = movement.lightningOffer ?? methods.first { $0.paymentMethod.methodType == "offer" }?.paymentMethod.value
         let description = (invoice?.description ?? offer.flatMap(PaymentEncoding.offerDescription))?

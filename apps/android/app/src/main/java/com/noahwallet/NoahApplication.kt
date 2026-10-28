@@ -1,8 +1,8 @@
 package com.noahwallet
 
 import android.app.Application
-import com.noahwallet.services.logging.BarkLog
 import com.noahwallet.services.logging.AppTelemetry
+import com.noahwallet.services.logging.BarkLog
 
 class NoahApplication : Application() {
     override fun onCreate() {

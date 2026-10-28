@@ -80,11 +80,11 @@ struct OnboardingPanes: Layout {
     /// Safe-area insets on the sides. The split sits at the window centre, so each pane pads only its outer edge.
     var sideInsets: (leading: CGFloat, trailing: CGFloat) = (0, 0)
 
-    func sizeThatFits(proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) -> CGSize {
+    func sizeThatFits(proposal: ProposedViewSize, subviews _: Subviews, cache _: inout ()) -> CGSize {
         proposal.replacingUnspecifiedDimensions()
     }
 
-    func placeSubviews(in bounds: CGRect, proposal: ProposedViewSize, subviews: Subviews, cache: inout ()) {
+    func placeSubviews(in bounds: CGRect, proposal _: ProposedViewSize, subviews: Subviews, cache _: inout ()) {
         guard subviews.count == 2 else { return }
         let leading = subviews[0], trailing = subviews[1]
         if wide {

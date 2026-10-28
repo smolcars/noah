@@ -38,7 +38,9 @@ class RecurringFixtureTest(private val name: String, private val domain: String,
         }
     }
     companion object {
-        @JvmStatic @Parameterized.Parameters(name = "{0}") fun cases() = listOf("recurring-schedule", "recurring-policy", "recurring-zone-change", "recurring-fee-cap").flatMap { domain ->
+        @JvmStatic
+        @Parameterized.Parameters(name = "{0}")
+        fun cases() = listOf("recurring-schedule", "recurring-policy", "recurring-zone-change", "recurring-fee-cap").flatMap { domain ->
             SharedFixtures.load(domain).map { arrayOf(it.name, domain, it.input, it.expected) }
         }
     }

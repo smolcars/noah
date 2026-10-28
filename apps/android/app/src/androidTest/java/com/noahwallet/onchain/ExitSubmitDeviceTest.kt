@@ -2,9 +2,9 @@ package com.noahwallet.onchain
 
 import androidx.activity.ComponentActivity
 import androidx.compose.runtime.*
-import androidx.compose.ui.test.*
 import androidx.compose.runtime.saveable.LocalSaveableStateRegistry
 import androidx.compose.runtime.saveable.SaveableStateRegistry
+import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createAndroidComposeRule
 import androidx.test.platform.app.InstrumentationRegistry
 import com.noahwallet.services.storage.WalletDataLocation
@@ -17,13 +17,13 @@ import com.noahwallet.ui.NoahTheme
 import com.noahwallet.ui.WindowRegion
 import com.noahwallet.ui.settings.SettingsNav
 import io.github.niteshbalusu11.bark.*
-import java.io.File
 import kotlinx.coroutines.CompletableDeferred
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.*
 import org.junit.Rule
 import org.junit.Test
+import java.io.File
 
 /**
  * Start and claim submit once through the pages' own wiring (exit.md, Testing): the page, its model, the session's locks,

@@ -26,8 +26,7 @@ struct ExpoPushToken: Sendable {
     }
 
     static func request(
-        installationID: String, deviceToken: Data, appID: String, development: Bool
-    ) -> Request {
+        installationID: String, deviceToken: Data, appID: String, development: Bool) -> Request {
         Request(
             deviceId: installationID.lowercased(),
             development: development,

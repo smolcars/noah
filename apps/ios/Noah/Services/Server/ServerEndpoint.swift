@@ -8,8 +8,7 @@ enum ServerEndpoint {
 
     static func baseURL(
         for variant: AppVariant, environment: [String: String] = ProcessInfo.processInfo.environment,
-        info: [String: Any]? = Bundle.main.infoDictionary
-    ) -> URL {
+        info: [String: Any]? = Bundle.main.infoDictionary) -> URL {
         switch variant {
         case .mainnet: return URL(string: "https://noahwallet.io")!
         case .signet: return URL(string: "https://signet.noahwallet.io")!

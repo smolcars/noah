@@ -193,10 +193,10 @@ struct RestoreWalletScreen: View {
     @ViewBuilder
     private var message: some View {
         let text: String? = if let issue { issue.message }
-            else if draft.input.wrongWordCount || draft.pasteRejected { "Paste exactly 12 or 24 words. Your entries haven't been replaced." }
-            else if let invalid = draft.firstInvalid { L10n.text("Check word {number}", invalid + 1, locale: locale.identifier) }
-            else if draft.invalidPhrase { "These words don’t form a valid phrase." }
-            else { nil }
+        else if draft.input.wrongWordCount || draft.pasteRejected { "Paste exactly 12 or 24 words. Your entries haven't been replaced." }
+        else if let invalid = draft.firstInvalid { L10n.text("Check word {number}", invalid + 1, locale: locale.identifier) }
+        else if draft.invalidPhrase { "These words don’t form a valid phrase." }
+        else { nil }
         Text(LocalizedStringKey(text ?? " "))
             .noahText(NoahTokens.Typography.sub)
             .foregroundStyle(NoahTokens.Colors.failure)
@@ -242,8 +242,8 @@ struct RestoreWalletScreen: View {
                 let generation = draft.generation, edits = draft.edits, change = UIPasteboard.general.changeCount
                 return { text in if draft.generation == generation && draft.edits == edits { paste(text, change: change) } }
             }
-                .frame(maxWidth: .infinity, minHeight: NoahTokens.Size.button, maxHeight: NoahTokens.Size.button)
-                .accessibilityIdentifier("restore-paste")
+            .frame(maxWidth: .infinity, minHeight: NoahTokens.Size.button, maxHeight: NoahTokens.Size.button)
+            .accessibilityIdentifier("restore-paste")
             Button("Restore", action: onRestore)
                 .buttonStyle(OnboardingPrimaryButtonStyle())
                 .disabled(!draft.canRestore)
@@ -285,7 +285,7 @@ struct RestorePasteControl: UIViewRepresentable {
         return control
     }
 
-    func updateUIView(_ control: UIPasteControl, context: Context) {
+    func updateUIView(_: UIPasteControl, context: Context) {
         context.coordinator.onPaste = onPaste
     }
 
@@ -322,7 +322,10 @@ struct RestorePasteControl: UIViewRepresentable {
             guard provider.hasItemConformingToTypeIdentifier(UTType.rtf.identifier) else { return nil }
             return await withCheckedContinuation { continuation in
                 _ = provider.loadDataRepresentation(for: .rtf) { data, _ in
-                    let text = data.flatMap { try? NSAttributedString(data: $0, options: [.documentType: NSAttributedString.DocumentType.rtf], documentAttributes: nil) }
+                    let text = data.flatMap { try? NSAttributedString(
+                        data: $0,
+                        options: [.documentType: NSAttributedString.DocumentType.rtf],
+                        documentAttributes: nil) }
                     continuation.resume(returning: text?.string)
                 }
             }
@@ -444,7 +447,7 @@ struct RecoveryWordField: UIViewRepresentable {
         context.coordinator.updateFocus(field)
     }
 
-    static func dismantleUIView(_ field: RecoveryWordTextField, coordinator: Coordinator) {
+    static func dismantleUIView(_ field: RecoveryWordTextField, coordinator _: Coordinator) {
         field.resignFirstResponder()
         field.text = ""
     }
@@ -456,7 +459,7 @@ struct RecoveryWordField: UIViewRepresentable {
             parent.text = field.text ?? ""
             field.text = parent.text
         }
-        func textFieldDidBeginEditing(_ textField: UITextField) {
+        func textFieldDidBeginEditing(_: UITextField) {
             if parent.focusedWord != parent.index { parent.focusedWord = parent.index }
         }
         func updateFocus(_ field: UITextField) {
@@ -471,18 +474,18 @@ struct RecoveryWordField: UIViewRepresentable {
         private func advance() {
             parent.focusedWord = parent.index < parent.wordCount - 1 ? parent.index + 1 : nil
         }
-        func textFieldShouldReturn(_ textField: UITextField) -> Bool {
+        func textFieldShouldReturn(_: UITextField) -> Bool {
             if !parent.acceptFirst() { advance() }
             return false
         }
         /// A typed space accepts the first suggestion or moves on; pasted phrases still pass through.
-        func textField(_ textField: UITextField, shouldChangeCharactersIn range: NSRange, replacementString string: String) -> Bool {
+        func textField(_ textField: UITextField, shouldChangeCharactersIn _: NSRange, replacementString string: String) -> Bool {
             guard string == " " else { return true }
             if !parent.acceptFirst(), !(textField.text ?? "").isEmpty { advance() }
             return false
         }
         /// The edit menu offers only Paste and selection.
-        func textField(_ textField: UITextField, editMenuForCharactersIn range: NSRange, suggestedActions: [UIMenuElement]) -> UIMenu? {
+        func textField(_: UITextField, editMenuForCharactersIn _: NSRange, suggestedActions: [UIMenuElement]) -> UIMenu? {
             UIMenu(children: RecoveryWordTextField.editMenu(suggestedActions))
         }
     }
@@ -521,8 +524,8 @@ final class RecoveryWordTextField: UITextField {
     }
 
     /// ⌘C, ⌘X and any other direct call export nothing.
-    override func copy(_ sender: Any?) {}
-    override func cut(_ sender: Any?) {}
+    override func copy(_: Any?) {}
+    override func cut(_: Any?) {}
 
     override func validate(_ command: UICommand) {
         super.validate(command)
@@ -546,5 +549,6 @@ final class RecoveryWordTextField: UITextField {
         textDragInteraction?.isEnabled = false
     }
 
-    required init?(coder: NSCoder) { fatalError("init(coder:) is not supported") }
+    @available(*, unavailable)
+    required init?(coder _: NSCoder) { fatalError("init(coder:) is not supported") }
 }

@@ -1,8 +1,7 @@
 import Foundation
+@testable import Noah
 import Security
 import Testing
-
-@testable import Noah
 
 @MainActor
 struct SecureStorageRetryTests {

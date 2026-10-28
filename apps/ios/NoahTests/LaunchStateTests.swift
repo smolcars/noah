@@ -1,7 +1,6 @@
-import Testing
-import Security
-
 @testable import Noah
+import Security
+import Testing
 
 struct LaunchStateTests {
     struct Source: Decodable {
@@ -32,7 +31,7 @@ struct LaunchStateTests {
         for item in cases {
             let sources = item.input.sources.map(\.result)
             let result = LaunchState.inspect(sources: sources, walletDatabaseExists: item.input.walletDatabaseExists,
-                fingerprintMatches: item.input.databaseFingerprint != "mismatch", multipleDatabases: item.input.multipleDatabases)
+                                             fingerprintMatches: item.input.databaseFingerprint != "mismatch", multipleDatabases: item.input.multipleDatabases)
             #expect(result.state.rawValue == item.expected.outcome, "\(item.name)")
             #expect(result.reason.rawValue == item.expected.reason, "\(item.name)")
         }

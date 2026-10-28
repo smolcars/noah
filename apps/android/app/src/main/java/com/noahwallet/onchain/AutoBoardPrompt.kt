@@ -1,15 +1,14 @@
 package com.noahwallet.onchain
 
-import com.noahwallet.ui.WalletAlertDialog
-
-import com.noahwallet.localization.tr
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.noahwallet.localization.tr
 import com.noahwallet.services.storage.SettingsPreferences
 import com.noahwallet.ui.AppModel
+import com.noahwallet.ui.WalletAlertDialog
 import kotlinx.coroutines.*
 import kotlinx.serialization.json.*
 

@@ -1,8 +1,7 @@
 import BarkBoltFFI
 import Foundation
-import Testing
-
 @testable import Noah
+import Testing
 
 /// bark-bolt-ffi 0.7.0's typed exit errors: never-exitable VTXOs, an unavailable chain source, and too
 /// few confirmed funds. No message is ever read.

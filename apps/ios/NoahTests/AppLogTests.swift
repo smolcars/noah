@@ -1,8 +1,7 @@
 import BarkBoltFFI
 import Foundation
-import Testing
-
 @testable import Noah
+import Testing
 
 /// Holds one step of the logging pipeline until the test releases it. A caller that waited for that step could never
 /// return, so a watchdog releases it after ten seconds and the test fails rather than hangs.
@@ -146,7 +145,7 @@ struct AppLogTests {
         }
     }
 
-    @Test func boundedWriterDoesNotWaitForDiskAndReportsOverflowInOrder() async throws {
+    @Test func boundedWriterDoesNotWaitForDiskAndReportsOverflowInOrder() async {
         let queue = DispatchQueue(label: "test.blocked-log-writer")
         queue.suspend()
         let file = LogFile(directory: directory, capacity: 2, queue: queue)
@@ -180,7 +179,7 @@ struct AppLogTests {
         #expect(lines[2].hasSuffix("[dropped 3 log records]"))
     }
 
-    @Test func writesReactNativeLineFormat() throws {
+    @Test func writesReactNativeLineFormat() {
         let file = LogFile(directory: directory, capacity: 5000)
         let date = Date(timeIntervalSince1970: 0)
         file.append(level: .warn, tag: "sync", message: "  first\nsecond  ", date: date)
@@ -221,7 +220,7 @@ struct AppLogTests {
         #expect(lines.last == "line \(LogFile.maxLines + 99)")
     }
 
-    @Test func visuallyRecoverableMnemonicsStayInvalidSeedsAndCannotReachLogs() throws {
+    @Test func visuallyRecoverableMnemonicsStayInvalidSeedsAndCannotReachLogs() {
         let phrase = Array(repeating: "abandon", count: 11).joined(separator: " ") + " about"
         for mark in ["\u{200B}", "\u{200C}", "\u{200D}", "\u{2060}", "\u{00AD}", "\u{0301}", "а", "α"] {
             let replacement = ["а", "α"].contains(mark) ? mark : "a" + mark

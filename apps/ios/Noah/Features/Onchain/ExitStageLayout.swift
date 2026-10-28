@@ -333,7 +333,12 @@ enum ExitStageLabels {
             if heights.count > 1, heights[0] != heights[heights.count - 1] {
                 let text = range(heights[0], heights[heights.count - 1])
                 for y in candidates {
-                    var fold = fit(ExitStageLabel(y: y, lines: [.init(text: text, tone: .ink)], priority: 0, block: heights[heights.count - 1], first: heights[0]))
+                    var fold = fit(ExitStageLabel(
+                        y: y,
+                        lines: [.init(text: text, tone: .ink)],
+                        priority: 0,
+                        block: heights[heights.count - 1],
+                        first: heights[0]))
                     span(&fold)
                     if !clash(fold.top, fold.bottom, trailing: false, margin: 3) { found = fold; break }
                 }
@@ -404,7 +409,7 @@ enum ExitStageText {
     }
 
     /// Measured widths: a moving picture lays its labels out every frame. NSCache is thread-safe.
-    nonisolated(unsafe) private static let widths = NSCache<NSString, NSNumber>()
+    private nonisolated(unsafe) static let widths = NSCache<NSString, NSNumber>()
 }
 
 extension Double {

@@ -1,8 +1,8 @@
 import BarkBoltFFI
 import Foundation
 import MMKV
-import Testing
 @testable import Noah
+import Testing
 
 @MainActor struct RecurringExecutorTests {
     final class Locked<Value>: @unchecked Sendable {
@@ -29,7 +29,7 @@ import Testing
         var statusChecks = 0
         var fee: UInt64 = 0
         var method = "ark"
-        var fees: LightningSendFees? = nil
+        var fees: LightningSendFees?
         var feeFetches = 0
         var feeFetchFails = false
         var notified: [RecurringPayment] = []
@@ -85,20 +85,28 @@ import Testing
                     calls.withLock { $0 += 1 }
                     try await afterPayment()
                     if await isAmbiguous() { throw URLError(.timedOut) }
-                    if payment.method == "ark" { return .init(amount: payment.amount, movementID: await arkReceiptMovementID(), proof: .submitReturnedArkSuccess) }
-                    return .init(amount: payment.amount, paymentHash: PaymentEncoding.invoice(payment.destination)?.hash ?? "test-hash", movementID: 1, fee: 0, proof: .actualMovement)
+                    if payment
+                        .method == "ark" { return .init(amount: payment.amount, movementID: await arkReceiptMovementID(), proof: .submitReturnedArkSuccess) }
+                    return .init(
+                        amount: payment.amount,
+                        paymentHash: PaymentEncoding.invoice(payment.destination)?.hash ?? "test-hash",
+                        movementID: 1,
+                        fee: 0,
+                        proof: .actualMovement)
                 }))
             executor = .init(dependencies: .init(store: store, journal: journal, controller: controller,
-                ensureOpen: {}, binding: { owner.withLock { $0 } }, allowed: {
-                    if stopped.withLock({ $0 }) { throw AppServices.WalletSuspended() }
-                }, quote: { [self] schedule in
-                    try await beforeQuote()
-                    let fees = await RecurringRecipient.lightningFees { [self] in
-                        try await fetchFees()
-                    }
-                    return await quoted(schedule, fees: fees)
-                }, automationGeneration: { [settings] in settings.string(forKey: WalletLifecycle.automationStopKey) }, zone: { [zone] in zone.withLock { $0 } }, now: { [clock] in clock.withLock { $0 } }, sync: { [self] entries in try await sync(entries) },
-                notifications: { [self] schedules, result in await notification(schedules, result) }))
+                                                 ensureOpen: {}, binding: { owner.withLock { $0 } }, allowed: {
+                                                     if stopped.withLock({ $0 }) { throw AppServices.WalletSuspended() }
+                                                 }, quote: { [self] schedule in
+                                                     try await beforeQuote()
+                                                     let fees = await RecurringRecipient.lightningFees { [self] in
+                                                         try await fetchFees()
+                                                     }
+                                                     return await quoted(schedule, fees: fees)
+                                                 }, automationGeneration: { [settings] in settings.string(forKey: WalletLifecycle.automationStopKey) },
+                                                 zone: { [zone] in zone.withLock { $0 } }, now: { [clock] in clock.withLock { $0 } },
+                                                 sync: { [self] entries in try await sync(entries) },
+                                                 notifications: { [self] schedules, result in await notification(schedules, result) }))
         }
         func fetchFees() throws -> LightningSendFees? {
             feeFetches += 1
@@ -106,8 +114,13 @@ import Testing
             return fees
         }
         func quoted(_ schedule: RecurringPayment, fees: LightningSendFees) -> (SendPayment, SendQuote, LightningSendFees?) {
-            (SendPayment(destination: method == "lightning" ? (try! SendLightningSafetyTests().payment()).destination : schedule.destination, method: method, amount: schedule.amountSat),
-             .init(amount: schedule.amountSat, fee: fee, total: schedule.amountSat + fee, walletIdentity: owner.withLock { $0.wallet }), fees)
+            (
+                SendPayment(
+                    destination: method == "lightning" ? (try! SendLightningSafetyTests().payment()).destination : schedule.destination,
+                    method: method,
+                    amount: schedule.amountSat),
+                .init(amount: schedule.amountSat, fee: fee, total: schedule.amountSat + fee, walletIdentity: owner.withLock { $0.wallet }),
+                fees)
         }
         func notification(_ schedules: [RecurringPayment], _ result: RecurringPayment?) async {
             if let result { notified.append(result); try? await notificationHook?(result) } else { reminders = schedules }
@@ -263,7 +276,7 @@ import Testing
         #expect(h.calls.withLock { $0 } == 1)
         #expect(saved.status == "active" && saved.occurrencesPaid == 1 && saved.nextOccurrenceIndex == 5)
         #expect(saved.inFlight == nil && saved.lastError == nil)
-        #expect(saved.runs.filter { $0.status == "success" }.count == 1)
+        #expect(saved.runs.count(where: { $0.status == "success" }) == 1)
         #expect(try h.journal.load()[schedule.id]?.resolved == true)
         #expect(try h.journal.load()[schedule.id]?.consumed == true)
         #expect(!h.notified.contains { $0.status == "needs_attention" })
@@ -512,7 +525,12 @@ import Testing
         try h.journal.save(new)
         #expect(try h.journal.consumed(binding: owner, scheduleID: schedule.id, at: h.now, policyRevision: nil, occurrenceIndex: old.plan.occurrenceIndex!))
         var otherWallet = owner; otherWallet.instance = UUID()
-        #expect(try !h.journal.consumed(binding: otherWallet, scheduleID: schedule.id, at: h.now, policyRevision: nil, occurrenceIndex: old.plan.occurrenceIndex!))
+        #expect(try !h.journal.consumed(
+            binding: otherWallet,
+            scheduleID: schedule.id,
+            at: h.now,
+            policyRevision: nil,
+            occurrenceIndex: old.plan.occurrenceIndex!))
     }
 
     @Test(arguments: [false, true]) func oldJournalMigrationRetainsUnknownRevisionHistory(v1: Bool) async throws {
@@ -527,7 +545,7 @@ import Testing
         let bytes: Data
         if v1 {
             bytes = try JSONSerialization.data(withJSONObject: ["version": 1, "attempts": attempts,
-                "consumed": [["binding": binding, "scheduleID": schedule.id, "through": h.now]]])
+                                                                "consumed": [["binding": binding, "scheduleID": schedule.id, "through": h.now]]])
         } else { bytes = try JSONEncoder().encode([schedule.id: old]) }
         try bytes.write(to: h.journal.file)
         _ = try h.journal.load()
@@ -545,10 +563,10 @@ import Testing
         #expect(h.calls.withLock { $0 } == 0)
         #expect(try h.store.load().schedules[schedule.id]?.status == "needs_attention")
         #expect(try h.journal.consumed(binding: owner, scheduleID: schedule.id, at: h.now + 1,
-                                     policyRevision: old.policyRevision, occurrenceIndex: old.plan.occurrenceIndex!))
+                                       policyRevision: old.policyRevision, occurrenceIndex: old.plan.occurrenceIndex!))
         var other = owner; other.instance = UUID()
         #expect(try !h.journal.consumed(binding: other, scheduleID: schedule.id, at: h.now + 1,
-                                      policyRevision: old.policyRevision, occurrenceIndex: old.plan.occurrenceIndex!))
+                                        policyRevision: old.policyRevision, occurrenceIndex: old.plan.occurrenceIndex!))
     }
     @Test func v2IndexScopeDoesNotBlockFreshRevisionOrWallet() throws {
         let h = try Harness(); let schedule = try h.add(); let owner = h.owner.withLock { $0 }
@@ -558,14 +576,14 @@ import Testing
         try h.journal.save(entry)
         let index = entry.plan.occurrenceIndex!
         #expect(try h.journal.consumed(binding: owner, scheduleID: schedule.id, at: h.now + 1,
-                                     policyRevision: entry.policyRevision, occurrenceIndex: index))
+                                       policyRevision: entry.policyRevision, occurrenceIndex: index))
         #expect(try !h.journal.consumed(binding: owner, scheduleID: schedule.id, at: h.now + 1,
-                                      policyRevision: UUID(), occurrenceIndex: index))
+                                        policyRevision: UUID(), occurrenceIndex: index))
         #expect(try h.journal.consumed(binding: owner, scheduleID: schedule.id, at: h.now,
-                                     policyRevision: UUID(), occurrenceIndex: 0))
+                                       policyRevision: UUID(), occurrenceIndex: 0))
         var other = owner; other.instance = UUID()
         #expect(try !h.journal.consumed(binding: other, scheduleID: schedule.id, at: h.now,
-                                      policyRevision: entry.policyRevision, occurrenceIndex: index))
+                                        policyRevision: entry.policyRevision, occurrenceIndex: index))
         entry.plan.occurrenceIndex = index + 1; entry.plan.scheduledFor = h.now + 1
         try h.journal.save(entry); try h.journal.save(entry)
         let json = try #require(JSONSerialization.jsonObject(with: Data(contentsOf: h.journal.file)) as? [String: Any])
@@ -600,7 +618,9 @@ import Testing
         #expect(try h.journal.load().isEmpty && h.saved == nil)
         #expect(h.notified.count == 1)
         #expect(h.notified.first?.status == "needs_approval")
-        #expect(h.notified.first?.lastError == "Ark's published Lightning fees for this amount can reach 2500 sats, above your automatic limit of 1000 sats. Review it to pay manually.")
+        #expect(h.notified.first?
+            .lastError ==
+            "Ark's published Lightning fees for this amount can reach 2500 sats, above your automatic limit of 1000 sats. Review it to pay manually.")
         #expect(try h.store.load().schedules[schedule.id]?.lastError == h.notified.first?.lastError)
     }
     @Test func arkInfoFailureUsesFallbackCap() async throws {
@@ -844,5 +864,4 @@ import Testing
         #expect(h.notified.count == 1)
         #expect(h.calls.withLock { $0 } == 0)
     }
-
 }

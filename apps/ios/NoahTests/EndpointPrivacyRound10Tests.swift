@@ -1,8 +1,7 @@
 import Foundation
+@testable import Noah
 import Sentry
 import Testing
-
-@testable import Noah
 
 struct EndpointPrivacyRound10Tests {
     @Test func reorderedAccentsCannotExposeEndpointTokens() throws {

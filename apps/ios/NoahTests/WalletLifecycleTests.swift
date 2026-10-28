@@ -1,9 +1,8 @@
 import BarkBoltFFI
 import Foundation
+@testable import Noah
 import SQLite3
 import Testing
-
-@testable import Noah
 
 /// Settings' suspend / resume / delete against a temporary datadir, MMKV
 /// instance and Keychain items.
@@ -32,8 +31,7 @@ struct WalletLifecycleTests {
         mutation: WalletMutationGate = .shared,
         drainTimeout: Duration = .seconds(30),
         settleBackground: @escaping @Sendable () async throws -> Void = {},
-        deregister: @escaping @Sendable () async throws -> Void = {}
-    ) -> WalletLifecycle {
+        deregister: @escaping @Sendable () async throws -> Void = {}) -> WalletLifecycle {
         WalletLifecycle(dependencies: .init(
             session: session, location: location, seed: seed, authToken: token, settings: settings,
             scratch: scratch ?? ScratchSpace(root: root.appending(path: "scratch")), appGroup: nil, mutation: mutation, drainTimeout: drainTimeout,
@@ -54,9 +52,9 @@ struct WalletLifecycleTests {
         #expect(sqlite3_open(location.database.path, &db) == SQLITE_OK)
         defer { sqlite3_close(db) }
         let sql = """
-            CREATE TABLE bark_properties (id TEXT PRIMARY KEY, network TEXT NOT NULL, fingerprint TEXT NOT NULL);
-            INSERT INTO bark_properties VALUES ('1', 'regtest', 'abcd1234');
-            """
+        CREATE TABLE bark_properties (id TEXT PRIMARY KEY, network TEXT NOT NULL, fingerprint TEXT NOT NULL);
+        INSERT INTO bark_properties VALUES ('1', 'regtest', 'abcd1234');
+        """
         #expect(sqlite3_exec(db, sql, nil, nil, nil) == SQLITE_OK)
     }
 
@@ -121,8 +119,7 @@ struct WalletLifecycleTests {
 
         try await lifecycle(
             session: session, settings: settings, seed: seed, token: token,
-            deregister: { try deregistered.save("called") }
-        ).delete()
+            deregister: { try deregistered.save("called") }).delete()
 
         #expect(deregistered.current == "called")
         #expect(!FileManager.default.fileExists(atPath: location.directory.path))
@@ -324,12 +321,12 @@ struct WalletLifecycleTests {
         try await replacement.value
         _ = try await push.value
         #expect(location.databaseExists)
-        #expect({ seed.read() == .found(replacementMnemonic) }())
+        #expect(seed.read() == .found(replacementMnemonic))
         #expect(!FileManager.default.fileExists(atPath: location.deletionMarker.path))
         // A late headless recovery also rechecks after the new wallet exists.
         _ = try await recovery.settle()
         #expect(location.databaseExists)
-        #expect({ seed.read() == .found(replacementMnemonic) }())
+        #expect(seed.read() == .found(replacementMnemonic))
     }
 
     @Test func markerForAnotherOrLegacyWalletNeverDeletesCurrentData() async throws {
@@ -556,7 +553,12 @@ struct WalletLifecycleTests {
         availability.makeUnavailable()
         let session = WalletSession(variant: .regtest, location: location) { _, _, _, _, _ in throw Unreachable() }
         let mutation = WalletMutationGate()
-        let current = lifecycle(session: session, settings: settings, seed: LockableSeed(item: seed, availability: availability), token: token, mutation: mutation)
+        let current = lifecycle(
+            session: session,
+            settings: settings,
+            seed: LockableSeed(item: seed, availability: availability),
+            token: token,
+            mutation: mutation)
         let recovery = RestoreRecovery(mutation: mutation) {
             try await current.recoverRestoreAndDeletionLocked { .nothingPending }
         }
@@ -637,8 +639,7 @@ struct WalletLifecycleTests {
         try seed.save("seed words")
         let session = WalletSession(variant: .regtest, location: location) { _, _, _, _, _ in throw Unreachable() }
         try await lifecycle(
-            session: session, settings: settings, seed: seed, token: token, deregister: { throw Unreachable() }
-        ).delete()
+            session: session, settings: settings, seed: seed, token: token, deregister: { throw Unreachable() }).delete()
         #expect(seed.read() == .notFound)
     }
 

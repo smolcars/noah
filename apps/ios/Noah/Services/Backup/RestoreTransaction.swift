@@ -229,7 +229,7 @@ struct RestoreTransaction: Sendable {
 
     func readJournal() throws -> Journal {
         guard let data = try? Data(contentsOf: journalURL),
-            let journal = try? JSONDecoder().decode(Journal.self, from: data), journal.version == 1
+              let journal = try? JSONDecoder().decode(Journal.self, from: data), journal.version == 1
         else { throw Failure.journalUnreadable }
         return journal
     }

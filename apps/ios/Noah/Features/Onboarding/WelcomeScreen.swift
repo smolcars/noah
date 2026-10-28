@@ -76,7 +76,7 @@ struct NoahWordmark: View {
                     .opacity(shown ? 1 : 0)
                     .offset(y: shown || reduceMotion ? 0 : 52)
                     .animation(reduceMotion ? NoahTokens.Motion.reduceMotionFade.delay(delay * 0.3)
-                                            : NoahTokens.Motion.bouncy.delay(delay + Double(index) * 0.065), value: shown)
+                        : NoahTokens.Motion.bouncy.delay(delay + Double(index) * 0.065), value: shown)
             }
         }
         .noahText(NoahTokens.Typography.wordmark)

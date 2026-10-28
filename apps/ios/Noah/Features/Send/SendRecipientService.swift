@@ -29,8 +29,8 @@ enum SendRecipientService {
         return (data, response)
     }
     private final class RefuseRedirects: NSObject, URLSessionTaskDelegate, Sendable {
-        func urlSession(_ session: URLSession, task: URLSessionTask, willPerformHTTPRedirection response: HTTPURLResponse,
-                        newRequest request: URLRequest) async -> URLRequest? { nil }
+        func urlSession(_: URLSession, task _: URLSessionTask, willPerformHTTPRedirection _: HTTPURLResponse,
+                        newRequest _: URLRequest) async -> URLRequest? { nil }
     }
     static func resolve(_ destination: String, session: WalletSession = .shared,
                         fetch: Fetch = fetch) async throws -> SendRecipientRoute {
@@ -43,8 +43,7 @@ enum SendRecipientService {
                 endpoint = URLComponents(string: "https://\(host)/.well-known/lnurlp/\(name)")
             }
         } else if let decoded = PaymentEncoding.bech32(value), decoded.prefix == "lnurl",
-            let bytes = PaymentEncoding.bytes(decoded.words)
-        {
+                  let bytes = PaymentEncoding.bytes(decoded.words) {
             endpoint = SendDestination.urlText(String(decoding: bytes, as: UTF8.self)).flatMap(URLComponents.init(string:))
             // As Android's HttpUrl requests it: dot segments resolved.
             if let path = endpoint?.percentEncodedPath { endpoint?.percentEncodedPath = SendDestination.removingDotSegments(path) }
@@ -68,8 +67,8 @@ enum SendRecipientService {
         guard (response as? HTTPURLResponse)?.statusCode == 200, data.count <= 65536 else { throw SendFailure.invalid }
         let decoded = try JSONDecoder().decode(Response.self, from: data)
         guard decoded.tag == "payRequest", let callback = URL(string: decoded.callback),
-            URLComponents(url: callback, resolvingAgainstBaseURL: false).map(SendDestination.allowsLnurl) == true,
-            decoded.minSendable <= decoded.maxSendable
+              URLComponents(url: callback, resolvingAgainstBaseURL: false).map(SendDestination.allowsLnurl) == true,
+              decoded.minSendable <= decoded.maxSendable
         else { throw SendFailure.invalid }
         var ark: String?
         if let address = decoded.ark, (try? await session.validateSendArkAddress(address)) == true { ark = address }
@@ -115,12 +114,12 @@ enum SendRecipientService {
         let value = SendDestination.cleaned(destination).lowercased()
         let parts = value.split(separator: "@", omittingEmptySubsequences: false)
         guard (1...2).contains(parts.count), let username = parts.first, username.count >= 2,
-            username.range(of: "^[a-z0-9_.-]+$", options: .regularExpression) != nil
+              username.range(of: "^[a-z0-9_.-]+$", options: .regularExpression) != nil
         else { return nil }
         if parts.count == 1 {
             guard username.count <= 32, username.first?.isLetter == true,
-                !["bc1", "tb1", "bcrt1", "lnbc", "lntb", "lnbcrt", "ark", "tark", "lno"].contains(
-                    where: username.hasPrefix)
+                  !["bc1", "tb1", "bcrt1", "lnbc", "lntb", "lnbcrt", "ark", "tark", "lno"].contains(
+                      where: username.hasPrefix)
             else { return nil }
         } else if !domain.hasPrefix(parts[1]) {
             return nil

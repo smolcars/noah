@@ -1,9 +1,9 @@
 import Foundation
-import Testing
 @testable import Noah
+import Testing
 
 struct ForegroundWalletSyncTests {
-    @Test @MainActor func foregroundReentryQueuedBehindWalletAccessRechecksSceneState() async throws {
+    @Test @MainActor func foregroundReentryQueuedBehindWalletAccessRechecksSceneState() async {
         let configuration = WalletMutationGate(), mutation = WalletMutationGate()
         let foreground = ForegroundWalletSync(configuration: configuration, mutation: mutation)
         let held = RecurringReservationTests.Gate()
@@ -55,5 +55,4 @@ struct ForegroundWalletSyncTests {
             #expect(passes.withLock { $0 } == 2)
         }
     }
-
 }

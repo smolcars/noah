@@ -1,13 +1,13 @@
 package com.noahwallet.onchain
 
-import io.github.niteshbalusu11.bark.*
 import com.noahwallet.services.wallet.ChainStatus
-import java.io.File
-import java.nio.file.Files
+import io.github.niteshbalusu11.bark.*
 import kotlinx.coroutines.*
 import kotlinx.serialization.json.Json
 import org.junit.Assert.*
 import org.junit.Test
+import java.io.File
+import java.nio.file.Files
 
 class OnchainJournalTest {
     private val json = Json { encodeDefaults = true }
@@ -128,7 +128,7 @@ class OnchainJournalTest {
         actions.forEach { (action, state) ->
             val a = OnchainOperationJournal.Attempt(quote(action, listOf("a", "b")))
             val good = if (action == OnchainAction.refresh) OnchainOperationJournal.Evidence("wallet", vtxoStates = mapOf("a" to state, "b" to state))
-                else OnchainOperationJournal.Evidence("wallet", exitStates = mapOf("a" to state, "b" to state))
+            else OnchainOperationJournal.Evidence("wallet", exitStates = mapOf("a" to state, "b" to state))
             assertNotNull(good.receipt(a))
             assertNull(good.copy(vtxoStates = good.vtxoStates - "b", exitStates = good.exitStates - "b").receipt(a))
         }
@@ -343,5 +343,4 @@ class OnchainJournalTest {
         assertEquals(201L, journal.loadAll().single().receipt!!.chainStatus!!.height)
         assertNotNull(journal.loadAll().single().receipt!!.statusError)
     } }
-
 }

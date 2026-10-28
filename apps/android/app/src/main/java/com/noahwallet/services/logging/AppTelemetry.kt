@@ -11,10 +11,9 @@ import io.sentry.SentryEvent
 import io.sentry.SentryOptions
 import io.sentry.android.core.SentryAndroid
 import io.sentry.android.core.SentryAndroidOptions
+import io.sentry.protocol.App
 import io.sentry.protocol.DebugImage
 import io.sentry.protocol.DebugMeta
-import java.util.UUID
-import io.sentry.protocol.App
 import io.sentry.protocol.Device
 import io.sentry.protocol.Mechanism
 import io.sentry.protocol.Message
@@ -24,9 +23,10 @@ import io.sentry.protocol.SentryException
 import io.sentry.protocol.SentryStackFrame
 import io.sentry.protocol.SentryStackTrace
 import io.sentry.protocol.SentryThread
+import kotlinx.serialization.json.*
 import java.io.StringReader
 import java.io.StringWriter
-import kotlinx.serialization.json.*
+import java.util.UUID
 
 object AppTelemetry {
     enum class Variant { mainnet, signet, regtest }
@@ -43,13 +43,13 @@ object AppTelemetry {
         !debug && variant != Variant.regtest && dsn.isNotBlank()
 
     internal fun options(variant: Variant, debug: Boolean, dsn: String,
-                         applicationId: String, versionName: String, versionCode: Int): SentryAndroidOptions? {
+        applicationId: String, versionName: String, versionCode: Int): SentryAndroidOptions? {
         if (!enabled(variant, debug, dsn)) return null
         return SentryAndroidOptions().also { configure(it, variant, dsn, applicationId, versionName, versionCode) }
     }
 
     private fun configure(options: SentryAndroidOptions, variant: Variant, dsn: String,
-                          applicationId: String, versionName: String, versionCode: Int) = with(options) {
+        applicationId: String, versionName: String, versionCode: Int) = with(options) {
         this.dsn = dsn
         environment = "production"
         release = "$applicationId@$versionName+$versionCode"
@@ -230,7 +230,7 @@ object AppTelemetry {
             return when (value) {
                 null, JsonNull -> true
                 is JsonPrimitive -> if (value.isString) string(value.content, values)
-                    else value.booleanOrNull != null || value.doubleOrNull?.isFinite() == true
+                else value.booleanOrNull != null || value.doubleOrNull?.isFinite() == true
                 is String -> string(value, values)
                 is Boolean, is Byte, is Short, is Int, is Long -> true
                 is Float -> value.isFinite()
@@ -251,7 +251,7 @@ object AppTelemetry {
         else {
             // Inspect the wire form too: numeric fields and joins are not string leaves.
             val json = if (payload is JsonObject) payload.toString()
-                else StringWriter().also { serializer.serialize(payload, it) }.toString()
+            else StringWriter().also { serializer.serialize(payload, it) }.toString()
             EndpointLogPrivacy.redactRecord(json) == json
         }
     } catch (_: Throwable) { false }

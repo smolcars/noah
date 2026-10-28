@@ -97,7 +97,9 @@ actor BtcMapRepository {
         let fetch = fetch
         let task = Task {
             try await Self.retry {
-                async let data = fetch(Self.url(path: "places/\(place.id)", query: [URLQueryItem(name: "fields", value: Self.detailFields.joined(separator: ","))]))
+                async let data = fetch(Self.url(
+                    path: "places/\(place.id)",
+                    query: [URLQueryItem(name: "fields", value: Self.detailFields.joined(separator: ","))]))
                 async let comments = place.comments ?? 0 > 0
                     ? fetch(Self.url(path: "places/\(place.id)/comments")) : Data("[]".utf8)
                 return try await BtcMapDetail.parse(place: data, comments: comments)

@@ -1,5 +1,5 @@
-import SwiftUI
 @preconcurrency import MapLibre
+import SwiftUI
 
 struct BtcMapCanvas: UIViewRepresentable {
     let model: BtcMapModel
@@ -15,7 +15,10 @@ struct BtcMapCanvas: UIViewRepresentable {
         map.automaticallyAdjustsContentInset = false
         map.minimumZoomLevel = 1
         map.maximumZoomLevel = 19
-        map.setCenter(CLLocationCoordinate2D(latitude: model.viewport.center[1], longitude: model.viewport.center[0]), zoomLevel: model.viewport.zoom, animated: false)
+        map.setCenter(
+            CLLocationCoordinate2D(latitude: model.viewport.center[1], longitude: model.viewport.center[0]),
+            zoomLevel: model.viewport.zoom,
+            animated: false)
         map.delegate = context.coordinator
         map.accessibilityLabel = "Bitcoin merchant map"
         let tap = UITapGestureRecognizer(target: context.coordinator, action: #selector(Coordinator.tapped(_:)))
@@ -48,7 +51,7 @@ struct BtcMapCanvas: UIViewRepresentable {
         }
     }
 
-    static func dismantleUIView(_ map: MLNMapView, coordinator: Coordinator) { map.delegate = nil }
+    static func dismantleUIView(_ map: MLNMapView, coordinator _: Coordinator) { map.delegate = nil }
 
     @MainActor final class Coordinator: NSObject, @preconcurrency MLNMapViewDelegate {
         let model: BtcMapModel
@@ -59,14 +62,17 @@ struct BtcMapCanvas: UIViewRepresentable {
         var styleRevision = 0
         private var revision = -1
         private var lastLocation: [Double]?
-        private let orange = UIColor(red: 247/255, green: 147/255, blue: 26/255, alpha: 1)
+        private let orange = UIColor(red: 247 / 255, green: 147 / 255, blue: 26 / 255, alpha: 1)
 
         init(model: BtcMapModel, onTap: @escaping () -> Void) { self.model = model; self.onTap = onTap }
 
         func mapView(_ mapView: MLNMapView, didFinishLoading style: MLNStyle) {
             Task { @MainActor [model] in model.basemapUnavailable = mapView.styleURL?.isFileURL == true }
             if let background = style.layer(withIdentifier: "offline-background") as? MLNBackgroundStyleLayer {
-                background.backgroundColor = NSExpression(forConstantValue: mapView.traitCollection.userInterfaceStyle == .dark ? UIColor.secondarySystemBackground.resolvedColor(with: UITraitCollection(userInterfaceStyle: .dark)) : UIColor.secondarySystemBackground.resolvedColor(with: UITraitCollection(userInterfaceStyle: .light)))
+                background
+                    .backgroundColor = NSExpression(forConstantValue: mapView.traitCollection.userInterfaceStyle == .dark ? UIColor.secondarySystemBackground
+                        .resolvedColor(with: UITraitCollection(userInterfaceStyle: .dark)) : UIColor.secondarySystemBackground
+                        .resolvedColor(with: UITraitCollection(userInterfaceStyle: .light)))
             }
             let source = MLNShapeSource(identifier: "btc-map-places", shape: nil,
                                         options: [.clustered: true, .clusterRadius: 46, .maximumZoomLevelForClustering: 14])
@@ -111,7 +117,7 @@ struct BtcMapCanvas: UIViewRepresentable {
             updateSources()
         }
 
-        func mapViewDidFailLoadingMap(_ mapView: MLNMapView, withError error: Error) {
+        func mapViewDidFailLoadingMap(_ mapView: MLNMapView, withError _: Error) {
             guard mapView.style == nil, mapView.styleURL?.isFileURL != true else { return }
             mapView.styleURL = Bundle.main.url(forResource: "btc-map-offline", withExtension: "json")
         }
@@ -141,14 +147,15 @@ struct BtcMapCanvas: UIViewRepresentable {
             }
         }
 
-        func mapView(_ mapView: MLNMapView, regionDidChangeWith reason: MLNCameraChangeReason, animated: Bool) {
+        func mapView(_ mapView: MLNMapView, regionDidChangeWith reason: MLNCameraChangeReason, animated _: Bool) {
             let viewport = BtcMapViewport(center: [mapView.centerCoordinate.longitude, mapView.centerCoordinate.latitude], zoom: mapView.zoomLevel)
             // Defer observable writes out of UIViewRepresentable's update pass.
-            let userInteraction = !reason.intersection([.gesturePan, .gesturePinch, .gestureRotate, .gestureZoomIn, .gestureZoomOut, .gestureOneFingerZoom]).isEmpty
+            let userInteraction = !reason.intersection([.gesturePan, .gesturePinch, .gestureRotate, .gestureZoomIn, .gestureZoomOut, .gestureOneFingerZoom])
+                .isEmpty
             let bounds = mapView.visibleCoordinateBounds
             Task { @MainActor [model] in
                 model.visibleBounds = BtcMapBounds(west: bounds.sw.longitude, south: bounds.sw.latitude,
-                                                  east: bounds.ne.longitude, north: bounds.ne.latitude)
+                                                   east: bounds.ne.longitude, north: bounds.ne.latitude)
                 model.record(viewport, userInteraction: userInteraction)
             }
         }

@@ -8,7 +8,9 @@ enum EsploraEndpoint {
         var errorDescription: String? { message }
     }
     static func normalize(_ value: String) throws -> String {
-        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines).filter { $0 != "\t" && $0 != "\n" && $0 != "\r" }.replacingOccurrences(of: "\\", with: "/")
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines).filter { $0 != "\t" && $0 != "\n" && $0 != "\r" }.replacingOccurrences(
+            of: "\\",
+            with: "/")
         guard !trimmed.isEmpty else { throw Failure(message: "Enter an Esplora API endpoint.") }
         let input = trimmed.range(of: "^https?://", options: [.regularExpression, .caseInsensitive]) == nil ? "https://" + trimmed : trimmed
         guard input.range(of: "^https?://[^/]", options: [.regularExpression, .caseInsensitive]) != nil,
@@ -27,11 +29,12 @@ enum EsploraEndpoint {
                   let port = UInt16(suffix.dropFirst()), port > 0 else { throw Failure(message: "Enter a valid Esplora API URL.") }
         }
         guard var url = URLComponents(string: input.replacingOccurrences(of: "\\", with: "/")), let host = url.host, !host.isEmpty,
-              !host.contains(where: { $0.isWhitespace }), url.url != nil else {
+              !host.contains(where: \.isWhitespace), url.url != nil else {
             throw Failure(message: "Enter a valid Esplora API URL.")
         }
         guard url.user == nil, url.password == nil else { throw Failure(message: "The Esplora endpoint cannot include credentials.") }
-        guard (url.query ?? "").isEmpty, (url.fragment ?? "").isEmpty else { throw Failure(message: "The Esplora endpoint cannot include a query string or fragment.") }
+        guard (url.query ?? "").isEmpty,
+              (url.fragment ?? "").isEmpty else { throw Failure(message: "The Esplora endpoint cannot include a query string or fragment.") }
         guard url.port.map({ (0...65535).contains($0) }) ?? true else { throw Failure(message: "Enter a valid Esplora API URL.") }
         url.scheme = url.scheme?.lowercased(); url.host = try canonicalHost(host.lowercased())
         if url.port == (url.scheme == "http" ? 80 : 443) { url.port = nil }

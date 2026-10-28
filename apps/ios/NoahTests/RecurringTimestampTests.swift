@@ -1,6 +1,6 @@
 import Foundation
-import Testing
 @testable import Noah
+import Testing
 
 @MainActor struct RecurringTimestampTests {
     static let fields = ["startAt", "endAt", "nextRunAt", "createdAt", "updatedAt", "retryNotBefore",

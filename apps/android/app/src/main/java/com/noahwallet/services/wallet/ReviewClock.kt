@@ -11,7 +11,7 @@ import android.os.SystemClock
 object ReviewClock {
     // JVM unit tests run against android.jar stubs, which throw; they get the JVM's monotonic clock instead.
     private val source: () -> Long = try { SystemClock.elapsedRealtime(); SystemClock::elapsedRealtime }
-        catch (_: RuntimeException) { { System.nanoTime() / 1_000_000 } }
+    catch (_: RuntimeException) { { System.nanoTime() / 1_000_000 } }
 
     fun now(): Long = source()
 

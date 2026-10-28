@@ -344,7 +344,7 @@ struct ReceiveView: View {
         tilt += 1
     }
 
-    private func copy(_ format: ReceiveFormat, _ value: String) {
+    private func copy(_: ReceiveFormat, _ value: String) {
         UIPasteboard.general.string = value
         haptics.play(.success)
         UIAccessibility.post(notification: .announcement, argument: L10n.text("Copied", locale: locale.identifier))
@@ -496,7 +496,7 @@ struct ReceiveQRCode: View {
         filter.correctionLevel = #"H"#
         guard let output = filter.outputImage,
               let image = CIContext().createCGImage(output.transformed(by: .init(scaleX: 6, y: 6)),
-                                                   from: output.extent.applying(.init(scaleX: 6, y: 6))) else { return nil }
+                                                    from: output.extent.applying(.init(scaleX: 6, y: 6))) else { return nil }
         return UIImage(cgImage: image)
     }
 }

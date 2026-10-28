@@ -1,23 +1,23 @@
 package com.noahwallet.services.wallet
 
-import com.noahwallet.onchain.*
 import android.content.Context
+import com.noahwallet.BuildConfig
 import com.noahwallet.history.HistoryMapping
 import com.noahwallet.history.HistoryTransaction
-import com.noahwallet.BuildConfig
+import com.noahwallet.onchain.*
+import com.noahwallet.send.*
 import com.noahwallet.services.storage.WalletDataLocation
 import io.github.niteshbalusu11.bark.*
-import java.io.File
 import kotlinx.coroutines.*
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import com.noahwallet.send.*
+import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOn
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+import java.io.File
 
 /** One owner per process: bark locks the datadir. All wallet operations go through this session. */
 class WalletSession internal constructor(
@@ -422,9 +422,9 @@ class WalletSession internal constructor(
     /** [renewal]: Home's Renew, whose VTXOs must all still be due when it's submitted, checked under these locks. */
     /** [keepOnchain]: where a claim to this wallet records its outputs, so auto-board leaves them on-chain. */
     suspend fun executeOnchain(quote: OnchainQuote, funding: AutoBoardFunding.Snapshot? = null, renewal: Boolean = false,
-                               keepOnchain: (Set<String>) -> Unit = {}, kept: (String) -> Set<String> = { emptySet() },
-                               recordClaim: (com.noahwallet.onchain.ExitClaimRecords.Record) -> Unit = {},
-                               newRun: (List<String>) -> Unit = {}, shortOfFunds: (Map<String, Long>) -> Unit = {}): String = withM6 { handles ->
+        keepOnchain: (Set<String>) -> Unit = {}, kept: (String) -> Set<String> = { emptySet() },
+        recordClaim: (com.noahwallet.onchain.ExitClaimRecords.Record) -> Unit = {},
+        newRun: (List<String>) -> Unit = {}, shortOfFunds: (Map<String, Long>) -> Unit = {}): String = withM6 { handles ->
         val threshold = if (renewal) WalletConfiguration.base(variant).vtxoRefreshExpiryThreshold.toUInt() else null
         onchainMutation.withLock { onchainOperations(handles).execute(quote, funding, renewalThreshold = threshold, keepOnchain = keepOnchain, kept = kept,
             recordClaim = recordClaim, newRun = newRun, shortOfFunds = shortOfFunds) }
@@ -591,8 +591,7 @@ class WalletSession internal constructor(
                 opener = sdkOpener(BuildConfig.APP_VARIANT, com.noahwallet.services.logging.AppLog(context, "send")::w,
                     EsploraSettings(com.noahwallet.services.storage.SettingsStorage(context))),
                 isSuspended = {
-                    com.noahwallet.services.storage.SettingsStorage(context).persistedState<com.noahwallet.services.storage.PersistedWalletState>(
-                        com.noahwallet.services.storage.PersistedWalletState.key)?.isWalletSuspended == true
+                    com.noahwallet.services.storage.SettingsStorage(context).persistedState<com.noahwallet.services.storage.PersistedWalletState>(com.noahwallet.services.storage.PersistedWalletState.key)?.isWalletSuspended == true
                 })
                 .also { instance = it }
         }
@@ -633,21 +632,19 @@ class WalletSession internal constructor(
         override val m6 = BarkOnchainAccess(wallet, onchain, warn)
         override suspend fun arkInfo() = wallet.arkInfo()
         override fun mailboxAuthorization(expiry: Long) = wallet.mailboxAuthorizationAt(expiry)
-        override suspend fun debug(action: DebugAction, input: String): String {
-            return when (action) {
-                DebugAction.ark -> DebugJSON.ark(wallet.arkInfo())
-                // Shown only here for support; the xpub must never reach logs or Sentry.
-                DebugAction.debugInfo -> DebugJSON.debugInfo(wallet.debugInfo())
-                DebugAction.refresh -> { wallet.refreshServer(); "Server refreshed" }
-                DebugAction.maintenance -> { wallet.maintenance(); "Maintenance completed" }
-                DebugAction.maintenanceRefresh -> wallet.maintenanceRefresh() ?: "Maintenance refresh completed"
-                DebugAction.delegated -> { wallet.maintenanceDelegated(); "Delegated maintenance completed" }
-                DebugAction.offboard -> wallet.offboardAll(input).toString()
-                DebugAction.decode -> DebugJSON.decoded(io.github.niteshbalusu11.bark.decodeVtxo(input))
-                DebugAction.importVtxo -> DebugJSON.imported(wallet.importVtxos(listOf(input)))
-                DebugAction.drop -> { wallet.dangerousDropVtxo(input); "VTXO removed" }
-                DebugAction.unlock -> { wallet.unlockVtxos(listOf(input), null); "VTXO unlocked" }
-            }
+        override suspend fun debug(action: DebugAction, input: String): String = when (action) {
+            DebugAction.ark -> DebugJSON.ark(wallet.arkInfo())
+            // Shown only here for support; the xpub must never reach logs or Sentry.
+            DebugAction.debugInfo -> DebugJSON.debugInfo(wallet.debugInfo())
+            DebugAction.refresh -> { wallet.refreshServer(); "Server refreshed" }
+            DebugAction.maintenance -> { wallet.maintenance(); "Maintenance completed" }
+            DebugAction.maintenanceRefresh -> wallet.maintenanceRefresh() ?: "Maintenance refresh completed"
+            DebugAction.delegated -> { wallet.maintenanceDelegated(); "Delegated maintenance completed" }
+            DebugAction.offboard -> wallet.offboardAll(input).toString()
+            DebugAction.decode -> DebugJSON.decoded(io.github.niteshbalusu11.bark.decodeVtxo(input))
+            DebugAction.importVtxo -> DebugJSON.imported(wallet.importVtxos(listOf(input)))
+            DebugAction.drop -> { wallet.dangerousDropVtxo(input); "VTXO removed" }
+            DebugAction.unlock -> { wallet.unlockVtxos(listOf(input), null); "VTXO unlocked" }
         }
         override fun stateChanges(): Changes {
             val subscription = wallet.stateChanges()

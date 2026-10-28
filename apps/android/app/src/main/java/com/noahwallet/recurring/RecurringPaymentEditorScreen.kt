@@ -1,36 +1,36 @@
 package com.noahwallet.recurring
 
-import com.noahwallet.localization.tr
 import android.app.DatePickerDialog
 import android.app.TimePickerDialog
+import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import androidx.core.view.doOnLayout
+import com.noahwallet.localization.tr
+import com.noahwallet.localization.trPlural
 import com.noahwallet.ui.LocalFoldingFeatures
 import com.noahwallet.ui.WindowRegion
-import com.noahwallet.ui.usableRegion
-import androidx.core.view.doOnLayout
-import com.noahwallet.ui.settings.*
 import com.noahwallet.ui.home.HomeType
 import com.noahwallet.ui.onboarding.LocalPalette
 import com.noahwallet.ui.onboarding.Underline
 import com.noahwallet.ui.onboarding.rememberHaptics
-import com.noahwallet.localization.trPlural
-import androidx.compose.foundation.border
-import androidx.compose.foundation.text.BasicTextField
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.unit.sp
+import com.noahwallet.ui.settings.*
+import com.noahwallet.ui.usableRegion
 import kotlinx.coroutines.launch
 import java.util.Calendar
 import java.util.TimeZone
@@ -61,7 +61,7 @@ internal fun recurringEndDate(value: Long, zone: TimeZone = TimeZone.getDefault(
 }
 
 @Composable internal fun RecurringPaymentEditorScreen(executor: RecurringExecutor, original: RecurringPayment?, amountUnit: com.noahwallet.formatting.BitcoinAmountUnit = com.noahwallet.formatting.BitcoinAmountUnit.bip177,
-                                             nav: SettingsNav? = null, done: () -> Unit) {
+    nav: SettingsNav? = null, done: () -> Unit) {
     val palette = LocalPalette.current
     val toasts = LocalSettingsToasts.current
     val haptics = rememberHaptics()
@@ -175,7 +175,7 @@ internal fun recurringEndDate(value: Long, zone: TimeZone = TimeZone.getDefault(
             applyOverrideConfiguration(android.content.res.Configuration(configuration).apply {
                 screenWidthDp = (region.width / density).toInt(); screenHeightDp = (region.height / density).toInt()
                 orientation = if (region.width > region.height) android.content.res.Configuration.ORIENTATION_LANDSCAPE
-                    else android.content.res.Configuration.ORIENTATION_PORTRAIT
+                else android.content.res.Configuration.ORIENTATION_PORTRAIT
             })
         }
     }

@@ -1,8 +1,7 @@
 import BarkBoltFFI
 import Foundation
-import Testing
-
 @testable import Noah
+import Testing
 
 struct DebugJSONTests {
     @Test func debugInfoShowsExactlyTheThreeSupportIdentifiers() throws {
@@ -12,6 +11,7 @@ struct DebugJSONTests {
     }
     @Test func errorsKeepTheExistingSafeDescriptionBoundary() {
         #expect(SafeErrorDescription.of(BarkError(message: "token=fake-test-token")) == "[redacted]")
-        #expect(SafeErrorDescription.of(NSError(domain: "private request", code: 1, userInfo: [NSLocalizedDescriptionKey: "secret input"])) == LogFile.redact("NSError"))
+        #expect(SafeErrorDescription.of(NSError(domain: "private request", code: 1, userInfo: [NSLocalizedDescriptionKey: "secret input"])) == LogFile
+            .redact("NSError"))
     }
 }

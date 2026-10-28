@@ -1,8 +1,7 @@
 import BarkBoltFFI
 import Foundation
-import Testing
-
 @testable import Noah
+import Testing
 
 @MainActor struct SendSafetyTests {
     let start = Date(timeIntervalSince1970: 1_790_000_000)
@@ -10,8 +9,7 @@ import Testing
     let quote = SendQuote(amount: 1000, fee: 208, total: 1208, feeRate: 1, approximate: true)
 
     func attempt(_ method: String = "ark", source: SendSource? = nil, max: Bool = false)
-        -> SendPaymentController.Attempt
-    {
+        -> SendPaymentController.Attempt {
         .init(
             payment: .init(
                 destination: address, method: method, amount: 1000, source: source, max: max),
@@ -20,8 +18,7 @@ import Testing
     }
     func movement(
         _ method: String = "ark", status: String = "successful", id: UInt32 = 2,
-        amount: UInt64 = 1000, hash: String? = nil
-    ) -> Movement {
+        amount: UInt64 = 1000, hash: String? = nil) -> Movement {
         Movement(
             id: id, status: status,
             subsystemName: method == "ark"
@@ -30,7 +27,7 @@ import Testing
             intendedBalanceSats: -Int64(amount), effectiveBalanceSats: -Int64(amount),
             offchainFeeSats: 0,
             sentToAddresses: [
-                .init(paymentMethod: .init(methodType: method, value: address), amountSats: amount)
+                .init(paymentMethod: .init(methodType: method, value: address), amountSats: amount),
             ],
             receivedOnAddresses: [], inputVtxoIds: [], outputVtxoIds: [], exitedVtxoIds: [],
             createdAt: ISO8601DateFormatter().string(from: start.addingTimeInterval(1)),
@@ -41,16 +38,15 @@ import Testing
     }
     func transaction(
         id: String = "new", outgoing: Bool = true, confirmed: Bool = false,
-        destination: String? = nil, witness: Bool = false, amount: UInt64 = 1000
-    ) throws -> WalletTransaction {
+        destination: String? = nil, witness: Bool = false, amount: UInt64 = 1000) throws -> WalletTransaction {
         let script = try #require(PaymentEncoding.bitcoinScript(destination ?? address))
         let scriptHex = script.map { String(format: "%02x", $0) }.joined()
         let amountHex = (0..<8).map { String(format: "%02x", (amount >> ($0 * 8)) & 255) }.joined()
         let hex =
             "02000000" + (witness ? "0001" : "") + "01" + String(repeating: "00", count: 32)
-            + "0000000000ffffffff01" + amountHex + String(format: "%02x", script.count)
-            + scriptHex
-            + (witness ? "010100" : "") + "00000000"
+                + "0000000000ffffffff01" + amountHex + String(format: "%02x", script.count)
+                + scriptHex
+                + (witness ? "010100" : "") + "00000000"
         return WalletTransaction(
             txid: id, txHex: hex, onchainFeeSats: 100, balanceChangeSats: outgoing ? -1100 : 1000,
             confirmation: confirmed ? .init(height: 100, hash: "block") : nil, isCpfp: false)
@@ -62,11 +58,9 @@ import Testing
     func controller(
         _ storage: SendPaymentTests.Storage,
         reconcile:
-            @escaping @Sendable (SendPaymentController.Attempt) async throws ->
-            SendPaymentController.Resolution
-    )
-        -> SendPaymentController
-    {
+        @escaping @Sendable (SendPaymentController.Attempt) async throws ->
+            SendPaymentController.Resolution)
+        -> SendPaymentController {
         .init(
             dependencies: .init(
                 prepare: { _, _ in .init(movementIDs: [], bdkTxids: []) },
@@ -254,8 +248,7 @@ import Testing
         if status == "successful" {
             #expect(
                 subject.state
-                    == .alreadyPaid(.init(amount: 0, paymentHash: "invoice-hash", movementID: 1, proof: .actualMovement))
-            )
+                    == .alreadyPaid(.init(amount: 0, paymentHash: "invoice-hash", movementID: 1, proof: .actualMovement)))
         } else if status == "pending" {
             #expect(subject.state == .uncertain)
         } else {
@@ -299,7 +292,7 @@ import Testing
         paid.offchainFeeSats = 83
         paid.effectiveBalanceSats = -1083
         #expect(SendReconciliation.ark(attempt("lightning"), movements: [paid])
-                == .paid(.init(amount: 1000, paymentHash: "invoice-hash", movementID: 2, fee: 83, proof: .actualMovement)))
+            == .paid(.init(amount: 1000, paymentHash: "invoice-hash", movementID: 2, fee: 83, proof: .actualMovement)))
     }
 
     @Test func confirmedReceiptRevalidatesThroughReorgAndMissingHistory() async throws {

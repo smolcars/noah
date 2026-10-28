@@ -6,12 +6,13 @@ import android.content.Context
 import android.os.SystemClock
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.horizontalScroll
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -20,9 +21,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.clipToBounds
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.foundation.clickable
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
@@ -33,12 +33,14 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewModelScope
 import com.noahwallet.formatting.BitcoinAmount
 import com.noahwallet.formatting.BitcoinAmountUnit
 import com.noahwallet.formatting.FiatCurrency
 import com.noahwallet.history.HistoryTransaction
 import com.noahwallet.localization.tr
 import com.noahwallet.send.*
+import com.noahwallet.ui.SendPresentation
 import com.noahwallet.ui.WalletAlertDialog
 import com.noahwallet.ui.design.NoahTokens
 import com.noahwallet.ui.home.CircleButton
@@ -46,10 +48,8 @@ import com.noahwallet.ui.home.HomeIcons
 import com.noahwallet.ui.home.HomeRow
 import com.noahwallet.ui.home.tonal
 import com.noahwallet.ui.keypadInput
-import com.noahwallet.ui.SendPresentation
 import com.noahwallet.ui.onboarding.*
 import kotlinx.coroutines.isActive
-import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.launch
 import java.util.Locale
 
@@ -202,7 +202,7 @@ internal fun SendContent(presentation: SendPresentation, env: SendEnv, actions: 
  */
 @Composable
 internal fun SendApproval(presentation: SendPresentation, payment: SendPayment, quote: SendQuote, env: SendEnv, actions: SendActions,
-                          paying: Boolean, cancel: () -> Unit, confirm: () -> Unit) {
+    paying: Boolean, cancel: () -> Unit, confirm: () -> Unit) {
     val controller = presentation.model.controller
     val reduceMotion = LocalReduceMotion.current
     val shift = with(androidx.compose.ui.platform.LocalDensity.current) { 28.dp.roundToPx() }
@@ -232,8 +232,8 @@ private fun formatted(sats: Long, env: SendEnv) = BitcoinAmount.format(sats, env
  */
 @Composable
 private fun StepPanes(nav: @Composable RowScope.() -> Unit, leadingCentred: Boolean, trailingAt: Alignment.Vertical,
-                      leading: @Composable ColumnScope.() -> Unit, trailing: @Composable ColumnScope.() -> Unit,
-                      bottom: (@Composable ColumnScope.() -> Unit)? = null) {
+    leading: @Composable ColumnScope.() -> Unit, trailing: @Composable ColumnScope.() -> Unit,
+    bottom: (@Composable ColumnScope.() -> Unit)? = null) {
     val pose = LocalPose.current
     val navRow = @Composable { Row(Modifier.fillMaxWidth().height(44.dp), verticalAlignment = Alignment.CenterVertically, content = nav) }
     // One column (or tabletop's lower half): [trailing] from the top and [bottom] pinned to the foot, scrolling only if they don't fit.
@@ -390,8 +390,7 @@ private fun AmountStep(presentation: SendPresentation, env: SendEnv, actions: Se
             AutoFit { AmountFigure(text, model.amount.isEmpty(), shake.value, modifier = Modifier.testTag("send-amount")) }
         }
         val price = model.btcPrice
-        Row(Modifier.fillMaxWidth().padding(top = 14.dp).height(24.dp).then(
-            if (price != null && editable) Modifier.clickableNoRipple { haptics.selection(); model.toggleCurrency() }.testTag("send-currency-toggle") else Modifier),
+        Row(Modifier.fillMaxWidth().padding(top = 14.dp).height(24.dp).then(if (price != null && editable) Modifier.clickableNoRipple { haptics.selection(); model.toggleCurrency() }.testTag("send-currency-toggle") else Modifier),
             horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
             if (price != null) {
                 Text(if (model.useFiat) formatted(sats, env) else FiatCurrency.display(sats, price, model.fiatCurrency, env.locale),
@@ -633,7 +632,7 @@ private fun ReviewStep(presentation: SendPresentation, env: SendEnv) {
 /** The review's layout: "Send ₿X", who it goes to, the rows, then [notes] and [action] (Hold to send) at the foot. */
 @Composable
 private fun ReviewPanes(amount: Long, who: SendWho, rail: SendRail?, source: SendSource?, quote: SendQuote?, payment: SendPayment?, env: SendEnv,
-                        backEnabled: Boolean, back: () -> Unit, notes: @Composable ColumnScope.() -> Unit, action: @Composable ColumnScope.() -> Unit) {
+    backEnabled: Boolean, back: () -> Unit, notes: @Composable ColumnScope.() -> Unit, action: @Composable ColumnScope.() -> Unit) {
     val palette = LocalPalette.current
     val tabletop = LocalPose.current is OnboardingPose.Tabletop
     val rows = @Composable { ReviewRows(source, quote, payment, rail, env, if (tabletop) 16.dp else 24.dp) }
@@ -655,17 +654,17 @@ private fun ReviewPanes(amount: Long, who: SendWho, rail: SendRail?, source: Sen
 
 @Composable
 private fun ReviewRows(source: SendSource?, quote: SendQuote?, payment: SendPayment?, rail: SendRail?, env: SendEnv, top: Dp) {
-        // Every row puts its label above its value at large text sizes rather than cutting either off.
-        Column(Modifier.padding(top = top)) {
-            if (rail != null) ValueRow(tr("Via"), tr(rail.label), icon = railIcon(rail), wraps = true)
-            if (rail != null) ValueRow(tr("Arrives"), arrives(rail, source, env.chainNeeded).let { (words, count) -> if (count == null) tr(words) else tr(words, count) }, wraps = true)
-            if (quote != null) {
-                ValueRow(tr(if (quote.approximate) "Estimated fee" else "Fee"), if (quote.fee == 0L && rail == SendRail.ark) tr("Free") else formatted(quote.fee, env), number = quote.fee != 0L || rail != SendRail.ark, wraps = true)
-                payment?.source?.let { ValueRow(tr("From"), tr(it.label), wraps = true) }
-                if (!payment?.comment.isNullOrEmpty()) ValueRow(tr("Note"), payment!!.comment, wraps = true)
-                ValueRow(tr(if (!quote.vtxoIDs.isNullOrEmpty()) "Total (reviewed coins)" else if (quote.approximate) "Estimated total" else "Total"), formatted(quote.total, env), number = true, divider = false, wraps = true)
-            }
+    // Every row puts its label above its value at large text sizes rather than cutting either off.
+    Column(Modifier.padding(top = top)) {
+        if (rail != null) ValueRow(tr("Via"), tr(rail.label), icon = railIcon(rail), wraps = true)
+        if (rail != null) ValueRow(tr("Arrives"), arrives(rail, source, env.chainNeeded).let { (words, count) -> if (count == null) tr(words) else tr(words, count) }, wraps = true)
+        if (quote != null) {
+            ValueRow(tr(if (quote.approximate) "Estimated fee" else "Fee"), if (quote.fee == 0L && rail == SendRail.ark) tr("Free") else formatted(quote.fee, env), number = quote.fee != 0L || rail != SendRail.ark, wraps = true)
+            payment?.source?.let { ValueRow(tr("From"), tr(it.label), wraps = true) }
+            if (!payment?.comment.isNullOrEmpty()) ValueRow(tr("Note"), payment!!.comment, wraps = true)
+            ValueRow(tr(if (!quote.vtxoIDs.isNullOrEmpty()) "Total (reviewed coins)" else if (quote.approximate) "Estimated total" else "Total"), formatted(quote.total, env), number = true, divider = false, wraps = true)
         }
+    }
 }
 
 /** The Arrives row's words and count. An Ark-funded on-chain send waits for the round's confirmations (today's setting). */
@@ -814,7 +813,7 @@ private fun resultTitle(ending: SendEnding, amount: Long, receipt: SendReceipt?,
  */
 @Composable
 internal fun ResultArea(ending: SendEnding, controller: SendController, attempt: SendAttempt?, receipt: SendReceipt?, amount: Long, who: SendWho,
-                       confirmedAt: Long?, env: SendEnv, actions: SendActions) {
+    confirmedAt: Long?, env: SendEnv, actions: SendActions) {
     val palette = LocalPalette.current
     val context = LocalContext.current
     val haptics = rememberHaptics()
@@ -836,7 +835,7 @@ internal fun ResultArea(ending: SendEnding, controller: SendController, attempt:
         SendEnding.pending -> tr("Lightning is still finding a route. You can leave this screen; Noah finishes it in the background.")
         // Only a person or address can be "reached"; an invoice just gets the refund line.
         SendEnding.refunded -> if (who.initial != null) tr("{amount} is back in your wallet. Lightning couldn’t reach {recipient}.", formatted(amount, env), who.name)
-            else tr("{amount} is back in your wallet.", formatted(amount, env))
+        else tr("{amount} is back in your wallet.", formatted(amount, env))
         // A retried invoice: bark's records can't say this attempt's coins came back, so no "back in your wallet".
         SendEnding.failed -> tr("That payment didn’t go through.")
         SendEnding.unknown -> tr(SendReceipt.uncertainMessage)
@@ -888,14 +887,13 @@ internal fun ResultArea(ending: SendEnding, controller: SendController, attempt:
     // Today's actions: check status (never submits), the explorer link and the audited override.
     if (ending in setOf(SendEnding.unknown, SendEnding.unavailable, SendEnding.pending) || receipt?.txid != null) {
         val label = if (controller.checking) "Checking…" else if (controller.state == SendController.State.storageBlocked) "Retry"
-            else if (controller.state == SendController.State.succeeded) "Refresh payment status" else "Check status"
+        else if (controller.state == SendController.State.succeeded) "Refresh payment status" else "Check status"
         if (ending == SendEnding.chainSent) TextButton(actions.checkStatus, enabled = !controller.checking, modifier = Modifier.padding(top = 8.dp)) {
             Text(tr(label), style = SendType.line, color = palette.foreground)
         } else SendPill(tr(label), Modifier.fillMaxWidth().padding(top = 16.dp).testTag("send-check-status"), enabled = !controller.checking, outlined = true, onClick = actions.checkStatus)
     }
     receipt?.txid?.takeIf { it.isNotEmpty() && env.variant != "regtest" && ending == SendEnding.chainSent }?.let { txid ->
-        TextButton({ context.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(
-            "https://mempool.space/${if (env.variant == "mainnet") "" else "signet/"}tx/$txid"))) }) { Text(tr("View in explorer"), style = SendType.line, color = palette.foreground) }
+        TextButton({ context.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse("https://mempool.space/${if (env.variant == "mainnet") "" else "signet/"}tx/$txid"))) }) { Text(tr("View in explorer"), style = SendType.line, color = palette.foreground) }
     }
     if (controller.canOverride) TextButton({ overrideStep = 1 }, Modifier.padding(top = 4.dp)) {
         Text(tr("Start a new payment after checking history"), style = SendType.line, color = palette.failure)

@@ -106,7 +106,7 @@ data class HomeRow(
             val unpaid = row.movementStatus == "failed" && row.outputVtxos.isNullOrEmpty() && row.exitedVtxos.isNullOrEmpty()
             if (row.source != "ark" || row.effectiveBalanceSat != 0L || (fee != 0L && !unpaid)) return false
             return if (row.movementKind in chainKinds) row.balanceChangeSat == 0L && row.onchainFeeSat == 0L
-                else (row.balanceChangeSat ?: 0L) == 0L && (row.onchainFeeSat ?: 0L) == 0L
+            else (row.balanceChangeSat ?: 0L) == 0L && (row.onchainFeeSat ?: 0L) == 0L
         }
 
         /** Money that actually came in: incoming, not a transfer between your own balances, not failed or canceled. */

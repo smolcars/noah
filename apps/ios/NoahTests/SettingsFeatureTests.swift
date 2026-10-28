@@ -1,18 +1,18 @@
 import Foundation
-import LocalAuthentication
 import HTTPTypes
+import LocalAuthentication
+@testable import Noah
 import OpenAPIRuntime
 import Testing
-@testable import Noah
 
 struct BiometricLockPolicyTests {
     @Test func onlyMissingPasscodeAllowsRecoveryPhraseWarning() {
         #expect(RecoveryPhraseAuthentication.unavailable(NSError(domain: LAError.errorDomain,
-            code: LAError.passcodeNotSet.rawValue)) == .noScreenLock)
+                                                                 code: LAError.passcodeNotSet.rawValue)) == .noScreenLock)
         for code in [LAError.authenticationFailed, .userCancel, .systemCancel, .appCancel,
                      .biometryNotAvailable, .biometryNotEnrolled, .biometryLockout, .notInteractive] {
             #expect(RecoveryPhraseAuthentication.unavailable(NSError(domain: LAError.errorDomain,
-                code: code.rawValue)) == .denied)
+                                                                     code: code.rawValue)) == .denied)
         }
         #expect(RecoveryPhraseAuthentication.unavailable(nil) == .denied)
         #expect(RecoveryPhraseAuthentication.unavailable(NSError(domain: "other", code: LAError.passcodeNotSet.rawValue)) == .denied)
@@ -95,13 +95,13 @@ struct SettingsFeatureTests {
     @Test func successfulManualBackupSurvivesFailedListRefresh() async throws {
         var uploaded = false
         let refreshed = try await BackupSettingsView.backUpAndRefresh(backup: { uploaded = true },
-            refresh: { throw URLError(.notConnectedToInternet) })
+                                                                      refresh: { throw URLError(.notConnectedToInternet) })
         #expect(uploaded)
         #expect(!refreshed)
         var listed = false
         await #expect(throws: URLError.self) {
             try await BackupSettingsView.backUpAndRefresh(backup: { throw URLError(.notConnectedToInternet) },
-                refresh: { listed = true })
+                                                          refresh: { listed = true })
         }
         #expect(!listed)
         #expect(try await BackupSettingsView.backUpAndRefresh(backup: {}, refresh: {}) == true)
@@ -145,7 +145,7 @@ struct SettingsFeatureTests {
         defer { try? FileManager.default.removeItem(at: root) }
         let storage = try SettingsStorage(rootPath: root.appending(path: "mmkv").path)
         try storage.setDurably(#"{"state":{"isAutoBoardingEnabled":true,"hasAttemptedAutoBoarding":true},"version":1}"#,
-            forKey: PersistedTransactionState.key)
+                               forKey: PersistedTransactionState.key)
         let funding = AutoBoardFunding.Snapshot(walletID: "wallet", outpoints: ["current:0"])
         let ledger = AutoBoardFunding(storage: storage)
         #expect(PersistedTransactionState.load(from: storage).isAutoBoardingEnabled)
@@ -161,7 +161,7 @@ struct SettingsFeatureTests {
         var fail = false
         var bodies: [String] = []
         func setFailure(_ value: Bool) { fail = value }
-        func send(_ request: HTTPRequest, body: HTTPBody?, baseURL: URL, operationID: String) async throws -> (HTTPResponse, HTTPBody?) {
+        func send(_: HTTPRequest, body: HTTPBody?, baseURL _: URL, operationID _: String) async throws -> (HTTPResponse, HTTPBody?) {
             if let body { bodies.append(try await String(collecting: body, upTo: 65536)) }
             if fail { throw URLError(.notConnectedToInternet) }
             return (.init(status: .ok), HTTPBody(#"{"success":true}"#))
@@ -176,7 +176,7 @@ struct SettingsFeatureTests {
         _ = try storage.updateServerState { $0.isBackupEnabled = false; $0.lightningAddress = "alice@example.com" }
         let transport = Transport()
         let server = ServerRegistration(variant: .regtest, settings: storage,
-            client: Client(serverURL: URL(string: "http://localhost")!, transport: transport))
+                                        client: Client(serverURL: URL(string: "http://localhost")!, transport: transport))
         await transport.setFailure(true)
         do { try await server.setBackupEnabled(true); Issue.record("Expected failed update") } catch {}
         #expect(server.state.isBackupEnabled == false)

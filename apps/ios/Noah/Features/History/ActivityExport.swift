@@ -106,9 +106,9 @@ enum ActivityShare {
 
     @MainActor static func present(_ items: [Any], anchor: CGRect?, completion: @escaping () -> Void = {}) {
         guard let scene = UIApplication.shared.connectedScenes.compactMap({ $0 as? UIWindowScene })
-                .first(where: { $0.activationState == .foregroundActive }) ?? UIApplication.shared.connectedScenes.first as? UIWindowScene,
-              let window = scene.windows.first(where: \.isKeyWindow) ?? scene.windows.first,
-              var top = window.rootViewController else { completion(); return }
+            .first(where: { $0.activationState == .foregroundActive }) ?? UIApplication.shared.connectedScenes.first as? UIWindowScene,
+            let window = scene.windows.first(where: \.isKeyWindow) ?? scene.windows.first,
+            var top = window.rootViewController else { completion(); return }
         while let presented = top.presentedViewController, !presented.isBeingDismissed { top = presented }
         let controller = UIActivityViewController(activityItems: items, applicationActivities: nil)
         controller.completionWithItemsHandler = { _, _, _, _ in completion() }
@@ -135,6 +135,6 @@ enum ActivityShare {
     /// Keeps the popover a popover on iPhone-sized traits.
     private final class PopoverKeeper: NSObject, UIPopoverPresentationControllerDelegate {
         static let shared = PopoverKeeper()
-        func adaptivePresentationStyle(for controller: UIPresentationController, traitCollection: UITraitCollection) -> UIModalPresentationStyle { .none }
+        func adaptivePresentationStyle(for _: UIPresentationController, traitCollection _: UITraitCollection) -> UIModalPresentationStyle { .none }
     }
 }

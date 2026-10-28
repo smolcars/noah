@@ -116,7 +116,7 @@ final class WalletLock {
     func setEnabled(_ enabled: Bool) async throws {
         let generation = policy.generation
         guard await authenticate(enabled ? L10n.text("Enable wallet authentication")
-                                 : L10n.text("Disable wallet authentication")) else { return }
+            : L10n.text("Disable wallet authentication")) else { return }
         guard generation == policy.generation else { return }
         var wallet = SettingsStorage.shared.persistedState(PersistedWalletState.self, key: PersistedWalletState.key) ?? .init()
         wallet.isBiometricsEnabled = enabled
@@ -194,7 +194,7 @@ struct WalletLockOverlay: UIViewRepresentable {
         context.coordinator.protectOnBackground = protectOnBackground
         context.coordinator.update(source: view.window)
     }
-    static func dismantleUIView(_ uiView: SourceView, coordinator: Coordinator) { coordinator.uncover() }
+    static func dismantleUIView(_: SourceView, coordinator: Coordinator) { coordinator.uncover() }
 
     final class SourceView: UIView {
         var onWindow: (() -> Void)?

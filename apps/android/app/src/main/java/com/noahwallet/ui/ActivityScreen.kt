@@ -31,7 +31,7 @@ import java.util.Locale
  */
 @Composable
 fun ActivityScreen(app: AppModel, onRepeatPayment: (RepeatPayment) -> Unit, onReceive: () -> Unit = {},
-                   onSettings: (androidx.navigation3.runtime.NavKey) -> Unit = {}, barHidden: (Boolean) -> Unit = {}) {
+    onSettings: (androidx.navigation3.runtime.NavKey) -> Unit = {}, barHidden: (Boolean) -> Unit = {}) {
     val history = app.history
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -75,7 +75,7 @@ fun ActivityScreen(app: AppModel, onRepeatPayment: (RepeatPayment) -> Unit, onRe
  */
 @Composable
 internal fun paymentDetail(app: AppModel, state: ActivityState, price: Double?, onRepeatPayment: (RepeatPayment) -> Unit,
-                           onSettings: (androidx.navigation3.runtime.NavKey) -> Unit): Pair<ActivityUi, ActivityActions> {
+    onSettings: (androidx.navigation3.runtime.NavKey) -> Unit): Pair<ActivityUi, ActivityActions> {
     val history = app.history
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -147,9 +147,8 @@ private suspend fun exportCSV(app: AppModel, context: android.content.Context, r
     return try {
         app.services.scratch.withOperation {
             val file = withContext(Dispatchers.IO) { app.historyExports.create(csv).also { export = it } }
-            androidx.work.WorkManager.getInstance(context).enqueue(
-                androidx.work.OneTimeWorkRequestBuilder<HistoryExportCleanup>()
-                    .setInitialDelay(HistoryExportFiles.retentionMillis, java.util.concurrent.TimeUnit.MILLISECONDS).build())
+            androidx.work.WorkManager.getInstance(context).enqueue(androidx.work.OneTimeWorkRequestBuilder<HistoryExportCleanup>()
+                .setInitialDelay(HistoryExportFiles.retentionMillis, java.util.concurrent.TimeUnit.MILLISECONDS).build())
             val uri = FileProvider.getUriForFile(context, "${context.packageName}.files", file)
             context.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).apply {
                 type = "text/csv"

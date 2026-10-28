@@ -25,7 +25,7 @@ class SendMovementIdentityTest {
             val ark = rail == "ark"
             val payment = SendPayment("reviewed-recipient", if (ark) "ark" else "onchain", 1000, if (ark) null else SendSource.offchain, max = rail == "offboard")
             val receipt = if (ark) SendReceipt(1000, movementID = 7u, proof = SendReceipt.Proof.submitReturnedArkSuccess)
-                else SendReceipt(1000, txid = "returned", movementID = 7u, proof = SendReceipt.Proof.submitReturnedTxid)
+            else SendReceipt(1000, txid = "returned", movementID = 7u, proof = SendReceipt.Proof.submitReturnedTxid)
             var reconciled = 0
             val wallet = FakeSendWallet().apply { payBlock = { receipt }; reconciliation = { reconciled++; SendResolution.Uncertain } }
             val journal = TestJournal()

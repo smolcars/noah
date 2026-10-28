@@ -13,7 +13,9 @@ import org.junit.runners.Parameterized
 @RunWith(Parameterized::class)
 class RecurringLiveAdmissionTest(private val initialized: Boolean?) {
     companion object {
-        @JvmStatic @Parameterized.Parameters(name = "initialized={0}") fun cases() = listOf(null, false, true).map { arrayOf(it) }
+        @JvmStatic
+        @Parameterized.Parameters(name = "initialized={0}")
+        fun cases() = listOf(null, false, true).map { arrayOf(it) }
     }
     @Test fun welcomeCallbacksCannotPoisonTheCreatedWallet() = runBlocking {
         val w = RecurringWorld(this)

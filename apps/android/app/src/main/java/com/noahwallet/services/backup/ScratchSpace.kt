@@ -1,8 +1,8 @@
 package com.noahwallet.services.backup
 
+import kotlinx.coroutines.flow.first
 import java.io.File
 import java.util.UUID
-import kotlinx.coroutines.flow.first
 
 /** Per-operation plaintext; launch sweeps abandoned folders without touching live operations. */
 class ScratchSpace(val root: File, private val syncDirectory: (File) -> Unit = { directory ->

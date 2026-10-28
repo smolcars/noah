@@ -1,6 +1,5 @@
 package com.noahwallet.services.server
 
-import com.noahwallet.api.generated.models.DeviceInfo as DevicePayload
 import com.noahwallet.services.storage.*
 import io.ktor.client.engine.mock.*
 import io.ktor.http.*
@@ -9,6 +8,7 @@ import kotlinx.coroutines.*
 import kotlinx.serialization.json.*
 import org.junit.Assert.*
 import org.junit.Test
+import com.noahwallet.api.generated.models.DeviceInfo as DevicePayload
 
 class ServerRegistrationTest {
     private val response = """{"display_name":"New","email":null,"is_email_verified":false,"lightning_address":"new@localhost.com","nostr_pubkey":null,"status":"OK","user_status":"active"}"""
@@ -266,7 +266,7 @@ class ServerRegistrationTest {
                 "/v0/email/send_verification" -> if (already) """{"success":true,"message":"Email already verified","email":"canonical@example.com"}""" else """{"success":true,"message":"Sent"}"""
                 "/v0/email/verify" -> """{"success":$verified}"""
                 else -> if (identityFails) return@MockEngine respond("failed", HttpStatusCode.BadRequest)
-                    else """{"lightning_address":"changed@localhost.com","nostr_pubkey":null}"""
+                else """{"lightning_address":"changed@localhost.com","nostr_pubkey":null}"""
             }
             respond(body, headers = headersOf(HttpHeaders.ContentType, "application/json"))
         }

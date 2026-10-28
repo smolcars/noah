@@ -1,8 +1,7 @@
 import Foundation
+@testable import Noah
 import OpenAPIRuntime
 import Testing
-
-@testable import Noah
 
 /// Mirrors `client/src/lib/backupCoordinator.ts`, with a manual clock.
 @Suite(.timeLimit(.minutes(1)))
@@ -102,7 +101,7 @@ struct BackupCoordinatorTests {
     }
 
     @MainActor @Test(arguments: [false, true])
-    func automaticBackupAfterReentryOutlivesActivation(immediate: Bool) async throws {
+    func automaticBackupAfterReentryOutlivesActivation(immediate: Bool) async {
         let world = World(), clock = ManualClock()
         let gate = RecurringReservationTests.Gate()
         var dependencies = world.dependencies(clock: clock)
@@ -129,7 +128,7 @@ struct BackupCoordinatorTests {
         #expect(!world.state.backupPending)
     }
 
-    @MainActor @Test func automaticRequestFromObserverWithExpiredActivationStillBacksUp() async throws {
+    @MainActor @Test func automaticRequestFromObserverWithExpiredActivationStillBacksUp() async {
         let world = World(), clock = ManualClock()
         var dependencies = world.dependencies(clock: clock)
         let perform = dependencies.perform
@@ -157,7 +156,7 @@ struct BackupCoordinatorTests {
         #expect(!world.state.backupPending)
     }
 
-    @MainActor @Test func automaticRetryOutlivesTheForegroundFlushThatScheduledIt() async throws {
+    @MainActor @Test func automaticRetryOutlivesTheForegroundFlushThatScheduledIt() async {
         let world = World(), clock = ManualClock()
         world.fail(times: 1)
         var dependencies = world.dependencies(clock: clock)
@@ -179,7 +178,7 @@ struct BackupCoordinatorTests {
         #expect(!world.state.backupPending)
     }
 
-    @Test func explicitFlushRetainsRevokedBackgroundBudget() async throws {
+    @Test func explicitFlushRetainsRevokedBackgroundBudget() async {
         let world = World(), clock = ManualClock()
         var dependencies = world.dependencies(clock: clock)
         dependencies.perform = { _, _ in
@@ -335,7 +334,7 @@ struct BackupCoordinatorTests {
         #expect(await clock.pending.isEmpty)
     }
 
-    @Test func debouncedRequestsShareOnePass() async throws {
+    @Test func debouncedRequestsShareOnePass() async {
         let clock = ManualClock()
         let world = World()
         let coordinator = BackupCoordinator(dependencies: world.dependencies(clock: clock))
@@ -366,7 +365,7 @@ struct BackupCoordinatorTests {
         #expect(world.state.lastBackupId == "backup-sha-1")
     }
 
-    @Test func failuresRetryWithBackoffAndSuccessResetsIt() async throws {
+    @Test func failuresRetryWithBackoffAndSuccessResetsIt() async {
         let clock = ManualClock()
         let world = World()
         world.fail(times: 2)
@@ -447,7 +446,7 @@ struct BackupCoordinatorTests {
         #expect(await clock.pending.isEmpty)
     }
 
-    @Test func cancellingScheduledWorkStopsTheTimers() async throws {
+    @Test func cancellingScheduledWorkStopsTheTimers() async {
         let clock = ManualClock()
         let world = World()
         let coordinator = BackupCoordinator(dependencies: world.dependencies(clock: clock))

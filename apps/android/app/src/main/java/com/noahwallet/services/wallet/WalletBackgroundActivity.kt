@@ -1,9 +1,9 @@
 package com.noahwallet.services.wallet
 
-import kotlinx.coroutines.sync.Mutex
-import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 
 object WalletBackgroundActivity {
     data class Status(val count: Int = 0, val completions: Long = 0) {

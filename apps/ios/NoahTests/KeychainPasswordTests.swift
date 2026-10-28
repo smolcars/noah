@@ -1,8 +1,7 @@
 import Foundation
+@testable import Noah
 import Security
 import Testing
-
-@testable import Noah
 
 /// Uses throwaway service names; never touches the real seed items.
 @Suite(.serialized)
@@ -43,12 +42,12 @@ struct KeychainPasswordTests {
         ]
         var result: CFTypeRef?
         guard SecItemCopyMatching(query as CFDictionary, &result) == errSecSuccess,
-            let attributes = result as? [String: Any]
+              let attributes = result as? [String: Any]
         else { return nil }
         return attributes[kSecAttrAccessible as String] as? String
     }
 
-    @Test func readsItemWrittenByReactNativeKeychain() throws {
+    @Test func readsItemWrittenByReactNativeKeychain() {
         defer { deleteItem() }
         let mnemonic = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about"
         #expect(addLikeReactNativeKeychain(mnemonic) == errSecSuccess)

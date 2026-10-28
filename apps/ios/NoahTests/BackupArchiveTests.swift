@@ -1,8 +1,7 @@
 import Foundation
+@testable import Noah
 import Testing
 import ZIPFoundation
-
-@testable import Noah
 
 struct BackupArchiveTests {
     private let mnemonic = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about"
@@ -103,10 +102,9 @@ struct BackupArchiveTests {
         let archive = try Archive(url: url, accessMode: .create)
         for (name, data) in entries {
             try archive.addEntry(
-                with: name, type: .file, uncompressedSize: Int64(data.count), compressionMethod: .deflate
-            ) { position, size in
-                data.subdata(in: Int(position)..<Int(position) + size)
-            }
+                with: name, type: .file, uncompressedSize: Int64(data.count), compressionMethod: .deflate) { position, size in
+                    data.subdata(in: Int(position)..<Int(position) + size)
+                }
         }
         return try Data(contentsOf: url)
     }
@@ -116,17 +114,17 @@ struct BackupArchiveTests {
     private func patch(_ zip: Data, crc: UInt32? = nil, uncompressedSize: UInt32? = nil) -> Data {
         var bytes = [UInt8](zip)
         func read(_ at: Int) -> UInt32 { bytes[at..<at + 4].reversed().reduce(0) { $0 << 8 | UInt32($1) } }
-        func write(_ value: UInt32, _ at: Int) { for i in 0..<4 { bytes[at + i] = UInt8(value >> (8 * i) & 0xff) } }
+        func write(_ value: UInt32, _ at: Int) { for i in 0..<4 { bytes[at + i] = UInt8(value >> (8 * i) & 0xFF) } }
         var offset = 0
         while offset + 30 < bytes.count {
             switch read(offset) {
-            case 0x0403_4b50:  // local file header
+            case 0x0403_4B50: // local file header
                 if let crc { write(crc, offset + 14) }
                 if let uncompressedSize { write(uncompressedSize, offset + 22) }
-            case 0x0201_4b50:  // central directory
+            case 0x0201_4B50: // central directory
                 if let crc { write(crc, offset + 16) }
                 if let uncompressedSize { write(uncompressedSize, offset + 24) }
-            case 0x0807_4b50:  // data descriptor
+            case 0x0807_4B50: // data descriptor
                 if let crc { write(crc, offset + 4) }
                 if let uncompressedSize { write(uncompressedSize, offset + 12) }
             default: break
@@ -283,9 +281,9 @@ struct BackupArchiveTests {
             }
             let unpacked = FileManager.default.enumerator(at: destination, includingPropertiesForKeys: [.isRegularFileKey])?
                 .compactMap { $0 as? URL }
-                .filter { (try? $0.resourceValues(forKeys: [.isRegularFileKey]).isRegularFile) == true }
-                .count
-            let extra = fixture.input.kind == "v2" ? 1 : 0  // manifest.json
+                .count(where: { (try? $0.resourceValues(forKeys: [.isRegularFileKey]).isRegularFile) == true })
+
+            let extra = fixture.input.kind == "v2" ? 1 : 0 // manifest.json
             #expect(unpacked == fixture.expected.files.count + extra, "\(fixture.name): nothing else unpacked")
         }
     }

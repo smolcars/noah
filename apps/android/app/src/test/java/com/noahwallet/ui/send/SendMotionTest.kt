@@ -103,7 +103,7 @@ class SendMotionTest {
         SendAttempt(payment = SendPayment("lnbcrt1invoice", "lightning", 1_000), paymentHash = "hash", failed = state == SendController.State.failed,
             snapshot = SendSnapshot(before, invoicePaid = false))
     private fun movement(status: String = "failed", outputs: List<String> = listOf("refund:0"), exited: List<String> = emptyList(),
-                         hash: String? = "hash", subsystem: String = "bark.lightning_send", id: UInt = 7u) =
+        hash: String? = "hash", subsystem: String = "bark.lightning_send", id: UInt = 7u) =
         Movement(id, status, subsystem, "send", "{}", -1_000, 0, 0u, emptyList(), emptyList(), listOf("htlc:0"), outputs, exited,
             "now", "now", null, hash, null, null)
 

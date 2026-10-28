@@ -1,7 +1,6 @@
 import Foundation
-import Testing
-
 @testable import Noah
+import Testing
 
 /// In-memory seed item whose reads and writes can be made to fail.
 final class FakeSeed: SecretItem, @unchecked Sendable {

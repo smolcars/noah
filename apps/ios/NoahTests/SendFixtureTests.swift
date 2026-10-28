@@ -1,6 +1,6 @@
 import Foundation
-import Testing
 @testable import Noah
+import Testing
 
 struct SendFixtureTests {
     struct ParseInput: Decodable { let destination: String; let network: String }
@@ -50,12 +50,17 @@ struct SendFixtureTests {
             let args = fixture.input.args
             switch fixture.input.operation {
             case "stage": #expect(try args[0].decode(SendProgress.self).next.rawValue == fixture.expected.decode(String.self), "\(fixture.name)")
-            case "rails": #expect(try SendFlow.rails(type: args[0].decode(String?.self), request: args[1].decode([String:String]?.self)) == fixture.expected.decode([SendRail].self))
+            case "rails": #expect(try SendFlow.rails(type: args[0].decode(String?.self), request: args[1].decode([String: String]?.self)) == fixture.expected
+                    .decode([SendRail].self))
             case "label": #expect(try SendFlow.label(type: args[0].decode(String?.self)) == fixture.expected.decode(String?.self))
-            case "note": #expect(try SendFlow.canNote(type: args[0].decode(String?.self), allowed: args[1].decode(Int.self)) == fixture.expected.decode(Bool.self))
-            case "max": #expect(try SendFlow.canMax(type: args[0].decode(String?.self), request: args[1].decode([String:String]?.self)) == fixture.expected.decode(Bool.self))
-            case "method": #expect(try SendFlow.method(rail: args[0].decode(SendRail.self), request: args[1].decode([String:String].self)) == fixture.expected.decode(String?.self))
-            case "recommend": #expect(try SendFlow.recommend(args[0].decode([SendRail].self), availability: args[1].decode([String:Bool].self)) == fixture.expected.decode(SendRail?.self))
+            case "note": #expect(try SendFlow.canNote(type: args[0].decode(String?.self), allowed: args[1].decode(Int.self)) == fixture.expected
+                    .decode(Bool.self))
+            case "max": #expect(try SendFlow.canMax(type: args[0].decode(String?.self), request: args[1].decode([String: String]?.self)) == fixture.expected
+                    .decode(Bool.self))
+            case "method": #expect(try SendFlow.method(rail: args[0].decode(SendRail.self), request: args[1].decode([String: String].self)) == fixture.expected
+                    .decode(String?.self))
+            case "recommend": #expect(try SendFlow.recommend(args[0].decode([SendRail].self), availability: args[1].decode([String: Bool].self)) == fixture
+                    .expected.decode(SendRail?.self))
             default: Issue.record("Unknown fixture")
             }
         }

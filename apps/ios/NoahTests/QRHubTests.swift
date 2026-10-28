@@ -1,6 +1,6 @@
 import Foundation
-import Testing
 @testable import Noah
+import Testing
 
 @MainActor
 struct QRHubTests {
@@ -69,7 +69,7 @@ struct QRHubTests {
         #expect(resolutions == ["alice@example.com"])
         #expect(send.quote == nil)
         #expect(!send.controller.locked)
-        #expect(send.stage == .amount)  // Recipient first: on to the keypad.
+        #expect(send.stage == .amount) // Recipient first: on to the keypad.
         #expect(await QRScanRoute.apply("zz", to: send))
         #expect(send.stage == .recipient && send.error != nil)
     }

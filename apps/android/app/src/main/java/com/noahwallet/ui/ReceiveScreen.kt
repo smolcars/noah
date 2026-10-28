@@ -1,30 +1,29 @@
 package com.noahwallet.ui
 
-import com.noahwallet.localization.tr
 import android.graphics.Bitmap
 import android.os.SystemClock
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.ui.semantics.clearAndSetSemantics
-import androidx.compose.ui.semantics.role
-import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.onClick
-import androidx.compose.ui.semantics.contentDescription
-import androidx.compose.ui.draw.clip
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.saveable.Saver
-import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.onClick
+import androidx.compose.ui.semantics.role
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -36,12 +35,13 @@ import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel
 import com.noahwallet.R
 import com.noahwallet.api.generated.client.V0PricesClient
 import com.noahwallet.formatting.*
+import com.noahwallet.localization.tr
 import com.noahwallet.services.server.value
 import com.noahwallet.services.wallet.*
 import com.noahwallet.ui.receive.*
 import kotlinx.coroutines.*
-import kotlinx.serialization.json.JsonObject
 import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
 
 private val requestSaver = Saver<ReceiveRequest?, String>(
     save = { it?.let { request -> Json.encodeToString(request) } ?: "" },
@@ -211,4 +211,3 @@ internal fun ReceiveQR(uri: String, actionLabel: String = "Show payment details"
         } else Text(tr("QR unavailable. Tap to copy payment details."), color = Color.Black)
     }
 }
-

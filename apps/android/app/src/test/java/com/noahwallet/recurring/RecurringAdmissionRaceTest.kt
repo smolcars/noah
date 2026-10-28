@@ -71,5 +71,4 @@ class RecurringAdmissionRaceTest {
             assertTrue(RecurringAutomationAuthority(location.directory) { file, bytes -> durableRecurringWrite(file, bytes) {} }.allowed())
         } finally { w.policyDirectory.parentFile!!.deleteRecursively() }
     }
-
 }

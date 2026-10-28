@@ -1,9 +1,9 @@
 import BarkBoltFFI
 import Foundation
+@testable import Noah
 import SwiftUI
 import Testing
 import UIKit
-@testable import Noah
 
 /// The Send motion follows the payment controller's real state (send-receive.md).
 @MainActor
@@ -280,7 +280,8 @@ struct SendMotionTests {
         receipt.broadcastRetryPending = true
         var quote = SendQuote(amount: 50_000, fee: 420, total: 50_420, feeRate: 2)
         quote.prepared = try JSONDecoder().decode(SendPreparedTransaction.self, from: Data(
-            #"{"id":"fixture","txid":"\#(String(repeating: "cd", count: 32))","vsize":141,"inputCount":1,"createdAt":\#(Date().timeIntervalSinceReferenceDate)}"#.utf8))
+            #"{"id":"fixture","txid":"\#(String(repeating: "cd", count: 32))","vsize":141,"inputCount":1,"createdAt":\#(Date().timeIntervalSinceReferenceDate)}"#
+                .utf8))
         let wallet = SendPayment(destination: SendReceiveShotTests.bitcoin, method: "onchain", amount: 50_000, source: .onchain)
         func controller(_ result: Result<SendReceipt, Error>?, read: (() throws -> Attempt?)? = nil) -> SendPaymentController {
             let storage = SendPaymentTests.Storage()
@@ -388,7 +389,7 @@ struct SendMotionTests {
             model.amount = "2500"
             await model.continueStage()
             #expect(model.stage == .recipient && model.progress.amountConfirmed)
-            model.stage = .amount  // Back from To, as SendView's goBack does for an amount-first entry.
+            model.stage = .amount // Back from To, as SendView's goBack does for an amount-first entry.
             await model.importRecipient(value)
             #expect(model.stage == .amount && model.sats == 2_500 && model.progress.recipientConfirmed, "\(value)")
             #expect(!model.progress.amountConfirmed && model.error == nil, "\(value)")
@@ -408,7 +409,7 @@ struct SendMotionTests {
             #expect(SendConfirmation.arrives(.init(payment), required: 2, locale: "en") == "After 2 confirmations")
             // The fine print keeps its own note.
             #expect(SendConfirmation.fine(invoiceNote: note, quote: quote, locale: "en")
-                    == note ?? SendQuote.recipientEstimateExplanation)
+                == note ?? SendQuote.recipientEstimateExplanation)
         }
     }
 
@@ -768,7 +769,9 @@ struct ReceiveFormatTests {
         // Tracking only the current and waiting arrivals, A2 would have arrived again.
         #expect(bumped.look(known: look.known, announced: announced).arrivals.map(\.txid) == ["A2"])
         // A deposit spending other coins still arrives.
-        let other = ReceiveChainSnapshot(tip: 100, incoming: bumped.incoming + [.init(txid: "C", toAddress: 1, received: 1, confirmedHeight: nil, inputs: [.init(txid: "fundC", vout: 0)])])
+        let other = ReceiveChainSnapshot(
+            tip: 100,
+            incoming: bumped.incoming + [.init(txid: "C", toAddress: 1, received: 1, confirmedHeight: nil, inputs: [.init(txid: "fundC", vout: 0)])])
         #expect(other.look(known: look.known, announced: announced, spent: spent).arrivals.map(\.txid) == ["C"])
     }
 

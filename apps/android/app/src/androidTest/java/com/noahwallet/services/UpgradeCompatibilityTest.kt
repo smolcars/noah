@@ -3,20 +3,20 @@ package com.noahwallet.services
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.noahwallet.BuildConfig
+import com.noahwallet.recurring.RecurringStore
 import com.noahwallet.services.launch.LaunchState
+import com.noahwallet.services.push.PushRuntime
 import com.noahwallet.services.storage.*
 import com.noahwallet.services.wallet.WalletSession
 import io.github.niteshbalusu11.bark.Network
-import java.io.File
-import java.security.MessageDigest
-import kotlinx.serialization.json.*
-import com.noahwallet.recurring.RecurringStore
-import com.noahwallet.services.push.PushRuntime
 import kotlinx.coroutines.runBlocking
+import kotlinx.serialization.json.*
 import org.junit.Assert.*
 import org.junit.Assume.assumeTrue
 import org.junit.Test
 import org.junit.runner.RunWith
+import java.io.File
+import java.security.MessageDigest
 
 /** Only run over an RN-created regtest wallet. No secret is printed, even on assertion failure. */
 @RunWith(AndroidJUnit4::class)
@@ -160,8 +160,7 @@ class UpgradeCompatibilityTest {
             assertTrue("Expo ID changed", expectedHash == hash)
         }
         // Exercise the first real native foreground launch, including recurring automation gates.
-        InstrumentationRegistry.getInstrumentation().startActivitySync(
-            android.content.Intent(context, com.noahwallet.MainActivity::class.java).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
+        InstrumentationRegistry.getInstrumentation().startActivitySync(android.content.Intent(context, com.noahwallet.MainActivity::class.java).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
         if (funded) {
             kotlinx.coroutines.withTimeout(20000) {
                 while (RecurringStore(settings).load().binding == null) kotlinx.coroutines.delay(100)

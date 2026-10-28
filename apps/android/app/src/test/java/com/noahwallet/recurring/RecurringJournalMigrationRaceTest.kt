@@ -86,5 +86,4 @@ class RecurringJournalMigrationRaceTest {
             assertTrue(send.load().isEmpty())
         } finally { w.policyDirectory.parentFile!!.deleteRecursively() }
     }
-
 }

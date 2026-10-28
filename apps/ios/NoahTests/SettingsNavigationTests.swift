@@ -1,5 +1,5 @@
-import Testing
 @testable import Noah
+import Testing
 
 /// Settings sits in Home's stack: deep links land on their page with Settings beneath, and
 /// wide windows swap the trailing page without stacking pages under it.

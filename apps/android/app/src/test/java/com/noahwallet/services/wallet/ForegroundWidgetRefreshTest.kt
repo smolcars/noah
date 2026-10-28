@@ -1,14 +1,13 @@
 package com.noahwallet.services.wallet
 
-import io.github.niteshbalusu11.bark.Network
 import com.noahwallet.recurring.RecurringBudget
+import io.github.niteshbalusu11.bark.Network
 import kotlinx.coroutines.*
 import org.junit.Assert.*
 import org.junit.Test
 
 class ForegroundWidgetRefreshTest {
-    private val summary = WalletSession.Summary(Network.REGTEST, "fixture", WalletBalance(
-        WalletBalance.Ark(1234u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u), WalletBalance.Onchain(0u, 0u, 0u)), 0)
+    private val summary = WalletSession.Summary(Network.REGTEST, "fixture", WalletBalance(WalletBalance.Ark(1234u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u), WalletBalance.Onchain(0u, 0u, 0u)), 0)
 
     @Test fun foregroundRefreshPublishesBalanceAndExpiry() = runBlocking {
         var written: Pair<WalletBalance, Long?>? = null

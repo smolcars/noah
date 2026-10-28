@@ -70,7 +70,6 @@ struct EmailScreen: View {
 
     // MARK: Headline
 
-    @ViewBuilder
     private var headline: some View {
         ZStack(alignment: .topLeading) {
             switch email.stage {
@@ -366,8 +365,8 @@ struct EmailHints: View {
             email.text = address
             haptics.play(.selection)
         } label: { Text(verbatim: label) }
-        .buttonStyle(OnboardingChipStyle())
-        .accessibilityLabel(Text(verbatim: address))
+            .buttonStyle(OnboardingChipStyle())
+            .accessibilityLabel(Text(verbatim: address))
     }
 }
 

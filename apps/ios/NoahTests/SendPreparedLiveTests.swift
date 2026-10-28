@@ -1,10 +1,9 @@
 import BarkBoltFFI
 import Foundation
+@testable import Noah
 import SwiftUI
 import Testing
 import UIKit
-
-@testable import Noah
 
 /// Fresh dedicated simulator only. Host funds the published address, drives Back/Confirm,
 /// checks Core, and kills/relaunches the app with the final receipt unacknowledged.
@@ -19,7 +18,7 @@ struct SendPreparedLiveTests {
         let creator = WalletCreator(dependencies: .live(session: session, variant: .regtest, appVersion: "prepared-live"))
         try await creator.createOrResume()
         try SettingsStorage.shared.setPersistedState(PersistedWalletState(isInitialized: true),
-            key: PersistedWalletState.key, version: PersistedWalletState.version)
+                                                     key: PersistedWalletState.key, version: PersistedWalletState.version)
         let documents = URL.documentsDirectory
         let request = try await session.receiveRequest()
         try request.onchainAddress.write(to: documents.appending(path: "prepared-fund.txt"), atomically: true, encoding: .utf8)

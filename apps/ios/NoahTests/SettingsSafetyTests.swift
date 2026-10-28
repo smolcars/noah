@@ -1,6 +1,6 @@
 import Foundation
-import Testing
 @testable import Noah
+import Testing
 
 /// Settings' money and destructive paths: a delete stays locked until it ends; amounts are whole sats as typed.
 @MainActor struct SettingsSafetyTests {

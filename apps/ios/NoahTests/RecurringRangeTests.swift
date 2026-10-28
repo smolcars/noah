@@ -1,6 +1,6 @@
 import Foundation
-import Testing
 @testable import Noah
+import Testing
 
 @MainActor struct RecurringRangeTests {
     static func fixture() throws -> String {
@@ -94,7 +94,7 @@ import Testing
         var schedule = try #require(h.store.load().schedules[id])
         var original = RecurringScheduleTests.schedule(start: 1000); original.id = id
         let entry = RecurringJournal.Entry(binding: h.owner.withLock { $0 }, scheduleID: id,
-            plan: original.plan(now: 1000.5), markedAt: 1000.5)
+                                           plan: original.plan(now: 1000.5), markedAt: 1000.5)
         try h.journal.save(entry)
         let journalBytes = try Data(contentsOf: h.journal.file)
         await h.executor.checkStatus(id)

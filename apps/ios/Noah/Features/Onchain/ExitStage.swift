@@ -131,7 +131,7 @@ struct ExitStageScene: Equatable {
         guard let (shown, latest) = best else { return self }
         let stacked = confirmed - latest, more = after - shown
         var scene = self
-        var drawn: [Int] = []   // each real node's drawn index
+        var drawn: [Int] = [] // each real node's drawn index
         scene.levels = []
         scene.folds = []
         if stacked > 0 {
@@ -426,8 +426,8 @@ struct ExitStagePainter {
         var round = ExitStageLabel(y: g.roundY - lh + 3, lines: [.init(text: tr("The round,"), tone: .strong), .init(text: tr("already on Bitcoin"))],
                                    priority: 2)
         round.fallbacks = [ExitStageLabel(y: g.roundY, lines: [.init(text: [tr("The round,"), tr("already on Bitcoin")]
-                                                                        .joined(separator: language.hasPrefix("ja") ? "" : " "))],
-                                          priority: 2, shrinks: true)]
+                    .joined(separator: language.hasPrefix("ja") ? "" : " "))],
+            priority: 2, shrinks: true)]
         if scene.explain {
             items.append(.init(y: g.coinY, lines: [.init(text: tr("Your VTXO"), tone: .strong), .init(text: tr("in Ark"))], priority: 3))
             if n > 1 {
@@ -476,18 +476,24 @@ struct ExitStagePainter {
             if let first = firstUnsent, first != n, scene.picture != .lift {
                 // Counting every transaction still to send, folded ones too; beside a later unsent one (up to the "+N"
                 // node) when the "Next block" pill takes this one's room.
-                var more = ExitStageLabel(y: Y(first), lines: [.init(text: L10n.plural("{n} more to send", count: scene.realCount - scene.real(first - 1), locale: language))], priority: 1.5)
+                var more = ExitStageLabel(
+                    y: Y(first),
+                    lines: [.init(text: L10n.plural("{n} more to send", count: scene.realCount - scene.real(first - 1), locale: language))],
+                    priority: 1.5)
                 more.fallbacks = ((first + 1)..<n).map { var label = more; label.y = Y($0); return label }
                 items.append(more)
             }
             if scene.locked, let unlock = scene.unlock {
                 let left = unlock > scene.tip ? unlock - scene.tip : 0
                 items.append(.init(y: g.coinY, lines: scene.picture == .unlocked
-                                   ? [.init(text: tr("Unlocked"), tone: .strong), .init(text: tr("since block {height}", height(unlock)))]
-                                   : [.init(text: L10n.plural("Locked · {n} blocks", count: Int(left), locale: language), tone: .strong),
-                                      .init(text: tr("opens at {height}", height(unlock)))], priority: 3.5))
+                        ? [.init(text: tr("Unlocked"), tone: .strong), .init(text: tr("since block {height}", height(unlock)))]
+                        : [.init(text: L10n.plural("Locked · {n} blocks", count: Int(left), locale: language), tone: .strong),
+                           .init(text: tr("opens at {height}", height(unlock)))], priority: 3.5))
             } else if [.unsent, .ready].contains(scene.levels[n - 1]) {
-                items.append(.init(y: g.coinY, lines: [.init(text: scene.picture == .canceled ? tr("Back in Ark") : tr("Your VTXO"), tone: .strong)], priority: 3.5))
+                items.append(.init(
+                    y: g.coinY,
+                    lines: [.init(text: scene.picture == .canceled ? tr("Back in Ark") : tr("Your VTXO"), tone: .strong)],
+                    priority: 3.5))
             }
         } else {
             let node = g.claimNode
@@ -553,7 +559,10 @@ struct ExitStagePainter {
     func frame(_ label: ExitStageLabel) -> CGRect {
         let g = geometry
         let width = label.lines.enumerated().map { index, line in
-            ExitStageText.width(line.text, size: (index < label.head ? g.fontSize : g.subSize) * label.size, strong: [.strong, .failureStrong].contains(line.tone))
+            ExitStageText.width(
+                line.text,
+                size: (index < label.head ? g.fontSize : g.subSize) * label.size,
+                strong: [.strong, .failureStrong].contains(line.tone))
         }.max() ?? 0
         let box = CGRect(x: label.trailing.map { $0 - width } ?? g.labelX, y: label.top, width: width, height: label.bottom - label.top)
         return label.pill == nil ? box : box.union(pill(label))
@@ -590,7 +599,10 @@ struct ExitStagePainter {
             let width = ExitStageText.width(string, size: size, strong: strong), height = size * 1.25
             return CGRect(x: trailing ? x - width : x, y: y - height / 2, width: width, height: height)
         }
-        var shapes: [ExitStageShape] = [.box(.round, "round", CGRect(x: g.trunk - g.roundSide / 2, y: g.ground - g.roundSide, width: g.roundSide, height: g.roundSide))]
+        var shapes: [ExitStageShape] = [.box(
+            .round,
+            "round",
+            CGRect(x: g.trunk - g.roundSide / 2, y: g.ground - g.roundSide, width: g.roundSide, height: g.roundSide))]
         for level in 1..<max(1, n) {
             shapes.append(.box(.node, "node\(level)", CGRect(x: g.trunk - g.side / 2, y: Y(level) - g.side / 2, width: g.side, height: g.side)))
         }
@@ -615,7 +627,10 @@ struct ExitStagePainter {
         }
         for (index, label) in labels.enumerated() {
             shapes.append(.box(.label, "label\(index)", frame(label)))
-            if let brace = label.brace { shapes.append(.box(.brace, "label\(index)", CGRect(x: g.trunk + 27, y: brace.lowerBound, width: 5, height: brace.upperBound - brace.lowerBound))) }
+            if let brace = label.brace { shapes.append(.box(
+                .brace,
+                "label\(index)",
+                CGRect(x: g.trunk + 27, y: brace.lowerBound, width: 5, height: brace.upperBound - brace.lowerBound))) }
         }
         result.shapes = shapes
         func clear(_ shape: ExitStageShape) -> Bool {
@@ -662,7 +677,10 @@ struct ExitStagePainter {
             let lineHeight = 12.5 * L, top = Y(1) + 9, room = (g.ground - g.roundSide - 5) - top
             let y0 = top + (room - Double(lines.count) * lineHeight) / 2 + lineHeight / 2, right = g.trunk - g.roundSide / 2 - 9
             let width = lines.map { ExitStageText.width($0, size: 10 * L) }.max() ?? 0
-            let shape = ExitStageShape.box(.caption, "caption", CGRect(x: right - width, y: y0 - lineHeight / 2, width: width, height: Double(lines.count) * lineHeight))
+            let shape = ExitStageShape.box(
+                .caption,
+                "caption",
+                CGRect(x: right - width, y: y0 - lineHeight / 2, width: width, height: Double(lines.count) * lineHeight))
             if clear(shape) {
                 result.caption = lines
                 result.captionY = y0
@@ -723,7 +741,14 @@ struct ExitStagePainter {
             paint(new, ExitStageFrame(scene, scene, elapsed: 60, reduceMotion: true), scene, scene, now: now, inline: inline, animating: false)
         } else {
             let a = from ?? scene
-            paint(context, ExitStageFrame(a, scene, elapsed: from == nil ? 60 : elapsed, reduceMotion: false), a, scene, now: now, inline: inline, animating: animating)
+            paint(
+                context,
+                ExitStageFrame(a, scene, elapsed: from == nil ? 60 : elapsed, reduceMotion: false),
+                a,
+                scene,
+                now: now,
+                inline: inline,
+                animating: animating)
         }
     }
 
@@ -781,7 +806,10 @@ struct ExitStagePainter {
         for sibling in arrangement.siblings {
             let p = sibling.coin, level = sibling.other.level, alpha = f.tree * (f.pop[safe: level] ?? 1)
             canvas.context.stroke(Self.link(CGPoint(x: p.x, y: p.y + 6), CGPoint(x: TX, y: Y(level) - 4)),
-                                  with: .color(c.orange.opacity(0.7 * alpha)), style: StrokeStyle(lineWidth: 1.4, lineCap: .round, dash: sibling.other.sent ? [] : [3, 3]))
+                                  with: .color(c.orange.opacity(0.7 * alpha)), style: StrokeStyle(
+                                      lineWidth: 1.4,
+                                      lineCap: .round,
+                                      dash: sibling.other.sent ? [] : [3, 3]))
             canvas.fill(canvas.circle(p.x, p.y, 6), c.soft.opacity(alpha))
             canvas.stroke(canvas.circle(p.x, p.y, 6), c.orange.opacity(alpha), 1.6)
             if let size = sibling.amount {
@@ -837,7 +865,10 @@ struct ExitStagePainter {
             if s.fold(at: index)?.kind == .stack, f.mined[index] > 0.9 {
                 // The oldest blocks stacked into one: an ink block in layers.
                 for offset in [-z / 6, z / 6] {
-                    canvas.stroke(canvas.line(CGPoint(x: p.x - z / 2, y: p.y + offset), CGPoint(x: p.x + z / 2, y: p.y + offset)), c.background.opacity(alpha), 1)
+                    canvas.stroke(
+                        canvas.line(CGPoint(x: p.x - z / 2, y: p.y + offset), CGPoint(x: p.x + z / 2, y: p.y + offset)),
+                        c.background.opacity(alpha),
+                        1)
                 }
             }
         }
@@ -885,8 +916,15 @@ struct ExitStagePainter {
                    inline: inline, breathe: breathe, flash: f.flash)
     }
 
-    private func drawLabels(_ context: GraphicsContext, _ labels: [ExitStageLabel], tree: Double, trailing: Double, fade: (ExitStageLabel) -> Double = { _ in 1 },
-                            inline: Bool, breathe: Double, flash: Double) {
+    private func drawLabels(
+        _ context: GraphicsContext,
+        _ labels: [ExitStageLabel],
+        tree: Double,
+        trailing: Double,
+        fade: (ExitStageLabel) -> Double = { _ in 1 },
+        inline: Bool,
+        breathe: Double,
+        flash: Double) {
         let g = geometry, c = colors
         for label in labels {
             let alpha = (label.trailing != nil ? trailing : tree).clamped(0, 1) * fade(label)
@@ -916,8 +954,8 @@ struct ExitStagePainter {
                 case .failure, .failureStrong: NoahTokens.Colors.failure
                 }
                 layer.draw(Text(verbatim: line.text).font(ExitStageText.font((index < label.head ? g.fontSize : g.subSize) * label.size,
-                                                                              strong: [.strong, .failureStrong].contains(line.tone)))
-                            .foregroundColor(color), at: CGPoint(x: x, y: y), anchor: label.trailing == nil ? .leading : .trailing)
+                                                                             strong: [.strong, .failureStrong].contains(line.tone)))
+                        .foregroundColor(color), at: CGPoint(x: x, y: y), anchor: label.trailing == nil ? .leading : .trailing)
             }
             if let brace = label.brace {
                 var path = Path()
@@ -937,7 +975,7 @@ struct ExitStagePainter {
         guard alpha > 0.01 else { return }
         var c = canvas
         c.context.opacity *= alpha
-        let colors = self.colors
+        let colors = colors
         func square(_ side: Double) -> Path { Path(roundedRect: CGRect(x: p.x - side / 2, y: p.y - side / 2, width: side, height: side), cornerRadius: 3.5) }
         if mined > 0.001 {
             let h = z * (1 + 0.22 * (1 - stamp))
@@ -953,7 +991,15 @@ struct ExitStagePainter {
                                       cornerRadius: 4 + 6 * ripple), with: .color(colors.foreground.opacity(0.4 * (1 - ripple))), lineWidth: 1.2)
             }
         } else if pending > 0.001 {
-            if inline && !grey { ExitPulsePainter.back(c.context, kind: .square(z), center: p, now: now, breathe: breathe, animating: animating && pending >= 1, colors: colors, strength: pending) }
+            if inline && !grey { ExitPulsePainter.back(
+                c.context,
+                kind: .square(z),
+                center: p,
+                now: now,
+                breathe: breathe,
+                animating: animating && pending >= 1,
+                colors: colors,
+                strength: pending) }
             if pending < 1 { c.stroke(c.circle(p.x, p.y, 5.5 * (1 - pending)), colors.orange, 1.6) }
             let h = z * (0.6 + 0.4 * pending)
             c.fill(square(h), colors.background)
@@ -964,7 +1010,14 @@ struct ExitStagePainter {
         } else if level == .ready || level == .needsFunds {
             c.fill(square(z), colors.background)
             c.stroke(square(z), colors.orange, 1.6)
-            if level == .needsFunds && inline { ExitPulsePainter.front(c.context, kind: .alarm(z * 0.95), center: p, now: now, breathe: breathe, animating: false, colors: colors) }
+            if level == .needsFunds && inline { ExitPulsePainter.front(
+                c.context,
+                kind: .alarm(z * 0.95),
+                center: p,
+                now: now,
+                breathe: breathe,
+                animating: false,
+                colors: colors) }
         } else {
             let r = (z >= 13 ? 6.2 : z * 0.42) * pop
             c.fill(c.circle(p.x, p.y, r), colors.background)
@@ -974,7 +1027,7 @@ struct ExitStagePainter {
 
     /// Your coin: the leaf transaction's output at the top of the branch; at the claim it travels the stem.
     private func coin(_ canvas: MotionCanvas, _ f: ExitStageFrame, _ s: ExitStageScene, inline: Bool, now: Double, breathe: Double, animating: Bool) {
-        let g = geometry, colors = self.colors, n = s.levels.count, last = n - 1
+        let g = geometry, colors = colors, n = s.levels.count, last = n - 1
         var center = CGPoint(x: g.trunk, y: g.coinY - 5 * f.lift), r = g.coinRadius
         if f.land > 0.001 {
             center = g.stem(f.land.clamped(0, 1))
@@ -982,14 +1035,32 @@ struct ExitStagePainter {
         }
         let pending = f.pending[last], mined = f.mined[last], waiting = pending > 0.001 && mined < 1 && s.levels[last] != .needsFunds
         if waiting && inline && !s.stale {
-            ExitPulsePainter.back(canvas.context, kind: .coin(r), center: center, now: now, breathe: breathe, animating: animating && pending >= 1, colors: colors, strength: pending)
+            ExitPulsePainter.back(
+                canvas.context,
+                kind: .coin(r),
+                center: center,
+                now: now,
+                breathe: breathe,
+                animating: animating && pending >= 1,
+                colors: colors,
+                strength: pending)
         }
         if s.picture == .unlocked && inline && f.claimSend < 0.5 {
-            ExitPulsePainter.back(canvas.context, kind: .glow(r), center: center, now: now, breathe: breathe, animating: false, colors: colors, strength: f.open.clamped(0, 1))
+            ExitPulsePainter.back(
+                canvas.context,
+                kind: .glow(r),
+                center: center,
+                now: now,
+                breathe: breathe,
+                animating: false,
+                colors: colors,
+                strength: f.open.clamped(0, 1))
         }
         if waiting && (inline || s.stale) {
-            canvas.context.stroke(canvas.circle(center.x, center.y, r + 5), with: .color((s.stale ? colors.muted : colors.orange).opacity(pending * (s.stale ? 0.6 : 0.6 + 0.4 * breathe))),
-                                  style: StrokeStyle(lineWidth: 1.6, dash: [3, 2.6], dashPhase: animating && !s.stale ? ExitPulsePainter.march(now, 5.6) : 0))
+            canvas.context.stroke(
+                canvas.circle(center.x, center.y, r + 5),
+                with: .color((s.stale ? colors.muted : colors.orange).opacity(pending * (s.stale ? 0.6 : 0.6 + 0.4 * breathe))),
+                style: StrokeStyle(lineWidth: 1.6, dash: [3, 2.6], dashPhase: animating && !s.stale ? ExitPulsePainter.march(now, 5.6) : 0))
         }
         if s.levels[last] == .needsFunds && inline {
             ExitPulsePainter.front(canvas.context, kind: .alarm(r + 5), center: center, now: now, breathe: breathe, animating: false, colors: colors)
@@ -1002,8 +1073,10 @@ struct ExitStagePainter {
         }
         // Its old spot, once it has gone: a dashed "spent" ring.
         if f.land > 0.5 {
-            canvas.context.stroke(canvas.circle(g.trunk, g.coinY, g.coinRadius * 0.8), with: .color(colors.muted.opacity(0.45 * ((f.land - 0.5) * 2).clamped(0, 1) * f.tree)),
-                                  style: StrokeStyle(lineWidth: 1.3, dash: [3, 3]))
+            canvas.context.stroke(
+                canvas.circle(g.trunk, g.coinY, g.coinRadius * 0.8),
+                with: .color(colors.muted.opacity(0.45 * ((f.land - 0.5) * 2).clamped(0, 1) * f.tree)),
+                style: StrokeStyle(lineWidth: 1.3, dash: [3, 3]))
         }
         let ripple = f.ripple[last]
         if mined > 0 && mined < 1 && ripple > 0 && ripple < 1 {
@@ -1014,7 +1087,7 @@ struct ExitStagePainter {
     /// The timelock: a dial around your coin, one tick per 6 blocks, and a padlock.
     private func dial(_ canvas: MotionCanvas, _ f: ExitStageFrame, _ s: ExitStageScene, inline: Bool, breathe: Double) {
         guard f.lock > 0.001, f.stem < 1 else { return }
-        let g = geometry, colors = self.colors, R = g.coinRadius + 10, alpha = f.lock * (1 - f.stem), cx = g.trunk, cy = g.coinY
+        let g = geometry, colors = colors, R = g.coinRadius + 10, alpha = f.lock * (1 - f.stem), cx = g.trunk, cy = g.coinY
         let start = -Double.pi / 2, ticks = Self.ticks(s.delta), done = (f.dial * Double(s.delta)).rounded() / Double(max(1, s.delta))
         var c = canvas
         c.context.opacity *= alpha
@@ -1026,7 +1099,12 @@ struct ExitStagePainter {
         }
         if done > 0 {
             var arc = Path()
-            arc.addArc(center: CGPoint(x: cx, y: cy), radius: R, startAngle: .radians(start), endAngle: .radians(start + 2 * .pi * min(1, done) * f.lock), clockwise: false)
+            arc.addArc(
+                center: CGPoint(x: cx, y: cy),
+                radius: R,
+                startAngle: .radians(start),
+                endAngle: .radians(start + 2 * .pi * min(1, done) * f.lock),
+                clockwise: false)
             c.context.stroke(arc, with: .color(f.open > 0.001 ? colors.orange : colors.foreground), style: StrokeStyle(lineWidth: 2.6, lineCap: .round))
         }
         if done < 1 && f.lock >= 0.999 && inline {
@@ -1060,7 +1138,7 @@ struct ExitStagePainter {
 
     /// Your on-chain wallet: fees leave it. At the claim it's the destination: this phone, or another wallet.
     private func destination(_ canvas: MotionCanvas, _ f: ExitStageFrame, _ s: ExitStageScene) {
-        let g = geometry, colors = self.colors, L = g.scale, claiming = s.claiming, alarm = s.levels.contains(.needsFunds)
+        let g = geometry, colors = colors, L = g.scale, claiming = s.claiming, alarm = s.levels.contains(.needsFunds)
         let alpha = claiming ? 1 : f.wallet
         guard alpha > 0.01 else { return }
         let center = CGPoint(x: g.walletX, y: g.walletY), grow = 1 + 0.12 * f.destPop.clamped(0, 1.2)
@@ -1078,7 +1156,12 @@ struct ExitStagePainter {
         }
         if f.destRing > 0.001 {
             var ring = Path()
-            ring.addArc(center: center, radius: 20 * grow, startAngle: .degrees(-90), endAngle: .degrees(-90 + 360 * f.destRing.clamped(0, 1)), clockwise: false)
+            ring.addArc(
+                center: center,
+                radius: 20 * grow,
+                startAngle: .degrees(-90),
+                endAngle: .degrees(-90 + 360 * f.destRing.clamped(0, 1)),
+                clockwise: false)
             canvas.context.stroke(ring, with: .color(colors.orange), lineWidth: 2.2)
         }
         if f.destPop > 0.001 {
@@ -1088,14 +1171,17 @@ struct ExitStagePainter {
         }
         if alarm {
             canvas.fill(canvas.circle(center.x + 12, center.y - 12, 6.5), NoahTokens.Colors.failure)
-            canvas.context.draw(Text(verbatim: "!").font(.system(size: 10, weight: .bold)).foregroundColor(.white), at: CGPoint(x: center.x + 12, y: center.y - 12))
+            canvas.context.draw(
+                Text(verbatim: "!").font(.system(size: 10, weight: .bold)).foregroundColor(.white),
+                at: CGPoint(x: center.x + 12, y: center.y - 12))
         }
         var layer = canvas.context
         layer.opacity *= alpha
         for (index, line) in destinationLines(s, landed: f.land > 0.9).enumerated() {
             layer.draw(Text(verbatim: line.text).font(ExitStageText.font(line.size, strong: line.strong))
-                        .foregroundColor(index == 0 ? (claiming ? colors.foreground : colors.muted) : alarm ? NoahTokens.Colors.failure : claiming ? colors.muted : colors.foreground),
-                       at: CGPoint(x: g.width - 12, y: line.y), anchor: .trailing)
+                .foregroundColor(index == 0 ? (claiming ? colors.foreground : colors.muted) : alarm ? NoahTokens.Colors.failure : claiming ? colors
+                    .muted : colors.foreground),
+                at: CGPoint(x: g.width - 12, y: line.y), anchor: .trailing)
         }
     }
 
@@ -1111,7 +1197,11 @@ struct ExitStagePainter {
         let room = g.width - 12 - (14 + ExitStageText.width(tr("Bitcoin"), size: 10.5 * L) + 12)
         var lines = [(text: first, size: Self.shrunk(first, 10.5 * L * scale, room: room, strong: claiming), strong: claiming, y: g.ground + 11 * L)]
         if let second {
-            lines.append((second, Self.shrunk(second, 11 * L * scale, room: room, strong: true), true, min(g.ground + 24 * L * scale, g.height - 11 * L * scale * 0.625 - 1)))
+            lines.append((
+                second,
+                Self.shrunk(second, 11 * L * scale, room: room, strong: true),
+                true,
+                min(g.ground + 24 * L * scale, g.height - 11 * L * scale * 0.625 - 1)))
         }
         return lines
     }
@@ -1135,7 +1225,7 @@ struct ExitStagePainter {
             }
         }
         for (index, level) in s.levels.enumerated() {
-            let old = f.origin[safe: index].flatMap { $0 }.flatMap { a.levels[safe: $0] }
+            let old = f.origin[safe: index].flatMap(\.self).flatMap { a.levels[safe: $0] }
             switch (old, level) {
             case (_, .pending(let theirs, let bumped)):
                 if bumped, case .pending(_, false)? = old { fly(index + 1, u: 1, radius: 3.4, hollow: false, alpha: f.oldFee * f.tree) }

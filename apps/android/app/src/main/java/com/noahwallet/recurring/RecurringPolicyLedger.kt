@@ -1,8 +1,8 @@
 package com.noahwallet.recurring
 
+import com.noahwallet.services.storage.syncDirectory
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.*
-import com.noahwallet.services.storage.syncDirectory
 import java.io.File
 import java.security.MessageDigest
 

@@ -50,8 +50,7 @@ enum BackupArchive {
     /// writes it to `destination`, which must not exist. The plaintext zip
     /// staging goes in `workDirectory` (a `ScratchSpace` folder in the app).
     static func seal(
-        snapshot: URL, manifest: Manifest, mnemonic: String, to destination: URL, workDirectory: URL
-    ) throws -> EncryptedFile {
+        snapshot: URL, manifest: Manifest, mnemonic: String, to destination: URL, workDirectory: URL) throws -> EncryptedFile {
         let fileManager = FileManager.default
         guard fileManager.fileExists(atPath: snapshot.path) else { throw Failure.snapshotMissing }
         guard !fileManager.fileExists(atPath: destination.path) else { throw Failure.destinationExists }
@@ -170,14 +169,14 @@ enum BackupArchive {
     /// every field present, nullable keys present as string or null.
     static func parseManifest(_ data: Data) throws -> Manifest {
         guard let object = try? JSONSerialization.jsonObject(with: data) as? [String: Any],
-            let version = object["formatVersion"] as? Int,
-            let createdAt = object["createdAt"] as? String,
-            let snapshotSha256 = object["snapshotSha256"] as? String,
-            let network = object["network"] as? String,
-            let walletFingerprint = object["walletFingerprint"] as? String,
-            let barkSchemaVersion = object["barkSchemaVersion"] as? Int,
-            let serverPubkey = object["serverPubkey"], serverPubkey is String || serverPubkey is NSNull,
-            let mailboxPubkey = object["mailboxPubkey"], mailboxPubkey is String || mailboxPubkey is NSNull
+              let version = object["formatVersion"] as? Int,
+              let createdAt = object["createdAt"] as? String,
+              let snapshotSha256 = object["snapshotSha256"] as? String,
+              let network = object["network"] as? String,
+              let walletFingerprint = object["walletFingerprint"] as? String,
+              let barkSchemaVersion = object["barkSchemaVersion"] as? Int,
+              let serverPubkey = object["serverPubkey"], serverPubkey is String || serverPubkey is NSNull,
+              let mailboxPubkey = object["mailboxPubkey"], mailboxPubkey is String || mailboxPubkey is NSNull
         else {
             throw Failure.invalidManifest
         }
@@ -199,11 +198,11 @@ enum BackupArchive {
             return String(decoding: (try? encoder.encode(value)) ?? Data("\"\"".utf8), as: UTF8.self)
         }
         let json = """
-            {"formatVersion":\(manifest.formatVersion),"createdAt":\(string(manifest.createdAt)),\
-            "snapshotSha256":\(string(manifest.snapshotSha256)),"network":\(string(manifest.network)),\
-            "walletFingerprint":\(string(manifest.walletFingerprint)),"serverPubkey":\(string(manifest.serverPubkey)),\
-            "mailboxPubkey":\(string(manifest.mailboxPubkey)),"barkSchemaVersion":\(manifest.barkSchemaVersion)}
-            """
+        {"formatVersion":\(manifest.formatVersion),"createdAt":\(string(manifest.createdAt)),\
+        "snapshotSha256":\(string(manifest.snapshotSha256)),"network":\(string(manifest.network)),\
+        "walletFingerprint":\(string(manifest.walletFingerprint)),"serverPubkey":\(string(manifest.serverPubkey)),\
+        "mailboxPubkey":\(string(manifest.mailboxPubkey)),"barkSchemaVersion":\(manifest.barkSchemaVersion)}
+        """
         return Data(json.utf8)
     }
 

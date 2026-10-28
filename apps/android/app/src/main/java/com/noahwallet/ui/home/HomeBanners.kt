@@ -1,27 +1,27 @@
 package com.noahwallet.ui.home
 
-import com.noahwallet.localization.tr
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
-import androidx.compose.material3.*
-import androidx.compose.runtime.*
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.verticalScroll
-import com.noahwallet.ui.readableWidth
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalUriHandler
+import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
 import com.noahwallet.BuildConfig
 import com.noahwallet.api.generated.models.AppVersionInfo
+import com.noahwallet.localization.tr
 import com.noahwallet.services.backup.BackupCoordinator
 import com.noahwallet.services.storage.PersistedBackupState
 import com.noahwallet.ui.AppModel
+import com.noahwallet.ui.readableWidth
 import io.github.niteshbalusu11.bark.PendingRoundStatus
 import kotlinx.coroutines.*
 

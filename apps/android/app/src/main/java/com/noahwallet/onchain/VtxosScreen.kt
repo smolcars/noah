@@ -24,9 +24,9 @@ import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.*
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.rememberTextMeasurer
-import androidx.compose.ui.text.drawText
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
@@ -63,13 +63,13 @@ internal fun expiresText(vtxo: VtxoModel): String {
 }
 
 internal fun money(app: AppModel, sats: Long) = if (app.hidden) BitcoinAmount.format(0, app.amountUnit, Locale.forLanguageTag(app.localeIdentifier)).replace("0", "••••")
-    else BitcoinAmount.format(sats, app.amountUnit, Locale.forLanguageTag(app.localeIdentifier))
+else BitcoinAmount.format(sats, app.amountUnit, Locale.forLanguageTag(app.localeIdentifier))
 
 /** The VTXO lifetime the server gives new VTXOs (blocks), for the expiry line and the lifetime bar. */
 @Composable
 private fun rememberLifetime(app: AppModel): Long? = produceState<Long?>(null) {
     value = try { withContext(Dispatchers.IO) { app.session.arkInfo()?.vtxoLifetime?.toLong() } }
-        catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled } catch (_: Exception) { null }
+    catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled } catch (_: Exception) { null }
 }.value
 
 /**
@@ -449,11 +449,11 @@ private fun LifetimeBar(vtxo: VtxoModel, lifetime: Long, number: java.text.Numbe
  */
 @Composable
 internal fun RenewReview(model: OnchainModel, take: () -> List<String>?, due: suspend (List<String>) -> List<String>,
-                         onStart: (List<String>) -> Unit) {
+    onStart: (List<String>) -> Unit) {
     // A wallet that can't be read now has nothing proven due, so no review is opened on it.
     suspend fun stillDue(ids: List<String>): List<String> = try { withContext(Dispatchers.IO) { due(ids) } }
-        catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
-        catch (_: Exception) { emptyList() }
+    catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
+    catch (_: Exception) { emptyList() }
     LaunchedEffect(Unit) {
         val requested = take() ?: return@LaunchedEffect
         // Home checked a while ago: a VTXO may have expired, been locked or left the expiring set since.

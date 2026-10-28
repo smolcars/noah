@@ -5,10 +5,6 @@ import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import com.noahwallet.ui.loadAppModel
-import kotlinx.coroutines.runBlocking
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
 import androidx.compose.material3.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
@@ -17,11 +13,15 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.noahwallet.ui.NoahTheme
 import com.noahwallet.ui.ParityPreviewActivity
-import java.io.File
+import com.noahwallet.ui.loadAppModel
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
 import org.junit.Assert.*
 import org.junit.Assume.assumeTrue
 import org.junit.Test
 import org.junit.runner.RunWith
+import java.io.File
 
 /** Only public read-only fixture fields; no seed or wallet operations. */
 @RunWith(AndroidJUnit4::class)
@@ -58,5 +58,4 @@ class WalletParityDeviceTest {
             }
         }
     }
-
 }

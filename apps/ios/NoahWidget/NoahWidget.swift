@@ -35,17 +35,15 @@ struct NoahWidget: Widget {
     var body: some WidgetConfiguration {
         StaticConfiguration(
             kind: Self.kind,
-            provider: BalanceProvider(appGroup: Self.appGroup)
-        ) { entry in
-            NoahBalanceWidgetView(
-                entry: entry, language: Self.language, variantName: Self.badge?.name,
-                variantColor: Self.badge?.color
-            )
-            .containerBackground(Color(red: 0.05, green: 0.05, blue: 0.05), for: .widget)
-        }
-        .configurationDisplayName(L10n.text("Noah Balance", locale: Self.language))
-        .description(Self.description)
-        .supportedFamilies([.systemSmall, .systemMedium])
+            provider: BalanceProvider(appGroup: Self.appGroup)) { entry in
+                NoahBalanceWidgetView(
+                    entry: entry, language: Self.language, variantName: Self.badge?.name,
+                    variantColor: Self.badge?.color)
+                    .containerBackground(Color(red: 0.05, green: 0.05, blue: 0.05), for: .widget)
+            }
+            .configurationDisplayName(L10n.text("Noah Balance", locale: Self.language))
+            .description(Self.description)
+            .supportedFamilies([.systemSmall, .systemMedium])
     }
 
     private static func infoValue(_ key: String) -> String {

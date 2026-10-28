@@ -40,7 +40,7 @@ struct NoahStoryView: View {
                     .accessibilityAddTraits(.isHeader)
                 Button(action: versionTapped) {
                     Text(verbatim: L10n.text("Version {version}", SettingsList.version, locale: language)
-                         + (summary?.debug == true ? " · " + L10n.text("debug", locale: language) : ""))
+                        + (summary?.debug == true ? " · " + L10n.text("debug", locale: language) : ""))
                         .noahText(HomeText.amount).monospacedDigit().foregroundStyle(NoahTokens.Colors.muted)
                 }
                 .buttonStyle(.plain)

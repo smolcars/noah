@@ -1,7 +1,6 @@
 import Foundation
-import Testing
-
 @testable import Noah
+import Testing
 
 struct BoundedDownloadTests {
     private let root = FileManager.default.temporaryDirectory.appending(path: "download-\(UUID().uuidString)")

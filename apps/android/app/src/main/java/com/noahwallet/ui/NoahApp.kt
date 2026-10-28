@@ -1,28 +1,28 @@
 package com.noahwallet.ui
 
-import com.noahwallet.localization.tr
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.EnterTransition
+import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.ExperimentalSharedTransitionApi
+import androidx.compose.animation.SharedTransitionLayout
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
+import androidx.compose.ui.Modifier
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
-import androidx.compose.ui.Modifier
 import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.runtime.rememberNavBackStack
-import androidx.navigation3.ui.NavDisplay
-import com.noahwallet.ui.settings.*
-import androidx.compose.animation.EnterTransition
-import androidx.compose.animation.ExitTransition
-import androidx.compose.animation.ExperimentalSharedTransitionApi
-import androidx.compose.animation.SharedTransitionLayout
-import androidx.compose.animation.togetherWith
 import androidx.navigation3.ui.LocalNavAnimatedContentScope
+import androidx.navigation3.ui.NavDisplay
+import com.noahwallet.localization.tr
+import com.noahwallet.ui.settings.*
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.contentOrNull
 
@@ -115,59 +115,59 @@ fun NoahApp(model: AppModel, links: PaymentLinks? = null) {
         onDispose { chrome.background = null }
     }
     androidx.compose.foundation.layout.Box(Modifier.fillMaxSize().avoidHinge(if (homeOwnsWindow) emptyList() else LocalFoldingFeatures.current)) {
-    // Settings isn't a tab: phones hide the bar under it; the rail stays.
-    AdaptiveNavigation(selectedTab, { selectedTab = it }, fullWindow = homeOwnsWindow, showBar = !(selectedTab == Destination.Send && sendBarHidden) &&
-        !(selectedTab == Destination.History && activityBarHidden) && !settingsVisible,
-    ) { padding ->
-        tabState.SaveableStateProvider(selectedTab) {
-            SharedTransitionLayout {
-            CompositionLocalProvider(LocalAppShared provides this, LocalSettingsEntry provides settingsEntry) {
-            NavDisplay(
-                backStack = mainTabEntries(selectedTab, backStack),
-                modifier = Modifier.padding(padding),
-                onBack = { goBack() },
-                entryProvider = entryProvider {
-                    entry<QRDestination> { destination ->
-                        QRHubScreen(model.server.state.lightningAddress,
-                            com.noahwallet.services.storage.SettingsPreferences.state(model.settings.string("profile-storage"))["displayName"]?.let { (it as? kotlinx.serialization.json.JsonPrimitive)?.contentOrNull } ?: "",
-                            onBack = { backStack.removeAt(backStack.lastIndex) },
-                            onProfile = { openSettings(SettingsDestination.Profile) },
-                            onScan = ::scanned, startScanning = destination.scan)
+        // Settings isn't a tab: phones hide the bar under it; the rail stays.
+        AdaptiveNavigation(selectedTab, { selectedTab = it }, fullWindow = homeOwnsWindow, showBar = !(selectedTab == Destination.Send && sendBarHidden) &&
+            !(selectedTab == Destination.History && activityBarHidden) && !settingsVisible,
+        ) { padding ->
+            tabState.SaveableStateProvider(selectedTab) {
+                SharedTransitionLayout {
+                    CompositionLocalProvider(LocalAppShared provides this, LocalSettingsEntry provides settingsEntry) {
+                        NavDisplay(
+                            backStack = mainTabEntries(selectedTab, backStack),
+                            modifier = Modifier.padding(padding),
+                            onBack = { goBack() },
+                            entryProvider = entryProvider {
+                                entry<QRDestination> { destination ->
+                                    QRHubScreen(model.server.state.lightningAddress,
+                                        com.noahwallet.services.storage.SettingsPreferences.state(model.settings.string("profile-storage"))["displayName"]?.let { (it as? kotlinx.serialization.json.JsonPrimitive)?.contentOrNull } ?: "",
+                                        onBack = { backStack.removeAt(backStack.lastIndex) },
+                                        onProfile = { openSettings(SettingsDestination.Profile) },
+                                        onScan = ::scanned, startScanning = destination.scan)
+                                }
+                                entry<MapDestination> { com.noahwallet.btcmap.BtcMapScreen { goBack() } }
+                                entry<SettingsDestination>(metadata = settingsZoom()) {
+                                    CompositionLocalProvider(LocalEntryScope provides LocalNavAnimatedContentScope.current) {
+                                        SettingsHost(model, settingsStack, close = { goBack() }, myCode = { backStack.add(QRDestination(false)) },
+                                            map = { backStack.add(MapDestination) })
+                                    }
+                                }
+                                entry<Destination> { destination ->
+                                    if (destination == Destination.Home || model.isWalletSuspended) CompositionLocalProvider(LocalEntryScope provides LocalNavAnimatedContentScope.current) {
+                                        HomeScreen(model, onViewAll = {
+                                            selectedTab = Destination.History
+                                        }, onRepeatPayment = repeat, onSettings = openPage, onScan = { backStack.add(QRDestination(true)) },
+                                            onBackup = { openSettings(SettingsDestination.Seed) },
+                                            onProfile = { openSettings(SettingsDestination.Profile) },
+                                            onRenew = { ids -> model.renewVtxos = ids; openSettings(SettingsDestination.Vtxos) }) {
+                                            openSettings(SettingsDestination.Settings, fromGear = true)
+                                        }
+                                    }
+                                    else if (destination == Destination.History) ActivityScreen(model, repeat, onReceive = { selectedTab = Destination.Receive },
+                                        onSettings = openPage, barHidden = { activityBarHidden = it })
+                                    else if (destination == Destination.Receive) ReceiveScreen(model, onProfile = {
+                                        openSettings(SettingsDestination.Profile)
+                                    }) {
+                                        showHome()
+                                    } else SendScreen(model, tabBar = { sendBarHidden = it }) {
+                                        showHome()
+                                    }
+                                }
+                            },
+                        )
                     }
-                    entry<MapDestination> { com.noahwallet.btcmap.BtcMapScreen { goBack() } }
-                    entry<SettingsDestination>(metadata = settingsZoom()) {
-                        CompositionLocalProvider(LocalEntryScope provides LocalNavAnimatedContentScope.current) {
-                            SettingsHost(model, settingsStack, close = { goBack() }, myCode = { backStack.add(QRDestination(false)) },
-                                map = { backStack.add(MapDestination) })
-                        }
-                    }
-                    entry<Destination> { destination ->
-                        if (destination == Destination.Home || model.isWalletSuspended) CompositionLocalProvider(LocalEntryScope provides LocalNavAnimatedContentScope.current) {
-                            HomeScreen(model, onViewAll = {
-                                selectedTab = Destination.History
-                            }, onRepeatPayment = repeat, onSettings = openPage, onScan = { backStack.add(QRDestination(true)) },
-                                onBackup = { openSettings(SettingsDestination.Seed) },
-                                onProfile = { openSettings(SettingsDestination.Profile) },
-                                onRenew = { ids -> model.renewVtxos = ids; openSettings(SettingsDestination.Vtxos) }) {
-                                openSettings(SettingsDestination.Settings, fromGear = true)
-                            }
-                        }
-                        else if (destination == Destination.History) ActivityScreen(model, repeat, onReceive = { selectedTab = Destination.Receive },
-                            onSettings = openPage, barHidden = { activityBarHidden = it })
-                        else if (destination == Destination.Receive) ReceiveScreen(model, onProfile = {
-                            openSettings(SettingsDestination.Profile)
-                        }) {
-                            showHome()
-                        } else SendScreen(model, tabBar = { sendBarHidden = it }) {
-                            showHome()
-                        }
-                    }
-                },
-            )
-            }
+                }
             }
         }
-    }
     }
 }
 

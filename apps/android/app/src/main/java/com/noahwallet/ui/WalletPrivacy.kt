@@ -1,19 +1,19 @@
 package com.noahwallet.ui
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.foundation.layout.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.semantics.testTagsAsResourceId
-import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.ExperimentalComposeUiApi
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.input.key.onPreviewKeyEvent
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.input.key.onPreviewKeyEvent
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.testTagsAsResourceId
 import androidx.compose.ui.unit.dp
 import com.noahwallet.localization.tr
 
@@ -76,10 +76,10 @@ internal fun WalletModalBottomSheet(onDismissRequest: () -> Unit, modifier: Modi
         } }) {
         Box(Modifier.fillMaxWidth().heightIn(max = (sheetHeight - 56.dp).coerceAtLeast(1.dp)).avoidHinge(verticalFolds)) {
             WalletModalContent(cover = {
-            Column(Modifier.padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(tr("Noah is locked"))
-                privacy.unlock?.let { NoahButton("Unlock", onClick = it) }
-            }
+                Column(Modifier.padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(tr("Noah is locked"))
+                    privacy.unlock?.let { NoahButton("Unlock", onClick = it) }
+                }
             }) { Column(content = content) }
         }
     }

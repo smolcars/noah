@@ -1,10 +1,9 @@
 import BarkBoltFFI
 import Foundation
+@testable import Noah
 import SwiftUI
 import Testing
 import UIKit
-
-@testable import Noah
 
 /// Opt-in stages on a dedicated simulator. Host funds through Core and approves the real review.
 @MainActor
@@ -22,12 +21,12 @@ struct FFI050LiveTests {
             try await session.createNew(mnemonic: mnemonic, runDaemon: false, appVersion: "ffi050-live")
             try seed.save(mnemonic)
             try SettingsStorage.shared.setPersistedState(PersistedWalletState(isInitialized: true),
-                key: PersistedWalletState.key, version: PersistedWalletState.version)
+                                                         key: PersistedWalletState.key, version: PersistedWalletState.version)
             var transaction = PersistedTransactionState()
             transaction.setAutoBoarding(stage == "auto-setup")
             if stage == "auto-setup" { transaction.hasAttemptedAutoBoarding = true }
             try SettingsStorage.shared.setPersistedState(transaction,
-                key: PersistedTransactionState.key, version: PersistedTransactionState.version)
+                                                         key: PersistedTransactionState.key, version: PersistedTransactionState.version)
             try await session.exitDepositAddress().write(to: documents.appending(path: "ffi050-funding.txt"), atomically: true, encoding: .utf8)
             try await session.close()
             return
@@ -62,7 +61,7 @@ struct FFI050LiveTests {
             if let failure { throw failure }
         } else if stage == "board-status" {
             let saved = try JSONDecoder().decode(OnchainOperationJournal.Attempt.self,
-                from: Data(contentsOf: documents.appending(path: "ffi050-amount-receipt.json")))
+                                                 from: Data(contentsOf: documents.appending(path: "ffi050-amount-receipt.json")))
             // Re-read a real reviewed receipt after Done, without another submission or wallet sync.
             let file = documents.appending(path: "ffi050-status-journal.json")
             defer { try? FileManager.default.removeItem(at: file) }
@@ -124,7 +123,7 @@ struct FFI050LiveTests {
             #expect(detail.state == "Canceled" && detail.history.contains("Start"))
             #expect(try await session.onchainOverview().exits.contains { $0.id == id })
             try JSONEncoder().encode(["id": id, "amount": String(row.amountSats), "state": detail.state,
-                "history": detail.history.joined(separator: ","), "activeCount": String(active.count)])
+                                      "history": detail.history.joined(separator: ","), "activeCount": String(active.count)])
                 .write(to: documents.appending(path: "ffi050-\(stage).json"))
         } else if stage == "sync" {
             try await session.sync()

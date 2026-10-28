@@ -1,7 +1,7 @@
 package com.noahwallet.services.server
 
-import kotlin.io.encoding.Base64
 import kotlinx.serialization.json.*
+import kotlin.io.encoding.Base64
 
 /** Expiry inspection only; signature verification belongs to the server. */
 object JWT {

@@ -7,13 +7,13 @@ import com.noahwallet.send.*
 import com.noahwallet.services.storage.*
 import com.noahwallet.services.wallet.*
 import io.github.niteshbalusu11.bark.generateMnemonic
-import java.io.File
 import kotlinx.coroutines.*
 import kotlinx.serialization.json.*
 import org.junit.Assert.*
 import org.junit.Assume.assumeTrue
 import org.junit.Test
 import org.junit.runner.RunWith
+import java.io.File
 
 /** Explicit opt-in, fingerprint-scoped disposable-wallet stages. Only public evidence leaves the app. */
 @RunWith(AndroidJUnit4::class)
@@ -63,7 +63,7 @@ class Ffi050LiveTest {
                 "board-amount", "board-max", "auto-review" -> {
                     session.sync(); done()
                     val quote = if (stage == "auto-review") checkNotNull(session.autoBoardQuote())
-                        else session.quoteOnchain(OnchainAction.board, amount = if (stage == "board-max") 0 else 30_000)
+                    else session.quoteOnchain(OnchainAction.board, amount = if (stage == "board-max") 0 else 30_000)
                     val prepared = checkNotNull(quote.preparedBoard)
                     check(quote.current() && !reviewExplanation(quote).contains("estimates"))
                     check(quote.net == quote.amount - checkNotNull(quote.fee))

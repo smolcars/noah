@@ -37,7 +37,7 @@ object ActivityFixtures {
         fun field(tag: Int, data: List<Int>) { words += tag; words += data.size / 32; words += data.size % 32; words += data }
         fun toWords(bytes: ByteArray): List<Int> {
             val out = mutableListOf<Int>(); var acc = 0; var bits = 0
-            for (b in bytes) { acc = (acc shl 8) or (b.toInt() and 255); bits += 8; while (bits >= 5) { bits -= 5; out += (acc shr bits) and 31 } ; acc = acc and ((1 shl bits) - 1) }
+            for (b in bytes) { acc = (acc shl 8) or (b.toInt() and 255); bits += 8; while (bits >= 5) { bits -= 5; out += (acc shr bits) and 31 }; acc = acc and ((1 shl bits) - 1) }
             if (bits > 0) out += (acc shl (5 - bits)) and 31
             return out
         }
@@ -72,8 +72,8 @@ object ActivityFixtures {
 
     /** A bark movement read through the app's own mapping, so fixtures show exactly what a wallet's records would. */
     private fun ark(n: Int, subsystem: String, now: Date, minutes: Long, intended: Long, effective: Long = intended, fee: Long = 0,
-                    status: String = "successful", sentTo: List<MovementDestination> = emptyList(), receivedOn: List<MovementDestination> = emptyList(),
-                    inputs: Int = 1, outputs: Int = 1, exited: Int = 0, metadata: String = "{}"): HistoryTransaction {
+        status: String = "successful", sentTo: List<MovementDestination> = emptyList(), receivedOn: List<MovementDestination> = emptyList(),
+        inputs: Int = 1, outputs: Int = 1, exited: Int = 0, metadata: String = "{}"): HistoryTransaction {
         val (name, kind) = subsystem.split(':')
         val created = at(now, minutes)
         return HistoryMapping.transaction(Movement(n.toUInt(), status, name, kind, metadata, intended, effective, fee.toULong(), sentTo, receivedOn,

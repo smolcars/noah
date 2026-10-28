@@ -1,7 +1,6 @@
 import Foundation
-import Testing
-
 @testable import Noah
+import Testing
 
 @MainActor struct SendReceiptRestartTests {
     @Test(arguments: ["ark", "lightning", "lnurl", "offer", "onchain", "offboard"])

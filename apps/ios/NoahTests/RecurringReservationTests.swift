@@ -1,7 +1,7 @@
 import BarkBoltFFI
 import Foundation
-import Testing
 @testable import Noah
+import Testing
 
 @MainActor @Suite(.regtestStack) struct RecurringReservationTests {
     actor Gate {
@@ -75,5 +75,4 @@ import Testing
         #expect(h.settings.string(forKey: WalletLifecycle.automationStopKey) != nil)
         try await session.closeSettled()
     }
-
 }

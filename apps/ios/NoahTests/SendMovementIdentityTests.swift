@@ -1,8 +1,7 @@
 import BarkBoltFFI
 import Foundation
-import Testing
-
 @testable import Noah
+import Testing
 
 /// SDK 0.6.0 returns movement ids for Ark sends and offboards (FFI item 16).
 @MainActor struct SendMovementIdentityTests {

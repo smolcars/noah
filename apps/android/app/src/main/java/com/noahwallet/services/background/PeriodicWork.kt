@@ -2,9 +2,9 @@ package com.noahwallet.services.background
 
 import android.content.Context
 import androidx.work.*
+import com.noahwallet.recurring.RecurringBudget
 import com.noahwallet.services.AppServices
 import com.noahwallet.services.logging.AppLog
-import com.noahwallet.recurring.RecurringBudget
 import com.noahwallet.services.wallet.WalletExecutionBudget
 import kotlinx.coroutines.*
 import java.util.concurrent.TimeUnit

@@ -6,10 +6,10 @@ import android.content.Context
 import android.content.Intent
 import androidx.core.app.NotificationCompat
 import androidx.work.*
-import com.noahwallet.localization.L10n
-import com.noahwallet.localization.NotificationCopy
 import com.noahwallet.MainActivity
 import com.noahwallet.R
+import com.noahwallet.localization.L10n
+import com.noahwallet.localization.NotificationCopy
 import com.noahwallet.notifications.NotificationChannels
 import com.noahwallet.services.push.PushNotifications
 import java.util.concurrent.TimeUnit
@@ -61,8 +61,7 @@ class RecurringReminderWorker(context: Context, parameters: WorkerParameters) : 
     override suspend fun doWork(): Result {
         return try {
             if (com.noahwallet.services.launch.LaunchState.current(applicationContext) != com.noahwallet.services.launch.LaunchState.existingWallet) return Result.success()
-            val s = RecurringRuntime.shared(applicationContext).executor.reminderSchedule(
-                inputData.getString("id"), inputData.getLong("due", -1)) ?: return Result.success()
+            val s = RecurringRuntime.shared(applicationContext).executor.reminderSchedule(inputData.getString("id"), inputData.getLong("due", -1)) ?: return Result.success()
             val reminder = inputData.getString("kind") == "reminder"
             val copy = NotificationCopy.reminder(applicationContext, RecurringNotifications.amount(applicationContext, s.amountSat), s.label, reminder)
             RecurringNotifications.show(applicationContext, "recurring-${s.id}-${inputData.getString("kind")}", copy.title, copy.body)

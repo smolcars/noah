@@ -3,12 +3,12 @@ package com.noahwallet.services
 import com.noahwallet.services.logging.*
 import io.sentry.*
 import io.sentry.protocol.Message
-import java.nio.file.Files
-import java.util.concurrent.Executor
+import io.sentry.protocol.SentryException
+import kotlinx.serialization.json.*
 import org.junit.Assert.*
 import org.junit.Test
-import kotlinx.serialization.json.*
-import io.sentry.protocol.SentryException
+import java.nio.file.Files
+import java.util.concurrent.Executor
 
 class EndpointPrivacyTest {
     @Test fun equivalentAuthoritiesUseSharedFixturesAtEveryBoundary() {
@@ -187,6 +187,5 @@ class EndpointPrivacyTest {
             assertEquals(expected, EndpointLogPrivacy.sanitize(input, registered, hosts = hosts))
             assertEquals("TransportError HTTP 503: $expected", EndpointLogPrivacy.sanitize("TransportError HTTP 503: $input", registered, hosts = hosts))
         }
-
     }
 }

@@ -19,15 +19,15 @@ enum BtcMapLimits {
         for byte in data {
             if quoted {
                 if escaped { escaped = false }
-                else if byte == 0x5c { escaped = true }
+                else if byte == 0x5C { escaped = true }
                 else if byte == 0x22 { quoted = false }
             } else {
                 switch byte {
                 case 0x22: quoted = true
-                case 0x5b, 0x7b:
+                case 0x5B, 0x7B:
                     depth += 1
                     guard depth <= nestingDepth else { throw BtcMapError.resourceLimit }
-                case 0x5d, 0x7d: depth -= 1
+                case 0x5D, 0x7D: depth -= 1
                 default: break
                 }
             }
@@ -59,7 +59,7 @@ enum BtcMapLimits {
         return data
     }
 
-    static func decodeRecords<T: Decodable>(_ type: T.Type, from data: Data) throws -> [T] {
+    static func decodeRecords<T: Decodable>(_: T.Type, from data: Data) throws -> [T] {
         try checkJSON(data)
         return try JSONDecoder().decode(Records<T>.self, from: data).values
     }

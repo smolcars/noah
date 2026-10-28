@@ -32,11 +32,11 @@ class SeedStorage internal constructor(
         when (val current = readUnlocked()) {
             is SecretResult.Unavailable -> current
             is SecretResult.Found -> if (current.value != value) SecretResult.Unavailable(SecretFailure.seedConflict)
-                else when (val copy = native.read()) {
-                    is SecretResult.Found -> if (copy.value == value) copy else SecretResult.Unavailable(SecretFailure.seedConflict)
-                    is SecretResult.Unavailable -> copy
-                    SecretResult.NotFound -> native.save(value, keepUnverifiedWrite)
-                }
+            else when (val copy = native.read()) {
+                is SecretResult.Found -> if (copy.value == value) copy else SecretResult.Unavailable(SecretFailure.seedConflict)
+                is SecretResult.Unavailable -> copy
+                SecretResult.NotFound -> native.save(value, keepUnverifiedWrite)
+            }
             SecretResult.NotFound -> native.save(value, keepUnverifiedWrite)
         }
     }

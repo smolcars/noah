@@ -8,7 +8,7 @@ import java.lang.reflect.Proxy
 class WidgetSnapshotTest {
     private fun preferences(read: (String, Array<out Any?>?) -> Any?): SharedPreferences =
         Proxy.newProxyInstance(SharedPreferences::class.java.classLoader, arrayOf(SharedPreferences::class.java)) {
-            _, method, args -> read(method.name, args)
+                _, method, args -> read(method.name, args)
         } as SharedPreferences
 
     @Test fun concurrentCommitCannotMixBalanceBucketsAndExpiryPolicy() {

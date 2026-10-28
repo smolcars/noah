@@ -116,7 +116,7 @@ struct ReceiveChainSnapshot: Equatable, Sendable {
     var tip: UInt32
     var incoming: [Transaction]
     /// On the first check, the transactions the wallet knew before syncing.
-    var before: Set<String>? = nil
+    var before: Set<String>?
 
     /// One check of Receive's watch: the new unconfirmed incoming transactions to announce
     /// (those paying the request's address first, then any other), and what's known after.

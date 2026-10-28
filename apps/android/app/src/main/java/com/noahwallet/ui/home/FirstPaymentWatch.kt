@@ -45,7 +45,7 @@ class FirstPaymentWatch {
      * (a configuration change continues it) does nothing.
      */
     suspend fun catchUp(revisions: Flow<Long>, refresh: suspend () -> Unit, settled: suspend () -> Pair<HomeRules.State, List<HistoryTransaction>>,
-                        firstPause: Long = 5_000, longestPause: Long = 60_000) {
+        firstPause: Long = 5_000, longestPause: Long = 60_000) {
         if (baseline != null) return
         val start = revisions.first()
         var pause = firstPause
@@ -80,7 +80,7 @@ class FirstPaymentWatch {
  */
 @Composable
 internal fun FirstPaymentVisits(watch: FirstPaymentWatch, active: Boolean, revision: () -> Long, refresh: suspend () -> Unit,
-                                settled: suspend () -> Pair<HomeRules.State, List<HistoryTransaction>>) {
+    settled: suspend () -> Pair<HomeRules.State, List<HistoryTransaction>>) {
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     val activity = LocalContext.current as? Activity
     DisposableEffect(lifecycle) {

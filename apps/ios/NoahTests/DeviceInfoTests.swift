@@ -1,7 +1,6 @@
 import Foundation
-import Testing
-
 @testable import Noah
+import Testing
 
 struct DeviceInfoTests {
     struct FixtureInput: Decodable {
@@ -24,8 +23,7 @@ struct DeviceInfoTests {
             let input = fixture.input
             #expect(DeviceInfo.fingerprint(input.device) == fixture.expected.fingerprint, "\(fixture.name)")
             #expect(DeviceInfo.shouldReport(
-                input.device, fingerprint: input.fingerprint, reportedAt: input.reportedAt, now: input.now
-            ) == fixture.expected.shouldReport, "\(fixture.name)")
+                input.device, fingerprint: input.fingerprint, reportedAt: input.reportedAt, now: input.now) == fixture.expected.shouldReport, "\(fixture.name)")
         }
     }
 }

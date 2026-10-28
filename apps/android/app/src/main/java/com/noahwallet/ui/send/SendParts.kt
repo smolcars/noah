@@ -349,7 +349,7 @@ internal fun WrappingLabel(text: String, style: androidx.compose.ui.text.TextSty
 /** Send's hold with other words ([hold], [busyLabel]); [action] names the accessibility action and its confirmation, [confirm] its button. */
 @Composable
 internal fun HoldToConfirm(hold: String, busyLabel: String, action: String, confirm: String, enabled: Boolean, sending: Boolean,
-                           modifier: Modifier = Modifier, tag: String, onConfirm: () -> Unit, wrap: Boolean = false) {
+    modifier: Modifier = Modifier, tag: String, onConfirm: () -> Unit, wrap: Boolean = false) {
     val palette = LocalPalette.current
     val reduceMotion = LocalReduceMotion.current
     val haptics = rememberHaptics()
@@ -498,7 +498,7 @@ internal fun PhaseText(text: String?, done: Boolean, modifier: Modifier = Modifi
  */
 @Composable
 internal fun SendPill(title: String, modifier: Modifier = Modifier, enabled: Boolean = true, outlined: Boolean = false, height: Dp = 52.dp,
-                       danger: Boolean = false, loading: Boolean = false, icon: Int? = null, wrap: Boolean = false, onClick: () -> Unit) {
+    danger: Boolean = false, loading: Boolean = false, icon: Int? = null, wrap: Boolean = false, onClick: () -> Unit) {
     val palette = LocalPalette.current
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
@@ -521,4 +521,3 @@ internal fun SendPill(title: String, modifier: Modifier = Modifier, enabled: Boo
         }
     }
 }
-

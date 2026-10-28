@@ -1,12 +1,11 @@
 import Foundation
-import Testing
-
 @testable import Noah
+import Testing
 
 /// Derives backup keys with 1,000 PBKDF2 rounds instead of 600,000, for tests that only open envelopes they sealed
 /// themselves. The shared vectors and other platforms' backups keep the real rounds.
 struct FastBackupKeys: TestTrait, TestScoping {
-    func provideScope(for test: Test, testCase: Test.Case?, performing function: @Sendable () async throws -> Void) async throws {
+    func provideScope(for _: Test, testCase _: Test.Case?, performing function: @Sendable () async throws -> Void) async throws {
         try await BackupCrypto.$testRounds.withValue(1_000) { try await function() }
     }
 }
@@ -83,7 +82,7 @@ struct BackupCryptoTests {
 
     @Test(.fastBackupKeys) func decryptsSlicedData() throws {
         let envelope = try BackupCrypto.encrypt(Data("slice".utf8), mnemonic: Self.mnemonic, version: .snapshot)
-        let padded = Data([0xff]) + envelope
+        let padded = Data([0xFF]) + envelope
         #expect(try BackupCrypto.decrypt(padded.dropFirst(), mnemonic: Self.mnemonic, expecting: .snapshot) == Data("slice".utf8))
     }
 }

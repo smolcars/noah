@@ -1,13 +1,12 @@
 package com.noahwallet.ui
 
-import com.noahwallet.ui.WalletAlertDialog
-
 import androidx.activity.compose.BackHandler
+import androidx.compose.animation.togetherWith
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import androidx.compose.animation.togetherWith
+import com.noahwallet.ui.WalletAlertDialog
 
 /**
  * The redesigned onboarding: Welcome → Creating → Name → Email → Notifications (→ battery) → Done,

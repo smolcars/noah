@@ -1,8 +1,8 @@
 import Foundation
+@testable import Noah
 import SwiftUI
 import Testing
 import UIKit
-@testable import Noah
 
 /// Opt-in screenshot fixtures for Activity: the real tab shell on the Activity tab with fake
 /// history, balance and prices (no wallet, server writes or recovery phrase). Write a state

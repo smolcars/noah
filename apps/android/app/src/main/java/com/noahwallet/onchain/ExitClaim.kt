@@ -25,8 +25,8 @@ import com.noahwallet.ui.send.SendChip
 import com.noahwallet.ui.send.clipboardText
 import com.noahwallet.ui.settings.*
 import kotlinx.coroutines.delay
-import kotlinx.coroutines.isActive
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 /**
@@ -45,7 +45,7 @@ internal fun ExitClaimPage(app: AppModel, nav: SettingsNav) {
 /** The claim page on [model] (destination, review and hold), apart from [AppModel] so a device test drives it. */
 @Composable
 internal fun ExitClaimScreen(model: OnchainModel, nav: SettingsNav, phoneAddress: suspend () -> String, suspended: Boolean, money: (Long) -> String,
-                             status: @Composable () -> Unit) {
+    status: @Composable () -> Unit) {
     val scope = rememberCoroutineScope()
     val haptics = rememberHaptics()
     var to by rememberSaveable { mutableStateOf(ClaimTo.other) }
@@ -58,7 +58,7 @@ internal fun ExitClaimScreen(model: OnchainModel, nav: SettingsNav, phoneAddress
     val destination = ExitClaim.destination(to, typed, phone, BuildConfig.APP_VARIANT)
     LaunchedEffect(to) {
         if (to == ClaimTo.phone && phone == null) try { phone = phoneAddress() }
-            catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled } catch (_: Exception) { phoneError = true }
+        catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled } catch (_: Exception) { phoneError = true }
     }
     // Today's claim review for this destination: read-only, fresh for 30 s, asked again when the destination changes and when
     // the page comes back (pausing drops it), so Claim never stays off.
@@ -93,9 +93,9 @@ internal fun ExitClaimScreen(model: OnchainModel, nav: SettingsNav, phoneAddress
 
 @Composable
 internal fun ExitClaimContent(exits: List<ExitModel>, tip: Long, quote: OnchainQuote?, fallback: OnchainQuote?, to: ClaimTo, typed: String, address: String?,
-                              phone: String?, phoneError: Boolean, busy: Boolean, suspended: Boolean, money: (Long) -> String, back: (() -> Unit)?,
-                              choose: (ClaimTo) -> Unit, type: (String) -> Unit, reviewAgain: () -> Unit, withoutEstimate: () -> Unit, claim: () -> Unit,
-                              reviewing: Boolean = false, status: @Composable () -> Unit = {}) {
+    phone: String?, phoneError: Boolean, busy: Boolean, suspended: Boolean, money: (Long) -> String, back: (() -> Unit)?,
+    choose: (ClaimTo) -> Unit, type: (String) -> Unit, reviewAgain: () -> Unit, withoutEstimate: () -> Unit, claim: () -> Unit,
+    reviewing: Boolean = false, status: @Composable () -> Unit = {}) {
     val palette = LocalPalette.current
     val context = LocalContext.current
     val haptics = rememberHaptics()
@@ -146,7 +146,7 @@ internal fun ExitClaimContent(exits: List<ExitModel>, tip: Long, quote: OnchainQ
         RadioRow(tr("This phone’s on-chain wallet"), detail = phone?.let { short(it, 8, 4) }, selected = to == ClaimTo.phone, divider = false,
             modifier = Modifier.testTag("exit-to-phone"), enabled = !busy) { haptics.selection(); choose(ClaimTo.phone) }
         if (to == ClaimTo.phone) FinePrint(if (phoneError) tr("Couldn't load a Noah wallet address. Try again when the wallet is ready.")
-            else tr("Noah won’t move these back to Ark."), failed = phoneError)
+        else tr("Noah won’t move these back to Ark."), failed = phoneError)
         Column(Modifier.padding(top = 18.dp)) {
             if (exits.size > 1) ExitValueRow(tr("Exits"), exits.size.toString(), ValueKind.number)
             ExitValueRow(tr("Claim fee"), known?.fee?.let { "~" + money(it) } ?: if (quote != null || fallback != null) tr("Unknown") else "—", ValueKind.number, last = true)

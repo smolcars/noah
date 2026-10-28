@@ -1,6 +1,6 @@
 import Foundation
-import Testing
 @testable import Noah
+import Testing
 
 @Suite(.timeLimit(.minutes(1)))
 @MainActor
@@ -175,7 +175,7 @@ struct HistoryModelTests {
             var enrichedAtEvent: Int?
             weak var model: HistoryModel?
             func load() -> [HistoryTransaction] {
-                if settled { enrichedAtEvent = model?.transactions.filter { $0.btcPrice != nil }.count }
+                if settled { enrichedAtEvent = model?.transactions.count(where: { $0.btcPrice != nil }) }
                 return rows
             }
             func quote() -> Double { quotes += 1; return 100000 }
@@ -202,10 +202,10 @@ struct HistoryModelTests {
         while (model.transactions.count != count || model.transactions.allSatisfy { $0.btcPrice == nil }),
               ContinuousClock.now < deadline { await Task.yield() }
         #expect(model.transactions.contains { $0.btcPrice != nil })
-        #expect(model.transactions.filter { $0.btcPrice != nil }.count < count,
+        #expect(model.transactions.count(where: { $0.btcPrice != nil }) < count,
                 "cached enrichment must yield before completing all rows")
         probe.settled = true; continuation.yield("databaseChanged")
-        while (probe.enrichedAtEvent == nil || model.isRefreshing), ContinuousClock.now < deadline { await Task.yield() }
+        while probe.enrichedAtEvent == nil || model.isRefreshing, ContinuousClock.now < deadline { await Task.yield() }
         #expect((probe.enrichedAtEvent ?? count) < count, "wallet event must be consumed during enrichment")
         await model.awaitEnrichment()
         #expect(model.transactions.allSatisfy { $0.btcPrice == 100000 })

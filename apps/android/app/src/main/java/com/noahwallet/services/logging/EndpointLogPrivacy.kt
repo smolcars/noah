@@ -1,11 +1,11 @@
 package com.noahwallet.services.logging
 
 import android.icu.text.IDNA
-import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 import com.noahwallet.BuildConfig
 import com.noahwallet.services.server.ServerEndpoint
 import com.noahwallet.services.wallet.EsploraEndpoint
 import com.noahwallet.services.wallet.WalletConfiguration
+import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 
 /** Register before entering Rust: endpoint paths can be opaque credentials. */
 internal object EndpointLogPrivacy {
@@ -279,9 +279,7 @@ internal object EndpointLogPrivacy {
     }
 
     // Explicit snapshots also let tests cover a clean installation without resetting global history.
-    internal fun sanitize(text: String, registered: Set<String>, matcher: SecretMatcher = SecretMatcher(emptySet()), hosts: Set<String> = emptySet()): String? {
-        return sanitize(text, registered, matcher, hosts, recordReadBack = false)
-    }
+    internal fun sanitize(text: String, registered: Set<String>, matcher: SecretMatcher = SecretMatcher(emptySet()), hosts: Set<String> = emptySet()): String? = sanitize(text, registered, matcher, hosts, recordReadBack = false)
 
     private fun sanitize(text: String, registered: Set<String>, matcher: SecretMatcher, hosts: Set<String>, recordReadBack: Boolean): String? {
         if (registered.isNotEmpty() && hasExcessiveCombiningRun(text)) return "[custom-esplora]"

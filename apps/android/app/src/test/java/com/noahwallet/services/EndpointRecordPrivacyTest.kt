@@ -2,22 +2,22 @@ package com.noahwallet.services
 
 import com.noahwallet.services.logging.*
 import com.noahwallet.services.wallet.EsploraEndpoint
-import okhttp3.HttpUrl.Companion.toHttpUrl
 import io.github.niteshbalusu11.bark.LogLevel
 import io.sentry.Breadcrumb
 import io.sentry.SentryEvent
 import io.sentry.protocol.Message
-import java.net.SocketTimeoutException
-import java.nio.file.Files
-import java.util.ArrayDeque
-import java.util.concurrent.Executor
 import kotlinx.serialization.json.*
+import okhttp3.HttpUrl.Companion.toHttpUrl
 import org.junit.Assert.*
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
-import org.robolectric.shadows.ShadowLog
 import org.robolectric.annotation.Config
+import org.robolectric.shadows.ShadowLog
+import java.net.SocketTimeoutException
+import java.nio.file.Files
+import java.util.ArrayDeque
+import java.util.concurrent.Executor
 
 @RunWith(RobolectricTestRunner::class)
 // A distinct instrumentation configuration isolates the process-lifetime fail-closed marker.
@@ -44,8 +44,7 @@ class EndpointRecordPrivacyTest {
             assertEquals(test.toString(), test.getValue("generalExpected").jsonPrimitive.content, general)
             if ("recordExpected" in test) {
                 // The date/boundary token itself must cause the whole-record replacement.
-                assertNotEquals(test.toString(), listOf("[custom-esplora]"), EndpointLogPrivacy.redactLogLines(
-                    input.lines(), registered, EndpointLogPrivacy.SecretMatcher(hostTokens), hosts))
+                assertNotEquals(test.toString(), listOf("[custom-esplora]"), EndpointLogPrivacy.redactLogLines(input.lines(), registered, EndpointLogPrivacy.SecretMatcher(hostTokens), hosts))
             }
         }
     }

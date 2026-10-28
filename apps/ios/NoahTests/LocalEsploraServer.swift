@@ -41,7 +41,9 @@ final class LocalEsploraServer: @unchecked Sendable {
                         : "HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\nConnection: close\r\n\r\n"
                     connection.send(content: Data(response.utf8), completion: .contentProcessed { _ in connection.cancel() })
                 case .oversized:
-                    connection.send(content: Data(("HTTP/1.1 200 OK\r\nContent-Length: 2097152\r\n\r\n" + String(repeating: "x", count: 2097152)).utf8), completion: .contentProcessed { _ in })
+                    connection.send(
+                        content: Data(("HTTP/1.1 200 OK\r\nContent-Length: 2097152\r\n\r\n" + String(repeating: "x", count: 2097152)).utf8),
+                        completion: .contentProcessed { _ in })
                 case .drip:
                     connection.send(content: Data("HTTP/1.1 200 OK\r\nContent-Length: 64\r\n\r\n".utf8), completion: .contentProcessed { _ in })
                     drip(connection, remaining: 64)

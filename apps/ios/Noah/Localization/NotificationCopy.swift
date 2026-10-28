@@ -15,7 +15,7 @@ struct NotificationCopy {
     static func reminder(amount: String, recipient: String, upcoming: Bool, defaults: UserDefaults = .standard) -> Self {
         let locale = LegacyLocale.resolved(from: defaults)
         return .init(title: L10n.text(upcoming ? "Upcoming recurring payment" : "Recurring payment waiting", locale: locale),
-              body: upcoming ? L10n.text("{amount} to {recipient} will be sent tomorrow.", amount, recipient, locale: locale)
-                : L10n.text("Open Noah to send {amount} to {recipient}.", amount, recipient, locale: locale))
+                     body: upcoming ? L10n.text("{amount} to {recipient} will be sent tomorrow.", amount, recipient, locale: locale)
+                         : L10n.text("Open Noah to send {amount} to {recipient}.", amount, recipient, locale: locale))
     }
 }

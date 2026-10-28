@@ -14,7 +14,7 @@ struct CitySearchEntry: Identifiable, Sendable {
     let searchTokens: [String]
     let searchText: String
 
-    var secondaryLabel: String { [regionName, countryName].compactMap { $0 }.joined(separator: ", ") }
+    var secondaryLabel: String { [regionName, countryName].compactMap(\.self).joined(separator: ", ") }
     var displayLabel: String {
         let region = countryCode == #"US"# ? admin1Code : regionName ?? ""
         return "\(name), \(region.isEmpty ? countryName : region)"
@@ -24,7 +24,7 @@ struct CitySearchEntry: Identifiable, Sendable {
 enum CitySearch {
     static func normalize(_ text: String) -> String {
         let decomposed = text.decomposedStringWithCompatibilityMapping
-        let stripped = String(decomposed.unicodeScalars.filter { !(0x300...0x36f).contains($0.value) })
+        let stripped = String(decomposed.unicodeScalars.filter { !(0x300...0x36F).contains($0.value) })
         return stripped.lowercased().replacingOccurrences(of: "[^\\p{L}\\p{N}]+", with: " ", options: .regularExpression)
             .trimmingCharacters(in: .whitespaces)
     }

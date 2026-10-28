@@ -11,7 +11,9 @@ import org.junit.runners.Parameterized
 class OnchainFixtureTest(private val domain: String, private val name: String, private val input: JsonObject, private val expected: JsonElement) {
     companion object {
         private val json = Json { ignoreUnknownKeys = true }
-        @JvmStatic @Parameterized.Parameters(name = "{0}: {1}") fun cases(): List<Array<Any>> =
+        @JvmStatic
+        @Parameterized.Parameters(name = "{0}: {1}")
+        fun cases(): List<Array<Any>> =
             listOf("exit-fee-estimate", "exit-cancellation", "exit-timeline", "exit-overview-coordination", "auto-boarding").flatMap { domain ->
                 val stream = checkNotNull(OnchainFixtureTest::class.java.classLoader!!.getResourceAsStream("$domain.json"))
                 val root = stream.bufferedReader().use { json.parseToJsonElement(it.readText()).jsonObject }

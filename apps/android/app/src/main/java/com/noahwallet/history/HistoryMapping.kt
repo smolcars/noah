@@ -28,7 +28,7 @@ object HistoryMapping {
         val txid = metadata.offboardTxid ?: metadata.chainAnchor?.replace(Regex(":\\d+$"), "")
         if (!txid.isNullOrEmpty()) return txid
         val candidates = if (outgoing) m.inputVtxoIds + m.outputVtxoIds + m.exitedVtxoIds
-            else m.outputVtxoIds + m.inputVtxoIds + m.exitedVtxoIds
+        else m.outputVtxoIds + m.inputVtxoIds + m.exitedVtxoIds
         return candidates.firstOrNull(String::isNotEmpty) ?: "movement-${m.id}"
     }
     fun transaction(m: Movement, now: Date = Date()): HistoryTransaction {

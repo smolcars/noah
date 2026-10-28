@@ -12,11 +12,11 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.*
@@ -118,7 +118,7 @@ internal fun NameStep(model: AppModel, presentation: OnboardingPresentation) {
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 internal fun NameField(name: String, onName: (String) -> Unit, domain: String, enabled: Boolean, focus: FocusRequester, label: String,
-                       onDone: () -> Unit, modifier: Modifier = Modifier) {
+    onDone: () -> Unit, modifier: Modifier = Modifier) {
     val palette = LocalPalette.current
     var focused by remember { mutableStateOf(false) }
     Column(modifier) {

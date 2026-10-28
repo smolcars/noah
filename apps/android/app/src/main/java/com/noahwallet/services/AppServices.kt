@@ -1,15 +1,15 @@
 package com.noahwallet.services
 
 import android.content.Context
-import com.noahwallet.services.launch.LaunchState
 import com.noahwallet.BuildConfig
+import com.noahwallet.services.backup.*
+import com.noahwallet.services.launch.LaunchState
 import com.noahwallet.services.logging.AppLog
 import com.noahwallet.services.server.*
 import com.noahwallet.services.storage.*
 import com.noahwallet.services.wallet.WalletSession
-import com.noahwallet.services.backup.*
-import kotlinx.coroutines.flow.takeWhile
 import kotlinx.coroutines.*
+import kotlinx.coroutines.flow.takeWhile
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
@@ -94,13 +94,13 @@ class AppServices private constructor(private val context: Context) {
         stopRecurringAutomation()
         com.noahwallet.recurring.RecurringStore(settings).protectLegacyBeforeReplacement()
         return WalletRestorer(variant, session, WalletDataLocation(context.filesDir, variant), SeedItem(seed),
-        makeClient = { phrase ->
-            var temporaryToken: String? = null
-            val temporaryTokens = AuthTokenProvider(
-                readToken = { temporaryToken }, saveToken = { temporaryToken = it }, clearToken = { temporaryToken = null },
-                readMnemonic = { phrase }, login = { ServerClient.login(publicClient, variant, it) })
-            ServerClient.make(ServerEndpoint.baseURL(variant, BuildConfig.REGTEST_SERVER_URL), temporaryTokens)
-        }, beginOnboarding = settings::beginOnboarding)
+            makeClient = { phrase ->
+                var temporaryToken: String? = null
+                val temporaryTokens = AuthTokenProvider(
+                    readToken = { temporaryToken }, saveToken = { temporaryToken = it }, clearToken = { temporaryToken = null },
+                    readMnemonic = { phrase }, login = { ServerClient.login(publicClient, variant, it) })
+                ServerClient.make(ServerEndpoint.baseURL(variant, BuildConfig.REGTEST_SERVER_URL), temporaryTokens)
+            }, beginOnboarding = settings::beginOnboarding)
     }
 
     @Volatile var recurringAutomationStorageFailed = false; private set
@@ -238,8 +238,7 @@ class AppServices private constructor(private val context: Context) {
         }
         if (variant == "regtest") throw com.noahwallet.services.wallet.EsploraEndpoint.Failure("Regtest wallets use Bitcoin Core instead of Esplora.")
         val store = com.noahwallet.services.wallet.EsploraSettings(settings)
-        val candidate = com.noahwallet.services.wallet.EsploraSettings.Selection(
-            endpoint = endpoint?.takeUnless { it == com.noahwallet.services.wallet.WalletConfiguration.base(variant).esplora }, variant = variant)
+        val candidate = com.noahwallet.services.wallet.EsploraSettings.Selection(endpoint = endpoint?.takeUnless { it == com.noahwallet.services.wallet.WalletConfiguration.base(variant).esplora }, variant = variant)
         com.noahwallet.services.background.PeriodicExecution.awaitIdle()
         com.noahwallet.services.wallet.WalletBackgroundActivity.withExclusiveAccess {
             lifecycle.withWalletMutation {

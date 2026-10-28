@@ -54,7 +54,7 @@ internal class LegacyPasswordReader(
                 // AndroidKeyStore requires RN's exact PKCS7 transformation for CBC keys.
                 val cipher = cipherFactory(if (gcm) "AES/GCM/NoPadding" else "AES/CBC/PKCS7Padding")
                 val parameters = if (gcm) GCMParameterSpec(128, bytes.copyOfRange(0, ivLength))
-                    else IvParameterSpec(bytes.copyOfRange(0, ivLength))
+                else IvParameterSpec(bytes.copyOfRange(0, ivLength))
                 cipher.init(Cipher.DECRYPT_MODE, existingKey, parameters)
                 val plaintext = cipher.doFinal(bytes, ivLength, bytes.size - ivLength)
                 return try { plaintext.strictUtf8() } finally { plaintext.fill(0) }

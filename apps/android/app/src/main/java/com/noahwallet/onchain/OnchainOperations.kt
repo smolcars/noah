@@ -40,7 +40,7 @@ internal class OnchainOperations(
             val weight = waiting?.let { tx -> exit.packages.find { it.txid == tx.txid }?.weight }
             // bark pays exit packages at its own exit rate, which its estimate reports; unknown leaves the inference off.
             val rate = weight?.let { try { wallet.exitFee(listOf(exit.id), null).feeRateSatPerVb.toLong() * 250 }
-                catch (cancelled: CancellationException) { throw cancelled } catch (_: Exception) { null } }
+            catch (cancelled: CancellationException) { throw cancelled } catch (_: Exception) { null } }
             val next = weight?.let { w -> rate?.let { ExitTransactions.packageFee(w, it) } }
             exit.copy(childFees = exit.packages.mapNotNull { p -> p.childTxid?.let { id -> fees[id]?.let { id to it } } }.toMap(), nextPackageFee = next)
         }
@@ -139,7 +139,7 @@ internal class OnchainOperations(
                 if (amount < 0 || amount > 2_100_000_000_000_000L) fail(OnchainFailure.invalid)
                 val rate = ((wallet.regularSatPerKwu() + 249) / 250).coerceAtLeast(1).toULong()
                 val prepared = try { wallet.prepareBoard(amount, amount == 0L, rate, excluded) }
-                    catch (error: BarkError) { throw OnchainException(boardFailure(error)) }
+                catch (error: BarkError) { throw OnchainException(boardFailure(error)) }
                 try {
                     currentCoroutineContext().ensureActive()
                     if (!ready() || prepared.grossSats > Long.MAX_VALUE.toULong() ||
@@ -213,9 +213,9 @@ internal class OnchainOperations(
      * evidence from the last run is forgotten. A failure in either changes nothing.
      */
     suspend fun execute(reviewed: OnchainQuote, funding: AutoBoardFunding.Snapshot? = null, renewalThreshold: UInt? = null,
-                        keepOnchain: (Set<String>) -> Unit = {}, kept: (String) -> Set<String> = { emptySet() },
-                        recordClaim: (ExitClaimRecords.Record) -> Unit = {}, newRun: (List<String>) -> Unit = {},
-                        shortOfFunds: (Map<String, Long>) -> Unit = {}): String {
+        keepOnchain: (Set<String>) -> Unit = {}, kept: (String) -> Set<String> = { emptySet() },
+        recordClaim: (ExitClaimRecords.Record) -> Unit = {}, newRun: (List<String>) -> Unit = {},
+        shortOfFunds: (Map<String, Long>) -> Unit = {}): String {
         if (!ready() || !reviewed.current(elapsed(), now()) || reviewed.walletID != wallet.walletID) fail(OnchainFailure.changed)
         if (reviewed.action == OnchainAction.board) {
             if (funding != null && (!reviewed.automatic || funding.walletID != wallet.walletID || autoBoardFunding(kept) != funding)) fail(OnchainFailure.changed)
@@ -253,7 +253,7 @@ internal class OnchainOperations(
                     if (result.broadcast is BroadcastOutcome.Uncertain) throw BoardUncertain()
                     val retry = result.broadcast is BroadcastOutcome.Failed
                     OnchainReceipt(if (retry) OnchainReceipt.broadcastFailedMessage
-                        else OnchainReceipt.boardingMessage(reviewed.chainFee), result.txid, reviewed.chainFee, retry)
+                    else OnchainReceipt.boardingMessage(reviewed.chainFee), result.txid, reviewed.chainFee, retry)
                 }
                 OnchainAction.refresh -> OnchainReceipt(wallet.refresh(reviewed.ids)?.let { "Refresh submitted to delegated round ${it.id}." } ?: "No refresh round was needed.")
                 OnchainAction.startExit -> {
@@ -266,7 +266,7 @@ internal class OnchainOperations(
                 OnchainAction.progress -> {
                     val failures = progressed(reviewed.feeRate, shortOfFunds)
                     OnchainReceipt(if (failures == 0) OnchainReceipt.progressedMessage
-                        else "Exit progression returned $failures errors. Transactions may have been broadcast or fee-bumped. Refresh exit details before continuing.")
+                    else "Exit progression returned $failures errors. Transactions may have been broadcast or fee-bumped. Refresh exit details before continuing.")
                 }
                 OnchainAction.claim -> {
                     val claim = wallet.drain(reviewed.ids, checkNotNull(reviewed.destination))
@@ -274,7 +274,7 @@ internal class OnchainOperations(
                     val mine = reviewed.destinationIsMine == true
                     // The signed claim, before it's sent: its outputs for this phone's wallet, its txid for the display record.
                     val signed = try { ExitTransactions.parse(wallet.claimTransaction(claim.psbtBase64)) }
-                        catch (cancelled: CancellationException) { throw cancelled } catch (_: Exception) { null }
+                    catch (cancelled: CancellationException) { throw cancelled } catch (_: Exception) { null }
                     if (mine) try {
                         val tx = checkNotNull(signed)
                         keepOnchain((0 until tx.outputs).map { "${tx.txid}:$it" }.toSet())

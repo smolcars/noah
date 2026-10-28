@@ -64,9 +64,9 @@ import kotlinx.coroutines.withContext
  */
 @Composable
 internal fun ExitFrame(title: String, back: (() -> Unit)?, hero: Boolean = false, foot: (@Composable RowScope.() -> Unit)? = null,
-                       scroll: ScrollState = rememberScrollState(), actions: @Composable RowScope.() -> Unit = {}, footFade: Float = .46f,
-                       pictureLeads: Boolean = false, chip: (@Composable () -> Unit)? = null,
-                       leading: @Composable ColumnScope.() -> Unit, trailing: @Composable ColumnScope.() -> Unit) {
+    scroll: ScrollState = rememberScrollState(), actions: @Composable RowScope.() -> Unit = {}, footFade: Float = .46f,
+    pictureLeads: Boolean = false, chip: (@Composable () -> Unit)? = null,
+    leading: @Composable ColumnScope.() -> Unit, trailing: @Composable ColumnScope.() -> Unit) {
     val palette = LocalPalette.current
     val haptics = rememberHaptics()
     when (val pose = LocalPose.current) {
@@ -119,7 +119,7 @@ internal fun ExitBig(text: String, modifier: Modifier = Modifier) {
  */
 @Composable
 internal fun ExitValueRow(label: String, value: String, kind: ValueKind = ValueKind.text, note: String? = null, failed: Boolean = false,
-                          small: Boolean = false, last: Boolean = false, modifier: Modifier = Modifier, trailing: (@Composable RowScope.() -> Unit)? = null) {
+    small: Boolean = false, last: Boolean = false, modifier: Modifier = Modifier, trailing: (@Composable RowScope.() -> Unit)? = null) {
     val palette = LocalPalette.current
     val stacked = androidx.compose.ui.platform.LocalDensity.current.fontScale >= 1.5f
     val style = when (kind) { ValueKind.text -> ActivityType.value; ValueKind.number -> ActivityType.number; ValueKind.mono -> ActivityType.mono }
@@ -166,7 +166,7 @@ internal fun ColumnScope.exitPicture(): Modifier =
 @Composable
 internal fun rememberExitDelta(app: AppModel): Long? = produceState<Long?>(null) {
     value = try { withContext(Dispatchers.IO) { app.session.arkInfo()?.vtxoExitDelta?.toLong() } }
-        catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled } catch (_: Exception) { null }
+    catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled } catch (_: Exception) { null }
 }.value
 
 /** One VTXO's exit estimate, for the warning's "About ₿X a VTXO now": bark's, for the largest that can exit. */
@@ -175,7 +175,7 @@ private fun rememberSampleCost(app: AppModel, vtxos: List<VtxoModel>): ExitCosts
     val id = vtxos.filter { it.eligible }.maxByOrNull { it.amount }?.id
     return produceState<ExitCosts.Cost?>(null, id) {
         value = id?.let { try { withContext(Dispatchers.IO) { app.session.exitCosts(listOf(it))[it] } }
-            catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled } catch (_: Exception) { null } }
+        catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled } catch (_: Exception) { null } }
     }.value
 }
 
@@ -201,8 +201,8 @@ internal fun ExitWarningPage(app: AppModel, nav: SettingsNav) {
 /** [revealed]: the exits card has shown on this page; kept with the page, so going back to it never plays its entrance again. */
 @Composable
 internal fun ExitWarningContent(exits: List<ExitModel>, tip: Long, delta: Long?, sample: Long?, suspended: Boolean, money: (Long) -> String,
-                                back: (() -> Unit)?, choose: () -> Unit, open: (String) -> Unit, all: () -> Unit, needsFunds: Set<String> = emptySet(),
-                                revealed: MutableState<Boolean> = rememberSaveable { mutableStateOf(false) }, status: @Composable () -> Unit = {}) {
+    back: (() -> Unit)?, choose: () -> Unit, open: (String) -> Unit, all: () -> Unit, needsFunds: Set<String> = emptySet(),
+    revealed: MutableState<Boolean> = rememberSaveable { mutableStateOf(false) }, status: @Composable () -> Unit = {}) {
     val palette = LocalPalette.current
     ExitFrame(tr("Emergency exit"), back, foot = {
         FootPill(tr("Choose VTXOs"), Modifier.testTag("exit-choose"), wrap = true, enabled = !suspended, onClick = choose)
@@ -353,29 +353,29 @@ internal fun ExitChoosePage(app: AppModel, nav: SettingsNav) {
         val known = value?.takeIf { it.first == eligible }?.second.orEmpty().filterValues { it != null }
         val missing = eligible.filter { it !in known }
         value = eligible to known + if (missing.isEmpty()) emptyMap() else try { withContext(Dispatchers.IO) { app.session.exitCosts(missing) } }
-            catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled } catch (_: Exception) { missing.associateWith { null } }
+        catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled } catch (_: Exception) { missing.associateWith { null } }
     }
     val costs = classified?.takeIf { it.first == eligible }?.second
     // bark's "All" estimate names the VTXOs it would leave out; the last answer stands while a new one fails.
     val excluded by produceState(emptySet<String>(), eligible, retries) {
         value = try { withContext(Dispatchers.IO) { app.session.exitExcluded() } }
-            catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled } catch (_: Exception) { value }
+        catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled } catch (_: Exception) { value }
     }
     ExitChooseContent(vtxos, costs, model.overview?.confirmed, loading = model.overview == null && model.loading, ready = model.overview != null,
         suspended = app.isWalletSuspended, busy = model.busy, money = { money(app, it) }, back = nav.back,
         // bark's estimate for exactly the selection (shared transactions once); read-only.
         estimate = { ids -> try { withContext(Dispatchers.IO) { app.session.quoteOnchain(OnchainAction.startExit, ids) } }
-            catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled } catch (_: Exception) { null } },
+        catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled } catch (_: Exception) { null } },
         review = { nav.open(ExitStartPage(it)) }, deposit = { deposit = it }, retry = { retries++ }, refused = ExitErrors.refused, excluded = excluded) { OnchainStatus(app, model) }
     deposit?.let { need -> if (!app.isWalletSuspended) ExitDepositSheet(app, need) { deposit = null } }
 }
 
 @Composable
 internal fun ExitChooseContent(all: List<VtxoModel>, costs: Map<String, ExitCosts.Cost?>?, confirmed: Long?, loading: Boolean, ready: Boolean,
-                               suspended: Boolean, busy: Boolean, money: (Long) -> String, back: (() -> Unit)?,
-                               estimate: suspend (List<String>) -> OnchainQuote?, review: (List<String>) -> Unit, deposit: (Long) -> Unit,
-                               initial: List<String>? = null, retry: () -> Unit = {}, refused: Map<String, String> = emptyMap(),
-                               excluded: Set<String> = emptySet(), status: @Composable () -> Unit = {}) {
+    suspended: Boolean, busy: Boolean, money: (Long) -> String, back: (() -> Unit)?,
+    estimate: suspend (List<String>) -> OnchainQuote?, review: (List<String>) -> Unit, deposit: (Long) -> Unit,
+    initial: List<String>? = null, retry: () -> Unit = {}, refused: Map<String, String> = emptyMap(),
+    excluded: Set<String> = emptySet(), status: @Composable () -> Unit = {}) {
     val palette = LocalPalette.current
     val haptics = rememberHaptics()
     var everything by rememberSaveable { mutableStateOf(initial == null) }
@@ -386,7 +386,7 @@ internal fun ExitChooseContent(all: List<VtxoModel>, costs: Map<String, ExitCost
     val classified = costs != null && unknown == 0
     // No selection or total holds a VTXO that can't be selected, whatever was picked before.
     val chosen = if (everything) ExitCosts.all(vtxos, costs.orEmpty(), refused, excluded)
-        else vtxos.filter { it.id in picked && ExitCosts.barred(it, refused, excluded) == null }
+    else vtxos.filter { it.id in picked && ExitCosts.barred(it, refused, excluded) == null }
     val ids = chosen.map { it.id }
     // Only when the selection changes: never on the page's periodic read.
     val quote by produceState<OnchainQuote?>(null, ids, classified) {
@@ -471,7 +471,7 @@ internal fun TotalRow(label: String, value: String) {
  */
 @Composable
 private fun ChooseRow(vtxo: VtxoModel, cost: ExitCosts.Cost?, checked: Boolean?, money: (Long) -> String, divider: Boolean,
-                      refused: Map<String, String>, excluded: Set<String>, toggle: () -> Unit) {
+    refused: Map<String, String>, excluded: Set<String>, toggle: () -> Unit) {
     val palette = LocalPalette.current
     val uneconomic = ExitCosts.uneconomic(vtxo, cost)
     val barred = ExitCosts.barred(vtxo, refused, excluded)
@@ -531,7 +531,7 @@ internal fun ExitDepositContent(address: String?, error: String?, need: Long, mo
     val toasts = LocalSettingsToasts.current
     val copied = tr("Copied")
     SettingsSheet(dismiss, tr("Add on-chain funds"), if (need > 0) tr("Send about {amount} here. Exits use it once it confirms.", money(need))
-        else tr("Exits use it once it confirms."), modifier = Modifier.testTag("exit-deposit-sheet")) { close ->
+    else tr("Exits use it once it confirms."), modifier = Modifier.testTag("exit-deposit-sheet")) { close ->
         address?.let { value ->
             Box(Modifier.fillMaxWidth().padding(top = 16.dp), contentAlignment = Alignment.Center) {
                 com.noahwallet.ui.ReceiveQR(value, maximumSide = 220.dp) { copy(context, value); toasts.show(copied) }

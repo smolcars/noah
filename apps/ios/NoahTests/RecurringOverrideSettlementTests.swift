@@ -1,6 +1,6 @@
 import Foundation
-import Testing
 @testable import Noah
+import Testing
 
 @MainActor struct RecurringOverrideSettlementTests {
     @Test(arguments: [false, true]) func recoveredHandoffDuringOverrideMustApplyPaidHistory(journalWriteFails: Bool) async throws {
@@ -36,7 +36,7 @@ import Testing
         #expect(e.consumed == true && e.historyApplied == true && e.released == true)
         #expect(h.calls.withLock { $0 } == 1)
         #expect(try h.store.load().schedules[s.id]?.occurrencesPaid == 1)
-        #expect(try h.store.load().schedules[s.id]?.runs.filter { $0.status == "success" }.count == 1)
+        #expect(try h.store.load().schedules[s.id]?.runs.count(where: { $0.status == "success" }) == 1)
     }
     private func failInitialHandoff(_ h: RecurringExecutorTests.Harness) throws {
         let sink = try #require(h.controller.persistRecurringEvidence)
@@ -72,7 +72,7 @@ import Testing
         #expect(e.resolved && e.historyApplied == true && e.released == true)
         #expect((e.consumed == true) == (outcome == "alreadyPaid"))
         #expect(try h.store.load().schedules[s.id]?.occurrencesPaid == 0)
-        #expect(try h.store.load().schedules[s.id]?.runs.filter { $0.status == "failed" }.count == 1)
+        #expect(try h.store.load().schedules[s.id]?.runs.count(where: { $0.status == "failed" }) == 1)
         #expect(h.calls.withLock { $0 } == 1)
     }
     @Test(arguments: ["terminal", "sendCleared", "consumed", "policy", "historyApplied", "released", "resumed"])
@@ -114,7 +114,7 @@ import Testing
         try await recover(h, id: s.id)
         let row = try #require(h.store.load().schedules[s.id])
         #expect(row.occurrencesPaid == 1)
-        #expect(row.runs.filter { $0.status == "success" }.count == 1)
+        #expect(row.runs.count(where: { $0.status == "success" }) == 1)
         let e = try #require(h.journal.load()[s.id])
         #expect(e.consumed == true && e.historyApplied == true && e.released == true && e.terminal?.outcome == .succeeded)
         #expect(h.calls.withLock { $0 } == 1)

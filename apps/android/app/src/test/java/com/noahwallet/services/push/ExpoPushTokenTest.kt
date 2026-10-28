@@ -26,8 +26,7 @@ class ExpoPushTokenTest {
             respond("""{"data":{"expoPushToken":"ExponentPushToken[test]"}}""", headers = headersOf(HttpHeaders.ContentType, "application/json"))
         }
         ServerClient.make("https://exp.host", engine = engine).use { client ->
-            assertEquals("ExponentPushToken[test]", ExpoPushToken(client).fetch(
-                ExpoPushToken.request("AABB-UUID", "com.noahwallet.regtest", "fcm-test-token")))
+            assertEquals("ExponentPushToken[test]", ExpoPushToken(client).fetch(ExpoPushToken.request("AABB-UUID", "com.noahwallet.regtest", "fcm-test-token")))
         }
     }
     @Test fun rejectedAndEmptyResponsesFail() = runBlocking {

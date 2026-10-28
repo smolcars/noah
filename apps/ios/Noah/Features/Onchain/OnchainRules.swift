@@ -22,8 +22,7 @@ enum ExitRules {
         amount > claimFee ? amount - claimFee : 0
     }
     static func warning(amount: UInt64, claimFee: UInt64, totalFee: UInt64, claimOnly: Bool)
-        -> String?
-    {
+        -> String? {
         if claimFee >= amount {
             return
                 "The estimated claim fee consumes the entire recovered value. A claim may not be possible."
@@ -121,11 +120,10 @@ enum ExitTimeline {
         "VtxoAlreadySpent": "Already spent", "Canceled": "Canceled", "VtxoSwept": "Swept",
     ]
     static func build(
-        history: [String], historyDetails: [ExitDetails], state: String, details current: ExitDetails?
-    ) -> [ExitTimelineItem] {
+        history: [String], historyDetails: [ExitDetails], state: String, details current: ExitDetails?) -> [ExitTimelineItem] {
         var states = history.isEmpty ? [state] : history
         if states.last != state { states.append(state) }
-        var details: [ExitDetails?] = historyDetails.map { $0 }
+        var details: [ExitDetails?] = historyDetails.map(\.self)
         if details.count < states.count {
             details.append(current)
         } else if details.count == states.count {
@@ -157,8 +155,7 @@ enum BoardingRules {
     static func threshold(_ minimum: UInt64) -> UInt64 { max(minimum, 20_000) }
     static func onchainFee(satsPerKwu: UInt64) -> UInt64 { (satsPerKwu * 208 + 249) / 250 }
     static func autoAmount(balance: UInt64, minimum: UInt64, onchainFee: UInt64, arkFee: UInt64)
-        -> UInt64?
-    {
+        -> UInt64? {
         guard balance >= onchainFee + reserve else { return nil }
         let gross = balance - onchainFee - reserve
         guard gross >= arkFee, gross - arkFee >= threshold(minimum) else { return nil }

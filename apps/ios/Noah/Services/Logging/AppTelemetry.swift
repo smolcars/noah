@@ -3,9 +3,9 @@ import Sentry
 
 enum AppTelemetry {
     #if DEBUG
-    static let isDebug = true
+        static let isDebug = true
     #else
-    static let isDebug = false
+        static let isDebug = false
     #endif
 
     static func start() {

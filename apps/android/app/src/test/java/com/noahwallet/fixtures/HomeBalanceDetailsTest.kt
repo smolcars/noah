@@ -1,7 +1,7 @@
 package com.noahwallet.fixtures
 
-import com.noahwallet.services.wallet.WalletBalance
 import com.noahwallet.formatting.BitcoinAmountUnit
+import com.noahwallet.services.wallet.WalletBalance
 import kotlinx.serialization.json.Json
 import org.junit.Assert.*
 import org.junit.Test

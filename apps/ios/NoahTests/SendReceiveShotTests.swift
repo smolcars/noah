@@ -1,8 +1,8 @@
 import Foundation
+@testable import Noah
 import SwiftUI
 import Testing
 import UIKit
-@testable import Noah
 
 /// Opt-in screenshot fixtures for Send and Receive: the real tab shell with a scripted
 /// payment controller, a fake receive model and stand-ins for wallet reads (no wallet,
@@ -171,7 +171,11 @@ struct SendReceiveShotTests {
             }
         }
         let arkPayment = SendPayment(destination: Self.ark, method: "ark", amount: 2_500,
-                                     repeatMetadata: try? SendPayment.metadata(destination: "maya@localhost.com", comment: "", amount: "2500", fiatCurrency: nil))
+                                     repeatMetadata: try? SendPayment.metadata(
+                                         destination: "maya@localhost.com",
+                                         comment: "",
+                                         amount: "2500",
+                                         fiatCurrency: nil))
         let lightningPayment = SendPayment(destination: Self.invoice, method: "lightning", amount: 1_500)
         let swapPayment = SendPayment(destination: Self.bitcoin, method: "onchain", amount: 50_000, source: .offchain)
         let walletPayment = SendPayment(destination: Self.bitcoin, method: "onchain", amount: 50_000, source: .onchain)
@@ -201,7 +205,7 @@ struct SendReceiveShotTests {
             review(arkPayment, SendQuote(amount: 2_500, fee: 0, total: 2_500), destination: "maya@localhost.com")
             if state != "review-ark" {
                 await script.configure(delay: state == "sent-ark" ? 0.8 : 1, result: state == "sent-ark"
-                                       ? .success(SendReceipt(amount: 2_500, fee: 0, proof: .submitReturnedArkSuccess)) : nil)
+                    ? .success(SendReceipt(amount: 2_500, fee: 0, proof: .submitReturnedArkSuccess)) : nil)
                 after = submit()
             }
         case "review-lightning", "sent-lightning", "slow-lightning", "pending-lightning", "refunded":
@@ -230,7 +234,8 @@ struct SendReceiveShotTests {
         case "review-onchain", "sent-wallet", "broadcast-pending":
             var quote = SendQuote(amount: 50_000, fee: 420, total: 50_420, feeRate: 2)
             quote.prepared = try JSONDecoder().decode(SendPreparedTransaction.self, from: Data(
-                #"{"id":"fixture","txid":"\#(String(repeating: "cd", count: 32))","vsize":141,"inputCount":1,"createdAt":\#(Date().timeIntervalSinceReferenceDate)}"#.utf8))
+                #"{"id":"fixture","txid":"\#(String(repeating: "cd", count: 32))","vsize":141,"inputCount":1,"createdAt":\#(Date().timeIntervalSinceReferenceDate)}"#
+                    .utf8))
             review(walletPayment, quote, destination: Self.bitcoin)
             if state != "review-onchain" {
                 var receipt = SendReceipt(amount: 50_000, txid: String(repeating: "cd", count: 32), status: .submitted, fee: 420, proof: .preparedTxid)
@@ -335,7 +340,8 @@ struct SendReceiveShotTests {
             let elapsed = Date().timeIntervalSince(start)
             let txid = String(repeating: "ef", count: 32)
             if elapsed < 3 { return ReceiveChainSnapshot(tip: tip, incoming: []) }
-            if elapsed < 11 { return ReceiveChainSnapshot(tip: tip, incoming: [.init(txid: txid, toAddress: 100_000, received: 100_000, confirmedHeight: nil)]) }
+            if elapsed <
+                11 { return ReceiveChainSnapshot(tip: tip, incoming: [.init(txid: txid, toAddress: 100_000, received: 100_000, confirmedHeight: nil)]) }
             return ReceiveChainSnapshot(tip: tip + 1, incoming: [.init(txid: txid, toAddress: 100_000, received: 100_000, confirmedHeight: tip + 1)])
         }
     }

@@ -1,8 +1,8 @@
 package com.noahwallet.services
 
-import java.io.File
 import org.junit.Assert.*
 import org.junit.Test
+import java.io.File
 
 /** Wiring contracts complement StoredWalletOpenerTest's real admission/seed-write checks.
  * Android framework entry classes cannot run in the plain JVM test process. */

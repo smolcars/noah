@@ -51,7 +51,7 @@ struct HomeActivityRowView: View {
         case .recurring: L10n.text("Recurring", locale: language)
         case nil: nil
         }
-        func joined(_ parts: String?...) -> String { parts.compactMap { $0 }.joined(separator: " · ") }
+        func joined(_ parts: String?...) -> String { parts.compactMap(\.self).joined(separator: " · ") }
         let nothingLeft = " " + L10n.text("· nothing left your wallet", locale: language)
         switch row.status {
         case .failed(let none): return L10n.text("Failed", locale: language) + (none ? nothingLeft : "")
@@ -111,7 +111,7 @@ struct HomeAvatar: View {
                     Circle()
                         .strokeBorder(NoahTokens.Colors.muted, style: StrokeStyle(lineWidth: size > 42 ? 2 : 1.5, dash: [4, 3]))
                         .rotationEffect(.degrees(reduceMotion ? 0 : timeline.date.timeIntervalSinceReferenceDate
-                            .truncatingRemainder(dividingBy: 8) / 8 * 360))
+                                .truncatingRemainder(dividingBy: 8) / 8 * 360))
                 }
                 .padding(size > 42 ? -4 : -3)
             }
@@ -294,7 +294,7 @@ struct HomeBalanceSheet: View {
                 Text("Balance").noahText(NoahTokens.Typography.sheetTitle)
                     .accessibilityAddTraits(.isHeader)
                 Text(verbatim: hidden ? HomeBalanceView.hiddenText(unit: unit)
-                        : BitcoinAmount.format(sats: Int64(clamping: balance.totalSats), unit: unit, locale: locale))
+                    : BitcoinAmount.format(sats: Int64(clamping: balance.totalSats), unit: unit, locale: locale))
                     .noahText(NoahTokens.Typography.amount)
                     .lineLimit(1).minimumScaleFactor(0.6)
                     .padding(.top, 6).padding(.bottom, 16)

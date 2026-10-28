@@ -18,7 +18,7 @@ class SendRecipientService(private val network: String, private val warn: (Strin
     suspend fun resolve(destination: String): SendRecipientRoute {
         val value = SendDestination.cleaned(destination).lowercase()
         val endpoint = if (SendDestination.isLightningAddress(value)) SendDestination.addressEndpoint(value)
-            else PaymentEncoding.bech32(value)?.let { PaymentEncoding.bytes(it.words)?.toString(Charsets.UTF_8)?.toHttpUrlOrNull() }
+        else PaymentEncoding.bech32(value)?.let { PaymentEncoding.bytes(it.words)?.toString(Charsets.UTF_8)?.toHttpUrlOrNull() }
         requireSend(SendDestination.allowsLnurl(endpoint))
         val request = endpoint!!.newBuilder().apply { runCatching { arkServerKey() }.getOrNull()?.let { addQueryParameter("ark", it) } }.build()
         val response = fetch(request)

@@ -2,10 +2,10 @@ package com.noahwallet.services.wallet
 
 import com.noahwallet.fixtures.SharedFixtures
 import com.noahwallet.services.storage.WalletDataLocation
-import java.nio.file.Files
 import kotlinx.serialization.json.*
 import org.junit.Assert.*
 import org.junit.Test
+import java.nio.file.Files
 
 class WalletValuesTest {
     @Test fun balanceMatchesSharedFixture() {

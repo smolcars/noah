@@ -7,14 +7,14 @@ import com.noahwallet.services.logging.LogFile
 import com.noahwallet.services.storage.*
 import com.noahwallet.services.wallet.*
 import io.github.niteshbalusu11.bark.*
-import java.io.File
-import java.util.UUID
 import kotlinx.coroutines.*
 import kotlinx.serialization.json.*
 import org.junit.Assert.*
 import org.junit.Assume.assumeTrue
 import org.junit.Test
 import org.junit.runner.RunWith
+import java.io.File
+import java.util.UUID
 
 /** Opt-in stages for bark-bolt-ffi 0.6.0 on an owned disposable emulator, against a Bark 0.8 stack selected with
  *  -PnoahRegtestArkURL / -PnoahRegtestBitcoindURL / -PnoahRegtestServerURL. The host funds, pays, cancels and

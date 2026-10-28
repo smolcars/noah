@@ -1,6 +1,5 @@
 package com.noahwallet.ui
 
-import com.noahwallet.localization.tr
 import android.Manifest
 import android.content.pm.PackageManager
 import androidx.activity.compose.BackHandler
@@ -24,6 +23,7 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.google.zxing.*
 import com.google.zxing.common.HybridBinarizer
+import com.noahwallet.localization.tr
 import java.util.concurrent.Executors
 import java.util.concurrent.atomic.AtomicBoolean
 

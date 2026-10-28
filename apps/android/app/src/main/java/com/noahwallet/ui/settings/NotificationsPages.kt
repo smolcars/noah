@@ -30,7 +30,7 @@ import com.noahwallet.ui.onboarding.rememberHaptics
  */
 @Composable
 internal fun NotificationsPage(model: AppModel, nav: SettingsNav, live: SettingsLive,
-                               unifiedPush: Boolean = PlatformAccess.unifiedPush(LocalContext.current)) {
+    unifiedPush: Boolean = PlatformAccess.unifiedPush(LocalContext.current)) {
     val context = LocalContext.current
     val palette = LocalPalette.current
     val toasts = LocalSettingsToasts.current

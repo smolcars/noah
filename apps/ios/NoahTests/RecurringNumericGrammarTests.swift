@@ -1,6 +1,6 @@
 import Foundation
-import Testing
 @testable import Noah
+import Testing
 
 @MainActor struct RecurringNumericGrammarTests {
     struct Case: Decodable, Sendable { let name: String; let rowJSON: String; let supported: Bool }

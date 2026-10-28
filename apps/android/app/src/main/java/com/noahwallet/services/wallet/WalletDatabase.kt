@@ -2,8 +2,8 @@ package com.noahwallet.services.wallet
 
 import android.database.DatabaseErrorHandler
 import android.database.sqlite.SQLiteDatabase
-import java.io.File
 import com.noahwallet.services.backup.ScratchSpace
+import java.io.File
 
 /** Read-only check before opening; OnchainWallet.openExisting repeats it in the SDK (defence in depth). */
 object WalletDatabase {

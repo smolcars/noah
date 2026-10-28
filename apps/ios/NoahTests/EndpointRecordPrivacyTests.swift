@@ -1,9 +1,8 @@
 import BarkBoltFFI
 import Foundation
+@testable import Noah
 import Sentry
 import Testing
-
-@testable import Noah
 
 struct EndpointRecordPrivacyTests {
     private struct Case: Decodable {
@@ -12,7 +11,9 @@ struct EndpointRecordPrivacyTests {
     }
 
     private struct HeaderCase: Decodable {
-        let name: String; let endpoint: String; let input: String; let expected: String; let generalExpected: String; let recordExpected: String?; let tokens: [String]
+        let name: String; let endpoint: String; let input: String; let expected: String; let generalExpected: String; let recordExpected: String?; let tokens: [
+            String
+        ]
     }
 
     @Test func sharedHeaderVectorsUseIsolatedSnapshots() throws {
@@ -24,11 +25,20 @@ struct EndpointRecordPrivacyTests {
             let hosts: Set<String> = [host]
             let hostTokens: Set<String> = [host, host + ":" + String(url.port ?? 443)]
             let matcher = EndpointLogPrivacy.SecretMatcher(hostTokens.union(test.tokens))
-            #expect(EndpointLogPrivacy.redactLogLines(test.input.components(separatedBy: "\n"), registered: registered, matcher: matcher, hosts: hosts) == test.expected.components(separatedBy: "\n"), "\(test.name)")
-            #expect((EndpointLogPrivacy.sanitize(test.input, registered: registered, matcher: matcher, hosts: hosts) ?? "[redacted]") == test.generalExpected, "\(test.name)")
+            #expect(
+                EndpointLogPrivacy.redactLogLines(test.input.components(separatedBy: "\n"), registered: registered, matcher: matcher, hosts: hosts) == test
+                    .expected.components(separatedBy: "\n"),
+                "\(test.name)")
+            #expect(
+                (EndpointLogPrivacy.sanitize(test.input, registered: registered, matcher: matcher, hosts: hosts) ?? "[redacted]") == test.generalExpected,
+                "\(test.name)")
             if test.recordExpected != nil {
                 // The date/boundary token itself must cause the whole-record replacement.
-                #expect(EndpointLogPrivacy.redactLogLines(test.input.components(separatedBy: "\n"), registered: registered, matcher: EndpointLogPrivacy.SecretMatcher(hostTokens), hosts: hosts) != ["[custom-esplora]"], "\(test.name)")
+                #expect(
+                    EndpointLogPrivacy
+                        .redactLogLines(test.input.components(separatedBy: "\n"), registered: registered, matcher: EndpointLogPrivacy.SecretMatcher(hostTokens),
+                                        hosts: hosts) != ["[custom-esplora]"],
+                    "\(test.name)")
             }
         }
     }
@@ -49,7 +59,10 @@ struct EndpointRecordPrivacyTests {
                     let plain = LogFile.redactPlain(input)
                     if body.contains("email=") { #expect(plain != input) }
                     let expected = hour == 12 ? plain.replacingOccurrences(of: time, with: "[custom-esplora]") : plain
-                    #expect(EndpointLogPrivacy.redactLogLines(input.components(separatedBy: "\n"), registered: registered, matcher: matcher, hosts: hosts) == [expected], "\(endpoints): \(input)")
+                    #expect(
+                        EndpointLogPrivacy
+                            .redactLogLines(input.components(separatedBy: "\n"), registered: registered, matcher: matcher, hosts: hosts) == [expected],
+                        "\(endpoints): \(input)")
                 }
             }
         }

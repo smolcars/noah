@@ -32,7 +32,10 @@ struct FeedbackView: View {
                     SettingsField(label: L10n.text("Name", locale: language), placeholder: L10n.text("Your name", locale: language), text: $draft.name)
                     SettingsField(label: L10n.text("Email (optional)", locale: language), placeholder: "you@example.com", text: $draft.email,
                                   keyboard: .emailAddress)
-                    SettingsField(label: L10n.text("Subject", locale: language), placeholder: L10n.text("Short summary", locale: language), text: $draft.subject)
+                    SettingsField(
+                        label: L10n.text("Subject", locale: language),
+                        placeholder: L10n.text("Short summary", locale: language),
+                        text: $draft.subject)
                     SettingsField(label: L10n.text("Message", locale: language), placeholder: L10n.text("What happened, or what would help?", locale: language),
                                   text: $draft.body, multiline: true)
                 }
@@ -41,7 +44,7 @@ struct FeedbackView: View {
                     .padding(.top, 20)
                 screenshot.padding(.top, 8)
                 SettingsFine(text: L10n.text("JPEG or PNG, 5 MB or smaller", locale: language) + ". "
-                             + L10n.text("Your app version and phone model are attached.", locale: language))
+                    + L10n.text("Your app version and phone model are attached.", locale: language))
                 if let error { SettingsFine(text: L10n.text(error, locale: language), failure: true) }
             }
             SettingsGroup {
@@ -136,13 +139,13 @@ private struct FeedbackImagePicker: UIViewControllerRepresentable {
         picker.delegate = context.coordinator
         return picker
     }
-    func updateUIViewController(_ controller: UIImagePickerController, context: Context) {}
+    func updateUIViewController(_: UIImagePickerController, context _: Context) {}
 
     final class Coordinator: NSObject, UIImagePickerControllerDelegate, UINavigationControllerDelegate {
         let parent: FeedbackImagePicker
         init(_ parent: FeedbackImagePicker) { self.parent = parent }
-        func imagePickerControllerDidCancel(_ picker: UIImagePickerController) { parent.dismiss() }
-        func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey: Any]) {
+        func imagePickerControllerDidCancel(_: UIImagePickerController) { parent.dismiss() }
+        func imagePickerController(_: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey: Any]) {
             parent.selected(info[.editedImage] as? UIImage)
             parent.dismiss()
         }

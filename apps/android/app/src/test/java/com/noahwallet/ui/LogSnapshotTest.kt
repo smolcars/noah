@@ -1,12 +1,12 @@
 package com.noahwallet.ui
 
-import com.noahwallet.ui.settings.LogSnapshot
 import com.noahwallet.services.logging.LogFile
-import java.io.File
-import java.nio.file.Files
+import com.noahwallet.ui.settings.LogSnapshot
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.*
 import org.junit.Test
+import java.io.File
+import java.nio.file.Files
 
 class LogSnapshotTest {
     @Test fun initialReadAndFailureHaveExplicitStates() = runBlocking {

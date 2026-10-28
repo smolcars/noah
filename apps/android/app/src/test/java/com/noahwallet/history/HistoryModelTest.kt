@@ -11,8 +11,7 @@ import java.util.Date
 
 class HistoryModelTest {
     private fun row(id: String = "movement-1") = HistoryTransaction(id, "Arkoor", 2100, "2026-07-15T12:00:00.000Z", "incoming", source = "ark")
-    private fun dependencies(rows: List<HistoryTransaction> = listOf(row())) = HistoryModel.Dependencies(
-        load = { rows }, sync = {}, changes = { emptyFlow() }, blockTime = { null }, price = { _, _ -> 100000.0 })
+    private fun dependencies(rows: List<HistoryTransaction> = listOf(row())) = HistoryModel.Dependencies(load = { rows }, sync = {}, changes = { emptyFlow() }, blockTime = { null }, price = { _, _ -> 100000.0 })
 
     @Test fun everyCompletedReadMovesTheRevisionEvenWhenNothingChanged() = runBlocking {
         val model = HistoryModel(dependencies())
@@ -158,7 +157,8 @@ class HistoryModelTest {
         observation.cancelAndJoin(); assertEquals(0, active)
     }
 
-    @Test(timeout = 30_000) fun warmQuoteCacheYieldsToWalletEventsDuringLargeEnrichment() = runBlocking {
+    @Test(timeout = 30_000)
+    fun warmQuoteCacheYieldsToWalletEventsDuringLargeEnrichment() = runBlocking {
         val events = Channel<String>(Channel.UNLIMITED)
         var rows = listOf(row())
         var quotes = 0

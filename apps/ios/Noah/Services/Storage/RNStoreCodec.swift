@@ -13,18 +13,18 @@ enum RNStoreCodec {
     static var storeKeys: [String] { Array(schemas.keys) + [RecurringStore.key] }
     static let schemas: [String: Schema] = [
         "wallet-storage": .init(fields: ["isInitialized": .bool, "isWalletLoaded": .bool,
-            "staticVtxoPubkey": .string, "isBiometricsEnabled": .bool, "isDebugModeEnabled": .bool,
-            "isWalletSuspended": .bool, "hasSeenBatteryOptimizationPrompt": .bool]),
+                                         "staticVtxoPubkey": .string, "isBiometricsEnabled": .bool, "isDebugModeEnabled": .bool,
+                                         "isWalletSuspended": .bool, "hasSeenBatteryOptimizationPrompt": .bool]),
         "profile-storage": .init(fields: ["displayName": .string, "preferredCurrency": .string, "bitcoinAmountUnit": .string]),
         "privacy-storage": .init(fields: ["isHomeBalanceHidden": .bool]),
         "transaction-storage": .init(version: 1, fields: ["isAutoBoardingEnabled": .bool, "hasAttemptedAutoBoarding": .bool]),
         "server-storage": .init(fields: ["isRegisteredWithServer": .bool, "lightningAddress": .string,
-            "nostrPubkey": .string, "isBackupEnabled": .bool, "emailAddress": .string,
-            "isEmailVerified": .bool, "isEmailPromptDismissed": .bool, "mailboxAuthorizationExpiry": .number,
-            "isMailboxAuthorizationEnabled": .bool, "lastReportedDeviceFingerprint": .string, "lastDeviceReportAt": .number]),
+                                         "nostrPubkey": .string, "isBackupEnabled": .bool, "emailAddress": .string,
+                                         "isEmailVerified": .bool, "isEmailPromptDismissed": .bool, "mailboxAuthorizationExpiry": .number,
+                                         "isMailboxAuthorizationEnabled": .bool, "lastReportedDeviceFingerprint": .string, "lastDeviceReportAt": .number]),
         "backup-storage": .init(fields: ["backupPending": .bool, "lastBackupAt": .number,
-            "lastBackupAttemptAt": .number, "lastBackupStatus": .string, "lastBackupError": .string,
-            "lastBackupId": .string, "lastUploadedSnapshotSha256": .string]),
+                                         "lastBackupAttemptAt": .number, "lastBackupStatus": .string, "lastBackupError": .string,
+                                         "lastBackupId": .string, "lastUploadedSnapshotSha256": .string]),
         "esplora-storage": .init(fields: ["endpointOverride": .string]),
     ]
 

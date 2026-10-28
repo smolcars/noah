@@ -1,8 +1,7 @@
 import BarkBoltFFI
 import Foundation
-import Testing
-
 @testable import Noah
+import Testing
 
 /// Real bark-bolt-ffi wallet against the regtest Ark server, in a temporary
 /// datadir with an in-memory seed. Enabled with `TEST_RUNNER_NOAH_SERVER_IT=1`.
@@ -38,7 +37,7 @@ struct WalletIntegrationTests {
         // RN creates key 0 before registration; a fresh native wallet must too.
         let registrationAddress = try await session.peekAddress(index: 0)
         #expect(!registrationAddress.isEmpty)
-        try await creator.createOrResume()  // already open: resumes instead of failing
+        try await creator.createOrResume() // already open: resumes instead of failing
 
         let summary = try #require(try await session.summary())
         #expect(summary.network == .regtest)

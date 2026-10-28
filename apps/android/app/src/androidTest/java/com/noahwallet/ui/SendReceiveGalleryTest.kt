@@ -50,7 +50,7 @@ class SendReceiveGalleryTest {
 
         // Send: the steps over today's model.
         fun send(name: String, wallet: SendFixtures.Wallet = SendFixtures.Wallet(), env: SendEnv = SendFixtures.env(), wait: Long = 1_200,
-                 setup: suspend (SendPresentation) -> Unit) {
+            setup: suspend (SendPresentation) -> Unit) {
             if (only != null && name !in only) return
             val presentation = SendFixtures.presentation(wallet)
             main { setup(presentation) }
@@ -89,7 +89,7 @@ class SendReceiveGalleryTest {
 
         // Sending: phase frames (the controller holds in flight) and every ending (static last frames).
         fun inFlight(name: String, route: SendRoute, at: Long, vararg reached: Pair<SendMilestone, Long>, env: SendEnv = SendFixtures.env(),
-                     destination: String = SendFixtures.ark, method: String = "ark") {
+            destination: String = SendFixtures.ark, method: String = "ark") {
             if (only != null && name !in only) return
             val wallet = SendFixtures.Wallet(SendFixtures.Outcome.never)
             val presentation = SendFixtures.presentation(wallet)
@@ -120,7 +120,7 @@ class SendReceiveGalleryTest {
         inFlight("send-chain-wallet", SendRoute.chainWallet, 3_000, paying, SendMilestone.sent to 900, destination = SendFixtures.onchain, method = "onchain")
 
         fun ended(name: String, outcome: SendFixtures.Outcome, payment: SendPayment, env: SendEnv = SendFixtures.env(), quote: SendQuote = SendQuote(payment.amount, 0, payment.amount, walletIdentity = SendFixtures.owner),
-                  block: suspend (SendController) -> Unit = {}) {
+            block: suspend (SendController) -> Unit = {}) {
             if (only != null && name !in only) return
             val wallet = SendFixtures.Wallet(outcome, quote).apply { gate.complete(Unit) }
             val presentation = SendFixtures.presentation(wallet)

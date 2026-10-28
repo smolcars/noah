@@ -92,5 +92,4 @@ class BtcMapModelTest {
         val world = BtcMapBounds.fromCamera(-200.0, -90.0, 200.0, 90.0)
         assertTrue(world.contains(-180.0, 0.0)); assertTrue(world.contains(180.0, 0.0))
     }
-
 }

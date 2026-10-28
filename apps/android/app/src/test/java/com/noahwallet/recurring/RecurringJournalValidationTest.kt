@@ -103,7 +103,9 @@ class RecurringJournalValidationTest(private val kind: String) {
         } finally { directory.deleteRecursively() }
     }
     companion object {
-        @JvmStatic @Parameterized.Parameters(name = "{0}") fun cases() = listOf(
+        @JvmStatic
+        @Parameterized.Parameters(name = "{0}")
+        fun cases() = listOf(
             "negative", "duplicate", "unsorted", "empty", "wrongIndex", "emptyScope", "wrongScope", "emptyWallet", "wrongWallet", "wrongNetwork",
             "badInstance", "shortInstance", "wrongInstance", "badRevision", "wrongRevision", "nullRevision", "attemptRevision", "attemptID",
             "attemptKind", "attemptIndex", "attemptDate", "markedAt", "unresolvedConsumed", "watermarkBehind", "watermarkScope", "watermarkWallet",

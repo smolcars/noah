@@ -90,8 +90,7 @@ class WalletCreator(private val dependencies: Dependencies) {
                     com.noahwallet.recurring.RecurringStore(SettingsStorage(context)).protectLegacyBeforeReplacement()
                     val result = storage.save(value)
                     if (result !is SecretResult.Found || result.value != value) {
-                        throw Failure.SecureStorageUnavailable(
-                            (result as? SecretResult.Unavailable)?.reason ?: SecretFailure.migrationFailed)
+                        throw Failure.SecureStorageUnavailable((result as? SecretResult.Unavailable)?.reason ?: SecretFailure.migrationFailed)
                     }
                 },
                 deleteSeed = { storage.delete(it) },

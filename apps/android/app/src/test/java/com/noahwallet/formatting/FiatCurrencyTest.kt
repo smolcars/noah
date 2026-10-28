@@ -2,12 +2,12 @@ package com.noahwallet.formatting
 
 import com.noahwallet.fixtures.FixtureCase
 import com.noahwallet.fixtures.SharedFixtures
-import java.util.Locale
 import kotlinx.serialization.json.*
 import org.junit.Assert.*
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.junit.runners.Parameterized
+import java.util.Locale
 
 @RunWith(Parameterized::class)
 class FiatCurrencyTest(private val case: FixtureCase) {
@@ -26,7 +26,8 @@ class FiatCurrencyTest(private val case: FixtureCase) {
         assertEquals(case.name, case.expected.jsonPrimitive.content, actual)
     }
     companion object {
-        @JvmStatic @Parameterized.Parameters(name = "{index}")
+        @JvmStatic
+        @Parameterized.Parameters(name = "{index}")
         fun fixtures() = SharedFixtures.load("fiat-currency").map { arrayOf(it) }
     }
 }

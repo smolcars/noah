@@ -1,7 +1,6 @@
 import Foundation
-import Testing
-
 @testable import Noah
+import Testing
 
 @MainActor struct SendOverrideAuditTests {
     @Test func corruptAuditIsPreservedBeforeFreshConfirmationAndJournalRemoval() throws {
@@ -15,7 +14,7 @@ import Testing
         let corrupt = Data("corrupt audit evidence".utf8)
         try corrupt.write(to: file)
         try dependencies.write(.init(broadcastingTxid: "original", payment: SendPreparedTests.payment,
-                                      snapshot: .init(movementIDs: [])))
+                                     snapshot: .init(movementIDs: [])))
         let write = dependencies.write
         var removals = 0
         dependencies.write = { attempt in
@@ -81,9 +80,9 @@ import Testing
         dependencies.reconcile = { _ in Issue.record("Must not reconcile a legacy journal"); return .uncertain }
         let candidates = [SendCandidate(id: 7, status: "pending", amount: 1000, createdAt: "2026-10-19")]
         try dependencies.write(.init(broadcastingTxid: broadcasting ? "legacy-txid" : nil,
-                                      payment: SendPreparedTests.payment, snapshot: .init(movementIDs: []),
-                                      receipt: broadcasting ? nil : .init(amount: 1000, txid: "legacy-txid"),
-                                      candidates: candidates, possibleTxids: ["possible-txid"]))
+                                     payment: SendPreparedTests.payment, snapshot: .init(movementIDs: []),
+                                     receipt: broadcasting ? nil : .init(amount: 1000, txid: "legacy-txid"),
+                                     candidates: candidates, possibleTxids: ["possible-txid"]))
         let controller = SendPaymentController(dependencies: dependencies)
         #expect(controller.locked && controller.attempt == nil)
         await controller.checkStatus()

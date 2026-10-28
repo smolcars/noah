@@ -3,7 +3,7 @@ import SwiftUI
 struct SettingsLabel: View {
     let title: String
     let detail: String
-    var value: String? = nil
+    var value: String?
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack {
@@ -20,7 +20,7 @@ struct SettingsLabel: View {
 
 extension View {
     func settingsStyle(_ title: LocalizedStringKey, maximumWidth: CGFloat = AdaptiveLayout.readableWidth) -> some View {
-        self.navigationTitle(title).navigationBarTitleDisplayMode(.inline)
+        navigationTitle(title).navigationBarTitleDisplayMode(.inline)
             .font(NoahFont.body).foregroundStyle(NoahColor.foreground)
             .readableWidth(maximumWidth)
             .scrollContentBackground(.hidden).background(NoahColor.background).tint(NoahColor.brand)

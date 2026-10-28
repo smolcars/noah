@@ -11,7 +11,9 @@ import java.util.Locale
 @RunWith(Parameterized::class)
 class BtcMapFixtureTest(private val name: String, private val domain: String, private val input: JsonObject, private val expected: JsonElement) {
     companion object {
-        @JvmStatic @Parameterized.Parameters(name = "{0}") fun cases() = listOf("btc-map", "city-search", "btc-map-review", "btc-map-limits").flatMap { domain ->
+        @JvmStatic
+        @Parameterized.Parameters(name = "{0}")
+        fun cases() = listOf("btc-map", "city-search", "btc-map-review", "btc-map-limits").flatMap { domain ->
             SharedFixtures.load(domain).map { arrayOf(it.name, domain, it.input.jsonObject, it.expected) }
         }
         fun asset(name: String) = requireNotNull(BtcMapFixtureTest::class.java.getResourceAsStream("/$name"))
@@ -49,7 +51,7 @@ class BtcMapFixtureTest(private val name: String, private val domain: String, pr
             "viewport" -> value(BtcMapViewport.parse(input.getValue("value").toString()))
             "normalize" -> value(CitySearch.normalize(read("value")))
             "parse" -> if (domain == "btc-map") value(runCatching { BtcMapSnapshot.parse(input.getValue("value").toString()) }.getOrNull())
-                else value(runCatching { CitySearch.parse(input.getValue("value").toString()) }.isSuccess)
+            else value(runCatching { CitySearch.parse(input.getValue("value").toString()) }.isSuccess)
             "merge" -> value(BtcMapSnapshot.parse(input.getValue("snapshot").toString())
                 .merging(BtcMapPatch.parse(input.getValue("patches").toString()), read("generatedAt")))
             "search" -> JsonArray(CitySearch.search(cities, read("query"), read("limit"), input["bias"]?.let { read("bias") }).map { city ->

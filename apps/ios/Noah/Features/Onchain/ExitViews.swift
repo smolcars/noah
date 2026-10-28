@@ -358,7 +358,7 @@ struct ExitVtxoRow: View {
     let vtxo: VtxoModel
     let uneconomic: Bool
     /// bark won't exit it: shown like one that can't exit, with bark's reason.
-    var refusal: ExitRefusal? = nil
+    var refusal: ExitRefusal?
     /// nil: the All list, no checkbox.
     let selected: Bool?
     var hairline = true

@@ -1,24 +1,16 @@
 package com.noahwallet.ui
 
-import com.noahwallet.localization.tr
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.ui.draw.alpha
-import androidx.compose.ui.draw.drawBehind
-import androidx.compose.ui.semantics.clearAndSetSemantics
-import androidx.compose.ui.platform.LocalFocusManager
-import androidx.compose.foundation.layout.windowInsetsPadding
-import androidx.compose.foundation.layout.safeDrawing
 import android.Manifest
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.runtime.saveable.rememberSaveable
-import com.noahwallet.services.push.PushNotifications
-import com.noahwallet.services.push.PushWork
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -26,23 +18,31 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
-import kotlinx.coroutines.launch
-import kotlinx.coroutines.Dispatchers
-import kotlinx.coroutines.withContext
-import com.noahwallet.ui.launch.*
-import com.noahwallet.services.storage.PersistedWalletState
 import com.noahwallet.R
+import com.noahwallet.localization.tr
 import com.noahwallet.services.launch.LaunchState
+import com.noahwallet.services.push.PushNotifications
+import com.noahwallet.services.push.PushWork
+import com.noahwallet.services.storage.PersistedWalletState
+import com.noahwallet.ui.launch.*
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 @Composable
 fun LaunchGateView(model: AppModel) {
@@ -156,29 +156,29 @@ fun LaunchGateView(model: AppModel) {
     val insets = androidx.compose.foundation.layout.WindowInsets.safeDrawing
     androidx.compose.runtime.CompositionLocalProvider(LocalWalletPrivacy provides WalletPrivacy(covered,
         unlock = if (model.walletLock.locked) ({ scope.launch { model.walletLock.unlock(activity) }; Unit }) else null), LocalWindowChrome provides chrome) {
-    androidx.compose.material3.Surface(color = if (fullWindow) com.noahwallet.ui.onboarding.noahPalette().background else MaterialTheme.colorScheme.background) {
-        androidx.compose.foundation.layout.Box(Modifier.fillMaxSize()
-            .walletContentProtection(covered)
-            .drawBehind {
-                chrome.background?.let { drawRect(it) }
-                chrome.bottom?.let { val inset = insets.getBottom(this).toFloat(); drawRect(it, androidx.compose.ui.geometry.Offset(0f, size.height - inset), androidx.compose.ui.geometry.Size(size.width, inset)) }
-            }
-            .windowInsetsPadding(insets)
-            .avoidHinge(if (fullWindow || route == LaunchRoute.app) emptyList() else LocalFoldingFeatures.current)) {
-            when (route) {
-                LaunchRoute.customServer -> NoahForm("The custom server isn't responding.") {
-                    if (model.switchingToDefaultServer) Text(tr("The server isn't responding; switching back…"))
-                    NoahButton("Use default server", !model.switchingToDefaultServer) { model.useDefaultEsploraServer() }
+        androidx.compose.material3.Surface(color = if (fullWindow) com.noahwallet.ui.onboarding.noahPalette().background else MaterialTheme.colorScheme.background) {
+            androidx.compose.foundation.layout.Box(Modifier.fillMaxSize()
+                .walletContentProtection(covered)
+                .drawBehind {
+                    chrome.background?.let { drawRect(it) }
+                    chrome.bottom?.let { val inset = insets.getBottom(this).toFloat(); drawRect(it, androidx.compose.ui.geometry.Offset(0f, size.height - inset), androidx.compose.ui.geometry.Size(size.width, inset)) }
                 }
-                LaunchRoute.message -> LaunchMessage(state, model.error != null, model::start, model)
-                LaunchRoute.loading -> LaunchMessage(null, false, model::start, model)
-                LaunchRoute.push -> PushNotificationsRequiredScreen(requesting, ::requestPermission)
-                LaunchRoute.battery -> com.noahwallet.ui.onboarding.OnboardingFrame(null) { BatteryOptimizationScreen(model) { gateRevision++ } }
-                LaunchRoute.app -> NoahApp(model, links.takeIf { linkStep == LinkStep.open })
-                LaunchRoute.onboarding -> Onboarding(model)
+                .windowInsetsPadding(insets)
+                .avoidHinge(if (fullWindow || route == LaunchRoute.app) emptyList() else LocalFoldingFeatures.current)) {
+                when (route) {
+                    LaunchRoute.customServer -> NoahForm("The custom server isn't responding.") {
+                        if (model.switchingToDefaultServer) Text(tr("The server isn't responding; switching back…"))
+                        NoahButton("Use default server", !model.switchingToDefaultServer) { model.useDefaultEsploraServer() }
+                    }
+                    LaunchRoute.message -> LaunchMessage(state, model.error != null, model::start, model)
+                    LaunchRoute.loading -> LaunchMessage(null, false, model::start, model)
+                    LaunchRoute.push -> PushNotificationsRequiredScreen(requesting, ::requestPermission)
+                    LaunchRoute.battery -> com.noahwallet.ui.onboarding.OnboardingFrame(null) { BatteryOptimizationScreen(model) { gateRevision++ } }
+                    LaunchRoute.app -> NoahApp(model, links.takeIf { linkStep == LinkStep.open })
+                    LaunchRoute.onboarding -> Onboarding(model)
+                }
             }
         }
-    }
     }
     if (!covered) model.error?.let { message ->
         WalletAlertDialog(onDismissRequest = { model.error = null },
@@ -197,7 +197,6 @@ fun LaunchGateView(model: AppModel) {
             } else com.noahwallet.ui.settings.LockCover(model.walletLock.error, model.walletLock.authenticating) { scope.launch { model.walletLock.unlock(activity) } }
         }
     }
-
 }
 
 internal enum class LaunchRoute { customServer, message, loading, push, battery, app, onboarding }
@@ -260,7 +259,7 @@ private fun LaunchMessage(state: LaunchState?, openFailed: Boolean, retry: () ->
 /** [color] and [style] restyle the button for stored-phrase recovery (iOS's destructive body text); defaults keep the theme's. */
 @Composable
 internal fun DeleteWalletFallback(model: AppModel, color: androidx.compose.ui.graphics.Color = androidx.compose.ui.graphics.Color.Unspecified,
-                                  style: androidx.compose.ui.text.TextStyle? = null) {
+    style: androidx.compose.ui.text.TextStyle? = null) {
     var showingDelete by rememberSaveable { mutableStateOf(false) }
     var confirmation by rememberSaveable { mutableStateOf("") }
     val enabled = model.canDeleteRecoveryWallet

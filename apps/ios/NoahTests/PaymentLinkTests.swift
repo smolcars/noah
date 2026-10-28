@@ -1,7 +1,7 @@
 import Foundation
+@testable import Noah
 import SwiftUI
 import Testing
-@testable import Noah
 
 @MainActor
 struct PaymentLinkTests {
@@ -122,7 +122,7 @@ struct PaymentLinkTests {
         #expect(WalletTabs.blockedMessage(link: true) != WalletTabs.blockedMessage(link: false))
     }
 
-    @Test func aReviewBeingPreparedOrShownRefusesALinkAndStaysAsItIs() async throws {
+    @Test func aReviewBeingPreparedOrShownRefusesALinkAndStaysAsItIs() async {
         var quoting: CheckedContinuation<SendQuote, Never>?
         let model = send(funds: 1_000_000, quote: { payment in
             if quoting == nil { return await withCheckedContinuation { quoting = $0 } } // Only the first review waits.

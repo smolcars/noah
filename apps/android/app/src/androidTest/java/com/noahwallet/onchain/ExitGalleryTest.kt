@@ -58,7 +58,7 @@ class ExitGalleryTest {
         val f = ExitFixtures
         val locale = language?.let { java.util.Locale.forLanguageTag(it) } ?: java.util.Locale.US
         val money: (Long) -> String = if (sats) { amount -> com.noahwallet.formatting.BitcoinAmount.format(amount, com.noahwallet.formatting.BitcoinAmountUnit.sats, locale) }
-            else f.money
+        else f.money
         val estimate: suspend (List<String>) -> OnchainQuote? = { ids ->
             val amount = f.vtxos.filter { it.id in ids }.sumOf { it.amount }
             OnchainQuote(OnchainAction.startExit, "fixture", ids.sorted(), amount = amount, fee = 262L * ids.size, chainFee = 5_533L * ids.size,
@@ -86,7 +86,7 @@ class ExitGalleryTest {
         show("start-unknown") { ExitStartContent(null, review.copy(fee = null, chainFee = null, feeRate = null, transactions = null), 18_400, false, false, 144, money, {}, {}, {}, {}) }
         show("start-expired") { ExitStartContent(review.copy(createdAt = System.currentTimeMillis() - 31_000), null, 18_400, false, false, 144, money, {}, {}, {}, {}) }
         fun progress(name: String, exit: ExitModel, tip: Long = exit.details.tip_height ?: f.tip, needsFunds: Boolean = false, confirmed: Long = 18_400,
-                     context: ExitContext = ExitContext(tip, confirmed, 144, cancelable = exit.cancelable, claimEstimate = 262), others: List<ExitModel> = emptyList()) =
+            context: ExitContext = ExitContext(tip, confirmed, 144, cancelable = exit.cancelable, claimEstimate = 262), others: List<ExitModel> = emptyList()) =
             show(name, 4_000) { ExitProgressContent(exit, f.stage(exit, tip, needsFunds), context, false, false, money, {}, {}, {}, {}, {}, {}, others = others) }
         progress("progress-lift", f.start)
         progress("progress-publish", f.publish)

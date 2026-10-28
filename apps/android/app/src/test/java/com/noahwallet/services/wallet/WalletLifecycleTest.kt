@@ -1,7 +1,7 @@
 package com.noahwallet.services.wallet
 
-import com.noahwallet.services.storage.*
 import com.noahwallet.services.backup.*
+import com.noahwallet.services.storage.*
 import com.noahwallet.ui.RestoreCompletion
 import com.noahwallet.ui.RestoreCompletionJournal
 import kotlinx.coroutines.*

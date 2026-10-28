@@ -33,8 +33,7 @@ struct BackupService: Sendable {
     /// `onUploadRequired` runs once the snapshot is known to differ from
     /// the last upload (RN marks the backup in progress there).
     func performBackup(
-        lastUploadedSnapshotSha256: String?, onUploadRequired: @Sendable () -> Void = {}
-    ) async throws -> Outcome {
+        lastUploadedSnapshotSha256: String?, onUploadRequired: @Sendable () -> Void = {}) async throws -> Outcome {
         try await scratch.withFolder("backup") { folder in
             try await performBackup(
                 lastUploadedSnapshotSha256: lastUploadedSnapshotSha256, onUploadRequired: onUploadRequired, in: folder)
@@ -42,8 +41,7 @@ struct BackupService: Sendable {
     }
 
     private func performBackup(
-        lastUploadedSnapshotSha256: String?, onUploadRequired: @Sendable () -> Void, in folder: URL
-    ) async throws -> Outcome {
+        lastUploadedSnapshotSha256: String?, onUploadRequired: @Sendable () -> Void, in folder: URL) async throws -> Outcome {
         let snapshotURL = folder.appending(path: "wallet-snapshot.sqlite")
         let encryptedURL = folder.appending(path: "wallet-backup.noahbackup")
         let snapshot = try await session.createSnapshot(at: snapshotURL)
@@ -60,8 +58,7 @@ struct BackupService: Sendable {
             body: .json(.init(
                 encryptedSha256: encrypted.sha256,
                 encryptedSize: Int64(encrypted.sizeBytes),
-                formatVersion: Int32(BackupArchive.formatVersion)))
-        ).ok.body.json
+                formatVersion: Int32(BackupArchive.formatVersion)))).ok.body.json
 
         try await put(file: encrypted, to: upload.uploadUrl, checksum: upload.checksumSha256)
         _ = try await client.completeBackupObjectUpload(body: .json(.init(backupId: upload.backupId))).ok

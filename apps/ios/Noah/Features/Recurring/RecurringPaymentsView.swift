@@ -63,8 +63,10 @@ struct RecurringPaymentsView: View {
                 SettingsFine(text: L10n.text("Wake-up schedule hasn't synced yet. Noah will retry when opened.", locale: language))
             }
             if let error = executor.error { SettingsFine(text: L10n.text(error, locale: language), failure: true) }
-            SettingsFine(text: L10n.text("Lightning fee limits use Ark’s published fees, up to 2% or 200 sats, whichever is higher. Payments above the limit need manual approval.", locale: language)
-                         + " " + L10n.text("Keep notifications on so payments can go through while Noah is closed.", locale: language))
+            SettingsFine(text: L10n.text(
+                "Lightning fee limits use Ark’s published fees, up to 2% or 200 sats, whichever is higher. Payments above the limit need manual approval.",
+                locale: language)
+                + " " + L10n.text("Keep notifications on so payments can go through while Noah is closed.", locale: language))
         }
         .settingsChrome("Recurring payments") {
             Button { open(.editor(nil)) } label: {
@@ -201,7 +203,8 @@ struct RecurringSchedulePage: View {
                 .padding(.top, 18)
             Text(verbatim: schedule.statusWord(sending: sending).map { L10n.text($0, locale: language) } ?? schedule.nextLine(locale: locale))
                 .noahText(NoahTokens.Typography.label)
-                .foregroundStyle(schedule.needsYou ? NoahTokens.Colors.failure : schedule.status == "paused" ? NoahTokens.Colors.muted : NoahTokens.Colors.foreground)
+                .foregroundStyle(schedule.needsYou ? NoahTokens.Colors.failure : schedule.status == "paused" ? NoahTokens.Colors.muted : NoahTokens.Colors
+                    .foreground)
                 .padding(.top, 12)
             Text(verbatim: schedule.label).noahText(NoahTokens.Typography.sub).foregroundStyle(NoahTokens.Colors.muted).padding(.top, 3)
             VStack(spacing: 0) {
@@ -220,7 +223,9 @@ struct RecurringSchedulePage: View {
                 if let run = schedule.runs.first {
                     SettingsDetailRow(label: L10n.text("Last", locale: language),
                                       value: Date(timeIntervalSince1970: run.attemptedAt / 1000).formatted(.dateTime.month(.abbreviated).day().locale(locale))
-                                          + " · " + L10n.text(run.status == "success" ? "Sent" : run.status == "skipped" ? "Skipped" : "Failed", locale: language),
+                                          + " · " + L10n.text(
+                                              run.status == "success" ? "Sent" : run.status == "skipped" ? "Skipped" : "Failed",
+                                              locale: language),
                                       hairline: false)
                 }
             }
@@ -287,7 +292,9 @@ struct RecurringSchedulePage: View {
             switch sheet {
             case .cancel:
                 SettingsSheetBody(title: L10n.text("Cancel {name}?", schedule.label, locale: language),
-                                  line: L10n.text("No more payments will be sent. Payments already sent can't be undone. An in-progress payment may still complete.", locale: language)) {
+                                  line: L10n.text(
+                                      "No more payments will be sent. Payments already sent can't be undone. An in-progress payment may still complete.",
+                                      locale: language)) {
                     EmptyView()
                 } actions: {
                     SettingsSheetButtons(cancel: L10n.text("Keep payment", locale: language),
@@ -305,7 +312,9 @@ struct RecurringSchedulePage: View {
             case .checked:
                 // The first resume step: check history before anything can be sent again.
                 SettingsSheetBody(title: L10n.text("Have you checked?", locale: language),
-                                  line: L10n.text("Check Activity for this payment's last attempt and ask the recipient whether it arrived.", locale: language)) {
+                                  line: L10n.text(
+                                      "Check Activity for this payment's last attempt and ask the recipient whether it arrived.",
+                                      locale: language)) {
                     EmptyView()
                 } actions: {
                     SettingsSheetButtons(cancel: L10n.text("Keep stopped", locale: language), action: L10n.text("I checked", locale: language),

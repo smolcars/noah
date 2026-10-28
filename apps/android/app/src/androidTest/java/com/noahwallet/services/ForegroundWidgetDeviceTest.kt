@@ -1,13 +1,13 @@
 package com.noahwallet.services
 
+import androidx.test.core.app.ActivityScenario
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
-import androidx.test.core.app.ActivityScenario
 import com.noahwallet.BuildConfig
 import com.noahwallet.MainActivity
-import com.noahwallet.services.wallet.*
-import com.noahwallet.services.storage.*
 import com.noahwallet.services.push.WidgetDataWriter
+import com.noahwallet.services.storage.*
+import com.noahwallet.services.wallet.*
 import com.noahwallet.ui.RecoveryPhraseInput
 import io.github.niteshbalusu11.bark.generateMnemonic
 import io.github.niteshbalusu11.bark.validateMnemonic
@@ -17,8 +17,8 @@ import org.junit.Assume.assumeTrue
 import org.junit.Test
 import org.junit.runner.RunWith
 import java.io.File
-import java.net.URI
 import java.net.HttpURLConnection
+import java.net.URI
 import java.util.UUID
 
 @RunWith(AndroidJUnit4::class)

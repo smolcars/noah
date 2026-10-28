@@ -1,6 +1,6 @@
 import Foundation
-import Testing
 @testable import Noah
+import Testing
 
 @MainActor struct RecurringWriteFailureTests {
     @Test(arguments: ["pauseQuote", "cancelQuote", "editQuote", "pauseSubmit", "cancelSubmit"])

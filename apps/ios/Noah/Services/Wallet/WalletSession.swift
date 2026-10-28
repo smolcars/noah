@@ -40,8 +40,7 @@ actor WalletSession {
     /// Opener seam so lifecycle rules can be tested without the SDK.
     /// `create` allows bark to create a new wallet in an empty datadir.
     typealias Opener = @Sendable (
-        _ mnemonic: String, _ datadir: String, _ runDaemon: Bool, _ appVersion: String, _ create: Bool
-    ) async throws -> Handles
+        _ mnemonic: String, _ datadir: String, _ runDaemon: Bool, _ appVersion: String, _ create: Bool) async throws -> Handles
 
     struct Handles: @unchecked Sendable {
         let wallet: Wallet
@@ -138,8 +137,7 @@ actor WalletSession {
     /// calls and another push/task/intent fail busy until the owner releases it.
     func withBackgroundAccess<T: Sendable>(
         _ operation: @escaping @Sendable () async throws -> T,
-        settle: @escaping @Sendable () async -> Void = {}
-    ) async throws -> T {
+        settle: @escaping @Sendable () async -> Void = {}) async throws -> T {
         try BackgroundExecution.checkActive()
         guard backgroundOwner == nil, runningCalls == 0, !sendReserved,
               sendPreparations.isEmpty, boardPreparations.isEmpty else { throw OpenError.busy }
@@ -188,7 +186,7 @@ actor WalletSession {
         guard !location.restorePending else { throw OpenError.restorePending }
         try checkExistingDatabase()
         let admission = RecurringSubmissionBudget()
-        let opener = self.opener
+        let opener = opener
         let datadir = location.directory.path
         // The attempt settles the state itself before anyone awaiting it
         // resumes, so `ensureOpen` joiners and `closeSettled` never see a
@@ -343,7 +341,7 @@ actor WalletSession {
     func verify(_ reservation: Reservation, mnemonic: String, appVersion: String) async throws {
         try checkHeld(reservation)
         try checkExistingDatabase()
-        let opener = self.opener
+        let opener = opener
         let datadir = location.directory.path
         try await Task {
             let handles = try await opener(mnemonic, datadir, false, appVersion, false)
@@ -362,7 +360,7 @@ actor WalletSession {
         guard !location.databaseExists else { throw OpenError.walletDatabaseExists }
         try FileManager.default.createDirectory(at: location.directory, withIntermediateDirectories: true)
         if self === WalletSession.shared { try RecurringStore().protectLegacyBeforeReplacement() }
-        let opener = self.opener
+        let opener = opener
         let datadir = location.directory.path
         let handles = try await Task { try await opener(mnemonic, datadir, runDaemon, appVersion, true) }.value
         daemonSince = runDaemon ? Date() : nil
@@ -700,9 +698,9 @@ actor WalletSession {
             do {
                 onchain = create
                     ? try await OnchainWallet.default(
-                    network: configuration.network, mnemonic: mnemonic, config: config, datadir: datadir)
+                        network: configuration.network, mnemonic: mnemonic, config: config, datadir: datadir)
                     : try await OnchainWallet.openExisting(
-                    network: configuration.network, mnemonic: mnemonic, config: config, datadir: datadir)
+                        network: configuration.network, mnemonic: mnemonic, config: config, datadir: datadir)
             } catch let error as BarkError where error.message.contains("incorrect mnemonic for existing wallet") {
                 throw StoredSeed.Failure.conflict
             }

@@ -1,7 +1,7 @@
 package com.noahwallet.services.server
 
-import com.noahwallet.api.generated.models.UpdateLightningIdentityPayload
 import com.noahwallet.BuildConfig
+import com.noahwallet.api.generated.models.UpdateLightningIdentityPayload
 import java.util.Locale
 
 object LightningIdentity {

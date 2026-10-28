@@ -96,52 +96,54 @@ struct RecoveryPhrasePage: View {
 
     var body: some View {
         SettingsScroll(line: shown ? L10n.text("{n} words that restore your wallet.", words.count, locale: language)
-                                   : L10n.text("The words that restore your wallet.", locale: language)) {
-            grid.padding(.top, 22)
-            SettingsWarning(text: L10n.text("Never share them. Anyone with these words can take your bitcoin.", locale: language))
-            if let failure = lock.error ?? error {
-                SettingsFine(text: L10n.text(failure, locale: language), failure: true)
-            }
-        }
-        .settingsChrome("Recovery phrase")
-        .settingsFooter {
-            if shown {
-                Button(action: copy) { Label(L10n.text("Copy", locale: language), systemImage: "doc.on.doc") }
-                    .buttonStyle(OnboardingSecondaryButtonStyle(height: NoahTokens.Size.button))
-                    .accessibilityIdentifier("phrase-copy")
-                if model.needsRecoveryPhraseBackup {
-                    Button(L10n.text("I wrote it down", locale: language), action: confirm)
-                        .buttonStyle(SettingsActionStyle())
-                        .accessibilityIdentifier("backup-confirm")
+            : L10n.text("The words that restore your wallet.", locale: language)) {
+                grid.padding(.top, 22)
+                SettingsWarning(text: L10n.text("Never share them. Anyone with these words can take your bitcoin.", locale: language))
+                if let failure = lock.error ?? error {
+                    SettingsFine(text: L10n.text(failure, locale: language), failure: true)
                 }
             }
-        }
-        .onboardingHaptics(haptics)
-        .settingsSheet(item: Binding(get: { gate?.state == .noScreenLock ? NoScreenLock() : nil },
-                                     set: { if $0 == nil, gate?.state == .noScreenLock { gate?.clear() } })) { _ in
-            SettingsSheetBody(title: L10n.text("No screen lock", locale: language),
-                              line: L10n.text("Anyone with this phone could see your phrase. Set a screen lock in Settings to protect it.", locale: language)) {
-                EmptyView()
-            } actions: {
-                SettingsSheetButtons(cancel: L10n.text("Cancel", locale: language), action: L10n.text("Show anyway", locale: language),
-                                     actionID: "phrase-show-anyway", onCancel: { gate?.clear() }) {
-                    Task { await gate?.showAnyway(reason: reason, active: { scenePhase == .active }) }
+            .settingsChrome("Recovery phrase")
+            .settingsFooter {
+                if shown {
+                    Button(action: copy) { Label(L10n.text("Copy", locale: language), systemImage: "doc.on.doc") }
+                        .buttonStyle(OnboardingSecondaryButtonStyle(height: NoahTokens.Size.button))
+                        .accessibilityIdentifier("phrase-copy")
+                    if model.needsRecoveryPhraseBackup {
+                        Button(L10n.text("I wrote it down", locale: language), action: confirm)
+                            .buttonStyle(SettingsActionStyle())
+                            .accessibilityIdentifier("backup-confirm")
+                    }
                 }
             }
-        }
-        .task {
-            if gate == nil { gate = PhraseGate(dependencies: fixture?.phrase ?? .live(lock: lock, model: model)) }
-            try? await Task.sleep(for: .milliseconds(420))
-            await authenticate()
-        }
-        .onChange(of: scenePhase) { _, phase in if phase == .background { hide() } }
-        .onChange(of: shown) { _, shown in if shown { haptics.play(.success) } }
-        // Face ID answers while its prompt still covers the page; the words soften in once they can be seen.
-        .onChange(of: shown && scenePhase == .active) { _, visible in
-            withAnimation(reduceMotion ? NoahTokens.Motion.reduceMotionFade : nil) { revealed = visible }
-        }
-        .onDisappear(perform: hide)
-        .accessibilityIdentifier("recovery-phrase")
+            .onboardingHaptics(haptics)
+            .settingsSheet(item: Binding(get: { gate?.state == .noScreenLock ? NoScreenLock() : nil },
+                                         set: { if $0 == nil, gate?.state == .noScreenLock { gate?.clear() } })) { _ in
+                SettingsSheetBody(title: L10n.text("No screen lock", locale: language),
+                                  line: L10n.text(
+                                      "Anyone with this phone could see your phrase. Set a screen lock in Settings to protect it.",
+                                      locale: language)) {
+                    EmptyView()
+                } actions: {
+                    SettingsSheetButtons(cancel: L10n.text("Cancel", locale: language), action: L10n.text("Show anyway", locale: language),
+                                         actionID: "phrase-show-anyway", onCancel: { gate?.clear() }) {
+                        Task { await gate?.showAnyway(reason: reason, active: { scenePhase == .active }) }
+                    }
+                }
+            }
+            .task {
+                if gate == nil { gate = PhraseGate(dependencies: fixture?.phrase ?? .live(lock: lock, model: model)) }
+                try? await Task.sleep(for: .milliseconds(420))
+                await authenticate()
+            }
+            .onChange(of: scenePhase) { _, phase in if phase == .background { hide() } }
+            .onChange(of: shown) { _, shown in if shown { haptics.play(.success) } }
+            // Face ID answers while its prompt still covers the page; the words soften in once they can be seen.
+            .onChange(of: shown && scenePhase == .active) { _, visible in
+                withAnimation(reduceMotion ? NoahTokens.Motion.reduceMotionFade : nil) { revealed = visible }
+            }
+            .onDisappear(perform: hide)
+            .accessibilityIdentifier("recovery-phrase")
     }
 
     private var reason: String { L10n.text("View your seed phrase", locale: language) }
@@ -230,6 +232,6 @@ private struct PhraseWord: View {
             .blur(radius: revealed || reduceMotion ? 0 : 8)
             .offset(y: revealed || reduceMotion ? 0 : 4)
             .animation(reduceMotion ? NoahTokens.Motion.reduceMotionFade
-                       : NoahTokens.Motion.soft.delay(Double(index) * 0.035), value: revealed)
+                : NoahTokens.Motion.soft.delay(Double(index) * 0.035), value: revealed)
     }
 }

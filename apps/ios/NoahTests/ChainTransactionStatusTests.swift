@@ -1,11 +1,10 @@
 import BarkBoltFFI
 import Foundation
+@testable import Noah
 import Testing
 
-@testable import Noah
-
 @MainActor struct ChainTransactionStatusTests {
-    @Test func offboardTracksMempoolConfirmationAndReorgWithoutChangingIdentity() throws {
+    @Test func offboardTracksMempoolConfirmationAndReorgWithoutChangingIdentity() {
         let original = SendReceipt(amount: 850, txid: "exact", status: .submitted, fee: 150, proof: .submitReturnedTxid)
         var receipt = original
         for status in [ChainTransactionStatus.notFound, .inMempool, .confirmed(123), .notFound] {
@@ -40,12 +39,12 @@ import Testing
             }
         }
     }
-    @Test func failedTransportPreservesLastKnownOffboardReceiptAndLock() async throws {
+    @Test func failedTransportPreservesLastKnownOffboardReceiptAndLock() async {
         let fixtures = SendSafetyTests()
         let storage = SendPaymentTests.Storage()
         var saved = fixtures.attempt("onchain", source: .offchain)
         saved.receipt = .init(amount: saved.payment.amount, txid: "exact", status: .confirmed,
-                             proof: .submitReturnedTxid, chainStatus: .confirmed(123))
+                              proof: .submitReturnedTxid, chainStatus: .confirmed(123))
         storage.attempt = saved
         let controller = fixtures.controller(storage) { _ in throw URLError(.notConnectedToInternet) }
         await controller.checkStatus()
@@ -62,7 +61,7 @@ import Testing
         var saved = fixtures.attempt("onchain", source: .onchain)
         saved.quote = quote
         saved.receipt = .init(amount: 1000, txid: "exact", status: .confirmed, fee: 100,
-                             proof: .preparedTxid, chainStatus: .confirmed(100))
+                              proof: .preparedTxid, chainStatus: .confirmed(100))
         let storage = SendPaymentTests.Storage()
         storage.attempt = saved
         if errorFirst {
@@ -118,11 +117,11 @@ import Testing
             }
         }
         let reads = WalletSession.OnchainAttemptReads(walletID: "wallet", transactionIDs: { ["lookalike"] },
-            vtxoState: { _ in Issue.record("No amount or VTXO matching for boards"); return "Spendable" },
-            exitState: { _ in nil }, transactionStatus: { txid in
-                #expect(txid == "exact")
-                return known ? .inMempool : .notFound
-            })
+                                                      vtxoState: { _ in Issue.record("No amount or VTXO matching for boards"); return "Spendable" },
+                                                      exitState: { _ in nil }, transactionStatus: { txid in
+                                                          #expect(txid == "exact")
+                                                          return known ? .inMempool : .notFound
+                                                      })
         let resolved = try await WalletSession.checkOnchainAttempt(quote.id, journal: journal, reads: reads)
         #expect(resolved == known)
         let saved = try #require(try await OnchainOperationJournal(file: file).load())
@@ -146,12 +145,12 @@ import Testing
         }
         let restarted = OnchainOperationJournal(file: file)
         let reads = WalletSession.OnchainAttemptReads(walletID: "wallet",
-            transactionIDs: { known ? ["exact"] : ["lookalike"] },
-            vtxoState: { _ in Issue.record("Never match boards by amount or VTXO"); return "Spendable" },
-            exitState: { _ in nil }, transactionStatus: { txid in
-                #expect(txid == "exact")
-                throw URLError(.notConnectedToInternet)
-            })
+                                                      transactionIDs: { known ? ["exact"] : ["lookalike"] },
+                                                      vtxoState: { _ in Issue.record("Never match boards by amount or VTXO"); return "Spendable" },
+                                                      exitState: { _ in nil }, transactionStatus: { txid in
+                                                          #expect(txid == "exact")
+                                                          throw URLError(.notConnectedToInternet)
+                                                      })
         #expect(try await WalletSession.checkOnchainAttempt(quote.id, journal: restarted, reads: reads) == known)
         let saved = try #require(try await OnchainOperationJournal(file: file).load())
         #expect((saved.receipt != nil) == known)
@@ -172,7 +171,7 @@ import Testing
         #expect(model.attempts.first?.receipt?.txid == (known ? "exact" : nil))
         #expect(model.attempts.first?.chainStatusError == ChainTransactionStatus.errorText)
         #expect(model.message == (known ? "Status resolved. Review the receipt."
-            : "Status remains uncertain. Noah checks again automatically as your wallet syncs."))
+                : "Status remains uncertain. Noah checks again automatically as your wallet syncs."))
         #expect(await calls.mutations == 0)
         var recovered = reads
         recovered.transactionStatus = { _ in .notFound }
@@ -192,7 +191,7 @@ import Testing
                 OnchainReceipt(message: "Submitted", txid: "exact", onchainFee: 1543)
             }
             let reads = WalletSession.OnchainAttemptReads(walletID: "wallet", transactionIDs: { [] },
-                vtxoState: { _ in "" }, exitState: { _ in nil }, transactionStatus: { _ in .confirmed(123) })
+                                                          vtxoState: { _ in "" }, exitState: { _ in nil }, transactionStatus: { _ in .confirmed(123) })
             #expect(try await WalletSession.checkOnchainAttempt(quote.id, journal: journal, reads: reads))
             var failed = reads
             failed.transactionStatus = { _ in throw URLError(.notConnectedToInternet) }
@@ -210,7 +209,7 @@ import Testing
         for state in [ExitState.canceled(tipHeight: 100),
                       .claimed(tipHeight: 102, txid: "claim", block: .init(height: 101, hash: "block"))] {
             let entry = ExitTransactionStatus(vtxoId: "terminal", amountSats: 29_900, state: state,
-                history: [.start(tipHeight: 90)], transactionCount: 0, transactions: [])
+                                              history: [.start(tipHeight: 90)], transactionCount: 0, transactions: [])
             let model = WalletSession.exitModel(entry)
             #expect(model.id == "terminal" && model.amount == 29_900)
             #expect(model.history == ["Start"] && model.timeline.count == 2)

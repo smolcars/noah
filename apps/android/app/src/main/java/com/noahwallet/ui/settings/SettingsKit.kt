@@ -22,8 +22,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.CornerRadius
@@ -36,6 +34,8 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.*
@@ -120,9 +120,9 @@ private val navHeight = 56.dp
  */
 @Composable
 internal fun SettingsFrame(title: String, back: (() -> Unit)?, modifier: Modifier = Modifier, line: String? = null, hero: Boolean = false,
-                           chip: (@Composable () -> Unit)? = null, actions: @Composable RowScope.() -> Unit = {},
-                           foot: (@Composable RowScope.() -> Unit)? = null, scroll: ScrollState? = rememberScrollState(),
-                           bare: Boolean = false, footFade: Float = .46f, content: @Composable ColumnScope.() -> Unit) {
+    chip: (@Composable () -> Unit)? = null, actions: @Composable RowScope.() -> Unit = {},
+    foot: (@Composable RowScope.() -> Unit)? = null, scroll: ScrollState? = rememberScrollState(),
+    bare: Boolean = false, footFade: Float = .46f, content: @Composable ColumnScope.() -> Unit) {
     val palette = LocalPalette.current
     val haptics = rememberHaptics()
     val reduceMotion = LocalReduceMotion.current
@@ -188,7 +188,7 @@ internal fun SettingsFrame(title: String, back: (() -> Unit)?, modifier: Modifie
 /** A bottom action (56 dp, prototype `.foot .pill`). */
 @Composable
 internal fun RowScope.FootPill(title: String, modifier: Modifier = Modifier, enabled: Boolean = true, outlined: Boolean = false,
-                               danger: Boolean = false, loading: Boolean = false, icon: Int? = null, weight: Float = 1f, wrap: Boolean = false, onClick: () -> Unit) {
+    danger: Boolean = false, loading: Boolean = false, icon: Int? = null, weight: Float = 1f, wrap: Boolean = false, onClick: () -> Unit) {
     val haptics = rememberHaptics()
     SendPill(title, modifier.weight(weight), enabled = enabled, outlined = outlined, height = 56.dp, danger = danger, loading = loading, icon = icon, wrap = wrap) {
         haptics.light(); onClick()
@@ -223,8 +223,8 @@ internal enum class RowDot { attention, failure }
  */
 @Composable
 internal fun SettingsRow(title: String, icon: Int? = null, glyph: String? = null, value: String? = null, sub: String? = null, dot: RowDot? = null,
-                         failed: Boolean = false, numeric: Boolean = false, end: RowEnd = RowEnd.Chevron, danger: Boolean = false, bold: Boolean = false,
-                         enabled: Boolean = true, selected: Boolean = false, divider: Boolean = true, modifier: Modifier = Modifier, onClick: (() -> Unit)? = null) {
+    failed: Boolean = false, numeric: Boolean = false, end: RowEnd = RowEnd.Chevron, danger: Boolean = false, bold: Boolean = false,
+    enabled: Boolean = true, selected: Boolean = false, divider: Boolean = true, modifier: Modifier = Modifier, onClick: (() -> Unit)? = null) {
     val palette = LocalPalette.current
     val haptics = rememberHaptics()
     val interaction = remember { MutableInteractionSource() }
@@ -290,7 +290,7 @@ internal fun SettingsSwitch(checked: Boolean, enabled: Boolean, modifier: Modifi
 /** A row of a radio list (prototype `.opt`): Material 3's radio, the name and a small detail. */
 @Composable
 internal fun RadioRow(title: String, detail: String? = null, selected: Boolean, divider: Boolean = true, danger: Boolean = false,
-                      modifier: Modifier = Modifier, enabled: Boolean = true, onClick: () -> Unit) {
+    modifier: Modifier = Modifier, enabled: Boolean = true, onClick: () -> Unit) {
     val palette = LocalPalette.current
     Row(modifier.fillMaxWidth().heightIn(min = 54.dp)
         .drawBehind { if (divider) drawRect(palette.hairline, Offset(0f, size.height - 1.dp.toPx()), Size(size.width, 1.dp.toPx())) }
@@ -309,7 +309,7 @@ internal fun RadioRow(title: String, detail: String? = null, selected: Boolean, 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun SettingsSheet(onDismiss: () -> Unit, title: String, line: String? = null, locked: Boolean = false, modifier: Modifier = Modifier,
-                           content: @Composable ColumnScope.(close: () -> Unit) -> Unit) {
+    content: @Composable ColumnScope.(close: () -> Unit) -> Unit) {
     val palette = LocalPalette.current
     val currentLocked by rememberUpdatedState(locked)
     val state = rememberModalBottomSheetState(skipPartiallyExpanded = true, confirmValueChange = { !currentLocked || it != SheetValue.Hidden })
@@ -328,7 +328,7 @@ internal fun SettingsSheet(onDismiss: () -> Unit, title: String, line: String? =
 /** A sheet's two actions (prototype `.shact`): Cancel and the action, sharing the width. */
 @Composable
 internal fun SheetActions(cancel: String, confirm: String, onCancel: () -> Unit, onConfirm: () -> Unit, enabled: Boolean = true, danger: Boolean = false,
-                          loading: Boolean = false, cancelEnabled: Boolean = !loading, confirmTag: String? = null, wrap: Boolean = false) {
+    loading: Boolean = false, cancelEnabled: Boolean = !loading, confirmTag: String? = null, wrap: Boolean = false) {
     val haptics = rememberHaptics()
     Row(Modifier.fillMaxWidth().padding(top = 22.dp), horizontalArrangement = Arrangement.spacedBy(10.dp), verticalAlignment = Alignment.CenterVertically) {
         SendPill(cancel, Modifier.weight(1f), enabled = cancelEnabled, outlined = true, wrap = wrap) { haptics.light(); onCancel() }
@@ -414,9 +414,9 @@ internal fun FieldLabel(text: String, modifier: Modifier = Modifier) {
  */
 @Composable
 internal fun SettingsField(value: String, onValue: (String) -> Unit, placeholder: String, modifier: Modifier = Modifier, label: String? = null,
-                           failed: Boolean = false, enabled: Boolean = true, lines: Int = 1, tag: String? = null,
-                           keyboard: KeyboardOptions = KeyboardOptions.Default, leading: Int? = null, contentDescription: String = label ?: placeholder,
-                           mono: Boolean = false) {
+    failed: Boolean = false, enabled: Boolean = true, lines: Int = 1, tag: String? = null,
+    keyboard: KeyboardOptions = KeyboardOptions.Default, leading: Int? = null, contentDescription: String = label ?: placeholder,
+    mono: Boolean = false) {
     val palette = LocalPalette.current
     val interaction = remember { MutableInteractionSource() }
     val focused by interaction.collectIsFocusedAsState()
@@ -456,7 +456,7 @@ internal fun PickerRow(text: String, modifier: Modifier = Modifier, icon: Int? =
  */
 @Composable
 internal fun SettingsAvatar(size: Dp, modifier: Modifier = Modifier, you: Boolean = false, initial: String? = null, icon: Int? = null,
-                            badge: Boolean = false, due: Boolean = false, pending: Boolean = false) {
+    badge: Boolean = false, due: Boolean = false, pending: Boolean = false) {
     val palette = LocalPalette.current
     val reduceMotion = LocalReduceMotion.current
     val turn = if (pending && !reduceMotion) rememberInfiniteTransition(label = "pending").animateFloat(0f, 360f,
@@ -532,7 +532,6 @@ internal fun BigTotal(amount: String, line: String?, modifier: Modifier = Modifi
         line?.let { Text(it, Modifier.padding(top = 3.dp), style = HomeType.line, color = palette.muted) }
     }
 }
-
 
 /** Onboarding's segmented control (prototype `.seg`): a soft track and a sliding pill on the snappy spring. */
 @Composable

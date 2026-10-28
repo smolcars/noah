@@ -1,13 +1,13 @@
 import Foundation
-import Testing
 @testable import Noah
+import Testing
 
 @MainActor struct SendRepeatParityTests {
     private func model() -> SendModel {
         SendModel(controller: SendPaymentTests().make(SendPaymentTests.Backend(), SendPaymentTests.Storage()),
-            resolveRecipient: { destination in
-                .init(destination: destination, minMsat: 1000, maxMsat: 10_000_000, commentAllowed: 100, arkAddress: "fresh-ark")
-            }, quotePayment: { payment in .init(amount: payment.amount, fee: 0, total: payment.amount) })
+                  resolveRecipient: { destination in
+                      .init(destination: destination, minMsat: 1000, maxMsat: 10_000_000, commentAllowed: 100, arkAddress: "fresh-ark")
+                  }, quotePayment: { payment in .init(amount: payment.amount, fee: 0, total: payment.amount) })
     }
     @Test func repeatConsumesOnceAndRevalidatesWithNormalRailChoice() async {
         for comment in ["", "note"] {
@@ -16,7 +16,7 @@ import Testing
             send.destination = "old@example.com"
             send.route = .init(destination: send.destination, minMsat: 0, maxMsat: .max, commentAllowed: 100, arkAddress: "stale")
             var pending: RepeatPayment? = .init(destination: "alice@example.com", comment: comment,
-                amountMode: "SATS", amountInput: "1000", amountSat: 1000)
+                                                amountMode: "SATS", amountInput: "1000", amountSat: 1000)
             send.consumeRepeatPayment(&pending, currency: "USD")
             #expect(pending == nil && send.stage == .recipient)
             #expect(send.route == nil && send.quote == nil && !send.showReview)
@@ -34,7 +34,7 @@ import Testing
         for currency in ["USD", "EUR"] {
             let send = model()
             var pending: RepeatPayment? = .init(destination: "alice@example.com", comment: "note",
-                amountMode: "FIAT", amountInput: "2.50", amountSat: 2500, fiatCurrency: "USD")
+                                                amountMode: "FIAT", amountInput: "2.50", amountSat: 2500, fiatCurrency: "USD")
             send.busy = true
             send.consumeRepeatPayment(&pending, currency: currency)
             #expect(pending != nil && send.destination.isEmpty)

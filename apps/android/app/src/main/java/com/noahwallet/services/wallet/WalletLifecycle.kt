@@ -3,13 +3,13 @@ package com.noahwallet.services.wallet
 import com.noahwallet.services.backup.RestoreTransaction
 import com.noahwallet.services.storage.WalletDataLocation
 import com.noahwallet.services.storage.syncDirectory
-import kotlinx.coroutines.withTimeout
-import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.NonCancellable
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.TimeoutCancellationException
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.withTimeout
 
 /** Files precede secrets: an interrupted deletion must remain recoverable from backup. */
 class WalletLifecycle(

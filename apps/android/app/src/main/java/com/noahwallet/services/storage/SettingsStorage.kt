@@ -5,8 +5,8 @@ import android.os.Build
 import android.system.Os
 import com.tencent.mmkv.MMKV
 import com.tencent.mmkv.MMKVLogLevel
-import java.io.File
 import kotlinx.serialization.json.*
+import java.io.File
 
 /** MMKV is only opened on a verified disposable snapshot; native writes use one atomic file. */
 class SettingsStorage(context: Context, private val sync: (File) -> Unit = ::syncDirectory,
@@ -93,8 +93,7 @@ class SettingsStorage(context: Context, private val sync: (File) -> Unit = ::syn
     }
     /** User-selected safe fallback stays effective in foreground when disk writes fail. */
     fun useDefaultEsplora(variant: String) = synchronized(openLock) {
-        val record = com.noahwallet.services.wallet.EsploraSettings.Record(
-            com.noahwallet.services.wallet.EsploraSettings.Selection(variant = variant))
+        val record = com.noahwallet.services.wallet.EsploraSettings.Record(com.noahwallet.services.wallet.EsploraSettings.Selection(variant = variant))
         val state = load(verify = true).let {
             val retained = com.noahwallet.services.wallet.EsploraSettings.retainingLogPrivacy(it.values)
             val previous = retained[com.noahwallet.services.wallet.EsploraSettings.key]?.let { raw -> Json.decodeFromString<com.noahwallet.services.wallet.EsploraSettings.Record>(raw) }

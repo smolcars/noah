@@ -1,9 +1,8 @@
 import Foundation
+@testable import Noah
 import SwiftUI
 import Testing
 import UIKit
-
-@testable import Noah
 
 /// The v2 picture's rules (docs/native-rewrite/design/exit-v2-notes.md): the tree's geometry and its
 /// label layout, the other people's stubs, what breathes and when, the Exits list's option B and the
@@ -121,7 +120,8 @@ struct ExitStageTests {
                     }
                     if !Self.coversEveryBlock(labels, real) { problems.append("\(device) \(locale) \(note()): a range undercounts") }
                     for (index, a) in shapes.enumerated() {
-                        if !CGRect(origin: .zero, size: size).contains(a.frame) { problems.append("\(device) \(locale) \(note()): \(a.kind) \(a.group) leaves the canvas") }
+                        if !CGRect(origin: .zero, size: size)
+                            .contains(a.frame) { problems.append("\(device) \(locale) \(note()): \(a.kind) \(a.group) leaves the canvas") }
                         for b in shapes[(index + 1)...] where a.group != b.group && a.overlaps(b) {
                             problems.append("\(device) \(locale) \(note()): \(a.kind) \(a.group) overlaps \(b.kind) \(b.group)")
                         }
@@ -163,7 +163,10 @@ struct ExitStageTests {
                             for pair in all ? pairs : pairs.filter({ $0 == nil || $0! == (1, count - 1) || $0! == (count / 2, count / 2) }) {
                                 var scene = base
                                 if let (low, high) = pair {
-                                    scene.others = [.init(level: low, amount: "100 000 000 sats", sent: true), .init(level: high, amount: "₿24,500", sent: false)]
+                                    scene.others = [
+                                        .init(level: low, amount: "100 000 000 sats", sent: true),
+                                        .init(level: high, amount: "₿24,500", sent: false),
+                                    ]
                                     scene.shared = (0..<count).map { $0 < high }
                                 }
                                 check(scene, "\(count) transactions, \(mined) mined, \(name), others at \(pair.map { "\($0.0)/\($0.1)" } ?? "none")")
@@ -175,7 +178,9 @@ struct ExitStageTests {
         }
         #expect(checked > 2_000)
         let kinds = Dictionary(grouping: problems) { $0.components(separatedBy: ": ").last ?? $0 }
-        #expect(problems.isEmpty, "\(problems.count) problems:\n\(kinds.map { "\($0.value.count)× \($0.key), e.g. \($0.value[0])" }.sorted().prefix(40).joined(separator: "\n"))")
+        #expect(
+            problems.isEmpty,
+            "\(problems.count) problems:\n\(kinds.map { "\($0.value.count)× \($0.key), e.g. \($0.value[0])" }.sorted().prefix(40).joined(separator: "\n"))")
     }
 
     /// A path too long for the picture is folded so every level keeps its full spacing: the oldest blocks stack into one
@@ -183,7 +188,7 @@ struct ExitStageTests {
     /// Labels count the real transactions. (It drew 20 transactions on an SE at AX1 as 7 pt nodes 5.96 pt apart.)
     @Test func aLongPathFoldsRatherThanSqueezing() {
         let size = CGSize(width: 375, height: 236), english = Locale(identifier: "en")
-        var scene = Self.mempool(heights: (921_346...921_350).map { $0 }, pending: 5, count: 20)
+        var scene = Self.mempool(heights: (921_346...921_350).map(\.self), pending: 5, count: 20)
         scene.others = [.init(level: 2, amount: "₿21,000", sent: true)]
         scene.shared = (0..<20).map { $0 < 2 }
         let (g, drawn) = ExitStageGeometry.fitting(scene, size: size, scale: 1.65)
@@ -203,16 +208,18 @@ struct ExitStageTests {
         // Your other exit branching at the second transaction branches from where it's drawn.
         if let level = drawn.others.first?.level {
             let first = drawn.real(level - 1), count = drawn.fold(at: level - 1)?.count ?? 1
-            #expect(first <= 1 && 1 < first + count)
+            #expect(first <= 1 && first + count > 1)
         }
         let ys = g.levels(ExitStageStill(drawn).mined)
         for level in 1..<ys.count { #expect(ys[level - 1] - ys[level] >= g.minimumGap(level, side: g.side, reserve: g.coinReserve()) - 0.001) }
-        #expect(Self.texts(ExitStagePainter(geometry: g, colors: .theme(.light), reduceMotion: false, locale: english).labels(drawn, ys: ys)).contains("Next block"))
+        #expect(Self.texts(ExitStagePainter(geometry: g, colors: .theme(.light), reduceMotion: false, locale: english).labels(drawn, ys: ys))
+            .contains("Next block"))
         // The labels count the real transactions: on the iPhone 17's picture, folded too, all 14 still to send.
         let (p, phone) = ExitStageGeometry.fitting(scene, size: CGSize(width: 393, height: 300), scale: 1)
         let phoneTexts = Self.texts(ExitStagePainter(geometry: p, colors: .theme(.light), reduceMotion: false, locale: english)
-                                    .labels(phone, ys: p.levels(ExitStageStill(phone).mined)))
-        #expect(!phone.folds.isEmpty && phoneTexts.contains("14 more to send") && phoneTexts.contains { $0.hasPrefix("Blocks 921,346–") || $0.hasPrefix("Block ") })
+            .labels(phone, ys: p.levels(ExitStageStill(phone).mined)))
+        #expect(!phone.folds.isEmpty && phoneTexts.contains("14 more to send") && phoneTexts
+            .contains { $0.hasPrefix("Blocks 921,346–") || $0.hasPrefix("Block ") })
         // A hundred, all in blocks and locked: the oldest stacked with their range, the coin's dial clear.
         var locked = ExitStageScene(picture: .lock, levels: (0..<100).map { .mined(921_000 + UInt32($0)) })
         (locked.tip, locked.leaf, locked.unlock) = (921_150, 921_099, 921_243)
@@ -243,7 +250,7 @@ struct ExitStageTests {
     /// read "Blocks 921,346–921,350" (it read 921,346–921,347, the stack alone).
     @Test func theFoldedRangeCountsEveryBlock() {
         for scale in [1.0, 1.65] {
-            let scene = Self.mempool(heights: (921_346...921_350).map { $0 }, pending: 5, count: 20)
+            let scene = Self.mempool(heights: (921_346...921_350).map(\.self), pending: 5, count: 20)
             let (g, drawn) = ExitStageGeometry.fitting(scene, size: CGSize(width: 375, height: 236), scale: scale)
             let labels = Self.painter(g).labels(drawn, ys: g.levels(ExitStageStill(drawn).mined))
             #expect(Self.coversEveryBlock(labels, scene), "\(scale)")
@@ -262,8 +269,8 @@ struct ExitStageTests {
     /// SE at AX1 grows the stack, so every transaction shifts a place.
     @Test func aFoldedPathMovesEachTransaction() {
         let size = CGSize(width: 375, height: 236)
-        var five = Self.mempool(heights: (921_346...921_350).map { $0 }, pending: 5, count: 20)
-        var six = Self.mempool(heights: (921_346...921_351).map { $0 }, pending: 6, count: 20)
+        var five = Self.mempool(heights: (921_346...921_350).map(\.self), pending: 5, count: 20)
+        var six = Self.mempool(heights: (921_346...921_351).map(\.self), pending: 6, count: 20)
         five.others = [.init(level: 8, amount: "₿21,000", sent: false)]
         six.others = five.others
         let (g, b) = ExitStageGeometry.fitting(six, size: size, scale: 1.65)
@@ -293,7 +300,7 @@ struct ExitStageTests {
     /// an SE at AX1: their coins no longer share a spot 9.98 pt apart.
     @Test func optionalElementsGiveWayInOrder() {
         let g = ExitStageGeometry(size: CGSize(width: 375, height: 236), scale: 1.65, count: 9), painter = Self.painter(g)
-        var scene = Self.mempool(heights: (921_346...921_350).map { $0 }, pending: 5, count: 9)
+        var scene = Self.mempool(heights: (921_346...921_350).map(\.self), pending: 5, count: 9)
         scene.others = [.init(level: 1, amount: "₿21,000", sent: true), .init(level: 2, amount: "₿24,500", sent: true)]
         let ys = g.levels(ExitStageStill(scene).mined)
         let arrangement = painter.arrange(scene, ys: ys, lock: 0, labels: painter.labels(scene, ys: ys))
@@ -327,7 +334,7 @@ struct ExitStageTests {
 
     @Test func labelsGoByPriorityAndOlderBlocksFoldIntoARange() {
         let g = Self.se, painter = Self.painter(g)
-        let scene = Self.mempool(heights: (921_346...921_350).map { $0 }, pending: 5, count: 9)
+        let scene = Self.mempool(heights: (921_346...921_350).map(\.self), pending: 5, count: 9)
         let labels = painter.labels(scene, ys: g.levels([1, 1, 1, 1, 1, 0, 0, 0, 0]))
         let texts = Self.texts(labels)
         // The waiting transaction and your coin always get theirs; the pile of blocks becomes one range.
@@ -424,7 +431,8 @@ struct ExitStageTests {
                 let room = label.trailing.map(g.claimColumn) ?? g.column(top: label.top, bottom: label.bottom)
                 for (index, line) in label.lines.enumerated() {
                     let head = index < label.head
-                    let width = ExitStageText.width(line.text, size: head ? g.fontSize : g.subSize, strong: [.strong, .failureStrong].contains(line.tone)) * label.size
+                    let width = ExitStageText
+                        .width(line.text, size: head ? g.fontSize : g.subSize, strong: [.strong, .failureStrong].contains(line.tone)) * label.size
                     #expect(width + (head && label.pill != nil ? 8 : 0) <= room + 0.5, "\(line.text)")
                 }
             }
@@ -548,8 +556,10 @@ struct ExitStageTests {
         #expect(ExitStageFrame(seed, big, elapsed: 1.1, reduceMotion: false).grow[1...].allSatisfy { $0 == 1 })
         #expect(ExitStageFrame(seed, big, elapsed: 1.6, reduceMotion: false).labels == 1)
         #expect(ExitStageFrame.duration(seed, big, reduceMotion: false) <= 2.5)
-        #expect(Self.texts(Self.painter(Self.iphone).labels(big, ys: ExitStageGeometry(size: CGSize(width: 393, height: 300), count: 8).levels(Array(repeating: 0, count: 8))))
-                    .contains("100 transactions"))
+        #expect(Self.texts(Self.painter(Self.iphone).labels(
+            big,
+            ys: ExitStageGeometry(size: CGSize(width: 393, height: 300), count: 8).levels(Array(repeating: 0, count: 8))))
+            .contains("100 transactions"))
         // A deep path on the progress page grows as fast once bark lists it.
         let lift = ExitStageScene(picture: .lift, levels: Array(repeating: .unsent, count: 9))
         let publish = ExitStageScene(picture: .path, levels: Array(repeating: .unsent, count: 9))
@@ -591,7 +601,7 @@ struct ExitStageTests {
         #expect(subtitle(["Processing", "AwaitingDelta"]) == "2 in progress")
         #expect(subtitle(["Claimable"]) == "1 ready to claim")
         #expect(subtitle(["Processing", "Processing", "Start", "AwaitingDelta", "ClaimInProgress", "Processing", "Claimable", "Claimed"])
-                == "6 in progress · 1 ready to claim")
+            == "6 in progress · 1 ready to claim")
     }
 
     @Test func theExitsCardIsTitledByWhatItHoldsAndTintedWhileAnyIsPending() {
@@ -610,14 +620,17 @@ struct ExitStageTests {
         #expect(entry(["Claimable", "Claimed"]) == .both)
         #expect(entry(["Processing", "Canceled", "Claimed"]) == .both)
         #expect(ExitEntry.pending.title == "Pending exits" && ExitEntry.past.title == "Past exits"
-                && ExitEntry.both.title == "Pending and past exits")
+            && ExitEntry.both.title == "Pending and past exits")
         // Orange while any exit is still yours to finish; the soft surface once they've all ended.
         #expect(ExitEntry.pending.tinted && ExitEntry.both.tinted && !ExitEntry.past.tinted)
     }
 
     @Test func onlyExitsThatShareTransactionsGetAPathInTheirGutter() {
         let root = Self.tx("r1", "confirmed", height: 99)
-        let a = Self.exit("a", "Processing", [root, Self.tx("l2", "confirmed", height: 100), Self.tx("a1", "awaiting-confirmation"), Self.tx("a2", "verify-inputs")])
+        let a = Self.exit(
+            "a",
+            "Processing",
+            [root, Self.tx("l2", "confirmed", height: 100), Self.tx("a1", "awaiting-confirmation"), Self.tx("a2", "verify-inputs")])
         let b = Self.exit("b", "Processing", [root, Self.tx("l2", "confirmed", height: 100), Self.tx("b1", "verify-inputs")])
         let c = Self.exit("c", "Processing", [Self.tx("r2", "confirmed", height: 90), Self.tx("c1", "verify-inputs")])
         let ready = Self.exit("d", "Claimable", [], details: .init(kind: "claimable", claimable_since: .init(height: 100, hash: "h")))
@@ -674,7 +687,7 @@ struct ExitStageTests {
                             var shapes = [ExitStageShape.box(.round, "root", CGRect(x: layout.root.x - 4.5, y: layout.root.y - 4.5, width: 9, height: 9))]
                             for node in layout.nodes {
                                 shapes.append(node.status == .needsFunds ? .circle(.node, node.id, node.point, 6)
-                                              : .box(.node, node.id, CGRect(x: node.point.x - 4, y: node.point.y - 4, width: 8, height: 8)))
+                                    : .box(.node, node.id, CGRect(x: node.point.x - 4, y: node.point.y - 4, width: 8, height: 8)))
                             }
                             shapes += layout.coins.enumerated().map { .circle(.coin, "coin\($0.offset)", $0.element, 14) }
                             for (index, a) in shapes.enumerated() {
@@ -694,7 +707,7 @@ struct ExitStageTests {
                                 }
                             }
                             // Shared transactions are drawn once while one plan fits.
-                            if plan != nil, shared > 0, layout.nodes.filter({ $0.id.hasSuffix("/s0") }).count > 1 { problems.append("\(note): s0 drawn twice") }
+                            if plan != nil, shared > 0, layout.nodes.count(where: { $0.id.hasSuffix("/s0") }) > 1 { problems.append("\(note): s0 drawn twice") }
                         }
                     }
                 }
@@ -740,7 +753,8 @@ struct ExitStageTests {
         let last = ExitDetails(kind: "processing", transactions: [Self.tx("r", "confirmed", height: 99), Self.tx("l", "awaiting-confirmation")])
         let leaf = coin("Processing", last)
         #expect(leaf.waiting && leaf.pulses(at: .zero, id: "x").first?.kind == .coin(9))
-        #expect(coin("Claimable", .init(kind: "claimable", claimable_since: .init(height: 190, hash: "h"))).pulses(at: .zero, id: "x").first?.kind == .glow(9.2))
+        #expect(coin("Claimable", .init(kind: "claimable", claimable_since: .init(height: 190, hash: "h"))).pulses(at: .zero, id: "x").first?
+            .kind == .glow(9.2))
     }
 
     /// The scene comes from bark's state: each transaction's status, what your other exits share and where they branch off, and the claim's destination.
@@ -755,7 +769,14 @@ struct ExitStageTests {
         mine.details.transactions?[2].status.origin = "wallet"
         let sibling = Self.exit("b", "Processing", shared + [Self.tx("leafB", "verify-inputs")])
         let cousin = Self.exit("c", "Processing", [Self.tx("r1", "confirmed", height: 99), Self.tx("l2c", "verify-inputs"), Self.tx("leafC", "verify-inputs")])
-        var overview = OnchainOverview(walletID: "w", vtxos: [], exits: [mine, sibling, cousin], confirmed: 18_400, tip: 101, pendingTotal: 0, claimableHeight: nil)
+        var overview = OnchainOverview(
+            walletID: "w",
+            vtxos: [],
+            exits: [mine, sibling, cousin],
+            confirmed: 18_400,
+            tip: 101,
+            pendingTotal: 0,
+            claimableHeight: nil)
         overview.childFees = ["child": 1_215]
         let text = ExitText(progress: ExitProgress(mine, tip: 101), exit: mine, tip: 101, overview: overview, attempts: [], money: money, language: "en")
         let scene = text.scene
@@ -768,7 +789,8 @@ struct ExitStageTests {
         let claimed = Self.exit("a", "Claimed", [], details: .init(kind: "claimed", block: .init(height: 300, hash: "h"), txid: "claim"))
         overview.claimRecords = ["claim": .init(ids: ["a"], fee: 262, toPhone: false, destination: "bcrt1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqdku202")]
         overview.exits = [claimed]
-        let done = ExitText(progress: ExitProgress(claimed, tip: 301), exit: claimed, tip: 301, overview: overview, attempts: [], money: money, language: "en").scene
+        let done = ExitText(progress: ExitProgress(claimed, tip: 301), exit: claimed, tip: 301, overview: overview, attempts: [], money: money, language: "en")
+            .scene
         #expect(done.picture == .claimed && done.destination == .other("bcrt1q…u202") && done.claimHeight == 300 && done.claimFee == money(262))
         // VoiceOver reads where it went, address in full: the picture is the only place that says so.
         let label = ExitText(progress: ExitProgress(claimed, tip: 301), exit: claimed, tip: 301, overview: overview, attempts: [], money: money,
@@ -776,7 +798,8 @@ struct ExitStageTests {
         #expect(label.hasPrefix("Claimed in block 300") && label.hasSuffix("Another wallet, bcrt1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqdku202"))
         overview.claimRecords["claim"]?.toPhone = true
         overview.claimRecords["claim"]?.destination = nil
-        let phone = ExitText(progress: ExitProgress(claimed, tip: 301), exit: claimed, tip: 301, overview: overview, attempts: [], money: money, language: "en").scene
+        let phone = ExitText(progress: ExitProgress(claimed, tip: 301), exit: claimed, tip: 301, overview: overview, attempts: [], money: money, language: "en")
+            .scene
         #expect(phone.destination == .phone && phone.received != nil)
         let phoneLabel = ExitText(progress: ExitProgress(claimed, tip: 301), exit: claimed, tip: 301, overview: overview, attempts: [], money: money,
                                   language: "en").pictureLabel

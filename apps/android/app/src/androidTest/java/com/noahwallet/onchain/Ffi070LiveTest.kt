@@ -5,13 +5,13 @@ import androidx.test.platform.app.InstrumentationRegistry
 import com.noahwallet.BuildConfig
 import com.noahwallet.services.storage.*
 import com.noahwallet.services.wallet.*
-import java.io.File
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.*
 import org.junit.Assert.*
 import org.junit.Assume.assumeTrue
 import org.junit.Test
 import org.junit.runner.RunWith
+import java.io.File
 
 /** Opt-in stages for bark-bolt-ffi 0.7.0 on an owned disposable emulator, on the wallet `Ffi060UpgradeLiveTest` created
  *  with the 0.6.0 build and verified after the upgrade, against a Bark 0.8 stack selected with the regtest overrides.

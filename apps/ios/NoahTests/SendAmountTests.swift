@@ -1,6 +1,6 @@
 import Foundation
-import Testing
 @testable import Noah
+import Testing
 
 struct SendAmountTests {
     struct Input: Decodable { let amount: String }

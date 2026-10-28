@@ -6,13 +6,13 @@ import com.noahwallet.BuildConfig
 import com.noahwallet.services.storage.*
 import com.noahwallet.services.wallet.*
 import io.github.niteshbalusu11.bark.generateMnemonic
-import java.io.File
 import kotlinx.coroutines.*
 import kotlinx.serialization.json.*
 import org.junit.Assert.*
 import org.junit.Assume.assumeTrue
 import org.junit.Test
 import org.junit.runner.RunWith
+import java.io.File
 
 /** Opt-in stages require a wallet created here; never opens an unowned wallet for mutation. */
 @RunWith(AndroidJUnit4::class)

@@ -1,9 +1,9 @@
 package com.noahwallet.services.storage
 
+import kotlinx.serialization.json.*
 import java.io.File
 import java.io.FileOutputStream
 import java.security.MessageDigest
-import kotlinx.serialization.json.*
 
 /** One committed generation. Pending files are never read or used as a fallback. */
 internal class NativeSettingsFile(val file: File,

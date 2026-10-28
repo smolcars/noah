@@ -23,8 +23,8 @@ enum PushPayload {
             object = raw
         }
         guard let record = object as? [String: Any],
-            let type = record["notification_type"] as? String, knownTypes.contains(type),
-            let data = try? JSONSerialization.data(withJSONObject: record)
+              let type = record["notification_type"] as? String, knownTypes.contains(type),
+              let data = try? JSONSerialization.data(withJSONObject: record)
         else { return nil }
         return try? JSONDecoder().decode(NotificationData.self, from: data)
     }
@@ -42,14 +42,12 @@ enum PushPayload {
             if let body = nested["body"] { return body }
             if let dataString = nested["dataString"] as? String { return dataString }
             if let launch = nested["UIApplicationLaunchOptionsRemoteNotificationKey"] as? [String: Any],
-                let body = launch["body"]
-            {
+               let body = launch["body"] {
                 return body
             }
         }
         if let launch = record["UIApplicationLaunchOptionsRemoteNotificationKey"] as? [String: Any],
-            let body = launch["body"]
-        {
+           let body = launch["body"] {
             return body
         }
         return nil

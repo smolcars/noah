@@ -1,7 +1,7 @@
 import Foundation
+@testable import Noah
 import SQLite3
 import Testing
-@testable import Noah
 
 @MainActor struct RecurringStoreTests {
     private func settings() throws -> SettingsStorage {
@@ -10,7 +10,8 @@ import Testing
     }
     @Test func rnUpgradeAndUnknownFieldsRoundTrip() throws {
         let settings = try settings()
-        let fixture = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent().appending(path: "fixtures/recurring-storage.json")
+        let fixture = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
+            .appending(path: "fixtures/recurring-storage.json")
         var envelope = try JSONSerialization.jsonObject(with: Data(contentsOf: fixture)) as! [String: Any]
         var state = envelope["state"] as! [String: Any]
         var schedules = state["schedules"] as! [String: Any]
@@ -55,7 +56,12 @@ import Testing
         try FileManager.default.createDirectory(at: location.directory, withIntermediateDirectories: true)
         var db: OpaquePointer?
         try #require(sqlite3_open(location.database.path, &db) == SQLITE_OK)
-        try #require(sqlite3_exec(db, "CREATE TABLE bark_properties (id TEXT PRIMARY KEY, network TEXT, fingerprint TEXT); INSERT INTO bark_properties VALUES ('1', 'regtest', 'same-seed');", nil, nil, nil) == SQLITE_OK)
+        try #require(sqlite3_exec(
+            db,
+            "CREATE TABLE bark_properties (id TEXT PRIMARY KEY, network TEXT, fingerprint TEXT); INSERT INTO bark_properties VALUES ('1', 'regtest', 'same-seed');",
+            nil,
+            nil,
+            nil) == SQLITE_OK)
         sqlite3_close(db)
         let first = try RecurringStore.binding(location: location)
         let token = location.directory.appending(path: ".noah-recurring-instance")

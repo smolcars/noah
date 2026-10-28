@@ -1,6 +1,6 @@
 import Foundation
-import Testing
 @testable import Noah
+import Testing
 
 struct OnboardingPersistenceTests {
     @Test(arguments: ["marker", "seed", "database", "publicKey"])

@@ -142,7 +142,7 @@ internal val LocalPose = staticCompositionLocalOf<OnboardingPose> { OnboardingPo
 /** Black pill (white in dark). Orange never fills a button. */
 @Composable
 internal fun PillButton(title: String, modifier: Modifier = Modifier, enabled: Boolean = true, loading: Boolean = false,
-                        outlined: Boolean = false, icon: (@Composable () -> Unit)? = null, onClick: () -> Unit) {
+    outlined: Boolean = false, icon: (@Composable () -> Unit)? = null, onClick: () -> Unit) {
     val palette = LocalPalette.current
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
@@ -173,7 +173,7 @@ internal fun TextAction(title: String, modifier: Modifier = Modifier, muted: Boo
     TextButton(onClick, modifier.heightIn(min = NoahTokens.Size.hitTarget), enabled = enabled,
         colors = ButtonDefaults.textButtonColors(contentColor = if (muted) palette.muted else palette.foreground)) {
         Text(title, style = if (muted) NoahTokens.Typography.body.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Medium)
-            else NoahTokens.Typography.body.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Medium))
+        else NoahTokens.Typography.body.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Medium))
     }
 }
 
@@ -228,4 +228,3 @@ internal suspend fun Animatable<Float, *>.shake(offsets: List<Float>, millis: In
 
 @Composable
 internal fun rememberShake(): Animatable<Float, androidx.compose.animation.core.AnimationVector1D> = remember { Animatable(0f) }
-

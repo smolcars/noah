@@ -115,7 +115,8 @@ class RecoveryWordExportTest {
 
     // Mouse positions map to text offsets, so these need real text metrics.
     @GraphicsMode(GraphicsMode.Mode.NATIVE)
-    @Test fun mouseDragInsideASelectionStartsNoDrag() {
+    @Test
+    fun mouseDragInsideASelectionStartsNoDrag() {
         // Control: a plain EditText turns these same events into a drag of the selected word.
         attached(::EditText) { plain ->
             plain.setSelection(0, 7)
@@ -138,7 +139,8 @@ class RecoveryWordExportTest {
     }
 
     @GraphicsMode(GraphicsMode.Mode.NATIVE)
-    @Test fun mouseClicksAndSelectionDragsStillWork() {
+    @Test
+    fun mouseClicksAndSelectionDragsStillWork() {
         attached({ RecoveryWordEditText(it, 0) }) { field ->
             field.setSelection(0, 7)
             mouseGesture(field, 3)

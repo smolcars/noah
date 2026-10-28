@@ -34,7 +34,7 @@ internal object TelemetrySubmission {
     }
 
     private class ReplayHint(private val retryable: Retryable, enqueable: Enqueable,
-                             private val timeoutMillis: Long) :
+        private val timeoutMillis: Long) :
         Cached, Retryable by retryable, Enqueable by enqueable, SubmissionResult, Flushable, Resettable {
         private var latch = CountDownLatch(1)
         @Volatile private var succeeded = false

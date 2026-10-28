@@ -69,9 +69,8 @@ class WalletCreatorTest {
         for (step in listOf("marker", "seed", "database", "publicKey")) {
             val fake = Fake().apply { stopAt = step }
             runCatching { WalletCreator(fake.dependencies()).createOrResume() }
-            val launch = com.noahwallet.services.launch.LaunchState.resolve(
-                if (fake.seed is SecretResult.Found) com.noahwallet.services.launch.LaunchState.SeedStatus.present
-                else com.noahwallet.services.launch.LaunchState.SeedStatus.absent, fake.data)
+            val launch = com.noahwallet.services.launch.LaunchState.resolve(if (fake.seed is SecretResult.Found) com.noahwallet.services.launch.LaunchState.SeedStatus.present
+            else com.noahwallet.services.launch.LaunchState.SeedStatus.absent, fake.data)
             assertFalse("Home after $step", launch == com.noahwallet.services.launch.LaunchState.existingWallet && fake.initialized != false)
             assertEquals(false, fake.initialized)
             if (step == "database" || step == "publicKey") {

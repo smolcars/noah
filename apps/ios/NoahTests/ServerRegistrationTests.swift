@@ -1,9 +1,8 @@
 import Foundation
-import Testing
 import HTTPTypes
-import OpenAPIRuntime
-
 @testable import Noah
+import OpenAPIRuntime
+import Testing
 
 @MainActor
 struct ServerRegistrationTests {
@@ -11,13 +10,16 @@ struct ServerRegistrationTests {
         var paths: [String] = []
         let failMailbox: Bool
         init(failMailbox: Bool) { self.failMailbox = failMailbox }
-        func send(_ request: HTTPRequest, body: HTTPBody?, baseURL: URL, operationID: String) async throws -> (HTTPResponse, HTTPBody?) {
+        func send(_ request: HTTPRequest, body _: HTTPBody?, baseURL _: URL, operationID: String) async throws -> (HTTPResponse, HTTPBody?) {
             paths.append(request.path ?? "")
             if operationID == Operations.CheckAppVersion.id {
                 return (.init(status: .ok), HTTPBody(#"{"update_required":false,"minimum_required_version":"0.0.1"}"#))
             }
             if operationID == Operations.Register.id {
-                return (.init(status: .ok), HTTPBody(#"{"display_name":"New","email":null,"is_email_verified":false,"lightning_address":"new@localhost.com","nostr_pubkey":null,"status":"OK","user_status":"active"}"#))
+                return (
+                    .init(status: .ok),
+                    HTTPBody(
+                        #"{"display_name":"New","email":null,"is_email_verified":false,"lightning_address":"new@localhost.com","nostr_pubkey":null,"status":"OK","user_status":"active"}"#))
             }
             if failMailbox { throw URLError(.notConnectedToInternet) }
             return (.init(status: .ok), HTTPBody(#"{"success":true}"#))
@@ -32,8 +34,9 @@ struct ServerRegistrationTests {
         _ = try settings.updateServerState { $0.isRegisteredWithServer = true; $0.isMailboxAuthorizationEnabled = stop != "disabled" }
         let transport = ResetTransport(failMailbox: stop == "mailbox")
         let service = ServerRegistration(variant: .regtest, settings: settings,
-            client: Client(serverURL: URL(string: "http://localhost")!, transport: transport),
-            registrationAddress: { "ark-test" }, mailboxAuthorization: { .init(encoded: "encoded", expiry: $0, mailboxId: "mailbox") })
+                                         client: Client(serverURL: URL(string: "http://localhost")!, transport: transport),
+                                         registrationAddress: { "ark-test" },
+                                         mailboxAuthorization: { .init(encoded: "encoded", expiry: $0, mailboxId: "mailbox") })
         var steps: [String] = []
         do {
             try await service.reRegister(loadWallet: {
@@ -68,10 +71,11 @@ struct ServerRegistrationTests {
         let settings = try SettingsStorage(rootPath: root.path, instanceID: UUID().uuidString)
         settings.set(PersistedServerStateTests.rnJSON, forKey: PersistedServerState.key)
         try settings.setPersistedState(PersistedProfileState(displayName: "Old", preferredCurrency: "EUR", bitcoinAmountUnit: "sats"),
-            key: PersistedProfileState.key, version: 0)
+                                       key: PersistedProfileState.key, version: 0)
         let service = ServerRegistration(variant: .regtest, settings: settings)
         let response = try JSONDecoder().decode(Components.Schemas.RegisterResponse.self, from: Data(
-            #"{"display_name":"New","email":null,"is_email_verified":false,"lightning_address":"new@localhost.com","nostr_pubkey":null,"status":"OK","user_status":"active"}"#.utf8))
+            #"{"display_name":"New","email":null,"is_email_verified":false,"lightning_address":"new@localhost.com","nostr_pubkey":null,"status":"OK","user_status":"active"}"#
+                .utf8))
         try service.apply(response, device: .init())
         #expect(service.state.isRegisteredWithServer == true)
         #expect(service.state.isBackupEnabled == true)
@@ -92,7 +96,7 @@ struct ServerRegistrationTests {
         var paths: [String] = []
         var failLogin = false
         func failNextLogin() { failLogin = true }
-        func send(_ request: HTTPRequest, body: HTTPBody?, baseURL: URL, operationID: String) async throws -> (HTTPResponse, HTTPBody?) {
+        func send(_ request: HTTPRequest, body: HTTPBody?, baseURL _: URL, operationID: String) async throws -> (HTTPResponse, HTTPBody?) {
             paths.append(request.path ?? "")
             if let body { bodies.append(try await String(collecting: body, upTo: 65536)) }
             if operationID == Operations.CheckAppVersion.id {
@@ -111,7 +115,7 @@ struct ServerRegistrationTests {
         _ = try settings.updateServerState { $0.isRegisteredWithServer = true }
         let transport = Transport()
         let service = ServerRegistration(variant: .regtest, settings: settings,
-            client: Client(serverURL: ServerEndpoint.baseURL(for: .regtest), transport: transport))
+                                         client: Client(serverURL: ServerEndpoint.baseURL(for: .regtest), transport: transport))
         try await service.ensureRegistered()
         try await service.ensureRegistered()
         #expect(await transport.paths == ["/v0/app_version"])

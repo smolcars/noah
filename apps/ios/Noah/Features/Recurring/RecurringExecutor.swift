@@ -127,7 +127,12 @@ import Observation
             try d.store.bind(owner)
             state.binding = owner
         }
-        guard state.binding == owner else { throw RecurringError.message("These recurring payments belong to a previous wallet. They are preserved but cannot run. Cancel them and create new schedules for this wallet.") }
+        guard state.binding == owner
+        else {
+            throw RecurringError
+                .message(
+                    "These recurring payments belong to a previous wallet. They are preserved but cannot run. Cancel them and create new schedules for this wallet.")
+        }
         return state
     }
     private func recoverMarkers(_ state: RecurringStore.State) async throws {
@@ -251,10 +256,15 @@ import Observation
                     guard let latest = state.schedules[id], latest == schedule,
                           planning.plan(now: d.now(), zone: d.zone(), ignoreBackoff: manual) == plan,
                           quote.walletIdentity == state.binding?.wallet else { continue }
-                    if approval == nil, let reason = RecurringFeePolicy.evaluate(amount: payment.amount, method: payment.method, quoteFee: quote.fee, schedule: fees).approvalIssue(quoteFee: quote.fee) {
+                    if approval == nil, let reason = RecurringFeePolicy.evaluate(
+                        amount: payment.amount,
+                        method: payment.method,
+                        quoteFee: quote.fee,
+                        schedule: fees).approvalIssue(quoteFee: quote.fee) {
                         schedule.status = "needs_approval"
                         schedule.issue = reason
-                        schedule.lastError = RecurringFeePolicy.evaluate(amount: payment.amount, method: payment.method, quoteFee: quote.fee, schedule: fees).approvalMessage(quoteFee: quote.fee)
+                        schedule.lastError = RecurringFeePolicy.evaluate(amount: payment.amount, method: payment.method, quoteFee: quote.fee, schedule: fees)
+                            .approvalMessage(quoteFee: quote.fee)
                         schedule.retryNotBefore = nil
                         schedule.updatedAt = d.now()
                         let updated = try await storage { [self, schedule] in
@@ -267,7 +277,13 @@ import Observation
                     }
                     // Automation never adopts a pre-existing Lightning checkpoint: no user fee review.
                     guard quote.checkpoint == nil else { throw SendFailure.lightningInProgress }
-                    let entry = RecurringJournal.Entry(binding: state.binding!, scheduleID: id, plan: plan, markedAt: d.now(), policyRevision: schedule.nativeRevision, policy: schedule)
+                    let entry = RecurringJournal.Entry(
+                        binding: state.binding!,
+                        scheduleID: id,
+                        plan: plan,
+                        markedAt: d.now(),
+                        policyRevision: schedule.nativeRevision,
+                        policy: schedule)
                     schedule.inFlight = .init(occurrenceIndex: plan.occurrenceIndex!, startedAt: d.now())
                     schedule.updatedAt = d.now()
                     let admitted = try await storage { [self, schedule] in
@@ -301,7 +317,8 @@ import Observation
                               state.schedules[id] == marked,
                               marked.amountSat <= RecurringPayment.maximumAmount,
                               marked.status == (unattended ? "active" : "needs_approval"),
-                              !unattended || RecurringFeePolicy.evaluate(amount: payment.amount, method: payment.method, quoteFee: quote.fee, schedule: fees).autoPay else {
+                              !unattended || RecurringFeePolicy.evaluate(amount: payment.amount, method: payment.method, quoteFee: quote.fee, schedule: fees)
+                              .autoPay else {
                             throw SendNotSubmitted(reason: .recurringStopped)
                         }
                     }
@@ -354,17 +371,23 @@ import Observation
     private func settle(_ entry: RecurringJournal.Entry, retainReceipt: Bool = false, notifyOriginal: Bool = false) async throws {
         guard let evidence = try await storage({ [self] in
             try d.journal.load()[entry.scheduleID].flatMap { saved in
-                saved.binding == entry.binding && saved.plan == entry.plan && saved.markedAt == entry.markedAt && saved.policyRevision == entry.policyRevision ? saved.terminal : nil
+                saved.binding == entry.binding && saved.plan == entry.plan && saved.markedAt == entry.markedAt && saved.policyRevision == entry
+                    .policyRevision ? saved.terminal : nil
             }
         }) else { return }
         if evidence.outcome == .uncertain { try await markUncertain(entry, message: evidence.message); return }
         if try await storage({ [self] in try d.binding() == entry.binding }) {
-            d.controller.releaseRecurring(attemptID: evidence.attempt.recurringAttemptID, expectedGeneration: evidence.generation, expectedWalletGeneration: evidence.walletGeneration, retainReceipt: retainReceipt)
+            d.controller.releaseRecurring(
+                attemptID: evidence.attempt.recurringAttemptID,
+                expectedGeneration: evidence.generation,
+                expectedWalletGeneration: evidence.walletGeneration,
+                retainReceipt: retainReceipt)
         }
         let notification = try await storage { [self] in try applySettlement(entry, evidence: evidence, notifyOriginal: notifyOriginal) }
         if let notification { await d.notifications([], notification) }
     }
-    private func applySettlement(_ entry: RecurringJournal.Entry, evidence: RecurringJournal.TerminalEvidence, notifyOriginal: Bool = false) throws -> RecurringPayment? {
+    private func applySettlement(_ entry: RecurringJournal.Entry, evidence: RecurringJournal.TerminalEvidence,
+                                 notifyOriginal: Bool = false) throws -> RecurringPayment? {
         try d.journal.withLock {
             guard try d.binding() == entry.binding,
                   var saved = try d.journal.load()[entry.scheduleID], saved.terminal?.settlementID == evidence.settlementID else { return nil }
@@ -389,7 +412,14 @@ import Observation
                             latest.lastError = stopped.lastError; latest.issue = stopped.issue; latest.retryNotBefore = stopped.retryNotBefore
                         }
                     } else {
-                        latest.failure(entry.plan, message: evidence.paid ? "This invoice was already paid. This occurrence was not sent again. Check the recipient before resuming." : evidence.message ?? "No payment was submitted.", retryable: !evidence.paid, now: evidence.recordedAt, issue: .init(code: evidence.paid ? .alreadyPaid : .retryableFailure))
+                        latest.failure(
+                            entry.plan,
+                            message: evidence
+                                .paid ? "This invoice was already paid. This occurrence was not sent again. Check the recipient before resuming." : evidence
+                                .message ?? "No payment was submitted.",
+                            retryable: !evidence.paid,
+                            now: evidence.recordedAt,
+                            issue: .init(code: evidence.paid ? .alreadyPaid : .retryableFailure))
                     }
                     try d.store.upsert(latest, settlementKey: evidence.settlementID.uuidString)
                     notification = latest
@@ -437,7 +467,9 @@ import Observation
             if reapproval { try requireReapprovalSafe(schedule.id) }
             if editing {
                 try rejectLegacyUncertainty(schedule.id)
-                guard let old = state.schedules[schedule.id], (reapproval || old.inFlight == nil && old.status != "needs_attention") else { throw RecurringError.message("Check this payment's outcome before editing it.") }
+                guard let old = state.schedules[schedule.id],
+                      reapproval || old.inFlight == nil && old.status != "needs_attention"
+                else { throw RecurringError.message("Check this payment's outcome before editing it.") }
             } else if state.schedules.count >= 50 { throw RecurringError.message("You've reached the maximum number of recurring payments.") }
             if reapproval { schedule.resume(now: d.now(), zone: d.zone()) }
             if editing { schedule.nativeRevision = UUID() }
@@ -467,7 +499,8 @@ import Observation
             guard schedule.amountSat <= RecurringPayment.maximumAmount else { throw RecurringError.message(RecurringPayment.amountLimitMessage) }
             let reapproval = schedule.requiresPolicyApproval
             if reapproval { try requireReapprovalSafe(id) }
-            guard reapproval || schedule.inFlight == nil && schedule.status != "needs_attention" else { throw RecurringError.message("Check your transaction history, then confirm the destructive override before resuming.") }
+            guard reapproval || schedule.inFlight == nil && schedule.status != "needs_attention"
+            else { throw RecurringError.message("Check your transaction history, then confirm the destructive override before resuming.") }
             schedule.resume(now: d.now(), zone: d.zone())
             if reapproval { schedule.nativeRevision = UUID() }
             try d.store.upsert(schedule, reapproval: reapproval)
@@ -542,7 +575,8 @@ import Observation
     }
     private func refreshDates() async throws {
         try await storage { [self] in
-            for var schedule in try boundStateNow().schedules.values where !schedule.unsupportedStorage && schedule.status != "completed" && !schedule.requiresPolicyApproval {
+            for var schedule in try boundStateNow().schedules.values
+                where !schedule.unsupportedStorage && schedule.status != "completed" && !schedule.requiresPolicyApproval {
                 let next = schedule.next(schedule.nextOccurrenceIndex, zone: d.zone())
                 if next != schedule.nextRunAt {
                     schedule.nextRunAt = next
@@ -573,12 +607,12 @@ import Observation
             for _ in 0..<20 {
                 try await refreshDates()
                 let state = try await boundState()
-                let entries = Self.entries(state.schedules.values.map { $0 })
+                let entries = Self.entries(state.schedules.values.map(\.self))
                 try await storage { [self] in try d.store.setPending(true) }
                 try await d.sync(entries)
                 try await refreshDates()
                 let synced = try await storage { [self] in
-                    guard Self.entries(try boundStateNow().schedules.values.map { $0 }) == entries else { return false }
+                    guard Self.entries(try boundStateNow().schedules.values.map(\.self)) == entries else { return false }
                     try d.store.setPending(false)
                     return true
                 }

@@ -30,8 +30,8 @@ class RestoreCompletion(
          * inside completion, before the receipt clears, so a replay after process death applies them too.
          */
         fun withSettings(settings: SettingsStorage, journal: RestoreCompletionJournal?, seedRestored: (String, String?) -> Unit,
-                         recover: suspend () -> RestoreTransaction.Recovery, openWallet: suspend () -> Unit,
-                         clearToken: suspend () -> Unit = {}, acknowledged: () -> Unit = {}) = RestoreCompletion(
+            recover: suspend () -> RestoreTransaction.Recovery, openWallet: suspend () -> Unit,
+            clearToken: suspend () -> Unit = {}, acknowledged: () -> Unit = {}) = RestoreCompletion(
             loadState = { settings.persistedState<PersistedWalletState>(PersistedWalletState.key) ?: PersistedWalletState() },
             saveState = { if (!settings.completeRestore()) throw SettingsStorage.Unavailable() },
             seedRestored = seedRestored, recover = recover, openWallet = openWallet, journal = journal, clearToken = clearToken,

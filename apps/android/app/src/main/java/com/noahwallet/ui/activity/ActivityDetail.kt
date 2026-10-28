@@ -70,7 +70,7 @@ private val detailNav = 56.dp
  */
 @Composable
 internal fun ActivityDetail(ui: ActivityUi, row: ActivityRules.Row, actions: ActivityActions, state: ActivityState, toasts: HomeToasts,
-                            wide: Boolean, shared: Shared?, closable: Boolean = wide, close: () -> Unit) {
+    wide: Boolean, shared: Shared?, closable: Boolean = wide, close: () -> Unit) {
     val palette = LocalPalette.current
     val haptics = rememberHaptics()
     val record = row.record
@@ -226,7 +226,7 @@ internal fun ActivityBlockRow(tip: Long, confirmedAt: Long?, needed: Long, local
     }
     val confirmations = BlockRow.confirmations(shownTip, confirmedAt)
     val line = if (confirmedAt == null) tr("Waiting for block {height}", format.format(shownTip + 1))
-        else tr("Confirmed in block {height}", format.format(confirmedAt)) + if (needed > 1) " · " + tr("{n} of {total}", format.format(confirmations.coerceAtMost(needed)), format.format(needed)) else ""
+    else tr("Confirmed in block {height}", format.format(confirmedAt)) + if (needed > 1) " · " + tr("{n} of {total}", format.format(confirmations.coerceAtMost(needed)), format.format(needed)) else ""
     Text(line, Modifier.padding(top = 4.dp).semantics { liveRegion = LiveRegionMode.Polite }, style = HomeType.line.copy(fontWeight = FontWeight.Medium), color = palette.muted)
 }
 
@@ -236,8 +236,8 @@ internal fun ActivityBlockRow(tip: Long, confirmedAt: Long?, needed: Long, local
  */
 @Composable
 internal fun DetailRow(label: String, value: String, kind: ValueKind = ValueKind.text, copy: String? = null, explorer: String? = null,
-                      glyph: Int? = null, small: Boolean = false, toasts: HomeToasts, onExplorer: (String) -> Unit = {}, last: Boolean = false,
-                      dot: Boolean = false, ok: Boolean = false, failed: Boolean = false, onClick: (() -> Unit)? = null) {
+    glyph: Int? = null, small: Boolean = false, toasts: HomeToasts, onExplorer: (String) -> Unit = {}, last: Boolean = false,
+    dot: Boolean = false, ok: Boolean = false, failed: Boolean = false, onClick: (() -> Unit)? = null) {
     val palette = LocalPalette.current
     val style = when (kind) {
         ValueKind.text -> ActivityType.value; ValueKind.number -> ActivityType.number; ValueKind.mono -> ActivityType.mono
@@ -320,7 +320,7 @@ private fun MainRows(ui: ActivityUi, row: ActivityRules.Row, actions: ActivityAc
     val rows = mutableListOf<@Composable (Boolean) -> Unit>()
     ActivityRules.recipient(record)?.let { to ->
         rows += { last -> if (ActivityRules.readable(to)) DetailRow("To", to, copy = to, toasts = toasts, last = last)
-            else DetailRow("To", short(to, 10, 6), ValueKind.mono, copy = to, toasts = toasts, last = last) }
+        else DetailRow("To", short(to, 10, 6), ValueKind.mono, copy = to, toasts = toasts, last = last) }
     }
     val rail = ActivityRules.rail(record)
     rows += { last -> DetailRow("Via", tr(rail.label), glyph = railGlyph.getValue(rail), toasts = toasts, last = last) }
@@ -375,14 +375,14 @@ private fun longDate(date: java.util.Date?, ui: ActivityUi): String {
 /** Everything today's technical section shows, collapsed; it opens with the soft spring. */
 @Composable
 private fun DetailsSection(ui: ActivityUi, row: ActivityRules.Row, actions: ActivityActions, state: ActivityState, toasts: HomeToasts,
-                           scroll: androidx.compose.foundation.ScrollState, modifier: Modifier) {
+    scroll: androidx.compose.foundation.ScrollState, modifier: Modifier) {
     Details(state.details, { state.details = it }, scroll, modifier) { TechnicalRows(ui, row.record, actions, toasts) }
 }
 
 /** Collapsed "Details": the row turns its chevron and the rows open with the soft spring, scrolling them into view. */
 @Composable
 internal fun Details(open: Boolean, onOpen: (Boolean) -> Unit, scroll: androidx.compose.foundation.ScrollState, modifier: Modifier = Modifier,
-                     content: @Composable ColumnScope.() -> Unit) {
+    content: @Composable ColumnScope.() -> Unit) {
     val palette = LocalPalette.current
     val haptics = rememberHaptics()
     val reduceMotion = LocalReduceMotion.current
@@ -402,7 +402,7 @@ internal fun Details(open: Boolean, onOpen: (Boolean) -> Unit, scroll: androidx.
             Icon(painterResource(HomeIcons.chevron), null, Modifier.size(18.dp).graphicsLayer { rotationZ = turn }, tint = palette.muted)
         }
         AnimatedVisibility(open, enter = if (reduceMotion) fadeIn(tween(NoahTokens.Motion.REDUCE_MOTION_FADE_MS))
-            else expandVertically(spring(1f, 157.9137f)) + fadeIn(spring(1f, 157.9137f)),
+        else expandVertically(spring(1f, 157.9137f)) + fadeIn(spring(1f, 157.9137f)),
             exit = if (reduceMotion) fadeOut(tween(NoahTokens.Motion.REDUCE_MOTION_FADE_MS)) else shrinkVertically(spring(1f, 157.9137f)) + fadeOut(spring(1f, 157.9137f))) {
             Column(Modifier.testTag("activity-details"), content = content)
         }

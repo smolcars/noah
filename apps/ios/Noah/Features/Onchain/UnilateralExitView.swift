@@ -36,8 +36,10 @@ struct UnilateralExitView: View {
                 .fixedSize(horizontal: false, vertical: true)
             // Where an exit goes: your branch of the round's tree, standing on Bitcoin. It grows once and stays.
             ExitStageView(scene: .explainer(count: Self.explained(sample)), wide: settings.wide,
-                          accessibilityText: L10n.plural("Your VTXO is a leaf of the round’s tree. To reach it, the {n} transactions on your branch go to the chain, root first.",
-                                                         count: Self.explained(sample), locale: language))
+                          accessibilityText: L10n.plural(
+                              "Your VTXO is a leaf of the round’s tree. To reach it, the {n} transactions on your branch go to the chain, root first.",
+                              count: Self.explained(sample),
+                              locale: language))
                 .frame(height: settings.wide ? max(240, paneHeight - 200) : window.size.height > 0 && window.size.height < 700 ? 236 : 268)
                 .padding(.top, 14)
                 .padding(.horizontal, settings.wide ? -12 : -NoahTokens.Space.screen)
@@ -213,7 +215,7 @@ struct ExitChooseView: View {
         } footer: {
             if !all && !settings.wide {
                 Text(verbatim: selection.isEmpty ? L10n.text("Choose the VTXOs to exit", locale: language)
-                     : estimate.map { L10n.text("{amount} · fees ~{fee}", money(value), money($0.exitBroadcastFeeSats), locale: language) } ?? money(value))
+                    : estimate.map { L10n.text("{amount} · fees ~{fee}", money(value), money($0.exitBroadcastFeeSats), locale: language) } ?? money(value))
                     .noahText(HomeText.amount).monospacedDigit()
             }
             Button(L10n.text("Review exit", locale: language)) {
@@ -286,40 +288,46 @@ struct ExitChooseView: View {
 
     /// The total, the fee estimate and what it means for your on-chain funds.
     @ViewBuilder private func summary(_ money: ExitMoney) -> some View {
-            VStack(spacing: 0) {
-                ExitDetailRow(label: L10n.text("VTXOs", locale: language), value: estimate.map {
-                    selection.count.formatted() + " · " + L10n.plural("{n} transactions", count: Int($0.txsToBroadcast), locale: language)
-                } ?? selection.count.formatted(), numeric: true)
-                ExitDetailRow(label: L10n.text("Network fees", locale: language), value: estimate.map { money.about($0.exitBroadcastFeeSats) } ?? "—", numeric: true)
-                ExitDetailRow(label: L10n.text("Claim fee", locale: language), value: estimate.map { money.about($0.claimFeeSats) } ?? "—", numeric: true)
-                ExitDetailRow(label: L10n.text("You get", locale: language),
-                                  value: estimate.map { money.about(ExitRules.received(amount: value, claimFee: $0.claimFeeSats)) } ?? money(value),
-                                  numeric: true, hairline: false)
+        VStack(spacing: 0) {
+            ExitDetailRow(label: L10n.text("VTXOs", locale: language), value: estimate.map {
+                selection.count.formatted() + " · " + L10n.plural("{n} transactions", count: Int($0.txsToBroadcast), locale: language)
+            } ?? selection.count.formatted(), numeric: true)
+            ExitDetailRow(
+                label: L10n.text("Network fees", locale: language),
+                value: estimate.map { money.about($0.exitBroadcastFeeSats) } ?? "—",
+                numeric: true)
+            ExitDetailRow(label: L10n.text("Claim fee", locale: language), value: estimate.map { money.about($0.claimFeeSats) } ?? "—", numeric: true)
+            ExitDetailRow(label: L10n.text("You get", locale: language),
+                          value: estimate.map { money.about(ExitRules.received(amount: value, claimFee: $0.claimFeeSats)) } ?? money(value),
+                          numeric: true, hairline: false)
+        }
+        .padding(.top, 22)
+        .opacity(estimating ? 0.5 : 1)
+        if short > 0 {
+            ExitWarning(text: L10n.text("Add about {amount} on-chain first. Each exit transaction’s fee comes from there.", money(short), locale: language))
+            Button(L10n.text("Add on-chain funds", locale: language)) { sheet = .deposit(short) }
+                .buttonStyle(.plain).noahText(NoahTokens.Typography.control).foregroundStyle(NoahTokens.Colors.failure).underline()
+                .padding(.top, 4)
+                .accessibilityIdentifier("exit-add-funds")
+        } else if let estimate, let confirmed = model.overview?.confirmed {
+            SettingsFine(text: L10n.text(
+                "Network fees come from your on-chain {amount} at {rate} sat/vB. Transactions your VTXOs share are paid once. Fees may change.",
+                money(confirmed),
+                estimate.feeRateSatPerVb.formatted(),
+                locale: language))
+        } else if !selection.isEmpty && !estimating {
+            // A refusal has no "Continue without estimate": the start would fail too.
+            if let reason = model.exitRefusal?.errorDescription {
+                SettingsFine(text: L10n.text(reason, locale: language), failure: true)
+            } else {
+                SettingsFine(text: L10n.text("Fee estimate unavailable", locale: language))
             }
-            .padding(.top, 22)
-            .opacity(estimating ? 0.5 : 1)
-            if short > 0 {
-                ExitWarning(text: L10n.text("Add about {amount} on-chain first. Each exit transaction’s fee comes from there.", money(short), locale: language))
-                Button(L10n.text("Add on-chain funds", locale: language)) { sheet = .deposit(short) }
-                    .buttonStyle(.plain).noahText(NoahTokens.Typography.control).foregroundStyle(NoahTokens.Colors.failure).underline()
-                    .padding(.top, 4)
-                    .accessibilityIdentifier("exit-add-funds")
-            } else if let estimate, let confirmed = model.overview?.confirmed {
-                SettingsFine(text: L10n.text("Network fees come from your on-chain {amount} at {rate} sat/vB. Transactions your VTXOs share are paid once. Fees may change.",
-                                             money(confirmed), estimate.feeRateSatPerVb.formatted(), locale: language))
-            } else if !selection.isEmpty && !estimating {
-                // A refusal has no "Continue without estimate": the start would fail too.
-                if let reason = model.exitRefusal?.errorDescription {
-                    SettingsFine(text: L10n.text(reason, locale: language), failure: true)
-                } else {
-                    SettingsFine(text: L10n.text("Fee estimate unavailable", locale: language))
-                }
-            }
-            if let estimate, value > 0, estimate.totalFeeSats >= value {
-                ExitWarning(text: L10n.text("Fees are more than these VTXOs are worth.", locale: language))
-            }
-            if all { leftOut(money) }
-            OnchainStatusSection(model: model).settingsReceipts().padding(.top, 18)
+        }
+        if let estimate, value > 0, estimate.totalFeeSats >= value {
+            ExitWarning(text: L10n.text("Fees are more than these VTXOs are worth.", locale: language))
+        }
+        if all { leftOut(money) }
+        OnchainStatusSection(model: model).settingsReceipts().padding(.top, 18)
     }
 
     /// All leaves out what can't or shouldn't exit, and says so.
@@ -329,9 +337,12 @@ struct ExitChooseView: View {
         let costly = vtxos.filter { $0.eligible && costs[$0.id] == .uneconomic }.reduce(0) { $0 + $1.amount }
         let lines = [dust > 0 ? L10n.text("Left out: {amount}, too small to exit.", money(dust), locale: language) : nil,
                      locked > 0 ? L10n.text("Left out: {amount}, in use right now.", money(locked), locale: language) : nil,
-                     costly > 0 ? L10n.text("Left out: {amount} that costs more in fees than it’s worth. Choose it to exit anyway.", money(costly), locale: language) : nil]
-        if lines.contains(where: { $0 != nil }) { SettingsFine(text: lines.compactMap { $0 }.joined(separator: "\n")) }
-        let failed = vtxos.filter { $0.eligible && costs[$0.id] == .failed }.count
+                     costly > 0 ? L10n.text(
+                         "Left out: {amount} that costs more in fees than it’s worth. Choose it to exit anyway.",
+                         money(costly),
+                         locale: language) : nil]
+        if lines.contains(where: { $0 != nil }) { SettingsFine(text: lines.compactMap(\.self).joined(separator: "\n")) }
+        let failed = vtxos.count(where: { $0.eligible && costs[$0.id] == .failed })
         if failed > 0 {
             SettingsFine(text: L10n.plural("Couldn’t check the fees of {n} VTXOs, so All waits. Choose them one by one, or try again.",
                                            count: failed, locale: language), failure: true)
@@ -383,7 +394,7 @@ struct ExitReviewView: View {
             if settings.wide {
                 // One branch: the deepest selected VTXO's, not the batch's total.
                 ExitStageView(scene: .explainer(count: UnilateralExitView.explained((model.overview?.vtxos ?? []).filter { ids.contains($0.id) }
-                                                                                       .max { $0.exitDepth < $1.exitDepth })), wide: true)
+                        .max { $0.exitDepth < $1.exitDepth })), wide: true)
                     .frame(height: max(240, paneHeight - 160)).padding(.top, 10).padding(.horizontal, -12)
             } else if let estimate {
                 // The progress picture, previewed as one line: round, transactions, coin, dial, destination.
@@ -395,12 +406,12 @@ struct ExitReviewView: View {
                     if let fee = quote.fee, let chainFee = quote.chainFee {
                         ExitDetailRow(label: L10n.text("Network fees", locale: language), value: money.about(chainFee), numeric: true)
                         ExitDetailRow(label: L10n.text("Paid from", locale: language),
-                                          value: L10n.text("On-chain · {amount}", money(quote.confirmed), locale: language))
+                                      value: L10n.text("On-chain · {amount}", money(quote.confirmed), locale: language))
                         ExitDetailRow(label: L10n.text("Claim fee", locale: language), value: money.about(fee), numeric: true)
                         if let delta = model.overview?.exitDelta, let estimate {
                             // One block per transaction along a path at most, then the timelock.
                             ExitDetailRow(label: L10n.text("Claimable", locale: language),
-                                              value: L10n.text("In {time}", ExitText.about(delta + UInt32(estimate.txsToBroadcast), language), locale: language))
+                                          value: L10n.text("In {time}", ExitText.about(delta + UInt32(estimate.txsToBroadcast), language), locale: language))
                         }
                         if let rate = quote.feeRate {
                             ExitDetailRow(label: L10n.text("Fee rate", locale: language), value: L10n.text("{rate} sat/vB", rate.formatted(), locale: language))
@@ -413,7 +424,9 @@ struct ExitReviewView: View {
                 }
                 .padding(.top, 22)
                 if quote.feesUnknown {
-                    ExitWarning(text: L10n.text("Fee estimate unavailable. Fees and amount to receive are unknown. Continue without an estimate only if you accept this uncertainty.", locale: language))
+                    ExitWarning(text: L10n.text(
+                        "Fee estimate unavailable. Fees and amount to receive are unknown. Continue without an estimate only if you accept this uncertainty.",
+                        locale: language))
                     ExitWarning(text: L10n.text("Broadcast funding status is unknown; confirmed onchain funds are required.", locale: language), muted: true)
                 } else if !quote.fundable, let chainFee = quote.chainFee {
                     ExitWarning(text: L10n.text("Not enough on-chain bitcoin for the fees. The exit starts, then waits until you add about {amount}.",
@@ -423,7 +436,9 @@ struct ExitReviewView: View {
                    let warning = ExitRules.warning(amount: quote.amount, claimFee: fee, totalFee: quote.totalFee, claimOnly: false) {
                     ExitWarning(text: L10n.text(warning, locale: language))
                 }
-                SettingsFine(text: L10n.text("Noah then sends and fee-bumps the exit’s transactions on its own, including in the background when the system lets it, paying from your on-chain bitcoin. Fees are estimates. Only the claim fee comes out of the amount. You can cancel until the last transaction is sent.", locale: language))
+                SettingsFine(text: L10n.text(
+                    "Noah then sends and fee-bumps the exit’s transactions on its own, including in the background when the system lets it, paying from your on-chain bitcoin. Fees are estimates. Only the claim fee comes out of the amount. You can cancel until the last transaction is sent.",
+                    locale: language))
             } else if model.busy {
                 ProgressView().frame(maxWidth: .infinity).padding(.top, 40)
             }
@@ -490,9 +505,8 @@ struct ExitTransactionRow: View {
             Text(txid).textSelection(.enabled).lineLimit(2).truncationMode(.middle)
         }
         if app.variant != .regtest,
-            let url = URL(
-                string: "https://mempool.space/" + (app.variant == .signet ? "signet/" : "") + "tx/" + txid)
-        {
+           let url = URL(
+               string: "https://mempool.space/" + (app.variant == .signet ? "signet/" : "") + "tx/" + txid) {
             Link("View in explorer", destination: url)
         }
     }

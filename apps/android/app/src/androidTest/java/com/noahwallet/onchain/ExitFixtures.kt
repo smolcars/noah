@@ -34,7 +34,7 @@ internal object ExitFixtures {
         ExitDetails.Transaction(ids[i], ExitDetails.Status(kind, child, block?.let { ExitDetails.Block(it) }, origin.takeIf { child != null }))
     private fun processing(at: Long, vararg txs: ExitDetails.Transaction) = ExitDetails(kind = "processing", tip_height = at, transactions = txs.toList())
     private fun exit(state: String, details: ExitDetails, history: List<ExitDetails> = emptyList(), fees: Map<String, Long> = emptyMap(),
-                     next: Long? = null, id: String = vtxos[0].id, amount: Long = 31_000, children: Map<Int, Pair<String, String>> = emptyMap()) =
+        next: Long? = null, id: String = vtxos[0].id, amount: Long = 31_000, children: Map<Int, Pair<String, String>> = emptyMap()) =
         ExitModel(id, amount, state, details, history.map { it.kind.orEmpty() }, history,
             packages.mapIndexed { i, p -> children[i]?.let { (child, origin) -> p.copy(childTxid = child, childOrigin = origin) } ?: p }, fees, next)
 

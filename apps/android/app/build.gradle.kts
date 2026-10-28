@@ -11,7 +11,8 @@ plugins {
 }
 
 abstract class SentryMappingMetadata : DefaultTask() {
-    @get:InputFile @get:PathSensitive(PathSensitivity.NONE)
+    @get:InputFile
+    @get:PathSensitive(PathSensitivity.NONE)
     abstract val mappingFile: RegularFileProperty
     @get:OutputDirectory abstract val outputDirectory: DirectoryProperty
 

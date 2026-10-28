@@ -1,18 +1,18 @@
 package com.noahwallet.services.backup
 
+import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.*
+import org.apache.commons.compress.archivers.zip.ZipFile
+import org.apache.commons.compress.utils.SeekableInMemoryByteChannel
 import java.io.File
 import java.io.InputStream
 import java.security.MessageDigest
 import java.text.SimpleDateFormat
 import java.util.*
-import kotlin.io.encoding.Base64
 import java.util.zip.CRC32
 import java.util.zip.ZipEntry
 import java.util.zip.ZipOutputStream
-import kotlinx.serialization.Serializable
-import kotlinx.serialization.json.*
-import org.apache.commons.compress.archivers.zip.ZipFile
-import org.apache.commons.compress.utils.SeekableInMemoryByteChannel
+import kotlin.io.encoding.Base64
 
 object BackupArchive {
     const val formatVersion = 2

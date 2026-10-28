@@ -83,7 +83,7 @@ object SendFixtures {
             source = "ark", destination = destination, movementStatus = "successful")
 
     fun env(tip: Long? = 921_345, refund: SendRefund? = null, estimates: Map<SendRail, Long> = mapOf(SendRail.ark to 0L, SendRail.lightning to 12L, SendRail.onchain to 420L),
-            chainNeeded: Long = 2) = SendEnv(BitcoinAmountUnit.bip177, Locale.US, "regtest", domain, history(), tip = tip, chainNeeded = chainNeeded,
+        chainNeeded: Long = 2) = SendEnv(BitcoinAmountUnit.bip177, Locale.US, "regtest", domain, history(), tip = tip, chainNeeded = chainNeeded,
         refund = refund, estimates = estimates)
 
     fun request(amount: Long? = null) = "bitcoin:$onchain?" + (if (amount != null) "amount=${java.math.BigDecimal.valueOf(amount, 8).stripTrailingZeros().toPlainString()}&lightning=$invoice&" else "") + "ark=$ark"

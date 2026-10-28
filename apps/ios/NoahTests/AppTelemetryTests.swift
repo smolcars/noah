@@ -1,8 +1,7 @@
 import Foundation
+@testable import Noah
 import Sentry
 import Testing
-
-@testable import Noah
 
 struct AppTelemetryTests {
     @Test func mnemonicDictionaryKeysMustNotReachTelemetry() throws {
@@ -88,8 +87,7 @@ struct AppTelemetryTests {
     }
 
     @Test func sharedSecretsAreScrubbedAtEveryTelemetryBoundary() throws {
-        for fixture in try Fixtures.load("log-redaction", input: String.self, expected: String.self)
-            {
+        for fixture in try Fixtures.load("log-redaction", input: String.self, expected: String.self) {
             // Isolate each boundary: duplicating an 11-word excerpt across the event
             // now intentionally constitutes a complete aggregate mnemonic run.
             for boundary in ["message", "exception", "context", "breadcrumb"] {
@@ -182,9 +180,9 @@ struct AppTelemetryTests {
         }
         #expect(AppTelemetry.options(variant: .regtest, isDebug: false, info: info) == nil)
         #if DEBUG
-        #expect(AppTelemetry.isDebug)
+            #expect(AppTelemetry.isDebug)
         #else
-        #expect(!AppTelemetry.isDebug)
+            #expect(!AppTelemetry.isDebug)
         #endif
     }
 
@@ -302,6 +300,4 @@ struct AppTelemetryTests {
         requestEvent.request?.headers = ["Authorization": "synthetic-credential"]
         #expect(AppTelemetry.scrub(requestEvent)?.request == nil)
     }
-
-
 }

@@ -19,7 +19,7 @@ final class NameAvailability {
 
     nonisolated static let maxLength = 24
     nonisolated static let minLength = 3
-    nonisolated private static let allowed = Set("abcdefghijklmnopqrstuvwxyz0123456789_.-")
+    private nonisolated static let allowed = Set("abcdefghijklmnopqrstuvwxyz0123456789_.-")
 
     /// How typed names are cleaned up and how short they may be.
     struct Rules: Sendable {
@@ -113,7 +113,7 @@ final class NameAvailability {
 
 extension NameAvailability {
     /// GET `<server>/.well-known/lnurlp/<name>`: 200 means someone has it.
-    nonisolated private static let session = URLSession(configuration: .ephemeral)
+    private nonisolated static let session = URLSession(configuration: .ephemeral)
 
     static func liveLookup(variant: AppVariant) -> @Sendable (String) async throws -> Bool {
         let base = ServerEndpoint.baseURL(for: variant)

@@ -82,7 +82,7 @@ extension BackgroundScheduler.Dependencies {
              cancel: { BGTaskScheduler.shared.cancel(taskRequestWithIdentifier: $0) },
              eligible: {
                  (try? HeadlessWalletGate.mnemonic(location: .init(variant: services.variant), settings: .shared,
-                                                  readSeed: { services.seed.read() })) != nil
+                                                   readSeed: { services.seed.read() })) != nil
              },
              isForeground: { UIApplication.shared.applicationState != .background },
              perform: { kind in

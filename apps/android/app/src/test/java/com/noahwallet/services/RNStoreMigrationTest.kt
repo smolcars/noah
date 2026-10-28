@@ -1,7 +1,7 @@
 package com.noahwallet.services
 
-import com.noahwallet.services.storage.*
 import com.noahwallet.fixtures.SharedFixtures
+import com.noahwallet.services.storage.*
 import kotlinx.serialization.json.*
 import org.junit.Assert.*
 import org.junit.Test

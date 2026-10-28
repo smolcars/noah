@@ -1,11 +1,10 @@
 import BarkBoltFFI
 import Foundation
 import HTTPTypes
+@testable import Noah
 import OpenAPIRuntime
 import SQLite3
 import Testing
-
-@testable import Noah
 
 /// Public BIP39 vector, offline unfunded wallet; never uses the app's wallet directory.
 @Suite(.serialized)
@@ -23,8 +22,8 @@ struct CrossPlatformBackupTests {
                 ? try await OnchainWallet.default(network: .regtest, mnemonic: mnemonic, config: config, datadir: datadir)
                 : try await OnchainWallet.openExisting(network: .regtest, mnemonic: mnemonic, config: config, datadir: datadir)
             let wallet = try await Wallet.openWithOnchain(network: .regtest, mnemonicOrSeed: mnemonic, config: config,
-                args: WalletOpenArgs(runDaemon: false, datadir: datadir, createIfNotExists: create,
-                                     createWithoutServer: true, skipRecovery: true), onchain: onchain)
+                                                          args: WalletOpenArgs(runDaemon: false, datadir: datadir, createIfNotExists: create,
+                                                                               createWithoutServer: true, skipRecovery: true), onchain: onchain)
             return .init(wallet: wallet, onchain: onchain)
         }
     }
@@ -41,14 +40,15 @@ struct CrossPlatformBackupTests {
             #expect(summary.movementCount == 0)
             #expect(summary.balance.details.allSatisfy { $0.sats == 0 })
             let service = BackupService(session: wallet, client: Client(serverURL: URL(string: "http://unused")!,
-                transport: WalletRestorerTests.FakeServer(backupId: "unused", encrypted: root)),
-                readMnemonic: { Self.phrase }, scratch: ScratchSpace(root: root.appending(path: "scratch")))
+                                                                        transport: WalletRestorerTests.FakeServer(backupId: "unused", encrypted: root)),
+                                        readMnemonic: { Self.phrase }, scratch: ScratchSpace(root: root.appending(path: "scratch")))
             let export = try await service.exportEncryptedBackup(to: root.appending(path: "ios.noahbackup"))
             let fixture: [String: Any] = ["name": "iOS BackupService export", "input": [
                 "producer": "ios", "mnemonic": Self.phrase,
-                "fileBase64": try Data(contentsOf: export.url).base64EncodedString()],
-                "expected": ["fingerprint": summary.fingerprint, "movements": summary.movementCount,
-                             "balance": try JSONSerialization.jsonObject(with: JSONEncoder().encode(summary.balance.details))]]
+                "fileBase64": try Data(contentsOf: export.url).base64EncodedString(),
+            ],
+            "expected": ["fingerprint": summary.fingerprint, "movements": summary.movementCount,
+                         "balance": try JSONSerialization.jsonObject(with: JSONEncoder().encode(summary.balance.details))]]
             try JSONSerialization.data(withJSONObject: fixture, options: [.prettyPrinted, .sortedKeys])
                 .write(to: FileManager.default.temporaryDirectory.appending(path: "native-backup-ios.json"))
             try await wallet.close()
@@ -69,8 +69,9 @@ struct CrossPlatformBackupTests {
         let seed = KeychainPassword(service: "com.noah.tests.cross-backup.\(UUID().uuidString)", account: "noah")
         defer { seed.remove() }
         let restorer = WalletRestorer(variant: .regtest, session: wallet, location: location, seed: seed,
-            makeClient: { _ in Client(serverURL: URL(string: "http://fixture")!,
-                transport: WalletRestorerTests.FakeServer(backupId: "android", encrypted: encrypted)) }, walletChanged: {})
+                                      makeClient: { _ in Client(serverURL: URL(string: "http://fixture")!,
+                                                                transport: WalletRestorerTests.FakeServer(backupId: "android", encrypted: encrypted)) },
+                                      walletChanged: {})
         do {
             let outcome = try await restorer.restore(mnemonic: fixture.input.mnemonic)
             #expect(outcome.backupId == "android" && !outcome.cleanupPending)
@@ -95,7 +96,7 @@ struct CrossPlatformBackupTests {
             }
             let data = try Data(contentsOf: encrypted)
             let info: [String: Any] = ["backup_id": "android", "created_at": "2026-10-20T00:00:00Z",
-                "encrypted_sha256": BackupArchive.sha256Hex(data), "encrypted_size": data.count, "format_version": format]
+                                       "encrypted_sha256": BackupArchive.sha256Hex(data), "encrypted_size": data.count, "format_version": format]
             var response = HTTPResponse(status: .ok)
             response.headerFields[.contentType] = "application/json"
             return (response, HTTPBody(try JSONSerialization.data(withJSONObject: [info])))
@@ -127,7 +128,7 @@ struct CrossPlatformBackupTests {
             }
             try FileManager.default.removeItem(at: encrypted)
             _ = try BackupArchive.seal(snapshot: opened.snapshot, manifest: manifest, mnemonic: Self.phrase,
-                to: encrypted, workDirectory: root)
+                                       to: encrypted, workDirectory: root)
         }
         let location = WalletDataLocation(variant: .regtest, documentsDirectory: root.appending(path: "existing"))
         try FileManager.default.createDirectory(at: location.directory, withIntermediateDirectories: true)
@@ -138,9 +139,10 @@ struct CrossPlatformBackupTests {
         defer { seed.remove() }
         try seed.save(Self.phrase)
         let restorer = WalletRestorer(variant: .regtest, session: wallet, location: location, seed: seed,
-            makeClient: { _ in Client(serverURL: URL(string: "http://fixture")!,
-                transport: FixtureServer(encrypted: encrypted, format: kind == "list" ? 3 : 2)) }, walletChanged: {},
-            beginOnboarding: { Issue.record("A newer backup reached the installation boundary") })
+                                      makeClient: { _ in Client(serverURL: URL(string: "http://fixture")!,
+                                                                transport: FixtureServer(encrypted: encrypted, format: kind == "list" ? 3 : 2)) },
+                                      walletChanged: {},
+                                      beginOnboarding: { Issue.record("A newer backup reached the installation boundary") })
         var failure: (any Error)?
         do { _ = try await restorer.restore(mnemonic: Self.phrase) } catch { failure = error }
         #expect(try Data(contentsOf: location.database) == previous)
@@ -162,5 +164,4 @@ struct CrossPlatformBackupTests {
         }
         #expect(RestoreIssue.from(failure) == .newerBackup)
     }
-
 }

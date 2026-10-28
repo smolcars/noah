@@ -1,9 +1,9 @@
 package com.noahwallet.onchain
 
-import java.util.UUID
 import com.noahwallet.services.wallet.ReviewClock
 import io.github.niteshbalusu11.bark.*
 import kotlinx.serialization.Serializable
+import java.util.UUID
 
 @Serializable
 enum class OnchainAction(val title: String) {

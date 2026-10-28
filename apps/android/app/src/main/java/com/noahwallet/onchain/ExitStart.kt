@@ -9,9 +9,9 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.drawscope.scale
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.text.drawText
-import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.dp
 import com.noahwallet.localization.tr
 import com.noahwallet.localization.trPlural
@@ -41,7 +41,7 @@ internal fun ExitStartPage(app: AppModel, nav: SettingsNav, ids: List<String>) {
 /** The start page on [model] (its review, the hold and where it leaves to), apart from [AppModel] so a device test drives it. */
 @Composable
 internal fun ExitStartScreen(model: OnchainModel, nav: SettingsNav, ids: List<String>, suspended: Boolean, delta: Long?, money: (Long) -> String,
-                             status: @Composable () -> Unit) {
+    status: @Composable () -> Unit) {
     val scope = rememberCoroutineScope()
     val haptics = rememberHaptics()
     var started by remember { mutableStateOf(false) }
@@ -72,8 +72,8 @@ internal fun ExitStartScreen(model: OnchainModel, nav: SettingsNav, ids: List<St
 
 @Composable
 internal fun ExitStartContent(quote: OnchainQuote?, fallback: OnchainQuote?, confirmed: Long?, busy: Boolean, suspended: Boolean, delta: Long?,
-                              money: (Long) -> String, back: (() -> Unit)?, reviewAgain: () -> Unit, withoutEstimate: () -> Unit, start: () -> Unit,
-                              depth: Int? = null, status: @Composable () -> Unit = {}) {
+    money: (Long) -> String, back: (() -> Unit)?, reviewAgain: () -> Unit, withoutEstimate: () -> Unit, start: () -> Unit,
+    depth: Int? = null, status: @Composable () -> Unit = {}) {
     val palette = LocalPalette.current
     val review = quote ?: fallback
     var current by remember(quote) { mutableStateOf(quote?.current() ?: false) }

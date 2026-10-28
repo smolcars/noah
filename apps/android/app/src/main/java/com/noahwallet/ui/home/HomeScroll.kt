@@ -23,7 +23,7 @@ import kotlin.math.roundToInt
  */
 @Stable
 class HomeScroll internal constructor(val compact: ScrollState, val leading: ScrollState, val list: LazyListState, val card: ScrollState,
-                                      anchor: MutableState<Anchor>) {
+    anchor: MutableState<Anchor>) {
     sealed interface Anchor {
         /** Above the rows: this far (px) down the balance column. */
         data class Above(val offset: Int) : Anchor

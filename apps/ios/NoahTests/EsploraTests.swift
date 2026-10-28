@@ -1,8 +1,8 @@
 import BarkBoltFFI
 import Darwin
 import Foundation
-import Testing
 @testable import Noah
+import Testing
 
 struct EsploraTests {
     private static let genesis = "00000008819873e925422c1ff0f99f7cc9bbb232af63a077a480a3633bee1ef6"
@@ -37,7 +37,8 @@ struct EsploraTests {
         let fixture = try Fixtures.decode("esplora", as: Fixture.self)
         #expect(fixture.normalization.count + fixture.genesis.count + fixture.tipHeight.count == 53)
         for test in fixture.normalization { #expect((try? EsploraEndpoint.normalize(test.input)) == test.endpoint) }
-        for test in fixture.genesis { #expect(((try? EsploraEndpoint.validateGenesis(test.value, variant: AppVariant(rawValue: test.variant)!)) != nil) == test.valid) }
+        for test in fixture
+            .genesis { #expect(((try? EsploraEndpoint.validateGenesis(test.value, variant: AppVariant(rawValue: test.variant)!)) != nil) == test.valid) }
         for test in fixture.tipHeight { #expect(((try? EsploraEndpoint.validateTip(test.value)) != nil) == test.valid) }
     }
     @Test func validationBoundsSilentDripAndOversizedResponses() async throws {
@@ -56,7 +57,8 @@ struct EsploraTests {
             let config = WalletConfiguration.effective(for: variant, endpoint: "custom.example/api/")
             #expect(config.esplora == (variant == .regtest ? nil : "https://custom.example/api"))
             #expect(config.arkServer == WalletConfiguration.base(for: variant).arkServer)
-            #expect(WalletConfiguration.effective(for: variant, endpoint: "https://user:pass@example.com").esplora == WalletConfiguration.base(for: variant).esplora)
+            #expect(WalletConfiguration.effective(for: variant, endpoint: "https://user:pass@example.com").esplora == WalletConfiguration.base(for: variant)
+                .esplora)
         }
     }
     @Test func connectionTestFetchesBothResourcesAndRejectsWrongNetwork() async throws {

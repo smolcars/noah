@@ -29,7 +29,7 @@ class OnchainModel(private val dependencies: Dependencies, private val detailID:
      * so a failure is unknown, never "no record": a refresh retries it.
      */
     suspend fun coin(id: String): Result<VtxoModel> = try { Result.success(dependencies.coin(id)) }
-        catch (cancelled: CancellationException) { throw cancelled } catch (failure: Exception) { Result.failure(failure) }
+    catch (cancelled: CancellationException) { throw cancelled } catch (failure: Exception) { Result.failure(failure) }
     var overview by mutableStateOf<OnchainOverview?>(null); private set
     /** Counts completed overview reads (pull to refresh, the periodic read), so a coin lookup can retry after each. */
     var revision by mutableIntStateOf(0); private set
@@ -112,7 +112,7 @@ class OnchainModel(private val dependencies: Dependencies, private val detailID:
         catch (failure: Exception) { error = (failure as? OnchainException)?.message ?: "Couldn't read wallet status. Pull to refresh." }
     }
     suspend fun review(action: OnchainAction, ids: List<String> = emptyList(), amount: Long = 0, destination: String? = null,
-                       renewal: Boolean = false) {
+        renewal: Boolean = false) {
         if (busy) return
         invalidate(); error = null; message = null; busy = true
         val token = generation
@@ -182,7 +182,7 @@ class OnchainModel(private val dependencies: Dependencies, private val detailID:
             load()
             // Only a board proven never recorded leaves the journal on a check.
             message = if (resolved && attempts.none { it.id == id }) OnchainFailure.boardNotAttempted.text
-                else if (resolved) "Status resolved. Review the receipt." else "Status remains uncertain. Noah checks again automatically as your wallet syncs."
+            else if (resolved) "Status resolved. Review the receipt." else "Status remains uncertain. Noah checks again automatically as your wallet syncs."
         } catch (cancelled: CancellationException) { throw cancelled }
         catch (failure: Exception) { error = (failure as? OnchainException)?.message ?: "Couldn't check status. The attempt is still saved." }
         finally { busy = false }

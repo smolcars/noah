@@ -1,9 +1,9 @@
 package com.noahwallet.services.storage
 
-import java.io.File
-import java.nio.file.Files
 import org.junit.Assert.*
 import org.junit.Test
+import java.io.File
+import java.nio.file.Files
 
 class MMKVIntegrityTest {
     private fun fixture(name: String) = checkNotNull(javaClass.classLoader!!.getResourceAsStream("rn-mmkv/$name")).use { it.readBytes() }

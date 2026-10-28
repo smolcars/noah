@@ -1,27 +1,27 @@
 package com.noahwallet
 
-import android.os.Bundle
-import android.os.Build
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
-import androidx.core.content.ContextCompat
-import androidx.lifecycle.lifecycleScope
-import kotlinx.coroutines.*
-import com.noahwallet.ui.loadAppModel
-import com.noahwallet.ui.AppModel
-import androidx.fragment.app.FragmentActivity
+import android.os.Build
+import android.os.Bundle
 import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
+import androidx.activity.viewModels
 import androidx.compose.foundation.layout.Box
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.testTagsAsResourceId
-import androidx.compose.ui.ExperimentalComposeUiApi
-import androidx.activity.enableEdgeToEdge
-import androidx.activity.viewModels
+import androidx.core.content.ContextCompat
+import androidx.fragment.app.FragmentActivity
+import androidx.lifecycle.lifecycleScope
+import com.noahwallet.ui.AppModel
 import com.noahwallet.ui.LaunchGateView
 import com.noahwallet.ui.NoahTheme
+import com.noahwallet.ui.loadAppModel
+import kotlinx.coroutines.*
 
 class MainActivity : FragmentActivity() {
     private var credentialRequestCode: Int? = null

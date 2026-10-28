@@ -1,14 +1,14 @@
 package com.noahwallet.onchain
 
+import com.noahwallet.fixtures.SharedFixtures
 import com.noahwallet.formatting.BitcoinAmountUnit
 import com.noahwallet.recurring.*
-import com.noahwallet.fixtures.SharedFixtures
 import kotlinx.serialization.json.*
-import java.util.Locale
 import org.junit.Assert.*
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import java.util.Locale
 
 @org.robolectric.annotation.Config(sdk = [35])
 @RunWith(RobolectricTestRunner::class)
