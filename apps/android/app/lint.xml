@@ -12,6 +12,10 @@
     <issue id="TypographyDashes" severity="ignore" />
     <!-- Java-era method-count advice; R8 inlines these accessors in release builds. -->
     <issue id="SyntheticAccessor" severity="ignore" />
+    <!-- ktor-utils references the JVM-only java.lang.management behind a runtime check; not our code. -->
+    <issue id="InvalidPackage">
+        <ignore regexp="ktor-utils-jvm" />
+    </issue>
     <!-- Generated, machine-translated values-*/ resources. -->
     <issue id="UnusedQuantity">
         <ignore path="src/main/res/values-*/strings.xml" />

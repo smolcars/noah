@@ -195,8 +195,8 @@ android {
         abortOnError = true
     }
     // Share the exact RN/iOS snapshots; do not copy 7 MB into another source tree.
-    sourceSets.getByName("main").assets.srcDirs("../../../client/assets/btcmap", "../../../client/assets/geonames")
-    sourceSets.getByName("test").resources.srcDirs("../../../client/assets/btcmap", "../../../client/assets/geonames")
+    sourceSets.getByName("main").assets.directories += listOf("../../../client/assets/btcmap", "../../../client/assets/geonames")
+    sourceSets.getByName("test").resources.directories += listOf("../../../client/assets/btcmap", "../../../client/assets/geonames")
     sourceSets.getByName("test").resources.directories += "../../fixtures"
     sourceSets.getByName("test").resources.directories += "../../../api"
     sourceSets.getByName("androidTest").assets.directories += "../../fixtures"
