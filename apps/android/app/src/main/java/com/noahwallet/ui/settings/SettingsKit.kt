@@ -44,6 +44,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
@@ -136,7 +137,7 @@ internal fun SettingsFrame(title: String, back: (() -> Unit)?, modifier: Modifie
         with(LocalDensity.current) { footHeight.toDp() } + 12.dp) else if (wide) 110.dp else 56.dp
     Box(modifier.fillMaxSize().background(palette.background)) {
         val body: @Composable ColumnScope.() -> Unit = {
-            FrameHeading(title, line, chip, large = !wide && !hero)
+            FrameHeading(title, line, large = !wide && !hero, content = chip)
             content()
         }
         val padding = Modifier.widthIn(max = 640.dp).fillMaxWidth().padding(start = start, end = end, top = navHeight + if (wide) 6.dp else 0.dp,
@@ -151,19 +152,19 @@ internal fun SettingsFrame(title: String, back: (() -> Unit)?, modifier: Modifie
             }
         }
         FrameBar(title, back, chip, actions, scroll, bare, hero, start)
-        foot?.let { FrameFoot(start, end, footFade, it) { height -> footHeight = height } }
+        foot?.let { FrameFoot(start, end, footFade, { height -> footHeight = height }, it) }
         HomeToast(LocalSettingsToasts.current.current, Modifier.align(Alignment.TopCenter).padding(top = 64.dp))
     }
 }
 
 /** The page's large title (compact pages that draw no hero) with its chip, then its line. */
 @Composable
-private fun FrameHeading(title: String, line: String?, chip: (@Composable () -> Unit)?, large: Boolean) {
+private fun FrameHeading(title: String, line: String?, large: Boolean, content: (@Composable () -> Unit)?) {
     val palette = LocalPalette.current
     if (large) Row(Modifier.fillMaxWidth().heightIn(min = 46.dp), verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         Text(title, Modifier.semantics { heading() }, style = ActivityType.large, color = palette.foreground)
-        chip?.invoke()
+        content?.invoke()
     }
     line?.let { Text(it, Modifier.padding(bottom = 4.dp), style = HomeType.line, color = palette.muted) }
 }
@@ -192,10 +193,10 @@ private fun FrameBar(title: String, back: (() -> Unit)?, chip: (@Composable () -
 
 /** A split pane's title in the bar, after Back when there is one. */
 @Composable
-private fun BarTitle(title: String, afterBack: Boolean, chip: (@Composable () -> Unit)?) {
+private fun BarTitle(title: String, afterBack: Boolean, content: (@Composable () -> Unit)?) {
     Text(title, Modifier.padding(start = if (afterBack) 8.dp else 0.dp).semantics { heading() }, style = ActivityType.wide,
         color = LocalPalette.current.foreground, maxLines = 1, overflow = TextOverflow.Ellipsis)
-    chip?.let { Spacer(Modifier.width(10.dp)); it() }
+    content?.let { Spacer(Modifier.width(10.dp)); it() }
 }
 
 @Composable
@@ -208,14 +209,14 @@ private fun RowScope.TuckedTitle(title: String, tucked: Boolean) {
 
 /** The bottom actions over a fade, reporting their [measured] height so nothing sits under them. */
 @Composable
-private fun BoxScope.FrameFoot(start: Dp, end: Dp, footFade: Float, actions: @Composable RowScope.() -> Unit, measured: (Int) -> Unit) {
+private fun BoxScope.FrameFoot(start: Dp, end: Dp, footFade: Float, measured: (Int) -> Unit, content: @Composable RowScope.() -> Unit) {
     val palette = LocalPalette.current
     val wide = LocalSettingsPane.current != SettingsPane.compact
     Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth().onSizeChanged { measured(it.height) }
         .background(Brush.verticalGradient(0f to palette.background.copy(alpha = 0f), footFade to palette.background))
         .padding(start = start, end = if (wide) 24.dp else end, top = 48.dp, bottom = if (wide) 24.dp else 28.dp)) {
         Row(Modifier.widthIn(max = 640.dp).fillMaxWidth().align(Alignment.Center), horizontalArrangement = Arrangement.spacedBy(10.dp),
-            verticalAlignment = Alignment.CenterVertically, content = actions)
+            verticalAlignment = Alignment.CenterVertically, content = content)
     }
 }
 
@@ -267,10 +268,9 @@ internal fun SettingsRow(title: String, icon: Int? = null, glyph: String? = null
     val pressed by interaction.collectIsPressedAsState()
     val highlight by animateFloatAsState(if (pressed || selected) 1f else 0f, tween(200), label = "row")
     val leading = icon != null || glyph != null
-    val action = rowAction(end, enabled, interaction, haptics, onClick)
     Row(modifier.fillMaxWidth().heightIn(min = 56.dp).graphicsLayer { alpha = if (enabled) 1f else .4f }
         .rowBackground(palette, { highlight }, divider = divider && !selected, inset = if (leading) 48.dp else 0.dp)
-        .then(action).semantics(mergeDescendants = true) { if (selected) this.selected = true },
+        .rowAction(end, enabled, interaction, haptics, onClick).semantics(mergeDescendants = true) { if (selected) this.selected = true },
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
         val ink = if (danger) palette.failure else palette.foreground
         if (leading) RowLeading(icon, glyph, ink)
@@ -313,12 +313,12 @@ private fun AvatarRing(size: Dp, modifier: Modifier) {
 }
 
 /** A toggle row toggles; any other row with [onClick] is a button. */
-private fun rowAction(end: RowEnd, enabled: Boolean, interaction: MutableInteractionSource, haptics: com.noahwallet.ui.onboarding.Haptics,
+private fun Modifier.rowAction(end: RowEnd, enabled: Boolean, interaction: MutableInteractionSource, haptics: com.noahwallet.ui.onboarding.Haptics,
     onClick: (() -> Unit)?): Modifier = when (end) {
-    is RowEnd.Toggle -> Modifier.toggleable(end.checked, interaction, null, enabled = enabled && end.enabled, role = Role.Switch) {
+    is RowEnd.Toggle -> toggleable(end.checked, interaction, null, enabled = enabled && end.enabled, role = Role.Switch) {
         haptics.selection(); end.change(it)
     }
-    else -> if (onClick != null) Modifier.clickable(interaction, null, enabled = enabled, role = Role.Button) { haptics.light(); onClick() } else Modifier
+    else -> if (onClick != null) clickable(interaction, null, enabled = enabled, role = Role.Button) { haptics.light(); onClick() } else this
 }
 
 /** The row's press or selection highlight, and its hairline from [inset] when [divider]. */
@@ -378,8 +378,8 @@ internal fun SettingsSwitch(checked: Boolean, enabled: Boolean, modifier: Modifi
 
 /** A row of a radio list (prototype `.opt`): Material 3's radio, the name and a small detail. */
 @Composable
-internal fun RadioRow(title: String, detail: String? = null, selected: Boolean, divider: Boolean = true, danger: Boolean = false,
-    modifier: Modifier = Modifier, enabled: Boolean = true, onClick: () -> Unit) {
+internal fun RadioRow(title: String, selected: Boolean, modifier: Modifier = Modifier, detail: String? = null, divider: Boolean = true,
+    danger: Boolean = false, enabled: Boolean = true, onClick: () -> Unit) {
     val palette = LocalPalette.current
     Row(modifier.fillMaxWidth().heightIn(min = 54.dp)
         .drawBehind { if (divider) drawRect(palette.hairline, Offset(0f, size.height - 1.dp.toPx()), Size(size.width, 1.dp.toPx())) }
@@ -634,7 +634,7 @@ internal fun <T> Segmented(options: List<Pair<T, String>>, selected: T, modifier
     val position by animateFloatAsState(index.toFloat(), if (reduceMotion) tween(0) else NoahTokens.Motion.snappy(), label = "segment")
     BoxWithConstraints(modifier.padding(top = 8.dp).fillMaxWidth().height(42.dp).tonal(CircleShape, palette.soft).padding(3.dp)) {
         val width = maxWidth / options.size
-        Box(Modifier.offset(x = width * position).width(width).fillMaxHeight()
+        Box(Modifier.offset { IntOffset((width * position).roundToPx(), 0) }.width(width).fillMaxHeight()
             .graphicsLayer { shadowElevation = 2.dp.toPx(); shape = CircleShape; clip = true }
             .background(if (dark) Color(0xFF3A3A3C) else palette.background, CircleShape))
         Row(Modifier.fillMaxSize()) {

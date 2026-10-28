@@ -92,7 +92,8 @@ internal fun ActivityDetail(ui: ActivityUi, row: ActivityRules.Row, actions: Act
             }
         }
         // Content fades under the bar once it scrolls.
-        val edge by animateFloatAsState(if (scroll.value > 2) 1f else 0f, tween(200), label = "edge")
+        val scrolled by remember(scroll) { derivedStateOf { scroll.value > 2 } }
+        val edge by animateFloatAsState(if (scrolled) 1f else 0f, tween(200), label = "edge")
         Box(Modifier.fillMaxWidth().height(detailNav).graphicsLayer { alpha = edge }
             .background(Brush.verticalGradient(0f to palette.background, .78f to palette.background, 1f to palette.background.copy(alpha = 0f))))
         Row(Modifier.fillMaxWidth().height(detailNav).padding(horizontal = 4.dp).enter(0, wide, shared, elapsed),

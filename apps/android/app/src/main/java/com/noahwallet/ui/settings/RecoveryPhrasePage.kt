@@ -145,7 +145,7 @@ private fun PhraseShield(model: AppModel, holder: RevealedPhrase, activity: Acti
         if (holder.expireClip(deadline)) clear.run()
     }
     val lifecycle = LocalLifecycleOwner.current.lifecycle
-    val current = LocalContext.current as? Activity
+    val current = androidx.activity.compose.LocalActivity.current
     DisposableEffect(lifecycle) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_STOP && current?.isChangingConfigurations != true) holder.clear()

@@ -88,7 +88,7 @@ internal fun UnifiedPushPage(nav: SettingsNav) {
             return@SettingsFrame
         }
         SettingsGroup(label = tr("Deliver with"), rows = setup.distributors.map { distributor -> { d ->
-            RadioRow(distributor.name, distributor.id, setup.selected == distributor.id, divider = d,
+            RadioRow(distributor.name, setup.selected == distributor.id, detail = distributor.id, divider = d,
                 modifier = Modifier.testTag("unifiedpush-${distributor.id}")) { haptics.selection(); setup.select(distributor.id) }
         } })
         Column(Modifier.padding(top = 22.dp)) {

@@ -228,13 +228,13 @@ private fun ReceiveCardSlot(ui: ReceiveUi, face: CardFace, tilt: Float, cardWidt
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-private fun ReceiveSheets(ui: ReceiveUi, actions: ReceiveActions, sheet: MutableState<String?>, paned: Boolean, formats: @Composable () -> Unit) {
+private fun ReceiveSheets(ui: ReceiveUi, actions: ReceiveActions, sheet: MutableState<String?>, paned: Boolean, content: @Composable () -> Unit) {
     val arriving = rememberArriving(ui, sheet)
     if (sheet.value == "formats" && !paned && !arriving) TonalSheet({ sheet.value = null }) {
         Text(tr("Ways to pay you"), Modifier.padding(bottom = 4.dp).semantics { heading() },
             style = SendType.strong.copy(fontSize = androidx.compose.ui.unit.TextUnit(22f, androidx.compose.ui.unit.TextUnitType.Sp)),
             color = LocalPalette.current.foreground)
-        formats()
+        content()
     }
     if (sheet.value == "amount" && ui.request != null && !arriving) TonalSheet({ if (!ui.saving) sheet.value = null }) {
         ReceiveAmountSheet(ui, onDone = { sats, note -> if (finishAmount(ui, actions, sats, note)) sheet.value = null })

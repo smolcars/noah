@@ -161,6 +161,8 @@ class AppModel(application: Application, val settings: SettingsStorage = Setting
 
     fun refreshLocale() { localeIdentifier = com.noahwallet.services.storage.LegacyLocale.resolved(getApplication()) }
 
+    // KTX edit(commit = true) drops commit()'s result, which is checked here.
+    @android.annotation.SuppressLint("UseKtx")
     fun setLanguage(code: String) {
         check(getApplication<Application>().getSharedPreferences("gt_store", android.content.Context.MODE_PRIVATE).edit()
             .putString(com.noahwallet.services.storage.LegacyLocale.key, code).commit())

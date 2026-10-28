@@ -172,7 +172,7 @@ internal fun rememberSettingsListState(initialSheet: String?) = SettingsListStat
 
 @Composable
 private fun SecurityGroup(model: AppModel, live: SettingsLive, selected: NavKey?, open: (NavKey) -> Unit) {
-    val activity = LocalContext.current as? FragmentActivity
+    val activity = androidx.activity.compose.LocalActivity.current as? FragmentActivity
     val backup = SettingsRules.backup(model.server.state.isBackupEnabled == true, live.backup.lastBackupStatus)
     SettingsGroup(label = tr("Security"), rows = listOfNotNull(
         { d -> SettingsRow(tr("Backup"), SettingsIcons.cloud, value = when (backup) {
@@ -341,7 +341,7 @@ private fun CurrencySheet(model: AppModel, dismiss: () -> Unit) {
         Column(Modifier.padding(top = 10.dp).heightIn(max = height * .56f).verticalScroll(rememberScrollState())) {
             codes.forEachIndexed { index, code ->
                 val currency = java.util.Currency.getInstance(code)
-                RadioRow(currency.getDisplayName(locale), "$code · ${currency.getSymbol(locale)}", model.preferredCurrency == code,
+                RadioRow(currency.getDisplayName(locale), model.preferredCurrency == code, detail = "$code · ${currency.getSymbol(locale)}",
                     divider = index < codes.lastIndex, modifier = Modifier.testTag("preference-$code")) {
                     choose { model.preference("preferredCurrency", code) }
                 }
@@ -358,8 +358,8 @@ private fun LanguageSheet(model: AppModel, dismiss: () -> Unit) {
         val choose = rememberChoice(model, close)
         Column(Modifier.padding(top = 10.dp)) {
             languages.forEachIndexed { index, code ->
-                RadioRow(preferenceName(Preference.language, code, Locale.forLanguageTag(code)), code.uppercase(Locale.ROOT), model.localeIdentifier == code,
-                    divider = index < languages.lastIndex, modifier = Modifier.testTag("preference-$code")) {
+                RadioRow(preferenceName(Preference.language, code, Locale.forLanguageTag(code)), model.localeIdentifier == code,
+                    detail = code.uppercase(Locale.ROOT), divider = index < languages.lastIndex, modifier = Modifier.testTag("preference-$code")) {
                     choose { model.setLanguage(code) }
                 }
             }

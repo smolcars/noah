@@ -65,7 +65,7 @@ internal fun WalletModalBottomSheet(onDismissRequest: () -> Unit, modifier: Modi
     val hinges = LocalFoldingFeatures.current
     val density = androidx.compose.ui.platform.LocalDensity.current
     val windowHeight = androidx.window.layout.WindowMetricsCalculator.getOrCreate()
-        .computeCurrentWindowMetrics(androidx.compose.ui.platform.LocalContext.current as android.app.Activity).bounds.height()
+        .computeCurrentWindowMetrics(requireNotNull(androidx.activity.compose.LocalActivity.current)).bounds.height()
     val horizontalFold = if (capAboveHorizontalFold) hinges.filter { it.width > it.height }.maxOfOrNull { it.bottom } else null
     // Sheets anchor to the bottom window edge; keep their entire height below a horizontal fold.
     val sheetHeight = with(density) { (windowHeight - (horizontalFold ?: 0)).coerceAtLeast(1).toDp() }
