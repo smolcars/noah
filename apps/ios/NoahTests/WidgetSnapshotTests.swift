@@ -60,12 +60,13 @@ struct WidgetSnapshotTests {
         defaults.set(["totalBalance": 125_000.0, "onchainBalance": 30_000.0, "offchainBalance": 95_000.0, "pendingBalance": 5_000.0,
                       "closestExpiryBlocks": 90.0, "expiryThreshold": 288.0], forKey: WidgetSnapshot.legacyKey)
         let snapshot = try #require(WidgetSnapshot.read(from: defaults, variant: "regtest", now: Self.now))
-        #expect(snapshot == WidgetSnapshot(writtenAt: Self.now, balance: 125_000, arriving: 5_000, dailyBalances: nil, amountUnit: .bip177,
+        // The old pending total also counted outgoing payments, so it never shows as arriving (as on Android).
+        #expect(snapshot == WidgetSnapshot(writtenAt: Self.now, balance: 125_000, arriving: 0, dailyBalances: nil, amountUnit: .bip177,
                                            hidden: false, fiat: nil, renewBy: nil, variant: "regtest"))
         let shown = WidgetPresentation(snapshot: snapshot, now: Self.now, language: "en", calendar: Self.utc)
         #expect(shown.balance == "₿\u{00A0}125,000")
         #expect(shown.wave == nil && shown.change == nil && shown.fiat == nil)
-        #expect(shown.status == .arriving("+₿\u{00A0}5,000 arriving"))
+        #expect(shown.status == nil)
         defaults.set(["totalBalance": -1.0, "pendingBalance": "5000"], forKey: WidgetSnapshot.legacyKey)
         #expect(WidgetSnapshot.read(from: defaults, variant: "regtest")?.balance == 0)
     }
