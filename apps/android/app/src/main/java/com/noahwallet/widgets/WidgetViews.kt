@@ -302,6 +302,9 @@ internal object WidgetViews {
         return Line(sp, (if (oneRow) 1f else 2f) + maxOf(if (oneRow) 16f else 17f, type.lines(text, paint(sp)).second))
     }
 
+    /** The 2×2's room for its sea above the balance (dp, [frame]): the 2×2 is planned only where the boat never meets the digits. */
+    const val SEA_ROOM = 29f
+
     /** The Actions' labels never go below this (sp, before the font scale); below it the buttons show their icons alone. */
     const val ACTION_FLOOR = 11f
 
@@ -376,7 +379,8 @@ internal object WidgetViews {
         // Everything but the status line: padding, the label row, the balance, the fiat and the Actions.
         private fun fixed(layout: WidgetLayout, fiat: Line?, row: Float) = (fiat?.tall ?: 0f) + when (layout) {
             WidgetLayout.medium -> 17f + 38f + 40f + 16f
-            WidgetLayout.small -> 15f + row + 34f + 16f
+            // The sea's shallowest band (26 dp) and its 4 dp gap above the balance, less the 1 dp it shares with the label row.
+            WidgetLayout.small -> 15f + row + 34f + 16f + SEA_ROOM
             else -> 28f
         }
 

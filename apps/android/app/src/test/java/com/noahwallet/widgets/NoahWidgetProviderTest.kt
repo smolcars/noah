@@ -590,7 +590,8 @@ class NoahWidgetProviderTest {
         val cases = listOf(month.copy(amountUnit = "sats"), month.copy(arriving = 0, renewDue = now + 40 * 60_000L),
             month.copy(arriving = 0, renewDue = now + 18 * hour))
         // 4×1s and 2×1s at a launcher's one-row heights, and 2×2 slots that may fall back to the 2×1.
-        val sizes = listOf(350f to 60f, 350f to 84f, 300f to 100f, 250f to 90f, 172.19f to 110f, 151.62f to 233.9f, 151.62f to 160f)
+        val sizes = listOf(350f to 60f, 350f to 84f, 300f to 100f, 250f to 90f, 172.19f to 110f, 151.62f to 233.9f, 151.62f to 160f,
+            172.19f to 224f)
         val shown = mutableSetOf<String>()
         val layouts = mutableSetOf<WidgetLayout>()
         try {
@@ -633,6 +634,14 @@ class NoahWidgetProviderTest {
             shown += view.text(id).trim(' ', '·')
         }
         assertTrue("$at: the balance", view.bottom(R.id.widget_balance) <= clip)
+        // The 2×2's sea ends above the balance as laid out, its 4 dp gap give or take the views' whole pixels: its line and
+        // boat never cross the digits (a 2×2 at 200% with a Renew line drew them 26 dp into the balance).
+        if (plan.layout == WidgetLayout.small) {
+            val sea = WidgetViews.frame(plan.layout, content, width, height, plan.status.tall, plan.labelRow, plan.label?.lift ?: 0f,
+                plan.fiat?.tall ?: 0f)!!
+            assertTrue("$at: the sea ends at ${(sea.y + sea.band) * d} px, the balance starts at ${view.top(R.id.widget_balance)} px",
+                (sea.y + sea.band + 3f) * d <= view.top(R.id.widget_balance))
+        }
         return plan.layout
     }
 
