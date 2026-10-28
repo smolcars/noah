@@ -5,6 +5,7 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.content.Intent
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.AnimationVector1D
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
@@ -136,176 +137,124 @@ private fun formatRows(ui: ReceiveUi): List<FormatRow> {
  * formats in the "Ways to pay you" sheet; wide and tabletop show them beside or below the card, with no sheet.
  * Must sit inside [OnboardingFrame], which resolves the pose.
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ReceiveContent(ui: ReceiveUi, actions: ReceiveActions, toasts: HomeToasts = remember { HomeToasts() }) {
-    val palette = LocalPalette.current
-    val reduceMotion = LocalReduceMotion.current
     val haptics = rememberHaptics()
     val context = LocalContext.current
     val pose = LocalPose.current
-    val scope = rememberCoroutineScope()
-    var sheet by rememberSaveable { mutableStateOf<String?>(null) }
+    val sheet = rememberSaveable { mutableStateOf<String?>(null) }
     val tilt = remember { Animatable(0f) }
-    val copied = tr("Copied")
     val face = cardFace(ui, ui.format)
     val rows = formatRows(ui)
-    fun copy(format: ReceiveFormat) {
-        val value = ReceiveFormats.payload(format, ui.request, ui.address) ?: return
-        (context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(ClipData.newPlainText(format.name, value))
-        haptics.success(); toasts.show(copied)
-    }
+    val copy = rememberFormatCopy(ui, toasts)
     fun share() {
         val value = face.payload ?: return
         haptics.light()
         context.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, value), null))
     }
-    fun amountSheet() { haptics.light(); sheet = "amount" }
-    fun select(format: ReceiveFormat, fromSheet: Boolean) {
-        if (format == ReceiveFormat.invoice && ui.amount == null) {
-            scope.launch {
-                if (fromSheet) { sheet = null; delay(200) }
-                amountSheet()
-            }
-            return
-        }
-        if (format == ui.format) return
-        haptics.selection(); actions.select(format)
-        if (!reduceMotion) scope.launch { tilt.animateTo(-10f, tween(120)); tilt.animateTo(0f, NoahTokens.Motion.bouncy()) }
-        if (fromSheet) scope.launch { delay(250); sheet = null }
-    }
+    fun amountSheet() { haptics.light(); sheet.value = "amount" }
+    val select = rememberFormatSelect(ui, actions, sheet, tilt)
     val paned = pose !is OnboardingPose.Compact
     val cardWidth = if (pose is OnboardingPose.Wide) 310.dp else 300.dp
     val qrSide = if (pose is OnboardingPose.Wide) 228.dp else 226.dp
-    val now by produceState(0L, ui.arrival?.startedAt) {
-        val started = ui.arrival?.startedAt ?: return@produceState
-        while (true) {
-            value = android.os.SystemClock.elapsedRealtime() - started
-            if (value > 6_000) break
-            delay(100)
-        }
-    }
-    val phase = ui.arrival?.let { ReceiveTimeline.phase(it.rail, now, reduceMotion) }
-    val chainPhase = ui.chain?.takeIf { phase == null }?.let { _ ->
-        val tip = ui.tip
-        val format = java.text.NumberFormat.getIntegerInstance(ui.locale)
-        when {
-            tip == null -> null
-            ui.confirmedAt != null -> tr("Confirmed in block {height}", format.format(ui.confirmedAt))
-            else -> tr("Waiting for block {height}", format.format(tip + 1))
-        }
-    }
-    val line = phase?.let { tr(it) } ?: chainPhase
-    val done = phase == "Received" || (ui.confirmedAt != null && chainPhase != null)
-    val card = @Composable {
-        if (ui.error != null && ui.request == null && ui.format != ReceiveFormat.lightningAddress) ErrorCard(ui.error, ui.errorTitle, cardWidth, actions.retry)
-        else FitHeight {
-            ReceiveCard(face, ui.arrival, ui.arrival?.let { ui.sats(it.sats) }, ui.listening && ui.error == null, tilt.value, cardWidth, qrSide,
-                actions.profile, if (paned) null else ({ haptics.light(); sheet = "formats" }))
-        }
-    }
+    val (line, done) = arrivalLine(ui)
+    val openFormats = { haptics.light(); sheet.value = "formats" }
+    val card = @Composable { ReceiveCardSlot(ui, face, tilt.value, cardWidth, qrSide, actions, openFormats.takeIf { !paned }) }
     val under = @Composable {
         PhaseText(line, done, Modifier.padding(top = 14.dp).width(cardWidth))
         ReceiveBlockRow(ui.chain, ui.tip, ui.confirmedAt, cardWidth, Modifier.padding(top = 8.dp))
     }
-    val pills = @Composable { modifier: Modifier ->
-        Row(modifier, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            SendPill(if (ui.amount == null) tr("Add amount") else tr("Change amount"), Modifier.weight(1f).testTag("receive-amount-button"),
-                enabled = ui.request != null && !ui.saving,
-                outlined = true, height = 48.dp) { amountSheet() }
-            SendPill(tr("Share"), Modifier.weight(1f).testTag("receive-share"), enabled = face.payload != null, height = 48.dp) { share() }
-        }
-    }
-    val list = @Composable { FormatList(ui, rows, onSelect = { select(it, false) }, onCopy = ::copy) }
-    // Today's request errors (and a failed Lightning receive) while the card still shows your address.
-    val problem = @Composable { modifier: Modifier ->
-        if (ui.error != null && !(ui.request == null && ui.format != ReceiveFormat.lightningAddress)) Column(modifier,
-            horizontalAlignment = Alignment.CenterHorizontally) {
-            ui.errorTitle?.let { Text(tr(it), style = SendType.strong, color = palette.foreground, textAlign = TextAlign.Center) }
-            Text(tr(ui.error), style = SendType.small, color = palette.failure, textAlign = TextAlign.Center)
-            androidx.compose.material3.TextButton(actions.retry) { Text(tr("Retry"), style = SendType.line, color = palette.foreground) }
-        }
-    }
+    val pills = @Composable { modifier: Modifier -> ReceivePills(ui, face.payload != null, modifier, ::amountSheet, ::share) }
+    val list = @Composable { FormatList(ui, rows, onSelect = { select(it, false) }, onCopy = copy) }
+    val problem = @Composable { modifier: Modifier -> RequestProblem(ui, actions.retry, modifier) }
+    val toast = @Composable { modifier: Modifier -> HomeToast(toasts.current, modifier) }
     when (pose) {
-        OnboardingPose.Compact -> Box(Modifier.fillMaxSize()) {
-            Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).padding(top = 6.dp, bottom = 16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally) {
-                Row(Modifier.fillMaxWidth().height(44.dp), horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
-                    CircleButton(SendIcons.copy, tr("Ways to pay you"), Modifier.testTag("receive-formats")) { haptics.light(); sheet = "formats" }
-                }
-                Box(Modifier.padding(top = 12.dp)) { card() }
-                under()
-                pills(Modifier.width(cardWidth).padding(top = 18.dp))
-                ui.invoiceError?.let { Text(tr(it), Modifier.padding(top = 12.dp).width(cardWidth), style = SendType.small, color = palette.failure,
-                    textAlign = TextAlign.Center) }
-                problem(Modifier.padding(top = 12.dp).width(cardWidth))
-            }
-            HomeToast(toasts.current, Modifier.align(Alignment.TopCenter).padding(top = 60.dp))
-        }
-        is OnboardingPose.Wide -> Row(Modifier.fillMaxSize()) {
-            Box(Modifier.width(pose.start).fillMaxHeight().padding(horizontal = 24.dp, vertical = 24.dp), contentAlignment = Alignment.Center) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) { card(); under() }
-                HomeToast(toasts.current, Modifier.align(Alignment.TopCenter))
-            }
-            Spacer(Modifier.width(pose.end - pose.start))
-            Box(Modifier.weight(1f).fillMaxHeight().padding(start = 40.dp, end = 34.dp, top = 40.dp, bottom = 24.dp), contentAlignment = Alignment.TopCenter) {
-                Column(Modifier.widthIn(max = OnboardingPose.paneContent.dp).fillMaxSize()) {
-                    Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
-                        Text(tr("Show"), Modifier.padding(bottom = 8.dp).semantics { heading() }, style = SendType.section, color = palette.muted)
-                        list()
-                        ui.invoiceError?.let { Text(tr(it), Modifier.padding(top = 12.dp), style = SendType.small, color = palette.failure) }
-                        problem(Modifier.fillMaxWidth().padding(top = 12.dp))
-                    }
-                    pills(Modifier.fillMaxWidth().padding(top = 16.dp))
-                }
-            }
-        }
-        is OnboardingPose.Tabletop -> Column(Modifier.fillMaxSize()) {
-            Box(Modifier.height(pose.top).fillMaxWidth().clipToBounds().padding(vertical = 10.dp), contentAlignment = Alignment.Center) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Box(Modifier.weight(1f, fill = false)) { card() }
-                    PhaseText(line, done, Modifier.padding(top = 8.dp).width(cardWidth))
-                }
-                HomeToast(toasts.current, Modifier.align(Alignment.TopCenter))
-            }
-            Spacer(Modifier.height(pose.bottom - pose.top))
-            Box(Modifier.weight(1f).fillMaxWidth().clipToBounds().padding(horizontal = 20.dp, vertical = 12.dp), contentAlignment = Alignment.TopCenter) {
-                Column(Modifier.widthIn(max = OnboardingPose.paneContent.dp).fillMaxSize()) {
-                    Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
-                        ReceiveBlockRow(ui.chain, ui.tip, ui.confirmedAt, cardWidth, Modifier.align(Alignment.CenterHorizontally))
-                        list()
-                        ui.invoiceError?.let { Text(tr(it), Modifier.padding(top = 12.dp), style = SendType.small, color = palette.failure) }
-                        problem(Modifier.fillMaxWidth().padding(top = 12.dp))
-                    }
-                    pills(Modifier.fillMaxWidth().padding(top = 12.dp))
-                }
-            }
+        OnboardingPose.Compact -> CompactReceive(ui, cardWidth, card, under, pills, problem, toast, openFormats)
+        is OnboardingPose.Wide -> WideReceive(ui, pose, card, under, pills, list, problem, toast)
+        is OnboardingPose.Tabletop -> TabletopReceive(ui, pose, cardWidth, line, done, card, pills, list, problem, toast)
+    }
+    ReceiveSheets(ui, actions, sheet, paned) { FormatList(ui, rows, onSelect = { select(it, true) }, onCopy = copy) }
+}
+
+/** Copies a format's payload, with a toast. */
+@Composable
+private fun rememberFormatCopy(ui: ReceiveUi, toasts: HomeToasts): (ReceiveFormat) -> Unit {
+    val context = LocalContext.current
+    val haptics = rememberHaptics()
+    val copied = tr("Copied")
+    return { format ->
+        ReceiveFormats.payload(format, ui.request, ui.address)?.let { value ->
+            (context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(ClipData.newPlainText(format.name, value))
+            haptics.success(); toasts.show(copied)
         }
     }
-    // An arrival plays on the card, so a new one closes any open sheet in the frame it starts; one already playing
-    // when the screen is restored keeps its sheet.
-    var presented by rememberSaveable { mutableStateOf(ui.arrival?.startedAt) }
-    val arriving = ui.arrival != null && ui.arrival.startedAt != presented
-    LaunchedEffect(ui.arrival?.startedAt) {
-        if (ui.arrival != null && ui.arrival.startedAt != presented) sheet = null
-        presented = ui.arrival?.startedAt
+}
+
+/** Picks a format (the card tilts); the invoice first asks for an amount. [fromSheet] closes the formats sheet after. */
+@Composable
+private fun rememberFormatSelect(ui: ReceiveUi, actions: ReceiveActions, sheet: MutableState<String?>,
+    tilt: Animatable<Float, AnimationVector1D>): (ReceiveFormat, Boolean) -> Unit {
+    val reduceMotion = LocalReduceMotion.current
+    val haptics = rememberHaptics()
+    val scope = rememberCoroutineScope()
+    return select@{ format, fromSheet ->
+        if (format == ReceiveFormat.invoice && ui.amount == null) {
+            scope.launch {
+                if (fromSheet) { sheet.value = null; delay(200) }
+                haptics.light(); sheet.value = "amount"
+            }
+            return@select
+        }
+        if (format == ui.format) return@select
+        haptics.selection(); actions.select(format)
+        if (!reduceMotion) scope.launch { tilt.animateTo(-10f, tween(120)); tilt.animateTo(0f, NoahTokens.Motion.bouncy()) }
+        if (fromSheet) scope.launch { delay(250); sheet.value = null }
     }
-    if (sheet == "formats" && !paned && !arriving) TonalSheet({ sheet = null }) {
+}
+
+/** The card, or today's error card while there's no request to show. [openFormats] is the compact card's formats tap. */
+@Composable
+private fun ReceiveCardSlot(ui: ReceiveUi, face: CardFace, tilt: Float, cardWidth: Dp, qrSide: Dp, actions: ReceiveActions, openFormats: (() -> Unit)?) {
+    if (ui.error != null && ui.request == null && ui.format != ReceiveFormat.lightningAddress) ErrorCard(ui.error, ui.errorTitle, cardWidth, actions.retry)
+    else FitHeight {
+        ReceiveCard(face, ui.arrival, ui.arrival?.let { ui.sats(it.sats) }, ui.listening && ui.error == null, tilt, cardWidth, qrSide,
+            actions.profile, openFormats)
+    }
+}
+
+/**
+ * The formats sheet (compact only) and the amount sheet. An arrival plays on the card, so a new one closes any open
+ * sheet in the frame it starts; one already playing when the screen is restored keeps its sheet.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ReceiveSheets(ui: ReceiveUi, actions: ReceiveActions, sheet: MutableState<String?>, paned: Boolean, formats: @Composable () -> Unit) {
+    val arriving = rememberArriving(ui, sheet)
+    if (sheet.value == "formats" && !paned && !arriving) TonalSheet({ sheet.value = null }) {
         Text(tr("Ways to pay you"), Modifier.padding(bottom = 4.dp).semantics { heading() },
             style = SendType.strong.copy(fontSize = androidx.compose.ui.unit.TextUnit(22f, androidx.compose.ui.unit.TextUnitType.Sp)),
-            color = palette.foreground)
-        FormatList(ui, rows, onSelect = { select(it, true) }, onCopy = ::copy)
+            color = LocalPalette.current.foreground)
+        formats()
     }
-    if (sheet == "amount" && ui.request != null && !arriving) TonalSheet({ if (!ui.saving) sheet = null }) {
-        ReceiveAmountSheet(ui, onDone = { sats, note ->
-            when {
-                sats == 0L && ui.amount == null -> sheet = null
-                sats == 0L -> { actions.removeAmount(); sheet = null }
-                sats == ui.amount && note.trim() == ui.request.description -> sheet = null
-                else -> actions.saveAmount(sats, note)
-            }
-        })
+    if (sheet.value == "amount" && ui.request != null && !arriving) TonalSheet({ if (!ui.saving) sheet.value = null }) {
+        ReceiveAmountSheet(ui, onDone = { sats, note -> if (finishAmount(ui, actions, sats, note)) sheet.value = null })
     }
+    CloseOnSaved(ui, sheet)
+}
+
+/** True from a new arrival's first frame until it's presented; it closes any open sheet as it starts. */
+@Composable
+private fun rememberArriving(ui: ReceiveUi, sheet: MutableState<String?>): Boolean {
+    var presented by rememberSaveable { mutableStateOf(ui.arrival?.startedAt) }
+    LaunchedEffect(ui.arrival?.startedAt) {
+        if (ui.arrival != null && ui.arrival.startedAt != presented) sheet.value = null
+        presented = ui.arrival?.startedAt
+    }
+    return ui.arrival != null && ui.arrival.startedAt != presented
+}
+
+@Composable
+private fun CloseOnSaved(ui: ReceiveUi, sheet: MutableState<String?>) {
     // Saving closes the sheet once today's invoice creation has returned a new request: only after a save seen
     // starting here, so a sheet restored with the screen (rotation, a pose change) stays open.
     var savingFrom by remember { mutableStateOf<ReceiveRequest?>(null) }
@@ -316,7 +265,189 @@ fun ReceiveContent(ui: ReceiveUi, actions: ReceiveActions, toasts: HomeToasts = 
         }
         val from = savingFrom ?: return@LaunchedEffect
         savingFrom = null
-        if (sheet == "amount" && ui.request != from && ui.invoiceError == null) sheet = null
+        if (sheet.value == "amount" && ui.request != from && ui.invoiceError == null) sheet.value = null
+    }
+}
+
+/** The amount sheet's Done: clear, keep or save the amount; true when the sheet can close now (a save closes it later). */
+private fun finishAmount(ui: ReceiveUi, actions: ReceiveActions, sats: Long, note: String): Boolean = when {
+    sats == 0L && ui.amount == null -> true
+    sats == 0L -> { actions.removeAmount(); true }
+    sats == ui.amount && note.trim() == ui.request?.description -> true
+    else -> { actions.saveAmount(sats, note); false }
+}
+
+/** The line under the card: the arrival's phase while it plays, then an on-chain payment's block; and whether it reads as done. */
+@Composable
+private fun arrivalLine(ui: ReceiveUi): Pair<String?, Boolean> {
+    val reduceMotion = LocalReduceMotion.current
+    val now by produceState(0L, ui.arrival?.startedAt) {
+        val started = ui.arrival?.startedAt ?: return@produceState
+        while (true) {
+            value = android.os.SystemClock.elapsedRealtime() - started
+            if (value > 6_000) break
+            delay(100)
+        }
+    }
+    val phase = ui.arrival?.let { ReceiveTimeline.phase(it.rail, now, reduceMotion) }
+    val chainPhase = ui.chain?.takeIf { phase == null }?.let { _ -> blockLine(ui) }
+    val line = phase?.let { tr(it) } ?: chainPhase
+    return line to (phase == "Received" || (ui.confirmedAt != null && chainPhase != null))
+}
+
+@Composable
+private fun blockLine(ui: ReceiveUi): String? {
+    val tip = ui.tip
+    val format = java.text.NumberFormat.getIntegerInstance(ui.locale)
+    return when {
+        tip == null -> null
+        ui.confirmedAt != null -> tr("Confirmed in block {height}", format.format(ui.confirmedAt))
+        else -> tr("Waiting for block {height}", format.format(tip + 1))
+    }
+}
+
+/** Add or change the amount, and share what the card shows. */
+@Composable
+private fun ReceivePills(ui: ReceiveUi, canShare: Boolean, modifier: Modifier, amount: () -> Unit, share: () -> Unit) {
+    Row(modifier, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        SendPill(if (ui.amount == null) tr("Add amount") else tr("Change amount"), Modifier.weight(1f).testTag("receive-amount-button"),
+            enabled = ui.request != null && !ui.saving,
+            outlined = true, height = 48.dp, onClick = amount)
+        SendPill(tr("Share"), Modifier.weight(1f).testTag("receive-share"), enabled = canShare, height = 48.dp, onClick = share)
+    }
+}
+
+/** Today's request errors (and a failed Lightning receive) while the card still shows your address. */
+@Composable
+private fun RequestProblem(ui: ReceiveUi, retry: () -> Unit, modifier: Modifier) {
+    val palette = LocalPalette.current
+    val error = ui.error ?: return
+    if (ui.request == null && ui.format != ReceiveFormat.lightningAddress) return
+    Column(modifier, horizontalAlignment = Alignment.CenterHorizontally) {
+        ui.errorTitle?.let { Text(tr(it), style = SendType.strong, color = palette.foreground, textAlign = TextAlign.Center) }
+        Text(tr(error), style = SendType.small, color = palette.failure, textAlign = TextAlign.Center)
+        androidx.compose.material3.TextButton(retry) { Text(tr("Retry"), style = SendType.line, color = palette.foreground) }
+    }
+}
+
+@Composable
+private fun CompactReceive(ui: ReceiveUi, cardWidth: Dp, card: @Composable () -> Unit, under: @Composable () -> Unit,
+    pills: @Composable (Modifier) -> Unit, problem: @Composable (Modifier) -> Unit, toast: @Composable (Modifier) -> Unit, formats: () -> Unit) {
+    Box(Modifier.fillMaxSize()) {
+        Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).padding(top = 6.dp, bottom = 16.dp),
+            horizontalAlignment = Alignment.CenterHorizontally) {
+            Row(Modifier.fillMaxWidth().height(44.dp), horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
+                CircleButton(SendIcons.copy, tr("Ways to pay you"), Modifier.testTag("receive-formats"), onClick = formats)
+            }
+            Box(Modifier.padding(top = 12.dp)) { card() }
+            under()
+            pills(Modifier.width(cardWidth).padding(top = 18.dp))
+            ui.invoiceError?.let { Text(tr(it), Modifier.padding(top = 12.dp).width(cardWidth), style = SendType.small, color = LocalPalette.current.failure,
+                textAlign = TextAlign.Center) }
+            problem(Modifier.padding(top = 12.dp).width(cardWidth))
+        }
+        toast(Modifier.align(Alignment.TopCenter).padding(top = 60.dp))
+    }
+}
+
+@Composable
+private fun WideReceive(ui: ReceiveUi, pose: OnboardingPose.Wide, card: @Composable () -> Unit, under: @Composable () -> Unit,
+    pills: @Composable (Modifier) -> Unit, list: @Composable () -> Unit, problem: @Composable (Modifier) -> Unit, toast: @Composable (Modifier) -> Unit) {
+    val palette = LocalPalette.current
+    Row(Modifier.fillMaxSize()) {
+        Box(Modifier.width(pose.start).fillMaxHeight().padding(horizontal = 24.dp, vertical = 24.dp), contentAlignment = Alignment.Center) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) { card(); under() }
+            toast(Modifier.align(Alignment.TopCenter))
+        }
+        Spacer(Modifier.width(pose.end - pose.start))
+        Box(Modifier.weight(1f).fillMaxHeight().padding(start = 40.dp, end = 34.dp, top = 40.dp, bottom = 24.dp), contentAlignment = Alignment.TopCenter) {
+            Column(Modifier.widthIn(max = OnboardingPose.paneContent.dp).fillMaxSize()) {
+                Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
+                    Text(tr("Show"), Modifier.padding(bottom = 8.dp).semantics { heading() }, style = SendType.section, color = palette.muted)
+                    list()
+                    ui.invoiceError?.let { Text(tr(it), Modifier.padding(top = 12.dp), style = SendType.small, color = palette.failure) }
+                    problem(Modifier.fillMaxWidth().padding(top = 12.dp))
+                }
+                pills(Modifier.fillMaxWidth().padding(top = 16.dp))
+            }
+        }
+    }
+}
+
+@Composable
+private fun TabletopReceive(ui: ReceiveUi, pose: OnboardingPose.Tabletop, cardWidth: Dp, line: String?, done: Boolean, card: @Composable () -> Unit,
+    pills: @Composable (Modifier) -> Unit, list: @Composable () -> Unit, problem: @Composable (Modifier) -> Unit, toast: @Composable (Modifier) -> Unit) {
+    Column(Modifier.fillMaxSize()) {
+        Box(Modifier.height(pose.top).fillMaxWidth().clipToBounds().padding(vertical = 10.dp), contentAlignment = Alignment.Center) {
+            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                Box(Modifier.weight(1f, fill = false)) { card() }
+                PhaseText(line, done, Modifier.padding(top = 8.dp).width(cardWidth))
+            }
+            toast(Modifier.align(Alignment.TopCenter))
+        }
+        Spacer(Modifier.height(pose.bottom - pose.top))
+        Box(Modifier.weight(1f).fillMaxWidth().clipToBounds().padding(horizontal = 20.dp, vertical = 12.dp), contentAlignment = Alignment.TopCenter) {
+            Column(Modifier.widthIn(max = OnboardingPose.paneContent.dp).fillMaxSize()) {
+                Column(Modifier.weight(1f).verticalScroll(rememberScrollState())) {
+                    ReceiveBlockRow(ui.chain, ui.tip, ui.confirmedAt, cardWidth, Modifier.align(Alignment.CenterHorizontally))
+                    list()
+                    ui.invoiceError?.let { Text(tr(it), Modifier.padding(top = 12.dp), style = SendType.small, color = LocalPalette.current.failure) }
+                    problem(Modifier.fillMaxWidth().padding(top = 12.dp))
+                }
+                pills(Modifier.fillMaxWidth().padding(top = 12.dp))
+            }
+        }
+    }
+}
+
+/** The typed amount in sats: as typed, or converted at today's price while typing in fiat. */
+private fun typedSats(amount: String, fiat: Boolean, ui: ReceiveUi): Long {
+    val normalized = amount.replace(DecimalFormatSymbols.getInstance(ui.locale).decimalSeparator, '.')
+    return if (fiat && ui.price != null) FiatCurrency.fiatToSats(normalized.toDoubleOrNull() ?: 0.0, ui.price) else normalized.toLongOrNull() ?: 0
+}
+
+/** The sheet's figure: the formatted sats, or the fiat symbol and the digits as typed. */
+private fun typedText(amount: String, fiat: Boolean, sats: Long, ui: ReceiveUi): String = when {
+    amount.isEmpty() -> ui.sats(0)
+    fiat -> (runCatching { java.util.Currency.getInstance(ui.currency).getSymbol(ui.locale) }.getOrDefault(ui.currency)) + amount.replace('.',
+        DecimalFormatSymbols.getInstance(ui.locale).decimalSeparator)
+    else -> ui.sats(sats)
+}
+
+/** The amount in the other currency (tap to type in it, while there's a price and no save running). */
+@Composable
+private fun CurrencyLine(ui: ReceiveUi, fiat: Boolean, sats: Long, toggle: () -> Unit) {
+    val palette = LocalPalette.current
+    Row(Modifier.padding(top = 8.dp).height(24.dp).then(if (ui.price != null && !ui.saving) Modifier.clickable(role = Role.Button, onClick = toggle)
+    else Modifier), verticalAlignment = Alignment.CenterVertically) {
+        ui.price?.let { price ->
+            Text(if (fiat) ui.sats(sats) else FiatCurrency.display(sats, price, ui.currency, ui.locale), style = SendType.body, color = palette.muted)
+            Icon(painterResource(SendIcons.swap), null, Modifier.padding(start = 8.dp).size(16.dp), tint = palette.muted)
+        }
+    }
+}
+
+/** The typed amount for the other currency: sats when leaving fiat, today's price in fiat when entering it; empty for none. */
+private fun switchedAmount(sats: Long, fiat: Boolean, ui: ReceiveUi): String {
+    val positive = sats.takeIf { it > 0 } ?: return ""
+    if (fiat) return positive.toString()
+    return ui.price?.let { FiatCurrency.satsToFiat(positive, it, ui.currency) } ?: ""
+}
+
+@Composable
+private fun NoteInput(note: String, onNote: (String) -> Unit, enabled: Boolean) {
+    val palette = LocalPalette.current
+    Row(Modifier.fillMaxWidth().padding(top = 12.dp, bottom = 6.dp).heightIn(min = 48.dp).tonal(RoundedCornerShape(24.dp),
+        palette.soft).padding(horizontal = 18.dp),
+        verticalAlignment = Alignment.CenterVertically) {
+        BasicTextField(note, onNote, Modifier.weight(1f).padding(vertical = 12.dp).testTag("receive-description-input"), enabled = enabled,
+            textStyle = SendType.body.copy(color = palette.foreground), cursorBrush = SolidColor(palette.orange), maxLines = 3,
+            decorationBox = { inner ->
+                Box {
+                    if (note.isEmpty()) Text(tr("Add a note"), style = SendType.body, color = palette.muted)
+                    inner()
+                }
+            })
     }
 }
 
@@ -405,15 +536,9 @@ internal fun ReceiveAmountSheet(ui: ReceiveUi, onDone: (Long, String) -> Unit) {
     var noting by rememberSaveable { mutableStateOf(request.description.isNotEmpty()) }
     var fiat by rememberSaveable { mutableStateOf(false) }
     val shake = rememberAmountShake()
-    val normalized = amount.replace(DecimalFormatSymbols.getInstance(ui.locale).decimalSeparator, '.')
-    val sats = if (fiat && ui.price != null) FiatCurrency.fiatToSats(normalized.toDoubleOrNull() ?: 0.0, ui.price) else normalized.toLongOrNull() ?: 0
+    val sats = typedSats(amount, fiat, ui)
     val valid = sats == 0L || runCatching { ReceiveRequest.validate(sats, note) }.isSuccess
-    val text = when {
-        amount.isEmpty() -> ui.sats(0)
-        fiat -> (runCatching { java.util.Currency.getInstance(ui.currency).getSymbol(ui.locale) }.getOrDefault(ui.currency)) + amount.replace('.',
-            DecimalFormatSymbols.getInstance(ui.locale).decimalSeparator)
-        else -> ui.sats(sats)
-    }
+    val text = typedText(amount, fiat, sats, ui)
     // Under a horizontal fold the sheet only has the lower half, so the amount sits beside the keypad there.
     val sideBySide = LocalPose.current is OnboardingPose.Tabletop
     val fields = @Composable {
@@ -423,31 +548,14 @@ internal fun ReceiveAmountSheet(ui: ReceiveUi, onDone: (Long, String) -> Unit) {
         Box(Modifier.fillMaxWidth().padding(top = 10.dp).height(58.dp), contentAlignment = Alignment.BottomCenter) {
             AmountFigure(text, amount.isEmpty(), shake.value, SendType.sheetAmount, Modifier.testTag("receive-amount-input"))
         }
-        Row(Modifier.padding(top = 8.dp).height(24.dp).then(if (ui.price != null && !ui.saving) Modifier.clickable(role = Role.Button) {
+        CurrencyLine(ui, fiat, sats) {
             haptics.selection()
-            amount = if (fiat) sats.takeIf { it > 0 }?.toString() ?: "" else sats.takeIf { it > 0 }?.let { FiatCurrency.satsToFiat(it, ui.price,
-                ui.currency) } ?: ""
+            amount = switchedAmount(sats, fiat, ui)
             fiat = !fiat
-        } else Modifier), verticalAlignment = Alignment.CenterVertically) {
-            ui.price?.let { price ->
-                Text(if (fiat) ui.sats(sats) else FiatCurrency.display(sats, price, ui.currency, ui.locale), style = SendType.body, color = palette.muted)
-                Icon(painterResource(SendIcons.swap), null, Modifier.padding(start = 8.dp).size(16.dp), tint = palette.muted)
-            }
         }
         if (!noting) Box(Modifier.padding(top = 12.dp, bottom = 6.dp)) { SendChip(tr("Add a note"), Modifier.testTag("receive-note-chip"),
             enabled = !ui.saving) { haptics.light(); noting = true } }
-        else Row(Modifier.fillMaxWidth().padding(top = 12.dp, bottom = 6.dp).heightIn(min = 48.dp).tonal(RoundedCornerShape(24.dp),
-            palette.soft).padding(horizontal = 18.dp),
-            verticalAlignment = Alignment.CenterVertically) {
-            BasicTextField(note, { note = it }, Modifier.weight(1f).padding(vertical = 12.dp).testTag("receive-description-input"), enabled = !ui.saving,
-                textStyle = SendType.body.copy(color = palette.foreground), cursorBrush = SolidColor(palette.orange), maxLines = 3,
-                decorationBox = { inner ->
-                    Box {
-                        if (note.isEmpty()) Text(tr("Add a note"), style = SendType.body, color = palette.muted)
-                        inner()
-                    }
-                })
-        }
+        else NoteInput(note, { note = it }, !ui.saving)
         if (note.trim().length > 639) Text(tr("Note must be 639 characters or fewer."), style = SendType.small, color = palette.failure)
         ui.invoiceError?.let { Text(tr(it), Modifier.padding(top = 6.dp), style = SendType.small, color = palette.failure, textAlign = TextAlign.Center) }
     }

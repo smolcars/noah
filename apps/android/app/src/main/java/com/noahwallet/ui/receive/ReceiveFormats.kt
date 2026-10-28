@@ -71,6 +71,7 @@ internal object ReceiveArrivals {
      * then a payment to your Lightning address. Replacements of deposits already shown are taken first, as seen
      * with no arrival (null). Null when nothing is waiting.
      */
+    @Suppress("LongParameterList") // a pure rule over the wallet's records, which ReceiveFormatsTest drives argument by argument
     fun next(rows: List<HistoryTransaction>, records: ReceiveRecords, address: String?, ownArk: Set<String>, ownHashes: Set<String>,
         amount: (String, String) -> Long?, spends: (String) -> List<String>?, now: Long): Pair<ReceiveRecords, ReceiveArrival?>? {
         val seen = replaced(rows, records, spends)
