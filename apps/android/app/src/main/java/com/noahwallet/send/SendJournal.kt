@@ -21,16 +21,17 @@ class SendJournal(private val file: File, private val sync: (File) -> Unit = ::s
     @Synchronized fun quarantineUnreadable() {
         val sources = listOf(file, File(file.path + ".bak"), File(file.path + ".new")).filter { it.exists() }
         check(sources.isNotEmpty())
-        for (source in sources) {
-            val copy = File(file.parentFile, ".send-evidence-${java.util.UUID.randomUUID()}")
-            try {
-                source.inputStream().use { input -> java.io.FileOutputStream(copy).use { output ->
-                    input.copyTo(output); output.fd.sync()
-                } }
-                check(copy.renameTo(File(file.parentFile, "${source.name}.unreadable-${java.util.UUID.randomUUID()}")))
-                sync(file.parentFile!!)
-            } finally { copy.delete() }
-        }
+        for (source in sources) quarantine(source)
+    }
+    private fun quarantine(source: File) {
+        val copy = File(file.parentFile, ".send-evidence-${java.util.UUID.randomUUID()}")
+        try {
+            source.inputStream().use { input -> java.io.FileOutputStream(copy).use { output ->
+                input.copyTo(output); output.fd.sync()
+            } }
+            check(copy.renameTo(File(file.parentFile, "${source.name}.unreadable-${java.util.UUID.randomUUID()}")))
+            sync(file.parentFile!!)
+        } finally { copy.delete() }
     }
     @Synchronized fun write(attempt: SendAttempt?) {
         val atomic = AtomicFile(file)
@@ -40,7 +41,10 @@ class SendJournal(private val file: File, private val sync: (File) -> Unit = ::s
         }
         check(file.parentFile!!.isDirectory)
         val output = atomic.startWrite()
-        try { output.write(json.encodeToString(attempt).toByteArray()); output.fd.sync(); atomic.finishWrite(output); sync(file.parentFile!!) }
-        catch (failure: Exception) { atomic.failWrite(output); throw failure }
+        var written = false
+        try {
+            output.write(json.encodeToString(attempt).toByteArray()); output.fd.sync(); atomic.finishWrite(output); sync(file.parentFile!!)
+            written = true
+        } finally { if (!written) atomic.failWrite(output) }
     }
 }

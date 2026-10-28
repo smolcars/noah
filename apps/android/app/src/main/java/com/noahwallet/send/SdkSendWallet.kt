@@ -41,58 +41,65 @@ internal class SdkSendWallet(private val wallet: Wallet, private val onchain: On
         val parsed = SendDestination.parse(payment.destination, network)
         requireSend(parsed.destinationType == payment.method && parsed.error == null)
         requireOfferAmount(payment) { wallet.parsePaymentRequest(it) }
-        if (payment.method == "lightning") {
-            val invoice = PaymentEncoding.invoice(payment.destination) ?: throw SendFailure(SendFailure.Reason.invalid)
-            requireSend(invoice.expires > System.currentTimeMillis() / 1000, SendFailure.Reason.expired)
-            requireSend(invoice.sats == null || invoice.sats.signum() == 0 || invoice.sats.compareTo(payment.amount.toBigDecimal()) == 0)
-            val pending = wallet.pendingLightningSends().filter { it.paymentHash == invoice.hash }
-            requireSend(pending.size <= 1, SendFailure.Reason.unresolved)
-            val state = wallet.lightningSendState(invoice.hash)
-            val send = pending.firstOrNull() ?: (state as? LightningSendStatus.InProgress)?.send
-            if (send != null) {
-                val fee = send.feeSats.toLong(); requireSend(fee >= 0)
-                return SendQuote(payment.amount, fee, Math.addExact(payment.amount, fee), walletIdentity = identity(), checkpoint = SendCheckpoint(send))
-            }
-        }
-        if (payment.method == "ark") { requireSend(wallet.validateArkoorAddress(payment.destination)); parseArkAddress(payment.destination) }
-        if (payment.max && payment.source == SendSource.offchain) requireSend(!onchain.isMine(payment.destination), SendFailure.Reason.ownAddress)
-        val available = if (payment.method == "onchain" && payment.source == SendSource.onchain) onchain.balance().confirmedSats else wallet.balance().spendableSats
+        if (payment.method == "lightning") existingLightningQuote(payment)?.let { return it }
+        checkRecipient(payment)
+        val fromOnchain = payment.method == "onchain" && payment.source == SendSource.onchain
+        val available = if (fromOnchain) onchain.balance().confirmedSats else wallet.balance().spendableSats
         var preparedID: String? = null
+        var quoted = false
         try {
-            val result = if (payment.method == "onchain" && payment.source == SendSource.onchain) {
-                val rate = SendFlow.sdkFeeRate(onchain.feeRates().regularSatPerKwu)
-                val prepared = onchain.prepareSend(payment.destination,
-                    if (payment.max) OnchainSendAmount.DrainAll else OnchainSendAmount.Amount(payment.amount.toULong()), rate, true)
-                preparedID = prepared.id
-                preparations.retain(prepared.id)
-                SendQuote(prepared.amountSats.toLong(), prepared.feeSats.toLong(), Math.addExact(prepared.amountSats.toLong(), prepared.feeSats.toLong()),
-                    rate.toLong(),
-                    prepared = SendPrepared(prepared.id, prepared.txid, prepared.vsize.toLong(), prepared.inputs.size,
-                        inputs = prepared.inputs.map { SendInput(it.txid, it.vout) }, reviewedAt = ReviewClock.now()))
-            } else {
-                var ids: List<String>? = null
-                val estimate = when (payment.method) {
-                    "ark" -> wallet.estimateArkoorPaymentFee(payment.amount.toULong())
-                    "lightning", "offer" -> wallet.estimateLightningSendFee(payment.amount.toULong())
-                    "onchain" -> {
-                        requireSend(payment.source == SendSource.offchain)
-                        if (payment.max) {
-                            ids = wallet.spendableVtxos().map { it.id }.sorted(); requireSend(ids.isNotEmpty(), SendFailure.Reason.insufficient)
-                            wallet.estimateOffboardFee(payment.destination, ids)
-                        } else wallet.estimateSendOnchainFee(payment.destination, payment.amount.toULong())
-                    }
-                    else -> throw SendFailure(SendFailure.Reason.invalid)
-                }
-                SendQuote(estimate.netAmountSats.toLong(), estimate.feeSats.toLong(), estimate.grossAmountSats.toLong(),
-                    approximate = payment.method == "onchain", vtxoIDs = ids)
-            }
+            val result = if (fromOnchain) onchainQuote(payment) { preparedID = it } else estimatedQuote(payment)
             requireSend(result.amount > 0 && result.fee >= 0 && result.total >= result.amount && result.total.toULong() <= available,
                 SendFailure.Reason.insufficient)
-            return result.copy(walletIdentity = identity())
-        } catch (failure: Exception) {
-            preparedID?.let { preparations.discard(it, true) }
-            throw failure
+            return result.copy(walletIdentity = identity()).also { quoted = true }
+        } finally {
+            if (!quoted) preparedID?.let { preparations.discard(it, true) }
         }
+    }
+    private suspend fun checkRecipient(payment: SendPayment) {
+        if (payment.method == "ark") { requireSend(wallet.validateArkoorAddress(payment.destination)); parseArkAddress(payment.destination) }
+        if (payment.max && payment.source == SendSource.offchain) requireSend(!onchain.isMine(payment.destination), SendFailure.Reason.ownAddress)
+    }
+    /** An invoice already being paid quotes from its checkpoint, so it can't be submitted again. */
+    private suspend fun existingLightningQuote(payment: SendPayment): SendQuote? {
+        val invoice = PaymentEncoding.invoice(payment.destination) ?: throw SendFailure(SendFailure.Reason.invalid)
+        requireSend(invoice.expires > System.currentTimeMillis() / 1000, SendFailure.Reason.expired)
+        requireSend(invoice.sats == null || invoice.sats.signum() == 0 || invoice.sats.compareTo(payment.amount.toBigDecimal()) == 0)
+        val pending = wallet.pendingLightningSends().filter { it.paymentHash == invoice.hash }
+        requireSend(pending.size <= 1, SendFailure.Reason.unresolved)
+        val state = wallet.lightningSendState(invoice.hash)
+        val send = pending.firstOrNull() ?: (state as? LightningSendStatus.InProgress)?.send ?: return null
+        val fee = send.feeSats.toLong(); requireSend(fee >= 0)
+        return SendQuote(payment.amount, fee, Math.addExact(payment.amount, fee), walletIdentity = identity(), checkpoint = SendCheckpoint(send))
+    }
+    /** Prepares (and retains) the exact transaction; [prepared] learns its id before anything can fail after it. */
+    private suspend fun onchainQuote(payment: SendPayment, prepared: (String) -> Unit): SendQuote {
+        val rate = SendFlow.sdkFeeRate(onchain.feeRates().regularSatPerKwu)
+        val transaction = onchain.prepareSend(payment.destination,
+            if (payment.max) OnchainSendAmount.DrainAll else OnchainSendAmount.Amount(payment.amount.toULong()), rate, true)
+        prepared(transaction.id)
+        preparations.retain(transaction.id)
+        return SendQuote(transaction.amountSats.toLong(), transaction.feeSats.toLong(),
+            Math.addExact(transaction.amountSats.toLong(), transaction.feeSats.toLong()), rate.toLong(),
+            prepared = SendPrepared(transaction.id, transaction.txid, transaction.vsize.toLong(), transaction.inputs.size,
+                inputs = transaction.inputs.map { SendInput(it.txid, it.vout) }, reviewedAt = ReviewClock.now()))
+    }
+    private suspend fun estimatedQuote(payment: SendPayment): SendQuote {
+        var ids: List<String>? = null
+        val estimate = when (payment.method) {
+            "ark" -> wallet.estimateArkoorPaymentFee(payment.amount.toULong())
+            "lightning", "offer" -> wallet.estimateLightningSendFee(payment.amount.toULong())
+            "onchain" -> {
+                requireSend(payment.source == SendSource.offchain)
+                if (payment.max) {
+                    ids = wallet.spendableVtxos().map { it.id }.sorted(); requireSend(ids.isNotEmpty(), SendFailure.Reason.insufficient)
+                    wallet.estimateOffboardFee(payment.destination, ids)
+                } else wallet.estimateSendOnchainFee(payment.destination, payment.amount.toULong())
+            }
+            else -> throw SendFailure(SendFailure.Reason.invalid)
+        }
+        return SendQuote(estimate.netAmountSats.toLong(), estimate.feeSats.toLong(), estimate.grossAmountSats.toLong(),
+            approximate = payment.method == "onchain", vtxoIDs = ids)
     }
     override suspend fun prepare(payment: SendPayment, quote: SendQuote): SendSnapshot {
         requireSend(quote.walletIdentity == identity(), SendFailure.Reason.unresolved)
@@ -104,7 +111,8 @@ internal class SdkSendWallet(private val wallet: Wallet, private val onchain: On
         PaymentEncoding.invoice(invoice)?.hash?.let { hash ->
             val pending = wallet.pendingLightningSends().filter { it.paymentHash == hash }
             requireSend(pending.size <= 1, SendFailure.Reason.unresolved)
-            checkpoint = checkpoint ?: pending.firstOrNull()?.let(::SendCheckpoint) ?: (wallet.lightningSendState(hash) as? LightningSendStatus.InProgress)?.send?.let(::SendCheckpoint)
+            checkpoint = checkpoint ?: pending.firstOrNull()?.let(::SendCheckpoint)
+                ?: (wallet.lightningSendState(hash) as? LightningSendStatus.InProgress)?.send?.let(::SendCheckpoint)
             invoicePaid = wallet.isInvoicePaid(hash)
         }
         if (payment.method == "onchain" && payment.source == SendSource.onchain) {
@@ -129,92 +137,110 @@ internal class SdkSendWallet(private val wallet: Wallet, private val onchain: On
             // Persist the SDK's success result and the payment's movement id, never infer them from history candidates.
             "ark" -> { beforeSubmit?.invoke(); receipt = receipt.copy(movementID = wallet.sendArkoorPayment(payment.destination, payment.amount.toULong()),
                 proof = SendReceipt.Proof.submitReturnedArkSuccess); null }
-            "lightning", "lnurl" -> {
-                val invoice = if (payment.method == "lnurl") snapshot.resolvedInvoice ?: throw SendFailure(SendFailure.Reason.invalid) else payment.destination
-                if (payment.method == "lnurl") SendRecipientService.validateInvoice(invoice, payment.amount, network)
-                val decoded = PaymentEncoding.invoice(invoice) ?: throw SendFailure(SendFailure.Reason.invalid)
-                val resolved = payment.copy(destination = invoice, method = "lightning")
-                // Inspect the checkpoint list before any creating API, even if a status lookup is stale.
-                val pending = wallet.pendingLightningSends().filter { it.paymentHash == decoded.hash }
-                requireSend(pending.size <= 1, SendFailure.Reason.unresolved)
-                val state = pending.firstOrNull()?.let { LightningSendStatus.InProgress(it) } ?: wallet.lightningSendState(decoded.hash)
-                SendLightningSubmission.submit(resolved, state, wallet.history(), snapshot.checkpoint, quote,
-                    check = { beforeSubmit?.invoke(); wallet.checkLightningPayment(it, false) },
-                    pay = { beforeSubmit?.invoke(); wallet.payLightningInvoice(invoice,
-                        if ((decoded.sats?.signum() ?: 0) > 0) null else payment.amount.toULong(), SendLightningSubmission.options) })
-            }
+            "lightning", "lnurl" -> payInvoice(payment, quote, snapshot, beforeSubmit)
             "offer" -> SendLightningSubmission.offer(wallet.pendingLightningSends()) { beforeSubmit?.invoke(); wallet.payLightningOffer(payment.destination,
                 payment.amount.toULong(), SendLightningSubmission.options) }
-            "onchain" -> {
-                if (payment.source == SendSource.onchain) {
-                    val prepared = quote.prepared ?: throw SendNotSubmitted(SendFailure.Reason.feeChanged)
-                    if (!preparations.consume(payment, quote)) throw SendNotSubmitted(SendFailure.Reason.feeChanged)
-                    try { receipt = SendOnchainSubmission.receipt(onchain.broadcastPrepared(prepared.id), quote) }
-                    catch (failure: Exception) { SendOnchainSubmission.notSubmitted(failure)?.let { throw SendNotSubmitted(it) }; throw failure }
-                } else {
-                    val result = if (payment.max) {
-                        val ids = wallet.spendableVtxos().map { it.id }.toSet()
-                        if (quote.vtxoIDs.isNullOrEmpty() || ids != quote.vtxoIDs.toSet()) throw SendNotSubmitted(SendFailure.Reason.fundsChanged)
-                        wallet.offboardVtxos(quote.vtxoIDs, payment.destination)
-                    } else wallet.sendOnchain(payment.destination, payment.amount.toULong())
-                    receipt = SendReceipt(if (payment.max) 0 else quote.amount, txid = result.txid, movementID = result.movementId,
-                        amountIsPending = payment.max, proof = SendReceipt.Proof.submitReturnedTxid)
-                    runCatching { wallet.history() }.getOrNull()?.let { receipt = SendReconciliation.offboardReceipt(receipt, payment, it) }
-                }
-                null
-            }
+            "onchain" -> { receipt = payOnchain(payment, quote); null }
             else -> throw SendFailure(SendFailure.Reason.invalid)
         }
-        if (lightning != null) {
-            requireSend(lightning is LightningSendStatus.Paid && lightning.preimage.isNotEmpty(), SendFailure.Reason.unresolved)
-            val hash = (lightning as LightningSendStatus.Paid).paymentHash
-            val movements = wallet.history().filter { SendReconciliation.isLightning(it, hash) }
-            receipt = if (snapshot.checkpoint != null) snapshot.checkpoint.receipt(lightning, movements, payment, quote)
-            else when (val result = SendReconciliation.lightningAttempt(movements, hash, payment.amount, snapshot, null,
-                SendReconciliation.fixesAmount(snapshot.resolvedInvoice ?: payment.destination))) {
-                is SendResolution.Paid -> result.receipt
-                is SendResolution.AlreadyPaid -> throw SendAlreadyPaid(result.receipt)
-                else -> throw SendFailure(SendFailure.Reason.unresolved)
-            }
-        }
+        if (lightning != null) receipt = lightningReceipt(lightning, payment, quote, snapshot)
         // Metadata failure is never a payment failure and must never enable resubmission.
         if (payment.repeatMetadata != null) SendReconciliation.metadataMovementID(receipt, snapshot)?.let { id ->
-            try { wallet.updateHistoryMetadata(id,
-                payment.repeatMetadata) } catch (_: Exception) { warn("Payment succeeded; repeat metadata could not be saved") }
+            try { wallet.updateHistoryMetadata(id, payment.repeatMetadata) }
+            catch (_: Exception) { warn("Payment succeeded; repeat metadata could not be saved") }
         }
         return receipt
     }
+    private suspend fun payInvoice(payment: SendPayment, quote: SendQuote, snapshot: SendSnapshot, beforeSubmit: (() -> Unit)?): LightningSendStatus {
+        val invoice = if (payment.method == "lnurl") snapshot.resolvedInvoice ?: throw SendFailure(SendFailure.Reason.invalid) else payment.destination
+        if (payment.method == "lnurl") SendRecipientService.validateInvoice(invoice, payment.amount, network)
+        val decoded = PaymentEncoding.invoice(invoice) ?: throw SendFailure(SendFailure.Reason.invalid)
+        val resolved = payment.copy(destination = invoice, method = "lightning")
+        // Inspect the checkpoint list before any creating API, even if a status lookup is stale.
+        val pending = wallet.pendingLightningSends().filter { it.paymentHash == decoded.hash }
+        requireSend(pending.size <= 1, SendFailure.Reason.unresolved)
+        val state = pending.firstOrNull()?.let { LightningSendStatus.InProgress(it) } ?: wallet.lightningSendState(decoded.hash)
+        return SendLightningSubmission.submit(resolved, state, wallet.history(), snapshot.checkpoint, quote,
+            check = { beforeSubmit?.invoke(); wallet.checkLightningPayment(it, false) },
+            pay = { beforeSubmit?.invoke(); wallet.payLightningInvoice(invoice,
+                if ((decoded.sats?.signum() ?: 0) > 0) null else payment.amount.toULong(), SendLightningSubmission.options) })
+    }
+    private suspend fun payOnchain(payment: SendPayment, quote: SendQuote): SendReceipt {
+        if (payment.source == SendSource.onchain) return broadcastPrepared(payment, quote)
+        val result = if (payment.max) {
+            val ids = wallet.spendableVtxos().map { it.id }.toSet()
+            if (quote.vtxoIDs.isNullOrEmpty() || ids != quote.vtxoIDs.toSet()) throw SendNotSubmitted(SendFailure.Reason.fundsChanged)
+            wallet.offboardVtxos(quote.vtxoIDs, payment.destination)
+        } else wallet.sendOnchain(payment.destination, payment.amount.toULong())
+        var receipt = SendReceipt(if (payment.max) 0 else quote.amount, txid = result.txid, movementID = result.movementId,
+            amountIsPending = payment.max, proof = SendReceipt.Proof.submitReturnedTxid)
+        runCatching { wallet.history() }.getOrNull()?.let { receipt = SendReconciliation.offboardReceipt(receipt, payment, it) }
+        return receipt
+    }
+    private suspend fun broadcastPrepared(payment: SendPayment, quote: SendQuote): SendReceipt {
+        val prepared = quote.prepared ?: throw SendNotSubmitted(SendFailure.Reason.feeChanged)
+        if (!preparations.consume(payment, quote)) throw SendNotSubmitted(SendFailure.Reason.feeChanged)
+        return broadcast(prepared.id, quote)
+    }
+    /** Only a rejection bark reports before broadcasting proves nothing was sent. */
+    private suspend fun broadcast(id: String, quote: SendQuote): SendReceipt = try {
+        SendOnchainSubmission.receipt(onchain.broadcastPrepared(id), quote)
+    } catch (failure: BarkError) {
+        throw SendOnchainSubmission.notSubmitted(failure)?.let(::SendNotSubmitted) ?: failure
+    }
+    /** A paid Lightning status, proven by its preimage and the matching movement. */
+    private suspend fun lightningReceipt(lightning: LightningSendStatus, payment: SendPayment, quote: SendQuote, snapshot: SendSnapshot): SendReceipt {
+        requireSend(lightning is LightningSendStatus.Paid && lightning.preimage.isNotEmpty(), SendFailure.Reason.unresolved)
+        val hash = (lightning as LightningSendStatus.Paid).paymentHash
+        val movements = wallet.history().filter { SendReconciliation.isLightning(it, hash) }
+        return if (snapshot.checkpoint != null) snapshot.checkpoint.receipt(lightning, movements, payment, quote)
+        else when (val result = SendReconciliation.lightningAttempt(movements, hash, payment.amount, snapshot, null,
+            SendReconciliation.fixesAmount(snapshot.resolvedInvoice ?: payment.destination))) {
+            is SendResolution.Paid -> result.receipt
+            is SendResolution.AlreadyPaid -> throw SendAlreadyPaid(result.receipt)
+            else -> throw SendFailure(SendFailure.Reason.unresolved)
+        }
+    }
     override suspend fun refreshReceipt(payment: SendPayment, receipt: SendReceipt): SendReceipt {
         val txid = receipt.txid ?: return receipt
-        return receipt.copy(chainStatus = ChainStatus.from(if (payment.source == SendSource.onchain) onchain.transactionStatus(txid) else wallet.transactionStatus(txid)), statusError = null)
+        val status = if (payment.source == SendSource.onchain) onchain.transactionStatus(txid) else wallet.transactionStatus(txid)
+        return receipt.copy(chainStatus = ChainStatus.from(status), statusError = null)
     }
     override suspend fun reconcile(attempt: SendAttempt): SendResolution {
         requireSend(attempt.walletIdentity == identity(), SendFailure.Reason.unresolved)
         if (attempt.inspectionPending) return SendResolution.Uncertain
-        val checkpoint = attempt.snapshot.checkpoint
-        if (checkpoint != null) {
-            val quote = attempt.quote ?: throw SendFailure(SendFailure.Reason.unresolved)
-            val payment = attempt.payment.copy(destination = attempt.snapshot.resolvedInvoice ?: attempt.payment.destination, method = "lightning")
-            val status = checkpoint.advance(payment, quote, wallet.lightningSendState(checkpoint.paymentHash)) { wallet.checkLightningPayment(it, false) }
-            return SendResolution.Paid(checkpoint.receipt(status, wallet.history(), payment, quote))
+        attempt.snapshot.checkpoint?.let { return reconcileCheckpoint(attempt, it) }
+        return when {
+            attempt.payment.method == "onchain" && (attempt.payment.source == SendSource.onchain || attempt.receipt?.txid != null) ->
+                SendReconciliation.onchainStatus(attempt, sync = { synchronization.serialized { onchain.sync() } },
+                    transactions = { onchain.transactions() },
+                    offboardHistory = { wallet.history() }, status = { txid ->
+                        ChainStatus.from(if (attempt.payment.source == SendSource.onchain) onchain.transactionStatus(txid) else wallet.transactionStatus(txid))
+                    })
+            attempt.payment.method in listOf("lightning", "lnurl") && attempt.paymentHash != null -> reconcileLightning(attempt, attempt.paymentHash)
+            else -> {
+                synchronization.serialized { wallet.sync() }
+                SendReconciliation.ark(attempt, wallet.history())
+            }
         }
-        if (attempt.payment.method == "onchain" && (attempt.payment.source == SendSource.onchain || attempt.receipt?.txid != null)) {
-            return SendReconciliation.onchainStatus(attempt, sync = { synchronization.serialized { onchain.sync() } },
-                transactions = { onchain.transactions() },
-                offboardHistory = { wallet.history() }, status = { txid ->
-                    ChainStatus.from(if (attempt.payment.source == SendSource.onchain) onchain.transactionStatus(txid) else wallet.transactionStatus(txid))
-                })
+    }
+    private suspend fun reconcileCheckpoint(attempt: SendAttempt, checkpoint: SendCheckpoint): SendResolution {
+        val quote = attempt.quote ?: throw SendFailure(SendFailure.Reason.unresolved)
+        val payment = attempt.payment.copy(destination = attempt.snapshot.resolvedInvoice ?: attempt.payment.destination, method = "lightning")
+        val status = checkpoint.advance(payment, quote, wallet.lightningSendState(checkpoint.paymentHash)) { wallet.checkLightningPayment(it, false) }
+        return SendResolution.Paid(checkpoint.receipt(status, wallet.history(), payment, quote))
+    }
+    private suspend fun reconcileLightning(attempt: SendAttempt, hash: String): SendResolution {
+        val state = wallet.lightningSendState(hash)
+        if (state is LightningSendStatus.InProgress) {
+            return SendResolution.InProgress(SendLightningProgress(state.send.amountSats.toLong(), state.send.feeSats.toLong()))
         }
-        if (attempt.payment.method in listOf("lightning", "lnurl") && attempt.paymentHash != null) {
-            val state = wallet.lightningSendState(attempt.paymentHash)
-            if (state is LightningSendStatus.InProgress) return SendResolution.InProgress(SendLightningProgress(state.send.amountSats.toLong(),
-                state.send.feeSats.toLong()))
-            if (attempt.existingLightning != null && attempt.existingLightning.amount != attempt.payment.amount) return SendResolution.InProgress(attempt.existingLightning)
-            val movements = wallet.history()
-            return SendReconciliation.ark(if (attempt.existingLightning != null) attempt.copy(snapshot = attempt.snapshot.copy(movementIDs = attempt.snapshot.movementIDs + movements.map { it.id })) else attempt, movements)
-        }
-        synchronization.serialized { wallet.sync() }
-        return SendReconciliation.ark(attempt, wallet.history())
+        val existing = attempt.existingLightning
+        if (existing != null && existing.amount != attempt.payment.amount) return SendResolution.InProgress(existing)
+        val movements = wallet.history()
+        val widened = if (existing != null) attempt.copy(snapshot = attempt.snapshot.copy(movementIDs = attempt.snapshot.movementIDs + movements.map { it.id }))
+        else attempt
+        return SendReconciliation.ark(widened, movements)
     }
     override suspend fun discard(quote: SendQuote, includingClaimed: Boolean) {
         quote.prepared?.let { preparations.discard(it.id, includingClaimed) }

@@ -24,7 +24,12 @@ import kotlinx.serialization.Serializable
 object SendFlow {
     fun rails(type: String?, request: Map<String, String>?): List<SendRail> {
         if (type == "bip321" && request != null) return SendRail.entries.filter { method(it, request) != null }
-        return when (type) { "ark" -> listOf(SendRail.ark); "lightning", "offer", "lnurl" -> listOf(SendRail.lightning); "onchain" -> listOf(SendRail.onchain); else -> emptyList() }
+        return when (type) {
+            "ark" -> listOf(SendRail.ark)
+            "lightning", "offer", "lnurl" -> listOf(SendRail.lightning)
+            "onchain" -> listOf(SendRail.onchain)
+            else -> emptyList()
+        }
     }
     fun method(rail: SendRail, request: Map<String, String>) = when (rail) {
         SendRail.ark -> "ark".takeIf { "arkAddress" in request }

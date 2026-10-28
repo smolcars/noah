@@ -30,7 +30,8 @@ internal class SendPreparations(private val discardNative: suspend (String) -> U
     }
     fun consume(payment: SendPayment, quote: SendQuote): Boolean = synchronized(lock) {
         val held = reviews[quote.prepared?.id] ?: return false
-        if (!held.claimed || held.discardRequested || held.broadcasting || held.payment != payment || held.quote != quote) return false
+        val claimed = held.claimed && !held.discardRequested && !held.broadcasting
+        if (!claimed || held.payment != payment || held.quote != quote) return false
         held.broadcasting = true
         true
     }

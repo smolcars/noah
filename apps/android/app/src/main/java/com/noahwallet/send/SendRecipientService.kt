@@ -47,7 +47,7 @@ class SendRecipientService(private val network: String, private val warn: (Strin
         private suspend fun fetchJSON(url: HttpUrl): JsonObject = withContext(Dispatchers.IO) {
             http.newCall(Request.Builder().url(url).build()).execute().use { response ->
                 requireSend(response.code == 200)
-                val source = response.body?.source() ?: throw SendFailure(SendFailure.Reason.invalid)
+                val source = response.body.source()
                 source.request(65537); requireSend(source.buffer.size <= 65536)
                 Json.parseToJsonElement(source.readUtf8()).jsonObject
             }
