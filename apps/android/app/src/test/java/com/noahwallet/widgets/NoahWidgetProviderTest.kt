@@ -206,6 +206,25 @@ class NoahWidgetProviderTest {
         assertEquals(2, attempts)
     }
 
+    /** Large system text never clips the balance: at font scale 2.0 its digits started 5.1 px above the bitmap (Sol review). */
+    @GraphicsMode(GraphicsMode.Mode.NATIVE)
+    @Test
+    fun theBalanceFitsItsBoxAtLargeFontScales() {
+        val d = 2.625f
+        // 30 sp at the system's font scale (linear here; Android 14+ scales large text a little less).
+        fun render(scale: Float, box: Float, tall: Float = 34f) = WidgetType.balancePx(context, "₿\u00a0252,742", false, 30f * d * scale, box, tall, d)
+        fun inkTop(bitmap: android.graphics.Bitmap): Int =
+            (0 until bitmap.height).first { y -> (0 until bitmap.width).any { x -> android.graphics.Color.alpha(bitmap.getPixel(x, y)) > 0 } }
+        val normal = render(1f, 400f)
+        for ((scale, bitmap) in listOf(1f to normal, 1.3f to render(1.3f, 400f), 2f to render(2f, 400f), 2f to render(2f, 144f))) {
+            assertEquals((34 * d).toInt(), bitmap.height)
+            assertTrue("scale $scale: ink from row ${inkTop(bitmap)}", inkTop(bitmap) > 0)
+            assertTrue("scale $scale: never below the usual size", bitmap.width >= normal.width || (scale == 2f && bitmap.width <= 144 * d))
+        }
+        // At the usual scale nothing changed: a taller box draws the same figures.
+        assertEquals(render(1f, 400f, 60f).width, normal.width)
+    }
+
     @GraphicsMode(GraphicsMode.Mode.NATIVE)
     @Test
     fun slotsShareIdenticalBitmaps() {

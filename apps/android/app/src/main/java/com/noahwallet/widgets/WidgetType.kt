@@ -16,18 +16,26 @@ import kotlin.math.roundToInt
 /**
  * The balance in Space Grotesk. Launchers inflate RemoteViews in a restricted context that never loads an app's fonts,
  * so the figures are drawn here as a white mask on an ImageView the launcher tints with the text colour: light, dark
- * and wallpaper colours still resolve in the launcher. Tabular digits; it shrinks to fit, down to half size.
+ * and wallpaper colours still resolve in the launcher. Tabular digits; it shrinks to fit.
  */
 internal object WidgetType {
     private fun font(context: Context, id: Int, fallback: Int): Typeface =
         runCatching { ResourcesCompat.getFont(context, id) }.getOrNull() ?: Typeface.create(Typeface.SANS_SERIF, fallback)
 
-    /** [widthDp] × [heightDp] is the balance's box; the text sits on its bottom, left aligned, like the layout's text. */
+    /**
+     * [widthDp] × [heightDp] is the balance's box; the text sits on its bottom, left aligned, like the layout's text. It
+     * shrinks to fit the width down to half size, and to fit the height however large the system text is.
+     */
     @Suppress("LongParameterList") // a drawing primitive: the text, its size and the box it fits
-    fun balance(context: Context, text: String, satsSuffix: Boolean, sizeSp: Float, widthDp: Float, heightDp: Float, density: Float): Bitmap {
+    fun balance(context: Context, text: String, satsSuffix: Boolean, sizeSp: Float, widthDp: Float, heightDp: Float, density: Float): Bitmap =
+        balancePx(context, text, satsSuffix, TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, sizeSp, context.resources.displayMetrics),
+            widthDp, heightDp, density)
+
+    /** [full]: the full text size in pixels, with the system's font scale applied. */
+    @Suppress("LongParameterList") // a drawing primitive: the text, its size and the box it fits
+    internal fun balancePx(context: Context, text: String, satsSuffix: Boolean, full: Float, widthDp: Float, heightDp: Float, density: Float): Bitmap {
         val main = if (satsSuffix && text.endsWith(" sats")) text.dropLast(5) else text
         val suffix = text.removePrefix(main)
-        val full = TypedValue.applyDimension(TypedValue.COMPLEX_UNIT_SP, sizeSp, context.resources.displayMetrics)
         fun paint(size: Float, medium: Boolean) = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
             typeface = if (medium) font(context, R.font.space_grotesk_medium, Typeface.NORMAL) else font(context, R.font.space_grotesk_semibold, Typeface.BOLD)
             textSize = size; color = Color.WHITE; fontFeatureSettings = "tnum"
@@ -36,8 +44,13 @@ internal object WidgetType {
         }
         fun width(size: Float) = paint(size, false).measureText(main) + if (suffix.isEmpty()) 0f else paint(size * .52f, true).measureText(suffix)
         val available = widthDp * density
-        val size = (full * minOf(1f, available / width(full).coerceAtLeast(1f))).coerceAtLeast(full / 2)
         val height = (heightDp * density).roundToInt().coerceAtLeast(1)
+        val byWidth = (full * minOf(1f, available / width(full).coerceAtLeast(1f))).coerceAtLeast(full / 2)
+        // Large system text: the figures' ink above the baseline and the line's descent below it must fit the box too,
+        // whatever the width allows (they scale with the size).
+        val ink = android.graphics.Rect().also { paint(full, false).getTextBounds(main, 0, main.length, it) }
+        val tall = (-ink.top + paint(full, false).fontMetrics.descent).coerceAtLeast(1f)
+        val size = minOf(byWidth, full * (height - 1) / tall)
         val bitmap = Bitmap.createBitmap(ceil(width(size)).toInt().coerceAtLeast(1), height, Bitmap.Config.ARGB_8888)
         val canvas = Canvas(bitmap)
         val numbers = paint(size, false)
