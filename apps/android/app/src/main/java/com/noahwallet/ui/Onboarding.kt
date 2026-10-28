@@ -31,39 +31,46 @@ fun Onboarding(model: AppModel) {
     BackHandler(enabled = model.step != "welcome") { goBack() }
     // One shield and clipboard from Restore or Recovery phrase found through Restoring and Ready: FLAG_SECURE and
     // clipboard clearing never lapse between steps, and end only when Home (or a launch gate) replaces onboarding.
-    val activity = LocalContext.current as android.app.Activity
+    val activity = requireNotNull(androidx.activity.compose.LocalActivity.current)
     val restoreClipboard = rememberRestoreClipboard(activity)
     if (model.step in setOf("restore", "storedSeed", "restoring")) RestoreShield(activity, model.walletLock, restoreClipboard) {}
     com.noahwallet.ui.onboarding.OnboardingFrame(presentation.scene) {
         // UnifiedPush setup keeps the conveyor beside it in split panes; one column has no room for it.
         val distributorAlone = presentation.notificationStage == com.noahwallet.ui.onboarding.NotificationStage.distributor &&
             com.noahwallet.ui.onboarding.LocalPose.current == com.noahwallet.ui.onboarding.OnboardingPose.Compact
-        val scene = when (model.step) {
-            "welcome" -> com.noahwallet.ui.onboarding.SceneMode.welcome
-            "creating" -> com.noahwallet.ui.onboarding.SceneMode.create
-            "restoring" -> com.noahwallet.ui.onboarding.SceneMode.restore
-            "notifications" -> if (distributorAlone) com.noahwallet.ui.onboarding.SceneMode.none else com.noahwallet.ui.onboarding.SceneMode.conveyor
-            else -> com.noahwallet.ui.onboarding.SceneMode.none
-        }
+        val scene = sceneFor(model.step, distributorAlone)
         SideEffect { presentation.scene.show(scene) }
         val reduceMotion = com.noahwallet.ui.onboarding.LocalReduceMotion.current
         androidx.compose.animation.AnimatedContent(model.step, transitionSpec = {
             // A failed stored-phrase restore travels back to its screen, as on iOS.
             onboardingTransition(targetState, direction.back || targetState == "storedSeed", reduceMotion)
-        }, label = "onboarding") { step ->
-            when (step) {
-                "welcome" -> com.noahwallet.ui.onboarding.WelcomeStep(model, presentation)
-                "restore" -> RestoreWalletScreen(model, restoreClipboard)
-                "storedSeed" -> RestoreWalletScreen(model, restoreClipboard, useStoredSeed = true)
-                "creating" -> com.noahwallet.ui.onboarding.CreatingStep(model, presentation)
-                "restoring" -> com.noahwallet.ui.onboarding.RestoringStep(model, presentation)
-                "name" -> com.noahwallet.ui.onboarding.NameStep(model, presentation)
-                "email" -> com.noahwallet.ui.onboarding.EmailStep(model, presentation)
-                "notifications" -> com.noahwallet.ui.onboarding.NotificationsStep(model, presentation)
-                "battery" -> com.noahwallet.ui.launch.BatteryOptimizationScreen(model, onBack = { goBack() }) { model.step = "done" }
-                "done" -> com.noahwallet.ui.onboarding.DoneStep(model, presentation)
-            }
-        }
+        }, label = "onboarding") { step -> OnboardingStep(step, model, presentation, restoreClipboard, ::goBack) }
+    }
+}
+
+/** The tree's scene behind each step; UnifiedPush setup alone in one column has none. */
+private fun sceneFor(step: String, distributorAlone: Boolean) = when (step) {
+    "welcome" -> com.noahwallet.ui.onboarding.SceneMode.welcome
+    "creating" -> com.noahwallet.ui.onboarding.SceneMode.create
+    "restoring" -> com.noahwallet.ui.onboarding.SceneMode.restore
+    "notifications" -> if (distributorAlone) com.noahwallet.ui.onboarding.SceneMode.none else com.noahwallet.ui.onboarding.SceneMode.conveyor
+    else -> com.noahwallet.ui.onboarding.SceneMode.none
+}
+
+@Composable
+private fun OnboardingStep(step: String, model: AppModel, presentation: com.noahwallet.ui.onboarding.OnboardingPresentation,
+    restoreClipboard: RestoreClipboard, goBack: () -> Unit) {
+    when (step) {
+        "welcome" -> com.noahwallet.ui.onboarding.WelcomeStep(model, presentation)
+        "restore" -> RestoreWalletScreen(model, restoreClipboard)
+        "storedSeed" -> RestoreWalletScreen(model, restoreClipboard, useStoredSeed = true)
+        "creating" -> com.noahwallet.ui.onboarding.CreatingStep(model, presentation)
+        "restoring" -> com.noahwallet.ui.onboarding.RestoringStep(model, presentation)
+        "name" -> com.noahwallet.ui.onboarding.NameStep(model, presentation)
+        "email" -> com.noahwallet.ui.onboarding.EmailStep(model, presentation)
+        "notifications" -> com.noahwallet.ui.onboarding.NotificationsStep(model, presentation)
+        "battery" -> com.noahwallet.ui.launch.BatteryOptimizationScreen(model, onBack = goBack) { model.step = "done" }
+        "done" -> com.noahwallet.ui.onboarding.DoneStep(model, presentation)
     }
 }
 
@@ -78,6 +85,7 @@ private fun onboardingTransition(target: String, back: Boolean, reduceMotion: Bo
             androidx.compose.animation.fadeOut(if (reduceMotion) fade else com.noahwallet.ui.design.NoahTokens.Motion.snappy())
     val spring = com.noahwallet.ui.design.NoahTokens.Motion.snappy<androidx.compose.ui.unit.IntOffset>()
     val fadeSpring = com.noahwallet.ui.design.NoahTokens.Motion.snappy<Float>()
-    return (androidx.compose.animation.slideInHorizontally(spring) { if (back) -it / 10 else it / 9 } + androidx.compose.animation.fadeIn(fadeSpring)) togetherWith
+    val enter = androidx.compose.animation.slideInHorizontally(spring) { if (back) -it / 10 else it / 9 } + androidx.compose.animation.fadeIn(fadeSpring)
+    return enter togetherWith
         (androidx.compose.animation.slideOutHorizontally(spring) { if (back) it / 9 else -it / 12 } + androidx.compose.animation.fadeOut(fadeSpring))
 }
