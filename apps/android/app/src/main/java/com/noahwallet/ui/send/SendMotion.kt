@@ -108,11 +108,10 @@ internal object SendTimeline {
         val result = mutableListOf<Started>()
         var shift = 0L
         for (step in steps(motion.route, ending)) {
-            val reached = reachedAt(step.needs) ?: break
             val nominal = if (reduceMotion) (step.at * reducedPace).toLong() else step.at
-            val start = maxOf(nominal + shift, reached)
+            val start = reachedAt(step.needs)?.let { maxOf(nominal + shift, it) }
+            if (start == null || start > elapsed) break
             shift = start - nominal
-            if (start > elapsed) break
             result += Started(step.phase, start)
         }
         return result

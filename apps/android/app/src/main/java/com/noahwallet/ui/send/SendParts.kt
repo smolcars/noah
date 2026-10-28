@@ -220,8 +220,11 @@ internal fun ToField(value: String, onValue: (String) -> Unit, enabled: Boolean,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, imeAction = ImeAction.Go, autoCorrectEnabled = false),
             keyboardActions = androidx.compose.foundation.text.KeyboardActions(onGo = { onDone() }),
             decorationBox = { inner ->
-                Box { if (value.isEmpty()) Text(tr("Name, address or invoice"), style = SendType.body, color = palette.muted, maxLines = 1,
-                    overflow = TextOverflow.Ellipsis); inner() }
+                Box {
+                    if (value.isEmpty()) Text(tr("Name, address or invoice"), style = SendType.body, color = palette.muted, maxLines = 1,
+                        overflow = TextOverflow.Ellipsis)
+                    inner()
+                }
             })
         SendChip(tr("Paste"), Modifier.testTag("send-paste"), container = palette.background, enabled = enabled, onClick = onPaste)
     }
@@ -426,8 +429,8 @@ internal fun HoldToConfirm(hold: String, busyLabel: String, action: String, conf
             role = Role.Button
             contentDescription = label
             if (!enabled) disabled()
-            onClick(label = action) { if (currentEnabled) confirming = true; currentEnabled }
-            customActions = listOf(CustomAccessibilityAction(action) { if (currentEnabled) confirming = true; currentEnabled })
+            onClick(label = action) { currentEnabled.also { if (it) confirming = true } }
+            customActions = listOf(CustomAccessibilityAction(action) { currentEnabled.also { if (it) confirming = true } })
         }, contentAlignment = Alignment.Center) {
         if (wrap) WrappingLabel(label, SendType.pill.copy(color = palette.background, textAlign = TextAlign.Center),
             Modifier.padding(horizontal = 16.dp, vertical = 6.dp))

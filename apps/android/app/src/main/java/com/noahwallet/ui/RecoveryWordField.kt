@@ -1,3 +1,5 @@
+@file:Suppress("MatchingDeclarationName") // named for the RecoveryWordField composable; the EditText is its platform view
+
 package com.noahwallet.ui
 
 import android.content.Context
@@ -88,7 +90,7 @@ internal class RecoveryWordEditText(context: Context, private val index: Int) : 
         override fun onCreateActionMode(mode: android.view.ActionMode?, menu: android.view.Menu): Boolean { strip(menu); return true }
         override fun onPrepareActionMode(mode: android.view.ActionMode?, menu: android.view.Menu): Boolean { strip(menu); return true }
         override fun onActionItemClicked(mode: android.view.ActionMode?, item: android.view.MenuItem) = false
-        override fun onDestroyActionMode(mode: android.view.ActionMode?) {}
+        override fun onDestroyActionMode(mode: android.view.ActionMode?) = Unit
         fun strip(menu: android.view.Menu) {
             while (true) {
                 val item = (0 until menu.size()).map(menu::getItem).firstOrNull { it.itemId !in kept } ?: return

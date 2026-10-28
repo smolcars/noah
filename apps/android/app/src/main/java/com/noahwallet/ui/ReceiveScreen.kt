@@ -62,7 +62,7 @@ private val arrivalSaver = Saver<ReceiveArrival?, String>(
  * records while the screen is visible.
  */
 @Composable
-fun ReceiveScreen(app: AppModel, onProfile: () -> Unit = {}, onDone: () -> Unit) {
+fun ReceiveScreen(app: AppModel, onProfile: () -> Unit = {}) {
     val locale = java.util.Locale.forLanguageTag(app.localeIdentifier)
     var request by rememberSaveable(stateSaver = requestSaver) { mutableStateOf<ReceiveRequest?>(null) }
     var format by rememberSaveable { mutableStateOf(ReceiveFormat.lightningAddress) }
@@ -159,7 +159,7 @@ fun ReceiveScreen(app: AppModel, onProfile: () -> Unit = {}, onDone: () -> Unit)
         invoiceError = invoiceError,
         arrival = arrival, chain = chain, tip = tip?.let { current -> confirmedAt?.let { maxOf(current, it) } ?: current }, confirmedAt = confirmedAt,
         listening = app.session.isOpen && !app.isWalletSuspended && error == null &&
-            (format == ReceiveFormat.lightningAddress && address != null || request != null))
+            ((format == ReceiveFormat.lightningAddress && address != null) || request != null))
     val actions = ReceiveActions(
         select = { format = it },
         saveAmount = { sats, note ->

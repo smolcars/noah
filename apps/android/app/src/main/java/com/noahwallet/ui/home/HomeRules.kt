@@ -115,7 +115,7 @@ object HomeRules {
         it.id to listOf(it.movementStatus, it.hasConfirmation, it.confirmationHeight, it.direction, it.amount,
             it.effectiveBalanceSat, it.intendedBalanceSat, it.balanceChangeSat, it.offchainFeeSat, it.onchainFeeSat)
     }
-    /** "Backup completed" and automatic-boarding completion are toasts now, within today's expiry. */
+    // "Backup completed" and automatic-boarding completion are toasts now, within today's expiry.
     /** The top bar's activity glyph while a backup or another background task runs: what runs, for TalkBack. */
     fun activity(backup: Banner?, background: String?): String? = backup?.title?.takeIf { it == "Backing up wallet" } ?: background
     /** A backup completed within today's banner expiry: the glyph's check, in place of the old toast. */

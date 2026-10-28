@@ -1,3 +1,5 @@
+@file:Suppress("MatchingDeclarationName") // named for the StyledQR composable and its Home card, like iOS
+
 package com.noahwallet.ui.home
 
 import androidx.compose.foundation.Canvas

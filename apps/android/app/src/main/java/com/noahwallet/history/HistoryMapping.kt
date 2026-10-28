@@ -74,7 +74,7 @@ object HistoryMapping {
     fun joinRecurring(rows: List<HistoryTransaction>, links: List<RecurringLink>): List<HistoryTransaction> =
         if (links.isEmpty()) rows else rows.map { row ->
             val link = links.firstOrNull { link -> row.direction == "outgoing" &&
-                (link.movementId != null && link.movementId == row.movementId || link.paymentHash != null && link.paymentHash == row.paymentHash) }
+                ((link.movementId != null && link.movementId == row.movementId) || (link.paymentHash != null && link.paymentHash == row.paymentHash)) }
             if (link == null) row else row.copy(recurring = link.recurring)
         }
     /**

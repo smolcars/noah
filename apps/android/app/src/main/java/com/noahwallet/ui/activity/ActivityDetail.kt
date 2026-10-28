@@ -175,10 +175,10 @@ private fun fiatLine(ui: ActivityUi, row: ActivityRules.Row): String? {
     val home = row.home
     if (ActivityRules.struck(home)) return null
     if (ui.hidden) return "••••"
-    val date = home.date
-    val today = date != null && HomeDays.day(date, ui.now) == HomeDays.Day.Today
     val currency = ui.currency.takeIf { it in FiatCurrency.supported } ?: return null
     val amount = home.amount ?: return null
+    val date = home.date
+    val today = date != null && HomeDays.day(date, ui.now) == HomeDays.Day.Today
     return if (!home.pending && date != null && !today) row.record.btcPrice?.takeIf { it.isFinite() && it > 0 }?.let {
         tr("{amount} at the time", FiatCurrency.display(amount, it, currency, ui.locale))
     } else ui.price?.takeIf { it.isFinite() && it > 0 }?.let { FiatCurrency.display(amount, it, currency, ui.locale) }
@@ -452,7 +452,7 @@ private fun TechnicalRows(ui: ActivityUi, record: HistoryTransaction, actions: A
     // As in React Native: the anchor only when it isn't the transaction already shown.
     record.chainAnchor?.takeIf { it.substringBefore(':') != record.txid?.substringBefore(':') }?.let { DetailBlock("Chain anchor", it, toasts) }
     listOf("Sent to" to record.sentTo, "Received on" to record.receivedOn).forEach { (label, values) ->
-        if (!values.isNullOrEmpty()) DetailBlock(label, values.joinToString("\n") { "${it.destination} · ${money(it.amount_sat)}" }, toasts,
+        if (!values.isNullOrEmpty()) DetailBlock(label, values.joinToString("\n") { "${it.destination} · ${money(it.amountSat)}" }, toasts,
             copy = values.size == 1)
     }
     listOf("Spent coins" to record.inputVtxos, "New coins" to record.outputVtxos, "Exited coins" to record.exitedVtxos).forEach { (title, coins) ->
@@ -466,6 +466,7 @@ private fun TechnicalRows(ui: ActivityUi, record: HistoryTransaction, actions: A
 }
 
 /** The plain-text receipt Share sends (see [ActivityRules.receipt]). */
+@Suppress("SpreadOperator") // the receipt's few format arguments pass straight through to L10n
 @Composable
 private fun receiptText(ui: ActivityUi, row: ActivityRules.Row): String {
     val context = LocalContext.current

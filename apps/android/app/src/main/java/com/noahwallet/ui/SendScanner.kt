@@ -57,8 +57,8 @@ import java.util.concurrent.atomic.AtomicBoolean
                 val cameraPreview = Preview.Builder().setTargetRotation(rotation).build().also { it.surfaceProvider = preview.surfaceProvider }
                 val displays = context.getSystemService(android.content.Context.DISPLAY_SERVICE) as android.hardware.display.DisplayManager
                 val displayListener = object : android.hardware.display.DisplayManager.DisplayListener {
-                    override fun onDisplayAdded(displayId: Int) {}
-                    override fun onDisplayRemoved(displayId: Int) {}
+                    override fun onDisplayAdded(displayId: Int) = Unit
+                    override fun onDisplayRemoved(displayId: Int) = Unit
                     override fun onDisplayChanged(displayId: Int) {
                         if (view.display?.displayId == displayId) {
                             val current = view.display?.rotation ?: android.view.Surface.ROTATION_0

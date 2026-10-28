@@ -552,7 +552,12 @@ private fun NoteField(value: String, onValue: (String) -> Unit, limit: Int, enab
         verticalAlignment = Alignment.CenterVertically) {
         BasicTextField(value, onValue, Modifier.weight(1f).padding(vertical = 14.dp).testTag("send-note"), enabled = enabled,
             textStyle = SendType.body.copy(color = palette.foreground), cursorBrush = SolidColor(palette.orange), maxLines = 3,
-            decorationBox = { inner -> Box { if (value.isEmpty()) Text(tr("Add a note"), style = SendType.body, color = palette.muted); inner() } })
+            decorationBox = { inner ->
+                Box {
+                    if (value.isEmpty()) Text(tr("Add a note"), style = SendType.body, color = palette.muted)
+                    inner()
+                }
+            })
         Text("${value.length}/$limit", Modifier.padding(start = 8.dp), style = SendType.small,
             color = if (value.length > limit) palette.failure else palette.muted)
     }
@@ -808,7 +813,7 @@ private fun SendingStep(presentation: SendPresentation, env: SendEnv, actions: S
         // Today's broadcast retry can't be acknowledged, and the phone hides the tab bar: Leave goes back with the
         // attempt and the send lock exactly as they are. A host without a tab bar offers the same on every unresolved result.
         val unresolved = resultShown && actions.leaveUnresolved && ending in setOf(SendEnding.unknown, SendEnding.unavailable)
-        if (doneShown && receipt?.broadcastRetryPending == true || unresolved) SendPill(tr("Close"),
+        if ((doneShown && receipt?.broadcastRetryPending == true) || unresolved) SendPill(tr("Close"),
             Modifier.fillMaxWidth().padding(bottom = 6.dp).testTag("send-leave").graphicsLayer { alpha = show.value.coerceIn(0f, 1f) }) {
             haptics.light(); actions.leave()
         } else if (doneShown) SendPill(tr("Done"),

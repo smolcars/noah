@@ -108,7 +108,7 @@ fun NoahApp(model: AppModel, links: PaymentLinks? = null) {
     val homeVisible = backStack.last() == Destination.Home && (selectedTab == Destination.Home || model.isWalletSuspended)
     val settingsVisible = backStack.last() == SettingsDestination.Settings && selectedTab == Destination.Home
     val homeOwnsWindow = homeVisible || settingsVisible ||
-        !model.isWalletSuspended && selectedTab in listOf(Destination.Send, Destination.Receive, Destination.History)
+        (!model.isWalletSuspended && selectedTab in listOf(Destination.Send, Destination.Receive, Destination.History))
     val chrome = LocalWindowChrome.current
     val palette = com.noahwallet.ui.onboarding.noahPalette()
     DisposableEffect(homeOwnsWindow, palette) {
@@ -159,9 +159,7 @@ fun NoahApp(model: AppModel, links: PaymentLinks? = null) {
                                         onSettings = openPage, barHidden = { activityBarHidden = it })
                                     else if (destination == Destination.Receive) ReceiveScreen(model, onProfile = {
                                         openSettings(SettingsDestination.Profile)
-                                    }) {
-                                        showHome()
-                                    } else SendScreen(model, tabBar = { sendBarHidden = it }) {
+                                    }) else SendScreen(model, tabBar = { sendBarHidden = it }) {
                                         showHome()
                                     }
                                 }

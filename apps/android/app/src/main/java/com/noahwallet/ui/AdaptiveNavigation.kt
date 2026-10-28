@@ -40,7 +40,10 @@ internal fun AdaptiveNavigation(selectedTab: Destination, select: (Destination) 
         Text(tr(destination.title), style = TextStyle(fontSize = 12.sp, lineHeight = 16.sp,
             fontWeight = if (selectedTab == destination) FontWeight.SemiBold else FontWeight.Medium))
     }
-    fun choose(destination: Destination) { if (destination != selectedTab) haptics.selection(); select(destination) }
+    fun choose(destination: Destination) {
+        if (destination != selectedTab) haptics.selection()
+        select(destination)
+    }
     BoxWithConstraints(Modifier.fillMaxSize()) {
         val tabletop = fullWindow && hinges.any { it.width > it.height }
         val rail = AdaptiveLayout.useRail(maxWidth.value, maxHeight.value) && !tabletop

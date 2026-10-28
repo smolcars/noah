@@ -124,7 +124,7 @@ fun SendScreen(app: AppModel, tabBar: (Boolean) -> Unit = {}, onDone: () -> Unit
     val txid = controller.attempt?.receipt?.txid
     val onchain = controller.locked && controller.attempt?.payment?.method == "onchain"
     LaunchedEffect(txid, onchain, app.isWalletSuspended) {
-        if (txid == null && !onchain || app.isWalletSuspended) return@LaunchedEffect
+        if ((txid == null && !onchain) || app.isWalletSuspended) return@LaunchedEffect
         lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
             // The block row's first tip doesn't wait: there's none to refresh yet.
             if (onchain && presentation.tip == null) runCatching { app.session.chainTip() }.getOrNull()?.let { presentation.tip = it }
@@ -145,9 +145,9 @@ fun SendScreen(app: AppModel, tabBar: (Boolean) -> Unit = {}, onDone: () -> Unit
             }
         }
     }
-    val hideBar = model.stage != SendStage.amount && !controller.locked || controller.locked &&
+    val hideBar = (model.stage != SendStage.amount && !controller.locked) || (controller.locked &&
         controller.state != SendController.State.storageBlocked &&
-        !(controller.state == SendController.State.uncertain && controller.attempt?.existingLightning == null)
+        !(controller.state == SendController.State.uncertain && controller.attempt?.existingLightning == null))
     SideEffect { tabBar(hideBar && !scanner) }
     DisposableEffect(Unit) { onDispose { tabBar(false) } }
     BackHandler(!controller.locked && !model.busy && (model.stage != SendStage.amount || model.progress.recipientConfirmed)) { model.back() }

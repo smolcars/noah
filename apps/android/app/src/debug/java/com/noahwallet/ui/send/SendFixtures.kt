@@ -52,7 +52,7 @@ object SendFixtures {
                 Outcome.notSent -> throw SendNotSubmitted(SendFailure.Reason.fundsChanged)
                 Outcome.alreadyPaid -> throw SendAlreadyPaid(SendReceipt(payment.amount, paymentHash = "hash", movementID = 9u, fee = 4,
                     proof = SendReceipt.Proof.actualMovement))
-                Outcome.refunded, Outcome.unknown -> throw IllegalStateException("Fixture payment call failed")
+                Outcome.refunded, Outcome.unknown -> error("Fixture payment call failed")
                 Outcome.never -> error("unreachable")
             }
         }
@@ -60,8 +60,8 @@ object SendFixtures {
             if (outcome == Outcome.chainConfirmed) ChainStatus(ChainStatus.Kind.confirmed, 921_346) else ChainStatus(ChainStatus.Kind.inMempool))
         override suspend fun reconcile(attempt: SendAttempt): SendResolution =
             if (outcome == Outcome.refunded) SendResolution.Failed else SendResolution.Uncertain
-        override suspend fun discard(quote: SendQuote, includingClaimed: Boolean) {}
-        override suspend fun discardAll() {}
+        override suspend fun discard(quote: SendQuote, includingClaimed: Boolean) = Unit
+        override suspend fun discardAll() = Unit
     }
 
     /** A presentation over a fresh controller and [wallet]; balances as Home's Everyday fixture. */

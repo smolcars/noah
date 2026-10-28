@@ -209,8 +209,8 @@ internal enum class LaunchRoute { customServer, message, loading, push, battery,
  * behind App lock, so it can't open once the gate clears (deep-links.md, Gates); the wallet's tabs wait for unlock.
  */
 internal fun linkStep(route: LaunchRoute, locked: Boolean, checking: Boolean, state: LaunchState?, openFailed: Boolean, suspended: Boolean) = when {
-    checking || route == LaunchRoute.loading || route == LaunchRoute.message &&
-        (state == null || state == LaunchState.existingWallet && !openFailed) -> LinkStep.wait
+    checking || route == LaunchRoute.loading || (route == LaunchRoute.message &&
+        (state == null || (state == LaunchState.existingWallet && !openFailed))) -> LinkStep.wait
     route != LaunchRoute.app || suspended -> LinkStep.ignore
     locked -> LinkStep.wait
     else -> LinkStep.open

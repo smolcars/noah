@@ -205,7 +205,13 @@ private fun StoryPlayer() {
         onDispose { media?.release(); player = null }
     }
     LaunchedEffect(player) {
-        while (isActive) { player?.let { if (!seeking) position = it.currentPosition.toFloat(); playing = it.isPlaying }; delay(500) }
+        while (isActive) {
+            player?.let {
+                if (!seeking) position = it.currentPosition.toFloat()
+                playing = it.isPlaying
+            }
+            delay(500)
+        }
     }
     fun time(ms: Float): String { val seconds = ms.toInt() / 1000; return "%d:%02d".format(seconds / 60, seconds % 60) }
     Row(Modifier.padding(top = 22.dp).fillMaxWidth().tonal(RoundedCornerShape(22.dp), palette.soft).padding(start = 14.dp, end = 16.dp, top = 14.dp,

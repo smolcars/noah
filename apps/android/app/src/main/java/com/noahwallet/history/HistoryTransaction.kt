@@ -1,5 +1,6 @@
 package com.noahwallet.history
 
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -24,7 +25,7 @@ data class HistoryTransaction(
     /** An exit fee child this wallet paid on-chain: the VTXO that exit is for (see [HistoryMapping.exitFees]). */
     val exitFeeFor: String? = null,
 ) {
-    @Serializable data class Destination(val destination: String, val amount_sat: Long, val paymentMethod: String? = null)
+    @Serializable data class Destination(val destination: String, @SerialName("amount_sat") val amountSat: Long, val paymentMethod: String? = null)
     @Serializable data class Accounting(val direction: String, val amount: Long)
     /** The recurring schedule this payment ran for, from the recurring journal (see [HistoryMapping.joinRecurring]). */
     @Serializable data class Recurring(val scheduleID: String, val label: String, val interval: com.noahwallet.recurring.RecurringInterval)

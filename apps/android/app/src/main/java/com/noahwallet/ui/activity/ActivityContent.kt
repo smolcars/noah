@@ -150,7 +150,10 @@ class ActivityState internal constructor(
     var exporting by exporting
     /** The list showing: search results scroll on their own, so closing search returns the list to its place. */
     val shownList get() = if (searching && query.isNotBlank()) results else list
-    fun open(id: String) { if (selected != id) details = false; selected = id }
+    fun open(id: String) {
+        if (selected != id) details = false
+        selected = id
+    }
 }
 
 @Composable
@@ -488,7 +491,8 @@ private fun BoxScope.ActivityBar(state: ActivityState, wide: Boolean, tucked: Bo
             var menu by remember { mutableStateOf(false) }
             BarButton(R.drawable.ic_activity_more, tr("More"), Modifier.testTag("activity-more")) { haptics.light(); menu = true }
             ActivityMenu(menu, state.filter, onDismiss = { menu = false }, onFilter = {
-                if (it != state.filter) haptics.selection(); state.filter = it; menu = false
+                if (it != state.filter) haptics.selection()
+                state.filter = it; menu = false
             }, onExport = { menu = false; onExport() }, onRefresh = { menu = false; onRefresh() })
         }
     }

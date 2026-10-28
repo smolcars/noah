@@ -163,7 +163,11 @@ fun ReceiveContent(ui: ReceiveUi, actions: ReceiveActions, toasts: HomeToasts = 
     fun amountSheet() { haptics.light(); sheet = "amount" }
     fun select(format: ReceiveFormat, fromSheet: Boolean) {
         if (format == ReceiveFormat.invoice && ui.amount == null) {
-            scope.launch { if (fromSheet) { sheet = null; delay(200) }; amountSheet() }; return
+            scope.launch {
+                if (fromSheet) { sheet = null; delay(200) }
+                amountSheet()
+            }
+            return
         }
         if (format == ui.format) return
         haptics.selection(); actions.select(format)
@@ -175,7 +179,11 @@ fun ReceiveContent(ui: ReceiveUi, actions: ReceiveActions, toasts: HomeToasts = 
     val qrSide = if (pose is OnboardingPose.Wide) 228.dp else 226.dp
     val now by produceState(0L, ui.arrival?.startedAt) {
         val started = ui.arrival?.startedAt ?: return@produceState
-        while (true) { value = android.os.SystemClock.elapsedRealtime() - started; if (value > 6_000) break; delay(100) }
+        while (true) {
+            value = android.os.SystemClock.elapsedRealtime() - started
+            if (value > 6_000) break
+            delay(100)
+        }
     }
     val phase = ui.arrival?.let { ReceiveTimeline.phase(it.rail, now, reduceMotion) }
     val chainPhase = ui.chain?.takeIf { phase == null }?.let { _ ->
@@ -188,7 +196,7 @@ fun ReceiveContent(ui: ReceiveUi, actions: ReceiveActions, toasts: HomeToasts = 
         }
     }
     val line = phase?.let { tr(it) } ?: chainPhase
-    val done = phase == "Received" || ui.confirmedAt != null && chainPhase != null
+    val done = phase == "Received" || (ui.confirmedAt != null && chainPhase != null)
     val card = @Composable {
         if (ui.error != null && ui.request == null && ui.format != ReceiveFormat.lightningAddress) ErrorCard(ui.error, ui.errorTitle, cardWidth, actions.retry)
         else FitHeight {
@@ -302,7 +310,10 @@ fun ReceiveContent(ui: ReceiveUi, actions: ReceiveActions, toasts: HomeToasts = 
     // starting here, so a sheet restored with the screen (rotation, a pose change) stays open.
     var savingFrom by remember { mutableStateOf<ReceiveRequest?>(null) }
     LaunchedEffect(ui.saving, ui.request) {
-        if (ui.saving) { if (savingFrom == null) savingFrom = ui.request; return@LaunchedEffect }
+        if (ui.saving) {
+            if (savingFrom == null) savingFrom = ui.request
+            return@LaunchedEffect
+        }
         val from = savingFrom ?: return@LaunchedEffect
         savingFrom = null
         if (sheet == "amount" && ui.request != from && ui.invoiceError == null) sheet = null
@@ -430,7 +441,12 @@ internal fun ReceiveAmountSheet(ui: ReceiveUi, onDone: (Long, String) -> Unit) {
             verticalAlignment = Alignment.CenterVertically) {
             BasicTextField(note, { note = it }, Modifier.weight(1f).padding(vertical = 12.dp).testTag("receive-description-input"), enabled = !ui.saving,
                 textStyle = SendType.body.copy(color = palette.foreground), cursorBrush = SolidColor(palette.orange), maxLines = 3,
-                decorationBox = { inner -> Box { if (note.isEmpty()) Text(tr("Add a note"), style = SendType.body, color = palette.muted); inner() } })
+                decorationBox = { inner ->
+                    Box {
+                        if (note.isEmpty()) Text(tr("Add a note"), style = SendType.body, color = palette.muted)
+                        inner()
+                    }
+                })
         }
         if (note.trim().length > 639) Text(tr("Note must be 639 characters or fewer."), style = SendType.small, color = palette.failure)
         ui.invoiceError?.let { Text(tr(it), Modifier.padding(top = 6.dp), style = SendType.small, color = palette.failure, textAlign = TextAlign.Center) }

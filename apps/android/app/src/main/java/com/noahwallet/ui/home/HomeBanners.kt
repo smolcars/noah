@@ -1,3 +1,5 @@
+@file:Suppress("MatchingDeclarationName") // named for Home's banner composables; HomeSignals is their state
+
 package com.noahwallet.ui.home
 
 import android.content.ClipData

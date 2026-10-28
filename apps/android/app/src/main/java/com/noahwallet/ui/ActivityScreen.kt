@@ -129,8 +129,8 @@ internal class ChainReads {
  * changes): the wallet's tip and, for an Ark-funded send, its transaction's block. No polling.
  */
 private suspend fun readChain(app: AppModel, record: HistoryTransaction, tip: (Long) -> Unit, confirmed: (String, Long) -> Unit) {
-    val pending = record.source == "onchain-wallet" && record.hasConfirmation != true || record.movementStatus == "pending" &&
-        record.movementKind in listOf("send-onchain", "offboard")
+    val pending = (record.source == "onchain-wallet" && record.hasConfirmation != true) || (record.movementStatus == "pending" &&
+        record.movementKind in listOf("send-onchain", "offboard"))
     if (!pending) return
     try {
         tip(app.session.chainTip())

@@ -169,13 +169,14 @@ object ActivityRules {
      */
     fun arkFee(record: HistoryTransaction): Long? {
         if (record.source != "ark") return null
-        if (record.subsystemName == "bark.lightning_send" && record.movementStatus == "successful") {
-            if (record.invoice?.let { !SendReconciliation.fixesAmount(it) } == true) return null
-            val sent = runCatching { record.sentTo.orEmpty().fold(0L) { sum, d -> Math.addExact(sum, d.amount_sat.also { require(it >= 0) }) } }
-                .getOrNull()?.takeIf { it > 0 } ?: return null
-            return SendReconciliation.lightningFee(record.effectiveBalanceSat ?: return null, sent)
-        }
+        if (record.subsystemName == "bark.lightning_send" && record.movementStatus == "successful") return lightningSendFee(record)
         return record.offchainFeeSat
+    }
+    private fun lightningSendFee(record: HistoryTransaction): Long? {
+        if (record.invoice?.let { !SendReconciliation.fixesAmount(it) } == true) return null
+        val sent = runCatching { record.sentTo.orEmpty().fold(0L) { sum, d -> Math.addExact(sum, d.amountSat.also { require(it >= 0) }) } }
+            .getOrNull()?.takeIf { it > 0 } ?: return null
+        return SendReconciliation.lightningFee(record.effectiveBalanceSat ?: return null, sent)
     }
     /** On-chain fees count for payments out and boards only. */
     fun networkFee(record: HistoryTransaction) = record.onchainFeeSat?.takeIf {
