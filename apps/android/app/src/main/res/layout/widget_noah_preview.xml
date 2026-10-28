@@ -36,7 +36,9 @@
         <TextView
             android:layout_width="match_parent"
             android:layout_height="18dp"
-            android:fontFamily="@font/space_grotesk_semibold"
+            android:fontFamily="sans-serif"
+            android:textFontWeight="600"
+            android:textStyle="bold"
             android:fontFeatureSettings="tnum"
             android:gravity="center_vertical"
             android:includeFontPadding="false"
@@ -52,7 +54,9 @@
         <TextView
             android:layout_width="match_parent"
             android:layout_height="34dp"
-            android:fontFamily="@font/space_grotesk_semibold"
+            android:fontFamily="sans-serif"
+            android:textFontWeight="600"
+            android:textStyle="bold"
             android:fontFeatureSettings="tnum"
             android:gravity="bottom|start"
             android:includeFontPadding="false"

@@ -149,12 +149,29 @@ class NoahWidgetProviderTest {
         WidgetViews.build(context, "regtest", content, width, height, 1f).apply(context, FrameLayout(context))
     private fun View.text(id: Int) = findViewById<TextView>(id).text.toString()
     private fun View.shown(id: Int) = findViewById<View>(id)?.visibility == View.VISIBLE
+    /** The balance is drawn (Space Grotesk, see WidgetType); its view carries the text. */
+    private fun View.balance() = findViewById<android.widget.ImageView>(R.id.widget_balance).let {
+        assertNotNull(it.drawable); it.contentDescription.toString()
+    }
+
+    @GraphicsMode(GraphicsMode.Mode.NATIVE)
+    @Test
+    fun theBalanceShrinksToFitDownToHalf() {
+        val d = context.resources.displayMetrics.density
+        val box = 144f
+        fun width(text: String, sats: Boolean = false, wide: Float = box) = WidgetType.balance(context, text, sats, 30f, wide, 34f, d).width
+        assertEquals((34 * d).toInt(), WidgetType.balance(context, "₿\u00a0252,742", false, 30f, box, 34f, d).height)
+        assertTrue(width("₿\u00a0252,742") <= box * d)
+        assertTrue("shrinks to fit", width("₿\u00a012,480,315") <= box * d + 1)
+        assertTrue("never below half size", width("₿\u00a021,000,000,000,000,000,000") > box * d)
+        assertTrue("sats at about half size", width("252,742 sats", true, 400f) < width("252,742 sats", false, 400f))
+    }
 
     @Test fun everyLayoutRendersItsLines() {
         language("en")
         val content = WidgetContent.of(context, month.copy(renewDue = now + 18 * hour), "regtest", now)
         val small = apply(content, 180f, 180f)
-        assertEquals("₿ 252,742", small.text(R.id.widget_balance)); assertEquals("\$283.07", small.text(R.id.widget_fiat))
+        assertEquals("₿ 252,742", small.balance()); assertEquals("\$283.07", small.text(R.id.widget_fiat))
         assertEquals("+₿ 30,142", small.text(R.id.widget_change)); assertEquals(" · 30 days", small.text(R.id.widget_change_days))
         assertEquals("Renew", small.text(R.id.widget_status_title)); assertEquals("Expires in 18 hours", small.text(R.id.widget_status_detail))
         assertTrue(small.shown(R.id.widget_status_icon)); assertFalse(small.shown(R.id.widget_status_dot)); assertTrue(small.shown(R.id.widget_boat))
@@ -189,7 +206,7 @@ class NoahWidgetProviderTest {
         context.getSharedPreferences("com.noahwallet.regtest", 0).edit().putLong("totalBalance", 1_234_567).putLong("onchainBalance", 1)
             .putLong("offchainBalance", 2).putLong("pendingBalance", 12_345).putLong("closestExpiryBlocks", 24).putLong("expiryThreshold", 24).commit()
         val old = render()
-        assertEquals("₿ 1,234,567", old.text(R.id.widget_balance))
+        assertEquals("₿ 1,234,567", old.balance())
         assertEquals("+₿ 12,345 arriving", old.text(R.id.widget_status_title))
         assertEquals("", old.text(R.id.widget_change))
         context.getSharedPreferences("com.noahwallet.regtest", 0).edit().clear()

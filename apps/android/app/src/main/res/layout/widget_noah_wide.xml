@@ -40,22 +40,13 @@
         android:importantForAccessibility="noHideDescendants"
         android:orientation="vertical">
 
-        <TextView
+        <ImageView
             android:id="@+id/widget_balance"
             android:layout_width="match_parent"
             android:layout_height="28dp"
-            android:autoSizeMaxTextSize="24sp"
-            android:autoSizeMinTextSize="12sp"
-            android:autoSizeStepGranularity="0.5sp"
-            android:autoSizeTextType="uniform"
-            android:fontFamily="@font/space_grotesk_semibold"
-            android:fontFeatureSettings="tnum"
-            android:gravity="bottom|start"
-            android:includeFontPadding="false"
-            android:letterSpacing="-0.03"
-            android:maxLines="1"
-            android:textColor="@color/widget_text"
-            android:textSize="24sp" />
+            android:importantForAccessibility="no"
+            android:scaleType="fitStart"
+            android:tint="@color/widget_text" />
 
         <LinearLayout
             android:id="@+id/widget_status"
@@ -94,6 +85,7 @@
                 android:fontFamily="sans-serif-medium"
                 android:gravity="center_vertical|start"
                 android:includeFontPadding="false"
+                android:ellipsize="end"
                 android:maxLines="1"
                 android:textColor="@color/widget_text"
                 android:textSize="12sp" />
@@ -117,23 +109,6 @@
             android:visibility="gone" />
     </LinearLayout>
 
-    <TextView
-        android:id="@+id/widget_chip"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_marginStart="8dp"
-        android:background="@drawable/widget_chip"
-        android:fontFamily="sans-serif-medium"
-        android:importantForAccessibility="no"
-        android:includeFontPadding="false"
-        android:maxLines="1"
-        android:paddingStart="7dp"
-        android:paddingTop="3dp"
-        android:paddingEnd="7dp"
-        android:paddingBottom="3dp"
-        android:textColor="@color/widget_chip_text"
-        android:textSize="11sp"
-        android:visibility="gone" />
 
     <FrameLayout
         android:id="@+id/widget_receive"

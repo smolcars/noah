@@ -7,7 +7,6 @@ import android.graphics.Typeface
 import android.net.Uri
 import android.text.SpannableString
 import android.text.Spanned
-import android.text.style.RelativeSizeSpan
 import android.text.style.StyleSpan
 import android.view.View
 import android.widget.RemoteViews
@@ -61,6 +60,16 @@ internal object WidgetViews {
         else -> null
     }
 
+    /** The balance's box (width and height, dp) and full text size (sp), from each layout's fixed dimensions. */
+    fun balanceBox(layout: WidgetLayout, widthDp: Float): Triple<Float, Float, Float> = when (layout) {
+        WidgetLayout.small -> Triple(widthDp - 36f, 34f, 30f)
+        WidgetLayout.medium -> Triple(widthDp - 36f - 14f - 150f, 38f, 34f)
+        // Padding, the longship and three 44 dp buttons with their gaps.
+        WidgetLayout.wide -> Triple(widthDp - 32f - 42f - 3 * 52f, 28f, 24f)
+        WidgetLayout.narrow -> Triple(widthDp - 32f - 30f, 28f, 24f)
+        WidgetLayout.empty -> error("No balance without a wallet")
+    }
+
     @Suppress("LongParameterList") // one slot: its content and flat geometry inputs
     fun build(context: Context, variant: String, content: WidgetContent?, widthDp: Float, heightDp: Float, density: Float): RemoteViews {
         val layout = if (content == null) WidgetLayout.empty else WidgetLayout.of(widthDp, heightDp)
@@ -76,11 +85,9 @@ internal object WidgetViews {
         if (content == null) return views
         views.setContentDescription(android.R.id.background, content.description)
 
-        views.setTextViewText(R.id.widget_balance, SpannableString(content.balance).apply {
-            // "sats" at about half size after the number.
-            if (content.satsSuffix && content.balance.endsWith(" sats"))
-                setSpan(RelativeSizeSpan(.52f), content.balance.length - 5, content.balance.length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE)
-        })
+        val (boxWidth, boxHeight, size) = balanceBox(layout, widthDp)
+        views.setImageViewBitmap(R.id.widget_balance, WidgetType.balance(context, content.balance, content.satsSuffix, size, boxWidth, boxHeight, density))
+        views.setContentDescription(R.id.widget_balance, content.balance)
         val oneRow = layout == WidgetLayout.narrow || layout == WidgetLayout.wide
         // One row shows one line: the status, or else the fiat.
         val fiat = content.fiat?.takeIf { !oneRow || content.status == null }
@@ -94,11 +101,10 @@ internal object WidgetViews {
 
     /** The chip and the change label, where the layout has them. */
     private fun labels(views: RemoteViews, layout: WidgetLayout, content: WidgetContent) {
-        if (layout != WidgetLayout.narrow) {
+        // The chip sits beside the change label, so only the layouts with a label have one.
+        if (layout == WidgetLayout.small || layout == WidgetLayout.medium) {
             views.setTextViewText(R.id.widget_chip, content.chip.orEmpty())
             views.setViewVisibility(R.id.widget_chip, if (content.chip != null) View.VISIBLE else View.GONE)
-        }
-        if (layout == WidgetLayout.small || layout == WidgetLayout.medium) {
             views.setTextViewText(R.id.widget_change, content.change.orEmpty())
             views.setTextViewText(R.id.widget_change_days, content.days.orEmpty())
         }

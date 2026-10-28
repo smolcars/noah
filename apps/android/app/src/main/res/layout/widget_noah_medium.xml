@@ -61,22 +61,13 @@
                 android:layout_weight="1"
                 android:orientation="vertical">
 
-                <TextView
+                <ImageView
                     android:id="@+id/widget_balance"
                     android:layout_width="match_parent"
                     android:layout_height="38dp"
-                    android:autoSizeMaxTextSize="34sp"
-                    android:autoSizeMinTextSize="17sp"
-                    android:autoSizeStepGranularity="0.5sp"
-                    android:autoSizeTextType="uniform"
-                    android:fontFamily="@font/space_grotesk_semibold"
-                    android:fontFeatureSettings="tnum"
-                    android:gravity="bottom|start"
-                    android:includeFontPadding="false"
-                    android:letterSpacing="-0.03"
-                    android:maxLines="1"
-                    android:textColor="@color/widget_text"
-                    android:textSize="34sp" />
+                    android:importantForAccessibility="no"
+                    android:scaleType="fitStart"
+                    android:tint="@color/widget_text" />
 
                 <TextView
                     android:id="@+id/widget_fiat"
@@ -138,6 +129,10 @@
                         android:layout_width="0dp"
                         android:layout_height="match_parent"
                         android:layout_weight="1"
+                        android:autoSizeMaxTextSize="13sp"
+                        android:autoSizeMinTextSize="9sp"
+                        android:autoSizeStepGranularity="0.5sp"
+                        android:autoSizeTextType="uniform"
                         android:ellipsize="end"
                         android:fontFamily="sans-serif-medium"
                         android:gravity="center_vertical|start"
@@ -185,7 +180,9 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:ellipsize="end"
-                        android:fontFamily="@font/space_grotesk_semibold"
+                        android:fontFamily="sans-serif"
+                        android:textFontWeight="600"
+                        android:textStyle="bold"
                         android:fontFeatureSettings="tnum"
                         android:includeFontPadding="false"
                         android:maxLines="1"
