@@ -80,11 +80,20 @@ internal object ExitStages {
         val synced = details.tip_height
         val stale = stalled && synced != null && exit.state in setOf("Start", "Processing") && tip > synced
         val base = ExitStage(ExitStage.Phase.lift, total = total, feesPaid = feesPaid, stale = stale)
-        // Once claimable, the timelock's start and end are what bark recorded while it waited.
-        val locked = (exit.historyDetails + details).lastOrNull { it.confirmed_block != null }
         return when (exit.state) {
             "Start" -> base
             "Processing" -> processing(exit, base, txs, tip, seen)
+            else -> afterProcessing(exit, base, known)
+        }.let { if (needsFunds && it.currentKind == "awaiting-cpfp-broadcast") it.copy(attention = ExitStage.Attention.needsFunds) else it }
+    }
+
+    /** Every transaction is in a block: the timelock, the claim, or how the exit ended. */
+    private fun afterProcessing(exit: ExitModel, base: ExitStage, known: List<ExitDetails.Transaction>): ExitStage {
+        val details = exit.details
+        val total = base.total
+        // Once claimable, the timelock's start and end are what bark recorded while it waited.
+        val locked = (exit.historyDetails + details).lastOrNull { it.confirmed_block != null }
+        return when (exit.state) {
             "AwaitingDelta" -> base.copy(phase = ExitStage.Phase.wait, inBlocks = total, current = total,
                 lastBlock = details.confirmed_block?.height, lockedFrom = details.confirmed_block?.height, claimableHeight = details.claimable_height)
             "Claimable" -> base.copy(phase = ExitStage.Phase.claimable, inBlocks = total, current = total, lockedFrom = locked?.confirmed_block?.height,
@@ -97,7 +106,7 @@ internal object ExitStages {
             "VtxoAlreadySpent" -> base.copy(phase = ExitStage.Phase.spent, stale = false)
             "VtxoSwept" -> base.copy(phase = ExitStage.Phase.swept, stale = false)
             else -> base
-        }.let { if (needsFunds && it.currentKind == "awaiting-cpfp-broadcast") it.copy(attention = ExitStage.Attention.needsFunds) else it }
+        }
     }
 
     private fun processing(exit: ExitModel, base: ExitStage, txs: List<ExitDetails.Transaction>, tip: Long, seen: Map<String, Long>): ExitStage {
@@ -111,28 +120,36 @@ internal object ExitStages {
             tx == null -> stage.copy(phase = ExitStage.Phase.onchain)
             kind in waitingKinds -> stage.copy(phase = if (inBlocks == 0) ExitStage.Phase.publish else ExitStage.Phase.confirm)
             kind == "awaiting-cpfp-broadcast" -> stage.copy(phase = ExitStage.Phase.mempool)
-            else -> {
-                val mine = tx.status.origin == null || tx.status.origin == "wallet"
-                // Every child bark gave it in this stay in the mempool, oldest first: a replaced one means fees rose. An earlier
-                // stay (before an eviction or reorg) doesn't count.
-                val children = (exit.historyDetails + exit.details).drop(episodeStart(exit, tx.txid)).mapNotNull { state ->
-                    state.transactions?.find { it.txid == tx.txid }?.status?.child_txid
-                }.distinct()
-                // bark's own tip stays put while nothing changes: count from the tip Noah first saw it in the mempool at.
-                val waited = seen[ExitSeen.key(exit, tx)]?.let { (tip - it).coerceAtLeast(0) } ?: 0
-                val fee = tx.status.child_txid?.let { exit.childFees[it] }
-                val pkg = exit.packages.find { it.txid == tx.txid }
-                val weight = pkg?.let { p -> p.weight?.let { w -> p.childWeight?.let { w + it } } }
-                val rate = if (fee != null && weight != null && weight > 0) Math.round(fee * 4.0 / weight) else null
-                stage.copy(phase = ExitStage.Phase.bump, waited = waited, fee = if (mine) fee else null, rate = if (mine) rate else null,
-                    attention = when {
-                        !mine -> ExitStage.Attention.shared
-                        children.size > 1 -> ExitStage.Attention.feesRose
-                        waited >= 1 -> ExitStage.Attention.stuck
-                        else -> null
-                    })
-            }
+            else -> bumping(exit, stage, tx, tip, seen)
         }
+    }
+
+    /** In the mempool with a fee child: who sent it, what it pays, and whether fees rose or it's stuck. */
+    private fun bumping(exit: ExitModel, stage: ExitStage, tx: ExitDetails.Transaction, tip: Long, seen: Map<String, Long>): ExitStage {
+        val mine = tx.status.origin == null || tx.status.origin == "wallet"
+        // Every child bark gave it in this stay in the mempool, oldest first: a replaced one means fees rose. An earlier
+        // stay (before an eviction or reorg) doesn't count.
+        val children = (exit.historyDetails + exit.details).drop(episodeStart(exit, tx.txid)).mapNotNull { state ->
+            state.transactions?.find { it.txid == tx.txid }?.status?.child_txid
+        }.distinct()
+        // bark's own tip stays put while nothing changes: count from the tip Noah first saw it in the mempool at.
+        val waited = seen[ExitSeen.key(exit, tx)]?.let { (tip - it).coerceAtLeast(0) } ?: 0
+        val fee = tx.status.child_txid?.let { exit.childFees[it] }
+        val rate = feeRate(exit, tx, fee)
+        return stage.copy(phase = ExitStage.Phase.bump, waited = waited, fee = if (mine) fee else null, rate = if (mine) rate else null,
+            attention = when {
+                !mine -> ExitStage.Attention.shared
+                children.size > 1 -> ExitStage.Attention.feesRose
+                waited >= 1 -> ExitStage.Attention.stuck
+                else -> null
+            })
+    }
+
+    /** sat/vB for [tx] and its fee child together, when bark gave both weights. */
+    private fun feeRate(exit: ExitModel, tx: ExitDetails.Transaction, fee: Long?): Long? {
+        val pkg = exit.packages.find { it.txid == tx.txid }
+        val weight = pkg?.let { p -> p.weight?.let { w -> p.childWeight?.let { w + it } } }
+        return if (fee != null && weight != null && weight > 0) Math.round(fee * 4.0 / weight) else null
     }
 }
 
