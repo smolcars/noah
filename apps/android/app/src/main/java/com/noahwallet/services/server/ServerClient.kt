@@ -56,7 +56,7 @@ object ServerClient {
 
     fun make(baseURL: String, tokens: AuthTokenProvider? = null,
         engine: HttpClientEngine = OkHttp.create()): HttpClient {
-        val origin = Url(baseURL)
+        val origin = URLBuilder().takeFrom(baseURL).build()
         val client = HttpClient(engine) {
             // Never replay a bearer or signed login body to a redirect target.
             followRedirects = false

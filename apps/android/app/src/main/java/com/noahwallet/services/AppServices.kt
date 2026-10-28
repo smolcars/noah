@@ -8,10 +8,22 @@ import com.noahwallet.services.logging.AppLog
 import com.noahwallet.services.server.*
 import com.noahwallet.services.storage.*
 import com.noahwallet.services.wallet.WalletSession
-import kotlinx.coroutines.*
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.InternalCoroutinesApi
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.takeWhile
+import kotlinx.coroutines.job
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 
 /** One shared session, token provider and server client for launch and future background work. */
 class AppServices private constructor(private val context: Context) {
@@ -76,7 +88,7 @@ class AppServices private constructor(private val context: Context) {
                         }
                         !resubscribe
                     }.collect { }
-                } while (resubscribe && isActive)
+                } while (resubscribe && coroutineContext[Job]?.isActive != false)
             } catch (cancelled: CancellationException) { throw cancelled }
             catch (_: Exception) { backupCoordinator.schedule(BackupCoordinator.Reason.startup, true) }
         }
@@ -360,7 +372,9 @@ class AppServices private constructor(private val context: Context) {
     }
 
     companion object {
-        @Volatile private var instance: AppServices? = null
+        @android.annotation.SuppressLint("StaticFieldLeak") // only the application context
+        @Volatile
+        private var instance: AppServices? = null
         fun shared(context: Context): AppServices = instance ?: synchronized(this) {
             instance ?: AppServices(context.applicationContext).also { instance = it }
         }

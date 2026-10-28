@@ -2,8 +2,8 @@
     xmlns:tools="http://schemas.android.com/tools">
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-    <!-- Kept from the RN app so grants survive the update. -->
-    <uses-permission android:name="android.permission.CAMERA" />
+    <!-- Kept from the RN app so grants survive the update. Like the RN app, the camera stays a required feature. -->
+    <uses-permission android:name="android.permission.CAMERA" tools:ignore="PermissionImpliesUnsupportedChromeOsHardware" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
     <uses-permission android:name="android.permission.USE_BIOMETRIC" />
@@ -22,12 +22,14 @@
         android:networkSecurityConfig="@xml/network_security_config"
         android:supportsRtl="true"
         android:enableOnBackInvokedCallback="true"
-        android:theme="@style/AppTheme">
+        android:theme="@style/AppTheme"
+        tools:targetApi="33">
         <!-- Initialization belongs to Application after installing the privacy hooks. -->
         <meta-data android:name="io.sentry.auto-init" android:value="false" />
         <provider android:name="io.sentry.android.core.SentryInitProvider" tools:node="remove" />
         <provider android:name="io.sentry.android.core.SentryPerformanceProvider" tools:node="remove" />
-        <provider android:name="io.sentry.ndk.SentryNdkPreloadProvider" tools:node="remove" />
+        <!-- Not in today's sentry-android-ndk; removed in case a release brings it back. -->
+        <provider android:name="io.sentry.ndk.SentryNdkPreloadProvider" tools:node="remove" tools:ignore="MissingClass" />
         <!-- Registration enables auto-init after onboarding; existing FCM storage remains intact. -->
         <meta-data android:name="firebase_messaging_auto_init_enabled" android:value="false" />
         <meta-data android:name="firebase_analytics_collection_enabled" android:value="false" />
@@ -60,11 +62,11 @@
                 <category android:name="android.intent.category.DEFAULT" />
                 <category android:name="android.intent.category.BROWSABLE" />
                 <data android:scheme="bitcoin" />
-                <data android:scheme="BITCOIN" />
+                <data android:scheme="BITCOIN" tools:ignore="AppLinkUrlError" />
                 <data android:scheme="lightning" />
-                <data android:scheme="LIGHTNING" />
+                <data android:scheme="LIGHTNING" tools:ignore="AppLinkUrlError" />
                 <data android:scheme="lnurlp" />
-                <data android:scheme="LNURLP" />
+                <data android:scheme="LNURLP" tools:ignore="AppLinkUrlError" />
             </intent-filter>
         </activity>
         <receiver android:name=".recurring.RecurringTimeReceiver" android:exported="false">

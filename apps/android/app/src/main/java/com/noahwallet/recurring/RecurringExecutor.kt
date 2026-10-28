@@ -3,7 +3,17 @@ package com.noahwallet.recurring
 import androidx.compose.runtime.*
 import com.noahwallet.api.generated.models.RecurringPaymentScheduleEntry
 import com.noahwallet.send.*
-import kotlinx.coroutines.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.job
+import kotlinx.coroutines.withContext
 import java.util.TimeZone
 import java.util.UUID
 
@@ -54,7 +64,7 @@ class RecurringExecutor(private val d: Dependencies,
     }
     private fun admissionChanged(owner: RecurringStore.Binding, generation: String?): Boolean =
         !d.journal.file.parentFile!!.isDirectory || d.binding() != owner || d.automationGeneration() != generation ||
-            executionBinding != null && executionBinding != owner
+            (executionBinding != null && executionBinding != owner)
     private suspend fun <T> storage(block: () -> T): T = walletMutation {
         withContext(Dispatchers.IO) { readAdmission(); block() }
     }
@@ -101,7 +111,7 @@ class RecurringExecutor(private val d: Dependencies,
         if (executionBinding != null && owner != executionBinding) throw NoWallet()
         d.store.automationGeneration()
         var state = d.store.load()
-        if (state.binding == null || state.binding != owner && state.schedules.isEmpty()) { d.store.bind(owner); state = d.store.load() }
+        if (state.binding == null || (state.binding != owner && state.schedules.isEmpty())) { d.store.bind(owner); state = d.store.load() }
         check(state.binding == owner) {
             "These recurring payments belong to a previous wallet. They are preserved but cannot run. Cancel them and create new schedules for this wallet."
         }
@@ -202,9 +212,9 @@ class RecurringExecutor(private val d: Dependencies,
     private suspend fun finishRun(noWallet: Boolean, budget: RecurringBudget, caller: Job?) {
         try {
             if (!noWallet) reload()
-            if (!noWallet && live(budget, caller) && currentCoroutineContext().isActive) {
+            if (!noWallet && live(budget, caller) && currentCoroutineContext()[Job]?.isActive != false) {
                 val visible = runCatching { storage { d.store.load().schedules.values.toList() } }.getOrDefault(emptyList())
-                if (live(budget, caller) && currentCoroutineContext().isActive) d.notify(visible, null)
+                if (live(budget, caller) && currentCoroutineContext()[Job]?.isActive != false) d.notify(visible, null)
             }
         } finally { executionBinding = null; running = false }
     }
@@ -404,7 +414,7 @@ class RecurringExecutor(private val d: Dependencies,
             if (reapproval) requireReapprovalSafe(input.id)
             if (editing) {
                 check(!d.journal.legacyUncertain(d.binding(), input.id)) { RecurringJournal.legacyMessage }
-                check(old != null && (reapproval || old.inFlight == null && old.status != "needs_attention")) {
+                check(old != null && (reapproval || (old.inFlight == null && old.status != "needs_attention"))) {
                     "Check this payment's outcome before editing it."
                 }
             }
@@ -432,7 +442,7 @@ class RecurringExecutor(private val d: Dependencies,
             check(schedule.amountSat <= RecurringPayment.maximumAmount) { RecurringPayment.amountLimitMessage }
             val reapproval = schedule.requiresPolicyApproval
             if (reapproval) requireReapprovalSafe(id)
-            check(reapproval || schedule.inFlight == null && schedule.status != "needs_attention") {
+            check(reapproval || (schedule.inFlight == null && schedule.status != "needs_attention")) {
                 "Check your transaction history, then confirm the destructive override before resuming."
             }
             if (schedule.status != "completed") d.store.upsert(schedule.resume(d.now(),

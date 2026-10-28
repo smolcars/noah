@@ -23,6 +23,7 @@ import androidx.compose.ui.semantics.liveRegion
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.core.net.toUri
 import com.noahwallet.BuildConfig
 import com.noahwallet.localization.tr
 import com.noahwallet.localization.trPlural
@@ -385,7 +386,7 @@ private fun rememberExplore(): (String) -> Unit {
     val host = LocalContext.current
     val noBrowser = tr("No browser available to open the explorer.")
     return { url ->
-        try { host.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url))) }
+        try { host.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, url.toUri())) }
         catch (_: android.content.ActivityNotFoundException) { toasts.show(noBrowser) }
     }
 }

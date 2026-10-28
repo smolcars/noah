@@ -50,7 +50,7 @@ class RecurringStore(private val read: () -> String?, private val write: (String
             0); putJsonObject("state") { putJsonObject("schedules") {}; put("serverSyncPending", false) } }
         return json.parseToJsonElement(stored).jsonObject.also {
             val version = it["version"]
-            require(version == null || version is JsonPrimitive && !version.isString && version.content == "0") {
+            require(version == null || (version is JsonPrimitive && !version.isString && version.content == "0")) {
                 "Recurring payment data couldn't be read. Your saved schedules have been preserved. Sending is stopped."
             }
             it.getValue("state").jsonObject.getValue("schedules").jsonObject
@@ -244,7 +244,7 @@ internal fun durableRecurringWrite(file: File, bytes: ByteArray, sync: (File) ->
 }
 
 /** Input has already passed JSON validation; retain original value slices on unrelated writes. */
-internal fun recurringRawFields(raw: String): Map<String, String> {
+private fun recurringRawFields(raw: String): Map<String, String> {
     val fields = linkedMapOf<String, String>()
     var index = skipWhitespace(raw, raw.indexOf('{') + 1)
     while (raw[index] != '}') {
@@ -301,7 +301,7 @@ private fun nesting(char: Char) = when (char) {
 }
 
 /** Check original property tokens before kotlinx collapses duplicate keys, including unknown objects. */
-internal fun requireUniqueRecurringProperties(raw: String) {
+private fun requireUniqueRecurringProperties(raw: String) {
     val objects = mutableListOf<MutableSet<String>?>()
     var index = 0
     while (index < raw.length) {

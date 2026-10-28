@@ -32,7 +32,7 @@ class MainActivity : FragmentActivity() {
     private var model: AppModel? = null
     private val links: com.noahwallet.ui.PaymentLinks by viewModels()
     private var invalidatedBeforeReady = false
-    internal fun invalidateLock() {
+    private fun invalidateLock() {
         model?.walletLock?.background() ?: run { invalidatedBeforeReady = true }
     }
     private val backgroundReceiver = object : BroadcastReceiver() {

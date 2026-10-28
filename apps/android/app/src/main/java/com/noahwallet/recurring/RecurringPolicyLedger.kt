@@ -38,7 +38,7 @@ internal class RecurringPolicyLedger(val file: File, private val warn: () -> Uni
     }
     private fun digestMatches(expected: String?, version: Int?, schedule: RecurringPayment): Boolean =
         if (version != null) expected == digest(schedule, version)
-        else expected == digest(schedule, 2) || schedule.issue == null && expected == digest(schedule, 1)
+        else expected == digest(schedule, 2) || (schedule.issue == null && expected == digest(schedule, 1))
     private fun matchingVersion(entry: Entry, schedule: RecurringPayment): Int = entry.digestVersion
         ?: if (entry.digest == digest(schedule, 2)) 2 else 1
     private fun entry(binding: RecurringStore.Binding, schedule: RecurringPayment, generation: Long) =

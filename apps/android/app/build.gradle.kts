@@ -110,6 +110,8 @@ android {
         val abis = providers.gradleProperty("noahAbis").orNull?.split(',')?.map(String::trim)?.filter(String::isNotEmpty)
             ?: listOf("arm64-v8a", "x86_64")
         require(abis.isNotEmpty() && abis.all { it in setOf("arm64-v8a", "x86_64") }) { "noahAbis must be arm64-v8a and/or x86_64" }
+        // x86_64 is in the default; -PnoahAbis narrows a phone-only build on purpose.
+        //noinspection ChromeOsAbiSupport
         ndk { abiFilters += abis }
     }
 
@@ -162,6 +164,8 @@ android {
     buildTypes {
         debug { signingConfig = signingConfigs.getByName("debug") }
         release {
+            // L10n finds translated strings by name (getIdentifier), which resource shrinking can't see.
+            //noinspection NotShrinkingResources
             isMinifyEnabled = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
             signingConfig = when {
@@ -250,7 +254,7 @@ dependencies {
     testImplementation(libs.compose.ui.test)
     androidTestImplementation(libs.work.testing)
     testImplementation(libs.junit)
-    testImplementation("com.ibm.icu:icu4j:78.3") // JVM bridge for android.icu.text.IDNA.
+    testImplementation(libs.icu4j) // JVM bridge for android.icu.text.IDNA.
     testImplementation(libs.ktor.client.mock)
     androidTestImplementation(libs.androidx.test.runner)
     androidTestImplementation(libs.androidx.test.junit)

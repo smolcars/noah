@@ -160,6 +160,6 @@ internal fun exitOrigin(origin: ExitTxOrigin) = when (origin) {
 internal fun validateClaimDestination(address: String, network: String) {
     val actual = com.noahwallet.send.PaymentEncoding.bitcoinNetwork(address)
     // Testnet addresses also pay signet, and non-bech32 ones regtest.
-    val testnet = actual == "testnet" && (network == "signet" || network == "regtest" && !address.startsWith("tb1", ignoreCase = true))
+    val testnet = actual == "testnet" && (network == "signet" || (network == "regtest" && !address.startsWith("tb1", ignoreCase = true)))
     if (actual == null || !(actual == network || testnet)) fail(OnchainFailure.invalid)
 }

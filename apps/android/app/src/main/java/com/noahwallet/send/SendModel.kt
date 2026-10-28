@@ -56,7 +56,7 @@ class SendModel(val controller: SendController, private val network: String,
         val pending = PaymentEncoding.invoice(invoice)?.hash in pendingLightningHashes
         return mapOf("ark" to (sats > 0 && arkBalance >= sats),
             "lightning" to (sats > 0 && (arkBalance >= sats || pending || parsed.destinationType == "lnurl")),
-            "onchain" to (isMax || sats > 0 && (arkBalance >= sats || onchainBalance >= sats)))
+            "onchain" to (isMax || (sats > 0 && (arkBalance >= sats || onchainBalance >= sats))))
     }
     val sources get() = SendSource.entries.filter {
         val balance = if (it == SendSource.offchain) arkBalance else onchainBalance
@@ -137,7 +137,7 @@ class SendModel(val controller: SendController, private val network: String,
             if (!unchanged()) return false
             route = resolved; requireSend(matchingRoute != null)
         }
-        progress = progress.copy(recipientConfirmed = true, amountConfirmed = progress.amountConfirmed || sats > 0 && !keypad,
+        progress = progress.copy(recipientConfirmed = true, amountConfirmed = progress.amountConfirmed || (sats > 0 && !keypad),
             selectedRail = if (isMax) SendRail.onchain else SendFlow.recommend(rails, availability))
         return true
     }
@@ -203,7 +203,7 @@ class SendModel(val controller: SendController, private val network: String,
         }
         if (method == "lightning") requireInvoiceAmount(target)
         val payment = SendPayment(target, method, sats, if (rail == SendRail.onchain) source else null, isMax, comment, repeatMetadata())
-        requireSend(!isMax || method == "onchain" && source != null)
+        requireSend(!isMax || (method == "onchain" && source != null))
         return payment
     }
     private fun requireInvoiceAmount(invoice: String) {

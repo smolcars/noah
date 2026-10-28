@@ -25,7 +25,7 @@ import kotlinx.serialization.Serializable
     }
     /** The send in progress must still be this checkpoint's: same invoice, amounts and movement. */
     private fun requireSameSend(current: SendCheckpoint, payment: SendPayment, quote: SendQuote) {
-        if (!current.matches(payment.destination, payment, quote) || movementID != null && current.movementID != movementID)
+        if (!current.matches(payment.destination, payment, quote) || (movementID != null && current.movementID != movementID))
             throw SendExistingLightning(SendLightningProgress(current.amount, current.fee))
     }
     fun receipt(status: LightningSendStatus, movements: List<Movement>, payment: SendPayment, quote: SendQuote): SendReceipt {

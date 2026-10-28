@@ -31,6 +31,7 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.net.toUri
 import com.noahwallet.BuildConfig
 import com.noahwallet.formatting.BitcoinAmount
 import com.noahwallet.formatting.BitcoinAmountUnit
@@ -406,7 +407,7 @@ internal fun VtxoDetailPage(app: AppModel, nav: SettingsNav, id: String) {
             DetailRow(tr("VTXO ID"), short(id), ValueKind.mono, copy = id, toasts = toasts)
             DetailRow(tr("Anchor"), short(vtxo.anchorPoint), ValueKind.mono, copy = vtxo.anchorPoint,
                 explorer = OnchainDisplay.explorerURL(vtxo.anchorPoint, BuildConfig.APP_VARIANT), toasts = toasts, last = true, onExplorer = { url ->
-                    try { context.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, android.net.Uri.parse(url))) }
+                    try { context.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, url.toUri())) }
                     catch (_: android.content.ActivityNotFoundException) { toasts.show(noBrowser) }
                 })
         }

@@ -1,9 +1,20 @@
 package com.noahwallet.services.backup
 
 import com.noahwallet.services.storage.PersistedBackupState
-import kotlinx.coroutines.*
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.launch
 
 /** A pass owns its slot until state is updated, then clears it BEFORE resuming flush waiters. */
 class BackupCoordinator(private val dependencies: Dependencies) {
@@ -111,7 +122,7 @@ class BackupCoordinator(private val dependencies: Dependencies) {
             synchronized(lock) { passCancelled(requireEnabled) }
             Result.failure(cancelled)
         } catch (@Suppress("TooGenericExceptionCaught") failure: Exception) { // any backup failure is retried with backoff
-            val cancelled = !currentCoroutineContext().isActive
+            val cancelled = currentCoroutineContext()[Job]?.isActive == false
             synchronized(lock) { if (cancelled) passCancelled(requireEnabled) else passFailed(requireEnabled) }
             Result.failure(failure)
         }

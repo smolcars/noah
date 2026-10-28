@@ -28,8 +28,8 @@ class SendController(private val dependencies: Dependencies,
     /** This wallet's saved payment isn't read yet (every settled storageBlocked carries a message): Send is neither free nor holding one. */
     val loading get() = state == State.storageBlocked && message == null
     val canOverride get() = !checking && (unboundJournal != null || unreadableJournal ||
-        attempt != null && (state in listOf(State.uncertain,
-            State.storageBlocked) || state == State.succeeded && attempt?.receipt?.broadcastRetryPending == true))
+        (attempt != null && (state in listOf(State.uncertain, State.storageBlocked) ||
+            (state == State.succeeded && attempt?.receipt?.broadcastRetryPending == true))))
 
     fun invalidateForWalletChange() {
         recurringEvidenceDurable = false

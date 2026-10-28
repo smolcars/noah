@@ -261,7 +261,7 @@ private class ScheduleActionRunner(private val scope: kotlinx.coroutines.Corouti
 private class ScheduleControls(s: RecurringPayment, suspended: Boolean, val resumeTitle: String, executor: RecurringExecutor) {
     val attention = s.status == "needs_attention" || s.inFlight != null
     val adjustable = s.status != "completed" && (s.status != "needs_attention" || s.requiresPolicyApproval)
-    val canResume = s.status == "active" || (s.inFlight == null || s.requiresPolicyApproval) && !suspended
+    val canResume = s.status == "active" || ((s.inFlight == null || s.requiresPolicyApproval) && !suspended)
     val edit = adjustable && (s.inFlight == null || s.requiresPolicyApproval)
     val reviewable = !executor.running && !executor.controller.locked && !suspended
 }

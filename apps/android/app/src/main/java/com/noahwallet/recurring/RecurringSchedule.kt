@@ -84,7 +84,7 @@ import java.util.TimeZone
         if (status != "active") return Plan("idle")
         inFlight?.let { return Plan(if (now - it.startedAt > 600_000) "stale_in_flight" else "idle") }
         val first = next(nextOccurrenceIndex, zone) ?: return Plan("complete")
-        if (first > now || !ignoreBackoff && (retryNotBefore ?: 0) > now) return Plan("idle")
+        if (first > now || (!ignoreBackoff && (retryNotBefore ?: 0) > now)) return Plan("idle")
         return duePlan(now, zone)
     }
     /** The latest due occurrence, skipping at most 5,000 missed ones. */

@@ -54,9 +54,9 @@ import kotlinx.serialization.json.*
         Proof.preparedTxid -> payment.method == "onchain" && payment.source == SendSource.onchain && !txid.isNullOrEmpty() && amount > 0 &&
             (payment.max || amount == payment.amount)
         Proof.submitReturnedTxid -> payment.method == "onchain" && !txid.isNullOrEmpty() &&
-            (amount > 0 || payment.max && payment.source == SendSource.offchain && amountIsPending) && (payment.max || amount == payment.amount)
+            (amount > 0 || (payment.max && payment.source == SendSource.offchain && amountIsPending)) && (payment.max || amount == payment.amount)
         Proof.actualMovement -> payment.method in listOf("lightning", "lnurl", "offer") && txid == null && !paymentHash.isNullOrEmpty() &&
-            movementID != null && (fee != null && amount > 0 || alreadyPaid && fee == null && amount == 0L) && (alreadyPaid || amount == payment.amount) &&
+            movementID != null && ((fee != null && amount > 0) || (alreadyPaid && fee == null && amount == 0L)) && (alreadyPaid || amount == payment.amount) &&
             (payment.method != "lightning" || paymentHash == (knownHash ?: PaymentEncoding.invoice(payment.destination)?.hash))
         null -> false
     }

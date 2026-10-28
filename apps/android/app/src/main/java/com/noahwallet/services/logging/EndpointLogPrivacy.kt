@@ -167,8 +167,8 @@ internal object EndpointLogPrivacy {
             return false
         }
         companion object {
-            internal fun fold(text: String) = text.lowercase(java.util.Locale.ROOT).uppercase(java.util.Locale.ROOT)
-            internal fun withoutMarks(text: String) = buildString {
+            private fun fold(text: String) = text.lowercase(java.util.Locale.ROOT).uppercase(java.util.Locale.ROOT)
+            private fun withoutMarks(text: String) = buildString {
                 var index = 0
                 while (index < text.length) {
                     val scalar = text.codePointAt(index)
@@ -335,7 +335,7 @@ internal object EndpointLogPrivacy {
         var result = text
         for ((index, view) in views.withIndex()) {
             val endpointOnly = endpoints(view)
-            if (endpointOnly == "[custom-esplora]" || index > 0 && endpointOnly != view) return "[custom-esplora]"
+            if (endpointOnly == "[custom-esplora]" || (index > 0 && endpointOnly != view)) return "[custom-esplora]"
             // Host replacement must not hide credential labels or break mnemonic runs.
             val plain = LogFile.redactPlain(view)
             if (index > 0 && plain != view) return "[redacted]"

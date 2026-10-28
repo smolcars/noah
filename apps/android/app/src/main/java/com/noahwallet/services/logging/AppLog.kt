@@ -34,14 +34,18 @@ class AppLog(private val tag: String, private val file: LogFile) {
     }
 }
 
+/** Logcat gets every record in every build, after redaction. */
+@android.annotation.SuppressLint("LogConditional")
+private fun systemLog(level: AppLog.Level, tag: String, message: String) {
+    Log.println(level.priority, "com.noah.app", EndpointLogPrivacy.redactRecord("[$tag] $message"))
+}
+
 /** RN Android layout: cacheDir/noah_logs/noah.log and .1 … .4, 512 KiB each. */
 class LogFile(
     private val directory: File,
     private val capacity: Int = maxPendingRecords,
     private val executor: Executor = writer,
-    private val systemSink: (AppLog.Level, String, String) -> Unit = { level, tag, message ->
-        Log.println(level.priority, "com.noah.app", EndpointLogPrivacy.redactRecord("[$tag] $message"))
-    },
+    private val systemSink: (AppLog.Level, String, String) -> Unit = ::systemLog,
 ) {
     init { require(capacity > 0) }
     private val formatter = SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.US)

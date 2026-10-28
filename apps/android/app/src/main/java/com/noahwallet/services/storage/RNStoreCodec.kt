@@ -36,8 +36,8 @@ object RNStoreCodec {
         val root = Json.parseToJsonElement(value).jsonObject
         val state = root.getValue("state").jsonObject
         val version = root["version"]
-        require(version == null || version is JsonPrimitive && !version.isString &&
-            (version.content == "0" || versions.getValue(key) == 1 && version.content == "1"))
+        require(version == null || (version is JsonPrimitive && !version.isString &&
+            (version.content == "0" || (versions.getValue(key) == 1 && version.content == "1"))))
         state.forEach { (field, value) -> require(field !in fields.getValue(key) || validField(field, value)) }
         if (key == "backup-storage") {
             state["lastBackupStatus"]?.let { require(it.jsonPrimitive.content in setOf("idle", "in_progress", "success", "failed")) }

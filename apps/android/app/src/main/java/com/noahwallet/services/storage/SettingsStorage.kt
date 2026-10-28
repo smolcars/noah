@@ -187,7 +187,7 @@ class SettingsStorage(context: Context, private val sync: (File) -> Unit = ::syn
                         Json.parseToJsonElement(checkNotNull(raw)).jsonObject.getValue("state").jsonObject.getValue("schedules").jsonObject
                     }.getOrNull()
                     if (schedules?.isEmpty() != true) { recurringNotice = true; values[key] = emptyRecurring }
-                } else if (raw == null || key in RNStoreCodec.versions && runCatching { RNStoreCodec.validateStoredValue(key, raw) }.isFailure) {
+                } else if (raw == null || (key in RNStoreCodec.versions && runCatching { RNStoreCodec.validateStoredValue(key, raw) }.isFailure)) {
                     settingsNotice = true
                 } else values[key] = raw
             }

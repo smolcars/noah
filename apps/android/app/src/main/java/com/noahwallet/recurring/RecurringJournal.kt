@@ -71,7 +71,7 @@ class RecurringJournal internal constructor(val file: File, private val read: ()
     private fun decode(raw: String): State {
         val root = json.parseToJsonElement(raw).jsonObject
         val version = root["version"]?.jsonPrimitive
-        require(version == null || !version.isString && version.intOrNull != null)
+        require(version == null || (!version.isString && version.intOrNull != null))
         var migrated = when (version?.int) {
             3 -> {
                 require(root.keys.containsAll(listOf("attempts", "consumed", "consumedIndices", "legacyUncertainty")))
@@ -124,7 +124,7 @@ class RecurringJournal internal constructor(val file: File, private val read: ()
         e.policyRevision?.let(::requireUUID)
         require(wellFormed(id, e))
         e.terminal?.let { terminal -> validateTerminal(e, terminal) }
-        require(!e.historyApplied || e.terminal != null && e.resolved)
+        require(!e.historyApplied || (e.terminal != null && e.resolved))
         require(!e.released || e.historyApplied)
         if (complete && e.consumed) requireConsumedEvidence(state, id, e)
     }
@@ -164,7 +164,7 @@ class RecurringJournal internal constructor(val file: File, private val read: ()
         check(!legacyUncertain(binding, entry.scheduleID)) { legacyMessage }
         entry.terminal?.let {
             check(it.attempt.recurringAttemptID == attempt.recurringAttemptID) { invalidMessage }
-            if (it.outcome != Outcome.uncertain || it.outcome == outcome && it.attempt == attempt) return
+            if (it.outcome != Outcome.uncertain || (it.outcome == outcome && it.attempt == attempt)) return
         }
         save(entry.copy(terminal = TerminalEvidence(entry.terminal?.settlementID ?: UUID.randomUUID().toString(), attempt, generation, walletGeneration,
             outcome, message, now)))
@@ -176,8 +176,8 @@ class RecurringJournal internal constructor(val file: File, private val read: ()
         val state = state()
         return state.legacyUncertainty.any { sameScope(it.binding, it.scheduleID, binding, id) } ||
             state.consumed.any { sameScope(it.binding, it.scheduleID, binding, id) && at <= it.through } ||
-            index != null && state.consumedIndices.any { sameScope(it.binding, it.scheduleID, binding, id) && sameRevision(it.policyRevision,
-                revision) && index in it.indices }
+            (index != null && state.consumedIndices.any { sameScope(it.binding, it.scheduleID, binding, id) && sameRevision(it.policyRevision,
+                revision) && index in it.indices })
     }
     @Synchronized fun save(entry: Entry) {
         val previous = state()
@@ -220,9 +220,9 @@ class RecurringJournal internal constructor(val file: File, private val read: ()
         }
 
         const val invalidMessage = "Recurring payment history needs attention. Its saved evidence has been preserved; sending remains stopped."
-        internal fun sameScope(a: RecurringStore.Binding, aID: String, b: RecurringStore.Binding, bID: String) =
+        private fun sameScope(a: RecurringStore.Binding, aID: String, b: RecurringStore.Binding, bID: String) =
             aID == bID && a.wallet == b.wallet && UUID.fromString(a.instance) == UUID.fromString(b.instance)
-        internal fun sameRevision(a: String?, b: String?) = a.equals(b, ignoreCase = true)
+        private fun sameRevision(a: String?, b: String?) = a.equals(b, ignoreCase = true)
         val legacyReason = RecurringIssue(RecurringIssue.Code.legacyHistory)
         const val legacyMessage = "Noah can't reconstruct this schedule's earlier payment history. Cancel it and explicitly approve a new recurring payment."
     }

@@ -67,6 +67,7 @@ firebase-messaging = { module = "com.google.firebase:firebase-messaging" }
 unifiedpush = { module = "org.unifiedpush.android:connector", version.ref = "unifiedpush" }
 bark-bolt = { module = "io.github.niteshbalusu11:bark-bolt-ffi-android", version.ref = "bark-bolt" }
 junit = { module = "junit:junit", version.ref = "junit" }
+icu4j = { module = "com.ibm.icu:icu4j", version = "78.3" }
 
 datastore-preferences = { module = "androidx.datastore:datastore-preferences", version.ref = "datastore" }
 security-crypto = { module = "androidx.security:security-crypto", version.ref = "security-crypto" }

@@ -19,7 +19,7 @@ object SendReconciliation {
         if (payment.source == SendSource.onchain) return false
         if (!subsystemMatches(movement, payment)) return false
         if (hash != null) return movement.paymentHash == hash
-        if (movement.intendedBalanceSats >= 0 && movement.effectiveBalanceSats >= 0 || payment.method == "lightning") return false
+        if ((movement.intendedBalanceSats >= 0 && movement.effectiveBalanceSats >= 0) || payment.method == "lightning") return false
         return sentTo(movement, payment)
     }
     private fun subsystemMatches(movement: Movement, payment: SendPayment): Boolean {
@@ -34,8 +34,8 @@ object SendReconciliation {
     }
     private fun sentTo(movement: Movement, payment: SendPayment): Boolean =
         movement.sentToAddresses.any { it.paymentMethod.value == payment.destination && (payment.max || it.amountSats == payment.amount.toULong()) } ||
-            payment.method == "offer" && movement.lightningOffer == payment.destination &&
-            movement.sentToAddresses.sumOf { it.amountSats } == payment.amount.toULong()
+            (payment.method == "offer" && movement.lightningOffer == payment.destination &&
+                movement.sentToAddresses.sumOf { it.amountSats } == payment.amount.toULong())
     /** What the movement sent; null when an output is negative or the sum overflows. */
     private fun sentAmount(movement: Movement): Long? = runCatching {
         movement.sentToAddresses.fold(0L) { sum, x -> Math.addExact(sum, x.amountSats.toLong().also { require(it >= 0) }) }
@@ -99,8 +99,8 @@ object SendReconciliation {
         if (payment.source == SendSource.onchain) return SendResolution.Uncertain
         val hash = if (payment.method in listOf("lightning", "lnurl")) attempt.paymentHash ?: PaymentEncoding.invoice(payment.destination)?.hash else null
         val candidates = movements.filter {
-            matches(it, payment, hash) && (hash != null || it.id !in attempt.snapshot.movementIDs &&
-                (HistoryRules.parseDate(it.createdAt)?.time ?: Long.MIN_VALUE) >= attempt.startedAt)
+            matches(it, payment, hash) && (hash != null || (it.id !in attempt.snapshot.movementIDs &&
+                (HistoryRules.parseDate(it.createdAt)?.time ?: Long.MIN_VALUE) >= attempt.startedAt))
         }
         return if (hash != null) lightningAttempt(candidates, hash, payment.amount, attempt.snapshot, attempt.startedAt,
             fixesAmount(attempt.snapshot.resolvedInvoice ?: payment.destination)) else SendResolution.Candidates(candidates.map { it.id })
@@ -116,7 +116,7 @@ object SendReconciliation {
         val movement = matches.singleOrNull() ?: return receipt
         val amount = runCatching { SendTransaction.amount(payment.destination,
             Json.parseToJsonElement(movement.metadataJson).jsonObject.getValue("offboard_tx").jsonPrimitive.content) }.getOrNull() ?: return receipt
-        if (amount <= 0 || !payment.max && amount != payment.amount) return receipt
+        if (amount <= 0 || (!payment.max && amount != payment.amount)) return receipt
         return receipt.copy(amount = amount, amountIsPending = false, fee = movement.offchainFeeSats.toLong(), movementID = movement.id)
     }
     fun withChainStatus(resolution: SendResolution, source: SendSource?, status: ChainStatus): SendResolution {

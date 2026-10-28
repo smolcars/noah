@@ -15,14 +15,22 @@ internal class TreeStrings(private val text: (String, Array<out String>) -> Stri
     fun trPlural(source: String, n: Long) = count(source, n)
 
     companion object {
+        @android.annotation.SuppressLint("DiscouragedApi") // translations are found by name, as in L10n
         fun of(resources: android.content.res.Resources, packageName: String, money: (Long) -> String): TreeStrings {
             val locale = resources.configuration.locales[0]
             val format = java.text.NumberFormat.getIntegerInstance(locale)
             fun id(source: String, type: String) = resources.getIdentifier(L10n.resourceName(source), type, packageName)
-            return TreeStrings({ source, arguments -> id(source, "string").let { if (it == 0) source else resources.getString(it, *arguments) } },
-                { source, n -> id(source,
-                    "plurals").let { if (it == 0) source else String.format(locale,
-                    resources.getQuantityString(it, n.coerceIn(0, Int.MAX_VALUE.toLong()).toInt()), format.format(n)) } },
+            @Suppress("SpreadOperator") // getString is vararg; a source has at most a few arguments
+            val text = { source: String, arguments: Array<out String> ->
+                id(source, "string").let { if (it == 0) source else resources.getString(it, *arguments) }
+            }
+            return TreeStrings(text,
+                { source, n ->
+                    id(source, "plurals").let {
+                        if (it == 0) source
+                        else String.format(locale, resources.getQuantityString(it, n.coerceIn(0, Int.MAX_VALUE.toLong()).toInt()), format.format(n))
+                    }
+                },
                 { format.format(it) }, money, locale.language == "ja")
         }
     }

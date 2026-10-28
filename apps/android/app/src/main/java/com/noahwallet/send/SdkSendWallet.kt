@@ -22,8 +22,8 @@ internal class SdkSendWallet(private val wallet: Wallet, private val onchain: On
     }.feeSats.toLong()
     override suspend fun identity() = SendIdentity(wallet.fingerprint(), wallet.network().name)
     override suspend fun quote(payment: SendPayment): SendQuote {
-        requireSend(payment.amount in 1..2_100_000_000_000_000L || payment.max && payment.amount >= 0)
-        requireSend(!payment.max || payment.method == "onchain" && payment.source != null)
+        requireSend(payment.amount in 1..2_100_000_000_000_000L || (payment.max && payment.amount >= 0))
+        requireSend(!payment.max || (payment.method == "onchain" && payment.source != null))
         val invoice = if (payment.method == "lnurl") recipientService().invoice(payment) else null
         val resolved = if (invoice != null) payment.copy(destination = invoice, method = "lightning") else payment
         val captured = if (payment.method in listOf("lightning", "lnurl", "offer")) try {
