@@ -2,6 +2,7 @@ package com.noahwallet.ui
 
 import android.app.Activity
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.LocalActivity
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
@@ -74,7 +75,7 @@ internal fun rememberRestoreClipboard(activity: Activity) = remember {
 
 /** Onboarding passes its [clipboard], shared with its restore shield so clearing outlasts this screen. */
 @Composable
-internal fun RestoreWalletScreen(model: AppModel, clipboard: RestoreClipboard = rememberRestoreClipboard(LocalContext.current as Activity),
+internal fun RestoreWalletScreen(model: AppModel, clipboard: RestoreClipboard = rememberRestoreClipboard(requireNotNull(LocalActivity.current)),
     useStoredSeed: Boolean = false) {
     if (useStoredSeed) StoredSeedRestoreScreen(model) else PhraseRestoreScreen(model, clipboard)
 }
@@ -128,139 +129,175 @@ private fun StoredSeedRestoreScreen(model: AppModel) {
 @OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun PhraseRestoreScreen(model: AppModel, clipboard: RestoreClipboard) {
-    val activity = LocalContext.current as Activity
+    val activity = requireNotNull(LocalActivity.current)
     val palette = LocalPalette.current
     val haptics = rememberHaptics()
     val focus = LocalFocusManager.current
     val input = androidx.lifecycle.viewmodel.compose.viewModel<RecoveryPhrasePresentation>().input
-    var revision by remember { mutableIntStateOf(0) }
-    var clearGeneration by remember { mutableIntStateOf(0) }
-    var fillGeneration by remember { mutableIntStateOf(0) }
-    // Only plain remember: Android saved-instance state must never contain recovery words.
-    var focused by remember { mutableStateOf<Int?>(null) }
-    var checksumFailed by remember { mutableStateOf(false) }
-    /** Paste found no text, or not 12 or 24 words. */
-    var pasteRejected by remember { mutableStateOf(false) }
-    var leftBad by remember { mutableStateOf(setOf<Int>()) }
-    val requesters = remember { List(24) { FocusRequester() } }
     val shake = remember { Animatable(0f) }
     val reduceMotion = LocalReduceMotion.current
     val flow = model.restore
+    // Only plain remember: Android saved-instance state must never contain recovery words.
+    val entry = remember(input, clipboard, flow) {
+        // The word cells are platform EditTexts: clearing Compose focus alone leaves their keyboard up.
+        PhraseEntry(input, clipboard, flow, haptics, focus) {
+            activity.getSystemService(android.view.inputmethod.InputMethodManager::class.java)
+                ?.hideSoftInputFromWindow(activity.window.decorView.windowToken, 0)
+        }
+    }
     val blocked = model.busy || !flow.canLeave
     val presentation = androidx.lifecycle.viewmodel.compose.viewModel<OnboardingPresentation>()
     val play = remember { presentation.firstShow("restore") }
-    // The word cells are platform EditTexts: clearing Compose focus alone leaves their keyboard up.
-    fun hideKeyboard() = activity.getSystemService(android.view.inputmethod.InputMethodManager::class.java)
-        ?.hideSoftInputFromWindow(activity.window.decorView.windowToken, 0)
-    fun clear() {
-        clipboard.clearIfUnchanged(); focus.clearFocus(); hideKeyboard(); input.clear(); focused = null
-        leftBad = emptySet(); checksumFailed = false; pasteRejected = false; revision++; clearGeneration++
-    }
-    fun leave() { clear(); flow.clearIssue(); model.step = "welcome" }
+    fun leave() { entry.clear(); flow.clearIssue(); model.step = "welcome" }
     BackHandler { if (!blocked) leave() }
-    RestoreShield(activity, model.walletLock, clipboard, ::clear)
+    RestoreShield(activity, model.walletLock, clipboard, entry::clear)
     // Read the revision so changes to the non-saveable, redacted input redraw the fields.
-    val words = remember(revision) { input.words }
-    val wordList = RecoveryPhraseInput.wordList
-    fun changed() { revision++; checksumFailed = false; pasteRejected = false; flow.clearIssue() }
-    fun moveOn(index: Int) { if (index < words.size - 1) requesters[index + 1].requestFocus() else { focus.clearFocus(); hideKeyboard() } }
-    fun accept(word: String, index: Int) {
-        input.update(word, index); changed(); haptics.selection(); moveOn(index)
-    }
-    fun fill(text: String): Boolean {
-        val count = RecoveryPhraseInput.normalizedWords(text).size
-        if (count !in listOf(12, 24)) { input.update(text, 0); changed(); return false }
-        focus.clearFocus(); hideKeyboard(); focused = null
-        input.update(text, 0); clipboard.accepted(text)
-        changed(); fillGeneration++; clearGeneration++; haptics.light()
-        leftBad = input.words.indices.filter { input.words[it] !in wordList }.toSet()
-        return true
-    }
-    LaunchedEffect(checksumFailed) { if (checksumFailed && !reduceMotion) shake.shake(listOf(-11f, 9f, -6f, 3f), 420) }
-    val firstBad = words.indices.firstOrNull { it in leftBad && words[it].isNotEmpty() && words[it] !in wordList }
+    val words = remember(entry.revision) { input.words }
+    LaunchedEffect(entry.checksumFailed) { if (entry.checksumFailed && !reduceMotion) shake.shake(listOf(-11f, 9f, -6f, 3f), 420) }
+    val firstBad = entry.firstBad(words)
     LaunchedEffect(firstBad) { if (firstBad != null) haptics.warning() }
-    val complete = words.all { it in wordList } && !input.wrongWordCount
-    val keyboard = WindowInsets.isImeVisible && focused != null
+    val complete = words.all { it in RecoveryPhraseInput.wordList } && !input.wrongWordCount
+    val keyboard = WindowInsets.isImeVisible && entry.focused != null
     FormLayout(leadingTop = {
         val label = tr("Back")
         IconButton({ if (!blocked) leave() }, Modifier.semantics { contentDescription = label }) { BackIcon(palette.foreground) }
     }, headline = { large ->
         Headline(tr("Welcome back"), tr("Enter your recovery phrase."), large, modifier = Modifier.entrance(0, play))
     }, form = {
-        WordCountControl(words.size, enabled = !blocked, modifier = Modifier.padding(top = formGap(22.dp)).entrance(2, play)) { count ->
-            if (count == words.size) return@WordCountControl
-            focus.clearFocus(); focused = null; input.selectWordCount(count)
-            leftBad = emptySet(); changed(); clearGeneration++; haptics.selection()
+        WordCountControl(words.size, enabled = !blocked, modifier = Modifier.padding(top = formGap(22.dp)).entrance(2, play), select = entry::selectCount)
+        key(entry.clearGeneration, words.size) {
+            WordGrid(entry, words, !blocked, Modifier.padding(top = 18.dp).graphicsLayer { translationX = shake.value * density }.entrance(3, play))
         }
-        key(clearGeneration, words.size) {
-            val columns = if (words.size == 12) 2 else 3
-            Column(Modifier.padding(top = 18.dp).graphicsLayer { translationX = shake.value * density }.entrance(3, play),
-                verticalArrangement = Arrangement.spacedBy(2.dp)) {
-                for (row in 0 until words.size / columns) Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                    for (column in 0 until columns) {
-                        val index = row * columns + column
-                        WordCell(words[index], index, words.size, bad = index in leftBad && words[index].isNotEmpty() && words[index] !in wordList,
-                            focused = focused == index, enabled = !blocked, stagger = fillGeneration, requester = requesters[index],
-                            onChange = { raw ->
-                                // Programmatic syncs echo the stored word back; only typing changes anything.
-                                if (raw == input.words.getOrNull(index)) return@WordCell
-                                val incoming = RecoveryPhraseInput.normalizedWords(raw)
-                                if (incoming.size > 1) { fill(raw); return@WordCell }
-                                input.update(raw, index); leftBad = leftBad - index; changed()
-                                // Space or return accepts the first suggestion.
-                                if (raw.isNotEmpty() && raw.last().isWhitespace() && incoming.size == 1) {
-                                    input.suggestions(index).firstOrNull()?.let { accept(it, index) } ?: moveOn(index)
-                                }
-                            },
-                            onFocus = { now -> if (now) focused = index else {
-                                if (focused == index) focused = null
-                                if (input.words.getOrNull(index)?.let { it.isNotEmpty() && it !in wordList } == true) leftBad = leftBad + index
-                            } },
-                            onNext = { input.suggestions(index).firstOrNull()?.let { accept(it, index) } ?: moveOn(index) },
-                            modifier = Modifier.weight(1f))
-                    }
-                }
-            }
-        }
-        val message = when {
-            input.wrongWordCount || pasteRejected -> tr("Paste exactly 12 or 24 words. Your entries haven't been replaced.")
-            checksumFailed -> tr("These words don’t form a valid phrase.")
-            firstBad != null -> tr("Check word {number}", firstBad + 1)
-            else -> flow.issue?.message?.let { tr(it) }
-        }
-        Text(message.orEmpty(), Modifier.padding(top = 14.dp).heightIn(min = 20.dp).testTag("restore-error")
+        Text(restoreMessage(entry, firstBad, flow).orEmpty(), Modifier.padding(top = 14.dp).heightIn(min = 20.dp).testTag("restore-error")
             .semantics { liveRegion = LiveRegionMode.Assertive }, style = NoahTokens.Typography.sub, color = palette.failure)
     }, accessory = true, actions = {
-        if (keyboard) {
-            val index = focused ?: 0
-            val suggestions = input.suggestions(index).take(3)
-            // The keyboard accessory: suggestions reveal the private prefix, so they expose no semantics.
-            Row(Modifier.fillMaxWidth().heightIn(min = 46.dp).horizontalScroll(rememberScrollState()).clearAndSetSemantics { },
-                horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                suggestions.forEachIndexed { position, word -> Chip(word, bold = position == 0) { accept(word, index) } }
-            }
-        } else Row(Modifier.fillMaxWidth().padding(top = NoahTokens.Space.s), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            PillButton(tr("Paste"), Modifier.weight(1f), enabled = !blocked, outlined = true, icon = { PasteIcon(palette.foreground) }) {
-                val text = clipboard.text()
-                if (text == null || RecoveryPhraseInput.normalizedWords(text).size !in listOf(12, 24)) {
-                    pasteRejected = true; haptics.warning()
-                } else fill(text)
-            }
+        if (keyboard) Suggestions(entry, entry.focused ?: 0)
+        else Row(Modifier.fillMaxWidth().padding(top = NoahTokens.Space.s), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            PillButton(tr("Paste"), Modifier.weight(1f), enabled = !blocked, outlined = true, icon = { PasteIcon(palette.foreground) }, onClick = entry::paste)
             PillButton(tr("Restore"), Modifier.weight(1f).testTag("restore-submit"), enabled = complete && model.canRestoreWallet) {
-                focus.clearFocus(); hideKeyboard()
-                if (!RecoveryPhraseInput.isValid(input.phrase) ||
-                    !runCatching { io.github.niteshbalusu11.bark.validateMnemonic(input.phrase) }.getOrDefault(false)) {
-                    haptics.error(); checksumFailed = true; return@PillButton
+                entry.validPhrase()?.let { phrase ->
+                    model.holdRestoreCompletion = true
+                    model.step = "restoring"
+                    model.restoreWallet(phrase)
                 }
-                haptics.medium()
-                val phrase = input.phrase
-                clear()
-                model.holdRestoreCompletion = true
-                model.step = "restoring"
-                model.restoreWallet(phrase)
             }
         }
     })
+}
+
+/** The phrase form's state and edits. Held with plain remember, so saved-instance state never holds recovery words. */
+@Stable
+private class PhraseEntry(
+    private val input: RecoveryPhraseInput, private val clipboard: RestoreClipboard, private val flow: RestoreFlow, private val haptics: Haptics,
+    private val focus: androidx.compose.ui.focus.FocusManager, private val hideKeyboard: () -> Unit,
+) {
+    val requesters = List(24) { FocusRequester() }
+    var revision by mutableIntStateOf(0); private set
+    var clearGeneration by mutableIntStateOf(0); private set
+    var fillGeneration by mutableIntStateOf(0); private set
+    var focused by mutableStateOf<Int?>(null); private set
+    var checksumFailed by mutableStateOf(false); private set
+    /** Paste found no text, or not 12 or 24 words. */
+    var pasteRejected by mutableStateOf(false); private set
+    var leftBad by mutableStateOf(setOf<Int>()); private set
+    private val wordList get() = RecoveryPhraseInput.wordList
+    private fun release() { focus.clearFocus(); hideKeyboard() }
+
+    val wrongWordCount get() = input.wrongWordCount
+    fun suggestions(index: Int) = input.suggestions(index)
+    fun bad(index: Int, words: List<String>) = index in leftBad && words[index].isNotEmpty() && words[index] !in wordList
+    fun firstBad(words: List<String>) = words.indices.firstOrNull { bad(it, words) }
+
+    fun clear() {
+        clipboard.clearIfUnchanged(); release(); input.clear(); focused = null
+        leftBad = emptySet(); checksumFailed = false; pasteRejected = false; revision++; clearGeneration++
+    }
+    private fun changed() { revision++; checksumFailed = false; pasteRejected = false; flow.clearIssue() }
+    private fun moveOn(index: Int) { if (index < input.words.size - 1) requesters[index + 1].requestFocus() else release() }
+    fun accept(word: String, index: Int) {
+        input.update(word, index); changed(); haptics.selection(); moveOn(index)
+    }
+    /** Space, return or Next accepts the first suggestion, or moves on without one. */
+    fun next(index: Int) { input.suggestions(index).firstOrNull()?.let { accept(it, index) } ?: moveOn(index) }
+    private fun fill(text: String) {
+        val count = RecoveryPhraseInput.normalizedWords(text).size
+        if (count !in listOf(12, 24)) { input.update(text, 0); changed(); return }
+        release(); focused = null
+        input.update(text, 0); clipboard.accepted(text)
+        changed(); fillGeneration++; clearGeneration++; haptics.light()
+        leftBad = input.words.indices.filter { input.words[it] !in wordList }.toSet()
+    }
+    fun selectCount(count: Int) {
+        if (count == input.words.size) return
+        focus.clearFocus(); focused = null; input.selectWordCount(count)
+        leftBad = emptySet(); changed(); clearGeneration++; haptics.selection()
+    }
+    fun typed(index: Int, raw: String) {
+        // Programmatic syncs echo the stored word back; only typing changes anything.
+        if (raw == input.words.getOrNull(index)) return
+        val incoming = RecoveryPhraseInput.normalizedWords(raw)
+        if (incoming.size > 1) { fill(raw); return }
+        input.update(raw, index); leftBad = leftBad - index; changed()
+        // Space or return accepts the first suggestion.
+        if (raw.isNotEmpty() && raw.last().isWhitespace() && incoming.size == 1) next(index)
+    }
+    fun focusChanged(index: Int, now: Boolean) {
+        if (now) { focused = index; return }
+        if (focused == index) focused = null
+        if (input.words.getOrNull(index)?.let { it.isNotEmpty() && it !in wordList } == true) leftBad = leftBad + index
+    }
+    fun paste() {
+        val text = clipboard.text()
+        if (text == null || RecoveryPhraseInput.normalizedWords(text).size !in listOf(12, 24)) {
+            pasteRejected = true; haptics.warning()
+        } else fill(text)
+    }
+    /** The phrase to restore, cleared from the form; null (with the shake) when its checksum fails. */
+    fun validPhrase(): String? {
+        release()
+        if (!RecoveryPhraseInput.isValid(input.phrase) ||
+            !runCatching { io.github.niteshbalusu11.bark.validateMnemonic(input.phrase) }.getOrDefault(false)) {
+            haptics.error(); checksumFailed = true; return null
+        }
+        haptics.medium()
+        val phrase = input.phrase
+        clear()
+        return phrase
+    }
+}
+
+/** The word cells, two or three a row. */
+@Composable
+private fun WordGrid(entry: PhraseEntry, words: List<String>, enabled: Boolean, modifier: Modifier) {
+    val columns = if (words.size == 12) 2 else 3
+    Column(modifier, verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        for (row in 0 until words.size / columns) Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(16.dp)) {
+            for (column in 0 until columns) {
+                val index = row * columns + column
+                WordCell(words[index], index, words.size, bad = entry.bad(index, words), focused = entry.focused == index, enabled = enabled,
+                    stagger = entry.fillGeneration, requester = entry.requesters[index], onChange = { entry.typed(index, it) },
+                    onFocus = { entry.focusChanged(index, it) }, onNext = { entry.next(index) }, modifier = Modifier.weight(1f))
+            }
+        }
+    }
+}
+
+@Composable
+private fun restoreMessage(entry: PhraseEntry, firstBad: Int?, flow: RestoreFlow): String? = when {
+    entry.wrongWordCount || entry.pasteRejected -> tr("Paste exactly 12 or 24 words. Your entries haven't been replaced.")
+    entry.checksumFailed -> tr("These words don’t form a valid phrase.")
+    firstBad != null -> tr("Check word {number}", firstBad + 1)
+    else -> flow.issue?.message?.let { tr(it) }
+}
+
+/** The keyboard accessory: suggestions reveal the private prefix, so they expose no semantics. */
+@Composable
+private fun Suggestions(entry: PhraseEntry, index: Int) {
+    val suggestions = entry.suggestions(index).take(3)
+    Row(Modifier.fillMaxWidth().heightIn(min = 46.dp).horizontalScroll(rememberScrollState()).clearAndSetSemantics { },
+        horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+        suggestions.forEachIndexed { position, word -> Chip(word, bold = position == 0) { entry.accept(word, index) } }
+    }
 }
 
 /** 12 / 24 sliding-pill control. */
@@ -274,7 +311,7 @@ private fun WordCountControl(count: Int, enabled: Boolean, modifier: Modifier, s
     val x by animateDpAsState(with(density) { (target?.first ?: 0f).toDp() }, NoahTokens.Motion.snappy(), label = "pill-x")
     val width by animateDpAsState(with(density) { (target?.second ?: 0f).toDp() }, NoahTokens.Motion.snappy(), label = "pill-width")
     Box(modifier.background(palette.soft, CircleShape).padding(3.dp)) {
-        if (target != null) Box(Modifier.offset(x = x).width(width).height(34.dp)
+        if (target != null) Box(Modifier.offset { androidx.compose.ui.unit.IntOffset(x.roundToPx(), 0) }.width(width).height(34.dp)
             .background(if (dark) androidx.compose.ui.graphics.Color(0xFF3A3A3C) else palette.background, CircleShape))
         Row(Modifier.selectableGroup()) {
             for (option in listOf(12, 24)) {
