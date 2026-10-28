@@ -45,7 +45,7 @@ internal fun ExitClaimPage(app: AppModel, nav: SettingsNav) {
 /** The claim page on [model] (destination, review and hold), apart from [AppModel] so a device test drives it. */
 @Composable
 internal fun ExitClaimScreen(model: OnchainModel, nav: SettingsNav, phoneAddress: suspend () -> String, suspended: Boolean, money: (Long) -> String,
-    status: @Composable () -> Unit) {
+    content: @Composable () -> Unit) {
     val scope = rememberCoroutineScope()
     val haptics = rememberHaptics()
     var to by rememberSaveable { mutableStateOf(ClaimTo.other) }
@@ -91,14 +91,14 @@ internal fun ExitClaimScreen(model: OnchainModel, nav: SettingsNav, phoneAddress
                     if (model.message != null && model.error == null && model.estimateFallback == null) { haptics.success(); nav.pop() } else haptics.error()
                 }
             }
-        }, status = status)
+        }, content = content)
 }
 
 @Composable
 internal fun ExitClaimContent(exits: List<ExitModel>, tip: Long, quote: OnchainQuote?, fallback: OnchainQuote?, to: ClaimTo, typed: String, address: String?,
     phone: String?, phoneError: Boolean, busy: Boolean, suspended: Boolean, money: (Long) -> String, back: (() -> Unit)?,
     choose: (ClaimTo) -> Unit, type: (String) -> Unit, reviewAgain: () -> Unit, withoutEstimate: () -> Unit, claim: () -> Unit,
-    reviewing: Boolean = false, status: @Composable () -> Unit = {}) {
+    reviewing: Boolean = false, content: @Composable () -> Unit = {}) {
     val palette = LocalPalette.current
     val context = LocalContext.current
     val haptics = rememberHaptics()
@@ -130,7 +130,7 @@ internal fun ExitClaimContent(exits: List<ExitModel>, tip: Long, quote: OnchainQ
         if (wide && first != null) ExitPicture(ExitScene.of(first, ExitStages.of(first, tip), tip), tr("Ready to claim"), exitPicture().padding(top = 14.dp),
             money)
     }) {
-        if (exits.isEmpty()) { FinePrint(tr("No exits are ready to claim.")); status(); return@ExitFrame }
+        if (exits.isEmpty()) { FinePrint(tr("No exits are ready to claim.")); content(); return@ExitFrame }
         SectionLabel(tr("To"))
         // Fixed while a review runs: a review asked meanwhile would be dropped, leaving Claim off.
         RadioRow(tr("Another wallet"), selected = to == ClaimTo.other, modifier = Modifier.testTag("exit-to-other"),
@@ -156,9 +156,9 @@ internal fun ExitClaimContent(exits: List<ExitModel>, tip: Long, quote: OnchainQ
         if (to == ClaimTo.phone) FinePrint(if (phoneError) tr("Couldn't load a Noah wallet address. Try again when the wallet is ready.")
         else tr("Noah won’t move these back to Ark."), failed = phoneError)
         Column(Modifier.padding(top = 18.dp)) {
-            if (exits.size > 1) ExitValueRow(tr("Exits"), exits.size.toString(), ValueKind.number)
+            if (exits.size > 1) ExitValueRow(tr("Exits"), exits.size.toString(), kind = ValueKind.number)
             ExitValueRow(tr("Claim fee"), known?.fee?.let { "~" + money(it) } ?: if (quote != null || fallback != null) tr("Unknown") else "—",
-                ValueKind.number, last = true)
+                kind = ValueKind.number, last = true)
             TotalRow(tr("You get"), known?.let { "~" + money(it.net) } ?: "—")
         }
         if (known != null) ExitRules.warning(known.amount, checkNotNull(known.fee), known.totalFee, claimOnly = true)?.let { Warning(tr(it), failed = true) }
@@ -166,7 +166,7 @@ internal fun ExitClaimContent(exits: List<ExitModel>, tip: Long, quote: OnchainQ
         if ((quote ?: fallback)?.feesUnknown == true) Warning(tr("Fee estimate unavailable. Fees and amount to receive are unknown. Continue without an estimate only if you accept this uncertainty."), failed = true)
         if (quote != null && !current) Warning(tr(OnchainFailure.changed.text), failed = true)
         FinePrint(tr("Every exit that’s ready goes in this one transaction. Earlier network fees aren’t taken again."))
-        status()
+        content()
     }
     if (scanning) Box(Modifier.fillMaxSize().background(palette.background).testTag("exit-claim-scanner")) {
         com.noahwallet.ui.SendScanner(onClose = { scanning = false }) { value -> scanning = false; type(value.trim()) }

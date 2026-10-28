@@ -41,7 +41,7 @@ internal fun ExitStartPage(app: AppModel, nav: SettingsNav, ids: List<String>) {
 /** The start page on [model] (its review, the hold and where it leaves to), apart from [AppModel] so a device test drives it. */
 @Composable
 internal fun ExitStartScreen(model: OnchainModel, nav: SettingsNav, ids: List<String>, suspended: Boolean, delta: Long?, money: (Long) -> String,
-    status: @Composable () -> Unit) {
+    content: @Composable () -> Unit) {
     val scope = rememberCoroutineScope()
     val haptics = rememberHaptics()
     var started by remember { mutableStateOf(false) }
@@ -67,13 +67,13 @@ internal fun ExitStartScreen(model: OnchainModel, nav: SettingsNav, ids: List<St
                     } else haptics.error()
                 }
             }
-        }, status = status)
+        }, content = content)
 }
 
 @Composable
 internal fun ExitStartContent(quote: OnchainQuote?, fallback: OnchainQuote?, confirmed: Long?, busy: Boolean, suspended: Boolean, delta: Long?,
     money: (Long) -> String, back: (() -> Unit)?, reviewAgain: () -> Unit, withoutEstimate: () -> Unit, start: () -> Unit,
-    depth: Int? = null, status: @Composable () -> Unit = {}) {
+    depth: Int? = null, content: @Composable () -> Unit = {}) {
     val palette = LocalPalette.current
     val review = quote ?: fallback
     var current by remember(quote) { mutableStateOf(quote?.current() ?: false) }
@@ -102,9 +102,9 @@ internal fun ExitStartContent(quote: OnchainQuote?, fallback: OnchainQuote?, con
         else if (review != null) ExitPath(path, review.ids.size > 1, known?.transactions?.toInt(), delta)
     }) {
         Column(Modifier.padding(top = 18.dp)) {
-            ExitValueRow(tr("Network fees"), known?.chainFee?.let { "~" + money(it) } ?: tr("Unknown"), ValueKind.number)
+            ExitValueRow(tr("Network fees"), known?.chainFee?.let { "~" + money(it) } ?: tr("Unknown"), kind = ValueKind.number)
             confirmed?.let { ExitValueRow(tr("Paid from"), tr("On-chain · {amount}", money(it))) }
-            ExitValueRow(tr("Claim fee"), known?.fee?.let { "~" + money(it) } ?: tr("Unknown"), ValueKind.number)
+            ExitValueRow(tr("Claim fee"), known?.fee?.let { "~" + money(it) } ?: tr("Unknown"), kind = ValueKind.number)
             known?.feeRate?.let { ExitValueRow(tr("Fee rate"), tr("{rate} sat/vB", it.toString())) }
             ExitValueRow(tr("Timelock"), delta?.let { trPlural("{n} blocks", it) } ?: tr("Unknown"), last = true)
             TotalRow(tr("You get"), known?.fee?.let { "~" + money(ExitRules.received(known.amount, it)) } ?: tr("Unknown"))
@@ -120,7 +120,7 @@ internal fun ExitStartContent(quote: OnchainQuote?, fallback: OnchainQuote?, con
         if (quote != null && !current) Warning(tr(OnchainFailure.changed.text), failed = true)
         @Suppress("MaxLineLength") // one translation source string
         FinePrint(tr("Noah then sends and fee-bumps the exit’s transactions on its own, including in the background when the system lets it, paying from your on-chain bitcoin. Fees are estimates. Only the claim fee comes out of the amount. You can cancel until the last transaction is sent."))
-        status()
+        content()
     }
 }
 

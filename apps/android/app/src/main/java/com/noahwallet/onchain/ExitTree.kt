@@ -122,6 +122,7 @@ internal data class ExitScene(
          * [others]: the wallet's other exits, for the shared transactions and their coins; [confirmed]: the on-chain balance
          * the next fee comes from; [destination]: a claim's address when it went to another wallet.
          */
+        @Suppress("LongParameterList") // exit-tree layout: flat geometry inputs
         fun of(exit: ExitModel, stage: ExitStage, tip: Long, others: List<ExitModel> = emptyList(), confirmed: Long? = null,
             claimFee: Long? = null, destination: String? = null): ExitScene {
             val n = stage.total.coerceAtLeast(1)
@@ -237,6 +238,7 @@ internal class TreeGeometry(val width: Float, val height: Float, val n: Int, val
      * your coin with its [reserve]) and the clearance, so every link shows and nothing touches. The level with its fee child
      * docked ([docked]) keeps the dot's room below it; the one short of funds ([ringed]) its red ring's, both sides.
      */
+    @Suppress("LongParameterList") // exit-tree layout: flat geometry inputs
     fun minimumGap(level: Int, side: Float, reserve: Float, count: Int = n, docked: Int = -1, ringed: Int = -1): Float {
         val below = when { level - 1 == 0 -> block / 2; level - 1 == ringed -> ring(side); else -> side / 2 }
         val above = when { level == count -> reserve; level == ringed -> ring(side); level == docked -> max(side / 2, feeDrop); else -> side / 2 }
@@ -398,6 +400,7 @@ internal object TreeLabels {
      * older one placed alone, into one range ([range]) wherever it fits, the latest too if need be, so every mined block is
      * in a label and no range leaves one out.
      */
+    @Suppress("LongParameterList") // exit-tree layout: flat geometry inputs
     fun place(items: List<Item>, lineHeight: Float, scale: Float, top: Float, bottom: Float, fit: (Item) -> Item, range: (Long, Long) -> String): List<Item> {
         val placed = mutableListOf<Item>(); val skipped = mutableListOf<Item>()
         fun clash(item: Item, margin: Float) = placed.any { it.right == item.right && !(item.bottom + margin < it.top || item.top - margin > it.bottom) }
@@ -583,6 +586,7 @@ internal object ExitRail {
     const val moreSize = 8f
 
     /** [label] writes "+N"; [measure] how wide it is at [moreSize]. */
+    @Suppress("LongParameterList") // exit-tree layout: flat geometry inputs
     fun stops(path: Int, start: Float, room: Float, end: Float, label: (Int) -> String, measure: (String) -> Float): List<Stop> {
         if (path <= 1) return listOf(Stop(start + 4, coin = true))
         fun stops(cap: Int, far: Boolean = false): List<Stop> {

@@ -45,26 +45,6 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 /**
- * What the exit page needs beyond bark's exit: the wallet's tip and balance, the server's delta, and its last claim: the
- * claim transaction's whole fee and every exit it claimed.
- */
-internal data class ExitContext(val tip: Long, val confirmed: Long?, val delta: Long?, val claimFee: Long? = null, val claimIds: List<String> = emptyList(),
-    val claimedTo: String? = null, val claimEstimate: Long? = null, val cancelable: Boolean = false,
-    /** The part of the exit's network fees ([ExitStage.feesPaid]) for steps its other exits share ([ExitFees.paid]). */
-    val sharedFees: Long = 0) {
-    /** This exit's part of [claimFee]; see [ExitClaim.share]. */
-    fun claimShare(id: String) = claimFee?.let { ExitClaim.share(it, claimIds, id) }
-
-    /** The claim to show: Noah's record of it, kept past acknowledgement, else its journal attempt (a claim from before records). */
-    fun claimed(record: ExitClaimRecords.Record?, attempt: OnchainOperationJournal.Attempt?) = when {
-        record != null -> copy(claimFee = record.fee, claimIds = record.ids, claimedTo = record.destination)
-        attempt != null -> copy(claimFee = attempt.quote.fee, claimIds = attempt.quote.ids,
-            claimedTo = attempt.quote.destination?.takeIf { attempt.quote.destinationIsMine == false })
-        else -> this
-    }
-}
-
-/**
  * One exit (prototype `SCR.progress`): the picture follows bark's state as Noah progresses it by itself; the rows, Details
  * and the actions the state allows. Reading it never broadcasts: Move exit forward and Cancel exit each review first.
  */
@@ -134,7 +114,7 @@ internal fun ExitProgressPage(app: AppModel, nav: SettingsNav, id: String) {
 @Composable
 internal fun ExitProgressContent(exit: ExitModel?, stage: ExitStage?, context: ExitContext, busy: Boolean, suspended: Boolean, money: (Long) -> String,
     back: (() -> Unit)?, check: () -> Unit, cancel: () -> Unit, claim: () -> Unit, addFunds: (Long) -> Unit, done: () -> Unit,
-    loaded: Boolean = true, others: List<ExitModel> = emptyList(), status: @Composable () -> Unit = {}) {
+    loaded: Boolean = true, others: List<ExitModel> = emptyList(), content: @Composable () -> Unit = {}) {
     val palette = LocalPalette.current
     val haptics = rememberHaptics()
     val scroll = rememberScrollState()
@@ -142,7 +122,7 @@ internal fun ExitProgressContent(exit: ExitModel?, stage: ExitStage?, context: E
     val wide = LocalPose.current !is OnboardingPose.Compact
     if (exit == null || stage == null) {
         ExitFrame(tr("Exit"), back, hero = true,
-            leading = {}) { FinePrint(if (loaded) tr("Exit status is unavailable. Pull to refresh.") else tr("Loading…")); status() }
+            leading = {}) { FinePrint(if (loaded) tr("Exit status is unavailable. Pull to refresh.") else tr("Loading…")); content() }
         return
     }
     val scene = ExitScene.of(exit, stage, context.tip, others, context.confirmed, context.claimShare(exit.id), context.claimedTo)
@@ -177,7 +157,7 @@ internal fun ExitProgressContent(exit: ExitModel?, stage: ExitStage?, context: E
                 outlined = !stage.stale, enabled = !busy && !suspended, loading = busy, onClick = check)
         }
     }), leading = {
-        if (!wide) ExitHeader(exit, stage, received, money, null)
+        if (!wide) ExitHeader(stage, received, money, null)
         // TalkBack hears the phase, the progress and, once claiming, where the claim goes: the whole address.
         val destination = if (stage.phase == ExitStage.Phase.claiming || stage.phase == ExitStage.Phase.claimed)
             context.claimedTo?.let { tr("Another wallet") + ", " + it } ?: tr("This phone") else null
@@ -188,7 +168,7 @@ internal fun ExitProgressContent(exit: ExitModel?, stage: ExitStage?, context: E
         if (wide) Text(exitExplanation(stage, context.delta), Modifier.fillMaxWidth().padding(top = 4.dp).heightIn(min = 40.dp),
             style = HomeType.line, color = palette.muted, textAlign = TextAlign.Center)
     }) {
-        if (wide) ExitHeader(exit, stage, received, money, exitSubLine(stage, context, money))
+        if (wide) ExitHeader(stage, received, money, exitSubLine(stage, context))
         if (failed) Warning(tr("Add about {amount} on-chain. Noah sends the next transaction once it confirms.", money(need)), failed = true)
         if (checkLink) SettingsLink(tr("Move exit forward"), Modifier.testTag("exit-check"), enabled = !busy && !suspended, onClick = check)
         @Suppress("MaxLineLength") // one translation source string
@@ -201,13 +181,13 @@ internal fun ExitProgressContent(exit: ExitModel?, stage: ExitStage?, context: E
             SettingsLink(tr("View in explorer"), Modifier.padding(top = 8.dp).testTag("exit-explorer")) { explore(url) }
         }
         Details(details, { details = it }, scroll) { ExitDetailRows(exit, stage, context) }
-        status()
+        content()
     }
 }
 
 /** The amount (what you received once claimed) and the one status word, with its dot (prototype `.dstat`). */
 @Composable
-private fun ExitHeader(exit: ExitModel, stage: ExitStage, amount: Long, money: (Long) -> String, sub: String?) {
+private fun ExitHeader(stage: ExitStage, amount: Long, money: (Long) -> String, sub: String?) {
     val palette = LocalPalette.current
     val failed = stage.attention == ExitStage.Attention.needsFunds
     Column(Modifier.padding(top = 6.dp)) {
@@ -284,7 +264,7 @@ internal fun exitPhaseLine(stage: ExitStage, tip: Long, money: (Long) -> String)
 
 /** The line under the status word on wide windows (prototype `sub`). */
 @Composable
-private fun exitSubLine(stage: ExitStage, context: ExitContext, money: (Long) -> String): String? {
+private fun exitSubLine(stage: ExitStage, context: ExitContext): String? {
     val next = number(context.tip + 1)
     return when {
         stage.attention == ExitStage.Attention.needsFunds -> tr("Needs on-chain funds")
@@ -339,11 +319,11 @@ private fun ExitRows(exit: ExitModel, stage: ExitStage, context: ExitContext, mo
         when (stage.phase) {
             ExitStage.Phase.claimed -> {
                 ExitValueRow(tr("Claimed in"), tr("Block {height}", number(stage.claimedBlock ?: 0)))
-                ExitValueRow(tr("Network fees"), money(stage.feesPaid), ValueKind.number, note = feesNote(context, money))
+                ExitValueRow(tr("Network fees"), money(stage.feesPaid), kind = ValueKind.number, note = feesNote(context, money))
                 // A batched claim's fee is paid once: this exit shows its share, and the whole fee and how many it covered.
                 context.claimShare(exit.id)?.let { share -> ExitValueRow(tr("Claim fee"),
                     if (context.claimIds.size > 1) tr("{amount} · share of {total} for {n} exits",
-                        money(share), money(checkNotNull(context.claimFee)), context.claimIds.size.toString()) else money(share), ValueKind.number) }
+                        money(share), money(checkNotNull(context.claimFee)), context.claimIds.size.toString()) else money(share), kind = ValueKind.number) }
                 val began = exit.historyDetails.firstOrNull()?.tip_height
                 ExitValueRow(tr("Took"),
                     if (began != null && stage.claimedBlock != null) (stage.claimedBlock - began).let { trPlural("{n} blocks · {time}", it,
@@ -357,14 +337,14 @@ private fun ExitRows(exit: ExitModel, stage: ExitStage, context: ExitContext, mo
             else -> {
                 ExitValueRow(tr("Transactions"), tr("{n} of {total} in blocks", stage.inBlocks.toString(), stage.total.toString()))
                 val left = context.confirmed?.takeIf { stage.attention == ExitStage.Attention.needsFunds }
-                ExitValueRow(tr("Network fees"), money(stage.feesPaid), ValueKind.number, failed = left != null,
+                ExitValueRow(tr("Network fees"), money(stage.feesPaid), kind = ValueKind.number, failed = left != null,
                     note = left?.let { l -> exit.nextPackageFee?.let { tr("{left} left on-chain. The next fee needs about {need}.", money(l),
                         money(it)) } } ?: feesNote(context, money))
                 val claimable = stage.claimableHeight?.let { tr("Block {height}", number(it)) }
                     ?: context.delta?.let { tr("About block {height}", number(context.tip + (stage.total - stage.inBlocks) + it)) }
                     ?: tr("After the timelock")
                 ExitValueRow(tr("Claimable"), claimable, last = stage.phase != ExitStage.Phase.wait)
-                if (stage.phase == ExitStage.Phase.wait) ExitValueRow(tr("Left"), trPlural("{n} blocks", stage.left(context.tip) ?: 0), ValueKind.number,
+                if (stage.phase == ExitStage.Phase.wait) ExitValueRow(tr("Left"), trPlural("{n} blocks", stage.left(context.tip) ?: 0), kind = ValueKind.number,
                     last = true)
             }
         }
@@ -413,7 +393,7 @@ private fun ExplorerButton(url: String?, open: (String) -> Unit) {
 private fun ExitDetailRows(exit: ExitModel, stage: ExitStage, context: ExitContext) {
     val toasts = LocalSettingsToasts.current
     val explore = rememberExplore()
-    ExitValueRow(tr("VTXO ID"), short(exit.id, 10, 6), ValueKind.mono, small = true) { CopyIcon("VTXO ID", exit.id, toasts) }
+    ExitValueRow(tr("VTXO ID"), short(exit.id, 10, 6), kind = ValueKind.mono, small = true) { CopyIcon("VTXO ID", exit.id, toasts) }
     val txs = exit.path
     val ids = txs.map { it.txid }.ifEmpty { exit.packages.map { it.txid } }
     if (ids.isNotEmpty()) {
@@ -439,7 +419,7 @@ private fun ExitDetailRows(exit: ExitModel, stage: ExitStage, context: ExitConte
     SectionLabel(tr("Exit"))
     stage.rate?.let { ExitValueRow(tr("Fee rate"), tr("{rate} sat/vB, raised when rates rise", it.toString()), small = true) }
     context.delta?.let { ExitValueRow(tr("Timelock"), trPlural("{n} blocks", it), small = true) }
-    stage.claimTxid?.let { ExitValueRow(tr("Claim"), short(it), ValueKind.mono, small = true) {
+    stage.claimTxid?.let { ExitValueRow(tr("Claim"), short(it), kind = ValueKind.mono, small = true) {
         CopyIcon("Claim", it, toasts); ExplorerButton(OnchainDisplay.explorerURL(it, BuildConfig.APP_VARIANT), explore)
     } }
     // bark's height for this state: it keeps it while nothing changes, so it says when the state was recorded, not when last checked.
@@ -466,8 +446,8 @@ private fun CheckSheet(quote: OnchainQuote, busy: Boolean, money: (Long) -> Stri
         tr("Sends the next step of your exit, or raises the fee on a step that’s stuck. Fees come from your on-chain bitcoin. Noah also does this on its own, including in the background when the system lets it."),
         modifier = Modifier.testTag("exit-check-sheet")) { close ->
         Column(Modifier.padding(top = 8.dp)) {
-            ExitValueRow(tr("Exits"), quote.ids.size.toString(), ValueKind.number)
-            quote.chainFee?.let { ExitValueRow(tr("Estimated fees"), "~" + money(it), ValueKind.number, last = true) }
+            ExitValueRow(tr("Exits"), quote.ids.size.toString(), kind = ValueKind.number)
+            quote.chainFee?.let { ExitValueRow(tr("Estimated fees"), "~" + money(it), kind = ValueKind.number, last = true) }
         }
         if (!current) Warning(tr(OnchainFailure.changed.text), failed = true)
         SheetActions(tr("Cancel"), tr("Move forward"), onCancel = close, onConfirm = check, enabled = current && !busy, loading = busy,

@@ -40,6 +40,7 @@ internal class TreeStrings(private val text: (String, Array<out String>) -> Stri
  * The point [u] (0 → 1) along a link from ([px], [py]) to ([cx], [cy]): onboarding's S-curve, leaving and arriving
  * vertically, or sideways when [horizontal]. The picture draws links along it; a branch's outline follows it.
  */
+@Suppress("LongParameterList") // exit-tree layout: flat geometry inputs
 internal fun linkAt(px: Float, py: Float, cx: Float, cy: Float, u: Float, horizontal: Boolean = false): Pair<Float, Float> {
     val a = 1 - u
     return if (horizontal) { val mx = (px + cx) / 2; (a * a * a * px + 3 * a * a * u * mx + 3 * a * u * u * mx + u * u * u * cx) to
@@ -69,6 +70,7 @@ internal data class TreeShape(val kind: Kind, val group: String, val l: Float, v
     fun inside(width: Float, height: Float) = l >= 0f && t >= 0f && r <= width && b <= height
 
     companion object {
+        @Suppress("LongParameterList") // exit-tree layout: flat geometry inputs
         fun box(kind: Kind, group: String, l: Float, t: Float, r: Float, b: Float) = TreeShape(kind, group, l, t, r, b)
         fun circle(kind: Kind, group: String, x: Float, y: Float, radius: Float) = TreeShape(kind, group, x - radius, y - radius, x + radius, y + radius, true)
         private fun near(circle: TreeShape, box: TreeShape, margin: Float): Boolean {
@@ -86,6 +88,7 @@ internal data class TreeShape(val kind: Kind, val group: String, val l: Float, v
  * otherwise give way: your other exits' amounts and the caption first, then your other exits' coins (slid down their
  * branch or further out before they're left out), then the stubs.
  */
+@Suppress("LongParameterList") // exit-tree layout: flat geometry inputs
 internal class TreeLayout(val scene: ExitScene, val words: TreeStrings, val geo: TreeGeometry, val ys: FloatArray, val labels: List<TreeLabels.Item>,
     val stubs: List<Stub>, val siblings: List<Sibling>, val caption: List<String>?, val captionY: Float,
     val wallet: List<WalletLine>, val more: Map<Int, String>, val shapes: List<TreeShape>) {
@@ -103,6 +106,7 @@ internal class TreeLayout(val scene: ExitScene, val words: TreeStrings, val geo:
         const val moreSize = 8f
 
         /** The layout for [scene] (already folded to fit) at rest, in a [width] × [height] dp picture. */
+        @Suppress("LongParameterList") // exit-tree layout: flat geometry inputs
         fun of(scene: ExitScene, width: Float, height: Float, scale: Float, wide: Boolean, words: TreeStrings, measure: TreeMeasure,
             balance: Long? = null, received: Long? = null): TreeLayout {
             val geo = TreeGeometry(width, height, scene.n, scale, wide)
@@ -267,6 +271,7 @@ internal class TreeLayout(val scene: ExitScene, val words: TreeStrings, val geo:
          * before them: the stubs, your other exits' coins (slid down their branch or further out if they must be), their
          * amounts, and the caption.
          */
+        @Suppress("LongParameterList") // exit-tree layout: flat geometry inputs
         fun arrange(s: ExitScene, geo: TreeGeometry, ys: FloatArray, lock: Float, labels: List<TreeLabels.Item>, server: Boolean, w: TreeStrings,
             measure: TreeMeasure, balance: Long?, received: Long?): TreeLayout {
             val n = s.n; val k = geo.scale; val tx = geo.trunk

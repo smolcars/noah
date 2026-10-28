@@ -72,7 +72,7 @@ internal fun ExitListPage(app: AppModel, nav: SettingsNav) {
 internal fun ExitListContent(exits: List<ExitModel>, tip: Long, needsFunds: Set<String>, ready: Boolean, loading: Boolean, suspended: Boolean,
     money: (Long) -> String, back: (() -> Unit)?, open: (String) -> Unit, claim: () -> Unit, more: () -> Unit,
     claims: Map<String, String> = emptyMap(), seen: Map<String, Long> = emptyMap(), stalled: Boolean = false,
-    status: @Composable () -> Unit = {}) {
+    content: @Composable () -> Unit = {}) {
     val palette = LocalPalette.current
     val haptics = rememberHaptics()
     var filter by rememberSaveable { mutableStateOf<String?>(null) }
@@ -132,7 +132,7 @@ internal fun ExitListContent(exits: List<ExitModel>, tip: Long, needsFunds: Set<
                 } else ExitListRow(rows[0].first, rows[0].second, tip, money, divider = divider) { open(block[0].id) }
             }
         }
-        status()
+        content()
     }
 }
 

@@ -119,8 +119,8 @@ internal fun ExitBig(text: String, modifier: Modifier = Modifier) {
  * (the fee split, what's short). [trailing] holds Details' copy and explorer buttons.
  */
 @Composable
-internal fun ExitValueRow(label: String, value: String, kind: ValueKind = ValueKind.text, note: String? = null, failed: Boolean = false,
-    small: Boolean = false, last: Boolean = false, modifier: Modifier = Modifier, trailing: (@Composable RowScope.() -> Unit)? = null) {
+internal fun ExitValueRow(label: String, value: String, modifier: Modifier = Modifier, kind: ValueKind = ValueKind.text, note: String? = null,
+    failed: Boolean = false, small: Boolean = false, last: Boolean = false, content: (@Composable RowScope.() -> Unit)? = null) {
     val palette = LocalPalette.current
     val stacked = androidx.compose.ui.platform.LocalDensity.current.fontScale >= 1.5f
     val style = when (kind) { ValueKind.text -> ActivityType.value; ValueKind.number -> ActivityType.number; ValueKind.mono -> ActivityType.mono }
@@ -133,22 +133,22 @@ internal fun ExitValueRow(label: String, value: String, kind: ValueKind = ValueK
             Text(label, style = ActivityType.label.let { if (small) it.copy(fontSize = 15.sp) else it }, color = palette.muted)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                 Text(value, Modifier.weight(1f, fill = false), style = style, color = if (failed) palette.failure else palette.foreground, textAlign = end)
-                trailing?.invoke(this)
+                content?.invoke(this)
             }
         }) { measurables, constraints ->
             val gap = 18.dp.roundToPx()
             val loose = constraints.copy(minWidth = 0, minHeight = 0)
-            val title = measurables[0]; val content = measurables[1]
-            val labelWidth = title.maxIntrinsicWidth(Int.MAX_VALUE); val valueWidth = content.maxIntrinsicWidth(Int.MAX_VALUE)
+            val title = measurables[0]; val cell = measurables[1]
+            val labelWidth = title.maxIntrinsicWidth(Int.MAX_VALUE); val valueWidth = cell.maxIntrinsicWidth(Int.MAX_VALUE)
             val beside = !stacked && labelWidth + gap + valueWidth <= constraints.maxWidth
             if (beside) {
-                val a = title.measure(loose); val b = content.measure(loose)
+                val a = title.measure(loose); val b = cell.measure(loose)
                 val height = maxOf(a.height, b.height)
                 layout(constraints.maxWidth, height) {
                     a.place(0, (height - a.height) / 2); b.place(constraints.maxWidth - b.width, (height - b.height) / 2)
                 }
             } else {
-                val a = title.measure(loose); val b = content.measure(loose)
+                val a = title.measure(loose); val b = cell.measure(loose)
                 layout(constraints.maxWidth, a.height + b.height + 2.dp.roundToPx()) {
                     a.place(0, 0); b.place(if (stacked) 0 else constraints.maxWidth - b.width, a.height + 2.dp.roundToPx())
                 }
@@ -160,6 +160,7 @@ internal fun ExitValueRow(label: String, value: String, kind: ValueKind = ValueK
 
 /** The picture's size: 300 dp in a column (prototype `.stage`), the rest of the leading pane when split. */
 @Composable
+@android.annotation.SuppressLint("ModifierFactoryExtensionFunction") // needs the column's weight and the window's pose
 internal fun ColumnScope.exitPicture(): Modifier =
     if (LocalPose.current is OnboardingPose.Compact) Modifier.fillMaxWidth().height(300.dp) else Modifier.fillMaxWidth().weight(1f)
 
@@ -203,7 +204,7 @@ internal fun ExitWarningPage(app: AppModel, nav: SettingsNav) {
 @Composable
 internal fun ExitWarningContent(exits: List<ExitModel>, tip: Long, delta: Long?, sample: Long?, suspended: Boolean, money: (Long) -> String,
     back: (() -> Unit)?, choose: () -> Unit, open: (String) -> Unit, all: () -> Unit, needsFunds: Set<String> = emptySet(),
-    revealed: MutableState<Boolean> = rememberSaveable { mutableStateOf(false) }, status: @Composable () -> Unit = {}) {
+    revealed: MutableState<Boolean> = rememberSaveable { mutableStateOf(false) }, content: @Composable () -> Unit = {}) {
     val palette = LocalPalette.current
     ExitFrame(tr("Emergency exit"), back, foot = {
         FootPill(tr("Choose VTXOs"), Modifier.testTag("exit-choose"), wrap = true, enabled = !suspended, onClick = choose)
@@ -246,7 +247,7 @@ internal fun ExitWarningContent(exits: List<ExitModel>, tip: Long, delta: Long?,
             Fact(SettingsIcons.ark, tr("Ark is faster and cheaper"), tr("If Ark works, send to a Bitcoin address instead."), divider = false)
         }
         FinePrint(tr("Reading this screen and estimating fees never broadcasts an exit."))
-        status()
+        content()
     }
 }
 
@@ -357,31 +358,41 @@ internal fun ExitChoosePage(app: AppModel, nav: SettingsNav) {
     val classified by produceState<Pair<List<String>, Map<String, ExitCosts.Cost?>>?>(null, eligible, retries) {
         val known = value?.takeIf { it.first == eligible }?.second.orEmpty().filterValues { it != null }
         val missing = eligible.filter { it !in known }
-        value = eligible to known + if (missing.isEmpty()) emptyMap() else try { withContext(Dispatchers.IO) { app.session.exitCosts(missing) } }
-        catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled } catch (_: Exception) { missing.associateWith { null } }
+        value = eligible to known + if (missing.isEmpty()) emptyMap() else exitCostsOrUnknown(app, missing)
     }
     val costs = classified?.takeIf { it.first == eligible }?.second
     // bark's "All" estimate names the VTXOs it would leave out; the last answer stands while a new one fails.
     val excluded by produceState(emptySet<String>(), eligible, retries) {
-        value = try { withContext(Dispatchers.IO) { app.session.exitExcluded() } }
-        catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled } catch (_: Exception) { value }
+        value = exitExcludedOr(app, value)
     }
     ExitChooseContent(vtxos, costs, model.overview?.confirmed, loading = model.overview == null && model.loading, ready = model.overview != null,
         suspended = app.isWalletSuspended, busy = model.busy, money = { money(app, it) }, back = nav.back,
         // bark's estimate for exactly the selection (shared transactions once); read-only.
-        estimate = { ids -> try { withContext(Dispatchers.IO) { app.session.quoteOnchain(OnchainAction.startExit, ids) } }
-        catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled } catch (_: Exception) { null } },
+        estimate = { ids -> startExitEstimate(app, ids) },
         review = { nav.open(ExitStartPage(it)) }, deposit = { deposit = it }, retry = { retries++ }, refused = ExitErrors.refused,
         excluded = excluded) { OnchainStatus(app, model) }
     deposit?.let { need -> if (!app.isWalletSuspended) ExitDepositSheet(app, need) { deposit = null } }
 }
+
+/** Each VTXO's own estimate; null for those bark can't estimate now. */
+private suspend fun exitCostsOrUnknown(app: AppModel, missing: List<String>): Map<String, ExitCosts.Cost?> =
+    try { withContext(Dispatchers.IO) { app.session.exitCosts(missing) } }
+    catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled } catch (_: Exception) { missing.associateWith { null } }
+
+/** What bark's "All" estimate leaves out, or [last] while a new answer fails. */
+private suspend fun exitExcludedOr(app: AppModel, last: Set<String>): Set<String> = try { withContext(Dispatchers.IO) { app.session.exitExcluded() } }
+catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled } catch (_: Exception) { last }
+
+private suspend fun startExitEstimate(app: AppModel, ids: List<String>) =
+    try { withContext(Dispatchers.IO) { app.session.quoteOnchain(OnchainAction.startExit, ids) } }
+    catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled } catch (_: Exception) { null }
 
 @Composable
 internal fun ExitChooseContent(all: List<VtxoModel>, costs: Map<String, ExitCosts.Cost?>?, confirmed: Long?, loading: Boolean, ready: Boolean,
     suspended: Boolean, busy: Boolean, money: (Long) -> String, back: (() -> Unit)?,
     estimate: suspend (List<String>) -> OnchainQuote?, review: (List<String>) -> Unit, deposit: (Long) -> Unit,
     initial: List<String>? = null, retry: () -> Unit = {}, refused: Map<String, String> = emptyMap(),
-    excluded: Set<String> = emptySet(), status: @Composable () -> Unit = {}) {
+    excluded: Set<String> = emptySet(), content: @Composable () -> Unit = {}) {
     val palette = LocalPalette.current
     val haptics = rememberHaptics()
     var everything by rememberSaveable { mutableStateOf(initial == null) }
@@ -429,12 +440,12 @@ internal fun ExitChooseContent(all: List<VtxoModel>, costs: Map<String, ExitCost
             }
         }
     }) {
-        if (vtxos.isEmpty()) { status(); return@ExitFrame }
+        if (vtxos.isEmpty()) { content(); return@ExitFrame }
         Column(Modifier.padding(top = 18.dp)) {
             ExitValueRow(tr("VTXOs"), fees?.transactions?.let { "${chosen.size} · " + trPlural("{n} transactions", it) } ?: chosen.size.toString(),
-                ValueKind.number)
-            ExitValueRow(tr("Network fees"), fees?.chainFee?.let { "~" + money(it) } ?: "—", ValueKind.number)
-            ExitValueRow(tr("Claim fee"), fees?.fee?.let { "~" + money(it) } ?: "—", ValueKind.number, last = true)
+                kind = ValueKind.number)
+            ExitValueRow(tr("Network fees"), fees?.chainFee?.let { "~" + money(it) } ?: "—", kind = ValueKind.number)
+            ExitValueRow(tr("Claim fee"), fees?.fee?.let { "~" + money(it) } ?: "—", kind = ValueKind.number, last = true)
             TotalRow(tr("You get"), fees?.fee?.let { "~" + money(ExitRules.received(value, it)) } ?: money(value))
         }
         val unestimated = chosen.isNotEmpty() && (classified || !everything) && quote == null
@@ -459,7 +470,7 @@ internal fun ExitChooseContent(all: List<VtxoModel>, costs: Map<String, ExitCost
                 money(out.uneconomic)))
         }
         Spacer(Modifier.height(40.dp))
-        status()
+        content()
     }
 }
 
@@ -551,7 +562,7 @@ internal fun ExitDepositContent(address: String?, error: String?, need: Long, mo
             Box(Modifier.fillMaxWidth().padding(top = 16.dp), contentAlignment = Alignment.Center) {
                 com.noahwallet.ui.ReceiveQR(value, maximumSide = 220.dp) { copy(context, value); toasts.show(copied) }
             }
-            ExitValueRow(tr("Bitcoin address"), short(value, 10, 8), ValueKind.mono, last = true) { CopyIcon("Bitcoin address", value, toasts) }
+            ExitValueRow(tr("Bitcoin address"), short(value, 10, 8), kind = ValueKind.mono, last = true) { CopyIcon("Bitcoin address", value, toasts) }
             FinePrint(tr("The amount required may vary."))
             Row(Modifier.fillMaxWidth().padding(top = 18.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 SendPill(tr("Copy"), Modifier.weight(1f), outlined = true, icon = SettingsIcons.copy, wrap = true) { copy(context, value); toasts.show(copied) }

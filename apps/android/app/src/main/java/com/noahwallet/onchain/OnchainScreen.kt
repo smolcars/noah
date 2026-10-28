@@ -50,6 +50,7 @@ internal fun onchainDependencies(app: AppModel) =
         ExitSeen.stored(app.settings), settle = { onchainSettle(app) }, shared = SharedOverview.shared) { onchainReady(app) }
 
 /** The model's calls on [session], each mutation under [lifecycle]'s gate; a device test runs them on a fake wallet. */
+@Suppress("LongParameterList") // wiring: one argument per dependency
 internal fun onchainDependencies(session: com.noahwallet.services.wallet.WalletSession, lifecycle: com.noahwallet.services.wallet.WalletLifecycle,
     funding: AutoBoardFunding, claims: ExitClaimRecords, seen: ExitSeen, settle: suspend () -> Boolean = { false },
     shared: SharedOverview? = null, ready: () -> Boolean) = OnchainModel.Dependencies(

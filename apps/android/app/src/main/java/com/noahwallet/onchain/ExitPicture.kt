@@ -187,6 +187,7 @@ private object TreeIcons {
 }
 
 /** A branch link: onboarding's S-curve, handles at the middle; drawn from [u0] to [u1] of its length (prototype `link`). */
+@Suppress("LongParameterList") // a drawing primitive: flat geometry and paint
 internal fun DrawScope.treeLink(p: Offset, c: Offset, u0: Float, u1: Float, color: Color, width: Float, alpha: Float, dash: FloatArray? = null,
     horizontal: Boolean = false) {
     if (u1 <= u0 || alpha <= 0f) return
@@ -210,6 +211,7 @@ internal fun DrawScope.treeCoin(at: Offset, r: Float, fill: Color, ring: Color, 
 }
 
 /** The 24-unit padlock drawn [size] units wide (prototype `padlock`); [open] lifts and turns the shackle. */
+@Suppress("LongParameterList") // a drawing primitive: flat geometry and paint
 internal fun DrawScope.treePadlock(at: Offset, size: Float, open: Float, alpha: Float, ink: Color, fill: Color) {
     if (size <= 0f || alpha <= 0f) return
     scale(size / 24f, size / 24f, at) { StageArt.run { padlock(at, alpha, open, ink, fill) } }
@@ -229,6 +231,7 @@ internal fun DrawScope.exitWalletBadge(at: Offset, palette: NoahTokens.Palette) 
     treeBadge(at, 14f, TreeIcons.wallet, palette.foreground, palette.hairline, palette.background, 1f)
 
 /** A circle badge with an icon: the server, the phone or the other wallet (prototype `badge`). */
+@Suppress("LongParameterList") // a drawing primitive: flat geometry and paint
 private fun DrawScope.treeBadge(at: Offset, r: Float, icon: Path, ink: Color, ring: Color, paper: Color, alpha: Float, dashed: Boolean = false,
     dots: Boolean = false) {
     if (alpha <= 0f) return
@@ -241,6 +244,7 @@ private fun DrawScope.treeBadge(at: Offset, r: Float, icon: Path, ink: Color, ri
     }
 }
 
+@Suppress("LongParameterList") // a drawing primitive: flat geometry and paint
 private fun DrawScope.text(layout: TextLayoutResult, x: Float, y: Float, color: Color, alpha: Float, align: Int = -1) {
     if (alpha <= 0.01f) return
     val left = when (align) { -1 -> x; 1 -> x - layout.size.width; else -> x - layout.size.width / 2f }
@@ -253,6 +257,7 @@ private fun DrawScope.text(layout: TextLayoutResult, x: Float, y: Float, color: 
  * (ringed red when it's short of funds).
  * Ink square: in a block, filled from the bottom as it's mined, settling from 1.22×, with one ripple.
  */
+@Suppress("LongParameterList") // a drawing primitive: flat geometry and paint
 private fun DrawScope.txNode(at: Offset, z: Float, mark: ExitScene.Mark, send: Float, mine: Float, stamp: Float, ripple: Float, alpha: Float,
     pop: Float, grey: Boolean, outline: Boolean, palette: NoahTokens.Palette, ready: Boolean = false) {
     if (alpha <= 0f) return
@@ -286,6 +291,7 @@ private fun DrawScope.txNode(at: Offset, z: Float, mark: ExitScene.Mark, send: F
     }
 }
 
+@Suppress("LongParameterList") // a drawing primitive: flat geometry and paint
 private fun DrawScope.drawTree(f: TreeFrame, palette: NoahTokens.Palette, measurer: TextMeasurer, styles: TreeStyles, layout: TreeLayout,
     before: TreeLayout?, stay: Set<String>) {
     val geo = f.geo; val m = f.move; val s = m.to; val t = f.t; val n = s.n; val k = geo.scale
