@@ -1,0 +1,240 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Noah widgets v2</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600&family=Roboto:wght@400;500;700&display=block">
+<style>
+:root{--sys:-apple-system,"SF Pro Text",system-ui,sans-serif;--sg:"Space Grotesk",-apple-system,system-ui,sans-serif;--rb:Roboto,system-ui,sans-serif;--SHIP:url(widgets-assets/ship.png);--WAVE:url(widgets-assets/wave.png)}
+.pg{font:13px/1.45 var(--font-sans,var(--sys));color:var(--foreground,#111);max-width:728px}
+.ctl{display:flex;flex-wrap:wrap;gap:6px 16px;margin:0 0 16px}
+.grp{display:flex;flex-wrap:wrap;align-items:center;gap:4px}
+.grp>em{font-style:normal;color:var(--muted-foreground,#777);font-size:12px;margin-right:2px}
+.chip{appearance:none;border:1px solid var(--border,#d4d4d4);background:transparent;color:inherit;font:inherit;font-size:12px;padding:3px 9px;border-radius:999px;cursor:pointer}
+.chip.on{background:var(--foreground,#111);color:var(--background,#fff);border-color:var(--foreground,#111)}
+h3{margin:18px 0 8px;font-size:11.5px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;color:var(--muted-foreground,#777)}
+h3 i{font-style:normal;text-transform:none;letter-spacing:0;font-weight:500}
+.cap{font-size:12px;color:var(--muted-foreground,#777);margin-top:6px}
+ul.rules{margin:0;padding-left:18px}ul.rules li{margin:3px 0}
+/* stages: wallpaper boxes */
+.stg{border-radius:var(--radius,14px);padding:16px;display:flex;flex-wrap:wrap;gap:14px;align-items:flex-start}
+.cell{display:flex;flex-direction:column;align-items:center;gap:6px}
+.cell>span{font:500 11.5px/1.2 var(--sys);color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.35)}
+.wp-l{background:radial-gradient(80% 60% at 0% 0%,#f4a77f 0,transparent 62%),radial-gradient(80% 70% at 100% 40%,#8ea6ec 0,transparent 62%),radial-gradient(80% 60% at 25% 100%,#e9a3b9 0,transparent 60%),#c9b6c8}
+.wp-d{background:radial-gradient(70% 45% at 0% 8%,#a4502a 0,transparent 62%),radial-gradient(80% 55% at 100% 40%,#2c45a0 0,transparent 62%),radial-gradient(70% 50% at 25% 100%,#62307a 0,transparent 62%),#0c0d16}
+.wp-al{background:radial-gradient(90% 60% at 90% 10%,#f3d7c4 0,transparent 60%),linear-gradient(165deg,#dfe6f6 0%,#b7c7ea 55%,#93a9d8 100%)}
+.wp-ad{background:radial-gradient(80% 50% at 85% 15%,#34477d 0,transparent 60%),radial-gradient(60% 40% at 0% 90%,#5a2f3c 0,transparent 60%),linear-gradient(170deg,#151b2a,#080b13)}
+/* widget */
+.w{position:relative;overflow:hidden;box-sizing:border-box;color:var(--fg);background:var(--bg);font-family:var(--sys);-webkit-font-smoothing:antialiased;flex:none}
+.w.ios{border-radius:22px}.w.and{border-radius:28px;font-family:var(--rb)}
+.lk-light,.al-light{--bg:#fff;--fg:#000;--mut:#707070;--soft:#f2f2f2;--wave:#F7931A;--nbg:rgba(247,147,26,.15);--ntx:#A85800}
+.lk-dark,.al-dark{--bg:#000;--fg:#fff;--mut:#8f8f8f;--soft:#1c1c1e;--wave:#F7931A;--nbg:rgba(247,147,26,.15);--ntx:#F7931A}
+.al-light{--soft:#f0f0f2}.al-dark{--soft:#1b1b1d}
+.al-you{--bg:#edf0f8;--fg:#181c24;--mut:#596070;--soft:#d8e0f4;--wave:#F7931A;--nbg:#d8e0f4;--ntx:#2e4578}
+.lk-tinted{--bg:rgba(52,36,16,.42);--fg:rgba(255,236,206,.88);--acc:#ffc56e;--mut:rgba(255,236,206,.55);--soft:rgba(255,214,150,.15);--wave:#ffc56e;--nbg:rgba(255,214,150,.18);--ntx:#ffc56e;backdrop-filter:blur(26px) saturate(1.2);-webkit-backdrop-filter:blur(26px) saturate(1.2)}
+.lk-clear{--bg:rgba(255,255,255,.07);--fg:#fff;--mut:rgba(255,255,255,.64);--soft:rgba(255,255,255,.17);--wave:#fff;--nbg:rgba(255,255,255,.2);--ntx:#fff;backdrop-filter:blur(9px) saturate(1.8);-webkit-backdrop-filter:blur(9px) saturate(1.8);box-shadow:inset 0 0 0 .5px rgba(255,255,255,.4),inset 0 1.5px 1px -.5px rgba(255,255,255,.55),0 10px 26px rgba(0,0,0,.2)}
+.sm{width:170px;height:170px;padding:14px 16px 15px;display:flex;flex-direction:column}
+.md{width:364px;height:170px;padding:15px 16px 14px;display:flex;flex-direction:column}
+.and.sm{width:180px;height:180px;padding:17px 18px 18px}.and.md{width:372px;height:180px;padding:17px 18px 16px}
+.tp{display:flex;align-items:center;justify-content:space-between;gap:6px;height:24px;flex:none}
+.ship{position:relative;width:30px;height:26px;flex:none;display:block}
+.ship b,.ship u{position:absolute;inset:0;background:var(--fg);-webkit-mask:var(--SHIP) center/contain no-repeat;mask:var(--SHIP) center/contain no-repeat}
+.ship u{background:var(--wave);-webkit-mask-image:var(--WAVE);mask-image:var(--WAVE)}
+.net{font:600 11px/1 var(--sys);padding:4px 7px;border-radius:9px;background:var(--nbg);color:var(--ntx);white-space:nowrap}
+.and .net{font-family:var(--rb);font-weight:500}
+.gr{flex:1}
+.bal{font:600 30px/1.08 var(--sg);letter-spacing:-.03em;white-space:nowrap;overflow:hidden;font-variant-numeric:tabular-nums;color:var(--acc,var(--fg))}
+.bal small{font-size:.52em;letter-spacing:0;font-weight:500}
+.fi{font:500 13px/17px inherit;font-family:inherit;color:var(--mut);margin-top:2px;white-space:nowrap}
+.st{font-weight:500;font-size:13px;line-height:17px;margin-top:5px;display:flex;align-items:center;gap:5px;min-width:0}
+.st span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.st .dot{width:7px;height:7px;border-radius:50%;background:var(--mut);flex:none}
+.st svg{width:14px;height:14px;flex:none}
+.st b{font-weight:600}.st.rn span{color:var(--mut)}.st.rn:not(.two) b+span::before{content:"· "}
+.st.two{display:grid;grid-template-columns:14px 1fr;column-gap:5px;align-items:center}
+.st.two span{grid-column:1/3;white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+.st.two:not(.rn){grid-template-columns:7px 1fr;align-items:start}.st.two:not(.rn) .dot{margin-top:5px}.st.two:not(.rn) span{grid-column:2}
+.row{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.row .col{flex:1;min-width:0}
+.md .bal{font-size:34px}
+.acts{display:flex;gap:8px;flex:none}
+.act{flex:1;min-width:0;height:38px;border-radius:19px;background:var(--soft);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);display:flex;align-items:center;justify-content:center;gap:6px;font-weight:600;font-size:14px;white-space:nowrap;overflow:hidden}
+.and .act{height:40px;border-radius:20px;font-weight:500}
+.act svg{width:16px;height:16px;flex:none}
+.rc{flex-direction:row;gap:14px}
+.rc .lc{width:132px;display:flex;flex-direction:column;flex:none}.rc .lc .bal{font-size:26px}
+.rows{flex:1;min-width:0;display:flex;flex-direction:column;justify-content:space-between}
+.r{display:flex;align-items:center;gap:8px;height:40px}
+.av{width:32px;height:32px;border-radius:50%;background:var(--soft);display:flex;align-items:center;justify-content:center;font:600 14px var(--sg);font-style:normal;flex:none}
+.av svg{width:15px;height:15px}
+.nm{flex:1;min-width:0;font-weight:500;font-size:14px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.am{font:600 14px var(--sg);font-variant-numeric:tabular-nums;white-space:nowrap}
+.a41{width:372px;height:84px;padding:0 14px 0 18px;display:flex;align-items:center;gap:12px}
+.a21{width:180px;height:84px;padding:0 16px;display:flex;align-items:center;gap:10px}
+.a41 .col,.a21 .col{min-width:0;flex:1}.a41 .bal,.a21 .bal{font-size:24px}
+.a41 .fi,.a21 .fi,.a41 .st,.a21 .st{margin-top:1px;font-size:12px;line-height:16px}
+.a21{gap:8px}.a21 .ship{width:22px;height:19px}.a21 .st svg,.a21 .st .dot{display:none}
+.sea{position:absolute;color:var(--wave);pointer-events:none}.sea svg{display:block;overflow:visible}.v2>:not(.sea){position:relative}
+.boat{position:absolute;background:var(--fg);-webkit-mask:var(--SHIP) center/contain no-repeat;mask:var(--SHIP) center/contain no-repeat}
+.tp2{display:flex;align-items:center;gap:6px;height:16px;flex:none;margin-bottom:3px}
+.chg{flex:1;min-width:0;font-size:11.5px;line-height:15px;color:var(--mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chg b{font:600 12px var(--sg);color:var(--fg);letter-spacing:-.01em}
+.v2.sm{padding:12px 16px 13px}.and.v2.sm{padding:15px 18px 16px}
+.row2{display:flex;gap:14px;align-items:stretch}.row2>.col{flex:1;min-width:0}
+.rc2{width:150px;flex:none}.rc2 .chg{text-align:right}
+.ib{width:44px;height:44px;border-radius:50%;background:var(--soft);display:flex;align-items:center;justify-content:center;flex:none}
+.ib svg{width:20px;height:20px}
+svg.i{fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round}
+/* phones */
+.duo{display:flex;gap:14px;justify-content:space-between}
+.phw{display:flex;flex-direction:column;align-items:center}
+.ph{zoom:.86;position:relative;overflow:hidden;width:393px;height:640px;border-radius:48px 48px 0 0;box-shadow:inset 0 0 0 1px rgba(0,0,0,.15);-webkit-mask:linear-gradient(#000 82%,transparent);mask:linear-gradient(#000 82%,transparent)}
+.ph.an{width:412px;border-radius:36px 36px 0 0}
+.ph>*{position:absolute}
+.sb{top:17px;left:42px;right:30px;display:flex;justify-content:space-between;align-items:center;font:600 16px var(--sys);color:#fff}
+.an .sb{top:12px;left:26px;right:22px;font:500 14px var(--rb)}
+.isl{top:11px;left:50%;width:122px;height:35px;margin-left:-61px;background:#000;border-radius:20px}
+.an .isl{top:12px;width:20px;height:20px;margin-left:-10px}
+.lbl{font:500 12px var(--sys);color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.35);text-align:center}
+.app{width:62px;height:62px;border-radius:15px;background:rgba(255,255,255,.5);box-shadow:inset 0 0 0 .5px rgba(255,255,255,.5)}
+.dk .app{background:rgba(255,255,255,.14)}
+.an .app{width:54px;height:54px;border-radius:50%}
+.glance{top:58px;left:26px;font:400 24px var(--rb);color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.25)}
+.ast{display:flex;flex-direction:column;align-items:center;gap:5px;width:85px}
+/* lock screen */
+.lock{border-radius:var(--radius,14px);padding:18px 16px 22px;display:flex;flex-direction:column;align-items:center;color:rgba(255,255,255,.92)}
+.ld{font:600 16px var(--sys);display:flex;gap:8px;align-items:center}
+.ld .bal{font-size:16px;letter-spacing:-.01em;color:inherit;overflow:visible}
+.lt{font:700 72px/1 var(--sys);letter-spacing:-.02em;margin:2px 0 12px}
+.lw{display:flex;gap:12px;align-items:center}
+.lr{width:172px;height:72px;box-sizing:border-box;padding:8px 10px;border-radius:16px;background:rgba(255,255,255,.14);display:flex;flex-direction:column;justify-content:center}
+.lr .bal{font-size:22px;color:#fff}.lr .st,.lr .fi{margin-top:2px;color:rgba(255,255,255,.75)}.lr .st .dot{background:rgba(255,255,255,.75)}
+.lr .tp{height:16px}.lr .ship{width:20px;height:16px}
+.lc2{width:72px;height:72px;border-radius:50%;background:rgba(255,255,255,.14);display:flex;align-items:center;justify-content:center}
+.lc2 svg{width:30px;height:30px}
+.lock .ship{--fg:#fff;--wave:#fff}
+/* before/after */
+.ba{display:grid;grid-template-columns:1fr 1fr;gap:14px;align-items:center}
+.ba img{display:block;border-radius:12px;max-width:100%}
+.ba>div{display:flex;justify-content:center}
+</style></head>
+<body><div class="pg"><div class="ctl" id="ctl"></div><div id="main"></div></div>
+<script>
+const st={view:'home',state:'everyday',ilook:'light',alook:'dark',medium:'actions',lang:'en',unit:'btc',fiat:'on'};
+location.hash.slice(1).split('&').forEach(p=>{const[k,v]=p.split('=');if(k in st&&v)st[k]=v});
+const CTL=[['view','',[['home','Home screen'],['ios','iOS'],['android','Android'],['v1','v1 → v2']]],
+['state','State',[['everyday','Everyday'],['arriving','Arriving'],['renew','Renew'],['fresh','New wallet'],['hidden','Hidden'],['signet','Signet'],['large','Large']]],
+['ilook','iOS',[['light','Light'],['dark','Dark'],['tinted','Tinted'],['clear','Clear']]],
+['alook','Android',[['light','Light'],['dark','Dark'],['you','Wallpaper colour']]],
+['medium','Medium',[['actions','Actions'],['recent','Recent']]],
+['lang','Language',[['en','en'],['es','es'],['ja','ja'],['ko','ko'],['sv','sv']]],
+['unit','Unit',[['btc','₿'],['sats','sats']]],['fiat','Fiat',[['on','On'],['off','Off']]]];
+const LOC={en:'en-US',es:'es-ES',ja:'ja-JP',ko:'ko-KR',sv:'sv-SE'};
+// Every string already exists in apps/i18n/<lang>/native.json.
+const TX={en:{arr:'{a} arriving',renew:'Renew',exp:n=>`Expires in ${n} hour${n==1?'':'s'}`,rcv:'Receive',scan:'Scan',send:'Send',days:n=>`${n} day${n==1?'':'s'}`},
+es:{arr:'{a} en camino',renew:'Renovar',exp:n=>`Vence en ${n} hora${n==1?'':'s'}`,rcv:'Recibir',scan:'Escanear',send:'Enviar',days:n=>`${n} día${n==1?'':'s'}`},
+ja:{arr:'{a} 受け取り中',renew:'更新',exp:n=>`${n}時間後に期限切れ`,rcv:'受け取る',scan:'スキャン',send:'送る',days:n=>`${n}日`},
+ko:{arr:'{a} 입금 예정',renew:'갱신',exp:n=>`${n}시간 후 만료`,rcv:'받기',scan:'스캔',send:'보내기',days:n=>`${n}일`},
+sv:{arr:'{a} på väg',renew:'Förnya',exp:n=>`Löper ut om ${n} ${n==1?'timme':'timmar'}`,rcv:'Ta emot',scan:'Skanna',send:'Skicka',days:n=>`${n} ${n==1?'dag':'dagar'}`}};
+const D={everyday:{b:252742,f:283.07},arriving:{b:252742,f:283.07,arr:100000},renew:{b:252742,f:283.07,h:18},fresh:{b:0,f:0},
+hidden:{b:252742,f:283.07,arr:100000,hid:1},signet:{b:252742,f:283.07,net:'Signet'},large:{b:12480315,f:13977.95},
+none:{none:1},before:{b:1234567,f:1382.71,net:'Regtest',h:24,arr:12345}};
+const NAMES={everyday:'Everyday',arriving:'Arriving',renew:'Renew due',fresh:'New wallet',hidden:'Hidden',signet:'Signet',large:'Large balance',none:'No wallet'};
+const RECENT=[{i:'m',n:'maya',a:2100},{i:'l',n:'lucas@ln.tips',a:4842},{ic:'bolt',n:'Coffee Collective',a:-4200}];
+const sv=p=>`<svg class="i" viewBox="0 0 24 24">${p}</svg>`;
+const I={rcv:sv('<path d="M17 7 7 17M7 8v9h9"/>'),send:sv('<path d="M7 17 17 7M8 7h9v9"/>'),
+scan:sv('<path d="M4 8V5.5A1.5 1.5 0 0 1 5.5 4H8M16 4h2.5A1.5 1.5 0 0 1 20 5.5V8M20 16v2.5a1.5 1.5 0 0 1-1.5 1.5H16M8 20H5.5A1.5 1.5 0 0 1 4 18.5V16"/><path d="M8.5 8.5h2.5v2.5H8.5zM13 8.5h2.5v2.5H13zM8.5 13h2.5v2.5H8.5zM13 13h2.5v2.5"/>'),
+renew:sv('<path d="M3.5 12a8.5 8.5 0 1 0 2.6-6.1L3.5 8.5"/><path d="M3.5 3.5v5h5"/><path d="M12 7.5V12l3 2"/>'),
+bolt:sv('<path d="M13 2.5 4.5 13.5H11l-1 8 8.5-11H12z"/>')};
+const SB='<svg width="66" height="13" viewBox="0 0 66 13" fill="#fff"><rect x="0" y="8" width="3" height="4" rx="1"/><rect x="5" y="6" width="3" height="6" rx="1"/><rect x="10" y="3" width="3" height="9" rx="1"/><rect x="15" y="0" width="3" height="12" rx="1"/><path d="M30 3.5a9 9 0 0 1 12 0l-1.4 1.5a7 7 0 0 0-9.2 0zM32.4 6a5.5 5.5 0 0 1 7.2 0l-1.4 1.5a3.5 3.5 0 0 0-4.4 0zM36 12l2-2.2a2.6 2.6 0 0 0-4 0z"/><rect x="47" y="1" width="16" height="10" rx="3" fill="none" stroke="#fff" stroke-opacity=".5"/><rect x="49" y="3" width="12" height="6" rx="1.5"/><rect x="64" y="4.5" width="1.5" height="3.5" rx=".7" fill-opacity=".5"/></svg>';
+const SHIP='<i class="ship"><b></b><u></u></i>';
+const nf=(n,o)=>new Intl.NumberFormat(LOC[o.lang]).format(n);
+const amt=(n,o,sign,hid)=>{const s=sign?(n<0?'−':'+'):'';if(hid)return o.unit=='sats'?`${s}•••• sats`:`${s}₿ ••••`;
+  const x=nf(Math.abs(n),o);return o.unit=='sats'?`${s}${x} sats`:`${s}₿ ${x}`};
+const big=(d,o)=>{const x=d.hid?'••••••':nf(d.b,o);return o.unit=='sats'?`${x}<small> sats</small>`:`₿ ${x}`};
+const fi=(d,o)=>o.fiat=='on'?`<div class="fi">${d.hid?'••••':new Intl.NumberFormat(LOC[o.lang],{style:'currency',currency:'USD'}).format(d.f)}</div>`:'';
+const net=d=>d.net?`<span class="net">${d.net}</span>`:'';
+// One line at most: Renew (only inside the maintenance window) wins over arriving.
+function status(d,o,two,short){const t=TX[o.lang],c=two?' two':'';
+  if(d.h)return short?`<div class="st">${I.renew}<span>${t.exp(d.h)}</span></div>`:`<div class="st rn${c}">${I.renew}<b>${t.renew}</b><span>${t.exp(d.h)}</span></div>`;
+  if(d.arr)return `<div class="st${c}"><i class="dot"></i><span>${t.arr.replace('{a}',amt(d.arr,o,1,d.hid))}</span></div>`;return ''}
+const small1=(d,o,c)=>d.none?`<div class="w sm ${c}" style="align-items:center;justify-content:center">${SHIP.replace('ship','ship" style="width:64px;height:56px')}</div>`:`<div class="w sm ${c}"><div class="tp">${SHIP}${net(d)}</div><div class="gr"></div><div class="bal">${big(d,o)}</div>${fi(d,o)}${status(d,o,1)}</div>`;
+function medium1(d,o,c){const t=TX[o.lang];
+  if(o.medium=='recent'&&d.b>0)return `<div class="w md rc ${c}"><div class="lc"><div class="tp">${SHIP}${net(d)}</div><div class="gr"></div><div class="bal">${big(d,o)}</div>${fi(d,o)}${status(d,o,1)}</div><div class="rows">${RECENT.map(r=>`<div class="r"><i class="av">${r.ic?I[r.ic]:r.i}</i><span class="nm">${r.n}</span><span class="am">${amt(r.a,o,1,d.hid)}</span></div>`).join('')}</div></div>`;
+  return `<div class="w md ${c}"><div class="row"><div class="col"><div class="bal">${big(d,o)}</div>${fi(d,o)}</div><div class="tp">${net(d)}${SHIP}</div></div>${status(d,o)}<div class="gr"></div><div class="acts"><span class="act">${I.rcv}${t.rcv}</span><span class="act">${I.scan}${t.scan}</span><span class="act">${I.send}${t.send}</span></div></div>`}
+// v2: the empty top area shows your balance over 30 days as the logo's wave, with the longship at "now".
+const EV=[[1,8000],[2,-2500],[4,4842],[6,-4200],[8,15000],[9,-10000],[11,-3200],[12,21000],[14,-6000],[15,-5000],[17,9500],[18,1500],[20,-7800],[21,-500],[23,12000],[24,6000],[26,-4000],[27,-10000],[28,3400],[29,2100]];
+function series(end){const o=[];let v=end-EV.reduce((a,e)=>a+e[1],0);for(let i=0;i<=30;i++){EV.forEach(e=>{if(e[0]==i)v+=e[1]});o.push(v)}return o}
+// Two gentle [1,2,1] passes so daily steps read as swell, not a stock ticker. The label keeps the exact change.
+const swell=S=>{for(let k=0;k<2;k++)S=S.map((v,i)=>(S[Math.max(0,i-1)]+2*v+S[Math.min(S.length-1,i+1)])/4);return S};
+function mono(xs,ys){const n=xs.length,d=[],m=[];for(let i=0;i<n-1;i++)d[i]=(ys[i+1]-ys[i])/(xs[i+1]-xs[i]);
+  m[0]=d[0];m[n-1]=d[n-2];for(let i=1;i<n-1;i++)m[i]=d[i-1]*d[i]<=0?0:(d[i-1]+d[i])/2;
+  for(let i=0;i<n-1;i++){if(!d[i]){m[i]=m[i+1]=0;continue}const a=m[i]/d[i],b=m[i+1]/d[i],q=a*a+b*b;if(q>9){const t=3/Math.sqrt(q);m[i]=t*a*d[i];m[i+1]=t*b*d[i]}}
+  let p=`M${xs[0]},${ys[0]}`;for(let i=0;i<n-1;i++){const h=(xs[i+1]-xs[i])/3;p+=`C${xs[i]+h},${ys[i]+m[i]*h} ${xs[i+1]-h},${ys[i+1]-m[i+1]*h} ${xs[i+1]},${ys[i+1]}`}return p}
+let U=0;const SEAS={};
+// The sea: your 30-day balance as the logo's wave. It bleeds to the widget's edges and fades out behind the text; the longship rides at today.
+function sea(d,p){const{w,h,lh,bs,inset}=p,id=++U,S=d.b&&!d.hid?swell(series(d.b)):[],top=Math.ceil(.63*bs)+1,bx=w-inset-bs;let ln,ye;SEAS[id]={d,p};
+  if(!S.length){ye=Math.round(lh*.72);ln=`M0,${ye}`;for(let x=3;x<=w+3;x+=3)ln+=`L${x},${(ye+1.4*Math.sin(x/7)).toFixed(1)}`}
+  else{const mn=Math.min(...S),mx=Math.max(...S),xs=S.map((v,i)=>+(i/(S.length-1)*(bx-2)).toFixed(1)),ys=S.map(v=>+(top+(1-(v-mn)/(mx-mn))*(lh-top-2)).toFixed(1));ye=ys.at(-1);ln=mono(xs,ys)+`L${w},${ye}`}
+  return `<div class="sea" data-id="${id}" style="left:${p.x}px;top:${p.y}px;width:${w}px;height:${h}px;${p.mask||''}"><svg width="${w}" height="${h}"><defs><linearGradient id="g${id}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="currentColor" stop-opacity=".28"/><stop offset="1" stop-color="currentColor" stop-opacity="0"/></linearGradient></defs><path d="${ln}L${w},${h}L0,${h}Z" fill="url(#g${id})"/><path d="${ln}" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg><i class="boat" style="width:${bs}px;height:${bs}px;left:${bx}px;top:${(ye-.7*bs).toFixed(1)}px"></i></div>`}
+// After layout, stretch the wave down to just above the balance.
+function seas(root){root.querySelectorAll('.v2 .sea[data-auto]').forEach(e=>{const wd=e.parentElement,b=wd.querySelector('.bal'),{d,p}=SEAS[e.dataset.id];
+  const lh=Math.max(26,b.offsetTop-p.y-4);e.outerHTML=sea(d,{...p,lh}).replace('class="sea"','class="sea" data-auto')})}
+const chg=(d,o)=>{if(!d.b||d.hid)return '<span class="chg"></span>';const S=series(d.b);return `<span class="chg"><b>${amt(Math.round(S.at(-1)-S[0]),o,1)}</b> · ${TX[o.lang].days(30)}</span>`};
+const rows=(d,o)=>`<div class="rows">${RECENT.map(r=>`<div class="r"><i class="av">${r.ic?I[r.ic]:r.i}</i><span class="nm">${r.n}</span><span class="am">${amt(r.a,o,1,d.hid)}</span></div>`).join('')}</div>`;
+const small=(d,o,c)=>{if(d.none)return small1(d,o,c);const a=c.startsWith('and'),W=a?180:170,y=a?32:28;
+  return `<div class="w sm v2 ${c}">${sea(d,{x:0,y,w:W,h:W-y,lh:40,bs:a?26:24,inset:a?16:14}).replace('class="sea"','class="sea" data-auto')}<div class="tp2">${chg(d,o)}${net(d)}</div><div class="gr"></div><div class="bal">${big(d,o)}</div>${fi(d,o)}${status(d,o,1)}</div>`};
+function medium(d,o,c){const t=TX[o.lang],a=c.startsWith('and'),W=a?372:364,H=a?180:170,y=a?34:32,acts=H-(a?16:14)-(a?40:38);
+  if(o.medium=='recent'&&d.b>0)return `<div class="w md rc v2 ${c}">${sea(d,{x:0,y:y-4,w:160,h:H-y+4,lh:40,bs:22,inset:14,mask:'-webkit-mask:linear-gradient(90deg,#000 88%,transparent);mask:linear-gradient(90deg,#000 88%,transparent)'}).replace('class="sea"','class="sea" data-auto')}<div class="lc"><div class="tp2">${chg(d,o)}${net(d)}</div><div class="gr"></div><div class="bal">${big(d,o)}</div>${fi(d,o)}${status(d,o,1)}</div>${rows(d,o)}</div>`;
+  return `<div class="w md v2 ${c}">${sea(d,{x:W-190,y,w:190,h:H-y,lh:acts-8-y,bs:26,inset:a?18:16,mask:'-webkit-mask:linear-gradient(90deg,transparent,#000 34%);mask:linear-gradient(90deg,transparent,#000 34%)'})}<div class="row2"><div class="col"><div class="bal">${big(d,o)}</div>${fi(d,o)}${status(d,o,1)}</div><div class="rc2"><div class="tp2">${net(d)}${chg(d,o)}</div></div></div><div class="gr"></div><div class="acts">${[['rcv',t.rcv],['scan',t.scan],['send',t.send]].map(([k,l])=>`<span class="act">${I[k]}${l}</span>`).join('')}</div></div>`}
+const line=(d,o)=>status(d,o,0,1)||fi(d,o);
+const a41=(d,o,c)=>`<div class="w and a41 ${c}">${SHIP}<div class="col"><div class="bal">${big(d,o)}</div>${line(d,o)}</div>${net(d)}<i class="ib">${I.rcv}</i><i class="ib">${I.scan}</i><i class="ib">${I.send}</i></div>`;
+const a21=(d,o,c)=>`<div class="w and a21 ${c}">${SHIP}<div class="col"><div class="bal">${big(d,o)}</div>${line(d,o)}</div></div>`;
+const ic=s=>'ios lk-'+s, ac=s=>'and al-'+s, iwp=s=>s=='light'?'wp-l':'wp-d', awp=s=>s=='dark'?'wp-ad':'wp-al';
+const LKN={light:'Light',dark:'Dark',tinted:'Tinted',clear:'Clear (Liquid Glass)',you:'Wallpaper colour'};
+const zoom=(h,z)=>`<div style="zoom:${z}">${h}</div>`;
+const apps=(n,cls)=>n.map(x=>`<div class="ast"><div class="app"></div><div class="lbl">${x}</div></div>`).join('');
+function iphone(d,o){const k=o.ilook;return `<div class="ph ${iwp(k)} ${k=='light'?'':'dk'}"><div class="sb"><span>9:41</span>${SB}</div><div class="isl"></div>
+  <div style="left:14.5px;top:64px">${small(d,o,ic(k))}<div class="lbl" style="margin-top:6px">Noah</div></div>
+  <div style="left:199px;top:64px;display:grid;grid-template-columns:85px 85px;row-gap:16px;width:180px">${apps(['Camera','Photos','Maps','Notes'])}</div>
+  <div style="left:14.5px;top:266px">${medium(d,o,ic(k))}<div class="lbl" style="margin-top:6px">Noah</div></div>
+  <div style="left:11px;top:470px;display:flex;gap:6px">${apps(['Clock','Weather','Music','Mail'])}</div></div>`}
+function android(d,o){const k=o.alook;return `<div class="ph an ${awp(k)}"><div class="sb"><span>9:41</span>${SB}</div><div class="isl"></div><div class="glance">Tue, Oct 27</div>
+  <div style="left:20px;top:110px">${medium(d,o,ac(k))}</div><div style="left:20px;top:308px">${small(d,o,ac(k))}</div>
+  <div style="left:212px;top:310px;display:grid;grid-template-columns:90px 90px;row-gap:22px">${apps(['Camera','Photos','Maps','Clock'])}</div>
+  <div style="left:14px;top:510px;display:flex;gap:8px">${apps(['Phone','Messages','Chrome','Mail'])}</div></div>`}
+const RULES=`<h3>What changes</h3><ul class="rules">
+<li><b>New in v2:</b> the empty top area shows your balance over the last 30 days, drawn as the logo's orange wave with the longship sailing at today. The 30-day change sits above it. A new wallet or a hidden balance gets calm water instead.</li><li>No header text. The longship and the system label say it's Noah.</li>
+<li>The balance is set like Home: Space Grotesk, the app's unit (₿ or sats) and the app's language, full digits that shrink to fit. No English "K"/"M".</li>
+<li>Fiat underneath, as on Home (optional).</li>
+<li>At most one status line, using Home's rules: <b>Renew</b> only inside the 24-hour window, otherwise <b>+₿ … arriving</b>. No always-on green/orange/red block count.</li>
+<li>Onchain/Offchain goes. The split stays in the app's balance sheet.</li>
+<li>Medium (4×2 on Android) adds Receive · Scan · Send, which open those screens. Nothing pays from the widget.</li>
+<li>Follows light/dark, plus iOS Tinted and Clear. Hides with the app's hide-balance setting. Signet and Regtest get Home's chip.</li>
+<li>No wallet yet, or after deleting one: just the mark, instead of today's ₿ 0.</li>
+<li>Still no new strings: "{n} days" is already translated too.</li></ul>`;
+const V={
+home(){const d=D[st.state];return `<div class="duo"><div class="phw"><div style="border-radius:42px 42px 0 0;overflow:hidden">${iphone(d,st)}</div><div class="cap">iPhone · small + medium · ${LKN[st.ilook]}</div></div>
+  <div class="phw"><div>${android(d,st)}</div><div class="cap">Android · 4×2 + 2×2 · ${LKN[st.alook]}</div></div></div>${RULES}`},
+ios(){const d=D[st.state],k=st.ilook;
+  return `<h3>Sizes <i>· ${NAMES[st.state]} · ${LKN[k]}</i></h3><div class="stg ${iwp(k)}">${small(d,st,ic(k))}${medium(d,st,ic(k))}</div>
+  <h3>Every state <i>· small</i></h3><div class="stg ${iwp(k)}" style="gap:12px 10px">${Object.keys(NAMES).map(s=>`<div class="cell">${zoom(small(D[s],st,ic(k)),.78)}<span>${NAMES[s]}</span></div>`).join('')}</div>
+  <h3>Every look</h3><div style="display:flex;gap:10px">${['light','dark','tinted','clear'].map(l=>`<div class="stg ${iwp(l)}" style="padding:12px;flex:1;justify-content:center"><div class="cell">${zoom(small(d,st,ic(l)),.82)}<span>${LKN[l]}</span></div></div>`).join('')}</div>
+  <h3>Lock Screen <i>· optional, new: rectangular, circular (opens Scan) and inline</i></h3>
+  <div class="lock wp-d"><div class="ld">Tue 27 ${SHIP.replace('ship','ship" style="width:18px;height:15px')}<span class="bal">${d.hid?'₿ ••••••':amt(d.b,st)}</span></div><div class="lt">9:41</div>
+  <div class="lw"><div class="lr"><div class="bal">${big(d,st)}</div>${status(d,st,0,1)||fi(d,{...st,fiat:'on'})}</div><div class="lc2">${I.scan}</div></div></div>`},
+android(){const d=D[st.state],k=st.alook;
+  return `<h3>Sizes <i>· ${NAMES[st.state]} · ${LKN[k]} · one resizable widget, four layouts</i></h3><div class="stg ${awp(k)}" style="gap:12px">${medium(d,st,ac(k))}${small(d,st,ac(k))}${a41(d,st,ac(k))}${a21(d,st,ac(k))}</div>
+  <div class="cap">4×2 · 2×2 · 4×1 · 2×1. The launcher picks the layout from the size (Android 12+ size map, options bundle on older versions).</div>
+  <h3>Every state <i>· 2×2</i></h3><div class="stg ${awp(k)}" style="gap:12px 10px">${Object.keys(NAMES).map(s=>`<div class="cell">${zoom(small(D[s],st,ac(k)),.74)}<span>${NAMES[s]}</span></div>`).join('')}</div>
+  <h3>Colour</h3><div style="display:flex;gap:10px">${['light','dark','you'].map(l=>`<div class="stg ${awp(l)}" style="padding:12px;flex:1;justify-content:center"><div class="cell">${zoom(small(d,st,ac(l)),.86)}<span>${LKN[l]}</span></div></div>`).join('')}</div>`},
+v1(){const d=D[st.state],k=st.ilook,a=st.alook;
+  return `<div class="ba"><h3 style="margin:0">v1</h3><h3 style="margin:0">v2</h3>
+  <div class="stg ${iwp(k)}" style="justify-content:center">${small1(d,st,ic(k))}</div><div class="stg ${iwp(k)}" style="justify-content:center">${small(d,st,ic(k))}</div>
+  <div class="stg ${iwp(k)}" style="justify-content:center">${zoom(medium1(d,st,ic(k)),.88)}</div><div class="stg ${iwp(k)}" style="justify-content:center">${zoom(medium(d,st,ic(k)),.88)}</div>
+  <div class="stg ${awp(a)}" style="justify-content:center">${small1(d,st,ac(a))}</div><div class="stg ${awp(a)}" style="justify-content:center">${small(d,st,ac(a))}</div></div>${RULES}`}};
+function fit(root){root.querySelectorAll('.w .bal,.lr .bal').forEach(e=>{e.style.fontSize='';let s=parseFloat(getComputedStyle(e).fontSize);const m=s*.5;
+  while(e.scrollWidth>e.clientWidth+.5&&s>m){s-=.5;e.style.fontSize=s+'px'}})}
+function render(){document.getElementById('ctl').innerHTML=CTL.map(([k,l,opts])=>`<div class="grp">${l?`<em>${l}</em>`:''}${opts.map(([v,n])=>`<button class="chip${st[k]==v?' on':''}" data-k="${k}" data-v="${v}">${n}</button>`).join('')}</div>`).join('');
+  const m=document.getElementById('main');m.innerHTML=V[st.view]();fit(m);seas(m)}
+document.addEventListener('click',e=>{const b=e.target.closest('.chip');if(!b)return;st[b.dataset.k]=b.dataset.v;render()});
+render();document.fonts.ready.then(render);
+</script></body></html>

@@ -1,0 +1,700 @@
+{
+  "$comment": "Widget balance wave (docs/native-rewrite/design/widgets.md). dailyBalances: value[30] = current balance; value[i] = current minus changes whose local date (timeZone) is after day i; change = value[30] - value[0]; calm when every value is equal. swell: two [1,2,1]/4 passes with clamped edges; compare with 1e-6 tolerance. Generated from the v2 mockup reference code.",
+  "cases": [
+    {
+      "name": "Mockup month: one change at noon on most days",
+      "input": {
+        "kind": "dailyBalances",
+        "now": "2026-10-27T15:00:00Z",
+        "timeZone": "UTC",
+        "currentBalance": 252742,
+        "changes": [
+          {
+            "at": "2026-09-28T12:00:00Z",
+            "delta": 8000
+          },
+          {
+            "at": "2026-09-29T12:00:00Z",
+            "delta": -2500
+          },
+          {
+            "at": "2026-10-01T12:00:00Z",
+            "delta": 4842
+          },
+          {
+            "at": "2026-10-03T12:00:00Z",
+            "delta": -4200
+          },
+          {
+            "at": "2026-10-05T12:00:00Z",
+            "delta": 15000
+          },
+          {
+            "at": "2026-10-06T12:00:00Z",
+            "delta": -10000
+          },
+          {
+            "at": "2026-10-08T12:00:00Z",
+            "delta": -3200
+          },
+          {
+            "at": "2026-10-09T12:00:00Z",
+            "delta": 21000
+          },
+          {
+            "at": "2026-10-11T12:00:00Z",
+            "delta": -6000
+          },
+          {
+            "at": "2026-10-12T12:00:00Z",
+            "delta": -5000
+          },
+          {
+            "at": "2026-10-14T12:00:00Z",
+            "delta": 9500
+          },
+          {
+            "at": "2026-10-15T12:00:00Z",
+            "delta": 1500
+          },
+          {
+            "at": "2026-10-17T12:00:00Z",
+            "delta": -7800
+          },
+          {
+            "at": "2026-10-18T12:00:00Z",
+            "delta": -500
+          },
+          {
+            "at": "2026-10-20T12:00:00Z",
+            "delta": 12000
+          },
+          {
+            "at": "2026-10-21T12:00:00Z",
+            "delta": 6000
+          },
+          {
+            "at": "2026-10-23T12:00:00Z",
+            "delta": -4000
+          },
+          {
+            "at": "2026-10-24T12:00:00Z",
+            "delta": -10000
+          },
+          {
+            "at": "2026-10-25T12:00:00Z",
+            "delta": 3400
+          },
+          {
+            "at": "2026-10-26T12:00:00Z",
+            "delta": 2100
+          }
+        ]
+      },
+      "expected": {
+        "values": [
+          222600,
+          230600,
+          228100,
+          228100,
+          232942,
+          232942,
+          228742,
+          228742,
+          243742,
+          233742,
+          233742,
+          230542,
+          251542,
+          251542,
+          245542,
+          240542,
+          240542,
+          250042,
+          251542,
+          251542,
+          243742,
+          243242,
+          243242,
+          255242,
+          261242,
+          261242,
+          257242,
+          247242,
+          250642,
+          252742,
+          252742
+        ],
+        "change": 30142,
+        "calm": false
+      }
+    },
+    {
+      "name": "A change at local midnight belongs to the day it starts",
+      "input": {
+        "kind": "dailyBalances",
+        "now": "2026-10-27T15:00:00Z",
+        "timeZone": "UTC",
+        "currentBalance": 10000,
+        "changes": [
+          {
+            "at": "2026-10-20T00:00:00Z",
+            "delta": 4000
+          },
+          {
+            "at": "2026-10-19T23:59:59Z",
+            "delta": 6000
+          }
+        ]
+      },
+      "expected": {
+        "values": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          6000,
+          10000,
+          10000,
+          10000,
+          10000,
+          10000,
+          10000,
+          10000,
+          10000
+        ],
+        "change": 10000,
+        "calm": false
+      }
+    },
+    {
+      "name": "Local days, not UTC days (Tokyo)",
+      "input": {
+        "kind": "dailyBalances",
+        "now": "2026-10-27T01:00:00Z",
+        "timeZone": "Asia/Tokyo",
+        "currentBalance": 5000,
+        "changes": [
+          {
+            "at": "2026-10-26T16:30:00Z",
+            "delta": 2000
+          },
+          {
+            "at": "2026-10-26T14:30:00Z",
+            "delta": 3000
+          }
+        ]
+      },
+      "expected": {
+        "values": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          3000,
+          5000
+        ],
+        "change": 5000,
+        "calm": false
+      }
+    },
+    {
+      "name": "Daylight saving ends inside the window (New York)",
+      "input": {
+        "kind": "dailyBalances",
+        "now": "2026-11-10T17:00:00Z",
+        "timeZone": "America/New_York",
+        "currentBalance": 70000,
+        "changes": [
+          {
+            "at": "2026-11-01T01:30:00-04:00",
+            "delta": 10000
+          },
+          {
+            "at": "2026-11-01T01:30:00-05:00",
+            "delta": 20000
+          },
+          {
+            "at": "2026-10-31T23:30:00-04:00",
+            "delta": 40000
+          }
+        ]
+      },
+      "expected": {
+        "values": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          40000,
+          70000,
+          70000,
+          70000,
+          70000,
+          70000,
+          70000,
+          70000,
+          70000,
+          70000,
+          70000
+        ],
+        "change": 70000,
+        "calm": false
+      }
+    },
+    {
+      "name": "Wallet younger than 30 days starts at zero",
+      "input": {
+        "kind": "dailyBalances",
+        "now": "2026-10-27T15:00:00Z",
+        "timeZone": "UTC",
+        "currentBalance": 47500,
+        "changes": [
+          {
+            "at": "2026-10-22T09:00:00Z",
+            "delta": 50000
+          },
+          {
+            "at": "2026-10-25T18:00:00Z",
+            "delta": -2500
+          }
+        ]
+      },
+      "expected": {
+        "values": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          50000,
+          50000,
+          50000,
+          47500,
+          47500,
+          47500
+        ],
+        "change": 47500,
+        "calm": false
+      }
+    },
+    {
+      "name": "Changes before the window leave it flat",
+      "input": {
+        "kind": "dailyBalances",
+        "now": "2026-10-27T15:00:00Z",
+        "timeZone": "UTC",
+        "currentBalance": 30000,
+        "changes": [
+          {
+            "at": "2026-09-20T12:00:00Z",
+            "delta": 30000
+          }
+        ]
+      },
+      "expected": {
+        "values": [
+          30000,
+          30000,
+          30000,
+          30000,
+          30000,
+          30000,
+          30000,
+          30000,
+          30000,
+          30000,
+          30000,
+          30000,
+          30000,
+          30000,
+          30000,
+          30000,
+          30000,
+          30000,
+          30000,
+          30000,
+          30000,
+          30000,
+          30000,
+          30000,
+          30000,
+          30000,
+          30000,
+          30000,
+          30000,
+          30000,
+          30000
+        ],
+        "change": 0,
+        "calm": true
+      }
+    },
+    {
+      "name": "No changes at all",
+      "input": {
+        "kind": "dailyBalances",
+        "now": "2026-10-27T15:00:00Z",
+        "timeZone": "UTC",
+        "currentBalance": 0,
+        "changes": []
+      },
+      "expected": {
+        "values": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0
+        ],
+        "change": 0,
+        "calm": true
+      }
+    },
+    {
+      "name": "A change earlier today only moves today",
+      "input": {
+        "kind": "dailyBalances",
+        "now": "2026-10-27T15:00:00Z",
+        "timeZone": "UTC",
+        "currentBalance": 21000,
+        "changes": [
+          {
+            "at": "2026-10-27T14:00:00Z",
+            "delta": 1000
+          }
+        ]
+      },
+      "expected": {
+        "values": [
+          20000,
+          20000,
+          20000,
+          20000,
+          20000,
+          20000,
+          20000,
+          20000,
+          20000,
+          20000,
+          20000,
+          20000,
+          20000,
+          20000,
+          20000,
+          20000,
+          20000,
+          20000,
+          20000,
+          20000,
+          20000,
+          20000,
+          20000,
+          20000,
+          20000,
+          20000,
+          20000,
+          20000,
+          20000,
+          20000,
+          21000
+        ],
+        "change": 1000,
+        "calm": false
+      }
+    },
+    {
+      "name": "A future-dated change (clock skew) counts as today",
+      "input": {
+        "kind": "dailyBalances",
+        "now": "2026-10-27T15:00:00Z",
+        "timeZone": "UTC",
+        "currentBalance": 9000,
+        "changes": [
+          {
+            "at": "2026-10-28T03:00:00Z",
+            "delta": 9000
+          }
+        ]
+      },
+      "expected": {
+        "values": [
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          0,
+          9000
+        ],
+        "change": 9000,
+        "calm": false
+      }
+    },
+    {
+      "name": "Swell: mockup month",
+      "input": {
+        "kind": "swell",
+        "series": [
+          222600,
+          230600,
+          228100,
+          228100,
+          232942,
+          232942,
+          228742,
+          228742,
+          243742,
+          233742,
+          233742,
+          230542,
+          251542,
+          251542,
+          245542,
+          240542,
+          240542,
+          250042,
+          251542,
+          251542,
+          243742,
+          243242,
+          243242,
+          255242,
+          261242,
+          261242,
+          257242,
+          247242,
+          250642,
+          252742,
+          252742
+        ]
+      },
+      "expected": {
+        "values": [
+          225443.75,
+          227318.75,
+          228683.875,
+          229769.375,
+          231166.375,
+          231326.875,
+          230992,
+          233067,
+          235929.5,
+          235729.5,
+          234679.5,
+          238104.5,
+          244804.5,
+          248042,
+          245854.5,
+          243073.25,
+          243917,
+          247542,
+          249992,
+          248979.5,
+          246023.25,
+          244635.75,
+          247398.25,
+          253367,
+          258367,
+          258992,
+          255579.5,
+          251810.75,
+          250860.75,
+          251873.25,
+          252610.75
+        ]
+      }
+    },
+    {
+      "name": "Swell: a single spike",
+      "input": {
+        "kind": "swell",
+        "series": [
+          0,
+          0,
+          0,
+          10,
+          0,
+          0,
+          0
+        ]
+      },
+      "expected": {
+        "values": [
+          0,
+          0.625,
+          2.5,
+          3.75,
+          2.5,
+          0.625,
+          0
+        ]
+      }
+    },
+    {
+      "name": "Swell: flat stays flat",
+      "input": {
+        "kind": "swell",
+        "series": [
+          5,
+          5,
+          5,
+          5
+        ]
+      },
+      "expected": {
+        "values": [
+          5,
+          5,
+          5,
+          5
+        ]
+      }
+    },
+    {
+      "name": "Swell: two points",
+      "input": {
+        "kind": "swell",
+        "series": [
+          1,
+          2
+        ]
+      },
+      "expected": {
+        "values": [
+          1.375,
+          1.625
+        ]
+      }
+    }
+  ]
+}

@@ -206,6 +206,11 @@ on disposable devices you created, copy these two JSON cases into the shared
 directory and deletes its plaintext wallet/scratch afterward. See both native
 READMEs for direct-restore and newer-backup evidence.
 
+`widgets.json` (13 cases) is the widget balance wave: 31 daily balances from settled
+changes by local day (midnight, a non-UTC zone, daylight saving, a young wallet, clock
+skew), the 30-day change, calm water, and the two-pass swell smoothing. It comes from the
+widgets v2 mockup's reference code; see `docs/native-rewrite/design/widgets.md`.
+
 The decrypt tool fixture/security checks run from the repo root with either
 `bun test scripts/decrypt_backup.test.js` or
 `node --test scripts/decrypt_backup.test.js` (Node 22.2+). They check both native
