@@ -192,11 +192,18 @@ fun UnifiedPushScreen(fromOnboarding: Boolean, onContinue: () -> Unit) {
             (context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(ClipData.newPlainText("UnifiedPush endpoint", endpoint))
         }
         if (setup.failed) Text(tr("Couldn't register with UnifiedPush. Please try again."), color = MaterialTheme.colorScheme.error)
-        if (endpoint != null && !registering) NoahButton(if (fromOnboarding) "Continue" else "Done", onClick = onContinue)
-        else NoahButton(if (registering) "Registering..." else if (fromOnboarding) "Register" else "Register with UnifiedPush",
-            enabled = !registering && !loading && setup.registration != null) {
-            setup.register()
-        }
+        RegisterAction(setup, fromOnboarding, onContinue)
         Text(tr("Install a distributor app like \"ntfy\" from F-Droid to enable push notifications."))
+    }
+}
+
+/** Register (again) with the picked distributor; once registered, Continue or Done. */
+@Composable
+private fun RegisterAction(setup: UnifiedPushSetup, fromOnboarding: Boolean, onContinue: () -> Unit) {
+    val registering = setup.registering
+    if (setup.endpoint != null && !registering) NoahButton(if (fromOnboarding) "Continue" else "Done", onClick = onContinue)
+    else NoahButton(if (registering) "Registering..." else if (fromOnboarding) "Register" else "Register with UnifiedPush",
+        enabled = !registering && !setup.loading && setup.registration != null) {
+        setup.register()
     }
 }

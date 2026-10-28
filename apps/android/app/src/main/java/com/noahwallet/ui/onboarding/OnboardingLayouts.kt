@@ -141,66 +141,86 @@ internal val LocalTabletopKeyboard = staticCompositionLocalOf { false }
 internal fun FormLayout(leadingTop: @Composable RowScope.() -> Unit = {}, trailingTop: @Composable RowScope.() -> Unit = {},
     headline: @Composable (large: Boolean) -> Unit, form: @Composable ColumnScope.() -> Unit,
     actions: @Composable ColumnScope.() -> Unit, scroll: Boolean = true, accessory: Boolean = false) {
-    val pad = NoahTokens.Space.screen
     val keyboard = WindowInsets.isImeVisible
-    val pose = LocalPose.current
-    @Composable fun OneColumn(modifier: Modifier) = Column(modifier.padding(horizontal = pad)) {
-        Row(Modifier.fillMaxWidth().padding(top = NoahTokens.Space.xs).heightIn(min = NoahTokens.Size.hitTarget),
-            verticalAlignment = Alignment.CenterVertically) { leadingTop(); Spacer(Modifier.weight(1f)); trailingTop() }
-        Column(Modifier.weight(1f).fillMaxWidth().then(if (scroll) Modifier.verticalScroll(rememberScrollState()) else Modifier)) {
-            Spacer(Modifier.height(NoahTokens.Space.l))
-            headline(false)
-            form()
-        }
-        Column(Modifier.fillMaxWidth().padding(bottom = NoahTokens.Space.s), content = actions)
-    }
+    val slots = FormSlots(leadingTop, trailingTop, headline, form, actions)
     // Each pose keeps one composition structure whether or not the keyboard is up: only modifiers change, so
     // the focused field is never recreated (which would drop focus and close the keyboard again).
-    when (pose) {
-        OnboardingPose.Compact -> OneColumn(Modifier.fillMaxSize())
-        is OnboardingPose.Tabletop -> CompositionLocalProvider(LocalTabletopKeyboard provides keyboard) {
-            Box(Modifier.fillMaxSize()) {
-                // Keyboard hidden: the headline stays fixed above the fold and only the pane below scrolls, clipped
-                // to that pane, so nothing scrolls through the hinge. Keyboard up: headline, field and primary
-                // action share the top half and the keyboard has the bottom. The form keeps its place either way.
-                Column(Modifier.fillMaxWidth().then(if (keyboard) Modifier.heightIn(max = pose.top) else Modifier.fillMaxHeight())
-                    .padding(horizontal = pad), horizontalAlignment = Alignment.CenterHorizontally) {
-                    Box(Modifier.widthIn(max = OnboardingPose.paneContent.dp).fillMaxWidth().padding(top = topBarHeight)
-                        .then(if (keyboard) Modifier else Modifier.height(pose.top - topBarHeight)),
-                        contentAlignment = Alignment.CenterStart) { headline(false) }
-                    Spacer(Modifier.height(if (keyboard) 0.dp else pose.bottom - pose.top))
-                    Column(Modifier.weight(1f, fill = !keyboard).widthIn(max = OnboardingPose.paneContent.dp).fillMaxWidth()
-                        .clipToBounds().verticalScroll(rememberScrollState())) {
-                        Spacer(Modifier.height(if (keyboard) 0.dp else NoahTokens.Space.l))
-                        form()
-                        Spacer(Modifier.height(NoahTokens.Space.xl))
-                        if (!(accessory && keyboard)) actions()
-                        Spacer(Modifier.height(NoahTokens.Space.s))
-                    }
-                    if (accessory && keyboard) Column(Modifier.widthIn(max = OnboardingPose.paneContent.dp).fillMaxWidth(), content = actions)
-                }
-                Box(Modifier.fillMaxSize().padding(horizontal = pad)) { TopRow(leadingTop, trailingTop) }
-            }
+    when (val pose = LocalPose.current) {
+        OnboardingPose.Compact -> OneColumnForm(slots, scroll)
+        is OnboardingPose.Tabletop -> CompositionLocalProvider(LocalTabletopKeyboard provides keyboard) { TabletopForm(pose, slots, keyboard, accessory) }
+        is OnboardingPose.Wide -> WideForm(pose, slots, keyboard, accessory)
+    }
+}
+
+/** A form's parts: the top row's ends, the headline (large in a split pane), the fields and the actions. */
+private class FormSlots(val leadingTop: @Composable RowScope.() -> Unit, val trailingTop: @Composable RowScope.() -> Unit,
+    val headline: @Composable (large: Boolean) -> Unit, val form: @Composable ColumnScope.() -> Unit, val actions: @Composable ColumnScope.() -> Unit)
+
+@Composable
+private fun OneColumnForm(slots: FormSlots, scroll: Boolean) {
+    val pad = NoahTokens.Space.screen
+    Column(Modifier.fillMaxSize().padding(horizontal = pad)) {
+        Row(Modifier.fillMaxWidth().padding(top = NoahTokens.Space.xs).heightIn(min = NoahTokens.Size.hitTarget),
+            verticalAlignment = Alignment.CenterVertically) { slots.leadingTop(this); Spacer(Modifier.weight(1f)); slots.trailingTop(this) }
+        Column(Modifier.weight(1f).fillMaxWidth().then(if (scroll) Modifier.verticalScroll(rememberScrollState()) else Modifier)) {
+            Spacer(Modifier.height(NoahTokens.Space.l))
+            slots.headline(false)
+            slots.form(this)
         }
-        is OnboardingPose.Wide -> SplitPanes(pose, picture = {
-            Box(Modifier.fillMaxSize().padding(horizontal = pad)) {
-                PaneColumn(top = keyboard) {
-                    Box(Modifier.widthIn(max = OnboardingPose.paneContent.dp)) { headline(true) }
-                }
-                TopRow(leading = leadingTop)
+        Column(Modifier.fillMaxWidth().padding(bottom = NoahTokens.Space.s), content = slots.actions)
+    }
+}
+
+/**
+ * Keyboard hidden: the headline stays fixed above the fold and only the pane below scrolls, clipped to that pane, so
+ * nothing scrolls through the hinge. Keyboard up: headline, field and primary action share the top half and the
+ * keyboard has the bottom. The form keeps its place either way.
+ */
+@Composable
+private fun TabletopForm(pose: OnboardingPose.Tabletop, slots: FormSlots, keyboard: Boolean, accessory: Boolean) {
+    val pad = NoahTokens.Space.screen
+    Box(Modifier.fillMaxSize()) {
+        Column(Modifier.fillMaxWidth().then(if (keyboard) Modifier.heightIn(max = pose.top) else Modifier.fillMaxHeight())
+            .padding(horizontal = pad), horizontalAlignment = Alignment.CenterHorizontally) {
+            Box(Modifier.widthIn(max = OnboardingPose.paneContent.dp).fillMaxWidth().padding(top = topBarHeight)
+                .then(if (keyboard) Modifier else Modifier.height(pose.top - topBarHeight)),
+                contentAlignment = Alignment.CenterStart) { slots.headline(false) }
+            Spacer(Modifier.height(if (keyboard) 0.dp else pose.bottom - pose.top))
+            Column(Modifier.weight(1f, fill = !keyboard).widthIn(max = OnboardingPose.paneContent.dp).fillMaxWidth()
+                .clipToBounds().verticalScroll(rememberScrollState())) {
+                Spacer(Modifier.height(if (keyboard) 0.dp else NoahTokens.Space.l))
+                slots.form(this)
+                Spacer(Modifier.height(NoahTokens.Space.xl))
+                if (!(accessory && keyboard)) slots.actions(this)
+                Spacer(Modifier.height(NoahTokens.Space.s))
             }
-        }) {
-            Box(Modifier.fillMaxSize().padding(horizontal = pad)) {
-                Column(Modifier.fillMaxSize()) {
-                    PaneColumn(top = keyboard, modifier = Modifier.weight(1f)) {
-                        form()
-                        Spacer(Modifier.height(NoahTokens.Space.xl))
-                        if (!(accessory && keyboard)) actions()
-                    }
-                    if (accessory && keyboard) Column(Modifier.fillMaxWidth().padding(bottom = NoahTokens.Space.s), content = actions)
-                }
-                TopRow(trailing = trailingTop)
+            if (accessory && keyboard) Column(Modifier.widthIn(max = OnboardingPose.paneContent.dp).fillMaxWidth(), content = slots.actions)
+        }
+        Box(Modifier.fillMaxSize().padding(horizontal = pad)) { TopRow(slots.leadingTop, slots.trailingTop) }
+    }
+}
+
+@Composable
+private fun WideForm(pose: OnboardingPose.Wide, slots: FormSlots, keyboard: Boolean, accessory: Boolean) {
+    val pad = NoahTokens.Space.screen
+    SplitPanes(pose, picture = {
+        Box(Modifier.fillMaxSize().padding(horizontal = pad)) {
+            PaneColumn(top = keyboard) {
+                Box(Modifier.widthIn(max = OnboardingPose.paneContent.dp)) { slots.headline(true) }
             }
+            TopRow(leading = slots.leadingTop)
+        }
+    }) {
+        Box(Modifier.fillMaxSize().padding(horizontal = pad)) {
+            Column(Modifier.fillMaxSize()) {
+                PaneColumn(top = keyboard, modifier = Modifier.weight(1f)) {
+                    slots.form(this)
+                    Spacer(Modifier.height(NoahTokens.Space.xl))
+                    if (!(accessory && keyboard)) slots.actions(this)
+                }
+                if (accessory && keyboard) Column(Modifier.fillMaxWidth().padding(bottom = NoahTokens.Space.s), content = slots.actions)
+            }
+            TopRow(trailing = slots.trailingTop)
         }
     }
 }
@@ -263,8 +283,9 @@ internal fun OnboardingFrame(clock: SceneClock?, splitAtWindowCentre: Boolean = 
             // Home beside a navigation rail: with no separating fold, split where a fold would be (the window's
             // centre), so a Pixel Fold keeps its panes in place as it bends from flat to book.
             val centre = with(density) { (window / 2f - origin.x).toDp() }
-            val pose = if (splitAtWindowCentre && hinges.isEmpty() && resolved is OnboardingPose.Wide && centre > 280.dp && maxWidth - centre > 280.dp)
-                OnboardingPose.Wide(centre, centre) else resolved
+            val unfolded = splitAtWindowCentre && hinges.isEmpty()
+            val roomy = centre > 280.dp && maxWidth - centre > 280.dp
+            val pose = if (unfolded && resolved is OnboardingPose.Wide && roomy) OnboardingPose.Wide(centre, centre) else resolved
             val sheetPane = (pose as? OnboardingPose.Wide)?.let { with(density) { SheetPane(origin.x.toDp() + it.end, maxWidth - it.end) } }
             val rootProvider = remember { { root } }
             CompositionLocalProvider(LocalPose provides pose, LocalSheetPane provides sheetPane,
