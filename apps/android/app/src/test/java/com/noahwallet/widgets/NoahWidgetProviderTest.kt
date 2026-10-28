@@ -438,16 +438,18 @@ class NoahWidgetProviderTest {
             listOf(172.19f, 151.62f).flatMap { w -> listOf(120f, 137f, 160f, 233.9f).map { w to it } }
         val placements = mutableSetOf<String>()
         val layouts = mutableSetOf<WidgetLayout>()
+        val actions = mutableSetOf<String>()
         try {
             for (scale in listOf(1f, 1.3f, 2f)) {
                 RuntimeEnvironment.setFontScale(scale)
                 for ((variant, snapshot, size) in cases.flatMap { (variant, snapshot) -> sizes.map { Triple(variant, snapshot, it) } }) {
                     val slot = layOut(scale, variant, snapshot, size)
                     layouts += slot.plan.layout
-                    checkLargeText(slot)?.let(placements::add)
+                    checkLargeText(slot, actions)?.let(placements::add)
                 }
             }
             assertEquals(setOf("beside", "own line", "left out"), placements)
+            assertEquals(setOf("labels", "icons"), actions)
             assertEquals(setOf(WidgetLayout.medium, WidgetLayout.wide, WidgetLayout.small, WidgetLayout.narrow), layouts)
             RuntimeEnvironment.setFontScale(1f)
             // The landscape phone's 4×2 (676.57 × 137.14 dp) with fiat and a status line: the 4×1; without the status line, it fits.
@@ -483,8 +485,11 @@ class NoahWidgetProviderTest {
         return LaidOut(view, content, plan, width, clip, at)
     }
 
-    /** The balance and the status line whole inside the widget, then its layout's label, Actions or label row; medium's label placement. */
-    private fun checkLargeText(slot: LaidOut): String? {
+    /**
+     * The balance and the status line whole inside the widget, then its layout's label, Actions (medium's into [actions])
+     * or label row; medium's label placement.
+     */
+    private fun checkLargeText(slot: LaidOut, actions: MutableSet<String>): String? {
         val view = slot.view; val at = slot.at; val clip = slot.clip
         assertTrue("$at: the balance", view.bottom(R.id.widget_balance) <= clip)
         // The status line whole, at every size and font scale.
@@ -494,14 +499,14 @@ class NoahWidgetProviderTest {
                 assertTrue("$at: \"${view.text(id)}\" at ${view.top(id)}..${view.bottom(id)} px, clipped at $clip", view.readable(id, clip))
         }
         return when (slot.plan.layout) {
-            WidgetLayout.medium -> checkMedium(slot)
+            WidgetLayout.medium -> checkMedium(slot, actions)
             WidgetLayout.wide -> { checkWide(slot); null }
             WidgetLayout.small -> { checkSmall(slot); null }
             else -> null
         }
     }
 
-    private fun checkMedium(slot: LaidOut): String {
+    private fun checkMedium(slot: LaidOut, actions: MutableSet<String>): String {
         val view = slot.view; val content = slot.content; val at = slot.at; val clip = slot.clip; val width = slot.width
         val d = context.resources.displayMetrics.density
         val label = slot.plan.label!!
@@ -521,13 +526,29 @@ class NoahWidgetProviderTest {
             assertTrue("$at: inside the padding", view.right(change) <= ((width - 18f) * d).toInt() + 1)
         }
         // ...and under the fiat and the status line, every Action whole inside the widget.
+        checkActions(slot, actions)
+        return placement
+    }
+
+    /** Medium's Actions, each whole inside the widget: its label whole inside the button, or its icon alone, its label the description. */
+    private fun checkActions(slot: LaidOut, actions: MutableSet<String>) {
+        val view = slot.view; val content = slot.content; val plan = slot.plan; val at = slot.at; val clip = slot.clip
+        val d = context.resources.displayMetrics.density
         val above = if (content.status != null) view.bottom(R.id.widget_status) else view.bottom(R.id.widget_fiat)
-        for (id in listOf(R.id.widget_receive, R.id.widget_scan, R.id.widget_send)) {
+        actions += if (plan.actions != null) "labels" else "icons"
+        for ((id, label, text) in listOf(Triple(R.id.widget_receive, R.id.widget_receive_label, content.receive),
+            Triple(R.id.widget_scan, R.id.widget_scan_label, content.scan), Triple(R.id.widget_send, R.id.widget_send_label, content.send))) {
             assertEquals(at, (40 * d).toInt(), view.findViewById<View>(id).height)
             assertTrue("$at: an Action at ${view.top(id)}..${view.bottom(id)} px, the line above to $above, clipped at $clip",
                 view.top(id) >= above && view.bottom(id) <= clip)
+            assertEquals(at, text, view.findViewById<View>(id).contentDescription)
+            assertEquals(at, plan.actions != null, view.shown(label))
+            if (plan.actions != null) {
+                assertTrue("$at: \"${view.text(label)}\"", view.whole(label))
+                assertTrue(at, view.left(label) >= view.left(id) && view.right(label) <= view.right(id) &&
+                    view.top(label) >= view.top(id) && view.bottom(label) <= view.bottom(id))
+            }
         }
-        return placement
     }
 
     /** The balance at its floor in the column, and every icon button whole inside the widget. */

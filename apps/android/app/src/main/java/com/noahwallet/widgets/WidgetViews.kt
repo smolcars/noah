@@ -269,10 +269,26 @@ internal object WidgetViews {
         }
     }
 
+    /** The Actions' labels never go below this (sp, before the font scale); below it the buttons show their icons alone. */
+    const val ACTION_FLOOR = 11f
+
+    /** The medium Actions' label size (sp, before the font scale) at which all three fit their buttons; null for icons alone. */
+    private fun actions(type: Type, content: WidgetContent, widthDp: Float): Float? {
+        // Three buttons 8 dp apart, each with 6 dp of padding a side, the 16 dp icon and 6 dp before the label; 1 dp to spare.
+        val room = (widthDp - 36f - 16f) / 3 - 12f - 16f - 6f - 1f
+        return generateSequence(14f) { it - .5f }.takeWhile { it >= ACTION_FLOOR }.firstOrNull { sp ->
+            listOf(content.receive, content.scan, content.send).all { type.wide(it, type.paint(type.medium, sp, exact = true)) <= room }
+        }
+    }
+
     private fun bold(text: String) = SpannableString(text).apply { setSpan(StyleSpan(Typeface.BOLD), 0, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE) }
 
-    /** One size as set out: its layout, the status line, the medium label, and the 2×2's label row (dp). */
-    data class Plan(val layout: WidgetLayout, val status: StatusFit? = null, val label: Label? = null, val labelRow: Float = 18f)
+    /**
+     * One size as set out: its layout, the status line, the medium label, the 2×2's label row (dp), and the medium
+     * Actions' label size (sp, [actions]; null for icons alone).
+     */
+    data class Plan(val layout: WidgetLayout, val status: StatusFit? = null, val label: Label? = null, val labelRow: Float = 18f,
+        val actions: Float? = null)
 
     /**
      * The layout for a [widthDp] × [heightDp] slot: by size, but a two-row layout only where its content fits the height
@@ -290,7 +306,8 @@ internal object WidgetViews {
             return when (layout) {
                 WidgetLayout.medium -> {
                     val needs = 17f + 38f + fiat + lines + 40f + 16f
-                    if (needs > heightDp) null else Plan(layout, status, label(type, content, widthDp, heightDp - needs))
+                    if (needs > heightDp) null
+                    else Plan(layout, status, label(type, content, widthDp, heightDp - needs), actions = actions(type, content, widthDp))
                 }
                 WidgetLayout.small -> {
                     val row = labelRow(type, content)
@@ -385,7 +402,7 @@ internal object WidgetViews {
         views.setViewVisibility(R.id.widget_fiat, if (fiat != null) View.VISIBLE else View.GONE)
         status(views, layout, content.status, plan.status)
         labels(views, layout, content, label)
-        actions(context, views, variant, layout, content)
+        buttons(context, views, variant, plan, content)
         return views
     }
 
@@ -411,18 +428,26 @@ internal object WidgetViews {
     }
 
     /** Receive, Scan and Send, where the layout has them. */
-    private fun actions(context: Context, views: RemoteViews, variant: String, layout: WidgetLayout, content: WidgetContent) {
+    private fun buttons(context: Context, views: RemoteViews, variant: String, plan: Plan, content: WidgetContent) {
+        val layout = plan.layout
         if (layout == WidgetLayout.medium || layout == WidgetLayout.wide) {
             for ((id, route, label) in listOf(Triple(R.id.widget_receive, Route.receive, content.receive),
                 Triple(R.id.widget_scan, Route.scan, content.scan), Triple(R.id.widget_send, Route.send, content.send))) {
                 views.setOnClickPendingIntent(id, open(context, variant, route))
                 views.setContentDescription(id, label)
             }
-            if (layout == WidgetLayout.medium) {
-                views.setTextViewText(R.id.widget_receive_label, content.receive)
-                views.setTextViewText(R.id.widget_scan_label, content.scan)
-                views.setTextViewText(R.id.widget_send_label, content.send)
-            }
+            if (layout == WidgetLayout.medium) buttonLabels(views, plan, content)
+        }
+    }
+
+    /** Medium: labels at the size all three fit, or icons alone, the label still the button's description; never an ellipsis. */
+    private fun buttonLabels(views: RemoteViews, plan: Plan, content: WidgetContent) {
+        val labels = listOf(R.id.widget_receive_label to content.receive, R.id.widget_scan_label to content.scan,
+            R.id.widget_send_label to content.send)
+        for ((id, text) in labels) {
+            views.setTextViewText(id, text)
+            views.setViewVisibility(id, if (plan.actions != null) View.VISIBLE else View.GONE)
+            plan.actions?.let { views.setTextViewTextSize(id, TypedValue.COMPLEX_UNIT_SP, it) }
         }
     }
 
