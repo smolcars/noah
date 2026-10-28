@@ -170,13 +170,21 @@ internal object WidgetViews {
                 .takeWhile { (_, end) -> end != java.text.BreakIterator.DONE }.map { (start, end) -> string.substring(start, end).trimEnd() }.toList()
         }
 
-        /** [text] laid out [widthDp] wide (on one line if null), as a TextView without font padding: its lines and height (dp). */
-        fun lines(text: CharSequence?, paint: TextPaint, widthDp: Float? = null): Pair<Int, Float> {
-            if (text.isNullOrEmpty()) return 0 to 0f
+        /**
+         * [text] laid out [widthDp] wide (on one line if null) as its TextView draws it: simple breaks and no hyphens (the
+         * builder's defaults, as the status views set them), the fallback fonts' line spacing, and font padding only where
+         * the view keeps it ([pad]).
+         */
+        fun layout(text: CharSequence, paint: TextPaint, widthDp: Float? = null, pad: Boolean = false): StaticLayout {
             val width = widthDp?.let { (it * metrics.density).toInt() } ?: (ceil(Layout.getDesiredWidth(text, paint)).toInt() + 1)
-            val laid = StaticLayout.Builder.obtain(text, 0, text.length, paint, width.coerceAtLeast(1)).setIncludePad(false)
+            return StaticLayout.Builder.obtain(text, 0, text.length, paint, width.coerceAtLeast(1)).setIncludePad(pad)
                 .apply { if (Build.VERSION.SDK_INT >= 28) setUseLineSpacingFromFallbacks(true) }.build()
-            return laid.lineCount to laid.height / metrics.density
+        }
+
+        /** [text]'s lines and height (dp), laid out as [layout]. */
+        fun lines(text: CharSequence?, paint: TextPaint, widthDp: Float? = null, pad: Boolean = false): Pair<Int, Float> {
+            if (text.isNullOrEmpty()) return 0 to 0f
+            return layout(text, paint, widthDp, pad).let { it.lineCount to it.height / metrics.density }
         }
     }
 
@@ -202,22 +210,31 @@ internal object WidgetViews {
     }
 
     /**
-     * The status line as set out: its text size (sp, before the font scale), its height (dp, with the gap above it), the
-     * lines each of its parts may take, and whether the medium layout puts the expiry on a line of its own.
+     * The status line as set out: its text size (sp, before the font scale), its height (dp, with the gap above it), each
+     * part's lines, whether the medium layout puts the expiry on a line of its own, and whether it was [forced] to the
+     * lines its room holds.
      */
-    data class StatusFit(val sp: Float, val tall: Float, val lines: Int, val split: Boolean = false)
+    data class StatusFit(val sp: Float, val tall: Float, val lines: List<Int>, val split: Boolean = false, val forced: Boolean = false)
 
-    /** The status line never goes below this (sp, before the font scale). */
+    /** Width (dp) left over when fitting text: each view in a row rounds to whole pixels, up to half a pixel each. */
+    const val SPARE = 3f
+
+    /** The status line goes down to this in two rows (sp, before the font scale). */
     const val STATUS_FLOOR = 11f
 
+    /** One row's status, and the fiat everywhere, go down to this, as their autoSize did (sp, before the font scale). */
+    const val LINE_FLOOR = 9f
+
     /**
-     * The status line in a [widthDp] × [heightDp] [layout]: at the largest size from 13 sp (12 in one row) down to
-     * [STATUS_FLOOR] that fits each part on a line, else wrapped (medium: "Renew" and the expiry under it, as on iOS) onto
-     * two lines, or in one row as many as the height leaves beside the balance, up to three, breaking only where the text
-     * may break. Its row grows with the text, so large text is never cut; null where it doesn't fit, unless [force]d.
+     * The status line in a [widthDp] [layout] with [roomDp] of height for it: at the largest size from 13 sp (12 in one
+     * row) down to its floor that fits each part on one line, else wrapped (medium: "Renew" and the expiry under it, as on
+     * iOS) onto as many lines as the room holds, breaking only where the text may break. Every height is the real text's,
+     * laid out as its TextView draws it; its row grows with it, so large text is never cut. Null where it doesn't fit,
+     * unless [force]d: then at the floor, on the lines the room holds.
      */
-    private class StatusLayout(val type: Type, val layout: WidgetLayout, status: WidgetContent.Status, widthDp: Float, val heightDp: Float) {
+    private class StatusLayout(val type: Type, val layout: WidgetLayout, status: WidgetContent.Status, widthDp: Float, val roomDp: Float) {
         val oneRow = layout == WidgetLayout.narrow || layout == WidgetLayout.wide
+        val medium = layout == WidgetLayout.medium
         val renew = status as? WidgetContent.Status.Renew
         val title: CharSequence = when (status) {
             is WidgetContent.Status.Renew -> if (oneRow) status.expiry else bold(status.title)
@@ -236,61 +253,79 @@ internal object WidgetViews {
             renew != null -> if (oneRow) 16f else 19f
             else -> if (oneRow) 10f else 12f
         }
+        val gap = if (oneRow) 1f else 5f
         val least = if (oneRow) 16f else 17f
-        val sizes = generateSequence(if (oneRow) 12f else 13f) { it - .5f }.takeWhile { it >= STATUS_FLOOR }.toList()
+        val floor = if (oneRow) LINE_FLOOR else STATUS_FLOOR
+        val sizes = generateSequence(if (oneRow) 12f else 13f) { it - .5f }.takeWhile { it >= floor }.toList()
 
         // Each part's text and room: medium Renew on one line, or split as the 2×2 always has it.
         fun parts(split: Boolean): List<Pair<CharSequence, Float>> = when {
             renew == null || oneRow -> listOf(title to row - icon)
-            layout == WidgetLayout.medium && !split -> listOf(SpannableStringBuilder(title).append(" · ${renew.expiry}") to row - icon)
+            medium && !split -> listOf(SpannableStringBuilder(title).append(" · ${renew.expiry}") to row - icon)
             else -> listOf(title to row - icon, renew.expiry to row)
         }
 
         fun paint(sp: Float) = type.paint(type.medium, sp, exact = true)
-
-        // 1 dp to spare for each view's whole pixels.
-        fun lines(text: CharSequence, room: Float, sp: Float) = type.lines(text, paint(sp), room - 1f)
-        fun breaks(text: CharSequence, room: Float, sp: Float) = type.segments(text).all { type.wide(it, paint(sp)) <= room - 1f }
-        fun most(sp: Float) = if (!oneRow) 2 else ((heightDp - 28f - 1f) / type.lines("0", paint(sp)).second).toInt().coerceIn(1, 3)
-        fun fits(parts: List<Pair<CharSequence, Float>>, sp: Float, max: Int) =
-            parts.all { (text, room) -> lines(text, room, sp).first <= max && breaks(text, room, sp) }
-        fun pick(parts: List<Pair<CharSequence, Float>>) = sizes.firstOrNull { fits(parts, it, 1) } ?: sizes.firstOrNull { fits(parts, it, most(it)) }
+        fun laid(text: CharSequence, room: Float, sp: Float) = type.layout(text, paint(sp), room - SPARE)
+        fun breaks(text: CharSequence, room: Float, sp: Float) = type.segments(text).all { type.wide(it, paint(sp)) <= room - SPARE }
+        fun tall(parts: List<Pair<CharSequence, Float>>, sp: Float) =
+            gap + parts.sumOf { (text, room) -> maxOf(least, laid(text, room, sp).height / type.metrics.density).toDouble() }.toFloat()
+        fun oneLine(parts: List<Pair<CharSequence, Float>>, sp: Float) =
+            parts.all { (text, room) -> laid(text, room, sp).lineCount == 1 } && tall(parts, sp) <= roomDp
+        fun wrapped(parts: List<Pair<CharSequence, Float>>, sp: Float) = parts.all { (text, room) -> breaks(text, room, sp) } && tall(parts, sp) <= roomDp
 
         /** The status line as it fits, or null where it doesn't, unless [force]d. */
         fun fit(force: Boolean): StatusFit? {
-            val one = if (layout == WidgetLayout.medium && renew != null) sizes.firstOrNull { fits(parts(false), it, 1) } else null
-            val split = layout == WidgetLayout.medium && renew != null && one == null
+            val one = if (medium && renew != null) sizes.firstOrNull { oneLine(parts(false), it) } else null
+            val split = medium && renew != null && one == null
             val parts = parts(split)
-            val sp = one ?: pick(parts) ?: if (force) STATUS_FLOOR else return null
-            val max = most(sp)
-            val tall = parts.sumOf { (text, room) ->
-                val (count, height) = lines(text, room, sp)
-                maxOf(least, height * minOf(count, max) / count.coerceAtLeast(1)).toDouble()
-            }.toFloat()
-            return StatusFit(sp, (if (oneRow) 1f else 5f) + tall, max, split)
+            val sp = one ?: sizes.firstOrNull { oneLine(parts, it) } ?: sizes.firstOrNull { wrapped(parts, it) }
+            if (sp != null) return StatusFit(sp, tall(parts, sp), parts.map { (text, room) -> laid(text, room, sp).lineCount }, split)
+            if (!force) return null
+            // The last resort, in one row: at the floor, the lines the room holds.
+            val (text, room) = parts.first()
+            val lines = laid(text, room, floor)
+            val shown = (1..lines.lineCount).lastOrNull { gap + lines.getLineBottom(it - 1) / type.metrics.density <= roomDp } ?: 1
+            return StatusFit(floor, gap + maxOf(least, lines.getLineBottom(shown - 1) / type.metrics.density), listOf(shown), forced = true)
         }
+    }
+
+    /** A line of text as set out: its size (sp, before the font scale) and its height (dp, with the gap above it). */
+    data class Line(val sp: Float, val tall: Float)
+
+    /** The fiat on one line [roomDp] wide: from 13 sp (12 in one row) down to [LINE_FLOOR], its row growing with the text. */
+    private fun fiat(type: Type, layout: WidgetLayout, text: String, roomDp: Float): Line {
+        val oneRow = layout == WidgetLayout.narrow || layout == WidgetLayout.wide
+        fun paint(sp: Float) = type.paint(type.medium, sp, exact = true)
+        val sp = generateSequence(if (oneRow) 12f else 13f) { it - .5f }.takeWhile { it >= LINE_FLOOR }
+            .firstOrNull { type.wide(text, paint(it)) <= roomDp - SPARE } ?: LINE_FLOOR
+        return Line(sp, (if (oneRow) 1f else 2f) + maxOf(if (oneRow) 16f else 17f, type.lines(text, paint(sp)).second))
     }
 
     /** The Actions' labels never go below this (sp, before the font scale); below it the buttons show their icons alone. */
     const val ACTION_FLOOR = 11f
 
-    /** The medium Actions' label size (sp, before the font scale) at which all three fit their buttons; null for icons alone. */
+    /**
+     * The medium Actions' label size (sp, before the font scale) at which all three fit their 40 dp buttons, across and
+     * down (their TextViews keep font padding); null for icons alone.
+     */
     private fun actions(type: Type, content: WidgetContent, widthDp: Float): Float? {
-        // Three buttons 8 dp apart, each with 6 dp of padding a side, the 16 dp icon and 6 dp before the label; 1 dp to spare.
-        val room = (widthDp - 36f - 16f) / 3 - 12f - 16f - 6f - 1f
+        // Three buttons 8 dp apart, each with 6 dp of padding a side, the 16 dp icon and 6 dp before the label.
+        val room = (widthDp - 36f - 16f) / 3 - 12f - 16f - 6f - SPARE
         return generateSequence(14f) { it - .5f }.takeWhile { it >= ACTION_FLOOR }.firstOrNull { sp ->
-            listOf(content.receive, content.scan, content.send).all { type.wide(it, type.paint(type.medium, sp, exact = true)) <= room }
+            val paint = type.paint(type.medium, sp, exact = true)
+            listOf(content.receive, content.scan, content.send).all { type.wide(it, paint) <= room && type.lines(it, paint, pad = true).second <= 40f }
         }
     }
 
     private fun bold(text: String) = SpannableString(text).apply { setSpan(StyleSpan(Typeface.BOLD), 0, length, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE) }
 
     /**
-     * One size as set out: its layout, the status line, the medium label, the 2×2's label row (dp), and the medium
-     * Actions' label size (sp, [actions]; null for icons alone).
+     * One size as set out: its layout, the status line, the medium label, the 2×2's label row (dp), the medium Actions'
+     * label size (sp, [actions]; null for icons alone), and the fiat line.
      */
     data class Plan(val layout: WidgetLayout, val status: StatusFit? = null, val label: Label? = null, val labelRow: Float = 18f,
-        val actions: Float? = null)
+        val actions: Float? = null, val fiat: Line? = null)
 
     /**
      * The layout for a [widthDp] × [heightDp] slot: by size, but a two-row layout only where its content fits the height
@@ -300,37 +335,65 @@ internal object WidgetViews {
      */
     fun plan(context: Context, content: WidgetContent?, widthDp: Float, heightDp: Float): Plan {
         if (content == null) return Plan(WidgetLayout.empty)
-        val type = Type(context)
-        val fiat = fiatRow(content)
-        fun plan(layout: WidgetLayout, force: Boolean = false): Plan? {
-            val status = content.status?.let { StatusLayout(type, layout, it, widthDp, heightDp).fit(force) ?: return null }
-            val lines = status?.tall ?: 0f
-            return when (layout) {
-                WidgetLayout.medium -> {
-                    val needs = 17f + 38f + fiat + lines + 40f + 16f
-                    if (needs > heightDp) null
-                    else Plan(layout, status, label(type, content, widthDp, heightDp - needs), actions = actions(type, content, widthDp))
-                }
-                WidgetLayout.small -> {
-                    val row = labelRow(type, content)
-                    if (15f + row + 34f + fiat + lines + 16f > heightDp) null else Plan(layout, status, labelRow = row)
-                }
-                WidgetLayout.wide -> {
-                    val density = type.metrics.density
-                    val narrowest = WidgetType.minWidth(context, content.balance, content.satsSuffix, 24f, 28f, density, .5f) / density
-                    // 1 dp to spare for the views' whole pixels.
-                    if (balanceBox(layout, widthDp).width < narrowest + 1f) null else Plan(layout, status)
-                }
-                else -> Plan(layout, status)
-            }
-        }
+        val planner = Planner(context, content, widthDp, heightDp)
         val first = WidgetLayout.of(widthDp, heightDp)
-        return listOf(first, WidgetLayout.of(widthDp, 0f), WidgetLayout.narrow).distinct().firstNotNullOfOrNull { plan(it) }
-            ?: plan(WidgetLayout.narrow, force = true)!!
+        return listOf(first, WidgetLayout.of(widthDp, 0f), WidgetLayout.narrow).distinct().firstNotNullOfOrNull { planner.plan(it) }
+            ?: planner.plan(WidgetLayout.narrow, force = true)!!
     }
 
-    /** The fiat line's height and the gap above it (dp), where there is one. */
-    private fun fiatRow(content: WidgetContent) = if (content.fiat != null) 2f + 17f else 0f
+    /** One slot's layouts as [plan] sets each out: null where its content doesn't fit the height, unless [plan] is forced. */
+    private class Planner(val context: Context, val content: WidgetContent, val widthDp: Float, val heightDp: Float) {
+        val type = Type(context)
+
+        fun plan(layout: WidgetLayout, force: Boolean = false): Plan? {
+            val fiatText = fiatText(layout)
+            val fiat = fiatText?.let { fiat(type, layout, it, column(layout)) }
+            val row = if (layout == WidgetLayout.small) labelRow(type, content) else 18f
+            val fixed = fixed(layout, fiat, row)
+            val status = content.status?.let { StatusLayout(type, layout, it, widthDp, heightDp - fixed).fit(force) ?: return null }
+            val needs = fixed + (status?.tall ?: 0f)
+            if (needs > heightDp && !force) return null
+            return when (layout) {
+                WidgetLayout.medium -> medium(status, needs, fiatText)
+                WidgetLayout.small -> Plan(layout, status, labelRow = row, fiat = fiat)
+                // The 44 dp buttons, and the balance at its floor.
+                WidgetLayout.wide -> if (heightDp < 44f || !wideFits()) null else Plan(layout, status, fiat = fiat)
+                else -> Plan(layout, status, fiat = fiat)
+            }
+        }
+
+        // One row shows the status, or else the fiat, under the balance.
+        private fun fiatText(layout: WidgetLayout): String? {
+            val oneRow = layout == WidgetLayout.narrow || layout == WidgetLayout.wide
+            return content.fiat?.takeIf { !oneRow || content.status == null }
+        }
+
+        private fun column(layout: WidgetLayout) = when (layout) {
+            WidgetLayout.medium, WidgetLayout.small -> widthDp - 36f
+            else -> balanceBox(layout, widthDp).width
+        }
+
+        // Everything but the status line: padding, the label row, the balance, the fiat and the Actions.
+        private fun fixed(layout: WidgetLayout, fiat: Line?, row: Float) = (fiat?.tall ?: 0f) + when (layout) {
+            WidgetLayout.medium -> 17f + 38f + 40f + 16f
+            WidgetLayout.small -> 15f + row + 34f + 16f
+            else -> 28f
+        }
+
+        private fun medium(status: StatusFit?, needs: Float, fiatText: String?): Plan {
+            val label = label(type, content, widthDp, heightDp - needs)
+            // The fiat again for the column the label leaves: never taller than what was set aside.
+            return Plan(WidgetLayout.medium, status, label, actions = actions(type, content, widthDp),
+                fiat = fiatText?.let { fiat(type, WidgetLayout.medium, it, balanceBox(WidgetLayout.medium, widthDp, label).width) })
+        }
+
+        // The balance at its floor in the 4×1's column, with 1 dp to spare for the views' whole pixels.
+        private fun wideFits(): Boolean {
+            val density = type.metrics.density
+            val narrowest = WidgetType.minWidth(context, content.balance, content.satsSuffix, 24f, 28f, density, .5f) / density
+            return balanceBox(WidgetLayout.wide, widthDp).width >= narrowest + 1f
+        }
+    }
 
     /**
      * The launcher refuses an update whose bitmaps exceed 1.5 × its display's pixels × 4 bytes (AppWidgetService), across
@@ -403,6 +466,7 @@ internal object WidgetViews {
         val fiat = content.fiat?.takeIf { !oneRow || content.status == null }
         views.setTextViewText(R.id.widget_fiat, fiat.orEmpty())
         views.setViewVisibility(R.id.widget_fiat, if (fiat != null) View.VISIBLE else View.GONE)
+        plan.fiat?.let { views.setTextViewTextSize(R.id.widget_fiat, TypedValue.COMPLEX_UNIT_SP, it.sp) }
         status(views, layout, content.status, plan.status)
         labels(views, layout, content, label)
         buttons(context, views, variant, plan, content)
@@ -475,7 +539,7 @@ internal object WidgetViews {
             }
             null -> {}
         }
-        // Sized to fit (status): every line of the status at one size, in one row on the lines the height leaves.
+        // Sized to fit (status): every line of the status at one size, each part on the lines it was measured to take.
         if (fit != null) size(views, fit, detail, medium)
     }
 
@@ -496,6 +560,7 @@ internal object WidgetViews {
     private fun size(views: RemoteViews, fit: StatusFit, detail: Boolean, medium: Boolean) {
         val ids = listOfNotNull(R.id.widget_status_title, R.id.widget_status_detail.takeIf { detail }, R.id.widget_status_detail_line.takeIf { medium })
         for (id in ids) views.setTextViewTextSize(id, TypedValue.COMPLEX_UNIT_SP, fit.sp)
-        if (!detail) views.setInt(R.id.widget_status_title, "setMaxLines", fit.lines)
+        views.setInt(R.id.widget_status_title, "setMaxLines", fit.lines.first())
+        fit.lines.getOrNull(1)?.let { views.setInt(if (medium) R.id.widget_status_detail_line else R.id.widget_status_detail, "setMaxLines", it) }
     }
 }

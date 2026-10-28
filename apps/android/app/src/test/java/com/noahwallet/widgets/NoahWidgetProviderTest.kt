@@ -572,6 +572,67 @@ class NoahWidgetProviderTest {
             view.findViewById<TextView>(id).let { assertTrue(slot.at, it.layout.height <= it.height + 1) }
     }
 
+    /**
+     * Every language's status shows whole in one row and the 2×1 (Sol review: Japanese in a 350 × 60 dp 4×1 at 100% needed
+     * 35 dp for two lines and got 30, and Spanish "Vence en menos de una hora" lost its end to a three-line cap in a 2×2
+     * slot at 200%). Heights are the real text's, so whatever layout a slot takes, all of its status shows.
+     */
+    @Test fun everyLanguagesStatusShowsWhole() = statusLanguages()
+
+    @Config(qualifiers = "420dpi")
+    @Test
+    fun everyLanguagesStatusShowsWholeOnAPhone() = statusLanguages()
+
+    private fun statusLanguages() {
+        val cases = listOf(month.copy(amountUnit = "sats"), month.copy(arriving = 0, renewDue = now + 40 * 60_000L),
+            month.copy(arriving = 0, renewDue = now + 18 * hour))
+        // 4×1s and 2×1s at a launcher's one-row heights, and 2×2 slots that may fall back to the 2×1.
+        val sizes = listOf(350f to 60f, 350f to 84f, 300f to 100f, 250f to 90f, 172.19f to 110f, 151.62f to 233.9f, 151.62f to 160f)
+        val shown = mutableSetOf<String>()
+        val layouts = mutableSetOf<WidgetLayout>()
+        try {
+            for ((code, scale) in listOf("ja", "es", "ko", "en").flatMap { code -> listOf(1f, 2f).map { code to it } }) {
+                language(code)
+                RuntimeEnvironment.setFontScale(scale)
+                for ((snapshot, size) in cases.flatMap { snapshot -> sizes.map { snapshot to it } }) {
+                    layouts += checkStatusShows("$code $scale×", snapshot, size, shown)
+                }
+            }
+            // Sol's Spanish case: the 2×2 where it fits, or the 2×1 taking the lines its height holds at a readable size,
+            // not three.
+            language("es")
+            RuntimeEnvironment.setFontScale(2f)
+            val es = WidgetViews.plan(context, WidgetContent.of(context, cases[1], "regtest", now), 151.62f, 233.9f)
+            assertTrue(es.toString(), es.layout == WidgetLayout.small ||
+                (es.layout == WidgetLayout.narrow && es.status!!.lines.single() > 3 && es.status.sp >= WidgetViews.STATUS_FLOOR))
+        } finally { RuntimeEnvironment.setFontScale(1f) }
+        assertTrue(WidgetLayout.wide in layouts && WidgetLayout.narrow in layouts)
+        // Sol's strings among those shown whole.
+        assertTrue(shown.toString(), shown.any { "受け取り中" in it })
+        assertTrue(shown.toString(), "Vence en menos de una hora" in shown)
+    }
+
+    /** One slot's status, on the lines its height holds and all of it shown ([shown] collects its text); returns its layout. */
+    private fun checkStatusShows(case: String, snapshot: WidgetSnapshot, size: Pair<Float, Float>, shown: MutableSet<String>): WidgetLayout {
+        val (width, height) = size
+        val d = context.resources.displayMetrics.density
+        val content = WidgetContent.of(context, snapshot, "regtest", now)
+        val plan = WidgetViews.plan(context, content, width, height)
+        val view = laidOut(content, width, height)
+        val at = "$case $width × $height dp, $plan"
+        val twoRows = plan.layout == WidgetLayout.medium || plan.layout == WidgetLayout.small
+        val clip = ((if (twoRows) height - 16f else height) * d).toInt() + 1
+        assertTrue(at, view.shown(R.id.widget_status))
+        // Laid out on the lines its height holds, never cut down to them as a last resort.
+        assertFalse("$at: the last resort", plan.status!!.forced)
+        for (id in listOf(R.id.widget_status_title, R.id.widget_status_detail, R.id.widget_status_detail_line).filter { view.shown(it) }) {
+            assertTrue("$at: \"${view.text(id)}\" at ${view.top(id)}..${view.bottom(id)} px, clipped at $clip", view.readable(id, clip))
+            shown += view.text(id).trim(' ', '·')
+        }
+        assertTrue("$at: the balance", view.bottom(R.id.widget_balance) <= clip)
+        return plan.layout
+    }
+
     /** The placed widget renders through the provider, from the old keys before the app runs, then the full snapshot. */
     @Test fun placedWidgetRendersOldKeysThenTheSnapshot() {
         language("en")
