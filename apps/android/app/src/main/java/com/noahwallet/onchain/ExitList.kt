@@ -86,19 +86,7 @@ internal fun ExitListContent(exits: List<ExitModel>, tip: Long, needsFunds: Set<
                 if (it != filter) haptics.selection()
                 filter = it
             }
-        }, foot = {
-            FootPill(tr("Exit more VTXOs"), Modifier.testTag("exit-more"), wrap = true, outlined = claimable.isNotEmpty(), enabled = !suspended, onClick = more)
-            if (claimable.isNotEmpty()) FootPill(tr("Claim {amount}", money(claimable.sumOf { it.amount })), Modifier.testTag("exit-list-claim"), wrap = true,
-                enabled = !suspended, onClick = claim)
-        }, leading = {
-            Text(exitCounts(stages.values) ?: tr("No exits in progress"), Modifier.padding(top = 8.dp),
-                style = HomeType.line.copy(fontSize = 17.sp, lineHeight = 22.sp),
-                color = palette.muted)
-            // Every exit's fee children, each once, as Activity's "Exit fee" rows.
-            val fees = ExitFees.total(exits)
-            if (fees > 0) Text(tr("{amount} in network fees", money(fees)), style = HomeType.line.copy(fontSize = 17.sp, lineHeight = 22.sp),
-                color = palette.muted)
-        }) {
+        }, foot = { ExitListFoot(claimable, suspended, money, more, claim) }, leading = { ExitListLeading(exits, stages, money) }) {
         when {
             !ready -> FinePrint(if (loading) tr("Loading…") else tr("Couldn't read wallet status. Pull to refresh."))
             exits.isEmpty() -> FinePrint(tr("No exits have been started."))
@@ -114,25 +102,50 @@ internal fun ExitListContent(exits: List<ExitModel>, tip: Long, needsFunds: Set<
         val sections = listOf(tr("Ready to claim") to visible.filter { stages.getValue(it.id).phase in ready },
             tr("In progress") to visible.filter { stages.getValue(it.id).live && stages.getValue(it.id).phase !in ready },
             tr("Finished") to visible.filter { !stages.getValue(it.id).live })
-        for ((name, list) in sections) if (list.isNotEmpty()) {
-            Text(name, Modifier.padding(top = 18.dp, bottom = 2.dp).semantics { heading() }, style = HomeType.header, color = palette.muted)
-            val blocks = ExitList.blocks(list, shared)
-            for ((index, block) in blocks.withIndex()) {
-                val rows = block.map { it to stages.getValue(it.id) }
-                // A line under every row but the section's last, as the rows are shown.
-                val divider = index < blocks.lastIndex
-                if (rows.size > 1) {
-                    SharedRows(rows, tip, money, open, divider = divider)
-                    val group = ExitList.Shared(block, block.flatMap { exit -> exit.packages.map { it.txid } }.distinct().size,
-                        block.sumOf { it.packages.size })
-                    Text(tr("These {n} share part of their path: {count} transactions to send, not {total}. Shared ones are sent and paid once.",
-                        group.exits.size.toString(), group.transactions.toString(), group.separately.toString()),
-                        Modifier.padding(start = ExitGutter.sharedWidth.dp, top = 4.dp,
-                            bottom = 6.dp).testTag("exit-shared"), style = HomeType.small, color = palette.muted)
-                } else ExitListRow(rows[0].first, rows[0].second, tip, money, divider = divider) { open(block[0].id) }
-            }
-        }
+        for ((name, list) in sections) if (list.isNotEmpty()) ExitSection(name, list, stages, shared, tip, money, open)
         content()
+    }
+}
+
+@Composable
+private fun RowScope.ExitListFoot(claimable: List<ExitModel>, suspended: Boolean, money: (Long) -> String, more: () -> Unit, claim: () -> Unit) {
+    FootPill(tr("Exit more VTXOs"), Modifier.testTag("exit-more"), wrap = true, outlined = claimable.isNotEmpty(), enabled = !suspended, onClick = more)
+    if (claimable.isNotEmpty()) FootPill(tr("Claim {amount}", money(claimable.sumOf { it.amount })), Modifier.testTag("exit-list-claim"), wrap = true,
+        enabled = !suspended, onClick = claim)
+}
+
+@Composable
+private fun ExitListLeading(exits: List<ExitModel>, stages: Map<String, ExitStage>, money: (Long) -> String) {
+    val palette = LocalPalette.current
+    Text(exitCounts(stages.values) ?: tr("No exits in progress"), Modifier.padding(top = 8.dp),
+        style = HomeType.line.copy(fontSize = 17.sp, lineHeight = 22.sp),
+        color = palette.muted)
+    // Every exit's fee children, each once, as Activity's "Exit fee" rows.
+    val fees = ExitFees.total(exits)
+    if (fees > 0) Text(tr("{amount} in network fees", money(fees)), style = HomeType.line.copy(fontSize = 17.sp, lineHeight = 22.sp),
+        color = palette.muted)
+}
+
+/** One section's heading and rows: exits that share transactions together, with a line on what they share. */
+@Composable
+private fun ExitSection(name: String, list: List<ExitModel>, stages: Map<String, ExitStage>, shared: List<ExitList.Shared>, tip: Long, money: (Long) -> String,
+    open: (String) -> Unit) {
+    val palette = LocalPalette.current
+    Text(name, Modifier.padding(top = 18.dp, bottom = 2.dp).semantics { heading() }, style = HomeType.header, color = palette.muted)
+    val blocks = ExitList.blocks(list, shared)
+    for ((index, block) in blocks.withIndex()) {
+        val rows = block.map { it to stages.getValue(it.id) }
+        // A line under every row but the section's last, as the rows are shown.
+        val divider = index < blocks.lastIndex
+        if (rows.size > 1) {
+            SharedRows(rows, tip, money, open, divider = divider)
+            val group = ExitList.Shared(block, block.flatMap { exit -> exit.packages.map { it.txid } }.distinct().size,
+                block.sumOf { it.packages.size })
+            Text(tr("These {n} share part of their path: {count} transactions to send, not {total}. Shared ones are sent and paid once.",
+                group.exits.size.toString(), group.transactions.toString(), group.separately.toString()),
+                Modifier.padding(start = ExitGutter.sharedWidth.dp, top = 4.dp,
+                    bottom = 6.dp).testTag("exit-shared"), style = HomeType.small, color = palette.muted)
+        } else ExitListRow(rows[0].first, rows[0].second, tip, money, divider = divider) { open(block[0].id) }
     }
 }
 
@@ -224,27 +237,30 @@ private fun SharedRows(rows: List<Pair<ExitModel, ExitStage>>, tip: Long, money:
         for (node in waits) GutterSpot(60f, { Offset(node.x, node.y) }) { c -> gutterPulse(c, 8f, breath, palette) }
         coins.forEachIndexed { i, coin -> if (coin.pulses) GutterSpot(80f,
             { layout?.let { Offset(90f, centers[i]) } }) { c -> coin.pulse(this, c, breath, palette) } }
-        Column(Modifier.drawBehind {
-            val l = layout ?: return@drawBehind
-            scale(density, density, Offset.Zero) {
-                for (link in l.links) treeLink(Offset(link.from.first, link.from.second), Offset(link.to.first, link.to.second), 0f, 1f,
-                    if (link.ink) palette.foreground else palette.orange, if (link.ink) 2f else 1.6f, 1f, horizontal = true)
-                drawRoundRect(palette.foreground, Offset(l.root.first - 4.5f, l.root.second - 4.5f), Size(9f, 9f), CornerRadius(2f))
-                for (node in l.nodes) if (!node.coin) gutterNode(Offset(node.x, node.y), node.st, palette, node.folded)
-                coins.forEachIndexed { i, coin -> coin.draw(this, Offset(90f, centers[i]), palette) }
-            }
-        }) {
+        Column(Modifier.drawBehind { layout?.let { l -> scale(density, density, Offset.Zero) { sharedGutter(l, coins, centers, palette) } } }) {
             rows.forEachIndexed { i, (exit, stage) ->
                 RowText(exit, stage, tip, money, ExitGutter.sharedWidth, divider || i < rows.lastIndex,
                     Modifier.onPlaced { c -> centers[i] = (c.positionInParent().y + c.size.height / 2f) / density }, shared = true) { open(exit.id) }
             }
         }
         // Above it: the waiting transactions' dashed outline, marching.
-        for (node in waits) GutterSpot(14f, { Offset(node.x, node.y) }) { c ->
-            drawRoundRect(palette.orange, Offset(c.x - 4, c.y - 4), Size(8f, 8f), CornerRadius(2.5f), alpha = .7f + .3f * breath.breathe,
-                style = Stroke(1.4f, pathEffect = PathEffect.dashPathEffect(floatArrayOf(2f, 1.6f), -breath.march * 3.6f / 5.4f)))
-        }
+        for (node in waits) GutterSpot(14f, { Offset(node.x, node.y) }) { c -> marchingOutline(c, breath, palette) }
     }
+}
+
+/** The shared gutter: its links, the round's block, each transaction once, and every coin at its row's centre. */
+private fun DrawScope.sharedGutter(l: ExitGutter.Layout, coins: List<GutterCoin>, centers: List<Float>, palette: NoahTokens.Palette) {
+    for (link in l.links) treeLink(Offset(link.from.first, link.from.second), Offset(link.to.first, link.to.second), 0f, 1f,
+        if (link.ink) palette.foreground else palette.orange, if (link.ink) 2f else 1.6f, 1f, horizontal = true)
+    drawRoundRect(palette.foreground, Offset(l.root.first - 4.5f, l.root.second - 4.5f), Size(9f, 9f), CornerRadius(2f))
+    for (node in l.nodes) if (!node.coin) gutterNode(Offset(node.x, node.y), node.st, palette, node.folded)
+    coins.forEachIndexed { i, coin -> coin.draw(this, Offset(90f, centers[i]), palette) }
+}
+
+/** A waiting transaction's dashed outline, marching. */
+private fun DrawScope.marchingOutline(c: Offset, breath: Breath, palette: NoahTokens.Palette) {
+    drawRoundRect(palette.orange, Offset(c.x - 4, c.y - 4), Size(8f, 8f), CornerRadius(2.5f), alpha = .7f + .3f * breath.breathe,
+        style = Stroke(1.4f, pathEffect = PathEffect.dashPathEffect(floatArrayOf(2f, 1.6f), -breath.march * 3.6f / 5.4f)))
 }
 
 /** A small box centred on [center] (dp, in its parent's coordinates) that draws in dp. */
@@ -309,16 +325,20 @@ private class GutterCoin(path: List<Pair<String, ExitGutter.St>>, stage: ExitSta
 
     /** Under the coin: its glow, rings and dashed ring while it waits; its glow once ready. */
     fun pulse(scope: DrawScope, c: Offset, breath: Breath, palette: NoahTokens.Palette) = with(scope) {
-        if (waits) {
-            treeGlow(c, 20f, .3f + .7f * breath.breathe, palette.orange)
-            if (breath.live) for (offset in listOf(0f, .5f)) {
-                val q = breath.ring(offset); val e = 1 - (1 - q) * (1 - q)
-                drawCircle(palette.orange, 14f * (1 + 2.3f * e), c, alpha = .8f * (1 - q).pow(1.3f), style = Stroke(.8f + 1.6f * (1 - q)))
-            }
-            drawCircle(palette.orange, 14f, c, alpha = .6f + .4f * breath.breathe,
-                style = Stroke(1.4f, pathEffect = PathEffect.dashPathEffect(floatArrayOf(3f, 2.4f), -breath.march)))
-        }
+        if (waits) waiting(c, breath, palette)
         if (after == ExitGutter.After.ready) treeGlow(c, 22f, .4f + .6f * breath.breathe, palette.orange)
+    }
+
+    private fun DrawScope.waiting(c: Offset, breath: Breath, palette: NoahTokens.Palette) {
+        treeGlow(c, 20f, .3f + .7f * breath.breathe, palette.orange)
+        if (breath.live) for (offset in listOf(0f, .5f)) ring(c, breath.ring(offset), palette)
+        drawCircle(palette.orange, 14f, c, alpha = .6f + .4f * breath.breathe,
+            style = Stroke(1.4f, pathEffect = PathEffect.dashPathEffect(floatArrayOf(3f, 2.4f), -breath.march)))
+    }
+
+    private fun DrawScope.ring(c: Offset, q: Float, palette: NoahTokens.Palette) {
+        val e = 1 - (1 - q) * (1 - q)
+        drawCircle(palette.orange, 14f * (1 + 2.3f * e), c, alpha = .8f * (1 - q).pow(1.3f), style = Stroke(.8f + 1.6f * (1 - q)))
     }
 
     fun draw(scope: DrawScope, c: Offset, palette: NoahTokens.Palette) = with(scope) {

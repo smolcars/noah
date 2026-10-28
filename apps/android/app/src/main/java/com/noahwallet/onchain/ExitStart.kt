@@ -22,8 +22,6 @@ import com.noahwallet.ui.onboarding.LocalPalette
 import com.noahwallet.ui.onboarding.rememberHaptics
 import com.noahwallet.ui.send.HoldToConfirm
 import com.noahwallet.ui.settings.*
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.isActive
 import kotlinx.coroutines.launch
 
 /**
@@ -74,12 +72,9 @@ internal fun ExitStartScreen(model: OnchainModel, nav: SettingsNav, ids: List<St
 internal fun ExitStartContent(quote: OnchainQuote?, fallback: OnchainQuote?, confirmed: Long?, busy: Boolean, suspended: Boolean, delta: Long?,
     money: (Long) -> String, back: (() -> Unit)?, reviewAgain: () -> Unit, withoutEstimate: () -> Unit, start: () -> Unit,
     depth: Int? = null, content: @Composable () -> Unit = {}) {
-    val palette = LocalPalette.current
     val review = quote ?: fallback
-    var current by remember(quote) { mutableStateOf(quote?.current() ?: false) }
-    LaunchedEffect(quote) { while (isActive && current) { delay(250); current = quote?.current() ?: false } }
+    val current = rememberCurrent(quote)
     val known = quote?.takeIf { it.fee != null && it.chainFee != null }
-    val wide = com.noahwallet.ui.onboarding.LocalPose.current !is com.noahwallet.ui.onboarding.OnboardingPose.Compact
     ExitFrame(tr("Review"), back, hero = true, pictureLeads = true, foot = {
         when {
             quote != null && current -> HoldToConfirm(tr("Hold to start exit"), tr("Starting"), tr("Start exit"), tr("Start exit"),
@@ -89,39 +84,55 @@ internal fun ExitStartContent(quote: OnchainQuote?, fallback: OnchainQuote?, con
             else -> FootPill(tr("Review again"), Modifier.testTag("exit-review-again"), wrap = true, enabled = !busy && !suspended, loading = busy,
                 onClick = reviewAgain)
         }
-    }, leading = {
-        ExitBig(review?.let { tr("Exit {amount}", money(it.amount)) } ?: tr("Exit"), Modifier.padding(top = 6.dp).testTag("exit-start-amount"))
-        review?.let { r ->
-            val count = trPlural("{n} VTXOs", r.ids.size)
-            Text(listOfNotNull(count, known?.transactions?.let { trPlural("{n} transactions", it) }, tr("about a day")).joinToString(" · "),
-                Modifier.padding(top = 3.dp), style = HomeType.line, color = palette.muted)
-        }
-        // One branch, the deepest selected VTXO's (a batch's total isn't one path); a round's usual four until it's known.
-        val path = depth ?: known?.transactions?.takeIf { review?.ids?.size == 1 }?.toInt() ?: 4
-        if (wide) ExitPicture(ExitScene.sample(path), tr("Your VTXO’s path to the chain"), exitPicture().padding(top = 14.dp))
-        else if (review != null) ExitPath(path, review.ids.size > 1, known?.transactions?.toInt(), delta)
-    }) {
-        Column(Modifier.padding(top = 18.dp)) {
-            ExitValueRow(tr("Network fees"), known?.chainFee?.let { "~" + money(it) } ?: tr("Unknown"), kind = ValueKind.number)
-            confirmed?.let { ExitValueRow(tr("Paid from"), tr("On-chain · {amount}", money(it))) }
-            ExitValueRow(tr("Claim fee"), known?.fee?.let { "~" + money(it) } ?: tr("Unknown"), kind = ValueKind.number)
-            known?.feeRate?.let { ExitValueRow(tr("Fee rate"), tr("{rate} sat/vB", it.toString())) }
-            ExitValueRow(tr("Timelock"), delta?.let { trPlural("{n} blocks", it) } ?: tr("Unknown"), last = true)
-            TotalRow(tr("You get"), known?.fee?.let { "~" + money(ExitRules.received(known.amount, it)) } ?: tr("Unknown"))
-        }
-        if (known != null && !known.fundable) Warning(tr("Not enough on-chain bitcoin for the fees. The exit starts, then waits until you add about {amount}.",
-            money(checkNotNull(known.chainFee) - known.confirmed)), failed = true)
-        if (known != null) ExitRules.warning(known.amount, checkNotNull(known.fee), known.totalFee, claimOnly = false)?.let { Warning(tr(it), failed = true) }
-        if (review?.feesUnknown == true) {
-            Warning(tr("Fee estimate unavailable. Fees and amount to receive are unknown. Continue without an estimate only if you accept this uncertainty."),
-                failed = true)
-            Warning(tr("Broadcast funding status is unknown; confirmed onchain funds are required."), failed = true)
-        }
-        if (quote != null && !current) Warning(tr(OnchainFailure.changed.text), failed = true)
+    }, leading = { StartLeading(review, known, money, depth, delta) }) {
+        StartTotals(known, confirmed, delta, money)
+        StartWarnings(review, known, quote != null && !current, money)
         @Suppress("MaxLineLength") // one translation source string
         FinePrint(tr("Noah then sends and fee-bumps the exit’s transactions on its own, including in the background when the system lets it, paying from your on-chain bitcoin. Fees are estimates. Only the claim fee comes out of the amount. You can cancel until the last transaction is sent."))
         content()
     }
+}
+
+/** The amount exiting, its VTXOs and transactions, and its path: the picture on wide screens, the one-line path on phones. */
+@Composable
+private fun ColumnScope.StartLeading(review: OnchainQuote?, known: OnchainQuote?, money: (Long) -> String, depth: Int?, delta: Long?) {
+    val palette = LocalPalette.current
+    val wide = com.noahwallet.ui.onboarding.LocalPose.current !is com.noahwallet.ui.onboarding.OnboardingPose.Compact
+    ExitBig(review?.let { tr("Exit {amount}", money(it.amount)) } ?: tr("Exit"), Modifier.padding(top = 6.dp).testTag("exit-start-amount"))
+    review?.let { r ->
+        val count = trPlural("{n} VTXOs", r.ids.size)
+        Text(listOfNotNull(count, known?.transactions?.let { trPlural("{n} transactions", it) }, tr("about a day")).joinToString(" · "),
+            Modifier.padding(top = 3.dp), style = HomeType.line, color = palette.muted)
+    }
+    // One branch, the deepest selected VTXO's (a batch's total isn't one path); a round's usual four until it's known.
+    val path = depth ?: known?.transactions?.takeIf { review?.ids?.size == 1 }?.toInt() ?: 4
+    if (wide) ExitPicture(ExitScene.sample(path), tr("Your VTXO’s path to the chain"), exitPicture().padding(top = 14.dp))
+    else if (review != null) ExitPath(path, review.ids.size > 1, known?.transactions?.toInt(), delta)
+}
+
+@Composable
+private fun StartTotals(known: OnchainQuote?, confirmed: Long?, delta: Long?, money: (Long) -> String) {
+    Column(Modifier.padding(top = 18.dp)) {
+        ExitValueRow(tr("Network fees"), known?.chainFee?.let { "~" + money(it) } ?: tr("Unknown"), kind = ValueKind.number)
+        confirmed?.let { ExitValueRow(tr("Paid from"), tr("On-chain · {amount}", money(it))) }
+        ExitValueRow(tr("Claim fee"), known?.fee?.let { "~" + money(it) } ?: tr("Unknown"), kind = ValueKind.number)
+        known?.feeRate?.let { ExitValueRow(tr("Fee rate"), tr("{rate} sat/vB", it.toString())) }
+        ExitValueRow(tr("Timelock"), delta?.let { trPlural("{n} blocks", it) } ?: tr("Unknown"), last = true)
+        TotalRow(tr("You get"), known?.fee?.let { "~" + money(ExitRules.received(known.amount, it)) } ?: tr("Unknown"))
+    }
+}
+
+@Composable
+private fun StartWarnings(review: OnchainQuote?, known: OnchainQuote?, changed: Boolean, money: (Long) -> String) {
+    if (known != null && !known.fundable) Warning(tr("Not enough on-chain bitcoin for the fees. The exit starts, then waits until you add about {amount}.",
+        money(checkNotNull(known.chainFee) - known.confirmed)), failed = true)
+    if (known != null) ExitRules.warning(known.amount, checkNotNull(known.fee), known.totalFee, claimOnly = false)?.let { Warning(tr(it), failed = true) }
+    if (review?.feesUnknown == true) {
+        Warning(tr("Fee estimate unavailable. Fees and amount to receive are unknown. Continue without an estimate only if you accept this uncertainty."),
+            failed = true)
+        Warning(tr("Broadcast funding status is unknown; confirmed onchain funds are required."), failed = true)
+    }
+    if (changed) Warning(tr(OnchainFailure.changed.text), failed = true)
 }
 
 /**
@@ -162,17 +173,28 @@ private fun ExitPath(path: Int, batch: Boolean, count: Int?, delta: Long?) {
             }
             treeLink(Offset(px, y), Offset(cx - 17, y), 0f, 1f, palette.hairline, 1.5f, 1f, floatArrayOf(3f, 3f), horizontal = true)
             drawCircle(palette.hairline, 13f, Offset(cx, y), style = Stroke(2f))
-            val ticks = ExitDial.ticks(delta ?: 144)
-            for (h in 0 until ticks) {
-                val an = -kotlin.math.PI / 2 + h * 2 * kotlin.math.PI / ticks; val r1 = if (ExitDial.major(delta ?: 144, h)) 19.5f else 17.5f
-                drawLine(palette.muted, Offset(cx + kotlin.math.cos(an).toFloat() * 16, y + kotlin.math.sin(an).toFloat() * 16),
-                    Offset(cx + kotlin.math.cos(an).toFloat() * r1, y + kotlin.math.sin(an).toFloat() * r1), 1f, alpha = .5f)
-            }
+            exitPathTicks(cx, y, delta ?: 144, palette.muted)
             treePadlock(Offset(cx, y - 1), 12f, 0f, 1f, palette.foreground, palette.background)
             treeLink(Offset(cx + 21, y), Offset(x1 - 36, y), 0f, 1f, palette.hairline, 1.5f, 1f, floatArrayOf(3f, 3f), horizontal = true)
             exitWalletBadge(Offset(x1 - 20, y), palette)
         }
     }
+    ExitPathCaptions(count, batch, delta)
+}
+
+/** The timelock dial's ticks around ([cx], [y]), the major ones longer. */
+private fun androidx.compose.ui.graphics.drawscope.DrawScope.exitPathTicks(cx: Float, y: Float, delta: Long, color: androidx.compose.ui.graphics.Color) {
+    val ticks = ExitDial.ticks(delta)
+    for (h in 0 until ticks) {
+        val an = -kotlin.math.PI / 2 + h * 2 * kotlin.math.PI / ticks; val r1 = if (ExitDial.major(delta, h)) 19.5f else 17.5f
+        drawLine(color, Offset(cx + kotlin.math.cos(an).toFloat() * 16, y + kotlin.math.sin(an).toFloat() * 16),
+            Offset(cx + kotlin.math.cos(an).toFloat() * r1, y + kotlin.math.sin(an).toFloat() * r1), 1f, alpha = .5f)
+    }
+}
+
+@Composable
+private fun ExitPathCaptions(count: Int?, batch: Boolean, delta: Long?) {
+    val palette = LocalPalette.current
     // Three columns, one per third of the path; at large text they stack, each caption whole.
     val stacked = androidx.compose.ui.platform.LocalDensity.current.fontScale >= 1.5f
     val captions = listOf(count?.let { trPlural("{n} transactions", it) } to if (batch) tr("shared ones once") else tr("one block each"),

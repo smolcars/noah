@@ -53,6 +53,7 @@ import com.noahwallet.ui.send.WrappingLabel
 import com.noahwallet.ui.settings.*
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.isActive
 import kotlinx.coroutines.withContext
 
 /**
@@ -654,4 +655,12 @@ internal fun ExitDepositContent(address: String?, error: String?, need: Long, mo
         } ?: FinePrint(tr(error ?: "Loading address…"), failed = error != null)
         SendPill(tr("Done"), Modifier.fillMaxWidth().padding(top = 10.dp), outlined = true, wrap = true) { close() }
     }
+}
+
+/** Whether [quote]'s review is still current, checked every 250 ms until it isn't. */
+@Composable
+internal fun rememberCurrent(quote: OnchainQuote?): Boolean {
+    var current by remember(quote) { mutableStateOf(quote?.current() ?: false) }
+    LaunchedEffect(quote) { while (isActive && current) { delay(250); current = quote?.current() ?: false } }
+    return current
 }
