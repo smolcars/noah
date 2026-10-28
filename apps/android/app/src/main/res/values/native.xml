@@ -1,29 +1,30 @@
 <?xml version='1.0' encoding='utf-8'?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
   <string name="widget_regtest_description">View your Bitcoin balance on regtest</string>
   <string name="widget_signet_description">View your Bitcoin balance on signet</string>
   <string name="widget_mainnet_description">View your Bitcoin balance</string>
   <string name="widget_title">Noah Wallet</string>
   <string name="widget_onchain">Onchain</string>
   <string name="widget_offchain">Offchain</string>
+  <string name="widget_preview_badge" translatable="false">REGTEST</string>
+  <string name="widget_preview_balance" translatable="false">0 sats</string>
+  <string name="widget_preview_amount" translatable="false">0</string>
   <string name="home">Home</string>
   <string name="receive">Receive</string>
   <string name="send">Send</string>
-  <string name="history">History</string>
-  <string name="placeholder">Coming soon</string>
-  <string name="build_variant">Build: %1$s</string>
-    <string name="launch_restore_incomplete">Restore didn\'t finish</string>
-    <string name="launch_restore_incomplete_message">Noah couldn\'t finish or undo an interrupted restore. Your wallet files were kept. Unlock your device, then restart Noah to recover safely.</string>
-    <string name="launch_welcome">Welcome to Noah</string>
-    <string name="launch_onboarding_message">Onboarding lands in M1.</string>
-    <string name="launch_seed_found">Recovery phrase found</string>
-    <string name="launch_seed_found_message">A recovery phrase from a previous install is stored on this device. Use it to restore your wallet from its backup.</string>
-    <string name="launch_seed_needed">Recovery phrase needed</string>
-    <string name="launch_seed_needed_message">Wallet data exists on this device but its recovery phrase could not be found.</string>
-    <string name="launch_unlock">Wallet recovery required</string>
-    <string name="launch_unlock_message">Noah cannot safely read or verify saved wallet data. Unlock your device and retry. If this continues, keep Noah installed and contact support. Never share your recovery phrase. Your saved data has been kept.</string>
-    <string name="launch_loading">Opening wallet</string>
-    <string name="launch_loading_message">Please wait while Noah loads your wallet.</string>
-    <string name="launch_open_failed">Unable to open wallet</string>
-    <string name="launch_open_failed_message">Noah could not verify this wallet against the saved recovery phrase. Keep Noah installed and contact support if retrying fails. Never share your recovery phrase. Your saved data has been kept.</string>
+    <!-- English-only until the launch gate's copy is unified with iOS (docs/native-rewrite/TODO.md, "launch-gate safety copy"). -->
+    <string name="launch_restore_incomplete" tools:ignore="MissingTranslation">Restore didn\'t finish</string>
+    <string name="launch_restore_incomplete_message" tools:ignore="MissingTranslation">Noah couldn\'t finish or undo an interrupted restore. Your wallet files were kept. Unlock your device, then restart Noah to recover safely.</string>
+    <string name="launch_welcome" tools:ignore="MissingTranslation">Welcome to Noah</string>
+    <string name="launch_onboarding_message" tools:ignore="MissingTranslation">Onboarding lands in M1.</string>
+    <string name="launch_seed_found" tools:ignore="MissingTranslation">Recovery phrase found</string>
+    <string name="launch_seed_found_message" tools:ignore="MissingTranslation">A recovery phrase from a previous install is stored on this device. Use it to restore your wallet from its backup.</string>
+    <string name="launch_seed_needed" tools:ignore="MissingTranslation">Recovery phrase needed</string>
+    <string name="launch_seed_needed_message" tools:ignore="MissingTranslation">Wallet data exists on this device but its recovery phrase could not be found.</string>
+    <string name="launch_unlock" tools:ignore="MissingTranslation">Wallet recovery required</string>
+    <string name="launch_unlock_message" tools:ignore="MissingTranslation">Noah cannot safely read or verify saved wallet data. Unlock your device and retry. If this continues, keep Noah installed and contact support. Never share your recovery phrase. Your saved data has been kept.</string>
+    <string name="launch_loading" tools:ignore="MissingTranslation">Opening wallet</string>
+    <string name="launch_loading_message" tools:ignore="MissingTranslation">Please wait while Noah loads your wallet.</string>
+    <string name="launch_open_failed" tools:ignore="MissingTranslation">Unable to open wallet</string>
+    <string name="launch_open_failed_message" tools:ignore="MissingTranslation">Noah could not verify this wallet against the saved recovery phrase. Keep Noah installed and contact support if retrying fails. Never share your recovery phrase. Your saved data has been kept.</string>
 </resources>

@@ -637,7 +637,7 @@
   <string name="gt_6d65584b25b63eed">"Lightning Receive Failed"</string>
   <string name="gt_2e657776a316f205">"Lightning address"</string>
   <string name="gt_fd323c8b42efb171">"Lightning address unavailable"</string>
-  <string name="gt_f2429099ee4d45fe">"Lightning fee limits use Ark’s published fees, up to 2% or 200 sats, whichever is higher. Payments above the limit need manual approval."</string>
+  <string name="gt_f2429099ee4d45fe" formatted="false">"Lightning fee limits use Ark’s published fees, up to 2% or 200 sats, whichever is higher. Payments above the limit need manual approval."</string>
   <string name="gt_d38ade727afcbfed">"Lightning invoice"</string>
   <string name="gt_31312f51a5df40b4">"Lightning invoices can only be paid once. Use a Lightning address or offer"</string>
   <string name="gt_49ae83f26e5d0d93">"Lightning is still finding a route. You can leave this screen; Noah finishes it in the background."</string>

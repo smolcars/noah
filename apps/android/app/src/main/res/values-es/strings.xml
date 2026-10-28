@@ -44,6 +44,7 @@
   <string name="gt_c99b0d023c7ff010">"Tras %1$s confirmaciones"</string>
   <plurals name="gt_d7e9ece445e2d5a3">
     <item quantity="one">"Tras %1$s pago"</item>
+    <item quantity="many">"Tras %1$s pagos"</item>
     <item quantity="other">"Tras %1$s pagos"</item>
   </plurals>
   <string name="gt_a52ace420f2175d0">"Todos"</string>
@@ -226,6 +227,7 @@
   <string name="gt_f78dda21b2e48efd">"Reclamable en unos %1$s"</string>
   <plurals name="gt_17bf7bb54aafd273">
     <item quantity="one">"Reclamable en %1$s bloque · %2$s"</item>
+    <item quantity="many">"Reclamable en %1$s bloques · %2$s"</item>
     <item quantity="other">"Reclamable en %1$s bloques · %2$s"</item>
   </plurals>
   <string name="gt_9564c9cd94655763">"Reclamable desde el bloque %1$s"</string>
@@ -315,6 +317,7 @@
   <string name="gt_7bcc035ddf337589">"No se pudieron actualizar los pagos recurrentes. Inténtalo de nuevo."</string>
   <plurals name="gt_942dd82f7e0ad733">
     <item quantity="one">"No se pudieron comprobar las comisiones de %1$s VTXO, así que Todos espera. Elígelo por separado o inténtalo de nuevo."</item>
+    <item quantity="many">"No se pudieron comprobar las comisiones de %1$s VTXOs, así que Todos espera. Elígelos uno por uno o inténtalo de nuevo."</item>
     <item quantity="other">"No se pudieron comprobar las comisiones de %1$s VTXOs, así que Todos espera. Elígelos uno por uno o inténtalo de nuevo."</item>
   </plurals>
   <string name="gt_3cb296f54acaa925">"No se pudo crear la solicitud"</string>
@@ -420,10 +423,12 @@
   <string name="gt_2742b75b4dc9ddf2">"Cada %1$s días"</string>
   <plurals name="gt_d7e9ac8485286c97">
     <item quantity="one">"Cada %1$s mes"</item>
+    <item quantity="many">"Cada %1$s meses"</item>
     <item quantity="other">"Cada %1$s meses"</item>
   </plurals>
   <plurals name="gt_31874561573db28d">
     <item quantity="one">"Cada %1$s semana"</item>
+    <item quantity="many">"Cada %1$s semanas"</item>
     <item quantity="other">"Cada %1$s semanas"</item>
   </plurals>
   <string name="gt_a49df89d3846230c">"Cada … días"</string>
@@ -461,10 +466,12 @@
   <string name="gt_96ca72eafe792fdf">"Vence en menos de una hora"</string>
   <plurals name="gt_f43156479fea31f4">
     <item quantity="one">"Vence en %1$s día"</item>
+    <item quantity="many">"Vence en %1$s días"</item>
     <item quantity="other">"Vence en %1$s días"</item>
   </plurals>
   <plurals name="gt_abf3777e2c2adc2c">
     <item quantity="one">"Vence en %1$s hora"</item>
+    <item quantity="many">"Vence en %1$s horas"</item>
     <item quantity="other">"Vence en %1$s horas"</item>
   </plurals>
   <string name="gt_ff44a401445c99df">"Por vencer"</string>
@@ -569,6 +576,7 @@
   <string name="gt_13f9f26fa93bba36">"En uso ahora mismo"</string>
   <plurals name="gt_da31d49e931af4ab">
     <item quantity="one">"En %1$s VTXO"</item>
+    <item quantity="many">"En %1$s VTXOs"</item>
     <item quantity="other">"En %1$s VTXOs"</item>
   </plurals>
   <string name="gt_0dc23ef619cceb30">"En %1$s"</string>
@@ -637,7 +645,7 @@
   <string name="gt_6d65584b25b63eed">"Error en la recepción Lightning"</string>
   <string name="gt_2e657776a316f205">"Dirección de Lightning"</string>
   <string name="gt_fd323c8b42efb171">"Dirección Lightning no disponible"</string>
-  <string name="gt_f2429099ee4d45fe">"Los límites de las comisiones Lightning se basan en las comisiones publicadas por Ark, con un máximo del 2 % o 200 sats, lo que sea mayor. Los pagos que superen el límite necesitan aprobación manual."</string>
+  <string name="gt_f2429099ee4d45fe" formatted="false">"Los límites de las comisiones Lightning se basan en las comisiones publicadas por Ark, con un máximo del 2 % o 200 sats, lo que sea mayor. Los pagos que superen el límite necesitan aprobación manual."</string>
   <string name="gt_d38ade727afcbfed">"Factura de Lightning"</string>
   <string name="gt_31312f51a5df40b4">"Las facturas de Lightning solo se pueden pagar una vez. Usa una dirección o una oferta de Lightning"</string>
   <string name="gt_49ae83f26e5d0d93">"Lightning sigue buscando una ruta. Puedes salir de esta pantalla; Noah lo terminará en segundo plano."</string>
@@ -659,6 +667,7 @@
   <string name="gt_5535252d05473e91">"Bloqueado hasta el bloque %1$s"</string>
   <plurals name="gt_388760a0e16051c3">
     <item quantity="one">"Bloqueado · %1$s bloque"</item>
+    <item quantity="many">"Bloqueado · %1$s bloques"</item>
     <item quantity="other">"Bloqueado · %1$s bloques"</item>
   </plurals>
   <string name="gt_050a9630d2132c97">"Bloqueando %1$s"</string>
@@ -804,6 +813,7 @@
   <string name="gt_e843a23b9e84091b">"No hay suficientes bitcoins en cadena para las comisiones. La salida empieza y espera hasta que añadas unos %1$s."</string>
   <plurals name="gt_6e31455decfd70ff">
     <item quantity="one">"Aún no está en un bloque · %1$s bloque"</item>
+    <item quantity="many">"Aún no está en un bloque · %1$s bloques"</item>
     <item quantity="other">"Aún no está en un bloque · %1$s bloques"</item>
   </plurals>
   <string name="gt_ca374c23ed92ea82">"Sin registrar"</string>
@@ -848,6 +858,7 @@
   <string name="gt_c35e69dac4ff6d3f">"Reserva restante en cadena"</string>
   <plurals name="gt_09e4665e49aef548">
     <item quantity="one">"Una reclamación para %1$s salida: %2$s recibidos tras una comisión de %3$s."</item>
+    <item quantity="many">"Una reclamación para %1$s salidas: %2$s recibidos tras una comisión de %3$s."</item>
     <item quantity="other">"Una reclamación para %1$s salidas: %2$s recibidos tras una comisión de %3$s."</item>
   </plurals>
   <string name="gt_d6e3df34a55bbeb3">"Una última transacción. Su comisión sale del importe."</string>
@@ -1011,11 +1022,13 @@
   <string name="gt_b72aebe90513cba1">"Renovar %1$s"</string>
   <plurals name="gt_51ccf0d08c7d2b01">
     <item quantity="one">"Renovar %1$s VTXO"</item>
+    <item quantity="many">"Renovar %1$s VTXOs"</item>
     <item quantity="other">"Renovar %1$s VTXOs"</item>
   </plurals>
   <string name="gt_1c736ed5f00ea1a6">"Renovado"</string>
   <plurals name="gt_c93ae43d7d80967e">
     <item quantity="one">"%1$s moneda renovada"</item>
+    <item quantity="many">"%1$s monedas renovadas"</item>
     <item quantity="other">"%1$s monedas renovadas"</item>
   </plurals>
   <string name="gt_56887030c2bff90f">"Alquiler, asignaciones o donaciones, pagados a tiempo."</string>
@@ -1261,6 +1274,7 @@
   <string name="gt_5e306b07871ba45a">"Esta salida va por detrás de la altura actual de la cadena. Avánzala para ponerla al día; también puede enviar transacciones de salida."</string>
   <plurals name="gt_02ca5673a1cb2959">
     <item quantity="one">"Esta salida va por detrás de la altura actual de la cadena: se revisó por última vez en el bloque %2$s, hace %1$s bloque. Avanzarla también puede enviar transacciones de salida."</item>
+    <item quantity="many">"Esta salida va por detrás de la altura actual de la cadena: se revisó por última vez en el bloque %2$s, hace %1$s bloques. Avanzarla también puede enviar transacciones de salida."</item>
     <item quantity="other">"Esta salida va por detrás de la altura actual de la cadena: se revisó por última vez en el bloque %2$s, hace %1$s bloques. Avanzarla también puede enviar transacciones de salida."</item>
   </plurals>
   <string name="gt_5ed0c20bff01c0ca">"Esta solicitud de pago ya está pagada. Este pago programado no se volvió a enviar. Comprueba el destinatario antes de reanudar."</string>
@@ -1361,6 +1375,7 @@
   <string name="gt_ef3bb53fb52f49d8">"ID de VTXO"</string>
   <plurals name="gt_1c5b6b6468f0c580">
     <item quantity="one">"VTXO vence en %1$s bloque"</item>
+    <item quantity="many">"VTXO vence en %1$s bloques"</item>
     <item quantity="other">"VTXO vence en %1$s bloques"</item>
   </plurals>
   <string name="gt_a3d44a4fe18f60fb">"Valor hexadecimal o ID del VTXO"</string>
@@ -1393,6 +1408,7 @@
   <string name="gt_706eee3cfecc480a">"Esperando el bloqueo temporal"</string>
   <plurals name="gt_985fc1ec623fd8b3">
     <item quantity="one">"En espera · %1$s bloque · %2$s"</item>
+    <item quantity="many">"En espera · %1$s bloques · %2$s"</item>
     <item quantity="other">"En espera · %1$s bloques · %2$s"</item>
   </plurals>
   <string name="gt_a9fecbd4968622c1">"La programación de activación aún no se ha sincronizado. Noah volverá a intentarlo cuando lo abras."</string>
@@ -1435,6 +1451,7 @@
   <string name="gt_f9f55c49d8421334">"Tu VTXO"</string>
   <plurals name="gt_bd4a6db1a4abe642">
     <item quantity="one">"Tu VTXO es una hoja del árbol de la ronda. Para llegar a ella, la única transacción de tu rama va a la cadena."</item>
+    <item quantity="many">"Tu VTXO es una hoja del árbol de la ronda. Para llegar a ella, las %1$s transacciones de tu rama van a la cadena, empezando por la raíz."</item>
     <item quantity="other">"Tu VTXO es una hoja del árbol de la ronda. Para llegar a ella, las %1$s transacciones de tu rama van a la cadena, empezando por la raíz."</item>
   </plurals>
   <string name="gt_7594ebdff7a25376">"Tu VTXO sale de Ark. A partir de aquí nada necesita el servidor de Ark."</string>
@@ -1446,6 +1463,7 @@
   <string name="gt_8d6771f61742ae50">"Tu bitcoin está en cadena y bloqueado durante un tiempo. El bloqueo le da a Ark tiempo para detener un VTXO que ya se gastó."</string>
   <plurals name="gt_8d95f0972bf7b0f6">
     <item quantity="one">"Tus bitcoins están en cadena, bloqueados durante %1$s bloque. El bloqueo da tiempo a Ark para detener un VTXO que ya se gastó."</item>
+    <item quantity="many">"Tus bitcoins están en cadena, bloqueados durante %1$s bloques. El bloqueo da tiempo a Ark para detener un VTXO que ya se gastó."</item>
     <item quantity="other">"Tus bitcoins están en cadena, bloqueados durante %1$s bloques. El bloqueo da tiempo a Ark para detener un VTXO que ya se gastó."</item>
   </plurals>
   <string name="gt_8074a7762dd1f578">"Tu correo actual se mantiene hasta que se verifique el nuevo."</string>
@@ -1496,6 +1514,7 @@
   <string name="gt_53e6cdc30765aade">"tu@ejemplo.com"</string>
   <plurals name="gt_605cb36be5d371ea">
     <item quantity="one">"Un lugar%2$s"</item>
+    <item quantity="many">"%1$s lugares%2$s"</item>
     <item quantity="other">"%1$s lugares%2$s"</item>
   </plurals>
   <string name="gt_21daf39744874523">"¿%1$s?"</string>
@@ -1520,53 +1539,65 @@
   <string name="gt_3f17302e05ff4a2f">"%1$s… · %2$s"</string>
   <plurals name="gt_449da3f9d936b5ef">
     <item quantity="one">"%1$s pago de Ark como archivo CSV."</item>
+    <item quantity="many">"%1$s pagos de Ark como archivo CSV."</item>
     <item quantity="other">"%1$s pagos de Ark como archivo CSV."</item>
   </plurals>
   <plurals name="gt_2c4c9aa016a69f38">
     <item quantity="one">"%1$s pago Lightning como archivo CSV."</item>
+    <item quantity="many">"%1$s pagos Lightning como archivo CSV."</item>
     <item quantity="other">"%1$s pagos Lightning como archivo CSV."</item>
   </plurals>
   <plurals name="gt_2c0c259cf0ba0ee3">
     <item quantity="one">"%1$s VTXO"</item>
+    <item quantity="many">"%1$s VTXOs"</item>
     <item quantity="other">"%1$s VTXOs"</item>
   </plurals>
   <plurals name="gt_f7957bd8d410be30">
     <item quantity="one">"%1$s VTXO vence en menos de un día"</item>
+    <item quantity="many">"%1$s VTXOs vencen en menos de un día"</item>
     <item quantity="other">"%1$s VTXOs vencen en menos de un día"</item>
   </plurals>
   <string name="gt_f4d60c7d0545f547">"Activos: %1$s"</string>
   <plurals name="gt_00f904d64507e53f">
     <item quantity="one">"%1$s bloque"</item>
+    <item quantity="many">"%1$s bloques"</item>
     <item quantity="other">"%1$s bloques"</item>
   </plurals>
   <plurals name="gt_ea278da1c77f8803">
     <item quantity="one">"%1$s bloque sin ella"</item>
+    <item quantity="many">"%1$s bloques sin ella"</item>
     <item quantity="other">"%1$s bloques sin ella"</item>
   </plurals>
   <plurals name="gt_bdf51ce532245aa7">
     <item quantity="one">"%1$s bloque · %2$s"</item>
+    <item quantity="many">"%1$s bloques · %2$s"</item>
     <item quantity="other">"%1$s bloques · %2$s"</item>
   </plurals>
   <string name="gt_3f2e9c59984c0b94">"%1$s d"</string>
   <plurals name="gt_901bac8a657292dd">
     <item quantity="one">"%1$s día"</item>
+    <item quantity="many">"%1$s días"</item>
     <item quantity="other">"%1$s días"</item>
   </plurals>
   <plurals name="gt_cea13885ad32653d">
     <item quantity="one">"Una salida está por detrás de la altura actual de la cadena. Avánzala para ponerla al día; esto también puede enviar transacciones de salida."</item>
+    <item quantity="many">"%1$s salidas están por detrás de la altura actual de la cadena. Avanza cualquiera de ellas para ponerlas al día; esto también puede enviar transacciones de salida."</item>
     <item quantity="other">"%1$s salidas están por detrás de la altura actual de la cadena. Avanza cualquiera de ellas para ponerlas al día; esto también puede enviar transacciones de salida."</item>
   </plurals>
   <string name="gt_068deca46a360c34">"%1$s h"</string>
   <plurals name="gt_e2f49aad27ca4b0f">
     <item quantity="one">"%1$s hora"</item>
+    <item quantity="many">"%1$s horas"</item>
     <item quantity="other">"%1$s horas"</item>
   </plurals>
   <plurals name="gt_35fab73e01e36413">
     <item quantity="one">"%1$s en curso"</item>
+    <item quantity="many">"%1$s en curso"</item>
     <item quantity="other">"%1$s en curso"</item>
   </plurals>
   <plurals name="gt_d51f3a84c3df479a">
     <item quantity="one">"%1$s más por enviar"</item>
+    <item quantity="many">"%1$s más por enviar"</item>
     <item quantity="other">"%1$s más por enviar"</item>
   </plurals>
   <string name="gt_76c569f37720fa3d">"Faltan %1$s para activar la depuración"</string>
@@ -1574,27 +1605,33 @@
   <string name="gt_9253a82d313a4ac7">"%1$s de %2$s en bloques"</string>
   <plurals name="gt_cbc409d6a950d6e9">
     <item quantity="one">"%1$s pago en cadena como archivo CSV."</item>
+    <item quantity="many">"%1$s pagos en cadena como archivo CSV."</item>
     <item quantity="other">"%1$s pagos en cadena como archivo CSV."</item>
   </plurals>
   <plurals name="gt_914407ec71603935">
     <item quantity="one">"%1$s pago"</item>
+    <item quantity="many">"%1$s pagos"</item>
     <item quantity="other">"%1$s pagos"</item>
   </plurals>
   <plurals name="gt_af16209be5ba011c">
     <item quantity="one">"%1$s pago como archivo CSV."</item>
+    <item quantity="many">"%1$s pagos como archivo CSV."</item>
     <item quantity="other">"%1$s pagos como archivo CSV."</item>
   </plurals>
   <plurals name="gt_8d28334022517918">
     <item quantity="one">"%1$s lista para reclamar"</item>
+    <item quantity="many">"%1$s listas para reclamar"</item>
     <item quantity="other">"%1$s listas para reclamar"</item>
   </plurals>
   <string name="gt_996a4adc403eb54c">"%1$s segundos"</string>
   <plurals name="gt_618ceaf828dd8956">
     <item quantity="one">"%1$s transacción"</item>
+    <item quantity="many">"%1$s transacciones"</item>
     <item quantity="other">"%1$s transacciones"</item>
   </plurals>
   <plurals name="gt_da1e3996a057be68">
     <item quantity="one">"%1$s transacción hacia la cadena"</item>
+    <item quantity="many">"%1$s transacciones hacia la cadena"</item>
     <item quantity="other">"%1$s transacciones hacia la cadena"</item>
   </plurals>
   <string name="gt_6f18db1fb525f402">"%1$s sem"</string>

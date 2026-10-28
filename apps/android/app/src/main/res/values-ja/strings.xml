@@ -637,7 +637,7 @@
   <string name="gt_6d65584b25b63eed">"Lightningの受け取りに失敗しました"</string>
   <string name="gt_2e657776a316f205">"ライトニングアドレス"</string>
   <string name="gt_fd323c8b42efb171">"ライトニングアドレスを利用できません"</string>
-  <string name="gt_f2429099ee4d45fe">"ライトニング手数料はArkの公表手数料に基づき、上限は支払額の2%または200 satsのいずれか高い方です。上限を超える支払いには手動での承認が必要です。"</string>
+  <string name="gt_f2429099ee4d45fe" formatted="false">"ライトニング手数料はArkの公表手数料に基づき、上限は支払額の2%または200 satsのいずれか高い方です。上限を超える支払いには手動での承認が必要です。"</string>
   <string name="gt_d38ade727afcbfed">"ライトニング請求書"</string>
   <string name="gt_31312f51a5df40b4">"ライトニング請求書は一度しか支払えません。ライトニングアドレスまたはオファーを使用してください"</string>
   <string name="gt_49ae83f26e5d0d93">"Lightningがまだ経路を探しています。この画面を閉じても、Noahがバックグラウンドで完了させます。"</string>

@@ -637,7 +637,7 @@
   <string name="gt_6d65584b25b63eed">"Lightning 수신 실패"</string>
   <string name="gt_2e657776a316f205">"라이트닝 주소"</string>
   <string name="gt_fd323c8b42efb171">"라이트닝 주소를 사용할 수 없습니다"</string>
-  <string name="gt_f2429099ee4d45fe">"Lightning 수수료 한도는 Ark가 공개한 수수료를 기준으로 하며, 2%와 200 sats 중 더 큰 금액까지 허용됩니다. 한도를 초과하는 결제는 수동 승인이 필요합니다."</string>
+  <string name="gt_f2429099ee4d45fe" formatted="false">"Lightning 수수료 한도는 Ark가 공개한 수수료를 기준으로 하며, 2%와 200 sats 중 더 큰 금액까지 허용됩니다. 한도를 초과하는 결제는 수동 승인이 필요합니다."</string>
   <string name="gt_d38ade727afcbfed">"라이트닝 인보이스"</string>
   <string name="gt_31312f51a5df40b4">"라이트닝 인보이스는 한 번만 결제할 수 있습니다. 라이트닝 주소나 라이트닝 오퍼를 사용하세요"</string>
   <string name="gt_49ae83f26e5d0d93">"라이트닝이 아직 경로를 찾고 있어요. 이 화면을 나가도 Noah가 백그라운드에서 마무리해요."</string>

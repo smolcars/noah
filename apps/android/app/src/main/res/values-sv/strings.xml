@@ -637,7 +637,7 @@
   <string name="gt_6d65584b25b63eed">"Mottagningen via Lightning misslyckades"</string>
   <string name="gt_2e657776a316f205">"Lightning-adress"</string>
   <string name="gt_fd323c8b42efb171">"Lightning-adressen är inte tillgänglig"</string>
-  <string name="gt_f2429099ee4d45fe">"Gränserna för Lightning-avgifter baseras på Arks publicerade avgifter, upp till 2 % eller 200 sats, beroende på vilket som är högst. Betalningar över gränsen kräver manuellt godkännande."</string>
+  <string name="gt_f2429099ee4d45fe" formatted="false">"Gränserna för Lightning-avgifter baseras på Arks publicerade avgifter, upp till 2 % eller 200 sats, beroende på vilket som är högst. Betalningar över gränsen kräver manuellt godkännande."</string>
   <string name="gt_d38ade727afcbfed">"Lightning-faktura"</string>
   <string name="gt_31312f51a5df40b4">"Lightning-fakturor kan bara betalas en gång. Använd en Lightning-adress eller ett Lightning-erbjudande"</string>
   <string name="gt_49ae83f26e5d0d93">"Lightning letar fortfarande efter en väg. Du kan lämna skärmen; Noah gör klart det i bakgrunden."</string>
