@@ -66,7 +66,12 @@ import Observation
             guard FileManager.default.fileExists(atPath: journal.file.deletingLastPathComponent().path) else { throw NoWallet() }
             let owner = try binding()
             guard try binding() == owner else { throw NoWallet() }
-            try journal.record(attempt, generation: generation, walletGeneration: walletGeneration, message: message, binding: owner, now: now())
+            try journal.record(
+                attempt,
+                generations: .init(generation: generation, walletGeneration: walletGeneration),
+                message: message,
+                binding: owner,
+                now: now())
         }
         if d.controller.state == .storageBlocked, d.controller.attempt?.recurringOccurrenceKey != nil { d.controller.reloadForWalletChange() }
     }

@@ -326,9 +326,12 @@ struct SendMotionTests {
         #expect(SendOutcomeView.actions(kind: kind, uncertain: true, resultShown: true).last == .close)
         let before = (controller.attempt?.payment, controller.attempt?.receipt, controller.generation)
         var dismissed = 0
-        let sheet = RecurringPaymentsView.approval(payment: SendPaymentTests().payment, quote: SendPaymentTests().quote,
-                                                   controller: controller, pay: { Issue.record("Close paid") },
-                                                   dismiss: { dismissed += 1 }, done: { Issue.record("Close acknowledged") })
+        let sheet = RecurringPaymentsView.approval(
+            review: .init(payment: SendPaymentTests().payment, quote: SendPaymentTests().quote),
+            controller: controller,
+            pay: { Issue.record("Close paid") },
+            dismiss: { dismissed += 1 },
+            done: { Issue.record("Close acknowledged") })
         sheet.onLeave()
         #expect(dismissed == 1)
         #expect(controller.locked && controller.state == .uncertain && controller.generation == before.2)
@@ -872,8 +875,8 @@ struct ReceiveFormatTests {
     static func row(_ arrival: ReceiveArrival, at t: Double, reduceMotion: Bool) throws -> Data {
         let view = Canvas { context, size in
             ReceiveBlockRow.draw(MotionCanvas(context: context, size: size, viewBox: CGRect(x: 0, y: 0, width: 300, height: 58), colors: .theme(.light)),
-                                 arrival: arrival, tip: 101, time: MotionTime(t: t, reduceMotion: reduceMotion), nextLabel: "next",
-                                 locale: Locale(identifier: "en"))
+                                 arrival: arrival, tip: 101, time: MotionTime(t: t, reduceMotion: reduceMotion),
+                                 copy: (next: "next", locale: Locale(identifier: "en")))
         }
         .frame(width: 300, height: 58)
         return try #require(ImageRenderer(content: view).uiImage?.pngData())

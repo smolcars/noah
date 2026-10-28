@@ -483,7 +483,7 @@ struct ReceiveBlockRow: View {
                 Self.draw(MotionCanvas(context: context, size: size, viewBox: CGRect(x: 0, y: 0, width: 300, height: 58),
                                        colors: .theme(colorScheme)),
                           arrival: arrival, tip: tip, time: MotionTime(t: t, reduceMotion: reduceMotion),
-                          nextLabel: L10n.text("next", locale: locale.identifier), locale: locale)
+                          copy: (next: L10n.text("next", locale: locale.identifier), locale: locale))
             }
         }
         .task(id: settleKey) {
@@ -497,7 +497,9 @@ struct ReceiveBlockRow: View {
         .accessibilityHidden(true)
     }
 
-    static func draw(_ canvas: MotionCanvas, arrival: ReceiveArrival, tip: UInt32?, time: MotionTime, nextLabel: String, locale: Locale) {
+    /// `copy`: the block row's "next" label and the locale its numbers use.
+    static func draw(_ canvas: MotionCanvas, arrival: ReceiveArrival, tip: UInt32?, time: MotionTime, copy: (next: String, locale: Locale)) {
+        let nextLabel = copy.next, locale = copy.locale
         let t = time.t
         let row = ChainBlockRow(x0: 72, y: 6, size: 30, tip: tip, confirmedHeight: arrival.confirmedHeight,
                                 heldAt: 0.7, confirmedAt: arrival.confirmedAt.map { $0.timeIntervalSince(arrival.start) },

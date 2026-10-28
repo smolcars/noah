@@ -87,11 +87,10 @@ extension WalletSession {
         let flight = syncFlight
         let threshold = UInt32(WalletConfiguration.base(for: .current).vtxoRefreshExpiryThreshold)
         return try await withOpenWallet { handles in
-            try await Self.submitRenewal(
-                quote, threshold: threshold, journal: journal, flight: flight,
+            let reads = RenewalReads(
                 requote: {
-                    try await Self.onchainQuote(handles, action: .refresh, ids: quote.ids, amount: quote.amount,
-                                                destination: nil, automatic: quote.automatic)
+                    try await Self.onchainQuote(handles, request: QuoteRequest(action: .refresh, ids: quote.ids, amount: quote.amount,
+                                                                               destination: nil, automatic: quote.automatic))
                 },
                 expiring: { try await handles.wallet.getExpiringVtxos(thresholdBlocks: $0).map(Self.renewalCoin) },
                 tip: { try await handles.onchain.tipHeight() },
@@ -101,6 +100,7 @@ extension WalletSession {
                         message: round.map { "Refresh submitted to delegated round \($0.id)." }
                             ?? "No refresh round was needed.")
                 })
+            return try await Self.submitRenewal(quote, threshold: threshold, journal: journal, flight: flight, reads: reads)
         }
     }
 
@@ -109,12 +109,16 @@ extension WalletSession {
     /// operation, immediately before submitting with nothing awaited in between: every VTXO
     /// must still be in the expiring set at this threshold and tip, spendable and unexpired.
     /// Otherwise, or if either can't be read, nothing is submitted and the review has changed.
+    /// What a renewal reads and calls, so its checks are tested without the SDK.
+    struct RenewalReads: Sendable {
+        var requote: @Sendable () async throws -> OnchainQuote
+        var expiring: @Sendable (UInt32) async throws -> [HomeRenewal.Coin]
+        var tip: @Sendable () async throws -> UInt32
+        var refresh: @Sendable ([String]) async throws -> OnchainReceipt
+    }
     static func submitRenewal(
-        _ quote: OnchainQuote, threshold: UInt32, journal: OnchainOperationJournal, flight: WalletSync,
-        requote: @escaping @Sendable () async throws -> OnchainQuote,
-        expiring: @escaping @Sendable (UInt32) async throws -> [HomeRenewal.Coin],
-        tip: @escaping @Sendable () async throws -> UInt32,
-        refresh: @escaping @Sendable ([String]) async throws -> OnchainReceipt) async throws -> String {
+        _ quote: OnchainQuote, threshold: UInt32, journal: OnchainOperationJournal, flight: WalletSync, reads: RenewalReads) async throws -> String {
+        let requote = reads.requote, expiring = reads.expiring, tip = reads.tip, refresh = reads.refresh
         guard quote.action == .refresh, ExitRules.current(elapsed: quote.elapsed()) else { throw OnchainFailure.changed }
         let message = Mutex<String?>(nil)
         try await flight.serialized {

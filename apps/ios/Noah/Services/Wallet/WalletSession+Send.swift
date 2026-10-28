@@ -259,8 +259,12 @@ extension WalletSession {
         if let checkpoint = snapshot.checkpoint {
             receipt = try checkpoint.receipt(status: lightning, movements: movements, payment: payment, quote: quote)
         } else {
-            switch SendReconciliation.lightningAttempt(movements, hash: hash, amount: payment.amount, snapshot: snapshot, startedAt: nil,
-                                                       fixed: SendReconciliation.fixesAmount(snapshot.resolvedInvoice ?? payment.destination)) {
+            switch SendReconciliation.lightningAttempt(
+                movements,
+                paying: .init(hash: hash, amount: payment.amount),
+                snapshot: snapshot,
+                startedAt: nil,
+                fixed: SendReconciliation.fixesAmount(snapshot.resolvedInvoice ?? payment.destination)) {
             case .paid(let actual): receipt = actual
             case .alreadyPaid(let actual): throw SendAlreadyPaid(receipt: actual)
             default: throw SendFailure.unresolved

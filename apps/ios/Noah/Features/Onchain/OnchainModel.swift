@@ -327,8 +327,12 @@ final class OnchainModel {
     func progress(_ exit: ExitModel, now: Date = Date()) -> ExitProgress {
         let parkedSince = exit.parkedEpisode.flatMap { sightings.value.seen[$0]?.at }
         let needsFunds = overview.map {
-            ExitFunds.needsFunds(exit, confirmed: $0.confirmed, packageFee: $0.packageFees[exit.id], proven: $0.provenParked,
-                                 parkedSince: parkedSince, daemonSince: $0.daemonSince.map { max($0, sceneChangedAt) }, now: now)
+            ExitFunds.needsFunds(
+                exit,
+                confirmed: $0.confirmed,
+                packageFee: $0.packageFees[exit.id],
+                proven: $0.provenParked,
+                timing: .init(parkedSince: parkedSince, daemonSince: $0.daemonSince.map { max($0, sceneChangedAt) }, now: now))
         } ?? false
         let claimSent = attempts.contains { attempt in
             attempt.quote.action == .claim && attempt.quote.ids.contains(exit.id) && attempt.receipt?.txid.map(exit.awaitsClaim) == true

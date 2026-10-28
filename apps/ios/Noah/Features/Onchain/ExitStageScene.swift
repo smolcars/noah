@@ -352,8 +352,12 @@ struct ExitStageView: View {
                 TimelineView(.animation(paused: settled || scenePhase != .active)) { timeline in
                     Canvas { context, _ in
                         let elapsed = timeline.date.timeIntervalSince(changedAt), now = timeline.date.timeIntervalSinceReferenceDate
-                        painter.draw(context, from: settled ? nil : from?.folded(nodes: capacity), to: drawn, elapsed: elapsed, now: now, inline: !settled,
-                                     animating: animating)
+                        painter.draw(
+                            context,
+                            from: settled ? nil : from?.folded(nodes: capacity),
+                            to: drawn,
+                            elapsed: elapsed,
+                            motion: .init(now: now, inline: !settled, animating: animating))
                     }
                 }
                 ForEach(pulses) { ExitPulseView(pulse: $0, front: true, animating: animating, colors: painter.colors) }

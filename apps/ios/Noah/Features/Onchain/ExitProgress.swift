@@ -306,8 +306,10 @@ enum ExitFunds {
 
     /// `proven`: the episode a completed Check the chain left parked, by exit. `parkedSince`: Noah's first
     /// sighting of this episode. `daemonSince`: since when bark's daemon has run uninterrupted.
-    static func needsFunds(_ exit: ExitModel, confirmed: UInt64, packageFee: UInt64?, proven: [String: String],
-                           parkedSince: Date?, daemonSince: Date?, now: Date) -> Bool {
+    /// `parkedSince`: Noah's first sighting of this episode. `daemonSince`: since when bark's daemon has run uninterrupted.
+    struct Timing { var parkedSince: Date?; var daemonSince: Date?; var now: Date }
+    static func needsFunds(_ exit: ExitModel, confirmed: UInt64, packageFee: UInt64?, proven: [String: String], timing: Timing) -> Bool {
+        let parkedSince = timing.parkedSince, daemonSince = timing.daemonSince, now = timing.now
         guard let episode = exit.parkedEpisode, let packageFee, confirmed < packageFee else { return false }
         if proven[exit.id] == episode { return true }
         // Only after bark has had a full daemon cycle to fund it, so the label doesn't flash before it tried.

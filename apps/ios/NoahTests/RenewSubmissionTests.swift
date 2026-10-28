@@ -32,20 +32,20 @@ struct RenewSubmissionTests {
     private func submit(_ journal: OnchainOperationJournal, flight: WalletSync, tip: Shared<UInt32>,
                         coins: [HomeRenewal.Coin] = [coin], failing: Read? = nil, submitted: Shared<Int>) async throws -> String {
         try await WalletSession.submitRenewal(
-            Self.quote, threshold: 144, journal: journal, flight: flight,
-            requote: { Self.quote },
-            expiring: { _ in
+            Self.quote,
+            threshold: 144,
+            journal: journal,
+            flight: flight,
+            reads: .init(requote: { Self.quote }, expiring: { _ in
                 if failing == .expiring { throw ReadFailed() }
                 return coins
-            },
-            tip: {
+            }, tip: {
                 if failing == .tip { throw ReadFailed() }
                 return tip.current
-            },
-            refresh: { _ in
+            }, refresh: { _ in
                 submitted.set(submitted.current + 1)
                 return OnchainReceipt(message: "submitted")
-            })
+            }))
     }
 
     @Test func expiryWhileWaitingForTheLockSubmitsNothing() async throws {

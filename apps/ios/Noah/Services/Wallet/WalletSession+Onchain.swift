@@ -162,8 +162,8 @@ extension WalletSession {
                 return quote
             }
             return try await Self.onchainQuote(
-                handles, action: action, ids: ids, amount: amount, destination: destination,
-                automatic: automatic)
+                handles,
+                request: QuoteRequest(action: action, ids: ids, amount: amount, destination: destination, automatic: automatic))
         }
     }
 
@@ -439,9 +439,18 @@ extension WalletSession {
         }
     }
 
-    static func onchainQuote(
-        _ handles: Handles, action: OnchainAction, ids: [String], amount requested: UInt64,
-        destination: String?, automatic: Bool, estimate: Bool = true) async throws -> OnchainQuote {
+    /// What to quote: the action, its VTXOs or amount, where it pays, and whether to estimate fees.
+    struct QuoteRequest {
+        var action: OnchainAction
+        var ids: [String]
+        var amount: UInt64
+        var destination: String?
+        var automatic: Bool
+        var estimate = true
+    }
+    static func onchainQuote(_ handles: Handles, request: QuoteRequest) async throws -> OnchainQuote {
+        let action = request.action, ids = request.ids, requested = request.amount, destination = request.destination
+        let automatic = request.automatic, estimate = request.estimate
         if action == .claim {
             return try await claimQuote(ids: ids, destination: destination, access: claimAccess(handles), automatic: automatic)
         }
@@ -565,8 +574,14 @@ extension WalletSession {
         let fresh: OnchainQuote
         do {
             fresh = try await Self.onchainQuote(
-                handles, action: quote.action, ids: quote.ids, amount: quote.boardAll == true ? 0 : quote.amount,
-                destination: quote.destination, automatic: quote.automatic, estimate: !quote.hasUnknownFeeConsent)
+                handles,
+                request: QuoteRequest(
+                    action: quote.action,
+                    ids: quote.ids,
+                    amount: quote.boardAll == true ? 0 : quote.amount,
+                    destination: quote.destination,
+                    automatic: quote.automatic,
+                    estimate: !quote.hasUnknownFeeConsent))
         } catch let failure as ExitEstimateUnavailable { throw try failure.preserving(quote) }
         guard quote.matches(fresh), ExitRules.current(elapsed: quote.elapsed()) else {
             throw OnchainFailure.changed

@@ -5,18 +5,22 @@ extension ExitStagePainter {
     // MARK: Drawing
 
     /// `inline`: the Canvas draws the moving parts itself (while the picture moves); otherwise overlays do.
-    func draw(_ context: GraphicsContext, from: ExitStageScene?, to scene: ExitStageScene, elapsed: Double, now: Double, inline: Bool, animating: Bool) {
+    /// When the picture is drawn, whether the Canvas draws the moving parts itself, and whether they move.
+    struct Motion { var now: Double; var inline: Bool; var animating: Bool }
+
+    func draw(_ context: GraphicsContext, from: ExitStageScene?, to scene: ExitStageScene, elapsed: Double, motion: Motion) {
+        let now = motion.now, inline = motion.inline, animating = motion.animating
         if reduceMotion {
             // Every move becomes a fade between the two stills.
             let u = (elapsed / 0.18).clamped(0, 1)
             if let from, u < 1 {
                 var old = context
                 old.opacity = 1 - u
-                paint(old, ExitStageFrame(from, from, elapsed: 60, reduceMotion: true), from, from, now: now, inline: true, animating: false)
+                paint(old, ExitStageFrame(from, from, elapsed: 60, reduceMotion: true), from, from, motion: .init(now: now, inline: true, animating: false))
             }
             var new = context
             new.opacity = from == nil ? 1 : u
-            paint(new, ExitStageFrame(scene, scene, elapsed: 60, reduceMotion: true), scene, scene, now: now, inline: inline, animating: false)
+            paint(new, ExitStageFrame(scene, scene, elapsed: 60, reduceMotion: true), scene, scene, motion: .init(now: now, inline: inline, animating: false))
         } else {
             let a = from ?? scene
             paint(
@@ -24,15 +28,13 @@ extension ExitStagePainter {
                 ExitStageFrame(a, scene, elapsed: from == nil ? 60 : elapsed, reduceMotion: false),
                 a,
                 scene,
-                now: now,
-                inline: inline,
-                animating: animating)
+                motion: .init(now: now, inline: inline, animating: animating))
         }
     }
 
     // swiftlint:disable:next function_body_length cyclomatic_complexity
-    private func paint(_ context: GraphicsContext, _ f: ExitStageFrame, _ a: ExitStageScene, _ s: ExitStageScene,
-                       now: Double, inline: Bool, animating: Bool) {
+    private func paint(_ context: GraphicsContext, _ f: ExitStageFrame, _ a: ExitStageScene, _ s: ExitStageScene, motion: Motion) {
+        let now = motion.now, inline = motion.inline, animating = motion.animating
         guard s.picture != .blank || s.explain else { return }
         let g = geometry, n = s.levels.count, c = colors, L = g.scale
         let canvas = MotionCanvas(context: context, size: CGSize(width: g.width, height: g.height),
@@ -137,9 +139,16 @@ extension ExitStagePainter {
                 canvas.stroke(canvas.circle(p.x, p.y, r), c.orange.opacity(alpha), 1.4, dash: [1.6, 1.6])
                 continue
             }
-            node(canvas, p, level: s.levels[index], mined: f.mined[index], stamp: f.stamp[index], ripple: f.ripple[index],
-                 pending: f.pending[index], side: z, pop: min(1.3, pop), alpha: alpha, grey: s.stale, inline: inline, now: now, breathe: breathe,
-                 animating: animating && inline)
+            node(
+                canvas,
+                p,
+                look: NodeLook(level: s.levels[index], mined: f.mined[index], stamp: f.stamp[index], ripple: f.ripple[index], pending: f.pending[index],
+                               side: z,
+                               pop: min(
+                                   1.3,
+                                   pop), alpha: alpha, grey: s.stale),
+                inline: inline,
+                ink: ExitPulseInk(now: now, breathe: breathe, animating: animating && inline, colors: colors))
             if s.fold(at: index)?.kind == .stack, f.mined[index] > 0.9 {
                 // The oldest blocks stacked into one: an ink block in layers.
                 for offset in [-z / 6, z / 6] {
@@ -179,30 +188,48 @@ extension ExitStagePainter {
         }
         if f.claimSend > 0.001 || f.claimMined > 0.001 {
             let claim: ExitStageScene.Level = s.picture == .claimed ? .mined(nil) : .pending(theirs: false, bumped: false)
-            node(canvas, g.claimNode, level: claim, mined: f.claimMined, stamp: f.claimStamp, ripple: f.claimRipple, pending: f.claimSend, side: 13,
-                 pop: 1, alpha: 1, grey: false, inline: inline, now: now, breathe: breathe, animating: animating && inline)
+            node(
+                canvas,
+                g.claimNode,
+                look: NodeLook(level: claim, mined: f.claimMined, stamp: f.claimStamp, ripple: f.claimRipple, pending: f.claimSend, side: 13, pop: 1, alpha: 1,
+                               grey: false),
+                inline: inline,
+                ink: ExitPulseInk(now: now, breathe: breathe, animating: animating && inline, colors: colors))
         }
-        coin(canvas, f, s, inline: inline, now: now, breathe: breathe, animating: animating && inline)
+        coin(canvas, f, s, inline: inline, ink: ExitPulseInk(now: now, breathe: breathe, animating: animating && inline, colors: colors))
         dial(canvas, f, s, inline: inline, breathe: breathe)
         destination(canvas, f, s)
         // Labels: the right-hand column says which block each transaction is in, and what's waiting.
         let old = f.fadeIn < 1 ? labels(a, ys: before) : []
         func same(_ x: ExitStageLabel, _ y: ExitStageLabel) -> Bool { x.lines == y.lines && x.y == y.y && x.pill == y.pill }
-        drawLabels(context, old.filter { label in !new.contains { same($0, label) } }, tree: 1 - f.fadeIn, trailing: 1 - f.fadeIn,
-                   inline: true, breathe: breathe, flash: 0)
-        drawLabels(context, new, tree: f.labels, trailing: f.claimSend, fade: { label in old.contains { same($0, label) } ? 1 : f.fadeIn },
-                   inline: inline, breathe: breathe, flash: f.flash)
+        drawLabels(
+            context,
+            old.filter { label in !new.contains { same($0, label) } },
+            style: LabelStyle(tree: 1 - f.fadeIn, trailing: 1 - f.fadeIn, inline: true, breathe: breathe, flash: 0))
+        drawLabels(
+            context,
+            new,
+            style: LabelStyle(
+                tree: f.labels,
+                trailing: f.claimSend,
+                fade: { label in old.contains { same($0, label) } ? 1 : f.fadeIn },
+                inline: inline,
+                breathe: breathe,
+                flash: f.flash))
     }
 
-    private func drawLabels(
-        _ context: GraphicsContext,
-        _ labels: [ExitStageLabel],
-        tree: Double,
-        trailing: Double,
-        fade: (ExitStageLabel) -> Double = { _ in 1 },
-        inline: Bool,
-        breathe: Double,
-        flash: Double) {
+    /// How a set of labels fades in and pulses.
+    struct LabelStyle {
+        var tree: Double
+        var trailing: Double
+        var fade: (ExitStageLabel) -> Double = { _ in 1 }
+        var inline: Bool
+        var breathe: Double
+        var flash: Double
+    }
+
+    private func drawLabels(_ context: GraphicsContext, _ labels: [ExitStageLabel], style: LabelStyle) {
+        let tree = style.tree, trailing = style.trailing, fade = style.fade, inline = style.inline, breathe = style.breathe, flash = style.flash
         let g = geometry, c = colors
         for label in labels {
             let alpha = (label.trailing != nil ? trailing : tree).clamped(0, 1) * fade(label)
@@ -248,8 +275,23 @@ extension ExitStagePainter {
 
     /// A transaction. Hollow circle: not sent yet. Glowing dashed square: in the mempool, waiting for
     /// the next block. Ink square: in a block. (Circles are off-chain, blocks on-chain, as v1.)
-    private func node(_ canvas: MotionCanvas, _ p: CGPoint, level: ExitStageScene.Level, mined: Double, stamp: Double, ripple: Double,
-                      pending: Double, side z: Double, pop: Double, alpha: Double, grey: Bool, inline: Bool, now: Double, breathe: Double, animating: Bool) {
+    /// How one node looks at this frame: its level and how far each of its moves has run.
+    struct NodeLook {
+        var level: ExitStageScene.Level
+        var mined: Double
+        var stamp: Double
+        var ripple: Double
+        var pending: Double
+        var side: Double
+        var pop: Double
+        var alpha: Double
+        var grey: Bool
+    }
+
+    private func node(_ canvas: MotionCanvas, _ p: CGPoint, look: NodeLook, inline: Bool, ink: ExitPulseInk) {
+        let level = look.level, mined = look.mined, stamp = look.stamp, ripple = look.ripple, pending = look.pending
+        let z = look.side, pop = look.pop, alpha = look.alpha, grey = look.grey
+        let now = ink.now, breathe = ink.breathe, animating = ink.animating
         guard alpha > 0.01 else { return }
         var c = canvas
         c.context.opacity *= alpha
@@ -273,10 +315,7 @@ extension ExitStagePainter {
                 c.context,
                 kind: .square(z),
                 center: p,
-                now: now,
-                breathe: breathe,
-                animating: animating && pending >= 1,
-                colors: colors,
+                ink: ExitPulseInk(now: now, breathe: breathe, animating: animating && pending >= 1, colors: colors),
                 strength: pending) }
             if pending < 1 { c.stroke(c.circle(p.x, p.y, 5.5 * (1 - pending)), colors.orange, 1.6) }
             let h = z * (0.6 + 0.4 * pending)
@@ -292,10 +331,7 @@ extension ExitStagePainter {
                 c.context,
                 kind: .alarm(z * 0.95),
                 center: p,
-                now: now,
-                breathe: breathe,
-                animating: false,
-                colors: colors) }
+                ink: ExitPulseInk(now: now, breathe: breathe, animating: false, colors: colors)) }
         } else {
             let r = (z >= 13 ? 6.2 : z * 0.42) * pop
             c.fill(c.circle(p.x, p.y, r), colors.background)
@@ -304,7 +340,8 @@ extension ExitStagePainter {
     }
 
     /// Your coin: the leaf transaction's output at the top of the branch; at the claim it travels the stem.
-    private func coin(_ canvas: MotionCanvas, _ f: ExitStageFrame, _ s: ExitStageScene, inline: Bool, now: Double, breathe: Double, animating: Bool) {
+    private func coin(_ canvas: MotionCanvas, _ f: ExitStageFrame, _ s: ExitStageScene, inline: Bool, ink: ExitPulseInk) {
+        let now = ink.now, breathe = ink.breathe, animating = ink.animating
         let g = geometry, colors = colors, n = s.levels.count, last = n - 1
         var center = CGPoint(x: g.trunk, y: g.coinY - 5 * f.lift), r = g.coinRadius
         if f.land > 0.001 {
@@ -317,10 +354,7 @@ extension ExitStagePainter {
                 canvas.context,
                 kind: .coin(r),
                 center: center,
-                now: now,
-                breathe: breathe,
-                animating: animating && pending >= 1,
-                colors: colors,
+                ink: ExitPulseInk(now: now, breathe: breathe, animating: animating && pending >= 1, colors: colors),
                 strength: pending)
         }
         if s.picture == .unlocked && inline && f.claimSend < 0.5 {
@@ -328,10 +362,7 @@ extension ExitStagePainter {
                 canvas.context,
                 kind: .glow(r),
                 center: center,
-                now: now,
-                breathe: breathe,
-                animating: false,
-                colors: colors,
+                ink: ExitPulseInk(now: now, breathe: breathe, animating: false, colors: colors),
                 strength: f.open.clamped(0, 1))
         }
         if waiting && (inline || s.stale) {
@@ -341,7 +372,11 @@ extension ExitStagePainter {
                 style: StrokeStyle(lineWidth: 1.6, dash: [3, 2.6], dashPhase: animating && !s.stale ? ExitPulsePainter.march(now, 5.6) : 0))
         }
         if s.levels[last] == .needsFunds && inline {
-            ExitPulsePainter.front(canvas.context, kind: .alarm(r + 5), center: center, now: now, breathe: breathe, animating: false, colors: colors)
+            ExitPulsePainter.front(
+                canvas.context,
+                kind: .alarm(r + 5),
+                center: center,
+                ink: ExitPulseInk(now: now, breathe: breathe, animating: false, colors: colors))
         }
         let fade = 1 - ((f.land - 0.85) / 0.13).clamped(0, 1)
         if f.land < 0.98 {

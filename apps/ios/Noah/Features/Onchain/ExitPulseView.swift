@@ -4,9 +4,17 @@ import SwiftUI
 /// glow breathing at 1.6 s, two rings rippling out 0.8 s apart, the dashed outline marching and the
 /// "Next block" pill pulsing with the breath. `back` goes under the tree (the node's own fill
 /// covers the glow's middle), `front` over it. Without `animating` it's a steady 60 % glow.
+/// The moment a pulse is drawn at: its time, the breath then, whether it moves, and its colours.
+struct ExitPulseInk {
+    var now: Double
+    var breathe: Double
+    var animating: Bool
+    var colors: MotionColors
+}
+
 enum ExitPulsePainter {
-    static func back(_ context: GraphicsContext, kind: ExitPulse.Kind, center p: CGPoint, now: Double, breathe: Double, animating: Bool,
-                     colors: MotionColors, strength: Double = 1) {
+    static func back(_ context: GraphicsContext, kind: ExitPulse.Kind, center p: CGPoint, ink: ExitPulseInk, strength: Double = 1) {
+        let now = ink.now, breathe = ink.breathe, animating = ink.animating, colors = ink.colors
         switch kind {
         case .square(let side):
             glow(context, p, side * 1.6, (0.3 + 0.7 * breathe) * strength, colors)
@@ -38,8 +46,8 @@ enum ExitPulsePainter {
         }
     }
 
-    static func front(_ context: GraphicsContext, kind: ExitPulse.Kind, center p: CGPoint, now: Double, breathe: Double, animating: Bool,
-                      colors: MotionColors) {
+    static func front(_ context: GraphicsContext, kind: ExitPulse.Kind, center p: CGPoint, ink: ExitPulseInk) {
+        let now = ink.now, breathe = ink.breathe, animating = ink.animating, colors = ink.colors
         switch kind {
         case .square(let side):
             context.stroke(Path(roundedRect: CGRect(x: p.x - side / 2, y: p.y - side / 2, width: side, height: side), cornerRadius: 3.5),
@@ -109,9 +117,17 @@ struct ExitPulseView: View {
                     let now = timeline.date.timeIntervalSinceReferenceDate, center = CGPoint(x: size.width / 2, y: size.height / 2)
                     let breathe = ExitPulse.breathe(now, animating: animating)
                     if front {
-                        ExitPulsePainter.front(context, kind: pulse.kind, center: center, now: now, breathe: breathe, animating: animating, colors: colors)
+                        ExitPulsePainter.front(
+                            context,
+                            kind: pulse.kind,
+                            center: center,
+                            ink: ExitPulseInk(now: now, breathe: breathe, animating: animating, colors: colors))
                     } else {
-                        ExitPulsePainter.back(context, kind: pulse.kind, center: center, now: now, breathe: breathe, animating: animating, colors: colors)
+                        ExitPulsePainter.back(
+                            context,
+                            kind: pulse.kind,
+                            center: center,
+                            ink: ExitPulseInk(now: now, breathe: breathe, animating: animating, colors: colors))
                     }
                 }
             }

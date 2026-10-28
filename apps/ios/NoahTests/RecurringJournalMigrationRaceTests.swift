@@ -43,7 +43,7 @@ import Testing
         DispatchQueue.global().async {
             defer { group.leave(); finished.signal() }
             started.signal()
-            do { try sendJournal.record(paid, generation: 1, walletGeneration: 1, message: nil, binding: binding, now: now) }
+            do { try sendJournal.record(paid, generations: .init(generation: 1, walletGeneration: 1), message: nil, binding: binding, now: now) }
             catch { errors.withLock { $0.append(String(describing: error)) } }
         }
         #expect(started.wait(timeout: .now() + 10) == .success)

@@ -91,8 +91,11 @@ struct RecurringPaymentsView: View {
 
     /// The approval sheet. Leaving an unresolved result (Close, or Done while still paying)
     /// only dismisses it; the attempt and the send lock stay as they are.
-    static func approval(payment: SendPayment, quote: SendQuote, controller: SendPaymentController, pay: @escaping () -> Void,
+    /// The payment and quote the sheet reviews.
+    struct ApprovalReview { var payment: SendPayment; var quote: SendQuote }
+    static func approval(review: ApprovalReview, controller: SendPaymentController, pay: @escaping () -> Void,
                          dismiss: @escaping () -> Void, done: @escaping () -> Void) -> SendConfirmation {
+        let payment = review.payment, quote = review.quote
         SendConfirmation(confirm: pay, payment: payment, quote: quote, controller: controller, cancel: dismiss, done: done, onLeave: dismiss)
     }
 }
@@ -223,9 +226,12 @@ struct RecurringSchedulePage: View {
         }
         .onboardingHaptics(haptics)
         .sheet(item: $review) { item in
-            RecurringPaymentsView.approval(payment: item.payment, quote: item.quote, controller: executor.controller,
-                                           pay: { Task { await ForegroundExecution.run { await executor.execute(manual: true, approval: item) } } },
-                                           dismiss: { review = nil }, done: { review = nil; Task { await executor.reload() } })
+            RecurringPaymentsView.approval(
+                review: .init(payment: item.payment, quote: item.quote),
+                controller: executor.controller,
+                pay: { Task { await ForegroundExecution.run { await executor.execute(manual: true, approval: item) } } },
+                dismiss: { review = nil },
+                done: { review = nil; Task { await executor.reload() } })
                 .onAppear { app.paymentLink.approvalOpen = true }
                 .onDisappear { app.paymentLink.approvalOpen = false }
                 .alert("Payment in progress", isPresented: Bindable(app.paymentLink).approvalBlocked) {

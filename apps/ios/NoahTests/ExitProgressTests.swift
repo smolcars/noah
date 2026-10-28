@@ -206,8 +206,12 @@ struct ExitProgressTests {
         let t0 = Date(timeIntervalSince1970: 1_000)
         func needs(_ confirmed: UInt64 = 310, fee: UInt64? = 1_215, proven: [String: String] = [:], seen: Date? = t0, daemon: Date? = .distantPast,
                    at seconds: TimeInterval, _ subject: ExitModel = exit) -> Bool {
-            ExitFunds.needsFunds(subject, confirmed: confirmed, packageFee: fee, proven: proven, parkedSince: seen, daemonSince: daemon,
-                                 now: t0.addingTimeInterval(seconds))
+            ExitFunds.needsFunds(
+                subject,
+                confirmed: confirmed,
+                packageFee: fee,
+                proven: proven,
+                timing: .init(parkedSince: seen, daemonSince: daemon, now: t0.addingTimeInterval(seconds)))
         }
         // Funds short, but bark hasn't had a full daemon cycle to try yet: no label.
         #expect(!needs(at: 0) && !needs(at: 74))
@@ -256,17 +260,13 @@ struct ExitProgressTests {
             confirmed: 100,
             packageFee: 1_215,
             proven: ["v": first.parkedEpisode!],
-            parkedSince: nil,
-            daemonSince: nil,
-            now: Date()))
+            timing: .init(parkedSince: nil, daemonSince: nil, now: Date())))
         #expect(!ExitFunds.needsFunds(
             again,
             confirmed: 100,
             packageFee: 1_215,
             proven: ["v": first.parkedEpisode!],
-            parkedSince: nil,
-            daemonSince: nil,
-            now: Date()))
+            timing: .init(parkedSince: nil, daemonSince: nil, now: Date())))
         var sightings = ExitSightings()
         _ = sightings.observe([first], tip: 100, now: Date(timeIntervalSince1970: 1))
         #expect(sightings.seen[again.parkedEpisode!] == nil)
@@ -294,8 +294,13 @@ struct ExitProgressTests {
         txs[0] = Self.tx("root", "awaiting-cpfp-broadcast")
         let exit = Self.exit("Processing", Self.processing(txs, tip: 102), history: [Self.processing(txs, tip: 100)])
         #expect(exit.parkedEpisode == "root|awaiting-cpfp-broadcast|0")
-        #expect(!ExitFunds.needsFunds(exit, confirmed: 100, packageFee: 1_215, proven: [:], parkedSince: nil, daemonSince: nil, now: Date()))
-        #expect(!ExitFunds.needsFunds(exit, confirmed: 100, packageFee: 1_215, proven: [:], parkedSince: nil, daemonSince: .distantPast, now: Date()))
+        #expect(!ExitFunds.needsFunds(exit, confirmed: 100, packageFee: 1_215, proven: [:], timing: .init(parkedSince: nil, daemonSince: nil, now: Date())))
+        #expect(!ExitFunds.needsFunds(
+            exit,
+            confirmed: 100,
+            packageFee: 1_215,
+            proven: [:],
+            timing: .init(parkedSince: nil, daemonSince: .distantPast, now: Date())))
     }
 
     @Test func sightingsKeepTheFirstTipAndForgetWhatMovedOn() throws {
@@ -337,8 +342,12 @@ struct ExitProgressTests {
         var txs = Self.path.map { Self.tx($0, "verify-inputs") }
         txs[0] = Self.tx("root", "awaiting-cpfp-broadcast")
         let exit = Self.exit("Processing", Self.processing(txs, tip: 100))
-        #expect(ExitFunds.needsFunds(exit, confirmed: 1_180, packageFee: 1_215, proven: ["v": "root|awaiting-cpfp-broadcast|0"],
-                                     parkedSince: nil, daemonSince: nil, now: Date()))
+        #expect(ExitFunds.needsFunds(
+            exit,
+            confirmed: 1_180,
+            packageFee: 1_215,
+            proven: ["v": "root|awaiting-cpfp-broadcast|0"],
+            timing: .init(parkedSince: nil, daemonSince: nil, now: Date())))
     }
 
     @Test func aLongerRealPathKeepsEveryNodeAfterStart() {

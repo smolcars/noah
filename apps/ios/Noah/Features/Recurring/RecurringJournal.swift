@@ -184,8 +184,11 @@ struct RecurringJournal {
         return migrated
     }
     /// Durable handoff before Send publishes a terminal result.
-    func record(_ attempt: SendPaymentController.Attempt, generation: Int, walletGeneration: Int,
+    /// The Send controller's generations when the attempt finished.
+    struct Generations { var generation: Int; var walletGeneration: Int }
+    func record(_ attempt: SendPaymentController.Attempt, generations: Generations,
                 message: String?, binding: RecurringStore.Binding, now: Double) throws {
+        let generation = generations.generation, walletGeneration = generations.walletGeneration
         Self.lock.lock(); defer { Self.lock.unlock() }
         let outcome: TerminalOutcome
         if attempt.alreadyPaid != nil { outcome = .alreadyPaid }
