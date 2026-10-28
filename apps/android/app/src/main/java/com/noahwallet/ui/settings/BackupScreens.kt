@@ -94,15 +94,16 @@ internal fun rememberFileShare(model: AppModel, title: String, mime: String, onS
                     finally { staged.discard() }
                 }
             }
-            try {
+            runCatching {
                 val uri = FileProvider.getUriForFile(context, "${context.packageName}.files", file, displayName)
                 val send = Intent(Intent.ACTION_SEND).setType(mime).putExtra(Intent.EXTRA_STREAM, uri)
                     .apply { clipData = ClipData.newRawUri(file.name, uri); addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION) }
-                androidx.work.WorkManager.getInstance(context).enqueue(androidx.work.OneTimeWorkRequestBuilder<com.noahwallet.services.sharing.SettingsShareCleanup>()
-                    .setInitialDelay(com.noahwallet.services.sharing.SettingsShareFiles.retentionMillis,
-                        java.util.concurrent.TimeUnit.MILLISECONDS).build())
+                val cleanup = androidx.work.OneTimeWorkRequestBuilder<com.noahwallet.services.sharing.SettingsShareCleanup>()
+                    .setInitialDelay(com.noahwallet.services.sharing.SettingsShareFiles.retentionMillis, java.util.concurrent.TimeUnit.MILLISECONDS)
+                    .build()
+                androidx.work.WorkManager.getInstance(context).enqueue(cleanup)
                 launcher.launch(Intent.createChooser(send, title, shareCompletion))
-            } catch (failure: Exception) { model.settingsShares.discard(file); throw failure }
+            }.onFailure { model.settingsShares.discard(file) }.getOrThrow()
         }
     }
 }

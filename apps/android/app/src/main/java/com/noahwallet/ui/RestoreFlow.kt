@@ -52,18 +52,28 @@ class RestoreCompletion(
             throw RestartRequired()
         }
         clearToken()
-        try {
-            val wallet = loadState()
-            saveState(wallet.copy(isInitialized = true, isWalletLoaded = true))
-            if (outcome.typedPhrase) acknowledgeBackup()
-            outcome.snapshotSha256?.let { seedRestored(it, outcome.backupId) }
-        } catch (failure: Exception) {
-            if (failure is CancellationException || !settingsUnavailable()) throw failure
+        if (!saveSettings(outcome)) {
             openWallet() // The durable receipt retries preferences; the wallet is already committed.
             return
         }
         openWallet()
         journal?.clear()
+    }
+
+    /** Marks the wallet restored in settings; false when settings storage is unavailable. */
+    private fun saveSettings(outcome: WalletRestorer.Outcome): Boolean {
+        @Suppress("TooGenericExceptionCaught") // settings storage throws untyped errors; rethrown unless storage is unavailable
+        try {
+            val wallet = loadState()
+            saveState(wallet.copy(isInitialized = true, isWalletLoaded = true))
+            if (outcome.typedPhrase) acknowledgeBackup()
+            outcome.snapshotSha256?.let { seedRestored(it, outcome.backupId) }
+            return true
+        } catch (cancelled: CancellationException) { throw cancelled }
+        catch (failure: Exception) {
+            if (!settingsUnavailable()) throw failure
+            return false
+        }
     }
 }
 
@@ -87,6 +97,7 @@ class RestoreFlow(
         // The screen cannot cancel; a committed engine result must reach completion even if its owner clears.
         withContext(NonCancellable) {
             var committed = false
+            @Suppress("TooGenericExceptionCaught") // restore boundary: every failure becomes the screen's issue
             try {
                 val outcome = restore(phrase) { step = it }
                 committed = true

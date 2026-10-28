@@ -77,6 +77,7 @@ internal fun EmailStep(model: AppModel, presentation: OnboardingPresentation) {
     }
     fun verify(code: String) {
         model.action("Invalid or expired verification code. Please try again.", useServerMessage = true) {
+            @Suppress("TooGenericExceptionCaught") // any failure but a wrong code clears the entry, then reaches the action's alert
             try { model.server.verifyEmail(code, presentation.email) }
             catch (failure: Exception) {
                 if (!wrongCode(failure)) { presentation.otp = presentation.otp.copy(verifying = false).cleared(); throw failure }

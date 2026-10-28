@@ -27,6 +27,7 @@ import com.noahwallet.BuildConfig
 import com.noahwallet.localization.tr
 import com.noahwallet.services.server.LightningIdentity
 import com.noahwallet.services.server.Nostr
+import com.noahwallet.services.server.ServerFailure
 import com.noahwallet.ui.AppModel
 import com.noahwallet.ui.activity.DetailRow
 import com.noahwallet.ui.activity.ValueKind
@@ -150,7 +151,7 @@ internal fun LightningAddressPage(model: AppModel, nav: SettingsNav) {
         focusManager.clearFocus()
         nav.save(model, "Failed to update Lightning address. Please try again.", useServerMessage = true) {
             try { model.server.saveIdentity(name, npub) }
-            catch (failure: Exception) {
+            catch (failure: ServerFailure) {
                 if (!NameRules.takenByServer(failure)) throw failure
                 availability = NameAvailability.taken; haptics.warning()
                 return@save
@@ -210,6 +211,7 @@ internal fun EmailPage(model: AppModel, nav: SettingsNav) {
     }
     fun verify(code: String) {
         model.action("Invalid or expired verification code. Please try again.", useServerMessage = true) {
+            @Suppress("TooGenericExceptionCaught") // any failure but a wrong code clears the entry, then reaches the action's alert
             try { model.server.verifyEmail(code, presentation.email) }
             catch (failure: Exception) {
                 if (!wrongCode(failure)) { presentation.otp = presentation.otp.copy(verifying = false).cleared(); throw failure }

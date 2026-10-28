@@ -33,6 +33,7 @@ import com.noahwallet.api.generated.client.WellKnownLnurlpClient
 import com.noahwallet.localization.tr
 import com.noahwallet.services.server.LightningIdentity
 import com.noahwallet.services.server.Nostr
+import com.noahwallet.services.server.ServerFailure
 import com.noahwallet.ui.AppModel
 import com.noahwallet.ui.design.NoahTokens
 import kotlinx.coroutines.CancellationException
@@ -87,7 +88,7 @@ internal fun NameStep(model: AppModel, presentation: OnboardingPresentation) {
         try { LightningIdentity.payload(chosen, npub) } catch (failure: IllegalArgumentException) { model.error = failure.message; return }
         model.action("Failed to update Lightning address. Please try again.", useServerMessage = true) {
             try { model.server.saveIdentity(chosen, npub) }
-            catch (failure: Exception) {
+            catch (failure: ServerFailure) {
                 if (!NameRules.takenByServer(failure)) throw failure
                 presentation.checkedName = chosen; presentation.availability = NameAvailability.taken; haptics.warning()
                 return@action

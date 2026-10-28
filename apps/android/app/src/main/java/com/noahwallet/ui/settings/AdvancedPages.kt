@@ -208,6 +208,7 @@ internal fun EsploraPage(model: AppModel, nav: SettingsNav) {
     fun apply(value: String?) {
         error = null
         model.action("Endpoint not changed") {
+            @Suppress("TooGenericExceptionCaught") // switch boundary: the failure's redacted message is the page's error
             try {
                 model.services.switchEsploraEndpoint(value) { reopened ->
                     withContext(Dispatchers.Main) {
@@ -273,10 +274,10 @@ internal fun LogsPage(model: AppModel, nav: SettingsNav) {
             share {
                 val scratch = model.services.scratch
                 val folder = scratch.makeFolder("share")
-                try {
+                runCatching {
                     val file = java.io.File(folder, "noah.log").apply { writeText(LogFile.shared(context).lines().joinToString("\n")) }
                     SharedFile(file) { scratch.discard(folder) }
-                } catch (failure: Exception) { scratch.discard(folder); throw failure }
+                }.onFailure { scratch.discard(folder) }.getOrThrow()
             }
         }
     }) {
@@ -318,6 +319,7 @@ internal fun DebugPage(model: AppModel, nav: SettingsNav) {
     val height = LocalConfiguration.current.screenHeightDp
     fun execute() { model.action("Action failed. Check your input and connection before trying again.") {
         result = null
+        @Suppress("TooGenericExceptionCaught") // developer page: shows whatever the debug action threw
         try {
             result = if (push) {
                 var token: String? = null

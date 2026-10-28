@@ -139,17 +139,19 @@ class HistoryModel(private val dependencies: Dependencies) {
                 enrichmentLock.withLock { enrich(latest, currency, request) }
             }
         } catch (cancelled: CancellationException) { throw cancelled }
-        catch (failure: Exception) {
+        catch (_: AppServices.WalletSuspended) { unavailable(request, "Your wallet is suspended. Resume it to view transactions.") }
+        catch (_: WalletSession.SessionError) { unavailable(request, "Your wallet isn't ready. Please try again.") }
+        catch (_: Exception) {
             if (request != generation) return
-            if (failure is WalletSession.SessionError || failure is AppServices.WalletSuspended) {
-                transactions = emptyList()
-                error = if (failure is AppServices.WalletSuspended) "Your wallet is suspended. Resume it to view transactions."
-                else "Your wallet isn't ready. Please try again."
-            } else {
-                error = "Couldn't load transactions. Please try again."
-                dependencies.warn("History read failed")
-            }
+            error = "Couldn't load transactions. Please try again."
+            dependencies.warn("History read failed")
         } finally { if (request == generation) { isRefreshing = false; isLoading = false } }
+    }
+
+    /** No wallet to read: the list empties and says why, unless a newer request took over. */
+    private fun unavailable(request: Long, message: String) {
+        if (request != generation) return
+        transactions = emptyList(); error = message
     }
 
     private suspend fun enrich(rows: List<HistoryTransaction>, currency: String, request: Long) {

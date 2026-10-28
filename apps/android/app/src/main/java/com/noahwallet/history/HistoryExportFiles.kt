@@ -16,8 +16,8 @@ class HistoryExportFiles(private val root: File, private val revoke: (File) -> U
         check(root.isDirectory || root.mkdirs())
         sweep()
         val file = File.createTempFile("noah_transactions_", ".csv", root)
-        try { file.writeText(content, Charsets.UTF_8); return file }
-        catch (failure: Exception) { file.delete(); throw failure }
+        runCatching { file.writeText(content, Charsets.UTF_8) }.onFailure { file.delete() }.getOrThrow()
+        return file
     }
     fun deleteAll() {
         if (!root.exists()) return
