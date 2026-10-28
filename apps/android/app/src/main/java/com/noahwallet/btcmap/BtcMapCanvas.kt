@@ -67,7 +67,7 @@ fun BtcMapCanvas(model: BtcMapModel, places: List<BtcMapPlace>, dark: Boolean, s
         onDispose { lifecycle.removeObserver(observer); context.unregisterComponentCallbacks(memory); canvas.destroy() }
     }
     AndroidView(factory = { canvas.view }, modifier = modifier, update = {
-        canvas.update(features, dark, model.cameraRevision, sheetTop, styleRevision, model.selectedID, model.userLocation)
+        canvas.update(features, dark, sheetTop, styleRevision)
     })
 }
 
@@ -117,10 +117,14 @@ private class MapCanvas(context: Context, private val model: BtcMapModel) {
                 ready.addOnMapClickListener { coordinate ->
                     val point = ready.projection.toScreenLocation(coordinate)
                     val radius = 22 * context.resources.displayMetrics.density
-                    val hits = ready.queryRenderedFeatures(RectF(point.x - radius, point.y - radius, point.x + radius, point.y + radius), "places", "clusters")
+                    val area = RectF(point.x - radius, point.y - radius, point.x + radius, point.y + radius)
+                    val hits = ready.queryRenderedFeatures(area, "places", "clusters")
                     val hit = hits.firstOrNull()
                     when {
-                        hit?.hasProperty("placeID") == true -> model.places.firstOrNull { it.id == hit.getNumberProperty("placeID").toLong() }?.let(model::select)
+                        hit?.hasProperty("placeID") == true -> {
+                            val id = hit.getNumberProperty("placeID").toLong()
+                            model.places.firstOrNull { it.id == id }?.let(model::select)
+                        }
                         hit?.hasProperty("cluster_id") == true -> {
                             val center = hit.geometry() as? Point
                             val source = ready.style?.getSourceAs<GeoJsonSource>("merchants")
@@ -136,8 +140,11 @@ private class MapCanvas(context: Context, private val model: BtcMapModel) {
         view.addOnLayoutChangeListener { _, _, _, _, _, _, _, _, _ -> padding() }
     }
 
-    fun update(newFeatures: FeatureCollection, newDark: Boolean, revision: Int, newSheetTop: Float?, retry: Int,
-        selected: Long?, userLocation: List<Double>?) {
+    /** Applies the screen's state; the model's camera, selection and location are read here, inside the view's observed update. */
+    fun update(newFeatures: FeatureCollection, newDark: Boolean, newSheetTop: Float?, retry: Int) {
+        val revision = model.cameraRevision
+        val selected = model.selectedID
+        val userLocation = model.userLocation
         val changed = features !== newFeatures
         features = newFeatures
         val styleChanged = dark != newDark || styleRevision != retry
@@ -172,7 +179,11 @@ private class MapCanvas(context: Context, private val model: BtcMapModel) {
         fallback = true; model.basemapUnavailable = true
         map?.setStyle(Style.Builder().fromJson(offlineStyle()), ::configure)
     }
-    private fun offlineStyle() = """{"version":8,"glyphs":"https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf","sources":{},"layers":[{"id":"background","type":"background","paint":{"background-color":"${if (dark == true) "#161618" else "#f2f2f7"}"}}]}"""
+    private fun offlineStyle(): String {
+        val background = if (dark == true) "#161618" else "#f2f2f7"
+        val layers = """[{"id":"background","type":"background","paint":{"background-color":"$background"}}]"""
+        return """{"version":8,"glyphs":"https://tiles.openfreemap.org/fonts/{fontstack}/{range}.pbf","sources":{},"layers":$layers}"""
+    }
 
     private fun configure(style: Style) {
         if (destroyed) return
