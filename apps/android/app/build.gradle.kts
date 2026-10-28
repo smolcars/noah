@@ -182,12 +182,22 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
+    // Every check on and every warning fails; CI runs lintRegtestDebug.
+    lint {
+        checkAllWarnings = true
+        warningsAsErrors = true
+        abortOnError = true
+    }
     // Share the exact RN/iOS snapshots; do not copy 7 MB into another source tree.
     sourceSets.getByName("main").assets.srcDirs("../../../client/assets/btcmap", "../../../client/assets/geonames")
     sourceSets.getByName("test").resources.srcDirs("../../../client/assets/btcmap", "../../../client/assets/geonames")
     sourceSets.getByName("test").resources.directories += "../../fixtures"
     sourceSets.getByName("test").resources.directories += "../../../api"
     sourceSets.getByName("androidTest").assets.directories += "../../fixtures"
+}
+
+kotlin {
+    compilerOptions { allWarningsAsErrors.set(true) }
 }
 
 dependencies {

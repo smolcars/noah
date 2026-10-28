@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- build.gradle.kts turns on every check and makes warnings fail. Only these are off, each for a reason. -->
+<lint>
+    <!-- Depend on the date, not the code: CI would break whenever a library ships a release. -->
+    <issue id="NewerVersionAvailable" severity="ignore" />
+    <issue id="GradleDependency" severity="ignore" />
+    <issue id="AndroidGradlePluginVersion" severity="ignore" />
+    <!-- Copy style belongs to the translation catalog (apps/i18n), which iOS shares. -->
+    <issue id="DuplicateStrings" severity="ignore" />
+    <issue id="TypographyQuotes" severity="ignore" />
+    <issue id="TypographyEllipsis" severity="ignore" />
+    <issue id="TypographyDashes" severity="ignore" />
+    <!-- Java-era method-count advice; R8 inlines these accessors in release builds. -->
+    <issue id="SyntheticAccessor" severity="ignore" />
+    <!-- Generated, machine-translated values-*/ resources. -->
+    <issue id="UnusedQuantity">
+        <ignore path="src/main/res/values-*/strings.xml" />
+    </issue>
+</lint>

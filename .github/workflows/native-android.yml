@@ -85,11 +85,12 @@ jobs:
       # installs it; nothing rebuilds it. CI runs no instrumentation, so the device tests are only compiled.
       # --build-cache reuses task outputs from master's signet and mainnet build where they match. The configuration cache stays off: it needs a secret
       # to persist across runs, and the release builds' Sentry upload task doesn't support it.
-      - name: Assemble minified regtest APK, compile device tests and run unit tests
+      # Kotlin warnings fail the compile (app/build.gradle.kts); lintRegtestDebug runs every Android Lint check (app/lint.xml).
+      - name: Assemble minified regtest APK, compile device tests, run unit tests and Android Lint
         env:
           CI_DEBUG_SIGNING: "true"
         working-directory: apps/android
-        run: ./gradlew --build-cache --dependency-verification=strict -PnoahAbis=x86_64 :app:assembleRegtestRelease -x lintVitalRegtestRelease :app:compileRegtestDebugAndroidTestSources :app:testRegtestDebugUnitTest
+        run: ./gradlew --build-cache --dependency-verification=strict -PnoahAbis=x86_64 :app:assembleRegtestRelease -x lintVitalRegtestRelease :app:compileRegtestDebugAndroidTestSources :app:testRegtestDebugUnitTest :app:lintRegtestDebug
 
       # Default compression: the APK stores its native libraries uncompressed, and zipping takes 65 MB to 31 MB.
       - name: Upload regtest APK
