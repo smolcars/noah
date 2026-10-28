@@ -576,7 +576,7 @@ extension SendPaymentController.Dependencies {
             withRecurringReservation: { try await session.withSendReservation($0, exclusive: true) },
             recurringEvidence: { attempt, generation, walletGeneration, _, message in
                 try RecurringJournal(file: location.directory.appending(path: "noah-recurring-journal.json"))
-                    .record(attempt, generation: generation, walletGeneration: walletGeneration,
+                    .record(attempt, generations: .init(generation: generation, walletGeneration: walletGeneration),
                             message: message, binding: RecurringStore.binding(location: location), now: RecurringPayment.now)
             },
             guardedPay: { try await session.submitSend($0, quote: $1, snapshot: $2, beforeSubmit: $3) })

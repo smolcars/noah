@@ -112,7 +112,7 @@ struct OnchainQuote: Identifiable, Codable, Equatable, Sendable {
     var reviewedAt: ContinuousClock.Instant?
     var automatic = false
     // Optional so journals written before MAX used boardAll remain readable.
-    // swiftlint:disable:next discouraged_optional_boolean - see above
+    // swiftlint:disable:next discouraged_optional_boolean - journals written before MAX lack it
     var boardAll: Bool?
     var unknownFeeConsent: UUID?
     var prepared: SendPreparedTransaction?

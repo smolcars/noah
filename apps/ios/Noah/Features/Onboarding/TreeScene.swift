@@ -183,7 +183,8 @@ struct TreePainter {
                             with: .color(color(orange, alpha)))
     }
 
-    private func ring(_ p: CGPoint, _ r: Double, style _: LinkStyle(orange: Bool, alpha: Double, width: CGFloat)) {
+    private func ring(_ p: CGPoint, _ r: Double, style: LinkStyle) {
+        let orange = style.orange, alpha = style.alpha, width = style.width
         guard r > 0, alpha > 0 else { return }
         let q = placement.point(p), radius = r * scale
         shaded(orange).stroke(Path(ellipseIn: CGRect(x: q.x - radius, y: q.y - radius, width: radius * 2, height: radius * 2)),

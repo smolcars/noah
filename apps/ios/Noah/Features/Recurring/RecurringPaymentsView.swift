@@ -96,7 +96,7 @@ struct RecurringPaymentsView: View {
     static func approval(review: ApprovalReview, controller: SendPaymentController, pay: @escaping () -> Void,
                          dismiss: @escaping () -> Void, done: @escaping () -> Void) -> SendConfirmation {
         let payment = review.payment, quote = review.quote
-        SendConfirmation(confirm: pay, payment: payment, quote: quote, controller: controller, cancel: dismiss, done: done, onLeave: dismiss)
+        return SendConfirmation(confirm: pay, payment: payment, quote: quote, controller: controller, cancel: dismiss, done: done, onLeave: dismiss)
     }
 }
 
