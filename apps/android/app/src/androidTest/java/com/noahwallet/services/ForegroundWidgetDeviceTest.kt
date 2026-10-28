@@ -112,7 +112,8 @@ class ForegroundWidgetDeviceTest {
                     assertEquals(balance.totalSats.toLong(), com.noahwallet.widgets.WidgetWave.changes(extras.rows!!, emptyMap()).sumOf { it.sats })
                     assertNull(extras.renewBlocks)
                     WidgetDataWriter.write(context, balance, extras,
-                        { WidgetDataWriter.Display(com.noahwallet.formatting.BitcoinAmountUnit.bip177, false, "USD") }, "regtest")
+                        { WidgetDataWriter.Display(com.noahwallet.formatting.BitcoinAmountUnit.bip177, false, "USD") }, "regtest",
+                        com.noahwallet.services.push.WidgetDataWriter.ticket())
                     val stored = com.noahwallet.widgets.WidgetSnapshot.read(context.getSharedPreferences("com.noahwallet.regtest", 0))!!
                     assertEquals(balance.totalSats.toLong(), stored.daily!!.last())
                     assertEquals(0L, stored.daily!!.first())

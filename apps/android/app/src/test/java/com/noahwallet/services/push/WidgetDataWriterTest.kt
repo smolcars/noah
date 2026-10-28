@@ -80,24 +80,24 @@ class WidgetDataWriterTest {
 
     @Test fun writeReplacesOldKeysAndKeepsTheQuoteWhileItsCurrencyHolds() = runBlocking {
         prefs.edit().putLong("totalBalance", 1).putLong("closestExpiryBlocks", 3).commit()
-        WidgetDataWriter.write(context, balance, null, { bip177 }, "regtest")
+        WidgetDataWriter.write(context, balance, null, { bip177 }, "regtest", WidgetDataWriter.ticket())
         assertEquals(setOf(WidgetSnapshot.KEY, WidgetDataWriter.CHAIN_DATES), prefs.all.keys)
         assertEquals(75L, stored!!.balance)
         WidgetDataWriter.republish(context, { bip177 }, "regtest", WidgetDataWriter.Quote("USD", 100_000_000.0))
         assertEquals(100_000_000.0, stored!!.fiatPrice!!, 0.0); assertEquals("USD", stored!!.fiatCurrency)
         // The next write (a push job, say) recomputes fiat from the stored quote.
         val more = WalletBalance(WalletBalance.Ark(200u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u), WalletBalance.Onchain(0u, 0u, 0u))
-        WidgetDataWriter.write(context, more, null, { bip177 }, "regtest")
+        WidgetDataWriter.write(context, more, null, { bip177 }, "regtest", WidgetDataWriter.ticket())
         assertEquals(200L, stored!!.balance); assertEquals(100_000_000.0, stored!!.fiatPrice!!, 0.0)
         // Another currency has no quote until Home fetches one.
-        WidgetDataWriter.write(context, more, null, { bip177.copy(currency = "EUR") }, "regtest")
+        WidgetDataWriter.write(context, more, null, { bip177.copy(currency = "EUR") }, "regtest", WidgetDataWriter.ticket())
         assertNull(stored!!.fiatPrice); assertNull(stored!!.fiatCurrency)
     }
 
     @Test fun displayChangesRepublishWithoutTheWallet() = runBlocking {
         WidgetDataWriter.republish(context, { bip177.copy(hidden = true) }, "regtest")
         assertNull("No wallet: nothing to republish", stored)
-        WidgetDataWriter.write(context, balance, WidgetDataWriter.Extras(emptyList(), 100, 5), { bip177 }, "regtest")
+        WidgetDataWriter.write(context, balance, WidgetDataWriter.Extras(emptyList(), 100, 5), { bip177 }, "regtest", WidgetDataWriter.ticket())
         val before = stored!!
         WidgetDataWriter.republish(context, { WidgetDataWriter.Display(BitcoinAmountUnit.sats, true, "USD") }, "regtest")
         assertEquals(before.copy(amountUnit = "sats", hidden = true), stored)
@@ -120,7 +120,9 @@ class WidgetDataWriterTest {
             }
         }
         var settings = bip177; var displayReads = 0
-        val push = launch(kotlinx.coroutines.Dispatchers.IO) { WidgetDataWriter.write(slow, balance, null, { displayReads++; settings }, "regtest") }
+        val push = launch(kotlinx.coroutines.Dispatchers.IO) {
+            WidgetDataWriter.write(slow, balance, null, { displayReads++; settings }, "regtest", WidgetDataWriter.ticket())
+        }
         entered.await()
         assertEquals("read under the lock, not before it", 0, displayReads)
         // The user hides the balance (and its republish has run) while the push job waits.
@@ -129,22 +131,55 @@ class WidgetDataWriterTest {
         assertTrue(stored!!.hidden); assertEquals(1, displayReads)
     }
 
+    private fun sats(total: Long) = WalletBalance(WalletBalance.Ark(total.toULong(), 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u), WalletBalance.Onchain(0u, 0u, 0u))
+
+    /**
+     * Writes are ordered by when their balance was read, not when they commit: a push that read A, stalled, and commits
+     * after the foreground published a newer B is dropped (Sol review), and nothing read before a clear comes back.
+     */
+    @Test fun aStalledPushNeverPublishesAnOlderBalance() = runBlocking {
+        val read = kotlinx.coroutines.CompletableDeferred<Unit>(); val gate = kotlinx.coroutines.CompletableDeferred<Unit>()
+        // The push job reads A, then stalls (its history read, say) before it publishes.
+        val push = launch(kotlinx.coroutines.Dispatchers.IO) {
+            val ticket = WidgetDataWriter.ticket()
+            read.complete(Unit); gate.await()
+            WidgetDataWriter.write(context, sats(100), null, { bip177 }, "regtest", ticket)
+        }
+        // Meanwhile the app reads B and publishes it.
+        read.await()
+        WidgetDataWriter.write(context, sats(200), null, { bip177 }, "regtest", WidgetDataWriter.ticket())
+        val newest = stored!!
+        gate.complete(Unit); push.join()
+        assertEquals(newest, stored)
+        assertEquals(200L, stored!!.balance)
+        // Reads published in order both land.
+        WidgetDataWriter.write(context, sats(300), null, { bip177 }, "regtest", WidgetDataWriter.ticket())
+        assertEquals(300L, stored!!.balance)
+        // Deleting the wallet drops a write read before it: the deleted balance never comes back.
+        val beforeDelete = WidgetDataWriter.ticket()
+        WidgetDataWriter.clear(context, "regtest")
+        WidgetDataWriter.write(context, sats(400), null, { bip177 }, "regtest", beforeDelete)
+        assertNull(stored)
+        WidgetDataWriter.write(context, sats(500), null, { bip177 }, "regtest", WidgetDataWriter.ticket())
+        assertEquals(500L, stored!!.balance)
+    }
+
     /** Confirmation dates are kept per txid beside the snapshot, never recomputed, and go with the wallet. */
     @Test fun confirmationDatesPersistAndClear() = runBlocking {
         val deposit = com.noahwallet.history.HistoryTransaction("onchain-wallet-d", "Onchain", 60_000, "1970-01-01T00:00:00.000Z", "incoming",
             source = "onchain-wallet", txid = "d", balanceChangeSat = 60_000, hasConfirmation = true, confirmationHeight = 994u)
-        WidgetDataWriter.write(context, balance, WidgetDataWriter.Extras(listOf(deposit), 1_000), { bip177 }, "regtest")
+        WidgetDataWriter.write(context, balance, WidgetDataWriter.Extras(listOf(deposit), 1_000), { bip177 }, "regtest", WidgetDataWriter.ticket())
         val first = prefs.getString(WidgetDataWriter.CHAIN_DATES, null)
         assertNotNull(first); assertTrue(first!!.contains("\"d\""))
         // A later write with the same tip keeps the first date; a known block time replaces it.
-        WidgetDataWriter.write(context, balance, WidgetDataWriter.Extras(listOf(deposit), 1_000), { bip177 }, "regtest")
+        WidgetDataWriter.write(context, balance, WidgetDataWriter.Extras(listOf(deposit), 1_000), { bip177 }, "regtest", WidgetDataWriter.ticket())
         assertEquals(first, prefs.getString(WidgetDataWriter.CHAIN_DATES, null))
-        WidgetDataWriter.write(context, balance, WidgetDataWriter.Extras(listOf(deposit), 1_000), { bip177 }, "regtest",
+        WidgetDataWriter.write(context, balance, WidgetDataWriter.Extras(listOf(deposit), 1_000), { bip177 }, "regtest", WidgetDataWriter.ticket(),
             known = mapOf("d" to 1_700_000_000_000))
         assertTrue(prefs.getString(WidgetDataWriter.CHAIN_DATES, null)!!.contains("1700000000000"))
         // A write without readable history keeps them; so does republishing a display change; deleting the wallet clears them.
         val exact = prefs.getString(WidgetDataWriter.CHAIN_DATES, null)
-        WidgetDataWriter.write(context, balance, WidgetDataWriter.Extras(), { bip177 }, "regtest")
+        WidgetDataWriter.write(context, balance, WidgetDataWriter.Extras(), { bip177 }, "regtest", WidgetDataWriter.ticket())
         assertEquals(exact, prefs.getString(WidgetDataWriter.CHAIN_DATES, null))
         WidgetDataWriter.republish(context, { bip177.copy(hidden = true) }, "regtest")
         assertNotNull(prefs.getString(WidgetDataWriter.CHAIN_DATES, null))
@@ -217,8 +252,8 @@ class RecurringWidgetExpiryTest {
         val context = RuntimeEnvironment.getApplication()
         val balance = WalletBalance(WalletBalance.Ark(1234u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u), WalletBalance.Onchain(0u, 0u, 0u))
         val display = WidgetDataWriter.Display(BitcoinAmountUnit.bip177, false, "USD")
-        WidgetDataWriter.write(context, balance, WidgetDataWriter.Extras(emptyList(), 100, 12), { display }, "regtest")
-        WidgetDataWriter.write(context, balance, WidgetDataWriter.Extras(), { display }, "regtest")
+        WidgetDataWriter.write(context, balance, WidgetDataWriter.Extras(emptyList(), 100, 12), { display }, "regtest", WidgetDataWriter.ticket())
+        WidgetDataWriter.write(context, balance, WidgetDataWriter.Extras(), { display }, "regtest", WidgetDataWriter.ticket())
         val stored = WidgetSnapshot.read(context.getSharedPreferences("com.noahwallet.regtest", Context.MODE_PRIVATE))!!
         assertEquals(1234L, stored.balance); assertNull(stored.renewDue); assertNull(stored.daily)
     }

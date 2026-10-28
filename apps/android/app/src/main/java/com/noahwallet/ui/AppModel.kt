@@ -425,9 +425,11 @@ class AppModel(application: Application, val settings: SettingsStorage = Setting
         try {
             checkStage()
             if (sync) session.sync()
-            summary = ForegroundWidgetRefresh.read(session::summary, session::widgetExtras, ::checkStage) { balance, extras ->
+            var ticket = 0L
+            summary = ForegroundWidgetRefresh.read({ session.summary().also { ticket = com.noahwallet.services.push.WidgetDataWriter.ticket() } },
+                session::widgetExtras, ::checkStage) { balance, extras ->
                 com.noahwallet.services.push.WidgetDataWriter.write(getApplication(), balance, extras, { widgetDisplay }, BuildConfig.APP_VARIANT,
-                    known = widgetBlockTimes(), checkStage = ::checkStage)
+                    ticket, known = widgetBlockTimes(), checkStage = ::checkStage)
             }
             summaryRevision++
             error = null

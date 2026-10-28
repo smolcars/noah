@@ -87,7 +87,7 @@ class PushCompatibilityTest {
         assertEquals(before.name, manager.getNotificationChannel("default").name)
         val balance = WalletBalance(WalletBalance.Ark(10u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u), WalletBalance.Onchain(5u, 3u, 8u))
         WidgetDataWriter.write(context, balance, WidgetDataWriter.Extras(emptyList(), 100, 2),
-            { WidgetDataWriter.Display(com.noahwallet.formatting.BitcoinAmountUnit.sats, true, "USD") }, "regtest")
+            { WidgetDataWriter.Display(com.noahwallet.formatting.BitcoinAmountUnit.sats, true, "USD") }, "regtest", WidgetDataWriter.ticket())
         val prefs = context.getSharedPreferences("com.noahwallet.regtest", Context.MODE_PRIVATE)
         // The provider reads exactly what the writer stored: one snapshot key, the old keys gone.
         assertEquals(setOf(com.noahwallet.widgets.WidgetSnapshot.KEY, WidgetDataWriter.CHAIN_DATES), prefs.all.keys)

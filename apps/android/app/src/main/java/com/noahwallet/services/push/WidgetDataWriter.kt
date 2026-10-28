@@ -57,6 +57,15 @@ object WidgetDataWriter {
 
     /** Every snapshot update (write, republish, clear) holds this, so none overwrites a newer one. */
     private val writes = Mutex()
+    private val reads = java.util.concurrent.atomic.AtomicLong()
+    /** The newest read published, or the clear that followed it; guarded by [writes]. */
+    private var published = 0L
+
+    /**
+     * Take right after reading the balance, and pass to [write]: a write whose read is older than one already published
+     * (a push that stalled while the app published a newer balance) or than a clear (a deleted wallet) is dropped.
+     */
+    fun ticket(): Long = reads.incrementAndGet()
     /** Confirmed transactions' dates by txid ([WidgetWave.ChainDate]), kept beside the snapshot and cleared with it. */
     internal const val CHAIN_DATES = "widgetChainDates"
     private val dateMap = MapSerializer(String.serializer(), WidgetWave.ChainDate.serializer())
@@ -99,7 +108,10 @@ object WidgetDataWriter {
     }
 
     suspend fun clear(context: Context, variant: String): Unit = withContext(NonCancellable + Dispatchers.IO) {
-        writes.withLock { check(prefs(context, variant).commitEdit { clear() }) }
+        writes.withLock {
+            published = reads.incrementAndGet()
+            check(prefs(context, variant).commitEdit { clear() })
+        }
         broadcast(context, variant)
     }
 
@@ -113,12 +125,14 @@ object WidgetDataWriter {
     /**
      * The whole snapshot replaces the file, old keys included. [display] is read under the lock from its live source, so
      * a slow writer never brings back a hide, unit or currency the user has changed since; the last quote carries over
-     * while its currency holds. [known]: block times Activity has read (txid → epoch ms), which date transactions exactly.
+     * while its currency holds. [ticket]: taken right after [balance] was read. [known]: block times Activity has read
+     * (txid → epoch ms), which date transactions exactly.
      */
     @Suppress("LongParameterList") // known and checkStage are optional per caller
-    suspend fun write(context: Context, balance: WalletBalance, extras: Extras?, display: () -> Display, variant: String,
+    suspend fun write(context: Context, balance: WalletBalance, extras: Extras?, display: () -> Display, variant: String, ticket: Long,
         known: Map<String, Long> = emptyMap(), checkStage: () -> Unit = {}): Unit = withContext(NonCancellable + Dispatchers.IO) {
-        writes.withLock {
+        val wrote = writes.withLock {
+            if (ticket < published) return@withLock false
             val prefs = prefs(context, variant)
             val stored = WidgetSnapshot.decode(prefs.getString(WidgetSnapshot.KEY, null))
             val quote = stored?.let { s -> s.fiatPrice?.let { price -> s.fiatCurrency?.let { Quote(it, price) } } }
@@ -133,8 +147,10 @@ object WidgetDataWriter {
                 checkStage()
             }
             check(committed) { "Widget preferences could not be saved" }
+            published = ticket
+            true
         }
-        broadcast(context, variant)
+        if (wrote) broadcast(context, variant)
     }
 
     /**

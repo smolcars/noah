@@ -24,7 +24,8 @@ class SystemNotificationDeviceTest {
             claimLightning = {}, reportMaintenance = { _, _ -> }, heartbeat = {}, announceReceived = { _, _, _ -> },
             refreshWidget = { com.noahwallet.services.push.WidgetDataWriter.write(context, balance,
                 com.noahwallet.services.push.WidgetDataWriter.Extras(emptyList(), 100, 123),
-                { com.noahwallet.services.push.WidgetDataWriter.Display(com.noahwallet.formatting.BitcoinAmountUnit.bip177, false, "USD") }, "regtest") },
+                { com.noahwallet.services.push.WidgetDataWriter.Display(com.noahwallet.formatting.BitcoinAmountUnit.bip177, false, "USD") }, "regtest",
+                com.noahwallet.services.push.WidgetDataWriter.ticket()) },
             log = {}, backup = {}, reportBackup = { _, _ -> }, recurring = {},
         ))
         jobs.handle(com.noahwallet.api.generated.models.NotificationDataRecurringPaymentDue(1))
