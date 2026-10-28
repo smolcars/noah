@@ -35,7 +35,11 @@ data class HistoryTransaction(
     val offer get() = method("offer")
     /** Decoded from the stored BOLT11 invoice, else the hash bark recorded in the metadata. */
     val paymentHash: String? get() = invoice?.let { com.noahwallet.send.PaymentEncoding.invoice(it)?.hash }
-        ?: metadataJson?.let { runCatching { (kotlinx.serialization.json.Json.parseToJsonElement(it) as? kotlinx.serialization.json.JsonObject)?.string("payment_hash") }.getOrNull() }
+        ?: metadataJson?.let {
+            runCatching {
+                (kotlinx.serialization.json.Json.parseToJsonElement(it) as? kotlinx.serialization.json.JsonObject)?.string("payment_hash")
+            }.getOrNull()
+        }
     /** What the payee wrote in the offer or invoice; null when there's none. */
     val description: String? get() = offer?.let(com.noahwallet.send.PaymentEncoding::offerDescription)
         ?: invoice?.let { com.noahwallet.send.PaymentEncoding.invoice(it)?.description }
