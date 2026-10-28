@@ -149,9 +149,10 @@ class AdaptiveLayoutDeviceTest {
         show("recurring-editor") { com.noahwallet.recurring.RecurringPaymentEditorScreen(executor, null) {} }
         val controller = com.noahwallet.send.SendController(com.noahwallet.send.SendController.Dependencies(read = { null }, write = {},
             reservation = { error("Gallery never submits payments") }))
-        val approval = com.noahwallet.send.SendModel(controller, "regtest", { error("Gallery never resolves") }, { error("Gallery never quotes") }, {})
+        val draft = com.noahwallet.send.SendModel(controller, "regtest", { error("Gallery never resolves") }, { error("Gallery never quotes") }, {})
+        val approval = SendPresentation(draft)
         show("send-approval") { com.noahwallet.ui.onboarding.OnboardingFrame(null) { com.noahwallet.ui.send.SendApproval(
-            SendPresentation(approval),
+            approval,
             com.noahwallet.send.SendPayment("ark1" + "q".repeat(180), "ark", 12345), com.noahwallet.send.SendQuote(12345, 5, 12350),
             com.noahwallet.ui.send.SendFixtures.env(), com.noahwallet.ui.send.SendActions(), paying = false, cancel = {}) {} } }
         show("dialog") { WalletAlertDialog({}, { TextButton({}) { Text("Confirm") } },
