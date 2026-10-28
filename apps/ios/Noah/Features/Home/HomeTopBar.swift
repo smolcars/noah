@@ -55,37 +55,7 @@ struct HomeTopBar: View {
 
     var body: some View {
         HStack(spacing: 0) {
-            Button(action: onProfile) {
-                HStack(spacing: 8) {
-                    ZStack {
-                        Circle().strokeBorder(NoahTokens.Colors.orange, lineWidth: 1.5)
-                        if let name, let initial = name.first {
-                            Text(verbatim: String(initial).lowercased()).noahText(HomeText.chipInitial)
-                        } else {
-                            Image(systemName: "person").accessibilityHidden(true).font(.system(size: 14, weight: .semibold))
-                        }
-                    }
-                    .frame(width: 30, height: 30)
-                    if let name { Text(verbatim: name).noahText(HomeText.strong).lineLimit(1) }
-                    if let badge = variant.badge {
-                        Text(verbatim: badge).noahText(HomeText.badge)
-                            .foregroundStyle(NoahTokens.Colors.orangeText)
-                            .padding(.horizontal, 7).padding(.vertical, 2)
-                            .background(NoahTokens.Colors.orangeTint, in: Capsule())
-                    }
-                }
-                .foregroundStyle(NoahTokens.Colors.foreground)
-                .padding(.leading, 5).padding(.trailing, name == nil && variant.badge == nil ? 5 : 14)
-                .frame(height: 40)
-                .contentShape(Capsule())
-                .glassCompat(in: Capsule(), interactive: true)
-                .frame(minHeight: NoahTokens.Size.hitTarget)
-            }
-            .buttonStyle(HomePressStyle())
-            .layoutPriority(1)
-            .accessibilityLabel(Text("Profile"))
-            .accessibilityValue(Text(verbatim: address ?? ""))
-            .accessibilityIdentifier("home-qr-button")
+            profileButton
             // The tucked balance sits centred in the room between you and the buttons, never over them.
             Spacer(minLength: 8)
             if let tucked {
@@ -111,6 +81,40 @@ struct HomeTopBar: View {
             }
         }
         .frame(height: NoahTokens.Size.hitTarget)
+    }
+
+    private var profileButton: some View {
+        Button(action: onProfile) {
+            HStack(spacing: 8) {
+                ZStack {
+                    Circle().strokeBorder(NoahTokens.Colors.orange, lineWidth: 1.5)
+                    if let name, let initial = name.first {
+                        Text(verbatim: String(initial).lowercased()).noahText(HomeText.chipInitial)
+                    } else {
+                        Image(systemName: "person").accessibilityHidden(true).font(.system(size: 14, weight: .semibold))
+                    }
+                }
+                .frame(width: 30, height: 30)
+                if let name { Text(verbatim: name).noahText(HomeText.strong).lineLimit(1) }
+                if let badge = variant.badge {
+                    Text(verbatim: badge).noahText(HomeText.badge)
+                        .foregroundStyle(NoahTokens.Colors.orangeText)
+                        .padding(.horizontal, 7).padding(.vertical, 2)
+                        .background(NoahTokens.Colors.orangeTint, in: Capsule())
+                }
+            }
+            .foregroundStyle(NoahTokens.Colors.foreground)
+            .padding(.leading, 5).padding(.trailing, name == nil && variant.badge == nil ? 5 : 14)
+            .frame(height: 40)
+            .contentShape(Capsule())
+            .glassCompat(in: Capsule(), interactive: true)
+            .frame(minHeight: NoahTokens.Size.hitTarget)
+        }
+        .buttonStyle(HomePressStyle())
+        .layoutPriority(1)
+        .accessibilityLabel(Text("Profile"))
+        .accessibilityValue(Text(verbatim: address ?? ""))
+        .accessibilityIdentifier("home-qr-button")
     }
 
     private func iconButton(systemName: String, label: LocalizedStringKey, id: String, action: @escaping () -> Void) -> some View {
@@ -418,34 +422,38 @@ struct HomeNudgeCard: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .fixedSize(horizontal: false, vertical: true)
-            if let button {
-                Button(action: action) {
-                    ZStack {
-                        Text(button).opacity(busy ? 0 : 1)
-                        if busy { ProgressView().tint(NoahTokens.Colors.background) }
-                    }
-                }
-                .buttonStyle(HomePillStyle())
-                .disabled(busy)
-                .accessibilityIdentifier(identifier)
-            }
-            if dismissible {
-                Button(action: dismiss) {
-                    Image(systemName: "xmark").font(.system(size: 12, weight: .bold))
-                        .foregroundStyle(NoahTokens.Colors.muted)
-                        .frame(width: 28, height: 28)
-                        .frame(minWidth: NoahTokens.Size.hitTarget, minHeight: NoahTokens.Size.hitTarget)
-                        .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .padding(.horizontal, -8)
-                .accessibilityLabel(Text(LocalizedStringKey(dismissLabel)))
-            }
+            controls
         }
         .padding(.vertical, 12).padding(.leading, 16).padding(.trailing, 12)
         .frame(maxWidth: .infinity, alignment: .leading)
         .glassCompat(in: RoundedRectangle(cornerRadius: 22, style: .continuous))
         .accessibilityElement(children: .contain)
+    }
+
+    @ViewBuilder private var controls: some View {
+        if let button {
+            Button(action: action) {
+                ZStack {
+                    Text(button).opacity(busy ? 0 : 1)
+                    if busy { ProgressView().tint(NoahTokens.Colors.background) }
+                }
+            }
+            .buttonStyle(HomePillStyle())
+            .disabled(busy)
+            .accessibilityIdentifier(identifier)
+        }
+        if dismissible {
+            Button(action: dismiss) {
+                Image(systemName: "xmark").font(.system(size: 12, weight: .bold))
+                    .foregroundStyle(NoahTokens.Colors.muted)
+                    .frame(width: 28, height: 28)
+                    .frame(minWidth: NoahTokens.Size.hitTarget, minHeight: NoahTokens.Size.hitTarget)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .padding(.horizontal, -8)
+            .accessibilityLabel(Text(LocalizedStringKey(dismissLabel)))
+        }
     }
 
     private var icon: String {

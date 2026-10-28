@@ -101,21 +101,7 @@ struct AdvancedPage: View {
                 row("Esplora", icon: "link", page: .esplora, id: "settings-esplora", value: AppVariant.current == .regtest ? "Bitcoin Core"
                     : esplora.endpoint == nil ? L10n.text("Noah default", locale: language) : L10n.text("Custom", locale: language), last: true)
             }
-            SettingsGroup(label: "Diagnostics") {
-                row("Logs", icon: "doc.text", page: .logs, id: "settings-logs")
-                SettingsRow(icon: "arrow.clockwise", title: L10n.text("Reset registration", locale: language), hairline: summary.debug,
-                            id: "settings-reset-registration") {
-                    haptics.play(.light)
-                    sheet = .reset
-                }
-                .disabled(busy || app.isWalletSuspended)
-                if summary.debug {
-                    row("Debug", icon: "ladybug", page: .debug, id: "settings-debug")
-                    // Off hides Debug again; five taps on the version bring it back.
-                    SettingsToggleRow(icon: "hammer", title: L10n.text("Debug mode", locale: language),
-                                      isOn: Binding(get: { summary.debug }, set: setDebug), hairline: false, id: "settings-debug-mode")
-                }
-            }
+            diagnostics
             SettingsGroup(label: "Wallet") {
                 SettingsToggleRow(icon: "stop.circle", title: L10n.text("Suspend wallet", locale: language),
                                   sub: L10n.text("Pauses all wallet activity", locale: language),
@@ -152,6 +138,24 @@ struct AdvancedPage: View {
                         }
                     }
                 }
+            }
+        }
+    }
+
+    private var diagnostics: some View {
+        SettingsGroup(label: "Diagnostics") {
+            row("Logs", icon: "doc.text", page: .logs, id: "settings-logs")
+            SettingsRow(icon: "arrow.clockwise", title: L10n.text("Reset registration", locale: language), hairline: summary.debug,
+                        id: "settings-reset-registration") {
+                haptics.play(.light)
+                sheet = .reset
+            }
+            .disabled(busy || app.isWalletSuspended)
+            if summary.debug {
+                row("Debug", icon: "ladybug", page: .debug, id: "settings-debug")
+                // Off hides Debug again; five taps on the version bring it back.
+                SettingsToggleRow(icon: "hammer", title: L10n.text("Debug mode", locale: language),
+                                  isOn: Binding(get: { summary.debug }, set: setDebug), hairline: false, id: "settings-debug-mode")
             }
         }
     }

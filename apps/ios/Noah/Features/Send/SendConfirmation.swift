@@ -56,60 +56,68 @@ struct SendConfirmation: View {
 
     private var review: some View {
         OnboardingPanes(wide: isWide, column: .leadingFits, sideInsets: wide == nil ? (window.insets.leading, window.insets.trailing) : sideInsets) {
-            VStack(alignment: .leading, spacing: 0) {
-                HStack {
-                    SendIconButton(systemName: "chevron.left", label: "Back", id: "send-review-back", action: cancel)
-                    Spacer()
-                }
-                .frame(height: NoahTokens.Size.hitTarget)
-                .padding(.horizontal, -2)
-                .padding(.top, isWide ? 14 : 4)
-                Text(verbatim: L10n.text("Send {amount}", format(quote.amount), locale: locale.identifier))
-                    .noahText(SendText.big).foregroundStyle(NoahTokens.Colors.foreground)
-                    .lineLimit(1).minimumScaleFactor(0.5)
-                    .padding(.top, 18)
-                    .accessibilityIdentifier("send-review-title")
-                HStack(spacing: 12) {
-                    SendAvatar(label: label, size: 36)
-                    Group { if label.nameIsVerbatim { Text(verbatim: label.name) } else { Text(LocalizedStringKey(label.name)) } }
-                        .noahText(NoahTokens.Typography.body).foregroundStyle(NoahTokens.Colors.foreground)
-                        .lineLimit(1).truncationMode(.middle)
-                }
-                .padding(.top, 16)
-            }
-            .padding(.horizontal, isWide ? 34 : 20)
-            .padding(.bottom, isWide ? 96 : 0)
-            .frame(maxWidth: isWide ? OnboardingLayout.paneContentWidth + 68 : nil)
-            .frame(maxWidth: .infinity, maxHeight: isWide ? .infinity : nil, alignment: .top)
-            VStack(alignment: .leading, spacing: 0) {
-                // Wide: rows and Hold to send sit at the bottom of the trailing pane (prototype `#vReview .R`),
-                // and the rows scroll when large text makes them taller than the pane.
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 0) {
-                        rows.padding(.top, isWide ? 0 : 24)
-                        if let fine { Text(verbatim: fine).noahText(HomeText.footnote).foregroundStyle(NoahTokens.Colors.muted).padding(.top, 12) }
-                        if let message = controller.message {
-                            Text(LocalizedStringKey(message)).noahText(HomeText.footnote).foregroundStyle(NoahTokens.Colors.failure).padding(.top, 12)
-                        }
-                    }
-                }
-                .scrollBounceBehavior(.basedOnSize)
-                .defaultScrollAnchor(isWide ? .bottom : nil, for: .alignment)
-                .frame(maxHeight: .infinity)
-                .padding(.top, isWide ? 66 : 0)
-                SendHoldButton(amount: format(quote.amount), enabled: !controller.locked) {
-                    (gate ?? ownGate).confirm(generation: controller.generation) {
-                        if let confirm { confirm() } else { controller.submit(payment, quote: quote) }
-                    }
-                }
-                .padding(.top, isWide ? 24 : 12).padding(.bottom, 6)
-            }
-            .padding(.leading, isWide ? 40 : 20).padding(.trailing, isWide ? 34 : 20)
-            .padding(.vertical, isWide ? 24 : 0).padding(.bottom, 12)
-            .frame(maxWidth: isWide ? OnboardingLayout.paneContentWidth + 74 : nil)
-            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: isWide ? .bottom : .top)
+            leadingPane
+            trailingPane
         }
         .background(NoahTokens.Colors.background.ignoresSafeArea())
+    }
+
+    private var leadingPane: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            HStack {
+                SendIconButton(systemName: "chevron.left", label: "Back", id: "send-review-back", action: cancel)
+                Spacer()
+            }
+            .frame(height: NoahTokens.Size.hitTarget)
+            .padding(.horizontal, -2)
+            .padding(.top, isWide ? 14 : 4)
+            Text(verbatim: L10n.text("Send {amount}", format(quote.amount), locale: locale.identifier))
+                .noahText(SendText.big).foregroundStyle(NoahTokens.Colors.foreground)
+                .lineLimit(1).minimumScaleFactor(0.5)
+                .padding(.top, 18)
+                .accessibilityIdentifier("send-review-title")
+            HStack(spacing: 12) {
+                SendAvatar(label: label, size: 36)
+                Group { if label.nameIsVerbatim { Text(verbatim: label.name) } else { Text(LocalizedStringKey(label.name)) } }
+                    .noahText(NoahTokens.Typography.body).foregroundStyle(NoahTokens.Colors.foreground)
+                    .lineLimit(1).truncationMode(.middle)
+            }
+            .padding(.top, 16)
+        }
+        .padding(.horizontal, isWide ? 34 : 20)
+        .padding(.bottom, isWide ? 96 : 0)
+        .frame(maxWidth: isWide ? OnboardingLayout.paneContentWidth + 68 : nil)
+        .frame(maxWidth: .infinity, maxHeight: isWide ? .infinity : nil, alignment: .top)
+    }
+
+    private var trailingPane: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            // Wide: rows and Hold to send sit at the bottom of the trailing pane (prototype `#vReview .R`),
+            // and the rows scroll when large text makes them taller than the pane.
+            ScrollView {
+                VStack(alignment: .leading, spacing: 0) {
+                    rows.padding(.top, isWide ? 0 : 24)
+                    if let fine { Text(verbatim: fine).noahText(HomeText.footnote).foregroundStyle(NoahTokens.Colors.muted).padding(.top, 12) }
+                    if let message = controller.message {
+                        Text(LocalizedStringKey(message)).noahText(HomeText.footnote).foregroundStyle(NoahTokens.Colors.failure).padding(.top, 12)
+                    }
+                }
+            }
+            .scrollBounceBehavior(.basedOnSize)
+            .defaultScrollAnchor(isWide ? .bottom : nil, for: .alignment)
+            .frame(maxHeight: .infinity)
+            .padding(.top, isWide ? 66 : 0)
+            SendHoldButton(amount: format(quote.amount), enabled: !controller.locked) {
+                (gate ?? ownGate).confirm(generation: controller.generation) {
+                    if let confirm { confirm() } else { controller.submit(payment, quote: quote) }
+                }
+            }
+            .padding(.top, isWide ? 24 : 12).padding(.bottom, 6)
+        }
+        .padding(.leading, isWide ? 40 : 20).padding(.trailing, isWide ? 34 : 20)
+        .padding(.vertical, isWide ? 24 : 0).padding(.bottom, 12)
+        .frame(maxWidth: isWide ? OnboardingLayout.paneContentWidth + 74 : nil)
+        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: isWide ? .bottom : .top)
     }
 
     private var rail: SendMotion.Rail { SendMotion.Rail(payment) }

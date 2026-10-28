@@ -25,7 +25,6 @@ struct SendView: View {
     /// The chain tip, read with each receipt check, for the block row.
     @State private var chainTip: UInt32?
     @FocusState private var focus: Field?
-    private enum Field { case recipient, note }
 
     let isActive: Bool
     let onLeave: () -> Void
@@ -173,12 +172,6 @@ struct SendView: View {
         model.error.map { model.destinationError?.message(locale: locale.identifier) ?? L10n.text($0, locale: locale.identifier) }
     }
 
-    private func error(_ text: String) -> some View {
-        Text(verbatim: text).noahText(HomeText.footnote).foregroundStyle(NoahTokens.Colors.failure)
-            .fixedSize(horizontal: false, vertical: true)
-            .accessibilityIdentifier("send-error")
-    }
-
     // MARK: Amount
 
     /// The most one balance can pay; Max and on-chain sources pick between them later.
@@ -228,55 +221,12 @@ struct SendView: View {
                     recipientLine.frame(maxWidth: .infinity).padding(.top, 6).accessibilityIdentifier("send-amount-recipient")
                 }
                 if wide { Spacer(minLength: 0) }
-                Group {
-                    if overBalance {
-                        Text(verbatim: L10n.text("Only {amount} available", format(available), locale: locale.identifier))
-                            .foregroundStyle(NoahTokens.Colors.failure)
-                    } else {
-                        Text(verbatim: L10n.text("{amount} available", format(available), locale: locale.identifier))
-                            .foregroundStyle(NoahTokens.Colors.muted)
-                    }
-                }
-                .noahText(NoahTokens.Typography.sub)
-                .frame(height: 20)
-                .padding(.top, wide || short ? 14 : 28)
-                .accessibilityIdentifier("send-available")
-                if let balance = app.summary?.balance,
-                   let message = balance.pendingRoundMessage(amount: format(balance.ark.pendingInRound)) {
-                    Text(LocalizedStringKey(message)).noahText(HomeText.footnote).foregroundStyle(NoahTokens.Colors.muted)
-                        .multilineTextAlignment(.center).padding(.top, 4)
-                }
+                balanceLines(short: short)
                 SendAmountDisplay(text: amountDisplay.text, empty: amountDisplay.empty, value: Double(model.sats), shake: shake)
                     .frame(height: 72)
                     .padding(.top, wide || short ? 14 : 30)
                     .accessibilityIdentifier("send-amount")
-                Button {
-                    haptics.play(.selection)
-                    model.toggleCurrency()
-                } label: {
-                    HStack(spacing: 8) {
-                        Text(verbatim: fiatLine).noahText(NoahTokens.Typography.body)
-                        Image(systemName: "arrow.up.arrow.down").font(.system(size: 14, weight: .medium))
-                    }
-                    .foregroundStyle(NoahTokens.Colors.muted)
-                    .frame(minHeight: NoahTokens.Size.hitTarget)
-                    .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .disabled(model.btcPrice == nil)
-                .accessibilityLabel(Text("Switch amount currency"))
-                .accessibilityValue(Text(verbatim: fiatLine))
-                .accessibilityIdentifier("send-currency-toggle")
-                .padding(.top, 2)
-                if canMax {
-                    Button("Max") {
-                        haptics.play(.light)
-                        model.maxSend()
-                    }
-                    .buttonStyle(SendChipStyle())
-                    .accessibilityIdentifier("send-max")
-                    .padding(.top, 4)
-                }
+                amountControls
                 if !model.parsed.isAmountEditable {
                     Text("Amount set by payment request").noahText(HomeText.footnote).foregroundStyle(NoahTokens.Colors.muted)
                         .padding(.top, 8)
@@ -307,6 +257,57 @@ struct SendView: View {
                 }
                 .frame(maxHeight: .infinity)
             }
+        }
+    }
+
+    @ViewBuilder private func balanceLines(short: Bool) -> some View {
+        Group {
+            if overBalance {
+                Text(verbatim: L10n.text("Only {amount} available", format(available), locale: locale.identifier))
+                    .foregroundStyle(NoahTokens.Colors.failure)
+            } else {
+                Text(verbatim: L10n.text("{amount} available", format(available), locale: locale.identifier))
+                    .foregroundStyle(NoahTokens.Colors.muted)
+            }
+        }
+        .noahText(NoahTokens.Typography.sub)
+        .frame(height: 20)
+        .padding(.top, wide || short ? 14 : 28)
+        .accessibilityIdentifier("send-available")
+        if let balance = app.summary?.balance,
+           let message = balance.pendingRoundMessage(amount: format(balance.ark.pendingInRound)) {
+            Text(LocalizedStringKey(message)).noahText(HomeText.footnote).foregroundStyle(NoahTokens.Colors.muted)
+                .multilineTextAlignment(.center).padding(.top, 4)
+        }
+    }
+
+    @ViewBuilder private var amountControls: some View {
+        Button {
+            haptics.play(.selection)
+            model.toggleCurrency()
+        } label: {
+            HStack(spacing: 8) {
+                Text(verbatim: fiatLine).noahText(NoahTokens.Typography.body)
+                Image(systemName: "arrow.up.arrow.down").font(.system(size: 14, weight: .medium))
+            }
+            .foregroundStyle(NoahTokens.Colors.muted)
+            .frame(minHeight: NoahTokens.Size.hitTarget)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .disabled(model.btcPrice == nil)
+        .accessibilityLabel(Text("Switch amount currency"))
+        .accessibilityValue(Text(verbatim: fiatLine))
+        .accessibilityIdentifier("send-currency-toggle")
+        .padding(.top, 2)
+        if canMax {
+            Button("Max") {
+                haptics.play(.light)
+                model.maxSend()
+            }
+            .buttonStyle(SendChipStyle())
+            .accessibilityIdentifier("send-max")
+            .padding(.top, 4)
         }
     }
 

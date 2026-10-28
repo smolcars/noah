@@ -27,47 +27,14 @@ struct DebugView: View {
     var body: some View {
         SettingsScroll(line: L10n.text("For developers. Some actions change your wallet.", locale: language)) {
             Text(L10n.text("Action", locale: language)).noahText(HomeText.section).foregroundStyle(NoahTokens.Colors.muted).padding(.top, 20)
-            Button {
-                haptics.play(.light)
-                sheet = .actions
-            } label: {
-                HStack {
-                    Text(LocalizedStringKey(action.rawValue)).noahText(NoahTokens.Typography.body)
-                        .foregroundStyle(destructive ? NoahTokens.Colors.failure : NoahTokens.Colors.foreground)
-                    Spacer()
-                    Image(systemName: "chevron.right").accessibilityHidden(true).font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(NoahTokens.Colors.muted)
-                }
-                .padding(.horizontal, 16)
-                .frame(minHeight: 54)
-                .glassCompat(in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
-            .padding(.top, 8)
-            .disabled(busy)
-            .accessibilityIdentifier("debug-action")
+            actionButton
             if action.needsInput {
                 SettingsField(label: L10n.text(action == .offboard ? "Bitcoin address" : "VTXO hex or ID", locale: language),
                               placeholder: action == .offboard ? "bcrt1q…" : "…", text: $input, multiline: action == .decode || action == .importVtxo,
                               id: "debug-input")
                     .disabled(busy)
             }
-            if let result {
-                Text(L10n.text("Result", locale: language)).noahText(HomeText.section).foregroundStyle(NoahTokens.Colors.muted).padding(.top, 20)
-                Text(verbatim: result).font(.system(size: 12.5, design: .monospaced)).textSelection(.enabled)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.horizontal, 16).padding(.vertical, 14)
-                    .background(NoahTokens.Colors.soft, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-                    .padding(.top, 8)
-                Button(L10n.text("Copy", locale: language), systemImage: "doc.on.doc") {
-                    SecureCopy.copy(result)
-                    haptics.play(.success)
-                    settings.toast("Copied")
-                }
-                .buttonStyle(HomePillStyle(prominent: false, height: 40))
-                .padding(.top, 10)
-            }
+            resultSection
         }
         .settingsChrome("Debug")
         .settingsFooter {
@@ -115,6 +82,47 @@ struct DebugView: View {
                     }
                 }
             }
+        }
+    }
+
+    private var actionButton: some View {
+        Button {
+            haptics.play(.light)
+            sheet = .actions
+        } label: {
+            HStack {
+                Text(LocalizedStringKey(action.rawValue)).noahText(NoahTokens.Typography.body)
+                    .foregroundStyle(destructive ? NoahTokens.Colors.failure : NoahTokens.Colors.foreground)
+                Spacer()
+                Image(systemName: "chevron.right").accessibilityHidden(true).font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(NoahTokens.Colors.muted)
+            }
+            .padding(.horizontal, 16)
+            .frame(minHeight: 54)
+            .glassCompat(in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .padding(.top, 8)
+        .disabled(busy)
+        .accessibilityIdentifier("debug-action")
+    }
+
+    @ViewBuilder private var resultSection: some View {
+        if let result {
+            Text(L10n.text("Result", locale: language)).noahText(HomeText.section).foregroundStyle(NoahTokens.Colors.muted).padding(.top, 20)
+            Text(verbatim: result).font(.system(size: 12.5, design: .monospaced)).textSelection(.enabled)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, 16).padding(.vertical, 14)
+                .background(NoahTokens.Colors.soft, in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+                .padding(.top, 8)
+            Button(L10n.text("Copy", locale: language), systemImage: "doc.on.doc") {
+                SecureCopy.copy(result)
+                haptics.play(.success)
+                settings.toast("Copied")
+            }
+            .buttonStyle(HomePillStyle(prominent: false, height: 40))
+            .padding(.top, 10)
         }
     }
 

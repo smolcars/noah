@@ -72,37 +72,10 @@ struct SendOutcomeView: View {
         Group {
             if isWide {
                 // The stage leads; the result and Done trail. Nothing crosses the fold.
-                OnboardingPanes(wide: true, sideInsets: wide == nil ? (window.insets.leading, window.insets.trailing) : sideInsets) {
-                    leading
-                        .padding(.horizontal, 34)
-                        .padding(.bottom, 96)
-                        .frame(maxWidth: OnboardingLayout.paneContentWidth + 68)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-                    VStack(alignment: .leading, spacing: 0) {
-                        Color.clear.frame(height: 66)
-                        ScrollView { resultSection }.scrollBounceBehavior(.basedOnSize)
-                        Spacer(minLength: 24)
-                        actions
-                    }
-                    .padding(.leading, 40).padding(.trailing, 34).padding(.vertical, 24)
-                    .frame(maxWidth: OnboardingLayout.paneContentWidth + 74)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-                }
+                panes
             } else {
                 // One column; long results scroll above Done.
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 0) {
-                        leading
-                        resultSection.padding(.top, 18)
-                    }
-                    .padding(.horizontal, 20)
-                    .padding(.bottom, 12)
-                }
-                .scrollBounceBehavior(.basedOnSize)
-                .safeAreaInset(edge: .bottom, spacing: 0) {
-                    actions.padding(.horizontal, 20).padding(.top, 8).padding(.bottom, 12)
-                        .background(NoahTokens.Colors.background)
-                }
+                column
             }
         }
         .background(NoahTokens.Colors.background.ignoresSafeArea())
@@ -128,6 +101,41 @@ struct SendOutcomeView: View {
             }
         } message: {
             Text(LocalizedStringKey(controller.overrideWarning))
+        }
+    }
+
+    private var panes: some View {
+        OnboardingPanes(wide: true, sideInsets: wide == nil ? (window.insets.leading, window.insets.trailing) : sideInsets) {
+            leading
+                .padding(.horizontal, 34)
+                .padding(.bottom, 96)
+                .frame(maxWidth: OnboardingLayout.paneContentWidth + 68)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+            VStack(alignment: .leading, spacing: 0) {
+                Color.clear.frame(height: 66)
+                ScrollView { resultSection }.scrollBounceBehavior(.basedOnSize)
+                Spacer(minLength: 24)
+                actions
+            }
+            .padding(.leading, 40).padding(.trailing, 34).padding(.vertical, 24)
+            .frame(maxWidth: OnboardingLayout.paneContentWidth + 74)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        }
+    }
+
+    private var column: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 0) {
+                leading
+                resultSection.padding(.top, 18)
+            }
+            .padding(.horizontal, 20)
+            .padding(.bottom, 12)
+        }
+        .scrollBounceBehavior(.basedOnSize)
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            actions.padding(.horizontal, 20).padding(.top, 8).padding(.bottom, 12)
+                .background(NoahTokens.Colors.background)
         }
     }
 

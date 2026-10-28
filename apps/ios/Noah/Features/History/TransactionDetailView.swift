@@ -533,44 +533,48 @@ struct DetailLine: View {
                 .foregroundStyle(NoahTokens.Colors.muted)
                 .fixedSize()
             Spacer(minLength: 0)
-            HStack(spacing: 8) {
-                if let glyph {
-                    Image(systemName: glyph).accessibilityHidden(true).font(.system(size: 14, weight: .medium))
-                        .foregroundStyle(glyphColor ?? NoahTokens.Colors.foreground)
-                }
-                valueText.foregroundStyle(failure ? NoahTokens.Colors.failure : NoahTokens.Colors.foreground)
-                if let onCopy {
-                    Button(action: onCopy) {
-                        Image(systemName: copied ? "checkmark" : "doc.on.doc")
-                            .font(.system(size: 15, weight: copied ? .semibold : .regular))
-                            .contentTransition(.symbolEffect(.replace))
-                            .frame(width: 30, height: 30)
-                    }
-                    .buttonStyle(.plain)
-                    .foregroundStyle(NoahTokens.Colors.muted)
-                    .padding(.trailing, -6)
-                    .accessibilityLabel(Text(L10n.text("Copy {label}", label)))
-                }
-                if let explorer {
-                    SwiftUI.Link(destination: explorer) {
-                        Image(systemName: "arrow.up.right.square").font(.system(size: 15)).frame(width: 30, height: 30)
-                    }
-                    .foregroundStyle(NoahTokens.Colors.muted)
-                    .padding(.trailing, -6)
-                    .accessibilityLabel(Text("View in explorer"))
-                }
-                if chevron {
-                    Image(systemName: "chevron.right").accessibilityHidden(true).font(.system(size: 14, weight: .semibold))
-                        .foregroundStyle(NoahTokens.Colors.muted)
-                }
-            }
-            .layoutPriority(1)
+            trailing
         }
         .frame(minHeight: compact ? 44 : 48)
         .padding(.vertical, wraps ? 10 : 0)
         .contentShape(Rectangle())
         .overlay(alignment: .bottom) { if hairline { HomeHairline() } }
         .accessibilityElement(children: .combine)
+    }
+
+    private var trailing: some View {
+        HStack(spacing: 8) {
+            if let glyph {
+                Image(systemName: glyph).accessibilityHidden(true).font(.system(size: 14, weight: .medium))
+                    .foregroundStyle(glyphColor ?? NoahTokens.Colors.foreground)
+            }
+            valueText.foregroundStyle(failure ? NoahTokens.Colors.failure : NoahTokens.Colors.foreground)
+            if let onCopy {
+                Button(action: onCopy) {
+                    Image(systemName: copied ? "checkmark" : "doc.on.doc")
+                        .font(.system(size: 15, weight: copied ? .semibold : .regular))
+                        .contentTransition(.symbolEffect(.replace))
+                        .frame(width: 30, height: 30)
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(NoahTokens.Colors.muted)
+                .padding(.trailing, -6)
+                .accessibilityLabel(Text(L10n.text("Copy {label}", label)))
+            }
+            if let explorer {
+                SwiftUI.Link(destination: explorer) {
+                    Image(systemName: "arrow.up.right.square").font(.system(size: 15)).frame(width: 30, height: 30)
+                }
+                .foregroundStyle(NoahTokens.Colors.muted)
+                .padding(.trailing, -6)
+                .accessibilityLabel(Text("View in explorer"))
+            }
+            if chevron {
+                Image(systemName: "chevron.right").accessibilityHidden(true).font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(NoahTokens.Colors.muted)
+            }
+        }
+        .layoutPriority(1)
     }
 
     @ViewBuilder private var valueText: some View {

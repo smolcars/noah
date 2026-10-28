@@ -18,33 +18,7 @@ struct RootView: View {
             if showsOnboarding {
                 OnboardingFlow(model: model, storedSeed: model.phase == .blocked(.seedWithoutWalletData))
             } else {
-                switch model.phase {
-                case .launching:
-                    if model.customServerUnresponsive {
-                        VStack(spacing: 16) {
-                            Text(model.switchingToDefaultServer ? L10n.text("The server isn't responding; switching back…") : L10n
-                                .text("The custom server isn't responding."))
-                            Button("Use default server") { model.useDefaultEsploraServer() }
-                                .disabled(model.switchingToDefaultServer)
-                        }.padding()
-                    } else { NoahColor.background.ignoresSafeArea() }
-                case .onboarding:
-                    EmptyView()
-                case .wallet:
-                    if model.pushPermission.blocksWallet(initialized: true) {
-                        PushNotificationsRequiredView()
-                    } else {
-                        WalletTabs()
-                    }
-                case .blocked(let state):
-                    LaunchMessageView(state: state)
-                case .restoreIncomplete:
-                    LaunchMessageView(
-                        title: model.walletError == nil ? "Restore didn't finish" : "Wallet cleanup didn't finish",
-                        message: LocalizedStringKey(model
-                            .walletError ??
-                            "Noah couldn't finish or undo an interrupted restore. Your wallet files were left as they are. Restart Noah to try again."))
-                }
+                phaseView
             }
         }
         .onOpenURL { model.paymentLink.receive($0, gate: model.paymentLinkGate) }
@@ -87,6 +61,36 @@ struct RootView: View {
                     await model.appBecameActive()
                 }
             }
+        }
+    }
+
+    @ViewBuilder private var phaseView: some View {
+        switch model.phase {
+        case .launching:
+            if model.customServerUnresponsive {
+                VStack(spacing: 16) {
+                    Text(model.switchingToDefaultServer ? L10n.text("The server isn't responding; switching back…") : L10n
+                        .text("The custom server isn't responding."))
+                    Button("Use default server") { model.useDefaultEsploraServer() }
+                        .disabled(model.switchingToDefaultServer)
+                }.padding()
+            } else { NoahColor.background.ignoresSafeArea() }
+        case .onboarding:
+            EmptyView()
+        case .wallet:
+            if model.pushPermission.blocksWallet(initialized: true) {
+                PushNotificationsRequiredView()
+            } else {
+                WalletTabs()
+            }
+        case .blocked(let state):
+            LaunchMessageView(state: state)
+        case .restoreIncomplete:
+            LaunchMessageView(
+                title: model.walletError == nil ? "Restore didn't finish" : "Wallet cleanup didn't finish",
+                message: LocalizedStringKey(model
+                    .walletError ??
+                    "Noah couldn't finish or undo an interrupted restore. Your wallet files were left as they are. Restart Noah to try again."))
         }
     }
 }

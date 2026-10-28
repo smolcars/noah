@@ -135,177 +135,229 @@ extension WalletSession {
         }
         return try await withOpenWallet { handles in
             guard snapshot.walletIdentity == (try await Self.sendIdentity(handles)) else { throw SendFailure.unresolved }
+            let run = SendRun(payment: payment, quote: quote, snapshot: snapshot, handles: handles, check: checkSubmission)
             var receipt = SendReceipt(amount: quote.amount)
             var lightning: LightningSendStatus?
-            switch payment.method {
-            case "ark":
-                try await checkSubmission()
-                // Persist the SDK's success result and the payment's movement id, never infer them from history candidates.
-                receipt.movementID = try await handles.wallet.sendArkoorPayment(arkAddress: payment.destination, amountSats: payment.amount)
-                receipt.proof = .submitReturnedArkSuccess
-            case "lightning", "lnurl":
-                var resolved = payment
-                if payment.method == "lnurl" {
-                    guard let invoice = snapshot.resolvedInvoice else { throw SendFailure.invalid }
-                    try SendRecipientService.validateInvoice(invoice, amount: payment.amount, metadata: nil)
-                    resolved.destination = invoice
-                    resolved.method = "lightning"
-                }
-                let invoice = resolved.destination
-                let fixed = PaymentEncoding.invoice(invoice)?.sats.map { $0 > 0 } ?? false
-                guard let hash = PaymentEncoding.invoice(invoice)?.hash else { throw SendFailure.invalid }
-                lightning = try await SendLightningSubmission.submit(
-                    payment: resolved, state: try await handles.wallet.lightningSendState(paymentHash: hash),
-                    movements: try await handles.wallet.history(), checkpoint: snapshot.checkpoint, quote: quote,
-                    check: { try await handles.wallet.checkLightningPayment(paymentHash: $0, wait: false) }) {
-                        try await checkSubmission()
-                        return try await handles.wallet.payLightningInvoice(
-                            invoice: invoice, amountSats: fixed ? nil : payment.amount, options: SendLightningSubmission.options)
-                    }
-            case "offer":
-                lightning = try await SendLightningSubmission.offer(pending: try await handles.wallet.pendingLightningSends()) {
-                    try await checkSubmission()
-                    return try await handles.wallet.payLightningOffer(
-                        offer: payment.destination, amountSats: payment.amount, options: SendLightningSubmission.options)
-                }
-            case "onchain":
-                if payment.source == .onchain {
-                    guard let prepared = quote.prepared,
-                          await self.consumeSendReview(payment, quote: quote) else {
-                        throw SendNotSubmitted(reason: .feeChanged)
-                    }
-                    do {
-                        try await checkSubmission()
-                        let result = try await handles.onchain.broadcastPrepared(id: prepared.id)
-                        receipt = try SendOnchainSubmission.receipt(result, quote: quote)
-                    } catch {
-                        if let reason = SendOnchainSubmission.notSubmitted(error) {
-                            throw SendNotSubmitted(reason: reason)
-                        }
-                        throw error
-                    }
-                } else {
-                    receipt.status = .submitted
-                    if payment.max {
-                        let current = try await handles.wallet.spendableVtxos().map(\.id)
-                        do { try SendMaxValidation.offchain(currentIDs: current, reviewedIDs: quote.vtxoIDs) }
-                        catch let error as SendFailure { throw SendNotSubmitted(reason: error) }
-                        try await checkSubmission()
-                        // offchain() above rejects a review without VTXO IDs.
-                        guard let vtxoIDs = quote.vtxoIDs else { throw SendNotSubmitted(reason: .fundsChanged) }
-                        let result = try await handles.wallet.offboardVtxos(vtxoIds: vtxoIDs, bitcoinAddress: payment.destination)
-                        receipt.txid = result.txid
-                        receipt.movementID = result.movementId
-                    } else {
-                        try await checkSubmission()
-                        let result = try await handles.wallet.sendOnchain(address: payment.destination, amountSats: payment.amount)
-                        receipt.txid = result.txid
-                        receipt.movementID = result.movementId
-                    }
-                }
-            default: throw SendFailure.invalid
-            }
-            if let lightning {
-                guard case .paid(let hash, let preimage) = lightning, !preimage.isEmpty else {
-                    throw SendFailure.unresolved
-                }
-                let movements = try await handles.wallet.history().filter {
-                    $0.subsystemName == "bark.lightning_send" && $0.subsystemKind == "send" && $0.paymentHash == hash
-                }
-                if let checkpoint = snapshot.checkpoint {
-                    receipt = try checkpoint.receipt(status: lightning, movements: movements, payment: payment, quote: quote)
-                } else {
-                    switch SendReconciliation.lightningAttempt(movements, hash: hash, amount: payment.amount, snapshot: snapshot, startedAt: nil,
-                                                               fixed: SendReconciliation.fixesAmount(snapshot.resolvedInvoice ?? payment.destination)) {
-                    case .paid(let actual): receipt = actual
-                    case .alreadyPaid(let actual): throw SendAlreadyPaid(receipt: actual)
-                    default: throw SendFailure.unresolved
-                    }
-                }
-            }
-            if receipt.txid != nil && receipt.proof == nil { receipt.proof = .submitReturnedTxid }
-            if payment.method == "onchain", payment.source == .offchain {
-                if payment.max {
-                    // offboardVtxos binds reviewed coins, but Bark recomputes the fee/output at submit.
-                    receipt.amount = 0
-                    receipt.amountIsPending = true
-                }
-                if let movements = try? await handles.wallet.history() {
-                    receipt = SendReconciliation.offboardReceipt(receipt, payment: payment, movements: movements)
-                }
-            }
-            if payment.source == .onchain, let txid = receipt.txid,
-               let transactions = try? await handles.onchain.transactions(),
-               let tx = transactions.first(where: { $0.txid == txid }) {
-                receipt.fee = tx.onchainFeeSats
-            }
-            // Metadata failure is never a payment failure and must never enable resubmission.
-            if let patch = payment.repeatMetadata, let id = SendReconciliation.metadataMovementID(receipt, snapshot: snapshot) {
-                do { try await handles.wallet.updateHistoryMetadata(movementId: id, patchJson: patch) } catch {
-                    AppLog("send").w("Payment succeeded; repeat metadata could not be saved")
-                }
-            }
-            return receipt
+            try await Self.submit(run, session: self, receipt: &receipt, lightning: &lightning)
+            if let lightning { receipt = try await Self.lightningReceipt(lightning, run: run) }
+            return await Self.finished(receipt, run: run)
         }
+    }
+
+    /// What one `submitSend` works with, after the wallet identity check.
+    private struct SendRun {
+        let payment: SendPayment
+        let quote: SendQuote
+        let snapshot: SendSnapshot
+        let handles: Handles
+        let check: @Sendable () async throws -> Void
+    }
+
+    /// Submits by method: the SDK call each method makes, after `check` (foreground and the caller's guard).
+    private static func submit(_ run: SendRun, session: WalletSession, receipt: inout SendReceipt,
+                               lightning: inout LightningSendStatus?) async throws {
+        let payment = run.payment, quote = run.quote, snapshot = run.snapshot, handles = run.handles, checkSubmission = run.check
+        switch payment.method {
+        case "ark":
+            try await checkSubmission()
+            // Persist the SDK's success result and the payment's movement id, never infer them from history candidates.
+            receipt.movementID = try await handles.wallet.sendArkoorPayment(arkAddress: payment.destination, amountSats: payment.amount)
+            receipt.proof = .submitReturnedArkSuccess
+        case "lightning", "lnurl":
+            var resolved = payment
+            if payment.method == "lnurl" {
+                guard let invoice = snapshot.resolvedInvoice else { throw SendFailure.invalid }
+                try SendRecipientService.validateInvoice(invoice, amount: payment.amount, metadata: nil)
+                resolved.destination = invoice
+                resolved.method = "lightning"
+            }
+            let invoice = resolved.destination
+            let fixed = PaymentEncoding.invoice(invoice)?.sats.map { $0 > 0 } ?? false
+            guard let hash = PaymentEncoding.invoice(invoice)?.hash else { throw SendFailure.invalid }
+            lightning = try await SendLightningSubmission.submit(
+                payment: resolved, state: try await handles.wallet.lightningSendState(paymentHash: hash),
+                movements: try await handles.wallet.history(), checkpoint: snapshot.checkpoint, quote: quote,
+                check: { try await handles.wallet.checkLightningPayment(paymentHash: $0, wait: false) }) {
+                    try await checkSubmission()
+                    return try await handles.wallet.payLightningInvoice(
+                        invoice: invoice, amountSats: fixed ? nil : payment.amount, options: SendLightningSubmission.options)
+                }
+        case "offer":
+            lightning = try await SendLightningSubmission.offer(pending: try await handles.wallet.pendingLightningSends()) {
+                try await checkSubmission()
+                return try await handles.wallet.payLightningOffer(
+                    offer: payment.destination, amountSats: payment.amount, options: SendLightningSubmission.options)
+            }
+        case "onchain": try await submitOnchain(run, session: session, receipt: &receipt)
+        default: throw SendFailure.invalid
+        }
+    }
+
+    private static func submitOnchain(_ run: SendRun, session: WalletSession, receipt: inout SendReceipt) async throws {
+        let payment = run.payment, quote = run.quote, handles = run.handles, checkSubmission = run.check
+        if payment.source == .onchain {
+            guard let prepared = quote.prepared,
+                  await session.consumeSendReview(payment, quote: quote) else {
+                throw SendNotSubmitted(reason: .feeChanged)
+            }
+            do {
+                try await checkSubmission()
+                let result = try await handles.onchain.broadcastPrepared(id: prepared.id)
+                receipt = try SendOnchainSubmission.receipt(result, quote: quote)
+            } catch {
+                if let reason = SendOnchainSubmission.notSubmitted(error) {
+                    throw SendNotSubmitted(reason: reason)
+                }
+                throw error
+            }
+        } else {
+            receipt.status = .submitted
+            if payment.max {
+                let current = try await handles.wallet.spendableVtxos().map(\.id)
+                do { try SendMaxValidation.offchain(currentIDs: current, reviewedIDs: quote.vtxoIDs) }
+                catch let error as SendFailure { throw SendNotSubmitted(reason: error) }
+                try await checkSubmission()
+                // offchain() above rejects a review without VTXO IDs.
+                guard let vtxoIDs = quote.vtxoIDs else { throw SendNotSubmitted(reason: .fundsChanged) }
+                let result = try await handles.wallet.offboardVtxos(vtxoIds: vtxoIDs, bitcoinAddress: payment.destination)
+                receipt.txid = result.txid
+                receipt.movementID = result.movementId
+            } else {
+                try await checkSubmission()
+                let result = try await handles.wallet.sendOnchain(address: payment.destination, amountSats: payment.amount)
+                receipt.txid = result.txid
+                receipt.movementID = result.movementId
+            }
+        }
+    }
+
+    /// The receipt for a paid Lightning send, from its checkpoint or the movements its hash names.
+    private static func lightningReceipt(_ lightning: LightningSendStatus, run: SendRun) async throws -> SendReceipt {
+        let payment = run.payment, quote = run.quote, snapshot = run.snapshot, handles = run.handles
+        let receipt: SendReceipt
+        guard case .paid(let hash, let preimage) = lightning, !preimage.isEmpty else {
+            throw SendFailure.unresolved
+        }
+        let movements = try await handles.wallet.history().filter {
+            $0.subsystemName == "bark.lightning_send" && $0.subsystemKind == "send" && $0.paymentHash == hash
+        }
+        if let checkpoint = snapshot.checkpoint {
+            receipt = try checkpoint.receipt(status: lightning, movements: movements, payment: payment, quote: quote)
+        } else {
+            switch SendReconciliation.lightningAttempt(movements, hash: hash, amount: payment.amount, snapshot: snapshot, startedAt: nil,
+                                                       fixed: SendReconciliation.fixesAmount(snapshot.resolvedInvoice ?? payment.destination)) {
+            case .paid(let actual): receipt = actual
+            case .alreadyPaid(let actual): throw SendAlreadyPaid(receipt: actual)
+            default: throw SendFailure.unresolved
+            }
+        }
+        return receipt
+    }
+
+    /// Proof, offboard and fee details, and the repeat metadata: none of it can fail the payment.
+    private static func finished(_ submitted: SendReceipt, run: SendRun) async -> SendReceipt {
+        let payment = run.payment, snapshot = run.snapshot, handles = run.handles
+        var receipt = submitted
+        if receipt.txid != nil && receipt.proof == nil { receipt.proof = .submitReturnedTxid }
+        if payment.method == "onchain", payment.source == .offchain {
+            if payment.max {
+                // offboardVtxos binds reviewed coins, but Bark recomputes the fee/output at submit.
+                receipt.amount = 0
+                receipt.amountIsPending = true
+            }
+            if let movements = try? await handles.wallet.history() {
+                receipt = SendReconciliation.offboardReceipt(receipt, payment: payment, movements: movements)
+            }
+        }
+        if payment.source == .onchain, let txid = receipt.txid,
+           let transactions = try? await handles.onchain.transactions(),
+           let tx = transactions.first(where: { $0.txid == txid }) {
+            receipt.fee = tx.onchainFeeSats
+        }
+        // Metadata failure is never a payment failure and must never enable resubmission.
+        if let patch = payment.repeatMetadata, let id = SendReconciliation.metadataMovementID(receipt, snapshot: snapshot) {
+            do { try await handles.wallet.updateHistoryMetadata(movementId: id, patchJson: patch) } catch {
+                AppLog("send").w("Payment succeeded; repeat metadata could not be saved")
+            }
+        }
+        return receipt
     }
     func reconcileSend(_ attempt: SendPaymentController.Attempt) async throws -> SendPaymentController.Resolution {
         let flight = syncFlight
         return try await withOpenWallet { handles in
             guard attempt.walletIdentity == (try await Self.sendIdentity(handles)) else { throw SendFailure.unresolved }
             guard attempt.inspectionPending != true else { return .uncertain }
-            if let checkpoint = attempt.snapshot.checkpoint {
-                guard let quote = attempt.quote else { throw SendFailure.unresolved }
-                var payment = attempt.payment
-                payment.destination = attempt.snapshot.resolvedInvoice ?? payment.destination
-                payment.method = "lightning"
-                let status = try await checkpoint.advance(
-                    invoice: payment.destination, payment: payment, quote: quote,
-                    state: try await handles.wallet.lightningSendState(paymentHash: checkpoint.paymentHash),
-                    check: { try await handles.wallet.checkLightningPayment(paymentHash: $0, wait: false) })
-                return .paid(try checkpoint.receipt(status: status, movements: try await handles.wallet.history(), payment: payment, quote: quote))
-            }
+            if let checkpoint = attempt.snapshot.checkpoint { return try await Self.reconcileCheckpoint(attempt, checkpoint, handles: handles) }
             if attempt.payment.method == "onchain", attempt.payment.source == .onchain || attempt.receipt?.txid != nil {
-                let resolution: SendPaymentController.Resolution
-                if attempt.payment.source == .onchain {
-                    // Preserve BDK reorg and confirmed competing-spend checks.
-                    try await flight.serialized { _ = try await handles.onchain.sync() }
-                    resolution = try SendReconciliation.onchain(attempt, transactions: try await handles.onchain.transactions())
-                } else if let receipt = attempt.receipt {
-                    resolution = .paid(SendReconciliation.offboardReceipt(receipt, payment: attempt.payment,
-                                                                          movements: try await handles.wallet.history()))
-                } else { return .uncertain }
-                return await SendReconciliation.chainEvidence(resolution, source: attempt.payment.source) { txid in
-                    let status = attempt.payment.source == .onchain
-                        ? try await handles.onchain.transactionStatus(txid: txid)
-                        : try await handles.wallet.transactionStatus(txid: txid)
-                    return .init(status)
-                }
+                return try await Self.reconcileOnchain(attempt, handles: handles, flight: flight)
             }
             if ["lightning", "lnurl"].contains(attempt.payment.method), let hash = attempt.paymentHash {
-                // Status checks must not drive an inherited checkpoint with an unreviewed amount.
-                let state = try await handles.wallet.lightningSendState(paymentHash: hash)
-                if case .inProgress(let send) = state {
-                    return .inProgress(.init(amount: send.amountSats, fee: send.feeSats))
-                }
-                if let existing = attempt.existingLightning, existing.amount != attempt.payment.amount {
-                    return .inProgress(existing)
-                }
-                let movements = try await handles.wallet.history()
-                var tracked = attempt
-                if attempt.existingLightning != nil {
-                    tracked.snapshot.movementIDs.formUnion(movements.map(\.id))
-                }
-                return SendReconciliation.ark(tracked, movements: movements)
+                return try await Self.reconcileLightning(attempt, hash: hash, handles: handles)
             }
-            try await flight.serialized { try await handles.wallet.sync() }
-            let resolution = SendReconciliation.ark(attempt, movements: try await handles.wallet.history())
-            if case .paid(let receipt) = resolution, let patch = attempt.payment.repeatMetadata,
-               let id = SendReconciliation.metadataMovementID(receipt, snapshot: attempt.snapshot) {
-                do { try await handles.wallet.updateHistoryMetadata(movementId: id, patchJson: patch) }
-                catch { AppLog("send").w(#"Reconciled payment; repeat metadata could not be saved"#) }
-            }
-            return resolution
+            return try await Self.reconcileArk(attempt, handles: handles, flight: flight)
         }
+    }
+
+    private static func reconcileCheckpoint(_ attempt: SendPaymentController.Attempt, _ checkpoint: SendLightningCheckpoint,
+                                            handles: Handles) async throws -> SendPaymentController.Resolution {
+        guard let quote = attempt.quote else { throw SendFailure.unresolved }
+        var payment = attempt.payment
+        payment.destination = attempt.snapshot.resolvedInvoice ?? payment.destination
+        payment.method = "lightning"
+        let status = try await checkpoint.advance(
+            invoice: payment.destination, payment: payment, quote: quote,
+            state: try await handles.wallet.lightningSendState(paymentHash: checkpoint.paymentHash),
+            check: { try await handles.wallet.checkLightningPayment(paymentHash: $0, wait: false) })
+        return .paid(try checkpoint.receipt(status: status, movements: try await handles.wallet.history(), payment: payment, quote: quote))
+    }
+
+    private static func reconcileOnchain(_ attempt: SendPaymentController.Attempt, handles: Handles,
+                                         flight: WalletSync) async throws -> SendPaymentController.Resolution {
+        let resolution: SendPaymentController.Resolution
+        if attempt.payment.source == .onchain {
+            // Preserve BDK reorg and confirmed competing-spend checks.
+            try await flight.serialized { _ = try await handles.onchain.sync() }
+            resolution = try SendReconciliation.onchain(attempt, transactions: try await handles.onchain.transactions())
+        } else if let receipt = attempt.receipt {
+            resolution = .paid(SendReconciliation.offboardReceipt(receipt, payment: attempt.payment,
+                                                                  movements: try await handles.wallet.history()))
+        } else { return .uncertain }
+        return await SendReconciliation.chainEvidence(resolution, source: attempt.payment.source) { txid in
+            let status = attempt.payment.source == .onchain
+                ? try await handles.onchain.transactionStatus(txid: txid)
+                : try await handles.wallet.transactionStatus(txid: txid)
+            return .init(status)
+        }
+    }
+
+    private static func reconcileLightning(_ attempt: SendPaymentController.Attempt, hash: String,
+                                           handles: Handles) async throws -> SendPaymentController.Resolution {
+        // Status checks must not drive an inherited checkpoint with an unreviewed amount.
+        let state = try await handles.wallet.lightningSendState(paymentHash: hash)
+        if case .inProgress(let send) = state {
+            return .inProgress(.init(amount: send.amountSats, fee: send.feeSats))
+        }
+        if let existing = attempt.existingLightning, existing.amount != attempt.payment.amount {
+            return .inProgress(existing)
+        }
+        let movements = try await handles.wallet.history()
+        var tracked = attempt
+        if attempt.existingLightning != nil {
+            tracked.snapshot.movementIDs.formUnion(movements.map(\.id))
+        }
+        return SendReconciliation.ark(tracked, movements: movements)
+    }
+
+    private static func reconcileArk(_ attempt: SendPaymentController.Attempt, handles: Handles,
+                                     flight: WalletSync) async throws -> SendPaymentController.Resolution {
+        try await flight.serialized { try await handles.wallet.sync() }
+        let resolution = SendReconciliation.ark(attempt, movements: try await handles.wallet.history())
+        if case .paid(let receipt) = resolution, let patch = attempt.payment.repeatMetadata,
+           let id = SendReconciliation.metadataMovementID(receipt, snapshot: attempt.snapshot) {
+            do { try await handles.wallet.updateHistoryMetadata(movementId: id, patchJson: patch) }
+            catch { AppLog("send").w(#"Reconciled payment; repeat metadata could not be saved"#) }
+        }
+        return resolution
     }
     private static func sendIdentity(_ handles: Handles) async throws -> SendWalletIdentity {
         let network = try await handles.wallet.network()

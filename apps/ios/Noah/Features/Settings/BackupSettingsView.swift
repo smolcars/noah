@@ -129,28 +129,7 @@ struct BackupSettingsView: View {
     private var list: some View {
         VStack(spacing: 0) {
             if let backups {
-                if backups.isEmpty {
-                    SettingsDetailRow(label: L10n.text("No backups found", locale: language), value: "", compact: true)
-                }
-                ForEach(backups, id: \.backupId) { backup in
-                    HStack(spacing: 8) {
-                        DetailLine(label: backupDate(backup.createdAt), value: size(backup), compact: true, hairline: false)
-                        Button {
-                            haptics.play(.light)
-                            sheet = .delete(backup)
-                        } label: {
-                            Image(systemName: "trash").font(.system(size: 15)).foregroundStyle(NoahTokens.Colors.muted).frame(width: 30, height: 30)
-                        }
-                        .buttonStyle(.plain)
-                        .disabled(busy)
-                        .accessibilityLabel(Text("Delete backup"))
-                    }
-                    .overlay(alignment: .bottom) { HomeHairline() }
-                }
-                if listFailed {
-                    Text(L10n.text("Couldn't list backups.", locale: language)).noahText(HomeText.footnote)
-                        .foregroundStyle(NoahTokens.Colors.failure).frame(maxWidth: .infinity, minHeight: 32, alignment: .leading)
-                }
+                backupRows(backups)
             } else if listFailed {
                 HStack {
                     Text(L10n.text("Couldn't list backups.", locale: language)).noahText(NoahTokens.Typography.sub)
@@ -165,6 +144,31 @@ struct BackupSettingsView: View {
             }
         }
         .padding(.leading, 48)
+    }
+
+    @ViewBuilder private func backupRows(_ backups: [Components.Schemas.BackupObjectInfo]) -> some View {
+        if backups.isEmpty {
+            SettingsDetailRow(label: L10n.text("No backups found", locale: language), value: "", compact: true)
+        }
+        ForEach(backups, id: \.backupId) { backup in
+            HStack(spacing: 8) {
+                DetailLine(label: backupDate(backup.createdAt), value: size(backup), compact: true, hairline: false)
+                Button {
+                    haptics.play(.light)
+                    sheet = .delete(backup)
+                } label: {
+                    Image(systemName: "trash").font(.system(size: 15)).foregroundStyle(NoahTokens.Colors.muted).frame(width: 30, height: 30)
+                }
+                .buttonStyle(.plain)
+                .disabled(busy)
+                .accessibilityLabel(Text("Delete backup"))
+            }
+            .overlay(alignment: .bottom) { HomeHairline() }
+        }
+        if listFailed {
+            Text(L10n.text("Couldn't list backups.", locale: language)).noahText(HomeText.footnote)
+                .foregroundStyle(NoahTokens.Colors.failure).frame(maxWidth: .infinity, minHeight: 32, alignment: .leading)
+        }
     }
 
     private func size(_ backup: Components.Schemas.BackupObjectInfo) -> String {

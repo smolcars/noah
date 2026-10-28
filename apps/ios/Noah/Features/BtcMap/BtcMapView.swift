@@ -17,29 +17,7 @@ struct BtcMapView: View {
     var body: some View {
         GeometryReader { geometry in
             HStack(spacing: 0) {
-                ZStack(alignment: .top) {
-                    BtcMapCanvas(model: model, compactDetail: !wideLayout && model.selected != nil) { searchFocused = false }
-                        .ignoresSafeArea(edges: .bottom)
-                    VStack(spacing: 10) {
-                        searchControls(maxHeight: geometry.size.height * 0.45)
-                            .readableWidth()
-                        Spacer(minLength: 0)
-                        if !searchFocused { bottomControls.readableWidth() }
-                    }
-                    .padding(12)
-                    if model.isLoading {
-                        ProgressView("Opening the bundled BTC Map…")
-                            .padding().background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
-                            .frame(maxHeight: .infinity)
-                    } else if let error = model.loadError {
-                        ContentUnavailableView {
-                            Label("Could not open BTC Map", systemImage: "map")
-                        } description: { Text(LocalizedStringKey(error)) } actions: {
-                            Button("Retry") { Task { await model.load() } }
-                        }
-                        .background(NoahColor.background)
-                    }
-                }
+                mapStack(height: geometry.size.height)
                 if wideLayout, let selected = model.selected {
                     Divider()
                     BtcMapDetailView(place: selected, location: model.userLocation, repository: model.repository) {
@@ -114,72 +92,110 @@ struct BtcMapView: View {
         } message: { Text(LocalizedStringKey(model.alert ?? "")) }
     }
 
+    private func mapStack(height: CGFloat) -> some View {
+        ZStack(alignment: .top) {
+            BtcMapCanvas(model: model, compactDetail: !wideLayout && model.selected != nil) { searchFocused = false }
+                .ignoresSafeArea(edges: .bottom)
+            VStack(spacing: 10) {
+                searchControls(maxHeight: height * 0.45)
+                    .readableWidth()
+                Spacer(minLength: 0)
+                if !searchFocused { bottomControls.readableWidth() }
+            }
+            .padding(12)
+            if model.isLoading {
+                ProgressView("Opening the bundled BTC Map…")
+                    .padding().background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16))
+                    .frame(maxHeight: .infinity)
+            } else if let error = model.loadError {
+                ContentUnavailableView {
+                    Label("Could not open BTC Map", systemImage: "map")
+                } description: { Text(LocalizedStringKey(error)) } actions: {
+                    Button("Retry") { Task { await model.load() } }
+                }
+                .background(NoahColor.background)
+            }
+        }
+    }
+
     private func searchControls(maxHeight: Double) -> some View {
         VStack(spacing: 10) {
-            HStack(spacing: 10) {
-                Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
-                TextField(
-                    "Search places or cities",
-                    text: Binding(get: { model.query }, set: { model.updateQuery($0) }),
-                    prompt: Text("Search places or cities").foregroundStyle(NoahColor.mutedForeground))
-                    .focused($searchFocused).autocorrectionDisabled().submitLabel(.search)
-                    .onSubmit {
-                        if let city = model.cities.first { model.select(city); searchFocused = false }
-                    }
-                    .accessibilityIdentifier("btc-map-search")
-                if !model.query.isEmpty {
-                    Button("Clear search", systemImage: "xmark.circle.fill") {
-                        model.selectedCity = nil
-                        model.query = ""
-                    }.labelStyle(.iconOnly).frame(minWidth: 44, minHeight: 44)
-                }
-            }
-            .padding(.leading, 16).padding(.trailing, 4).frame(minHeight: 48)
-            .glassCompat(in: Capsule())
+            searchField
 
             if searchFocused && CitySearch.normalize(model.query).count >= 2 && model.selectedCity == nil {
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 0) {
-                        Text("Locations").font(NoahFont.headline).padding()
-                        if model.cityError { Text("City search is unavailable.").font(NoahFont.footnote).padding(.horizontal) }
-                        ForEach(model.cities) { city in
-                            resultRow(city.name, detail: city.secondaryLabel, symbol: "location") {
-                                model.select(city); searchFocused = false
-                            }
-                        }
-                        if !model.merchants.isEmpty {
-                            Divider().padding(.horizontal)
-                            Text("Bitcoin places").font(NoahFont.headline).padding()
-                            ForEach(model.merchants) { place in
-                                resultRow(place.name, detail: place.category.label, symbol: place.category.symbol) {
-                                    model.select(place); searchFocused = false
-                                }
-                            }
-                        }
-                        if model.cities.isEmpty && model.merchants.isEmpty {
-                            Text("No matching cities or Bitcoin places").font(NoahFont.callout).padding()
+                results(maxHeight: maxHeight)
+            } else {
+                categories
+            }
+        }
+    }
+
+    private var searchField: some View {
+        HStack(spacing: 10) {
+            Image(systemName: "magnifyingglass").foregroundStyle(.secondary)
+            TextField(
+                "Search places or cities",
+                text: Binding(get: { model.query }, set: { model.updateQuery($0) }),
+                prompt: Text("Search places or cities").foregroundStyle(NoahColor.mutedForeground))
+                .focused($searchFocused).autocorrectionDisabled().submitLabel(.search)
+                .onSubmit {
+                    if let city = model.cities.first { model.select(city); searchFocused = false }
+                }
+                .accessibilityIdentifier("btc-map-search")
+            if !model.query.isEmpty {
+                Button("Clear search", systemImage: "xmark.circle.fill") {
+                    model.selectedCity = nil
+                    model.query = ""
+                }.labelStyle(.iconOnly).frame(minWidth: 44, minHeight: 44)
+            }
+        }
+        .padding(.leading, 16).padding(.trailing, 4).frame(minHeight: 48)
+        .glassCompat(in: Capsule())
+    }
+
+    private func results(maxHeight: Double) -> some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 0) {
+                Text("Locations").font(NoahFont.headline).padding()
+                if model.cityError { Text("City search is unavailable.").font(NoahFont.footnote).padding(.horizontal) }
+                ForEach(model.cities) { city in
+                    resultRow(city.name, detail: city.secondaryLabel, symbol: "location") {
+                        model.select(city); searchFocused = false
+                    }
+                }
+                if !model.merchants.isEmpty {
+                    Divider().padding(.horizontal)
+                    Text("Bitcoin places").font(NoahFont.headline).padding()
+                    ForEach(model.merchants) { place in
+                        resultRow(place.name, detail: place.category.label, symbol: place.category.symbol) {
+                            model.select(place); searchFocused = false
                         }
                     }
                 }
-                .scrollDismissesKeyboard(.interactively)
-                .frame(maxHeight: maxHeight)
-                .background(NoahColor.background, in: RoundedRectangle(cornerRadius: 16))
-            } else {
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 8) {
-                        ForEach(PlaceCategory.allCases, id: \.self) { category in
-                            Button { model.category = category } label: {
-                                Label(LocalizedStringKey(category.label), systemImage: category.symbol)
-                                    .font(NoahFont.footnote)
-                                    .padding(.horizontal, 14).frame(minHeight: 44)
-                                    .foregroundStyle(model.category == category ? Color.black : NoahColor.foreground)
-                                    .background(model.category == category ? NoahColor.brand : Color.clear, in: Capsule())
-                                    .glassCompat(in: Capsule(), interactive: true)
-                            }
-                            .buttonStyle(.plain)
-                            .accessibilityAddTraits(model.category == category ? .isSelected : [])
-                        }
+                if model.cities.isEmpty && model.merchants.isEmpty {
+                    Text("No matching cities or Bitcoin places").font(NoahFont.callout).padding()
+                }
+            }
+        }
+        .scrollDismissesKeyboard(.interactively)
+        .frame(maxHeight: maxHeight)
+        .background(NoahColor.background, in: RoundedRectangle(cornerRadius: 16))
+    }
+
+    private var categories: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                ForEach(PlaceCategory.allCases, id: \.self) { category in
+                    Button { model.category = category } label: {
+                        Label(LocalizedStringKey(category.label), systemImage: category.symbol)
+                            .font(NoahFont.footnote)
+                            .padding(.horizontal, 14).frame(minHeight: 44)
+                            .foregroundStyle(model.category == category ? Color.black : NoahColor.foreground)
+                            .background(model.category == category ? NoahColor.brand : Color.clear, in: Capsule())
+                            .glassCompat(in: Capsule(), interactive: true)
                     }
+                    .buttonStyle(.plain)
+                    .accessibilityAddTraits(model.category == category ? .isSelected : [])
                 }
             }
         }
@@ -206,22 +222,7 @@ struct BtcMapView: View {
                     .font(NoahFont.footnote).padding(10).background(NoahColor.background, in: Capsule())
             }
             if model.selected == nil, let location = model.userLocation, !model.nearby.isEmpty {
-                ScrollView(.horizontal, showsIndicators: false) {
-                    HStack(spacing: 8) {
-                        ForEach(model.nearby) { place in
-                            Button { model.select(place) } label: {
-                                VStack(alignment: .leading, spacing: 6) {
-                                    Text(place.name).font(NoahFont.headline).lineLimit(1)
-                                    Text(
-                                        "\(L10n.text(place.category.label, locale: locale.identifier)) · \(BtcMapDistance.format(BtcMapDistance.kilometers(from: location, to: place.center), locale: locale))")
-                                        .font(NoahFont.footnote).foregroundStyle(.secondary)
-                                }
-                                .frame(width: 220, alignment: .leading).padding(14)
-                                .background(NoahColor.background, in: RoundedRectangle(cornerRadius: 16))
-                            }.buttonStyle(.plain)
-                        }
-                    }
-                }
+                nearby(location)
             } else {
                 HStack {
                     Text(L10n.plural("{_gt_value_4} places{_gt_value_3}", count: model.filtered.count, "", locale: locale.identifier)).font(NoahFont.footnote)
@@ -233,17 +234,40 @@ struct BtcMapView: View {
                 }
                 .padding(.horizontal, 12).padding(.vertical, 8).glassCompat(in: Capsule())
             }
-            HStack(spacing: 6) {
-                Link(#"© OpenStreetMap"#, destination: URL(literal: "https://www.openstreetmap.org/copyright"))
-                Link(#"© OpenMapTiles"#, destination: URL(literal: "https://openmaptiles.org"))
-                Link(#"BTC Map"#, destination: URL(literal: "https://btcmap.org"))
-                Link(#"GeoNames"#, destination: URL(literal: "https://www.geonames.org"))
-            }
-            .font(.caption2).foregroundStyle(NoahColor.foreground)
-            .padding(8).background(NoahColor.background, in: RoundedRectangle(cornerRadius: 8))
-            .frame(maxWidth: .infinity, alignment: .trailing)
-            // Keep MapLibre's attribution button unobscured at the lower left.
-            .padding(.bottom, 28)
+            attribution
         }
+    }
+
+    private func nearby(_ location: [Double]) -> some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 8) {
+                ForEach(model.nearby) { place in
+                    Button { model.select(place) } label: {
+                        VStack(alignment: .leading, spacing: 6) {
+                            Text(place.name).font(NoahFont.headline).lineLimit(1)
+                            Text(
+                                "\(L10n.text(place.category.label, locale: locale.identifier)) · \(BtcMapDistance.format(BtcMapDistance.kilometers(from: location, to: place.center), locale: locale))")
+                                .font(NoahFont.footnote).foregroundStyle(.secondary)
+                        }
+                        .frame(width: 220, alignment: .leading).padding(14)
+                        .background(NoahColor.background, in: RoundedRectangle(cornerRadius: 16))
+                    }.buttonStyle(.plain)
+                }
+            }
+        }
+    }
+
+    private var attribution: some View {
+        HStack(spacing: 6) {
+            Link(#"© OpenStreetMap"#, destination: URL(literal: "https://www.openstreetmap.org/copyright"))
+            Link(#"© OpenMapTiles"#, destination: URL(literal: "https://openmaptiles.org"))
+            Link(#"BTC Map"#, destination: URL(literal: "https://btcmap.org"))
+            Link(#"GeoNames"#, destination: URL(literal: "https://www.geonames.org"))
+        }
+        .font(.caption2).foregroundStyle(NoahColor.foreground)
+        .padding(8).background(NoahColor.background, in: RoundedRectangle(cornerRadius: 8))
+        .frame(maxWidth: .infinity, alignment: .trailing)
+        // Keep MapLibre's attribution button unobscured at the lower left.
+        .padding(.bottom, 28)
     }
 }

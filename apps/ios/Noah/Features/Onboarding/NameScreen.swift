@@ -35,17 +35,7 @@ struct NameScreen: View {
                             .padding(.top, NoahTokens.Space.s)
                     }
                     Spacer(minLength: NoahTokens.Space.screen).frame(maxHeight: column.gap)
-                    Button(action: onContinue) {
-                        ZStack {
-                            Text("Continue").opacity(saving ? 0 : 1)
-                            if saving { ProgressView().tint(NoahTokens.Colors.background) }
-                        }
-                    }
-                    .buttonStyle(OnboardingPrimaryButtonStyle())
-                    .disabled(!name.canContinue && !saving)
-                    .allowsHitTesting(!saving)
-                    .accessibilityIdentifier("onboarding-name-continue")
-                    .padding(.bottom, NoahTokens.Space.l)
+                    continueButton
                     Spacer(minLength: 0).frame(maxHeight: column.trail)
                 }
                 .onboardingPane()
@@ -75,6 +65,20 @@ struct NameScreen: View {
             try? await Task.sleep(for: .milliseconds(380))
             focused = true
         }
+    }
+
+    private var continueButton: some View {
+        Button(action: onContinue) {
+            ZStack {
+                Text("Continue").opacity(saving ? 0 : 1)
+                if saving { ProgressView().tint(NoahTokens.Colors.background) }
+            }
+        }
+        .buttonStyle(OnboardingPrimaryButtonStyle())
+        .disabled(!name.canContinue && !saving)
+        .allowsHitTesting(!saving)
+        .accessibilityIdentifier("onboarding-name-continue")
+        .padding(.bottom, NoahTokens.Space.l)
     }
 }
 

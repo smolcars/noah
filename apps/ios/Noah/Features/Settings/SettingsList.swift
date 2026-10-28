@@ -110,24 +110,7 @@ struct SettingsList: View {
                 security
                 bitcoin
                 display
-                SettingsGroup(label: "App") {
-                    row(
-                        "Notifications",
-                        icon: "bell",
-                        page: .notifications,
-                        id: "settings-notifications",
-                        value: notificationsValue,
-                        dot: summary.notificationsOn == false ? .failure : .hidden,
-                        failure: summary.notificationsOn == false)
-                    row(
-                        "Advanced",
-                        icon: "slider.horizontal.3",
-                        page: .advanced,
-                        id: "settings-advanced",
-                        value: app.isWalletSuspended ? L10n.text("Suspended", locale: language) : nil,
-                        failure: app.isWalletSuspended,
-                        last: true)
-                }
+                appGroup
                 SettingsGroup(label: "Help") {
                     row("Feedback", icon: "bubble.left", page: .feedback, id: "settings-feedback")
                     row("About Noah", icon: "sailboat", page: .about, id: "settings-about", last: true)
@@ -171,6 +154,27 @@ struct SettingsList: View {
             }
         } else {
             list.settingsChrome("Settings")
+        }
+    }
+
+    private var appGroup: some View {
+        SettingsGroup(label: "App") {
+            row(
+                "Notifications",
+                icon: "bell",
+                page: .notifications,
+                id: "settings-notifications",
+                value: notificationsValue,
+                dot: summary.notificationsOn == false ? .failure : .hidden,
+                failure: summary.notificationsOn == false)
+            row(
+                "Advanced",
+                icon: "slider.horizontal.3",
+                page: .advanced,
+                id: "settings-advanced",
+                value: app.isWalletSuspended ? L10n.text("Suspended", locale: language) : nil,
+                failure: app.isWalletSuspended,
+                last: true)
         }
     }
 
@@ -244,15 +248,7 @@ struct SettingsList: View {
 
     private var bitcoin: some View {
         SettingsGroup(label: "Bitcoin") {
-            let vtxos = summary.overview?.vtxos ?? []
-            let due = !VtxoList.due(vtxos).isEmpty
-            row(
-                "VTXOs",
-                icon: "cylinder.split.1x2",
-                page: .vtxos,
-                id: "settings-vtxos",
-                value: summary.overview == nil ? nil : due ? L10n.text("Renew", locale: language) : vtxos.count.formatted(.number.locale(locale)),
-                dot: due ? .attention : .hidden)
+            vtxosRow
             row(
                 "On-chain",
                 icon: "link",
@@ -260,15 +256,7 @@ struct SettingsList: View {
                 id: "settings-onchain",
                 value: walletSummary.map { money($0.balance.onchain.confirmed) },
                 numeric: true)
-            let approvals = executor.schedules.count(where: { $0.status == "needs_approval" })
-            let active = executor.schedules.count(where: { $0.status == "active" })
-            row(
-                "Recurring payments",
-                icon: "arrow.triangle.2.circlepath",
-                page: .recurring,
-                id: "settings-recurring-payments",
-                value: approvals > 0 ? L10n.text("Approve", locale: language) : active > 0 ? L10n.text("{n} active", active, locale: language) : nil,
-                dot: approvals > 0 ? .attention : .hidden)
+            recurringRow
             row(
                 "Emergency exit",
                 icon: "rectangle.portrait.and.arrow.right",
@@ -280,6 +268,30 @@ struct SettingsList: View {
                 settings.map()
             }
         }
+    }
+
+    @ViewBuilder private var vtxosRow: some View {
+        let vtxos = summary.overview?.vtxos ?? []
+        let due = !VtxoList.due(vtxos).isEmpty
+        row(
+            "VTXOs",
+            icon: "cylinder.split.1x2",
+            page: .vtxos,
+            id: "settings-vtxos",
+            value: summary.overview == nil ? nil : due ? L10n.text("Renew", locale: language) : vtxos.count.formatted(.number.locale(locale)),
+            dot: due ? .attention : .hidden)
+    }
+
+    @ViewBuilder private var recurringRow: some View {
+        let approvals = executor.schedules.count(where: { $0.status == "needs_approval" })
+        let active = executor.schedules.count(where: { $0.status == "active" })
+        row(
+            "Recurring payments",
+            icon: "arrow.triangle.2.circlepath",
+            page: .recurring,
+            id: "settings-recurring-payments",
+            value: approvals > 0 ? L10n.text("Approve", locale: language) : active > 0 ? L10n.text("{n} active", active, locale: language) : nil,
+            dot: approvals > 0 ? .attention : .hidden)
     }
 
     private var display: some View {

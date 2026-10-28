@@ -561,46 +561,50 @@ struct SettingsField: View {
             if let label {
                 Text(verbatim: label).noahText(HomeText.section).foregroundStyle(NoahTokens.Colors.muted)
             }
-            // swiftlint:disable:next accessibility_trait_for_button - the tap only focuses the field; the TextField is the accessible control
-            HStack(spacing: 10) {
-                Group {
-                    if multiline {
-                        TextField(text: $text, prompt: Text(verbatim: placeholder).foregroundStyle(NoahTokens.Colors.muted), axis: .vertical) {
-                            Text(verbatim: label ?? placeholder)
-                        }
-                        .lineLimit(4...12)
-                    } else {
-                        TextField(text: $text, prompt: Text(verbatim: placeholder).foregroundStyle(NoahTokens.Colors.muted)) {
-                            Text(verbatim: label ?? placeholder)
-                        }
-                    }
-                }
-                .noahText(NoahTokens.Typography.body)
-                .tint(NoahTokens.Colors.orange)
-                .keyboardType(keyboard)
-                .submitLabel(.done)
-                .textInputAutocapitalization(.never)
-                .autocorrectionDisabled()
-                .focused($focused)
-                .accessibilityIdentifier(id)
-                if let tag {
-                    Text(verbatim: tag).noahText(HomeText.section).foregroundStyle(NoahTokens.Colors.muted).lineLimit(1).fixedSize()
-                }
-            }
-            .padding(.leading, 16).padding(.trailing, 12)
-            .padding(.vertical, multiline ? 14 : 0)
-            .frame(minHeight: 54)
-            .glassCompat(in: RoundedRectangle(cornerRadius: 18, style: .continuous))
-            .overlay {
-                RoundedRectangle(cornerRadius: 18, style: .continuous)
-                    .strokeBorder(failure ? NoahTokens.Colors.failure : NoahTokens.Colors.orange, lineWidth: 1.5)
-                    .opacity(failure || focused ? 1 : 0)
-            }
-            .contentShape(Rectangle())
-            .onTapGesture { focused = true }
+            field
         }
         .padding(.top, 20)
         .onChange(of: focused) { _, focused in focusChanged?(focused) }
+    }
+
+    private var field: some View {
+        // swiftlint:disable:next accessibility_trait_for_button - the tap only focuses the field; the TextField is the accessible control
+        HStack(spacing: 10) {
+            Group {
+                if multiline {
+                    TextField(text: $text, prompt: Text(verbatim: placeholder).foregroundStyle(NoahTokens.Colors.muted), axis: .vertical) {
+                        Text(verbatim: label ?? placeholder)
+                    }
+                    .lineLimit(4...12)
+                } else {
+                    TextField(text: $text, prompt: Text(verbatim: placeholder).foregroundStyle(NoahTokens.Colors.muted)) {
+                        Text(verbatim: label ?? placeholder)
+                    }
+                }
+            }
+            .noahText(NoahTokens.Typography.body)
+            .tint(NoahTokens.Colors.orange)
+            .keyboardType(keyboard)
+            .submitLabel(.done)
+            .textInputAutocapitalization(.never)
+            .autocorrectionDisabled()
+            .focused($focused)
+            .accessibilityIdentifier(id)
+            if let tag {
+                Text(verbatim: tag).noahText(HomeText.section).foregroundStyle(NoahTokens.Colors.muted).lineLimit(1).fixedSize()
+            }
+        }
+        .padding(.leading, 16).padding(.trailing, 12)
+        .padding(.vertical, multiline ? 14 : 0)
+        .frame(minHeight: 54)
+        .glassCompat(in: RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .overlay {
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .strokeBorder(failure ? NoahTokens.Colors.failure : NoahTokens.Colors.orange, lineWidth: 1.5)
+                .opacity(failure || focused ? 1 : 0)
+        }
+        .contentShape(Rectangle())
+        .onTapGesture { focused = true }
     }
 }
 

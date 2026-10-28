@@ -25,6 +25,14 @@ extension SendModel {
 }
 
 extension SendView {
+    enum Field { case recipient, note }
+
+    func error(_ text: String) -> some View {
+        Text(verbatim: text).noahText(HomeText.footnote).foregroundStyle(NoahTokens.Colors.failure)
+            .fixedSize(horizontal: false, vertical: true)
+            .accessibilityIdentifier("send-error")
+    }
+
     static func typeName(_ type: String?, destination: String, ownDomain: String) -> String? {
         switch type {
         case "lnurl":

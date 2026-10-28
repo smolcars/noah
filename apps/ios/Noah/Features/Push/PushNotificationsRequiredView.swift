@@ -38,38 +38,46 @@ struct NotificationsScreen: View {
             FitOrScroll {
                 VStack(spacing: 0) {
                     Spacer(minLength: 0).frame(maxHeight: layout.wide ? .infinity : 0)
-                    ZStack {
-                        if required {
-                            OnboardingHeadline(title: Text("Notifications are required"),
-                                               subtitle: Text("Without them, Noah can’t receive payments or renew your bitcoin before it expires."),
-                                               large: layout.wide, centered: true)
-                                .transition(.opacity)
-                        } else {
-                            OnboardingHeadline(title: Text("Keep Noah awake"),
-                                               subtitle: Text("Notifications let Noah receive payments and renew your bitcoin before it expires."),
-                                               large: layout.wide, centered: true)
-                                .transition(.opacity)
-                        }
-                    }
-                    .animation(NoahTokens.Motion.travel(reduceMotion), value: required)
+                    headline
                     Spacer(minLength: NoahTokens.Space.screen)
                         .frame(maxHeight: layout.wide ? NoahTokens.Space.xxxl : .infinity)
-                    Button(action: action) {
-                        ZStack {
-                            Text(required ? "Open Settings" : "Turn on notifications").opacity(busy ? 0 : 1)
-                            if busy { ProgressView().tint(NoahTokens.Colors.background) }
-                        }
-                    }
-                    .buttonStyle(OnboardingPrimaryButtonStyle())
-                    .allowsHitTesting(!busy)
-                    .accessibilityIdentifier(required ? "notifications-open-settings" : "notifications-enable")
-                    .onboardingAppear(2)
-                    .padding(.bottom, NoahTokens.Space.l)
+                    actionButton
                     Spacer(minLength: 0).frame(maxHeight: layout.wide ? .infinity : 0)
                 }
                 .onboardingPane()
             }
         }
+    }
+
+    private var headline: some View {
+        ZStack {
+            if required {
+                OnboardingHeadline(title: Text("Notifications are required"),
+                                   subtitle: Text("Without them, Noah can’t receive payments or renew your bitcoin before it expires."),
+                                   large: layout.wide, centered: true)
+                    .transition(.opacity)
+            } else {
+                OnboardingHeadline(title: Text("Keep Noah awake"),
+                                   subtitle: Text("Notifications let Noah receive payments and renew your bitcoin before it expires."),
+                                   large: layout.wide, centered: true)
+                    .transition(.opacity)
+            }
+        }
+        .animation(NoahTokens.Motion.travel(reduceMotion), value: required)
+    }
+
+    private var actionButton: some View {
+        Button(action: action) {
+            ZStack {
+                Text(required ? "Open Settings" : "Turn on notifications").opacity(busy ? 0 : 1)
+                if busy { ProgressView().tint(NoahTokens.Colors.background) }
+            }
+        }
+        .buttonStyle(OnboardingPrimaryButtonStyle())
+        .allowsHitTesting(!busy)
+        .accessibilityIdentifier(required ? "notifications-open-settings" : "notifications-enable")
+        .onboardingAppear(2)
+        .padding(.bottom, NoahTokens.Space.l)
     }
 }
 

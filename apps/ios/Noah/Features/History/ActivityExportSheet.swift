@@ -24,42 +24,50 @@ struct ActivityExportSheet: View {
                 .padding(.bottom, 6)
             Text(verbatim: filter.exportSentence(count: exportCount, locale: locale.identifier))
                 .noahText(NoahTokens.Typography.sub).foregroundStyle(NoahTokens.Colors.muted)
-            HStack(spacing: 14) {
-                Image(systemName: "doc.text").accessibilityHidden(true).font(.system(size: 24, weight: .regular)).frame(width: 26)
-                VStack(alignment: .leading, spacing: 0) {
-                    Text(verbatim: Self.fileName).font(.system(size: 15, weight: .medium, design: .monospaced))
-                    Text("Dates, amounts, fees, prices, IDs and destinations").noahText(HomeText.footnote)
-                        .foregroundStyle(NoahTokens.Colors.muted)
-                }
-            }
-            .padding(.vertical, 14).padding(.horizontal, 16)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(NoahTokens.Colors.foreground.opacity(0.07), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
-            .padding(.top, 20)
-            .accessibilityElement(children: .combine)
+            fileCard
             if let error {
                 Text(LocalizedStringKey(error)).noahText(HomeText.footnote).foregroundStyle(NoahTokens.Colors.failure)
                     .padding(.top, 12)
                     .accessibilityIdentifier("activity-export-error")
             }
-            HStack(spacing: 10) {
-                Button("Cancel", action: onClose)
-                    .buttonStyle(HomePillStyle(prominent: false, height: 52, font: NoahTokens.Typography.button))
-                    .frame(maxWidth: .infinity)
-                Button(action: export) {
-                    Text(working ? "Exporting…" : "Export").frame(maxWidth: .infinity)
-                }
-                .buttonStyle(HomePillStyle(height: 52, font: NoahTokens.Typography.button))
-                .disabled(exportCount == 0 || working)
-                .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { anchor = $0 }
-                .accessibilityIdentifier("activity-export-confirm")
-            }
-            .padding(.top, 22)
+            buttons
         }
         .foregroundStyle(NoahTokens.Colors.foreground)
         .padding(.horizontal, NoahTokens.Space.screen)
         .padding(.top, 26).padding(.bottom, 26)
         .onboardingHaptics(haptics)
+    }
+
+    private var fileCard: some View {
+        HStack(spacing: 14) {
+            Image(systemName: "doc.text").accessibilityHidden(true).font(.system(size: 24, weight: .regular)).frame(width: 26)
+            VStack(alignment: .leading, spacing: 0) {
+                Text(verbatim: Self.fileName).font(.system(size: 15, weight: .medium, design: .monospaced))
+                Text("Dates, amounts, fees, prices, IDs and destinations").noahText(HomeText.footnote)
+                    .foregroundStyle(NoahTokens.Colors.muted)
+            }
+        }
+        .padding(.vertical, 14).padding(.horizontal, 16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(NoahTokens.Colors.foreground.opacity(0.07), in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .padding(.top, 20)
+        .accessibilityElement(children: .combine)
+    }
+
+    private var buttons: some View {
+        HStack(spacing: 10) {
+            Button("Cancel", action: onClose)
+                .buttonStyle(HomePillStyle(prominent: false, height: 52, font: NoahTokens.Typography.button))
+                .frame(maxWidth: .infinity)
+            Button(action: export) {
+                Text(working ? "Exporting…" : "Export").frame(maxWidth: .infinity)
+            }
+            .buttonStyle(HomePillStyle(height: 52, font: NoahTokens.Typography.button))
+            .disabled(exportCount == 0 || working)
+            .onGeometryChange(for: CGRect.self) { $0.frame(in: .global) } action: { anchor = $0 }
+            .accessibilityIdentifier("activity-export-confirm")
+        }
+        .padding(.top, 22)
     }
 
     private func export() {

@@ -27,31 +27,7 @@ struct ReceiveFormatList: View {
             Button {
                 onSelect(format)
             } label: {
-                HStack(spacing: 12) {
-                    Circle()
-                        .fill(format == selected ? NoahTokens.Colors.foreground : .clear)
-                        .overlay { if format != selected { Circle().strokeBorder(NoahTokens.Colors.hairline, lineWidth: 1.5) } }
-                        .frame(width: 10, height: 10)
-                        .animation(.easeOut(duration: 0.2), value: selected)
-                    VStack(alignment: .leading, spacing: 1) {
-                        Text(LocalizedStringKey(format.name)).noahText(HomeText.strong).foregroundStyle(NoahTokens.Colors.foreground)
-                        Group {
-                            if let payload { Text(verbatim: payload) }
-                            else if format == .invoice { Text("Add an amount first") }
-                            else if format == .lightningAddress { Text("Lightning address unavailable") }
-                            else { Text(verbatim: "…") }
-                        }
-                        .font(.system(size: 13, design: .monospaced))
-                        .foregroundStyle(NoahTokens.Colors.foreground)
-                        .lineLimit(1).truncationMode(.middle)
-                        Text(verbatim: format.subtitle(amount: amount, locale: locale.identifier))
-                            .noahText(HomeText.footnote).foregroundStyle(NoahTokens.Colors.muted)
-                            .lineLimit(2)
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                }
-                .frame(minHeight: 66)
-                .contentShape(Rectangle())
+                label(format, payload: payload)
             }
             .buttonStyle(.plain)
             .accessibilityAddTraits(format == selected ? .isSelected : [])
@@ -74,6 +50,34 @@ struct ReceiveFormatList: View {
         }
         .opacity(enabled ? 1 : 0.35)
         .overlay(alignment: .bottom) { if !last { Rectangle().fill(NoahTokens.Colors.hairline).frame(height: 1) } }
+    }
+
+    private func label(_ format: ReceiveFormat, payload: String?) -> some View {
+        HStack(spacing: 12) {
+            Circle()
+                .fill(format == selected ? NoahTokens.Colors.foreground : .clear)
+                .overlay { if format != selected { Circle().strokeBorder(NoahTokens.Colors.hairline, lineWidth: 1.5) } }
+                .frame(width: 10, height: 10)
+                .animation(.easeOut(duration: 0.2), value: selected)
+            VStack(alignment: .leading, spacing: 1) {
+                Text(LocalizedStringKey(format.name)).noahText(HomeText.strong).foregroundStyle(NoahTokens.Colors.foreground)
+                Group {
+                    if let payload { Text(verbatim: payload) }
+                    else if format == .invoice { Text("Add an amount first") }
+                    else if format == .lightningAddress { Text("Lightning address unavailable") }
+                    else { Text(verbatim: "…") }
+                }
+                .font(.system(size: 13, design: .monospaced))
+                .foregroundStyle(NoahTokens.Colors.foreground)
+                .lineLimit(1).truncationMode(.middle)
+                Text(verbatim: format.subtitle(amount: amount, locale: locale.identifier))
+                    .noahText(HomeText.footnote).foregroundStyle(NoahTokens.Colors.muted)
+                    .lineLimit(2)
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+        }
+        .frame(minHeight: 66)
+        .contentShape(Rectangle())
     }
 }
 

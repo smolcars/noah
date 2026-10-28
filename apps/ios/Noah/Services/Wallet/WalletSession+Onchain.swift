@@ -32,36 +32,45 @@ extension WalletSession {
                 overview.checkFailed = check.failed
             }
             guard !models.isEmpty else { return overview }
-            let children = Set(models.flatMap { $0.path.compactMap(\.status.child_txid) })
-            let claims = Set(models.compactMap(\.details.claimTxid))
-            for transaction in (try? await handles.onchain.transactions()) ?? [] {
-                // BDK can't price a fee child (its anchor input isn't the wallet's); what left the wallet is its fee.
-                if children.contains(transaction.txid), let fee = transaction.onchainFeeSats
-                    ?? (transaction.balanceChangeSats < 0 ? UInt64(-transaction.balanceChangeSats) : nil) {
-                    overview.childFees[transaction.txid] = fee
-                }
-                if claims.contains(transaction.txid), transaction.balanceChangeSats > 0 {
-                    overview.received[transaction.txid] = UInt64(transaction.balanceChangeSats)
-                }
-            }
-            // The parked package's own fee: its parent's weight and bark's canonical child at the rate bark's
-            // exits pay (its estimate's). Unpriced, needs-funds stays unknown.
-            for exit in models {
-                guard let txid = exit.parkedTxid else { continue }
-                // bark's own figure, when Check the chain reported this parking episode short of confirmed funds.
-                if let needed = check?.needed[exit.id], overview.provenParked[exit.id] == exit.parkedEpisode {
-                    overview.packageFees[exit.id] = needed
-                    continue
-                }
-                guard let status = try? await handles.wallet.getExitStatus(vtxoId: exit.id, includeHistory: false, includeTransactions: true),
-                      let hex = status.transactions.first(where: { $0.parentTxid == txid })?.parentTxHex,
-                      let weight = BitcoinTransaction.weight(hex: hex),
-                      let rate = try? await handles.wallet.estimateEmergencyExitFee(
-                          vtxoIds: [exit.id], feeRateSatPerVb: nil, destination: nil, feeMargin: 1).feeRateSatPerVb
-                else { continue }
-                overview.packageFees[exit.id] = ExitFunds.packageFee(parentWeight: weight, satPerVb: rate)
-            }
+            await Self.addChildFees(handles, models: models, to: &overview)
+            await Self.addPackageFees(handles, models: models, check: check, to: &overview)
             return overview
+        }
+    }
+
+    /// Fee children and claims this wallet paid for or received, from its own transactions.
+    private static func addChildFees(_ handles: Handles, models: [ExitModel], to overview: inout OnchainOverview) async {
+        let children = Set(models.flatMap { $0.path.compactMap(\.status.child_txid) })
+        let claims = Set(models.compactMap(\.details.claimTxid))
+        for transaction in (try? await handles.onchain.transactions()) ?? [] {
+            // BDK can't price a fee child (its anchor input isn't the wallet's); what left the wallet is its fee.
+            if children.contains(transaction.txid), let fee = transaction.onchainFeeSats
+                ?? (transaction.balanceChangeSats < 0 ? UInt64(-transaction.balanceChangeSats) : nil) {
+                overview.childFees[transaction.txid] = fee
+            }
+            if claims.contains(transaction.txid), transaction.balanceChangeSats > 0 {
+                overview.received[transaction.txid] = UInt64(transaction.balanceChangeSats)
+            }
+        }
+    }
+
+    private static func addPackageFees(_ handles: Handles, models: [ExitModel], check: ExitCheck?, to overview: inout OnchainOverview) async {
+        // The parked package's own fee: its parent's weight and bark's canonical child at the rate bark's
+        // exits pay (its estimate's). Unpriced, needs-funds stays unknown.
+        for exit in models {
+            guard let txid = exit.parkedTxid else { continue }
+            // bark's own figure, when Check the chain reported this parking episode short of confirmed funds.
+            if let needed = check?.needed[exit.id], overview.provenParked[exit.id] == exit.parkedEpisode {
+                overview.packageFees[exit.id] = needed
+                continue
+            }
+            guard let status = try? await handles.wallet.getExitStatus(vtxoId: exit.id, includeHistory: false, includeTransactions: true),
+                  let hex = status.transactions.first(where: { $0.parentTxid == txid })?.parentTxHex,
+                  let weight = BitcoinTransaction.weight(hex: hex),
+                  let rate = try? await handles.wallet.estimateEmergencyExitFee(
+                      vtxoIds: [exit.id], feeRateSatPerVb: nil, destination: nil, feeMargin: 1).feeRateSatPerVb
+            else { continue }
+            overview.packageFees[exit.id] = ExitFunds.packageFee(parentWeight: weight, satPerVb: rate)
         }
     }
 
@@ -514,67 +523,79 @@ extension WalletSession {
                         funding: AutoBoardFunding.Snapshot? = nil)
         async throws -> String {
         try await withOpenWallet { handles in
-            if quote.action == .board {
-                return try await self.submitBoard(quote, walletID: handles.wallet.fingerprint(), journal: journal,
-                                                  confirmed: { try await handles.onchain.balance().confirmedSats },
-                                                  claims: { try await Self.exitClaims(handles) },
-                                                  funding: funding,
-                                                  readFunding: {
-                                                      guard try await handles.wallet.pendingBoards().isEmpty else { return nil }
-                                                      return try await AutoBoardFunding.confirmed(walletID: handles.wallet.fingerprint(),
-                                                                                                  utxos: handles.onchain.utxos(),
-                                                                                                  transactions: handles.onchain.transactions())
-                                                  })
-            }
+            if quote.action == .board { return try await Self.executeBoard(self, quote, handles: handles, journal: journal, funding: funding) }
             if quote.action == .claim {
                 return try await Self.executeClaim(quote, journal: journal, access: Self.claimAccess(handles))
             }
-            if quote.action == .startExit {
-                var access = Self.startAccess(handles)
-                let walletID = handles.wallet.fingerprint()
-                access.began = { ids in
-                    await self.forgetExitProof(ids, walletID: walletID)
-                    try ExitRuns.begin(ids, walletID: walletID)
-                }
-                return try await Self.executeStart(quote, journal: journal, access: access)
-            }
-            guard ExitRules.current(elapsed: quote.elapsed()) else { throw OnchainFailure.changed }
-            guard !quote.feesUnknown || quote.hasUnknownFeeConsent else { throw OnchainFailure.changed }
-            let fresh: OnchainQuote
-            do {
-                fresh = try await Self.onchainQuote(
-                    handles, action: quote.action, ids: quote.ids, amount: quote.boardAll == true ? 0 : quote.amount,
-                    destination: quote.destination, automatic: quote.automatic, estimate: !quote.hasUnknownFeeConsent)
-            } catch let failure as ExitEstimateUnavailable { throw try failure.preserving(quote) }
-            guard quote.matches(fresh), ExitRules.current(elapsed: quote.elapsed()) else {
+            if quote.action == .startExit { return try await Self.executeStartExit(self, quote, handles: handles, journal: journal) }
+            return try await Self.executeOther(self, quote, handles: handles, journal: journal)
+        }
+    }
+
+    private static func executeBoard(_ session: WalletSession, _ quote: OnchainQuote, handles: Handles, journal: OnchainOperationJournal,
+                                     funding: AutoBoardFunding.Snapshot?) async throws -> String {
+        try await session.submitBoard(quote, walletID: handles.wallet.fingerprint(), journal: journal,
+                                      confirmed: { try await handles.onchain.balance().confirmedSats },
+                                      claims: { try await Self.exitClaims(handles) },
+                                      funding: funding,
+                                      readFunding: {
+                                          guard try await handles.wallet.pendingBoards().isEmpty else { return nil }
+                                          return try await AutoBoardFunding.confirmed(walletID: handles.wallet.fingerprint(),
+                                                                                      utxos: handles.onchain.utxos(),
+                                                                                      transactions: handles.onchain.transactions())
+                                      })
+    }
+
+    private static func executeStartExit(_ session: WalletSession, _ quote: OnchainQuote, handles: Handles,
+                                         journal: OnchainOperationJournal) async throws -> String {
+        var access = Self.startAccess(handles)
+        let walletID = handles.wallet.fingerprint()
+        access.began = { ids in
+            await session.forgetExitProof(ids, walletID: walletID)
+            try ExitRuns.begin(ids, walletID: walletID)
+        }
+        return try await Self.executeStart(quote, journal: journal, access: access)
+    }
+
+    /// Refresh, progress and cancel: requoted and compared before the journal runs them.
+    private static func executeOther(_ session: WalletSession, _ quote: OnchainQuote, handles: Handles,
+                                     journal: OnchainOperationJournal) async throws -> String {
+        guard ExitRules.current(elapsed: quote.elapsed()) else { throw OnchainFailure.changed }
+        guard !quote.feesUnknown || quote.hasUnknownFeeConsent else { throw OnchainFailure.changed }
+        let fresh: OnchainQuote
+        do {
+            fresh = try await Self.onchainQuote(
+                handles, action: quote.action, ids: quote.ids, amount: quote.boardAll == true ? 0 : quote.amount,
+                destination: quote.destination, automatic: quote.automatic, estimate: !quote.hasUnknownFeeConsent)
+        } catch let failure as ExitEstimateUnavailable { throw try failure.preserving(quote) }
+        guard quote.matches(fresh), ExitRules.current(elapsed: quote.elapsed()) else {
+            throw OnchainFailure.changed
+        }
+        return try await journal.perform(quote) {
+            switch quote.action {
+            case .board:
                 throw OnchainFailure.changed
-            }
-            return try await journal.perform(quote) {
-                switch quote.action {
-                case .board:
-                    throw OnchainFailure.changed
-                case .refresh:
-                    let round = try await handles.wallet.refreshVtxosDelegated(vtxoIds: quote.ids)
-                    return OnchainReceipt(
-                        message: round.map { "Refresh submitted to delegated round \($0.id)." }
-                            ?? "No refresh round was needed.")
-                case .startExit:
-                    throw OnchainFailure.invalid // Handled by the start path above.
-                case .progress:
-                    let failures = try await self.progressExits(quote.feeRate, access: Self.exitProgressAccess(handles))
-                    return OnchainReceipt(
-                        message: failures == 0
-                            ? OnchainReceipt.progressedMessage
-                            :
-                            "Exit progression returned \(failures) errors. Transactions may have been broadcast or fee-bumped. Refresh exit details before continuing.")
-                case .claim:
-                    throw OnchainFailure.invalid // Handled by the shared claim path above.
-                case .cancel:
-                    let result = try await handles.wallet.cancelExit(vtxoId: quote.ids[0])
-                    guard result.canceled else { throw OnchainFailure.cancellationRefused }
-                    await self.forgetExitProof(quote.ids, walletID: handles.wallet.fingerprint())
-                    return "Exit canceled. The VTXO remains spendable."
-                }
+            case .refresh:
+                let round = try await handles.wallet.refreshVtxosDelegated(vtxoIds: quote.ids)
+                return OnchainReceipt(
+                    message: round.map { "Refresh submitted to delegated round \($0.id)." }
+                        ?? "No refresh round was needed.")
+            case .startExit:
+                throw OnchainFailure.invalid // Handled by the start path above.
+            case .progress:
+                let failures = try await session.progressExits(quote.feeRate, access: Self.exitProgressAccess(handles))
+                return OnchainReceipt(
+                    message: failures == 0
+                        ? OnchainReceipt.progressedMessage
+                        :
+                        "Exit progression returned \(failures) errors. Transactions may have been broadcast or fee-bumped. Refresh exit details before continuing.")
+            case .claim:
+                throw OnchainFailure.invalid // Handled by the shared claim path above.
+            case .cancel:
+                let result = try await handles.wallet.cancelExit(vtxoId: quote.ids[0])
+                guard result.canceled else { throw OnchainFailure.cancellationRefused }
+                await session.forgetExitProof(quote.ids, walletID: handles.wallet.fingerprint())
+                return "Exit canceled. The VTXO remains spendable."
             }
         }
     }

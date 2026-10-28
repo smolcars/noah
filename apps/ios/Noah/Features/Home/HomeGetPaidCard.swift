@@ -49,32 +49,7 @@ struct HomeQRCard: View {
     var body: some View {
         ZStack {
             VStack(spacing: 0) {
-                if let address {
-                    StyledQRCode(content: address, animate: animateQR)
-                        .frame(width: qrSide, height: qrSide)
-                    Text(verbatim: address)
-                        .noahText(NoahTokens.Typography.button)
-                        .foregroundStyle(NoahTokens.Colors.qrInk)
-                        .lineLimit(1).truncationMode(.middle)
-                        .padding(.top, 14)
-                    Text("Scan with any Lightning wallet")
-                        .noahText(HomeText.footnote)
-                        .foregroundStyle(Color(hex: 0x6B6B6B))
-                        .padding(.top, 2)
-                } else {
-                    VStack(alignment: .leading, spacing: NoahTokens.Space.s) {
-                        Text("Lightning address unavailable").noahText(NoahTokens.Typography.button)
-                        Text("Finish setting up your Lightning address before sharing your QR.")
-                            .noahText(HomeText.footnote).foregroundStyle(Color(hex: 0x6B6B6B))
-                        Button("Open Profile", action: onProfile)
-                            .noahText(HomeText.strong)
-                            .foregroundStyle(NoahTokens.Colors.orangeText)
-                            .padding(.top, NoahTokens.Space.xs)
-                    }
-                    .foregroundStyle(NoahTokens.Colors.qrInk)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .fixedSize(horizontal: false, vertical: true)
-                }
+                addressCard
             }
             .modifier(HomeReceiptFade(celebration: celebration))
             if let celebration {
@@ -96,6 +71,35 @@ struct HomeQRCard: View {
             }
         }
         .accessibilityElement(children: .combine)
+    }
+
+    @ViewBuilder private var addressCard: some View {
+        if let address {
+            StyledQRCode(content: address, animate: animateQR)
+                .frame(width: qrSide, height: qrSide)
+            Text(verbatim: address)
+                .noahText(NoahTokens.Typography.button)
+                .foregroundStyle(NoahTokens.Colors.qrInk)
+                .lineLimit(1).truncationMode(.middle)
+                .padding(.top, 14)
+            Text("Scan with any Lightning wallet")
+                .noahText(HomeText.footnote)
+                .foregroundStyle(Color(hex: 0x6B6B6B))
+                .padding(.top, 2)
+        } else {
+            VStack(alignment: .leading, spacing: NoahTokens.Space.s) {
+                Text("Lightning address unavailable").noahText(NoahTokens.Typography.button)
+                Text("Finish setting up your Lightning address before sharing your QR.")
+                    .noahText(HomeText.footnote).foregroundStyle(Color(hex: 0x6B6B6B))
+                Button("Open Profile", action: onProfile)
+                    .noahText(HomeText.strong)
+                    .foregroundStyle(NoahTokens.Colors.orangeText)
+                    .padding(.top, NoahTokens.Space.xs)
+            }
+            .foregroundStyle(NoahTokens.Colors.qrInk)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .fixedSize(horizontal: false, vertical: true)
+        }
     }
 }
 

@@ -248,38 +248,11 @@ struct ReceiveCard: View {
     private var front: some View {
         VStack(spacing: 0) {
             if let payload {
-                StyledQRCode(content: payload, reveal: reveal)
-                    .id(payload)
-                    .frame(width: qrSide, height: qrSide)
-                    .accessibilityIdentifier("receive-qr")
-                Text(verbatim: title)
-                    .noahText(NoahTokens.Typography.button)
-                    .foregroundStyle(NoahTokens.Colors.qrInk)
-                    .lineLimit(1).truncationMode(.middle)
-                    .padding(.top, 12)
-                    .accessibilityIdentifier("receive-qr-title")
-                Text(LocalizedStringKey(caption))
-                    .noahText(HomeText.footnote)
-                    .foregroundStyle(Color(hex: 0x6B6B6B))
-                    .multilineTextAlignment(.center)
-                    .padding(.top, 2)
+                qr(payload)
             } else if !unavailable {
                 ProgressView().tint(NoahTokens.Colors.qrInk).frame(width: qrSide, height: qrSide)
             } else {
-                VStack(alignment: .leading, spacing: NoahTokens.Space.s) {
-                    Text("Lightning address unavailable").noahText(NoahTokens.Typography.button)
-                    Text("Finish setting up your Lightning address before sharing your QR.")
-                        .noahText(HomeText.footnote).foregroundStyle(Color(hex: 0x6B6B6B))
-                    Button("Open Profile", action: onProfile)
-                        .noahText(HomeText.strong)
-                        .foregroundStyle(NoahTokens.Colors.orangeText)
-                        .padding(.top, NoahTokens.Space.xs)
-                        .accessibilityIdentifier("receive-open-profile")
-                }
-                .foregroundStyle(NoahTokens.Colors.qrInk)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .fixedSize(horizontal: false, vertical: true)
-                .padding(.vertical, 8)
+                addressUnavailable
             }
             if let band {
                 HStack(alignment: .firstTextBaseline) {
@@ -297,6 +270,41 @@ struct ReceiveCard: View {
         }
         .padding(.horizontal, 22).padding(.top, 22).padding(.bottom, 18)
         .frame(maxWidth: .infinity)
+    }
+
+    @ViewBuilder private func qr(_ payload: String) -> some View {
+        StyledQRCode(content: payload, reveal: reveal)
+            .id(payload)
+            .frame(width: qrSide, height: qrSide)
+            .accessibilityIdentifier("receive-qr")
+        Text(verbatim: title)
+            .noahText(NoahTokens.Typography.button)
+            .foregroundStyle(NoahTokens.Colors.qrInk)
+            .lineLimit(1).truncationMode(.middle)
+            .padding(.top, 12)
+            .accessibilityIdentifier("receive-qr-title")
+        Text(LocalizedStringKey(caption))
+            .noahText(HomeText.footnote)
+            .foregroundStyle(Color(hex: 0x6B6B6B))
+            .multilineTextAlignment(.center)
+            .padding(.top, 2)
+    }
+
+    private var addressUnavailable: some View {
+        VStack(alignment: .leading, spacing: NoahTokens.Space.s) {
+            Text("Lightning address unavailable").noahText(NoahTokens.Typography.button)
+            Text("Finish setting up your Lightning address before sharing your QR.")
+                .noahText(HomeText.footnote).foregroundStyle(Color(hex: 0x6B6B6B))
+            Button("Open Profile", action: onProfile)
+                .noahText(HomeText.strong)
+                .foregroundStyle(NoahTokens.Colors.orangeText)
+                .padding(.top, NoahTokens.Space.xs)
+                .accessibilityIdentifier("receive-open-profile")
+        }
+        .foregroundStyle(NoahTokens.Colors.qrInk)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .fixedSize(horizontal: false, vertical: true)
+        .padding(.vertical, 8)
     }
 
     private func back(_ arrival: ReceiveArrival, t: Double) -> some View {
