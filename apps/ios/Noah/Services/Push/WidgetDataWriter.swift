@@ -21,6 +21,9 @@ enum WidgetDataWriter {
         var changes: [WidgetWave.Change]? // swiftlint:disable:this discouraged_optional_collection - nil: not read, unlike no changes
         /// Pending offboards, a change as far as the balance written no longer holds them (`WidgetBalanceHistory.offboarded`).
         var offboards: [WidgetWave.Change] = []
+        /// The balance the records were read against; the wave uses them only if the balance written agrees
+        /// (`WidgetBalanceHistory.agrees`), else it keeps the earlier days. Nil: not given, the caller vouches for them.
+        var balance: WalletBalance?
         var renewal = Renewal.unknown
         /// Incoming unconfirmed on-chain (`HomeStatusLine.incomingOnchain`); nil when not read.
         var incomingOnchain: UInt64?
@@ -92,7 +95,7 @@ enum WidgetDataWriter {
                          quote: WidgetSnapshot.Fiat?, variant: AppVariant, now: Date, calendar: Calendar) -> WidgetSnapshot {
         let current = Int64(clamping: balance.totalSats)
         var daily: [Int64]? // swiftlint:disable:this discouraged_optional_collection - nil: unknown (calm water)
-        if let changes = facts.changes {
+        if let changes = facts.changes, facts.balance.map({ WidgetBalanceHistory.agrees($0, balance) }) ?? true {
             let offboarded = WidgetBalanceHistory.offboarded(facts.offboards, held: balance.ark.pendingOffboard)
             daily = WidgetWave.dailyBalances(current: current, changes: changes + offboarded, now: now, calendar: calendar)
         } else if let previous, let written = previous.dailyBalances, written.count == WidgetWave.days + 1 {

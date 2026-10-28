@@ -471,27 +471,32 @@ extension WalletSession {
         guard isOpen else { return nil }
         return try await withOpenWallet { handles in
             let wallet = handles.wallet
-            let ark = try await wallet.balance()
-            let chain = try await handles.onchain.balance()
             return Summary(
                 network: try await wallet.network(),
                 fingerprint: wallet.fingerprint(),
-                balance: WalletBalance(
-                    ark: .init(
-                        spendable: ark.spendableSats,
-                        needsRefresh: ark.needsRefreshSats,
-                        pendingLightningSend: ark.pendingLightningSendSats,
-                        claimableLightningReceive: ark.claimableLightningReceiveSats,
-                        pendingInRound: ark.pendingInRoundSats,
-                        pendingExit: ark.pendingExitSats,
-                        pendingBoard: ark.pendingBoardSats,
-                        pendingArkoorSend: ark.pendingArkoorSendSats,
-                        pendingOffboard: ark.pendingOffboardSats,
-                        pending: ark.pendingSats,
-                        total: ark.totalSats),
-                    onchain: .init(confirmed: chain.confirmedSats, pending: chain.pendingSats, total: chain.totalSats)),
+                balance: try await Self.balance(handles),
                 movementCount: try await wallet.history().count)
         }
+    }
+
+    /// bark's and the on-chain wallet's balances, as Home shows them.
+    static func balance(_ handles: Handles) async throws -> WalletBalance {
+        let ark = try await handles.wallet.balance()
+        let chain = try await handles.onchain.balance()
+        return WalletBalance(
+            ark: .init(
+                spendable: ark.spendableSats,
+                needsRefresh: ark.needsRefreshSats,
+                pendingLightningSend: ark.pendingLightningSendSats,
+                claimableLightningReceive: ark.claimableLightningReceiveSats,
+                pendingInRound: ark.pendingInRoundSats,
+                pendingExit: ark.pendingExitSats,
+                pendingBoard: ark.pendingBoardSats,
+                pendingArkoorSend: ark.pendingArkoorSendSats,
+                pendingOffboard: ark.pendingOffboardSats,
+                pending: ark.pendingSats,
+                total: ark.totalSats),
+            onchain: .init(confirmed: chain.confirmedSats, pending: chain.pendingSats, total: chain.totalSats))
     }
 
     /// Both reads stay counted until completion; no observer holds a wallet call open.

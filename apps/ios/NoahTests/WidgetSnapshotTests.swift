@@ -595,4 +595,85 @@ struct WidgetBalanceHistoryTests {
         // A claimable one that then fails.
         #expect(try Self.days(Self.balance(spendable: 100_000), [Self.earlier, older("canceled", 0), newer("failed", 0)]) == Self.before + [100_000])
     }
+
+    private struct Records: Equatable {
+        var movements: [Movement]
+        var chain: [WalletTransaction] = []
+        var pending = WidgetBalanceHistory.Pending()
+    }
+
+    /// `consistent` over scripted readings, as `widgetFacts` makes them: the balance, then the records, then the balance.
+    private static func consistent(_ balances: [WalletBalance?], _ records: [Records]) async -> (records: Records, balance: WalletBalance?)? {
+        var balances = balances[...], records = records[...]
+        return await WidgetBalanceHistory.consistent(balance: { balances.popFirst().flatMap(\.self) }, records: { records.popFirst() })
+    }
+
+    /// What the writer draws for `shown` from a read, after a snapshot written earlier today with `earlier`.
+    private static func written(_ shown: WalletBalance, _ read: (records: Records, balance: WalletBalance?), earlier: [Int64],
+                                dated: [String: Date] = [:]) throws -> [Int64] {
+        let facts = WidgetDataWriter.Facts(changes: WidgetBalanceHistory.changes(movements: read.records.movements, chain: read.records.chain,
+                                                                                 chainDates: dated, pending: read.records.pending, now: now),
+                                           balance: read.balance)
+        let previous = WidgetSnapshot(writtenAt: now.addingTimeInterval(-300), balance: shown.totalSats, arriving: 0, dailyBalances: earlier,
+                                      amountUnit: .bip177, hidden: false, fiat: nil, renewBy: nil, variant: "regtest")
+        let snapshot = WidgetDataWriter.snapshot(balance: shown, facts: facts, previous: previous,
+                                                 display: .init(hidden: false, unit: .bip177, currency: "USD"), quote: nil,
+                                                 variant: .regtest, now: now, calendar: utc)
+        return try #require(snapshot.dailyBalances)
+    }
+
+    /// The records are read between two readings of the balance that agree, once more if it moved (two moves: no wave).
+    @Test func recordsAreReadBetweenAgreeingBalances() async throws {
+        let steady = Self.balance(spendable: 100_000), moved = Self.balance(spendable: 100_000, claimable: 30_000)
+        let first = Records(movements: [Self.earlier]), second = Records(movements: [])
+        let once = try #require(await Self.consistent([steady, steady], [first, second]))
+        #expect(once.records == first && once.balance == steady)
+        let again = try #require(await Self.consistent([steady, moved, moved], [first, second]))
+        #expect(again.records == second && again.balance == moved)
+        let unsettled = try #require(await Self.consistent([steady, moved, steady], [first, second]))
+        #expect(unsettled.records == second && unsettled.balance == nil)
+        #expect(try #require(await Self.consistent([nil, steady, steady], [first, second])).balance == steady)
+        #expect(await Self.consistent([steady, steady], []) == nil)
+    }
+
+    /// A claimable receive settles between the reads: its movement read pending, its pending entry read gone. The records
+    /// are read again; the summary's balance from before it settled doesn't agree, so the earlier days stay; with one
+    /// from after, the records draw the same days.
+    @Test func aReceiveSettlingBetweenTheReadsNeverMovesTheEarlierDays() async throws {
+        let receive = { (status: String) in
+            Self.movement("bark.lightning_receive", "receive", metadata: "{}", effective: 30_000, created: Self.now.addingTimeInterval(-600),
+                          status: status, id: 2)
+        }
+        let claimable = Self.balance(spendable: 100_000, claimable: 30_000), settled = Self.balance(spendable: 130_000)
+        let omitted = Records(movements: [Self.earlier, receive("pending")]), done = Records(movements: [Self.earlier, receive("successful")])
+        let read = try #require(await Self.consistent([claimable, settled, settled], [omitted, done]))
+        #expect(read.records == done && read.balance == settled)
+        let earlier = Self.before + [130_000]
+        #expect(try Self.written(claimable, read, earlier: earlier) == earlier)
+        #expect(try Self.written(settled, read, earlier: earlier) == earlier)
+        // Unchecked, the omitted read would have lifted every earlier day by 30,000.
+        #expect(try Self.written(claimable, (omitted, nil), earlier: earlier) != earlier)
+    }
+
+    /// The same for a board whose VTXO is registered between the reads.
+    @Test func aBoardSettlingBetweenTheReadsNeverMovesTheEarlierDays() async throws {
+        let deposit = WalletTransaction(txid: "deposit-txid", txHex: "", onchainFeeSats: nil, balanceChangeSats: 50_500,
+                                        confirmation: .init(height: 900, hash: "d"), isCpfp: false)
+        let funding = WalletTransaction(txid: "funding-txid", txHex: "", onchainFeeSats: 500, balanceChangeSats: -50_500,
+                                        confirmation: .init(height: 1_000, hash: "f"), isCpfp: false)
+        let dated: [String: Date] = [deposit.txid: Self.now.addingTimeInterval(-10 * 86_400)]
+        let board = { (status: String) in
+            Self.movement("bark.board", "board", metadata: #"{"chain_anchor":"funding-txid:0"}"#, effective: 50_000,
+                          created: Self.now.addingTimeInterval(-600), status: status, outputs: ["board-vtxo"])
+        }
+        let confirming = Self.balance(boarding: 50_000), registered = Self.balance(spendable: 50_000)
+        let omitted = Records(movements: [board("pending")], chain: [deposit, funding])
+        let done = Records(movements: [board("successful")], chain: [deposit, funding])
+        let read = try #require(await Self.consistent([confirming, registered, registered], [omitted, done]))
+        #expect(read.records == done && read.balance == registered)
+        let earlier = Array(repeating: Int64(0), count: 20) + Array(repeating: 50_500, count: 10) + [50_000]
+        #expect(try Self.written(confirming, read, earlier: earlier, dated: dated) == earlier)
+        #expect(try Self.written(registered, read, earlier: earlier, dated: dated) == earlier)
+        #expect(try Self.written(confirming, (omitted, nil), earlier: earlier, dated: dated) != earlier)
+    }
 }

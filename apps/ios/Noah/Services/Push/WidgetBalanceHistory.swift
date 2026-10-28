@@ -64,6 +64,30 @@ enum WidgetBalanceHistory {
         return [.init(at: oldest, delta: -left)]
     }
 
+    /// Whether records read against `read` hold for `shown`: the total and the buckets the rules count pending items
+    /// against didn't move.
+    static func agrees(_ read: WalletBalance, _ shown: WalletBalance) -> Bool {
+        read.totalSats == shown.totalSats && read.ark.claimableLightningReceive == shown.ark.claimableLightningReceive
+            && read.ark.pendingBoard == shown.ark.pendingBoard && read.ark.pendingOffboard == shown.ark.pendingOffboard
+    }
+
+    /// `records` read between two readings of the balance that agree, read once more if it moved meanwhile (a receive or a
+    /// board settling); nil if it couldn't be read. The balance is nil if it moved again or couldn't be read: the records
+    /// still tell what's arriving, but not the wave.
+    static func consistent<Records>(balance: () async -> WalletBalance?,
+                                    records: () async -> Records?) async -> (records: Records, balance: WalletBalance?)? {
+        var before = await balance()
+        var last: Records?
+        for _ in 0..<2 {
+            guard let read = await records() else { return nil }
+            last = read
+            let after = await balance()
+            if let before, let after, agrees(before, after) { return (read, after) }
+            before = after
+        }
+        return last.map { ($0, nil) }
+    }
+
     /// A first estimate of when a transaction confirmed: ten minutes a block before the tip.
     static func estimate(_ transaction: WalletTransaction, tip: UInt32, now: Date) -> Date? {
         guard let height = transaction.confirmation?.height else { return nil }
