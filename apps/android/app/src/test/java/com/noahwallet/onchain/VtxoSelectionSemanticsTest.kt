@@ -26,7 +26,8 @@ class VtxoSelectionSemanticsTest {
             assertNotNull(checkbox[SemanticsActions.OnClick].action)
             assertEquals(!enabled, checkbox.contains(SemanticsProperties.Disabled))
             val label = configurations.single { it.contains(SemanticsProperties.ContentDescription) }
-            assertEquals(listOf("VTXO 1234567890ab…, 30,000 sats, Active, ${if (checked) "checked" else "not checked"}"), label[SemanticsProperties.ContentDescription])
+            assertEquals(listOf("VTXO 1234567890ab…, 30,000 sats, Active, ${if (checked) "checked" else "not checked"}"),
+                label[SemanticsProperties.ContentDescription])
         }
     }
 }

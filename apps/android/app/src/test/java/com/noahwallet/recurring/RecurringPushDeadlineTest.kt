@@ -10,7 +10,11 @@ class RecurringPushDeadlineTest {
         val entered = CompletableDeferred<Unit>(); val release = CompletableDeferred<Unit>(); val settled = CompletableDeferred<Unit>()
         val budget = RecurringBudget()
         try {
-            withTimeout(2000) { RecurringPushDeadline(scope, 20).run(budget) { withContext(NonCancellable) { entered.complete(Unit); release.await(); settled.complete(Unit) } } }
+            withTimeout(2000) { RecurringPushDeadline(scope, 20).run(budget) { withContext(NonCancellable) {
+                entered.complete(Unit)
+                release.await()
+                settled.complete(Unit)
+            } } }
             assertTrue(entered.isCompleted); assertFalse(settled.isCompleted); assertFalse(budget.available)
             release.complete(Unit); withTimeout(2000) { settled.await() }
         } finally { release.complete(Unit); scope.cancel() }

@@ -32,10 +32,13 @@ class OnchainFixtureTest(private val domain: String, private val name: String, p
                 "eligible" -> assertEquals(expected.jsonPrimitive.boolean, ExitRules.eligible(s("state"), n("amount")))
                 "receive" -> assertEquals(expected.jsonPrimitive.long, ExitRules.received(n("amount"), n("claimFee")))
                 "warning" -> assertEquals(expected.jsonPrimitive.contentOrNull, ExitRules.warning(n("amount"), n("claimFee"), n("totalFee"), b("claimOnly")))
-                "current" -> assertEquals(expected.jsonPrimitive.boolean, decode<ExitReviewInputs>(input.getValue("inputs")).matches(decode(input.getValue("current"))) && ExitRules.current(n("reviewedAt"), n("now")))
+                "current" -> assertEquals(expected.jsonPrimitive.boolean,
+                    decode<ExitReviewInputs>(input.getValue("inputs")).matches(decode(input.getValue("current"))) &&
+                        ExitRules.current(n("reviewedAt"), n("now")))
                 else -> error("Unknown fixture")
             }
-            "exit-cancellation" -> assertEquals(expected.jsonPrimitive.boolean, ExitRules.cancelable(s("state"), decode<ExitDetails>(input.getValue("details")).transactions?.lastOrNull()?.status?.kind))
+            "exit-cancellation" -> assertEquals(expected.jsonPrimitive.boolean,
+                ExitRules.cancelable(s("state"), decode<ExitDetails>(input.getValue("details")).transactions?.lastOrNull()?.status?.kind))
             "auto-boarding" -> assertEquals(expected.jsonPrimitive.longOrNull, BoardingRules.autoAmount(n("balance"), n("minimum"), n("chainFee"), n("arkFee")))
             "exit-overview-coordination" -> {
                 val ready = ExitRules.ready(b("isInitialized"), b("isWalletLoaded"), b("isWalletSuspended"), b("isBackgroundJobRunning"))
@@ -44,7 +47,8 @@ class OnchainFixtureTest(private val domain: String, private val name: String, p
                 assertEquals(expected.jsonObject.getValue("reads").jsonArray.isNotEmpty(), ready)
             }
             "exit-timeline" -> {
-                val actual = ExitTimeline.build(decode(input.getValue("history")), decode(input.getValue("historyDetails")), s("currentState"), decode(input.getValue("currentDetails")))
+                val actual = ExitTimeline.build(decode(input.getValue("history")), decode(input.getValue("historyDetails")), s("currentState"),
+                    decode(input.getValue("currentDetails")))
                 assertEquals(expected.jsonArray.size, actual.size)
                 actual.zip(expected.jsonArray).forEach { (item, e) ->
                     val obj = e.jsonObject

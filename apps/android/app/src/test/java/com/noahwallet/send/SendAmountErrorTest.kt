@@ -7,7 +7,8 @@ import org.junit.Test
 /** Next with 0 shows the amount error; a valid amount clears it at once and a destination error stays (send-receive.md, Amount). */
 class SendAmountErrorTest {
     private fun model(scope: CoroutineScope) =
-        SendModel(controller(FakeSendWallet(), TestJournal(), scope), "regtest", { error("no LNURL here") }, { FakeSendWallet.quote }, {}, scope).apply { arkBalance = 10_000 }
+        SendModel(controller(FakeSendWallet(), TestJournal(), scope), "regtest", { error("no LNURL here") }, { FakeSendWallet.quote }, {},
+            scope).apply { arkBalance = 10_000 }
 
     @Test fun aValidAmountClearsTheZeroAmountError() = runBlocking {
         val m = model(this)

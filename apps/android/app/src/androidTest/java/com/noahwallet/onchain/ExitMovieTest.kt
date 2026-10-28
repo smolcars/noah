@@ -35,18 +35,23 @@ class ExitMovieTest {
                     ExitDetails.Transaction(f.ids[0], ExitDetails.Status("confirmed", "fee1", ExitDetails.Block(f.tip + 1), "wallet")),
                     ExitDetails.Transaction(f.ids[1], ExitDetails.Status("awaiting-confirmation", "fee2", null, "wallet")),
                     ExitDetails.Transaction(f.ids[2], ExitDetails.Status("verify-inputs", null, null, null)),
-                    ExitDetails.Transaction(f.ids[3], ExitDetails.Status("verify-inputs", null, null, null))))) to ExitContext(f.tip + 1, 17_185, 144, cancelable = true),
+                    ExitDetails.Transaction(f.ids[3], ExitDetails.Status("verify-inputs", null, null, null))))) to ExitContext(f.tip + 1, 17_185,
+                    144, cancelable = true),
                 f.confirm to ExitContext(f.tip + 2, 15_970, 144, cancelable = true))
-            "claim" -> listOf(f.claimable to ExitContext(f.tip + 148, 18_400, 144, claimEstimate = 262), f.claiming to claimed.copy(tip = f.tip + 148), f.claimed to claimed)
+            "claim" -> listOf(f.claimable to ExitContext(f.tip + 148, 18_400, 144, claimEstimate = 262),
+                f.claiming to claimed.copy(tip = f.tip + 148), f.claimed to claimed)
             "fold" -> (25..27).map { f.long(it) to ExitContext(f.tip + it, 18_400, 144, cancelable = true) }
             else -> emptyList()
         }
         val scenario = ActivityScenario.launch(ComponentActivity::class.java)
-        scenario.onActivity { it.enableEdgeToEdge(); it.setContent { com.noahwallet.ui.NoahTheme { Box(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing)) { ExitPreviewHost {
-            if (movie == "list") ExitListContent(f.list, f.tip + 2, setOf(f.list[5].id), true, false, false, f.money, {}, {}, {}, {})
-            else frames.getOrNull(step)?.let { (exit, context) -> ExitProgressContent(exit, f.stage(exit, context.tip), context, false, false, f.money, {}, {}, {}, {}, {}, {},
-                others = if (movie == "fold") listOf(exit, f.longSibling) else emptyList()) }
-        } } } } }
+        scenario.onActivity {
+            it.enableEdgeToEdge()
+            it.setContent { com.noahwallet.ui.NoahTheme { Box(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing)) { ExitPreviewHost {
+                if (movie == "list") ExitListContent(f.list, f.tip + 2, setOf(f.list[5].id), true, false, false, f.money, {}, {}, {}, {})
+                else frames.getOrNull(step)?.let { (exit, context) ->
+                    ExitProgressContent(exit, f.stage(exit, context.tip), context, false, false, f.money, {}, {}, {}, {}, {}, {},
+                        others = if (movie == "fold") listOf(exit, f.longSibling) else emptyList()) }
+            } } } } }
         Thread.sleep(6_000)
         for (i in 1 until frames.size) { scenario.onActivity { step = i }; Thread.sleep(6_000) }
         Thread.sleep(2_000)

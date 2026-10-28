@@ -30,7 +30,9 @@ class Ffi050LiveTest {
         val marker = File(context.filesDir, "ffi050-owned-4978")
         val json = Json { encodeDefaults = true }
         fun save(value: JsonElement) = File(context.cacheDir, "ffi050-$stage.json").writeText(value.toString())
-        suspend fun done() { session.onchainJournal.loadAll().filter { it.receipt != null && !it.receipt.broadcastRetryPending }.forEach { session.onchainJournal.acknowledge(it.id) } }
+        suspend fun done() { session.onchainJournal.loadAll().filter { it.receipt != null && !it.receipt.broadcastRetryPending }.forEach {
+            session.onchainJournal.acknowledge(it.id)
+        } }
         try {
             if (stage == "create") {
                 check(!location.hasAnyData && seed.read() == SecretResult.NotFound && !marker.exists())
@@ -58,7 +60,12 @@ class Ffi050LiveTest {
                 "sync" -> {
                     session.sync()
                     val overview = session.onchainOverview()
-                    save(buildJsonObject { put("confirmed", overview.confirmed); put("tip", overview.tip); put("address", session.exitDepositAddress()); put("arkSpendable", session.summary()!!.balance.ark.spendable.toLong()) })
+                    save(buildJsonObject {
+                        put("confirmed", overview.confirmed)
+                        put("tip", overview.tip)
+                        put("address", session.exitDepositAddress())
+                        put("arkSpendable", session.summary()!!.balance.ark.spendable.toLong())
+                    })
                 }
                 "board-amount", "board-max", "auto-review" -> {
                     session.sync(); done()
@@ -98,9 +105,18 @@ class Ffi050LiveTest {
                     // Prove the SDK, not Noah's discovery file or movement bridge, supplies the rows.
                     File(location.directory, "noah-exit-history.json").delete()
                     val all = session.onchainOverview().exits
-                    assertTrue(ids.all { id -> all.any { it.id == id && it.state == "Canceled" && it.timeline.map { item -> item.state } == listOf("Start", "Canceled") } })
+                    assertTrue(ids.all { id -> all.any { it.id == id && it.state == "Canceled" &&
+                        it.timeline.map { item -> item.state } == listOf("Start", "Canceled") } })
                     assertFalse(session.withOpen { it.m6.exits().any { exit -> exit.vtxoId in ids } })
-                    save(buildJsonObject { put("rows", JsonArray(all.map { row -> buildJsonObject { put("id", row.id); put("amount", row.amount); put("state", row.state); put("history", JsonArray(row.timeline.map { JsonPrimitive(it.state) })) } })); put("withoutNoahDiscoveryIndex", true) })
+                    save(buildJsonObject {
+                        put("rows", JsonArray(all.map { row -> buildJsonObject {
+                            put("id", row.id)
+                            put("amount", row.amount)
+                            put("state", row.state)
+                            put("history", JsonArray(row.timeline.map { JsonPrimitive(it.state) }))
+                        } }))
+                        put("withoutNoahDiscoveryIndex", true)
+                    })
                 }
                 "offboard", "offboard-status" -> {
                     val journal = SendJournal(File(location.directory, "noah-send-attempt.json"))

@@ -43,7 +43,9 @@ class RecurringJournalTest {
     }
     @Test fun androidV1RevisionEvidenceIsRetainedAlongsideUncertainty() {
         val revision = UUID.randomUUID().toString()
-        var raw = """{"version":1,"attempts":{},"consumed":[],"revisions":[{"binding":${RecurringStore.json.encodeToString(binding)},"scheduleID":"rent","policyRevision":"$revision","throughIndex":7}]}"""
+        var raw =
+            """{"version":1,"attempts":{},"consumed":[],"revisions":[{"binding":${RecurringStore.json.encodeToString(binding)},"scheduleID":"rent",""" +
+                """"policyRevision":"$revision","throughIndex":7}]}"""
         val journal = RecurringJournal(File("unused"), { raw }, { raw = it })
         journal.load()
         val indices = RecurringStore.json.parseToJsonElement(raw).jsonObject.getValue("consumedIndices").jsonArray.single().jsonObject
@@ -55,7 +57,8 @@ class RecurringJournalTest {
         for (raw in listOf(
             """{"version":3,"attempts":{}}""",
             """{"version":2,"attempts":{}}""",
-            """{"version":2,"attempts":{},"consumed":[],"consumedIndices":[{"binding":${RecurringStore.json.encodeToString(binding)},"scheduleID":"rent","indices":[-1]}],"legacyUncertainty":[]}""",
+            """{"version":2,"attempts":{},"consumed":[],"consumedIndices":[{"binding":${RecurringStore.json.encodeToString(binding)},""" +
+                """"scheduleID":"rent","indices":[-1]}],"legacyUncertainty":[]}""",
             """{"version":1,"attempts":{},"consumed":[{"binding":${RecurringStore.json.encodeToString(binding)},"scheduleID":"rent"}]}"""
         )) {
             var writes = 0
@@ -107,9 +110,11 @@ class RecurringJournalTest {
             val entry = RecurringJournal.Entry(binding, "rent", RecurringPayment.Plan("pay", 0, 1000), 1000, resolved = true, consumed = true)
             val journal = RecurringJournal(file, write = { durableRecurringWrite(file, it.toByteArray()) {} })
             journal.save(entry)
-            journal.save(entry.copy(plan = entry.plan.copy(scheduledFor = 2000), consumed = false, resolved = false, policyRevision = UUID.randomUUID().toString()))
+            journal.save(entry.copy(plan = entry.plan.copy(scheduledFor = 2000), consumed = false, resolved = false,
+                policyRevision = UUID.randomUUID().toString()))
             val reopened = RecurringJournal(file)
-            assertTrue(reopened.consumed(binding, "rent", 1000)); assertFalse(reopened.consumed(binding.copy(instance = UUID.randomUUID().toString()), "rent", 1000))
+            assertTrue(reopened.consumed(binding, "rent", 1000))
+            assertFalse(reopened.consumed(binding.copy(instance = UUID.randomUUID().toString()), "rent", 1000))
             assertFalse(reopened.load().getValue("rent").resolved)
         } finally { directory.deleteRecursively() }
     }

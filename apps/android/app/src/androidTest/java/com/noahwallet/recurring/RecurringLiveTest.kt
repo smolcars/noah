@@ -80,7 +80,8 @@ class RecurringLiveTest {
             }
             val board = session.quoteOnchain(com.noahwallet.onchain.OnchainAction.board, amount = 30_000)
             session.executeOnchain(board)
-            File(context.filesDir, "recurring-live-board-ready.txt").writeText("boarded 30000 sats; required confirmations ${session.arkInfo()!!.requiredBoardConfirmations}")
+            File(context.filesDir,
+                "recurring-live-board-ready.txt").writeText("boarded 30000 sats; required confirmations ${session.arkInfo()!!.requiredBoardConfirmations}")
         }
         withTimeout(180_000) {
             while (true) {
@@ -108,7 +109,8 @@ class RecurringLiveTest {
             assertFalse(runtime.executor.controller.locked)
         }
         runtime.execute(); withContext(Dispatchers.Main) { runtime.executor.pause(a.id) }; runtime.execute()
-        withContext(Dispatchers.Main) { assertEquals("paused", runtime.executor.schedules.single { it.id == a.id }.status); runtime.executor.cancel(a.id) }; runtime.execute()
+        withContext(Dispatchers.Main) { assertEquals("paused", runtime.executor.schedules.single { it.id == a.id }.status); runtime.executor.cancel(a.id) }
+        runtime.execute()
         val afterArk = session.transactionHistory().filter { it.id !in before }
         assertEquals(1, afterArk.size)
         peer.sync()
@@ -141,13 +143,25 @@ class RecurringLiveTest {
         assertTrue(journal.load().getValue(a.id).consumed); assertTrue(journal.load().getValue(l.id).consumed)
         assertFalse(RecurringStore(settings).load().pending)
         File(context.filesDir, "recurring-live-evidence.json").writeText(buildJsonObject {
-            put("arkAmountSat", 1000); put("arkFeeSat", afterArk.single().offchainFeeSat); put("arkNewMovements", afterArk.size); put("totalNewMovements", afterAll.size)
+            put("arkAmountSat", 1000)
+            put("arkFeeSat", afterArk.single().offchainFeeSat)
+            put("arkNewMovements", afterArk.size)
+            put("totalNewMovements", afterAll.size)
             put("lightningAmountSat", 1000); put("lightningQuoteFeeSat", quoted.fee); put("worstCaseFeeSat", feePolicy.worstCaseFeeSat)
-            put("feeCapSat", feePolicy.capSat); put("lightningPaymentHash", lightningMovement.paymentHash); put("lightningActualFeeSat", lightningMovement.offchainFeeSats.toLong()); put("lightningAutomatic", true); put("consumedBoth", true); put("syncPending", false)
-            put("arkMovement", afterArk.single().id); put("peerReceiveMovement", peerReceive.id); put("peerReceivedSat", peerReceive.amount); putJsonArray("movements") { afterAll.forEach { add(it.id) } }
+            put("feeCapSat", feePolicy.capSat)
+            put("lightningPaymentHash", lightningMovement.paymentHash)
+            put("lightningActualFeeSat", lightningMovement.offchainFeeSats.toLong())
+            put("lightningAutomatic", true)
+            put("consumedBoth", true)
+            put("syncPending", false)
+            put("arkMovement", afterArk.single().id)
+            put("peerReceiveMovement", peerReceive.id)
+            put("peerReceivedSat", peerReceive.amount)
+            putJsonArray("movements") { afterAll.forEach { add(it.id) } }
         }.toString())
         // Keep a future policy for the real Settings/list/editor inspection. It cannot be due.
-        withContext(Dispatchers.Main) { runtime.executor.save(a.copy(id = UUID.randomUUID().toString(), label = "Monthly donation", startAt = System.currentTimeMillis() + 86_400_000,
+        withContext(Dispatchers.Main) { runtime.executor.save(a.copy(id = UUID.randomUUID().toString(), label = "Monthly donation",
+            startAt = System.currentTimeMillis() + 86_400_000,
             nextRunAt = System.currentTimeMillis() + 86_400_000, interval = RecurringInterval("month", 1)), false) }
         peer.closeSettled(); check(peerRoot.deleteRecursively())
         session.closeSettled()

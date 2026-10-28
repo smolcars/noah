@@ -24,7 +24,8 @@ class RecurringLocalizationTest {
         for (locale in languages) for (corrupt in listOf(false, true)) {
             language(locale); val w = RecurringWorld(this)
             try {
-                val s = w.add().copy(status = "needs_attention", issue = RecurringIssue(RecurringIssue.Code.policyEvidence), lastError = display(), nextRunAt = 1123)
+                val s = w.add().copy(status = "needs_attention", issue = RecurringIssue(RecurringIssue.Code.policyEvidence),
+                    lastError = display(), nextRunAt = 1123)
                 w.store.upsert(s)
                 if (corrupt) w.journalRaw = "{broken"
                 else w.journal.save(RecurringJournal.Entry(w.binding, s.id, s.copy(status = "active").plan(w.now, w.zone), w.now))
@@ -76,7 +77,11 @@ class RecurringLocalizationTest {
                 w.executor.execute(); w.executor.execute(manual = true)
                 val s = w.schedule!!
                 assertEquals("needs_approval", s.status); assertNull(s.retryNotBefore); assertEquals(0, w.wallet.calls)
-                assertEquals(when (kind) { "ark" -> RecurringIssue.Code.arkFee; "quote" -> RecurringIssue.Code.quoteExceedsCap; else -> RecurringIssue.Code.scheduleExceedsCap }, s.issue!!.code)
+                assertEquals(when (kind) { "ark" ->
+                    RecurringIssue.Code.arkFee
+                    "quote" -> RecurringIssue.Code.quoteExceedsCap
+                    else -> RecurringIssue.Code.scheduleExceedsCap
+                }, s.issue!!.code)
                 assertTrue(s.issue.valid); assertTrue(w.journal.load().isEmpty())
                 if (kind != "ark") assertEquals(listOf("500", if (kind == "quote") "40" else "200"), s.issue.arguments)
                 assertTrue(s.issue.message(context).isNotEmpty())
@@ -112,25 +117,34 @@ class RecurringLocalizationTest {
                     RecurringPayment.unsupportedMessage to RecurringIssue.Code.unsupported,
                     RecurringPayment.amountLimitMessage to RecurringIssue.Code.amountLimit,
                     "Noah was interrupted while sending this payment. Check your transaction history before resuming." to RecurringIssue.Code.interrupted,
-                    "This schedule has more than 5,000 missed occurrences. Cancel it and create a schedule with a future first payment." to RecurringIssue.Code.tooManyMissed,
+                    "This schedule has more than 5,000 missed occurrences. " +
+                        "Cancel it and create a schedule with a future first payment." to RecurringIssue.Code.tooManyMissed,
                     "This payment may have been sent. Check its status before making another payment." to RecurringIssue.Code.uncertain,
-                    "This invoice was already paid. This occurrence was not sent again. Check the recipient before resuming." to RecurringIssue.Code.alreadyPaid,
+                    "This invoice was already paid. This occurrence was not sent again. " +
+                        "Check the recipient before resuming." to RecurringIssue.Code.alreadyPaid,
                     "The fee for this Ark payment must be 0 sats to pay automatically. Review it to pay manually." to RecurringIssue.Code.arkFee,
-                    "The fee for this payment (41 sats) is above your automatic limit of 40 sats. Review it to pay manually." to RecurringIssue.Code.quoteExceedsCap,
-                    "Ark's published Lightning fees for this amount can reach 500 sats, above your automatic limit of 200 sats. Review it to pay manually." to RecurringIssue.Code.scheduleExceedsCap,
+                    "The fee for this payment (41 sats) is above your automatic limit of 40 sats. " +
+                        "Review it to pay manually." to RecurringIssue.Code.quoteExceedsCap,
+                    "Ark's published Lightning fees for this amount can reach 500 sats, above your automatic limit of 200 sats. " +
+                        "Review it to pay manually." to RecurringIssue.Code.scheduleExceedsCap,
                     "No payment was submitted." to RecurringIssue.Code.retryableFailure,
                     "This payment could not be prepared. No payment was submitted." to RecurringIssue.Code.retryableFailure,
                     (display() + " unknown") to RecurringIssue.Code.unknown)
                 for ((message, code) in cases) {
                     val root = RecurringStore.json.parseToJsonElement(raw).jsonObject
                     val state = root.getValue("state").jsonObject; val rows = state.getValue("schedules").jsonObject
-                    val row = JsonObject(rows.getValue(original.id).jsonObject - "issue" + mapOf("lastError" to JsonPrimitive(message), "retryNotBefore" to JsonPrimitive(1123)))
+                    val row = JsonObject(rows.getValue(original.id).jsonObject - "issue" + mapOf("lastError" to JsonPrimitive(message),
+                        "retryNotBefore" to JsonPrimitive(1123)))
                     val legacy = JsonObject(root + ("state" to JsonObject(state + ("schedules" to JsonObject(rows + (original.id to row)))))).toString()
                     var stored = legacy
                     val decoded = RecurringStore({ stored }, { stored = it }).load().schedules.getValue(original.id)
                     assertEquals(code, decoded.issue!!.code); assertTrue(decoded.issue.valid)
                     if (code == RecurringIssue.Code.retryableFailure) { assertEquals("active", decoded.status); assertNotNull(decoded.retryNotBefore) }
-                    else { assertNotEquals("active", decoded.status); assertNull(decoded.retryNotBefore); assertEquals("idle", decoded.plan(w.now, w.zone).kind) }
+                    else {
+                        assertNotEquals("active", decoded.status)
+                        assertNull(decoded.retryNotBefore)
+                        assertEquals("idle", decoded.plan(w.now, w.zone).kind)
+                    }
                     assertEquals(legacy, stored)
                 }
             } finally { cleanup(w) }

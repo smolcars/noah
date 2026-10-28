@@ -72,9 +72,16 @@ class WrappingPillTest {
         compose.setContent { NoahTheme { CompositionLocalProvider(LocalDensity provides Density(LocalDensity.current.density, 2f)) {
             Column {
                 // The needs-funds foot (Cancel exit at 0.8, Add on-chain funds at 1) and the deposit sheet's Copy and Share.
-                Row(Modifier.width(312.dp)) { SendPill("Avbryt uttaget", Modifier.weight(.8f), wrap = true) {}; SendPill(add, Modifier.weight(1f), height = 56.dp, wrap = true) {} }
-                Row(Modifier.width(312.dp)) { SendPill(copy, Modifier.weight(1f), outlined = true, icon = SettingsIcons.copy, wrap = true) {}; SendPill("Dela", Modifier.weight(1f), wrap = true) {} }
-                HoldToConfirm(hold, "Löser in", "Lös in", "Lös in", enabled = true, sending = false, modifier = Modifier.width(312.dp), tag = "hold", onConfirm = {}, wrap = true)
+                Row(Modifier.width(312.dp)) {
+                    SendPill("Avbryt uttaget", Modifier.weight(.8f), wrap = true) {}
+                    SendPill(add, Modifier.weight(1f), height = 56.dp, wrap = true) {}
+                }
+                Row(Modifier.width(312.dp)) {
+                    SendPill(copy, Modifier.weight(1f), outlined = true, icon = SettingsIcons.copy, wrap = true) {}
+                    SendPill("Dela", Modifier.weight(1f), wrap = true) {}
+                }
+                HoldToConfirm(hold, "Löser in", "Lös in", "Lös in", enabled = true, sending = false, modifier = Modifier.width(312.dp), tag = "hold",
+                    onConfirm = {}, wrap = true)
             }
         } } }
         for (text in listOf(add, copy, hold)) breaksBetweenWords(text)

@@ -37,13 +37,15 @@ class SendFixtureTest(private val domain: String, private val case: FixtureCase)
                     "note" -> JsonPrimitive(SendFlow.canNote(str(0), args[1].jsonPrimitive.int))
                     "max" -> JsonPrimitive(SendFlow.canMax(str(0), map(1)))
                     "method" -> SendFlow.method(SendRail.valueOf(str(0)!!), map(1)!!)?.let(::JsonPrimitive) ?: JsonNull
-                    "recommend" -> SendFlow.recommend(args[0].jsonArray.map { SendRail.valueOf(it.jsonPrimitive.content) }, args[1].jsonObject.mapValues { it.value.jsonPrimitive.boolean })?.name?.let(::JsonPrimitive) ?: JsonNull
+                    "recommend" -> SendFlow.recommend(args[0].jsonArray.map { SendRail.valueOf(it.jsonPrimitive.content) },
+                        args[1].jsonObject.mapValues { it.value.jsonPrimitive.boolean })?.name?.let(::JsonPrimitive) ?: JsonNull
                     else -> error("Unknown fixture")
                 }
                 assertEquals(case.name, case.expected, result)
             }
             "onchain-send" -> assertEquals(case.name, case.expected.jsonPrimitive.long,
-                SendFlow.maxBalance(input["source"]?.jsonPrimitive?.contentOrNull?.let(SendSource::valueOf), input.getValue("onchain").jsonPrimitive.long, input.getValue("offchain").jsonPrimitive.long))
+                SendFlow.maxBalance(input["source"]?.jsonPrimitive?.contentOrNull?.let(SendSource::valueOf), input.getValue("onchain").jsonPrimitive.long,
+                    input.getValue("offchain").jsonPrimitive.long))
             "lightning-invoice" -> {
                 val expected = case.expected.jsonObject
                 val trimmed = input["description"]?.jsonPrimitive?.contentOrNull?.trim() ?: ""

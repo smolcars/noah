@@ -89,8 +89,9 @@ class AdaptiveLayoutDeviceTest {
             show("send") { SendScreen(model) {} }
             show("scanner") { SendScanner({}, {}) }
             show("receive-amount") { WalletModalBottomSheet({}, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
-                com.noahwallet.ui.receive.ReceiveAmountSheet(com.noahwallet.ui.receive.ReceiveUi(com.noahwallet.services.wallet.ReceiveRequest("tark1layout", "bcrt1layout"),
-                    null, com.noahwallet.ui.receive.ReceiveFormat.request, com.noahwallet.formatting.BitcoinAmountUnit.sats, java.util.Locale.US, null, "USD")) { _, _ -> }
+                com.noahwallet.ui.receive.ReceiveAmountSheet(com.noahwallet.ui.receive.ReceiveUi(
+                    com.noahwallet.services.wallet.ReceiveRequest("tark1layout", "bcrt1layout"), null, com.noahwallet.ui.receive.ReceiveFormat.request, com.noahwallet.formatting.BitcoinAmountUnit.sats, java.util.Locale.US,
+                    null, "USD")) { _, _ -> }
             } }
             show("history") { ActivityScreen(model, {}) }
             show("btc-map") { com.noahwallet.btcmap.BtcMapScreen {} }
@@ -120,17 +121,25 @@ class AdaptiveLayoutDeviceTest {
             }
             val executor = com.noahwallet.recurring.RecurringRuntime.shared(context).executor
             show("recurring-editor") { com.noahwallet.recurring.RecurringPaymentEditorScreen(executor, null) {} }
-            val controller = com.noahwallet.send.SendController(com.noahwallet.send.SendController.Dependencies(read = { null }, write = {}, reservation = { error("Gallery never submits payments") }))
+            val controller = com.noahwallet.send.SendController(com.noahwallet.send.SendController.Dependencies(read = { null }, write = {},
+                reservation = { error("Gallery never submits payments") }))
             show("send-approval") { com.noahwallet.ui.onboarding.OnboardingFrame(null) { com.noahwallet.ui.send.SendApproval(
-                SendPresentation(com.noahwallet.send.SendModel(controller, "regtest", { error("Gallery never resolves") }, { error("Gallery never quotes") }, {})),
+                SendPresentation(com.noahwallet.send.SendModel(controller, "regtest", { error("Gallery never resolves") },
+                    { error("Gallery never quotes") }, {})),
                 com.noahwallet.send.SendPayment("ark1" + "q".repeat(180), "ark", 12345), com.noahwallet.send.SendQuote(12345, 5, 12350),
                 com.noahwallet.ui.send.SendFixtures.env(), com.noahwallet.ui.send.SendActions(), paying = false, cancel = {}) {} } }
             show("dialog") { WalletAlertDialog({}, { TextButton({}) { Text("Confirm") } },
                 title = { Text("Confirm payment") }, text = { Text("Layout verification ".repeat(60)) }) }
             show("debug-tools", chrome = false) { com.noahwallet.ui.onboarding.OnboardingFrame(null) { DebugPage(model, SettingsNav(null, {}, {}, {}, {})) } }
-            show("lock-cover", chrome = false) { androidx.compose.ui.window.Dialog({}, properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
-                Surface(Modifier.fillMaxSize()) { Box(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing).avoidHinge()) { NoahForm("Noah is Locked") { Text("Authenticate to access your wallet"); NoahButton("Unlock") {} } } }
-            } }
+            show("lock-cover", chrome = false) {
+                androidx.compose.ui.window.Dialog({},
+                    properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false)) {
+                    Surface(Modifier.fillMaxSize()) {
+                        Box(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing).avoidHinge()) { NoahForm("Noah is Locked") {
+                            Text("Authenticate to access your wallet")
+                            NoahButton("Unlock") {}
+                        } } }
+                } }
         } finally { instrumentation.runOnMainSync { activity.finish() } }
     }
 }

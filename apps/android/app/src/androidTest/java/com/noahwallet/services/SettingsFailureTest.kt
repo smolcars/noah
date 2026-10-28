@@ -13,7 +13,8 @@ import java.io.File
 import java.util.UUID
 
 class SettingsFailureTest {
-    private val restoreSteps = listOf("journal", "previousMoved", "installed", "committing", "seed", "markerRemoved", "previousRemoved", "journalRemoved", "flags", "markerOnly", "stateOnly", "corrupt") +
+    private val restoreSteps = listOf("journal", "previousMoved", "installed", "committing", "seed", "markerRemoved", "previousRemoved", "journalRemoved",
+        "flags", "markerOnly", "stateOnly", "corrupt") +
         (1..6).map { "initializing$it" } + (1..9).map { "settling$it" }
 
     private fun isolatedServices(context: android.content.Context): AppServices =
@@ -40,7 +41,8 @@ class SettingsFailureTest {
             services.ensureWalletOpen()
             fail("Background opened unpersisted fallback")
         } catch (failure: Exception) {
-            assertTrue("Background must reject unhealthy settings before reading the seed: ${failure.javaClass.simpleName}", failure is SettingsStorage.Unavailable)
+            assertTrue("Background must reject unhealthy settings before reading the seed: ${failure.javaClass.simpleName}",
+                failure is SettingsStorage.Unavailable)
             assertEquals("unchanged", location.database.readText())
             assertFalse(services.session.isOpen)
         } finally {

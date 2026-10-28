@@ -14,7 +14,8 @@ class SendMovementIdentityTest {
     private fun tx(amount: Long): String {
         val script = PaymentEncoding.bitcoinScript(address)!!
         val value = ByteArray(8) { i -> (amount ushr (i * 8)).toByte() }
-        return "0200000001" + "00".repeat(36) + "00ffffffff01" + PaymentEncoding.hex(value) + "%02x".format(script.size) + PaymentEncoding.hex(script) + "00000000"
+        return "0200000001" + "00".repeat(36) + "00ffffffff01" + PaymentEncoding.hex(value) +
+            "%02x".format(script.size) + PaymentEncoding.hex(script) + "00000000"
     }
     private fun offboard(id: UInt = 2u, txid: String = "returned") = movement().copy(id = id, subsystemName = "bark.offboard", subsystemKind = "offboard",
         offchainFeeSats = 150u, metadataJson = buildJsonObject { put("offboard_txid", txid); put("offboard_tx", tx(850)) }.toString())
@@ -23,7 +24,8 @@ class SendMovementIdentityTest {
     @Test fun returnedMovementIDSurvivesRestartWithoutHistoryMatching() = runBlocking {
         for (rail in listOf("ark", "offboard", "sendOnchain")) {
             val ark = rail == "ark"
-            val payment = SendPayment("reviewed-recipient", if (ark) "ark" else "onchain", 1000, if (ark) null else SendSource.offchain, max = rail == "offboard")
+            val payment = SendPayment("reviewed-recipient", if (ark) "ark" else "onchain", 1000, if (ark) null else SendSource.offchain,
+                max = rail == "offboard")
             val receipt = if (ark) SendReceipt(1000, movementID = 7u, proof = SendReceipt.Proof.submitReturnedArkSuccess)
             else SendReceipt(1000, txid = "returned", movementID = 7u, proof = SendReceipt.Proof.submitReturnedTxid)
             var reconciled = 0
@@ -78,9 +80,11 @@ class SendMovementIdentityTest {
 
     @Test fun metadataAttachesOnlyToTheExactNewMovement() {
         val snapshot = SendSnapshot(setOf(1u, 2u))
-        assertEquals(7u, SendReconciliation.metadataMovementID(SendReceipt(1000, movementID = 7u, proof = SendReceipt.Proof.submitReturnedArkSuccess), snapshot))
+        assertEquals(7u, SendReconciliation.metadataMovementID(SendReceipt(1000, movementID = 7u,
+            proof = SendReceipt.Proof.submitReturnedArkSuccess), snapshot))
         // An inherited checkpoint's movement predates the attempt and keeps its own metadata.
-        assertNull(SendReconciliation.metadataMovementID(SendReceipt(1000, paymentHash = "hash", movementID = 2u, fee = 1, proof = SendReceipt.Proof.actualMovement), snapshot))
+        assertNull(SendReconciliation.metadataMovementID(SendReceipt(1000, paymentHash = "hash", movementID = 2u, fee = 1,
+            proof = SendReceipt.Proof.actualMovement), snapshot))
         // Without an exact id nothing is attached; history is never matched by destination or amount.
         assertNull(SendReconciliation.metadataMovementID(SendReceipt(1000, proof = SendReceipt.Proof.submitReturnedArkSuccess), snapshot))
     }
@@ -103,7 +107,9 @@ class SendMovementIdentityTest {
             receipt = SendReceipt(0, txid = "returned", amountIsPending = true, proof = SendReceipt.Proof.submitReturnedTxid))).jsonObject
         val receipt = current.getValue("receipt").jsonObject
         assertEquals(JsonNull, receipt["movementID"])
-        val journal = TestJournal().apply { attempt = json.decodeFromJsonElement<SendAttempt>(JsonObject(current + ("receipt" to JsonObject(receipt - "movementID")))) }
+        val journal = TestJournal().apply {
+            attempt = json.decodeFromJsonElement<SendAttempt>(JsonObject(current + ("receipt" to JsonObject(receipt - "movementID"))))
+        }
         assertNull(journal.attempt!!.receipt!!.movementID)
         wallet.reconciliation = { SendResolution.Paid(SendReconciliation.offboardReceipt(it.receipt!!, it.payment, listOf(offboard()))) }
         val restarted = controller(wallet, journal, this); restarted.reloadForWalletChange(); restarted.checkStatus()

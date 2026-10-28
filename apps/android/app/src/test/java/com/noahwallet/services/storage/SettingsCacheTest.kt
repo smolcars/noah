@@ -32,7 +32,8 @@ class SettingsCacheTest {
     /** The host's stat, as precise as [settingsStamp] on a device (Robolectric's Os.stat is a stub). */
     private val hostStat: (File) -> List<Long>? = { file -> runCatching {
         Files.readAttributes(file.toPath(), "unix:ino,size,lastModifiedTime,ctime").let {
-            listOf(it["ino"] as Long, it["size"] as Long, (it["lastModifiedTime"] as FileTime).to(TimeUnit.NANOSECONDS), (it["ctime"] as FileTime).to(TimeUnit.NANOSECONDS))
+            listOf(it["ino"] as Long, it["size"] as Long, (it["lastModifiedTime"] as FileTime).to(TimeUnit.NANOSECONDS),
+                (it["ctime"] as FileTime).to(TimeUnit.NANOSECONDS))
         }
     }.getOrNull() }
     private fun storage(context: ContextWrapper, sync: (File) -> Unit = {}) = SettingsStorage(context, sync, hostStat)
@@ -77,7 +78,10 @@ class SettingsCacheTest {
     @Test fun aReplacementDuringOurWriteIsReadAndKept() = withSettings { context, file ->
         var replaceAfterRename = false
         // The directory sync runs after our rename: another writer replaces the file right then.
-        val settings = storage(context) { if (replaceAfterRename && it.isDirectory) { replaceAfterRename = false; replace(file, mapOf("key" to "theirs", "their" to "kept")) } }
+        val settings = storage(context) { if (replaceAfterRename && it.isDirectory) {
+            replaceAfterRename = false
+            replace(file, mapOf("key" to "theirs", "their" to "kept"))
+        } }
         settings.set("before", "key")
         replaceAfterRename = true
         settings.set("ours", "key")

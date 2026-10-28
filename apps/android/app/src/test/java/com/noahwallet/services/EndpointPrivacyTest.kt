@@ -40,7 +40,9 @@ class EndpointPrivacyTest {
             val lines = file.lines()
             assertEquals(persisted.size, lines.size)
             for ((line, safe) in lines.zip(persisted)) assertTrue(line, line.endsWith(safe))
-            directory.resolve("noah.log.1").writeText(cases.filter { it.getValue("redacted").jsonPrimitive.boolean }.joinToString("\n") { it.getValue("input").jsonPrimitive.content })
+            directory.resolve("noah.log.1").writeText(cases.filter { it.getValue("redacted").jsonPrimitive.boolean }.joinToString("\n") {
+                it.getValue("input").jsonPrimitive.content
+            })
             assertFalse(file.lines().joinToString().contains("bücher.example)"))
             assertFalse(file.lines().joinToString().contains("[0:0::1]"))
         } finally { directory.deleteRecursively() }
@@ -105,7 +107,8 @@ class EndpointPrivacyTest {
         val origin = "https://fakehostcredential73.example.com:8443"
         EndpointLogPrivacy.register("$origin/api")
         EndpointLogPrivacy.register("https://fakepunctcredential92.example.com/api")
-        val inputs = listOf("https://fakepunctcredential92.example.com:443)", origin, "$origin/api/blocks/tip/height", origin.uppercase(), "$origin)", "$origin,", "$origin.",
+        val inputs = listOf("https://fakepunctcredential92.example.com:443)", origin, "$origin/api/blocks/tip/height", origin.uppercase(),
+            "$origin)", "$origin,", "$origin.",
             origin.replace("fake", """\u0066ake"""), origin.replace(":", "%3A").replace("/", "%2F"), origin.replace("/", "%2F"),
             origin.replace("/", "\\/"), origin.replace(":", "&#58;").replace("/", "&#x2f;"))
         for (input in inputs) {
@@ -171,7 +174,8 @@ class EndpointPrivacyTest {
         }
         for (variant in listOf("mainnet", "signet", "regtest")) {
             val config = com.noahwallet.services.wallet.WalletConfiguration.base(variant)
-            for (endpoint in listOfNotNull(com.noahwallet.services.server.ServerEndpoint.baseURL(variant, com.noahwallet.BuildConfig.REGTEST_SERVER_URL), config.arkServer, config.esplora)) {
+            for (endpoint in listOfNotNull(com.noahwallet.services.server.ServerEndpoint.baseURL(variant, com.noahwallet.BuildConfig.REGTEST_SERVER_URL),
+                config.arkServer, config.esplora)) {
                 val origin = endpoint.substringBefore("/api").trimEnd('/')
                 assertEquals(endpoint, EndpointLogPrivacy.sanitize(endpoint, setOf("https://fake-custom.example")))
                 assertEquals("[custom-esplora]", EndpointLogPrivacy.sanitize(endpoint, setOf(origin)))

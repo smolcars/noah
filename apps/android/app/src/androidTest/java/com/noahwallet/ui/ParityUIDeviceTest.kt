@@ -140,7 +140,9 @@ class ParityUIDeviceTest {
             click("Copy Lightning address")
             waitFor("Copy feedback appears") { text("Copied") != null }
             var copied: String? = null
-            instrumentation.runOnMainSync { copied = (context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager).primaryClip?.getItemAt(0)?.text?.toString() }
+            instrumentation.runOnMainSync {
+                copied = (context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager).primaryClip?.getItemAt(0)?.text?.toString()
+            }
             assertEquals("satoshi@example.test", copied)
         } finally { instrumentation.runOnMainSync { activity.finish() } }
     }
@@ -170,7 +172,8 @@ class ParityUIDeviceTest {
         try {
             waitFor("Scanner paste") { text("Paste") != null }
             instrumentation.runOnMainSync {
-                (context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(ClipData.newPlainText("Payment", "satoshi@example.test"))
+                (context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(ClipData.newPlainText("Payment",
+                    "satoshi@example.test"))
             }
             click("Paste")
             waitFor("Paste routes payment request") { text("Payment request routed") != null }
@@ -259,7 +262,9 @@ class ParityUIDeviceTest {
             val currency = SettingsPreferences.preferredCurrency(SettingsStorage(context).string("profile-storage"))
             val rate = V0PricesClient(services.client).fiatPrices(JsonObject(emptyMap())).value().rates[currency]
             val total = checkNotNull(services.session.summary()).balance.totalSats.toLong()
-            val live = checkNotNull(HomeRules.fiat(total, rate, currency, Locale.forLanguageTag(LegacyLocale.resolved(context)), hidden = false)) { "a live $currency rate" }
+            val live = checkNotNull(HomeRules.fiat(total, rate, currency, Locale.forLanguageTag(LegacyLocale.resolved(context)), hidden = false)) {
+                "a live $currency rate"
+            }
             waitFor("Live fiat amount $live") { text(live) != null }
             shot("home-live")
             // The name chip opens Profile; its My code row shows the code alone.
@@ -269,7 +274,11 @@ class ParityUIDeviceTest {
             assertNull("My code has no Scan beside it", text("Scan"))
             shot("qr-live-address")
             // Back through Profile and Settings to Home, whose scan button opens the scanner alone.
-            for (step in 1..4) if (text("Scan") == null) { automation.performGlobalAction(AccessibilityService.GLOBAL_ACTION_BACK); instrumentation.waitForIdleSync(); Thread.sleep(500) }
+            for (step in 1..4) if (text("Scan") == null) {
+                automation.performGlobalAction(AccessibilityService.GLOBAL_ACTION_BACK)
+                instrumentation.waitForIdleSync()
+                Thread.sleep(500)
+            }
             click("Scan")
             waitFor("Live scanner") { text("Scan QR code") != null }
             assertNull("The scanner has no My code beside it", text("My code"))
@@ -292,7 +301,8 @@ class ParityUIDeviceTest {
         val services = AppServices.shared(context)
         services.ensureWalletOpen()
         val settings = SettingsStorage(context)
-        settings.set(SettingsPreferences.update(settings.string("transaction-storage"), mapOf("isAutoBoardingEnabled" to JsonPrimitive(true), "hasAttemptedAutoBoarding" to JsonPrimitive(true)), 1), "transaction-storage")
+        settings.set(SettingsPreferences.update(settings.string("transaction-storage"),
+            mapOf("isAutoBoardingEnabled" to JsonPrimitive(true), "hasAttemptedAutoBoarding" to JsonPrimitive(true)), 1), "transaction-storage")
         settings.sync()
         File(context.cacheDir, "auto-board-address.txt").writeText(services.session.exitDepositAddress())
     }

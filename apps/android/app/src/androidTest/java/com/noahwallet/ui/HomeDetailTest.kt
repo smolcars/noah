@@ -63,7 +63,8 @@ class HomeDetailTest {
             compose.onNodeWithTag("activity-detail-status", useUnmergedTree = true).assert(hasAnyDescendant(hasText(case.status)))
             case.shows?.let { compose.onNodeWithText(it, substring = true, useUnmergedTree = true).assertExists() }
             // × closes the sheet; the last payment closes with Back instead.
-            if (i < cases.lastIndex) compose.onNodeWithTag("activity-detail-close").performClick() else InstrumentationRegistry.getInstrumentation().sendKeyDownUpSync(KeyEvent.KEYCODE_BACK)
+            if (i < cases.lastIndex) compose.onNodeWithTag("activity-detail-close").performClick()
+            else InstrumentationRegistry.getInstrumentation().sendKeyDownUpSync(KeyEvent.KEYCODE_BACK)
             settle()
             compose.onAllNodesWithTag("activity-detail").assertCountEquals(0)
             assertNull(state.selected)

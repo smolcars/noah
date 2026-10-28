@@ -20,7 +20,8 @@ class ArkInfoEndpointTest {
     }
 
     @Test fun pricesUseConfiguredServerForEveryVariant() {
-        for ((variant, origin) in listOf("mainnet" to "https://noahwallet.io", "signet" to "https://signet.noahwallet.io", "regtest" to "http://10.0.2.2:3000")) {
+        for ((variant, origin) in listOf("mainnet" to "https://noahwallet.io", "signet" to "https://signet.noahwallet.io",
+            "regtest" to "http://10.0.2.2:3000")) {
             val urls = ServerEndpoint.priceURLs(ServerEndpoint.baseURL(variant))
             assertEquals("$origin/v0/prices", urls.first)
             assertEquals("$origin/v0/historical-price", urls.second)

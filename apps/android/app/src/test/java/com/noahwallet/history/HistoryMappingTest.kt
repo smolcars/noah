@@ -24,7 +24,9 @@ class HistoryMappingTest {
     private fun home(m: Movement, domain: String? = "noahwallet.io") = HomeRow.of(row(m), domain)
 
     // BOLT11 spec vector: description "bolt11.org".
-    private val invoice = "lnbc15u1p3xnhl2pp5jptserfk3zk4qy42tlucycrfwxhydvlemu9pqr93tuzlv9cc7g3sdqsvfhkcap3xyhx7un8cqzpgxqzjcsp5f8c52y2stc300gl6s4xswtjpc37hrnnr3c9wvtgjfuvqmpm35evq9qyyssqy4lgd8tj637qcjp05rdpxxykjenthxftej7a2zzmwrmrl70fyj9hvj0rewhzj7jfyuwkwcg9g2jpwtk3wkjtwnkdks84hsnu8xps5vsq4gj5hs"
+    private val invoice =
+        "lnbc15u1p3xnhl2pp5jptserfk3zk4qy42tlucycrfwxhydvlemu9pqr93tuzlv9cc7g3sdqsvfhkcap3xyhx7un8cqzpgxqzjcsp5f8c52y2stc300gl6s4xswtjpc37hrnnr3c9wvtgjfu" +
+            "vqmpm35evq9qyyssqy4lgd8tj637qcjp05rdpxxykjenthxftej7a2zzmwrmrl70fyj9hvj0rewhzj7jfyuwkwcg9g2jpwtk3wkjtwnkdks84hsnu8xps5vsq4gj5hs"
     private val invoiceHash = "90570c8d3688ad5012aa5ff982606971ae46b3f9df0a100cb15f05f61718f223"
     /** A BOLT12 offer: bech32 without a checksum over offer_description (TLV 10) and an issuer id (TLV 22). */
     private fun offer(description: String?): String {
@@ -84,7 +86,11 @@ class HistoryMappingTest {
         assertEquals(monthly, joined[0].recurring)
         assertEquals("Coffee", joined[1].recurring?.label)
         assertNull("no link: an ordinary send", joined[2].recurring)
-        with(HomeRow.of(joined[0], "noahwallet.io")) { assertEquals("Savings", title); assertEquals("Recurring", kind); assertEquals(HomeRow.Avatar.Recurring, avatar) }
+        with(HomeRow.of(joined[0], "noahwallet.io")) {
+            assertEquals("Savings", title)
+            assertEquals("Recurring", kind)
+            assertEquals(HomeRow.Avatar.Recurring, avatar)
+        }
         // A miss leaves Home's own reading.
         val missed = HistoryMapping.joinRecurring(listOf(ark), listOf(HistoryMapping.RecurringLink(monthly, 99u, "ff")))
         assertNull(missed[0].recurring)
@@ -102,9 +108,11 @@ class HistoryMappingTest {
         assertEquals("Coffee Collective", home(coffee).title)
         // Without a description: what happened, never empty.
         assertEquals("Sent", home(movement("bark.lightning_send:send", intended = -3_300, sentTo = listOf("offer" to offer(null)))).title)
-        assertEquals("Received", home(movement("bark.lightning_receive:receive", intended = 1_500, receivedOn = listOf("invoice" to "lnbcrt1unreadable"))).title)
+        assertEquals("Received", home(movement("bark.lightning_receive:receive", intended = 1_500,
+            receivedOn = listOf("invoice" to "lnbcrt1unreadable"))).title)
         // A Lightning address keeps its counterparty title.
-        assertEquals("bob@getalby.com", home(movement("bark.lightning_send:send", intended = -5_000, sentTo = listOf("lightning-address" to "bob@getalby.com"))).title)
+        assertEquals("bob@getalby.com", home(movement("bark.lightning_send:send", intended = -5_000,
+            sentTo = listOf("lightning-address" to "bob@getalby.com"))).title)
     }
 
     @Test fun paymentHashIsDecodedFromTheStoredInvoice() {
@@ -124,7 +132,8 @@ class HistoryMappingTest {
         assertEquals("Ark", HomeRow.of(bare, null).title)
         // An RN-era repeat payment keeps its Lightning-address reading and Pay again.
         val repeat = row(movement("bark.arkoor:send", intended = -1_000, sentTo = listOf("ark" to "tark1maya"),
-            metadata = """{"noah":{"repeat_payment":{"version":1,"destination":"maya@noahwallet.io","comment":"","amount_mode":"sats","amount_value":"1000"}}}"""))
+            metadata = """{"noah":{"repeat_payment":{"version":1,"destination":"maya@noahwallet.io","comment":"","amount_mode":"sats",""" +
+                """"amount_value":"1000"}}}"""))
         assertEquals("Lnurl", repeat.type)
         assertEquals("maya", HomeRow.of(repeat, "noahwallet.io").title)
         // On-chain wallet rows carry no movement facts.

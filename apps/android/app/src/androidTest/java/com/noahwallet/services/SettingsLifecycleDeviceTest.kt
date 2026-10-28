@@ -110,7 +110,8 @@ class SettingsLifecycleDeviceTest {
         assertEquals(SecretResult.NotFound, SeedStorage(context, "regtest").read())
         assertEquals(SecretResult.NotFound, KeychainPassword.mnemonic(context, "regtest").read())
         assertEquals(SecretResult.NotFound, KeychainPassword.serverAuthToken(context, "regtest").read())
-        for (key in listOf("wallet-storage", "server-storage", "backup-storage", "profile-storage", "privacy-storage", "transaction-storage")) assertNull(SettingsStorage(context).string(key))
+        for (key in listOf("wallet-storage", "server-storage", "backup-storage", "profile-storage", "privacy-storage", "transaction-storage"))
+            assertNull(SettingsStorage(context).string(key))
         assertTrue(context.getSharedPreferences("com.noahwallet.regtest", Context.MODE_PRIVATE).all.isEmpty())
         assertEquals(LaunchState.onboarding, LaunchState.current(context))
     }

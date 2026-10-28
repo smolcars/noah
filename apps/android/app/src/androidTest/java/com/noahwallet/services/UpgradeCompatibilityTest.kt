@@ -160,7 +160,8 @@ class UpgradeCompatibilityTest {
             assertTrue("Expo ID changed", expectedHash == hash)
         }
         // Exercise the first real native foreground launch, including recurring automation gates.
-        InstrumentationRegistry.getInstrumentation().startActivitySync(android.content.Intent(context, com.noahwallet.MainActivity::class.java).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
+        InstrumentationRegistry.getInstrumentation().startActivitySync(android.content.Intent(context,
+            com.noahwallet.MainActivity::class.java).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
         if (funded) {
             kotlinx.coroutines.withTimeout(20000) {
                 while (RecurringStore(settings).load().binding == null) kotlinx.coroutines.delay(100)
@@ -176,7 +177,8 @@ class UpgradeCompatibilityTest {
                 assertTrue("Native launch changed saved preferences", envelopesBefore[key] == settings.string(key))
             }
             assertEquals(true, PersistedServerState.decode(settings.string(PersistedServerState.key)).isEmailPromptDismissed)
-            assertEquals("Mailbox preference changed", mailboxBefore, PersistedServerState.decode(settings.string(PersistedServerState.key)).isMailboxAuthorizationEnabled)
+            assertEquals("Mailbox preference changed", mailboxBefore,
+                PersistedServerState.decode(settings.string(PersistedServerState.key)).isMailboxAuthorizationEnabled)
         }
         args.getString("expoTokenSha256")?.let { expected ->
             assertTrue("Real Expo token expectation missing", expected.matches(Regex("[0-9a-f]{64}")))

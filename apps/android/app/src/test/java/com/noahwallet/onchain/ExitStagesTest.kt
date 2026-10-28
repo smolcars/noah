@@ -23,28 +23,38 @@ class ExitStagesTest {
         val publish = ExitStages.of(exit("Processing", processing(100, *path("verify-inputs", "awaiting-input-confirmation",
             "awaiting-input-confirmation", "awaiting-input-confirmation"))), 100)
         assertEquals(ExitStage.Phase.publish, publish.phase); assertEquals(0, publish.current); assertEquals(4, publish.total)
-        val sending = ExitStages.of(exit("Processing", processing(100, *path("awaiting-cpfp-broadcast", "verify-inputs", "verify-inputs", "verify-inputs"))), 100)
+        val sending = ExitStages.of(exit("Processing",
+            processing(100, *path("awaiting-cpfp-broadcast", "verify-inputs", "verify-inputs", "verify-inputs"))), 100)
         assertEquals(ExitStage.Phase.mempool, sending.phase); assertNull(sending.attention)
         val bump = ExitStages.of(exit("Processing", processing(100, tx("root", "awaiting-confirmation", "c1", origin = "wallet"),
             tx("l2", "verify-inputs"), tx("l1", "verify-inputs"), tx("leaf", "verify-inputs")),
-            packages = listOf(ExitPackage("root", weight = 1_012, childTxid = "c1", childWeight = 608, childOrigin = "wallet")), fees = mapOf("c1" to 1_215)), 100)
+            packages = listOf(ExitPackage("root", weight = 1_012, childTxid = "c1", childWeight = 608, childOrigin = "wallet")),
+            fees = mapOf("c1" to 1_215)), 100)
         assertEquals(ExitStage.Phase.bump, bump.phase); assertNull(bump.attention)
         assertEquals(1_215L, bump.fee); assertEquals(3L, bump.rate); assertEquals(1_215L, bump.feesPaid)
         val confirmed = ExitStages.of(exit("Processing", processing(101, tx("root", "confirmed", "c1", 101, "wallet"),
             tx("l2", "awaiting-input-confirmation"), tx("l1", "verify-inputs"), tx("leaf", "verify-inputs"))), 101)
-        assertEquals(ExitStage.Phase.confirm, confirmed.phase); assertEquals(1, confirmed.inBlocks); assertEquals(101L, confirmed.lastBlock); assertEquals(1, confirmed.current)
-        val onchain = ExitStages.of(exit("Processing", processing(104, *four.mapIndexed { i, id -> tx(id, "confirmed", "c$i", 101L + i, "wallet") }.toTypedArray())), 104)
+        assertEquals(ExitStage.Phase.confirm, confirmed.phase)
+        assertEquals(1, confirmed.inBlocks)
+        assertEquals(101L, confirmed.lastBlock)
+        assertEquals(1, confirmed.current)
+        val onchain = ExitStages.of(exit("Processing",
+            processing(104, *four.mapIndexed { i, id -> tx(id, "confirmed", "c$i", 101L + i, "wallet") }.toTypedArray())), 104)
         assertEquals(ExitStage.Phase.onchain, onchain.phase); assertEquals(104L, onchain.lastBlock); assertEquals(4, onchain.inBlocks)
-        val wait = ExitStages.of(exit("AwaitingDelta", ExitDetails(kind = "awaiting-delta", tip_height = 150, confirmed_block = ExitDetails.Block(104), claimable_height = 248),
+        val wait = ExitStages.of(exit("AwaitingDelta",
+            ExitDetails(kind = "awaiting-delta", tip_height = 150, confirmed_block = ExitDetails.Block(104), claimable_height = 248),
             history = listOf(processing(104, *path("confirmed", "confirmed", "confirmed", "confirmed")))), 150)
         assertEquals(ExitStage.Phase.wait, wait.phase); assertEquals(4, wait.total); assertEquals(248L, wait.claimableHeight); assertEquals(98L, wait.left(150))
-        assertEquals(ExitStage.Phase.claimable, ExitStages.of(exit("Claimable", ExitDetails(kind = "claimable", tip_height = 248, claimable_since = ExitDetails.Block(248))), 248).phase)
-        val claiming = ExitStages.of(exit("ClaimInProgress", ExitDetails(kind = "claim-in-progress", tip_height = 248, claimable_since = ExitDetails.Block(248), claim_txid = "claim")), 248)
+        assertEquals(ExitStage.Phase.claimable,
+            ExitStages.of(exit("Claimable", ExitDetails(kind = "claimable", tip_height = 248, claimable_since = ExitDetails.Block(248))), 248).phase)
+        val claiming = ExitStages.of(exit("ClaimInProgress",
+            ExitDetails(kind = "claim-in-progress", tip_height = 248, claimable_since = ExitDetails.Block(248), claim_txid = "claim")), 248)
         assertEquals(ExitStage.Phase.claiming, claiming.phase); assertEquals("claim", claiming.claimTxid)
         val claimed = ExitStages.of(exit("Claimed", ExitDetails(kind = "claimed", tip_height = 249, block = ExitDetails.Block(249), txid = "claim")), 260)
         assertEquals(ExitStage.Phase.claimed, claimed.phase); assertEquals(249L, claimed.claimedBlock); assertFalse(claimed.stale); assertFalse(claimed.live)
         val canceled = ExitStages.of(exit("Canceled", ExitDetails(kind = "canceled", tip_height = 102),
-            history = listOf(processing(101, tx("root", "confirmed", block = 101), tx("l2", "awaiting-cpfp-broadcast"), tx("l1", "verify-inputs"), tx("leaf", "verify-inputs")))), 102)
+            history = listOf(processing(101, tx("root", "confirmed", block = 101), tx("l2", "awaiting-cpfp-broadcast"), tx("l1", "verify-inputs"),
+                tx("leaf", "verify-inputs")))), 102)
         assertEquals(ExitStage.Phase.canceled, canceled.phase); assertEquals(1, canceled.inBlocks); assertEquals(4, canceled.total)
         assertEquals(ExitStage.Phase.spent, ExitStages.of(exit("VtxoAlreadySpent", ExitDetails(tip_height = 100)), 100).phase)
         assertEquals(ExitStage.Phase.swept, ExitStages.of(exit("VtxoSwept", ExitDetails(tip_height = 100)), 100).phase)
@@ -77,14 +87,18 @@ class ExitStagesTest {
         assertEquals(4, lift.n); assertTrue(lift.lifting); assertEquals(List(4) { m.unsent }, lift.marks)
         assertEquals("tree nodes have other people's branches; the leaf doesn't", listOf(true, true, true, false), lift.nodes)
         assertFalse("nothing is sent: no phone badge yet", lift.wallet)
-        val parked = exit("Processing", processing(100, tx("root", "confirmed", block = 99), tx("l2", "awaiting-cpfp-broadcast"), tx("l1", "verify-inputs"), tx("leaf", "verify-inputs")),
+        val parked = exit("Processing", processing(100, tx("root", "confirmed", block = 99), tx("l2", "awaiting-cpfp-broadcast"), tx("l1", "verify-inputs"),
+            tx("leaf", "verify-inputs")),
             packages = packages, next = 1_200)
         scene(parked).let { assertEquals("ready, not in the mempool: no glow, no Next block", listOf(m.mined, m.ready, m.unsent, m.unsent), it.marks)
             assertEquals(listOf(99L, null, null, null), it.heights); assertEquals(-1, it.waiting); assertTrue("fees leave the wallet now", it.wallet) }
         scene(parked, needsFunds = true).let { assertEquals("it waits on the branch, ringed red", m.needsFee, it.marks[1]); assertEquals(-1, it.waiting)
             assertEquals("the fee needs 1,200 and 300 is left", 900L, it.need) }
         val paying = exit("Processing", processing(100, tx("root", "awaiting-confirmation", "c", origin = "mempool"), tx("leaf", "verify-inputs")))
-        scene(paying).let { assertEquals(listOf(m.waiting, m.unsent), it.marks); assertEquals(listOf(true, false), it.theirs); assertEquals(listOf(true, false), it.paid)
+        scene(paying).let {
+            assertEquals(listOf(m.waiting, m.unsent), it.marks)
+            assertEquals(listOf(true, false), it.theirs)
+            assertEquals(listOf(true, false), it.paid)
             assertNull("another wallet's fee costs nothing", it.fee) }
         val wait = exit("AwaitingDelta", ExitDetails(tip_height = 150, confirmed_block = ExitDetails.Block(104), claimable_height = 248),
             history = listOf(processing(104, *four.mapIndexed { i, id -> tx(id, "confirmed", block = 101L + i) }.toTypedArray())))
@@ -95,8 +109,14 @@ class ExitStagesTest {
         val claimed = wait.copy(state = "Claimed", details = ExitDetails(tip_height = 249, block = ExitDetails.Block(249), txid = "claim"))
         scene(claimed, 249).let { assertTrue(it.claiming && it.claimed); assertEquals(249L, it.claimedBlock); assertNull("this phone", it.destination) }
         assertEquals("bc1qx", ExitScene.of(claimed, ExitStages.of(claimed, 249), 249, destination = "bc1qx").destination)
-        val canceled = exit("Canceled", ExitDetails(tip_height = 101), history = listOf(processing(101, tx("root", "confirmed", block = 101), tx("leaf", "awaiting-cpfp-broadcast"))))
-        scene(canceled, 101).let { assertEquals(listOf(m.mined, m.unsent), it.marks); assertEquals(listOf(101L, null), it.heights); assertTrue(it.canceled); assertFalse(it.wallet) }
+        val canceled = exit("Canceled", ExitDetails(tip_height = 101),
+            history = listOf(processing(101, tx("root", "confirmed", block = 101), tx("leaf", "awaiting-cpfp-broadcast"))))
+        scene(canceled, 101).let {
+            assertEquals(listOf(m.mined, m.unsent), it.marks)
+            assertEquals(listOf(101L, null), it.heights)
+            assertTrue(it.canceled)
+            assertFalse(it.wallet)
+        }
     }
 
     /**
@@ -126,14 +146,16 @@ class ExitStagesTest {
     }
     /** The explorer link opens the claim once there is one, else the furthest step that's been sent; nothing sent, none. */
     @Test fun theExplorerOpensTheClaimElseTheFurthestSentStep() {
-        val sent = exit("Processing", processing(101, tx("root", "confirmed", "c1", 101), tx("l1", "awaiting-confirmation", "c2"), tx("leaf", "awaiting-cpfp-broadcast")))
+        val sent = exit("Processing", processing(101, tx("root", "confirmed", "c1", 101), tx("l1", "awaiting-confirmation", "c2"),
+            tx("leaf", "awaiting-cpfp-broadcast")))
         assertEquals("l1", sent.explorerTxid(null))
         assertNull(exit("Processing", processing(100, tx("root", "awaiting-cpfp-broadcast"))).explorerTxid(null))
         assertEquals("claim", sent.explorerTxid("claim"))
     }
     @Test fun anotherWalletsChildIsSharedAndCostsNothing() {
         // Its child isn't one of this wallet's transactions, so the overview has no fee for it.
-        val stage = ExitStages.of(exit("Processing", processing(100, tx("root", "awaiting-confirmation", "theirs", origin = "mempool"), tx("leaf", "verify-inputs")),
+        val stage = ExitStages.of(exit("Processing",
+            processing(100, tx("root", "awaiting-confirmation", "theirs", origin = "mempool"), tx("leaf", "verify-inputs")),
             packages = listOf(ExitPackage("root", childTxid = "theirs", childOrigin = "mempool"))), 100)
         assertEquals(ExitStage.Attention.shared, stage.attention); assertNull(stage.fee); assertEquals(0L, stage.feesPaid)
     }
@@ -229,7 +251,8 @@ class ExitStagesTest {
             ExitDetails(tip_height = 100, confirmed_block = ExitDetails.Block(100), claimable_height = 244)), 180, stalled = true).stale)
     }
 
-    private val parked = exit("Processing", processing(100, tx("root", "confirmed", block = 99), tx("l2", "awaiting-cpfp-broadcast"), tx("leaf", "verify-inputs")),
+    private val parked = exit("Processing",
+        processing(100, tx("root", "confirmed", block = 99), tx("l2", "awaiting-cpfp-broadcast"), tx("leaf", "verify-inputs")),
         history = listOf(processing(99, tx("root", "awaiting-confirmation", "c1"), tx("l2", "verify-inputs"), tx("leaf", "verify-inputs")),
             processing(100, tx("root", "confirmed", block = 99), tx("l2", "awaiting-cpfp-broadcast"), tx("leaf", "verify-inputs"))), next = 1_215)
 
@@ -258,7 +281,8 @@ class ExitStagesTest {
         checking.checked(listOf(parked), completed = true)
         assertFalse(checking.checkFailed); assertEquals(setOf("v1"), checking.needsFunds(listOf(parked), 0, null))
         // Once it gets its child it's forgotten: parked again, it needs bark to try again.
-        val sent = parked.copy(details = processing(100, tx("root", "confirmed", block = 99), tx("l2", "awaiting-confirmation", "c2"), tx("leaf", "verify-inputs")))
+        val sent = parked.copy(details = processing(100, tx("root", "confirmed", block = 99), tx("l2", "awaiting-confirmation", "c2"),
+            tx("leaf", "verify-inputs")))
         assertTrue(checking.needsFunds(listOf(sent), 0, null).isEmpty())
         assertTrue(checking.needsFunds(listOf(parked), 0, null).isEmpty())
         // The same, unseen by Noah: evicted and parked again between two reads. bark's history starts a new episode, so
@@ -270,7 +294,8 @@ class ExitStagesTest {
             historyDetails = parked.historyDetails + parked.details + sent.details)
         assertTrue("a new episode needs its own proof", episodes.needsFunds(listOf(again), 0, 1).isEmpty())
         now = 75_000; assertEquals(setOf("v1"), episodes.needsFunds(listOf(again), 0, 1))
-        assertEquals("only the parked transaction shows it", null, ExitStages.of(exit("Processing", processing(100, *path("verify-inputs"))), 100, needsFunds = true).attention)
+        assertEquals("only the parked transaction shows it", null,
+            ExitStages.of(exit("Processing", processing(100, *path("verify-inputs"))), 100, needsFunds = true).attention)
     }
 
     @Test fun aCheckThatReportsFundsShortIsDirectEvidenceWithWhatBarkNeeds() {
@@ -289,7 +314,8 @@ class ExitStagesTest {
         assertNull(funding.needed("v1")); assertTrue(funding.needsFunds(listOf(unpriced), 0, 1).isEmpty())
     }
 
-    private fun vtxo(id: String, amount: Long, state: String = "Spendable") = VtxoModel(id, amount, 1_000, state, "round", 4, 0, true, "", 144, "a:0", "p:0", false, 100)
+    private fun vtxo(id: String, amount: Long, state: String = "Spendable") =
+        VtxoModel(id, amount, 1_000, state, "round", 4, 0, true, "", 144, "a:0", "p:0", false, 100)
 
     @Test fun vtxosBarkRefusedShowWhyAndAreLeftOutOfEverySelection() {
         val open = vtxo("open", 31_000); val spent = vtxo("spent", 20_000); val dust = vtxo("dust", 290); val locked = vtxo("locked", 9_000, "Locked")
@@ -304,7 +330,10 @@ class ExitStagesTest {
     }
 
     @Test fun vtxosTheAllEstimateLeavesOutNeedRenewingAndCountNowhere() {
-        val open = vtxo("open", 31_000); val nonStandard = vtxo("non-standard", 20_000); val dust = vtxo("dust", 290); val locked = vtxo("locked", 9_000, "Locked")
+        val open = vtxo("open", 31_000)
+        val nonStandard = vtxo("non-standard", 20_000)
+        val dust = vtxo("dust", 290)
+        val locked = vtxo("locked", 9_000, "Locked")
         val excluded = setOf("non-standard", "dust", "locked")
         assertEquals(ExitCosts.Barred.renew, ExitCosts.barred(nonStandard, excluded = excluded))
         assertEquals("today's dust label stays", ExitCosts.Barred.dust, ExitCosts.barred(dust, excluded = excluded))
@@ -318,7 +347,11 @@ class ExitStagesTest {
     }
 
     @Test fun uneconomicVtxosAreLabelledAndLeftOutOfAll() {
-        val big = vtxo("big", 31_000); val small = vtxo("small", 5_000); val dust = vtxo("dust", 290); val locked = vtxo("locked", 710, "Locked"); val unknown = vtxo("unknown", 4_000)
+        val big = vtxo("big", 31_000)
+        val small = vtxo("small", 5_000)
+        val dust = vtxo("dust", 290)
+        val locked = vtxo("locked", 710, "Locked")
+        val unknown = vtxo("unknown", 4_000)
         val costs = mapOf("big" to ExitCosts.Cost(5_533, 262, 4), "small" to ExitCosts.Cost(4_800, 262, 4), "unknown" to null)
         assertFalse(ExitCosts.uneconomic(big, costs["big"]))
         assertTrue(ExitCosts.uneconomic(small, costs["small"]))
@@ -332,12 +365,14 @@ class ExitStagesTest {
 
     @Test fun settingsSaysInProgressOnlyWhileAnExitRuns() {
         assertFalse(ExitList.live(null)); assertFalse(ExitList.live(emptyList()))
-        for (state in listOf("Start", "Processing", "AwaitingDelta", "Claimable", "ClaimInProgress")) assertTrue(state, ExitList.live(listOf(exit(state, ExitDetails()))))
+        for (state in listOf("Start", "Processing", "AwaitingDelta", "Claimable", "ClaimInProgress"))
+            assertTrue(state, ExitList.live(listOf(exit(state, ExitDetails()))))
         for (state in listOf("Claimed", "Canceled", "VtxoAlreadySpent", "VtxoSwept")) assertFalse(state, ExitList.live(listOf(exit(state, ExitDetails()))))
     }
 
     @Test fun theWarningsExitsCardIsTitledByWhatItHoldsAndTintedWhileAnyIsPending() {
-        fun entry(vararg states: String) = ExitEntry.of(states.mapIndexed { i, state -> ExitStages.of(exit(state, ExitDetails(tip_height = 100), id = "v$i"), 100) })
+        fun entry(vararg states: String) =
+            ExitEntry.of(states.mapIndexed { i, state -> ExitStages.of(exit(state, ExitDetails(tip_height = 100), id = "v$i"), 100) })
         assertNull(entry())
         for (state in listOf("Start", "Processing", "AwaitingDelta", "Claimable", "ClaimInProgress")) assertEquals(state, ExitEntry.pending, entry(state))
         for (state in listOf("Claimed", "Canceled", "VtxoAlreadySpent", "VtxoSwept")) assertEquals(state, ExitEntry.past, entry(state))
@@ -389,16 +424,19 @@ class ExitStagesTest {
         assertEquals("bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq", ExitClaim.address("bc1qar0srrr7xfkvy5l643lydnw9re59gtzzwf5mdq", "mainnet"))
         assertNull("a signet wallet isn't regtest", ExitClaim.address("tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx", "regtest"))
         assertEquals("tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx", ExitClaim.address("tb1qw508d6qejxtdg4y5r3zarvary0c5xw7kxpjzsx", "signet"))
-        for (bad in listOf("", "bcrt1q", "ark1qq", "lnbcrt1", "bitcoin:?lightning=lnbc1", "user@example.com")) assertNull(bad, ExitClaim.address(bad, "regtest"))
+        for (bad in listOf("", "bcrt1q", "ark1qq", "lnbcrt1", "bitcoin:?lightning=lnbc1", "user@example.com"))
+            assertNull(bad, ExitClaim.address(bad, "regtest"))
     }
 
     @Test fun aSubmittedClaimShowsAsClaimingUntilBarkCatchesUp() {
         fun attempt(txid: String?, kind: com.noahwallet.services.wallet.ChainStatus.Kind?, action: OnchainAction = OnchainAction.claim) =
             OnchainOperationJournal.Attempt(OnchainQuote(action, "wallet", listOf("a", "b"), "address"),
                 OnchainReceipt("Claim submitted.", txid, chainStatus = kind?.let { com.noahwallet.services.wallet.ChainStatus(it) }))
-        assertEquals(mapOf("a" to "claim", "b" to "claim"), ExitClaims.submitted(listOf(attempt("claim", com.noahwallet.services.wallet.ChainStatus.Kind.inMempool))))
+        assertEquals(mapOf("a" to "claim", "b" to "claim"),
+            ExitClaims.submitted(listOf(attempt("claim", com.noahwallet.services.wallet.ChainStatus.Kind.inMempool))))
         assertEquals("not checked yet", mapOf("a" to "claim", "b" to "claim"), ExitClaims.submitted(listOf(attempt("claim", null))))
-        assertTrue("the chain source lost it: claimable again", ExitClaims.submitted(listOf(attempt("claim", com.noahwallet.services.wallet.ChainStatus.Kind.notFound))).isEmpty())
+        assertTrue("the chain source lost it: claimable again",
+            ExitClaims.submitted(listOf(attempt("claim", com.noahwallet.services.wallet.ChainStatus.Kind.notFound))).isEmpty())
         assertTrue(ExitClaims.submitted(listOf(attempt(null, null), attempt("x", null, OnchainAction.startExit))).isEmpty())
         val claimable = ExitStage(ExitStage.Phase.claimable)
         val waiting = exit("Claimable", ExitDetails(kind = "claimable"))
@@ -433,9 +471,18 @@ class ExitStagesTest {
 
     @Test fun transactionsGiveTheirTxidWeightAndShape() {
         // Genesis coinbase (legacy) and a regtest key-spend (segwit), checked against bitcoind's decoderawtransaction.
-        val genesis = ExitTransactions.parse("01000000010000000000000000000000000000000000000000000000000000000000000000ffffffff4d04ffff001d0104455468652054696d65732030332f4a616e2f32303039204368616e63656c6c6f72206f6e206272696e6b206f66207365636f6e64206261696c6f757420666f722062616e6b73ffffffff0100f2052a01000000434104678afdb0fe5548271967f1a67130b7105cd6a828e03909a67962e0ea1f61deb649f6bc3f4cef38c4f35504e51ec112de5c384df7ba0b8d578a4c702b6bf11d5fac00000000")!!
-        assertEquals("4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b", genesis.txid); assertEquals(816L, genesis.weight); assertEquals(1, genesis.outputs)
-        val segwit = ExitTransactions.parse("020000000001013e16e76ee2b6a9dc798b81be3a4903286e4e454dc019c48062d5396b4e21fdca0000000000fdffffff01d09b0000000000002251208751b9234a38be714a8011a02bad9f346f7b80e4a76b13fcacda7b0e2890c5e601408982addc732de240dd1dfb0bd4a66e0ab807073c73d92b26256827a2643735827b1eb0cb92812c4969544c107489479dc54ec9bc27409a15bef8486972bf03297f030000")!!
+        val genesis =
+            ExitTransactions.parse("01000000010000000000000000000000000000000000000000000000000000000000000000ffffffff4d04ffff001d0104455468652054696d657" +
+                "32030332f4a616e2f32303039204368616e63656c6c6f72206f6e206272696e6b206f66207365636f6e64206261696c6f757420666f722062616e6b73ffffffff0100f20" +
+                "52a01000000434104678afdb0fe5548271967f1a67130b7105cd6a828e03909a67962e0ea1f61deb649f6bc3f4cef38c4f35504e51ec112de5c384df7ba0b8d578a4c702" +
+                "b6bf11d5fac00000000")!!
+        assertEquals("4a5e1e4baab89f3a32518a88c31bc87f618f76673e2cc77ab2127b7afdeda33b", genesis.txid)
+        assertEquals(816L, genesis.weight)
+        assertEquals(1, genesis.outputs)
+        val segwit =
+            ExitTransactions.parse("020000000001013e16e76ee2b6a9dc798b81be3a4903286e4e454dc019c48062d5396b4e21fdca0000000000fdffffff01d09b000000000000225" +
+                "1208751b9234a38be714a8011a02bad9f346f7b80e4a76b13fcacda7b0e2890c5e601408982addc732de240dd1dfb0bd4a66e0ab807073c73d92b26256827a2643735827" +
+                "b1eb0cb92812c4969544c107489479dc54ec9bc27409a15bef8486972bf03297f030000")!!
         assertEquals("75ebf7553b394d32e07c7e4297c86f2e861101cf5cae510a1c4f28f490cf20c6", segwit.txid); assertEquals(444L, segwit.weight)
         assertEquals(listOf("cafd214e6b39d56280c419c04d454e6e2803493abe818b79dca9b6e26ee7163e" to 0L), segwit.inputs)
         for (bad in listOf("", "zz", "0100000001")) assertNull(ExitTransactions.parse(bad))

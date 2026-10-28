@@ -31,7 +31,8 @@ class RenewReviewTest {
         // As the session does, under the wallet's locks: every VTXO must still be due, or nothing is submitted.
         executeRenewal = { quote ->
             if (!quote.ids.all { it in due }) fail(OnchainFailure.changed)
-            journal[quote.id] = OnchainOperationJournal.Attempt(quote, OnchainReceipt("Refresh submitted to delegated round 7.")); "Refresh submitted to delegated round 7."
+            journal[quote.id] = OnchainOperationJournal.Attempt(quote, OnchainReceipt("Refresh submitted to delegated round 7."))
+            "Refresh submitted to delegated round 7."
         },
     ))
     private var started: List<String>? = null

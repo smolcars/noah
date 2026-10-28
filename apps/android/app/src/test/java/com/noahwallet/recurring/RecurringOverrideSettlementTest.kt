@@ -27,7 +27,9 @@ class RecurringOverrideSettlementTest {
             w.controller.reloadForWalletChange()
             w.executor.execute(); w.executor.checkStatus("rent")
             val e = w.journal.load().getValue("rent")
-            assertTrue("terminal=${e.terminal?.outcome}; consumed=${e.consumed}; historyApplied=${e.historyApplied}; released=${e.released}; paid=${w.schedule!!.occurrencesPaid}; successes=${w.schedule!!.runs.count { it.status == "success" }}; sendReceipt=${w.sendJournal.attempt?.receipt}", e.terminal?.outcome == RecurringJournal.Outcome.succeeded && w.schedule!!.occurrencesPaid == 1)
+            assertTrue("terminal=${e.terminal?.outcome}; consumed=${e.consumed}; historyApplied=${e.historyApplied}; released=${e.released}; " +
+                "paid=${w.schedule!!.occurrencesPaid}; successes=${w.schedule!!.runs.count { it.status == "success" }}; " +
+                "sendReceipt=${w.sendJournal.attempt?.receipt}", e.terminal?.outcome == RecurringJournal.Outcome.succeeded && w.schedule!!.occurrencesPaid == 1)
             assertEquals(1, w.wallet.calls)
             assertEquals("Proven paid occurrence was skipped by override", 1, w.schedule!!.occurrencesPaid)
             assertEquals(1, w.schedule!!.runs.count { it.status == "success" })
@@ -115,7 +117,8 @@ class RecurringOverrideSettlementTest {
                 val row = store.load().schedules.getValue("rent")
                 assertEquals(boundary, 1, row.occurrencesPaid)
                 assertEquals(boundary, 1, row.runs.count { it.status == "success" })
-                assertTrue(journal.load().getValue("rent").let { it.consumed && it.historyApplied && it.released && it.terminal?.outcome == RecurringJournal.Outcome.succeeded })
+                assertTrue(journal.load().getValue("rent").let { it.consumed && it.historyApplied && it.released &&
+                    it.terminal?.outcome == RecurringJournal.Outcome.succeeded })
                 assertEquals(boundary, 1, w.wallet.calls)
                 val again = recover(w).first.load().schedules.getValue("rent")
                 assertEquals(1, again.occurrencesPaid)

@@ -122,7 +122,10 @@ class BackupIntegrationTest {
             stage = "compare"
             val expected = BackupArchive.parseManifest(File(context.cacheDir, "backup-node-fixture/manifest.json").readBytes())
             assertEquals(expected.walletFingerprint, summary.fingerprint); assertEquals(0, summary.movementCount)
-        } catch (failure: Exception) { fail("Node-made backup restore failed at $stage: ${failure.javaClass.simpleName}; ${(failure as? WalletRestorer.Failure)?.reason ?: (failure as? WalletSession.OpenError)?.reason ?: (failure as? BackupCrypto.Failure)?.reason}") }
+        } catch (failure: Exception) {
+            val reason = (failure as? WalletRestorer.Failure)?.reason ?: (failure as? WalletSession.OpenError)?.reason ?: (failure as? BackupCrypto.Failure)?.reason
+            fail("Node-made backup restore failed at $stage: ${failure.javaClass.simpleName}; $reason")
+        }
         finally { runCatching { session.close() }; root.deleteRecursively(); File(context.cacheDir, "backup-node-fixture").deleteRecursively() }
     }
 

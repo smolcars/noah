@@ -161,7 +161,9 @@ class CrossPlatformBackupTest {
         private val listener = java.net.ServerSocket(0, 8, java.net.InetAddress.getByName("127.0.0.1"))
         val url = "http://127.0.0.1:${listener.localPort}"
         private val bytes = file.readBytes()
-        private val info = """{"backup_id":"ios","created_at":"2026-10-20T00:00:00Z","encrypted_sha256":"${BackupArchive.sha256(bytes)}","encrypted_size":${bytes.size},"format_version":$format}"""
+        private val info =
+            """{"backup_id":"ios","created_at":"2026-10-20T00:00:00Z","encrypted_sha256":"${BackupArchive.sha256(bytes)}",""" +
+                """"encrypted_size":${bytes.size},"format_version":$format}"""
         private val thread = Thread {
             while (!listener.isClosed) {
                 val socket = try { listener.accept() } catch (_: java.net.SocketException) { break }
@@ -176,7 +178,8 @@ class CrossPlatformBackupTest {
                         "/file" -> bytes
                         else -> error("Unexpected fixture route")
                     }
-                    it.getOutputStream().write(("HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: ${response.size}\r\nConnection: close\r\n\r\n").toByteArray())
+                    it.getOutputStream().write(("HTTP/1.1 200 OK\r\nContent-Type: application/json\r\nContent-Length: ${response.size}\r\nConnection: " +
+                        "close\r\n\r\n").toByteArray())
                     it.getOutputStream().write(response)
                 }
             }

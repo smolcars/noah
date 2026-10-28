@@ -123,7 +123,8 @@ class Ffi060LiveTest {
             poll(120) { session.sync(); session.movements().any { it.subsystemName == "bark.arkoor" && it.subsystemKind == "receive" } }
             // 60 s is also captaind's default, so a distinct value shows the SDK forwards retryForSecs (host greps its span).
             val probe = args.getString("probe")
-            val probed = probe != null && peer.wallet.payLightningInvoice(probe, null, LightningSendOptions(wait = true, retryForSecs = 45u)) is LightningSendStatus.Paid
+            val probed = probe != null && peer.wallet.payLightningInvoice(probe, null,
+                LightningSendOptions(wait = true, retryForSecs = 45u)) is LightningSendStatus.Paid
             evidence("ark", buildJsonObject {
                 put("movementID", id.toLong()); put("journalMovementID", journal?.receipt?.movementID?.toLong())
                 put("peerSendMovementID", peerMovement.toLong()); put("spendable", session.summary()!!.spendableSats.toLong())

@@ -80,12 +80,14 @@ class ExitTreeSweepTest {
         if (drawn.claiming) assertTrue("$label: the claim's label", layout.labels.any { it.x != null })
         // Never below the minimum spacing; long paths fold instead.
         val geo = layout.geo; val lock = if (drawn.locked && !drawn.claiming) 1f else 0f
-        for (j in 1..drawn.n) assertTrue("$label: gap $j", layout.ys[j - 1] - layout.ys[j] >= geo.minimumGap(j, geo.node, geo.coinReserve(lock), docked = drawn.docked, ringed = drawn.ringed) - .01f)
+        for (j in 1..drawn.n) assertTrue("$label: gap $j",
+            layout.ys[j - 1] - layout.ys[j] >= geo.minimumGap(j, geo.node, geo.coinReserve(lock), docked = drawn.docked, ringed = drawn.ringed) - .01f)
         assertEquals("$label: the real count", scene.n, drawn.count)
         // Every mined block is in a label: its own, or a range with the others that have none.
         if (!drawn.explain && !drawn.claiming) for (i in 0 until scene.n) {
             val height = scene.heights[i]?.takeIf { scene.mined(i) && !(i == scene.n - 1 && scene.locked) } ?: continue
-            assertTrue("$label: block $height has no label (${layout.labels.mapNotNull { it.blocks }})", layout.labels.any { it.blocks?.contains(height) == true })
+            assertTrue("$label: block $height has no label (${layout.labels.mapNotNull { it.blocks }})",
+                layout.labels.any { it.blocks?.contains(height) == true })
         }
         // Every other exit finds a spot here, so none is left out without the overlap check seeing it.
         assertEquals("$label: your other exits", drawn.others.count { it.level in 1 until drawn.n }, layout.siblings.size)
@@ -111,9 +113,11 @@ class ExitTreeSweepTest {
         val other = "bcrt1psagmjg628zl8zj5qzxszhtvlx3hhhq8y5a438l9vmfasu2yschnqwyxvxg"
         return listOf(
             "Start" to path(n, 0, null, ExitStage.Phase.lift), "publish" to path(n, 0, null, ExitStage.Phase.publish),
-            "ready" to path(n, half, m.ready, ExitStage.Phase.mempool), "needs funds" to path(n, half, m.needsFee, ExitStage.Phase.mempool, ExitStage.Attention.needsFunds),
+            "ready" to path(n, half, m.ready, ExitStage.Phase.mempool),
+            "needs funds" to path(n, half, m.needsFee, ExitStage.Phase.mempool, ExitStage.Attention.needsFunds),
             "waiting" to path(n, half), "fees rose" to path(n, half, attention = ExitStage.Attention.feesRose),
-            "stuck" to path(n, half, attention = ExitStage.Attention.stuck), "sent by someone else" to path(n, half, attention = ExitStage.Attention.shared, theirs = true),
+            "stuck" to path(n, half, attention = ExitStage.Attention.stuck),
+            "sent by someone else" to path(n, half, attention = ExitStage.Attention.shared, theirs = true),
             "stale" to path(n, half).copy(stale = true, checkedAt = 921_348), "confirmed" to path(n, half, null, ExitStage.Phase.confirm),
             "on-chain" to ExitScene(n, ExitStage.Phase.onchain, done, List(n) { 921_346L + it }, paid = List(n) { true }),
             "locked" to locked(ExitStage.Phase.wait, null), "claimable" to locked(ExitStage.Phase.claimable, null),
@@ -170,7 +174,11 @@ class ExitTreeSweepTest {
                 for (mined in spots(0..n)) for (current in listOf(ExitGutter.St.waiting, ExitGutter.St.ready, ExitGutter.St.needsFunds, ExitGutter.St.unsent)) {
                     val listed = List(rows) { r ->
                         val done = (mined - r * lag).coerceAtLeast(0)
-                        List(n) { i -> (if (i < k) "s$i" else if (paired && i < (k + n) / 2) "b${r % 2}.$i" else "r$r.$i") to when { i < done -> ExitGutter.St.mined; i == done -> current; else -> ExitGutter.St.unsent } }
+                        List(n) { i -> (if (i < k) "s$i" else if (paired && i < (k + n) / 2) "b${r % 2}.$i" else "r$r.$i") to when { i < done ->
+                            ExitGutter.St.mined
+                            i == done -> current
+                            else -> ExitGutter.St.unsent
+                        } }
                     }
                     val paths = ExitGutter.tree(listed, { path -> path.dropLast(1).map { it.first } })
                     val label = "gutter: $rows exits${if (paired) " paired" else ""}, $n transactions, parting after $k, $mined mined, $lag behind, $current"
@@ -179,7 +187,8 @@ class ExitTreeSweepTest {
                     val columns = drawn.map { it.x }.distinct().sorted()
                     for ((a, b) in columns.zipWithNext()) assertTrue("$label: columns $a and $b", b - a >= ExitGutter.minStep - .01f)
                     columns.lastOrNull()?.let { assertTrue("$label: clear of the coins", it <= 90f - 14) }
-                    for (a in drawn) for (b in drawn) if (a !== b) assertFalse("$label: ${a.id} on ${b.id}", kotlin.math.abs(a.x - b.x) < 10 && kotlin.math.abs(a.y - b.y) < 10)
+                    for (a in drawn) for (b in drawn) if (a !== b)
+                        assertFalse("$label: ${a.id} on ${b.id}", kotlin.math.abs(a.x - b.x) < 10 && kotlin.math.abs(a.y - b.y) < 10)
                     // What they share is drawn once: they leave the round together.
                     if (k >= 1) assertEquals("$label: the first column", 1, drawn.count { it.x == columns.first() })
                     // Each exit's transaction being sent keeps its own place.
@@ -215,7 +224,8 @@ class ExitTreeSweepTest {
         assertEquals("both other exits, with their amounts", listOf(true, true), layout.siblings.map { it.amount != null })
         assertTrue("the round, the latest block, the pill and your coin", layout.labels.size >= 4)
         val explainer = check(ExitScene.sample(4), phone, w, "explainer", 268f)
-        assertEquals("${explainer.labels.map { it.key }} ${explainer.stubs.size} stubs", 3, explainer.labels.size); assertNotNull("${explainer.stubs}", explainer.caption)
+        assertEquals("${explainer.labels.map { it.key }} ${explainer.stubs.size} stubs", 3, explainer.labels.size)
+        assertNotNull("${explainer.stubs}", explainer.caption)
     }
 
     @Test fun theSwedishFeeWrapsInsideItsColumnAtTwiceTheText() {
@@ -237,7 +247,8 @@ class ExitTreeSweepTest {
             val w = words(language); val scene = path(20, 5, current)
             val layout = check(scene, frame, w, "$language, twenty transactions, five mined, $current", levels = 9)
             assertEquals("${frame.name}: ${layout.scene.spans}", 0..1, layout.scene.spans?.first())
-            for (height in scene.heights.filterNotNull()) assertTrue("${frame.name}, $language: block $height", layout.labels.any { it.blocks?.contains(height) == true })
+            for (height in scene.heights.filterNotNull())
+                assertTrue("${frame.name}, $language: block $height", layout.labels.any { it.blocks?.contains(height) == true })
         }
     }
 
@@ -286,7 +297,8 @@ class ExitTreeSweepTest {
         // Four transactions, the first waiting, three others leaving at the root: no branch, drawn whole, runs through
         // another's coin.
         for (frame in listOf(phone, small)) {
-            val layout = check(path(4, 0, others = List(3) { ExitScene.Other(1, 24_500L - 3_000 * it) }), frame, w, "four transactions, three others at the root")
+            val layout = check(path(4, 0, others = List(3) { ExitScene.Other(1, 24_500L - 3_000 * it) }), frame, w,
+                "four transactions, three others at the root")
             for (a in layout.siblings) for (b in layout.siblings) if (a !== b) for (i in 0..40) {
                 val (x, y) = linkAt(a.x, layout.ys[a.level] + a.dy + 6, layout.geo.trunk, layout.ys[a.level] - 4, i / 40f)
                 assertTrue("${frame.name}: $a's branch crosses $b", hypot(x - b.x, y - (layout.ys[b.level] + b.dy)) >= 6 + .7f)

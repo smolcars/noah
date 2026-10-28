@@ -74,7 +74,8 @@ class OnchainOperationsTest {
             for (error in errors) fixture { wallet, ops, journal, _ ->
                 wallet.active = listOf(ExitVtxo("a", 30_000u, ExitState.Claimable(100u, BlockRef(100u, "block"), null), true))
                 wallet.estimateError = error
-                val failure = runCatching { ops.quote(action, listOf("a"), destination = if (action == OnchainAction.claim) "address" else null) }.exceptionOrNull()
+                val failure = runCatching { ops.quote(action, listOf("a"), destination = if (action == OnchainAction.claim)
+                    "address" else null) }.exceptionOrNull()
                 // Untyped failures, an unreachable chain and a fee-rate overflow keep today's fallback; refusals offer none.
                 val allowed = error is BarkError && (error.code == BarkErrorCode.OTHER || error.code == BarkErrorCode.INVALID_FEE_RATE ||
                     error.code in ExitErrors.chain) || error is java.net.SocketTimeoutException || error is java.net.UnknownHostException
@@ -136,7 +137,8 @@ class OnchainOperationsTest {
         assertEquals("bark may have registered others first", listOf(listOf("a")), forgotten)
         // Any other start failure stays uncertain, as today.
         wallet.startError = BarkError("untrusted diagnostic", BarkErrorCode.OTHER)
-        assertEquals(OnchainFailure.uncertain, (runCatching { ops.execute(unknown.copy(id = "second", unknownFeeConsent = "second")) }.exceptionOrNull() as OnchainException).reason)
+        assertEquals(OnchainFailure.uncertain,
+            (runCatching { ops.execute(unknown.copy(id = "second", unknownFeeConsent = "second")) }.exceptionOrNull() as OnchainException).reason)
     } }
     @Test fun aStartBarkRefusedPartWayIsRetriedAfterAReloadWithoutADuplicateExit() = runBlocking { fixture { wallet, _, journal, _ ->
         wallet.items = listOf(Wallet.vtxo("a"), Wallet.vtxo("b")); wallet.unexitable = setOf("b")
@@ -256,13 +258,15 @@ class OnchainOperationsTest {
         for (action in listOf(OnchainAction.startExit, OnchainAction.claim)) fixture { wallet, ops, journal, _ ->
             wallet.active = listOf(ExitVtxo("a", 30_000u, ExitState.Claimable(100u, BlockRef(100u, "block"), null), true))
             wallet.estimateError = java.net.SocketTimeoutException("estimator offline")
-            val failure = runCatching { ops.quote(action, listOf("a"), destination = if (action == OnchainAction.claim) "address" else null) }.exceptionOrNull() as ExitEstimateUnavailable
+            val failure = runCatching { ops.quote(action, listOf("a"), destination = if (action == OnchainAction.claim)
+                "address" else null) }.exceptionOrNull() as ExitEstimateUnavailable
             val unknown = failure.review
             assertNull(unknown.fee); assertNull(unknown.chainFee); assertNull(unknown.feeRate)
             assertTrue(runCatching { ops.execute(unknown) }.isFailure)
             assertTrue(wallet.calls.isEmpty()); assertEquals(1, wallet.estimates)
             val reviewed = unknown.copy(unknownFeeConsent = unknown.id)
-            for (invalid in listOf(reviewed.copy(reviewedAt = checkNotNull(reviewed.reviewedAt) - 30_000), reviewed.copy(walletID = "other"), reviewed.copy(ids = listOf("missing"))))
+            for (invalid in listOf(reviewed.copy(reviewedAt = checkNotNull(reviewed.reviewedAt) - 30_000), reviewed.copy(walletID = "other"),
+                reviewed.copy(ids = listOf("missing"))))
                 assertTrue(runCatching { ops.execute(invalid) }.isFailure)
             if (action == OnchainAction.claim) {
                 wallet.ownershipError = true
@@ -363,7 +367,9 @@ class OnchainOperationsTest {
             excludedBy += excluded
             prepareError?.let { throw it }
             // As bark's selection: excluded coins are never spent, so their value isn't there to board.
-            val spendable = balance - fundingUtxos.filterIsInstance<OnchainUtxo.Local>().filter { "${it.outpoint.txid}:${it.outpoint.vout}" in excluded }.sumOf { it.amountSats.toLong() }
+            val spendable = balance - fundingUtxos.filterIsInstance<OnchainUtxo.Local>().filter {
+                "${it.outpoint.txid}:${it.outpoint.vout}" in excluded
+            }.sumOf { it.amountSats.toLong() }
             val chainFee = exactFee + if (all) 0 else 43 * rate.toLong() + extraFixedFee
             val gross = if (all) spendable - chainFee else amount
             if (gross < fee || gross + chainFee > spendable) throw BarkError("insufficient balance", BarkErrorCode.INSUFFICIENT_FUNDS)
@@ -449,12 +455,20 @@ class OnchainOperationsTest {
             calls.add("progress"); progressRates += feeRate; progressError?.let { throw it }; return progressStatuses
         }
         override suspend fun cancel(id: String): Boolean { duringMutation(); calls.add("cancel"); return cancelResult }
-        override suspend fun drain(ids: List<String>, destination: String): ExitClaimTransaction { drainDestinations.add(destination); calls.add("drain"); return ExitClaimTransaction("psbt", claimFee.toULong()) }
+        override suspend fun drain(ids: List<String>, destination: String): ExitClaimTransaction {
+            drainDestinations.add(destination)
+            calls.add("drain")
+            return ExitClaimTransaction("psbt", claimFee.toULong())
+        }
         override suspend fun broadcastClaim(psbt: String): String { calls.add("broadcast"); broadcastError?.let { throw it }; return "claim-tx" }
         /** A signed one-output transaction (txid 75ebf755…), standing in for the drain's claim. */
-        override suspend fun claimTransaction(psbt: String) = "020000000001013e16e76ee2b6a9dc798b81be3a4903286e4e454dc019c48062d5396b4e21fdca0000000000fdffffff01d09b0000000000002251208751b9234a38be714a8011a02bad9f346f7b80e4a76b13fcacda7b0e2890c5e601408982addc732de240dd1dfb0bd4a66e0ab807073c73d92b26256827a2643735827b1eb0cb92812c4969544c107489479dc54ec9bc27409a15bef8486972bf03297f030000"
+        override suspend fun claimTransaction(psbt: String) =
+            "020000000001013e16e76ee2b6a9dc798b81be3a4903286e4e454dc019c48062d5396b4e21fdca0000000000fdffffff01d09b0000000000002251208751b9234a38be714a80" +
+                "11a02bad9f346f7b80e4a76b13fcacda7b0e2890c5e601408982addc732de240dd1dfb0bd4a66e0ab807073c73d92b26256827a2643735827b1eb0cb92812c4969544c107489" +
+                "479dc54ec9bc27409a15bef8486972bf03297f030000"
         companion object {
-            fun vtxo(id: String, amount: ULong = 30_000u) = Vtxo("server", 144u, OutPoint("anchor", 0u), OutPoint("point", 0u), id, amount, 500u, "pubkey", VtxoState.Spendable, 1u, 500u, true)
+            fun vtxo(id: String, amount: ULong = 30_000u) =
+                Vtxo("server", 144u, OutPoint("anchor", 0u), OutPoint("point", 0u), id, amount, 500u, "pubkey", VtxoState.Spendable, 1u, 500u, true)
         }
     }
     @Test fun aClaimToThisPhoneKeepsItsOutputsOnchainBeforeItsBroadcast() = runBlocking {
@@ -472,7 +486,8 @@ class OnchainOperationsTest {
     }
     @Test fun aClaimWhoseOutputsCantBeKeptIsNeverSent() = runBlocking { fixture { wallet, ops, journal, _ ->
         wallet.active = listOf(ExitVtxo("a", 30_000u, ExitState.Claimable(100u, BlockRef(100u, "hash"), null), true))
-        val failure = runCatching { ops.execute(ops.quote(OnchainAction.claim, listOf("a"), destination = "address"), keepOnchain = { error("disk full") }) }.exceptionOrNull()
+        val failure = runCatching { ops.execute(ops.quote(OnchainAction.claim, listOf("a"), destination = "address"),
+            keepOnchain = { error("disk full") }) }.exceptionOrNull()
         assertEquals(OnchainFailure.keepFailed, (failure as OnchainException).reason)
         assertTrue(wallet.calls.none { it == "broadcast" })
         assertTrue("nothing was sent, so nothing blocks trying again", journal.loadAll().isEmpty())
@@ -492,9 +507,11 @@ class OnchainOperationsTest {
     @Test fun exitsCarryTheirFeesAndTheWaitingPackagesFee() = runBlocking { fixture { wallet, _, journal, _ ->
         val node = ExitTransactions.parse(wallet.claimTransaction(""))!!
         // As BDK reports a fee child live: no fee (its anchor input isn't a wallet coin), only what left the wallet.
-        wallet.fundingTransactions = listOf(WalletTransaction("child-1", "", null, -1_215, null, false), WalletTransaction("unrelated", "", 99u, -99, null, false))
-        val waiting = ExitState.Processing(101u, listOf(ExitTx("root", ExitTxStatus.Confirmed("child-1", BlockRef(101u, "h"), ExitTxOrigin.Wallet(BlockRef(101u, "h")))),
-            ExitTx("leaf", ExitTxStatus.AwaitingCpfpBroadcast)))
+        wallet.fundingTransactions = listOf(WalletTransaction("child-1", "", null, -1_215, null, false),
+            WalletTransaction("unrelated", "", 99u, -99, null, false))
+        val waiting = ExitState.Processing(101u,
+            listOf(ExitTx("root", ExitTxStatus.Confirmed("child-1", BlockRef(101u, "h"), ExitTxOrigin.Wallet(BlockRef(101u, "h")))),
+                ExitTx("leaf", ExitTxStatus.AwaitingCpfpBroadcast)))
         wallet.states["a"] = waiting
         val hex = wallet.claimTransaction("")
         val packages = listOf(ExitTransactionPackage("root", hex, "child-1", hex, ExitTxOrigin.Wallet(BlockRef(101u, "h")), waiting.transactions[0].status),
@@ -541,7 +558,10 @@ class OnchainOperationsTest {
     private val deposit = OnchainUtxo.Local(OutPoint("deposit", 0u), 60_000u, 100u)
     private val claimTx = WalletTransaction("claim", "", null, 28_375, null, false)
     private val depositTx = WalletTransaction("deposit", "", null, 60_000, null, false)
-    private fun ledger(): AutoBoardFunding { var disk: String? = null; return AutoBoardFunding({ disk }, { disk = it }).apply { keep("wallet", setOf("claim:0")) } }
+    private fun ledger(): AutoBoardFunding {
+        var disk: String? = null
+        return AutoBoardFunding({ disk }, { disk = it }).apply { keep("wallet", setOf("claim:0")) }
+    }
 
     @Test fun aDepositAfterAClaimToThisPhoneIsOfferedWithoutTheClaim() = runBlocking { fixture { wallet, ops, _, _ ->
         val store = ledger()
@@ -567,7 +587,9 @@ class OnchainOperationsTest {
         assertNull(ops.autoBoardQuote(store::kept)); assertTrue("nothing was even prepared", wallet.preparations.isEmpty())
         // A small deposit beside it: the balance passes 20,000, but what auto-board may move doesn't.
         val small = OnchainUtxo.Local(OutPoint("deposit", 0u), 10_000u, 100u)
-        wallet.fundingTransactions = listOf(claimTx, depositTx.copy(balanceChangeSats = 10_000)); wallet.fundingUtxos = listOf(claimed, small); wallet.balance = 38_375
+        wallet.fundingTransactions = listOf(claimTx, depositTx.copy(balanceChangeSats = 10_000))
+        wallet.fundingUtxos = listOf(claimed, small)
+        wallet.balance = 38_375
         assertNull(ops.autoBoardFunding(store::kept))
         assertNotNull("weighing the claim too would have asked", ops.autoBoardFunding())
     } }
@@ -803,28 +825,29 @@ class OnchainOperationsTest {
         assertTrue(runCatching { ops.quote(OnchainAction.progress, listOf("a")) }.isFailure)
     } }
     @Test fun aStartOrCancelForgetsItsExitsEvidenceEvenIfItsCallerIsCanceled() = runBlocking {
-        for ((action, accepted) in listOf(OnchainAction.startExit to true, OnchainAction.cancel to true, OnchainAction.cancel to false)) fixture { wallet, ops, journal, _ ->
-            wallet.cancelResult = accepted
-            if (action == OnchainAction.cancel) {
-                wallet.active = listOf(ExitVtxo("a", 30_000u, ExitState.Start(100u), false)); wallet.states["a"] = ExitState.Start(100u)
+        for ((action, accepted) in listOf(OnchainAction.startExit to true, OnchainAction.cancel to true, OnchainAction.cancel to false))
+            fixture { wallet, ops, journal, _ ->
+                wallet.cancelResult = accepted
+                if (action == OnchainAction.cancel) {
+                    wallet.active = listOf(ExitVtxo("a", 30_000u, ExitState.Start(100u), false)); wallet.states["a"] = ExitState.Start(100u)
+                }
+                val quote = ops.quote(action, listOf("a"))
+                val entered = CompletableDeferred<Unit>(); val release = CompletableDeferred<Unit>()
+                wallet.duringMutation = { entered.complete(Unit); release.await() }
+                val forgotten = java.util.Collections.synchronizedList(mutableListOf<List<String>>())
+                var after = false
+                // As WalletSession.withOpen runs it: the native call on IO under NonCancellable, its caller on its own thread (the
+                // page's) and free to go. Coming back to a canceled caller throws, so nothing after the call runs.
+                val page = java.util.concurrent.Executors.newSingleThreadExecutor().asCoroutineDispatcher()
+                val caller = launch(page) {
+                    withContext(NonCancellable + Dispatchers.IO) { runCatching { ops.execute(quote, newRun = { forgotten += it }) } }
+                    after = true
+                }
+                entered.await(); caller.cancel(); release.complete(Unit); caller.join(); page.close()
+                assertFalse("the caller is gone before anything after the call runs", after)
+                assertEquals("$action accepted=$accepted", if (accepted) listOf(listOf("a")) else emptyList(), forgotten.toList())
+                assertEquals(accepted, journal.loadAll().any { it.receipt != null })
             }
-            val quote = ops.quote(action, listOf("a"))
-            val entered = CompletableDeferred<Unit>(); val release = CompletableDeferred<Unit>()
-            wallet.duringMutation = { entered.complete(Unit); release.await() }
-            val forgotten = java.util.Collections.synchronizedList(mutableListOf<List<String>>())
-            var after = false
-            // As WalletSession.withOpen runs it: the native call on IO under NonCancellable, its caller on its own thread (the
-            // page's) and free to go. Coming back to a canceled caller throws, so nothing after the call runs.
-            val page = java.util.concurrent.Executors.newSingleThreadExecutor().asCoroutineDispatcher()
-            val caller = launch(page) {
-                withContext(NonCancellable + Dispatchers.IO) { runCatching { ops.execute(quote, newRun = { forgotten += it }) } }
-                after = true
-            }
-            entered.await(); caller.cancel(); release.complete(Unit); caller.join(); page.close()
-            assertFalse("the caller is gone before anything after the call runs", after)
-            assertEquals("$action accepted=$accepted", if (accepted) listOf(listOf("a")) else emptyList(), forgotten.toList())
-            assertEquals(accepted, journal.loadAll().any { it.receipt != null })
-        }
     }
 
     @Test fun claimFeeIsCheckedBeforeBroadcastAndBroadcastErrorsStayUncertain() = runBlocking { fixture { wallet, ops, journal, _ ->
@@ -877,7 +900,8 @@ class OnchainOperationsTest {
             val destination = if (mine) "bcrt1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqdku202" else "mipcBbFg9gMiCh81Kj8tqqdgoZub1ZJRfn"
             val reviewed = ops.quote(OnchainAction.claim, listOf("a"), destination = destination)
             assertEquals(mine, reviewed.destinationIsMine)
-            assertEquals(if (mine) null else "This address isn't in your Noah wallet. The claimed funds will be sent there.", reviewed.externalDestinationWarning)
+            assertEquals(if (mine) null else "This address isn't in your Noah wallet. The claimed funds will be sent there.",
+                reviewed.externalDestinationWarning)
             ops.execute(reviewed)
             assertEquals(listOf(destination, destination), wallet.ownershipChecks)
             assertEquals(listOf(reviewed.destination), wallet.drainDestinations)
@@ -897,7 +921,8 @@ class OnchainOperationsTest {
             val destination = "mipcBbFg9gMiCh81Kj8tqqdgoZub1ZJRfn"
             val reviewed = if (estimated) ops.quote(OnchainAction.claim, listOf("a"), destination = destination) else {
                 wallet.estimateError = java.net.SocketTimeoutException("estimator offline")
-                val unknown = (runCatching { ops.quote(OnchainAction.claim, listOf("a"), destination = destination) }.exceptionOrNull() as ExitEstimateUnavailable).review
+                val unknown = (runCatching { ops.quote(OnchainAction.claim, listOf("a"),
+                    destination = destination) }.exceptionOrNull() as ExitEstimateUnavailable).review
                 // Continue without estimate: the review has no fee; the drain's own is the one paid.
                 wallet.claimFee = 1_310
                 unknown.copy(unknownFeeConsent = unknown.id)
@@ -920,7 +945,8 @@ class OnchainOperationsTest {
         wallet.active = listOf(ExitVtxo("a", 30_000u, ExitState.Claimable(100u, BlockRef(100u, "hash"), null), true))
         wallet.mine = false
         wallet.estimateError = java.net.SocketTimeoutException("estimator offline")
-        val unknown = (runCatching { ops.quote(OnchainAction.claim, listOf("a"), destination = "mipcBbFg9gMiCh81Kj8tqqdgoZub1ZJRfn") }.exceptionOrNull() as ExitEstimateUnavailable).review
+        val unknown = (runCatching { ops.quote(OnchainAction.claim, listOf("a"),
+            destination = "mipcBbFg9gMiCh81Kj8tqqdgoZub1ZJRfn") }.exceptionOrNull() as ExitEstimateUnavailable).review
         wallet.claimFee = 1_310
         // The node takes the claim, but its answer times out.
         wallet.broadcastError = java.net.SocketTimeoutException("no answer")
@@ -939,7 +965,8 @@ class OnchainOperationsTest {
         ops.execute(ops.quote(OnchainAction.claim, listOf("a"), destination = "bcrt1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqdku202"), recordClaim = { record = it })
         assertEquals(ExitClaimRecords.Record("claim-tx", 1_295, listOf("a"), true, null), record)
         journal.acknowledge(journal.loadAll().single().id)
-        ops.execute(ops.quote(OnchainAction.claim, listOf("a"), destination = "bcrt1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqdku202"), recordClaim = { error("disk full") })
+        ops.execute(ops.quote(OnchainAction.claim, listOf("a"), destination = "bcrt1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqdku202"),
+            recordClaim = { error("disk full") })
         assertEquals("the second claim still went out and was journaled", 2, wallet.calls.count { it == "broadcast" })
         assertEquals("claim-tx", journal.loadAll().single().receipt!!.txid)
     } }
@@ -1050,7 +1077,8 @@ class OnchainOperationsTest {
         assertFalse(ops.check(attempt.id))
         assertNull(ops.autoBoardFunding())
         wallet.submitOutcome = BroadcastOutcome.Accepted
-        assertEquals(OnchainFailure.busy, (runCatching { ops.execute(ops.quote(OnchainAction.board, amount = 30_000)) }.exceptionOrNull() as OnchainException).reason)
+        assertEquals(OnchainFailure.busy,
+            (runCatching { ops.execute(ops.quote(OnchainAction.board, amount = 30_000)) }.exceptionOrNull() as OnchainException).reason)
         // bark had recorded it: its pending board names the funding txid, and Check status finds it with delivery protection.
         wallet.boardTxids = setOf("board-tx")
         assertTrue(ops.check(attempt.id))
@@ -1071,7 +1099,8 @@ class OnchainOperationsTest {
         val again = OnchainOperations(wallet, reloaded)
         assertTrue(reloaded.loadAll().single().uncertainBoard)
         assertEquals(OnchainFailure.busy, (runCatching { reloaded.overrideUncertain(first.id) }.exceptionOrNull() as OnchainException).reason)
-        assertEquals(OnchainFailure.busy, (runCatching { again.execute(again.quote(OnchainAction.board, amount = 30_000)) }.exceptionOrNull() as OnchainException).reason)
+        assertEquals(OnchainFailure.busy,
+            (runCatching { again.execute(again.quote(OnchainAction.board, amount = 30_000)) }.exceptionOrNull() as OnchainException).reason)
         // Even a journal written with an override on it still blocks.
         assertTrue(reloaded.loadAll().single().copy(overrideAudit = OnchainOperationJournal.OverrideAudit(1)).blocks(OnchainAction.board, emptyList()))
         assertEquals(1, wallet.calls.count { it.startsWith("submit:") })
@@ -1134,8 +1163,10 @@ class OnchainOperationsTest {
             } else {
                 val kept = journal.loadAll().single()
                 assertTrue("$case crash=$crash", kept.blocks(OnchainAction.board, emptyList()))
-                assertEquals("$case crash=$crash", OnchainFailure.busy, (runCatching { journal.overrideUncertain(id) }.exceptionOrNull() as OnchainException).reason)
-                assertEquals(OnchainFailure.busy, (runCatching { ops.execute(ops.quote(OnchainAction.board, amount = 30_000)) }.exceptionOrNull() as OnchainException).reason)
+                assertEquals("$case crash=$crash", OnchainFailure.busy,
+                    (runCatching { journal.overrideUncertain(id) }.exceptionOrNull() as OnchainException).reason)
+                assertEquals(OnchainFailure.busy,
+                    (runCatching { ops.execute(ops.quote(OnchainAction.board, amount = 30_000)) }.exceptionOrNull() as OnchainException).reason)
                 assertEquals(submits, wallet.calls.count { it.startsWith("submit:") })
             }
         }
@@ -1169,7 +1200,8 @@ class OnchainOperationsTest {
     } }
     @Test fun aReorgedOrUnverifiableParentAtSubmitReadsAsBeforeSubmission() = runBlocking {
         // SDK 0.7.0's confirmed-only re-check: a parent back in the mempool, or a chain source it can't reach.
-        for ((code, reason) in listOf(BarkErrorCode.PREPARED_INPUTS_UNAVAILABLE to OnchainFailure.reserved, BarkErrorCode.OTHER to OnchainFailure.boardNotAttempted)) fixture { wallet, ops, journal, _ ->
+        for ((code, reason) in listOf(BarkErrorCode.PREPARED_INPUTS_UNAVAILABLE to OnchainFailure.reserved,
+            BarkErrorCode.OTHER to OnchainFailure.boardNotAttempted)) fixture { wallet, ops, journal, _ ->
             wallet.submitError = BarkError("prepared board parent is no longer confirmed", code)
             val failure = runCatching { ops.execute(ops.quote(OnchainAction.board, amount = 30_000)) }.exceptionOrNull() as OnchainException
             assertEquals(code.name, reason, failure.reason)
@@ -1213,6 +1245,7 @@ class OnchainOperationsTest {
         val all = ops.overview(24u).exits
         assertEquals(setOf("Canceled", "Claimed"), all.map { it.state }.toSet())
         assertTrue(all.all { it.amount == 30_000L && it.timeline.first().state == "Start" })
-        assertEquals(all, OnchainOperations(wallet, OnchainOperationJournal(OnchainFile(File(wallet.attemptFile.parentFile, "reopened")) {})).overview(24u).exits)
+        assertEquals(all, OnchainOperations(wallet,
+            OnchainOperationJournal(OnchainFile(File(wallet.attemptFile.parentFile, "reopened")) {})).overview(24u).exits)
     } }
 }

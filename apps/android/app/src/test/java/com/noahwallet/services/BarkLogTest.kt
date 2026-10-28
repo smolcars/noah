@@ -75,7 +75,8 @@ class BarkLogTest {
         val file = LogFile(directory, executor = Executor { it.run() }, systemSink = { _, _, text -> received += text })
         try {
             BarkLog(file).log(LogLevel.WARN, "bark::onchain",
-                """fee estimation failed: HttpResponse { status: 404, message: "No route: /unknown/fakeUnregisteredCredential; \"nested\"" }; caused by: upstream unavailable""")
+                """fee estimation failed: HttpResponse { status: 404, message: "No route: /unknown/fakeUnregisteredCredential; \"nested\"" }; caused """ +
+                    """by: upstream unavailable""")
             val expected = "HttpResponse { status: 404 }"
             assertEquals(listOf(expected), received)
             assertTrue(file.lines().single().endsWith(expected))
@@ -107,7 +108,8 @@ class BarkLogTest {
             val logger = BarkLog(file)
             for (text in listOf(
                 "[ONCHAIN] Using Bitcoin Core RPC at http://fake-user:fake-password@localhost:18443",
-                "request failed: error sending request for url (https://example.invalid/x?X-Amz-Signature=fake-presigned-value)\n\nCaused by:\n    transport error",
+                "request failed: error sending request for url (https://example.invalid/x?X-Amz-Signature=fake-presigned-value)\n\nCaused by:\n    " +
+                    "transport error",
                 "sync failed: invalid signature: " + "ab".repeat(64),
                 "wallet failed: private_key=0x" + "cd".repeat(32))) {
                 logger.log(LogLevel.ERROR, "bark::wallet", text)

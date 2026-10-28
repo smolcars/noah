@@ -53,9 +53,12 @@ class PaymentLinksTest {
             .filter { it.getValue("network").jsonPrimitive.content == "regtest" }.map { it.getValue("destination").jsonPrimitive.content }
             .filter { it == it.trim() && it.substringBefore(':').lowercase() in PaymentLinks.schemes }.distinct()
         assertTrue(vectors.map { it.substringBefore(':') }.toSet().containsAll(listOf("bitcoin", "lightning", "lnurlp", "LNURLP")))
-        val lnurl = "LNURL1DP68GURN8GHJ7UM9WFMXJCM99E3K7MF0V9CXJ0M385EKVCENXC6R2C35XVUKXEFCV5MKVV34X5EKZD3EV56NYD3HXQURZEPEXEJXXEPNXSCRVWFNV9NXZCN9XQ6XYEFHVGCXXCMYXYMNSERXFQ5FNS"
-        val uppercase = mapOf("BITCOIN:BCRT1Q5MQ29KAQ9KQ660M3EEPQY8PKV7JHEFD69KLC22?amount=0.0001" to "bitcoin:bcrt1q5mq29kaq9kq660m3eepqy8pkv7jhefd69klc22?amount=0.0001",
-            "LIGHTNING:$lnurl" to "lightning:${lnurl.lowercase()}", "LNURLP://example.com/pay" to "lnurlp://example.com/pay")
+        val lnurl =
+            "LNURL1DP68GURN8GHJ7UM9WFMXJCM99E3K7MF0V9CXJ0M385EKVCENXC6R2C35XVUKXEFCV5MKVV34X5EKZD3EV56NYD3HXQURZEPEXEJXXEPNXSCRVWFNV9NXZCN9XQ6XYEFHVGCXXC" +
+                "MYXYMNSERXFQ5FNS"
+        val uppercase =
+            mapOf("BITCOIN:BCRT1Q5MQ29KAQ9KQ660M3EEPQY8PKV7JHEFD69KLC22?amount=0.0001" to "bitcoin:bcrt1q5mq29kaq9kq660m3eepqy8pkv7jhefd69klc22?amount=0.0001",
+                "LIGHTNING:$lnurl" to "lightning:${lnurl.lowercase()}", "LNURLP://example.com/pay" to "lnurlp://example.com/pay")
         for (link in vectors + uppercase.keys) {
             val links = PaymentLinks(); val delivery = Delivery()
             links.receive(view(link))
@@ -71,7 +74,8 @@ class PaymentLinksTest {
         }
         // Withdraw, auth and every other scheme or action stay out.
         val links = PaymentLinks()
-        for (other in listOf("lnurlw://example.com/w", "keyauth://example.com/k", "lnurlc://example.com/c", "https://example.com/pay", "com.noahwallet.regtest://send"))
+        for (other in listOf("lnurlw://example.com/w", "keyauth://example.com/k", "lnurlc://example.com/c", "https://example.com/pay",
+            "com.noahwallet.regtest://send"))
             links.receive(view(other))
         links.receive(Intent(Intent.ACTION_SEND, Uri.parse("bitcoin:bcrt1q5mq29kaq9kq660m3eepqy8pkv7jhefd69klc22")))
         assertNull(links.pending)

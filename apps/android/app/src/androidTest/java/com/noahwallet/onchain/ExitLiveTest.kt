@@ -40,7 +40,8 @@ class ExitLiveTest {
                 owned.writeText(summary.fingerprint)
                 settings.setPersistedState(PersistedWalletState(isInitialized = true, isWalletLoaded = true), PersistedWalletState.key, 0)
                 settings.set(SettingsPreferences.autoBoard(settings.string("transaction-storage"), false), "transaction-storage")
-                settings.set(SettingsPreferences.update(settings.string("profile-storage"), mapOf("bitcoinAmountUnit" to JsonPrimitive("sats"))), "profile-storage")
+                settings.set(SettingsPreferences.update(settings.string("profile-storage"),
+                    mapOf("bitcoinAmountUnit" to JsonPrimitive("sats"))), "profile-storage")
                 settings.sync()
                 save("fingerprint" to JsonPrimitive(summary.fingerprint), "address" to JsonPrimitive(session.exitDepositAddress()))
                 return@runBlocking
@@ -87,16 +88,19 @@ class ExitLiveTest {
                     val overview = session.onchainOverview()
                     val wallet = session.withOpen { it.transactions() }.map { tx -> JsonObject(mapOf("txid" to JsonPrimitive(tx.txid),
                         "fee" to (tx.onchainFeeSats?.let { JsonPrimitive(it.toLong()) } ?: JsonNull), "change" to JsonPrimitive(tx.balanceChangeSats))) }
-                    save("tip" to JsonPrimitive(overview.tip), "confirmed" to JsonPrimitive(overview.confirmed), "wallet" to JsonArray(wallet), "exits" to JsonArray(overview.exits.map { exit ->
-                        val detail = session.exitDetail(exit.id)
-                        JsonObject(mapOf("id" to JsonPrimitive(exit.id), "state" to JsonPrimitive(exit.state), "amount" to JsonPrimitive(exit.amount),
-                            "nextPackageFee" to (exit.nextPackageFee?.let(::JsonPrimitive) ?: JsonNull),
-                            "detailNextPackageFee" to (detail?.nextPackageFee?.let(::JsonPrimitive) ?: JsonNull),
-                            "childFees" to JsonObject(exit.childFees.mapValues { JsonPrimitive(it.value) }),
-                            "packages" to JsonArray(exit.packages.map { Json.encodeToJsonElement(mapOf("txid" to it.txid, "weight" to it.weight?.toString(),
-                                "outputs" to it.outputs.toString(), "spends" to it.spends?.toString(), "child" to it.childTxid, "origin" to it.childOrigin)) }),
-                            "details" to Json.encodeToJsonElement(exit.details), "history" to JsonArray(exit.historyDetails.map { Json.encodeToJsonElement(it) })))
-                    }))
+                    save("tip" to JsonPrimitive(overview.tip), "confirmed" to JsonPrimitive(overview.confirmed), "wallet" to JsonArray(wallet),
+                        "exits" to JsonArray(overview.exits.map { exit ->
+                            val detail = session.exitDetail(exit.id)
+                            JsonObject(mapOf("id" to JsonPrimitive(exit.id), "state" to JsonPrimitive(exit.state), "amount" to JsonPrimitive(exit.amount),
+                                "nextPackageFee" to (exit.nextPackageFee?.let(::JsonPrimitive) ?: JsonNull),
+                                "detailNextPackageFee" to (detail?.nextPackageFee?.let(::JsonPrimitive) ?: JsonNull),
+                                "childFees" to JsonObject(exit.childFees.mapValues { JsonPrimitive(it.value) }),
+                                "packages" to JsonArray(exit.packages.map { Json.encodeToJsonElement(mapOf("txid" to it.txid, "weight" to it.weight?.toString(),
+                                    "outputs" to it.outputs.toString(), "spends" to it.spends?.toString(), "child" to it.childTxid,
+                                    "origin" to it.childOrigin)) }),
+                                "details" to Json.encodeToJsonElement(exit.details),
+                                "history" to JsonArray(exit.historyDetails.map { Json.encodeToJsonElement(it) })))
+                        }))
                 }
                 // Auto-board's handled ledger and what it would offer now: a claim to this phone must be handled, never offered.
                 "ledger" -> {
@@ -110,7 +114,8 @@ class ExitLiveTest {
                     session.sync(); done()
                     val item = session.onchainOverview().vtxos.first { it.refreshable }
                     val quote = reviewExecute(OnchainAction.refresh, listOf(item.id))
-                    save("id" to JsonPrimitive(item.id), "amount" to JsonPrimitive(item.amount), "fee" to JsonPrimitive(quote.fee), "receipt" to JsonPrimitive(session.onchainJournal.loadAll().last().receipt!!.message))
+                    save("id" to JsonPrimitive(item.id), "amount" to JsonPrimitive(item.amount), "fee" to JsonPrimitive(quote.fee),
+                        "receipt" to JsonPrimitive(session.onchainJournal.loadAll().last().receipt!!.message))
                 }
                 "estimate" -> {
                     session.sync(); done()
@@ -121,7 +126,8 @@ class ExitLiveTest {
                     val quote = session.quoteOnchain(OnchainAction.startExit, ids)
                     assertEquals(overview.exits, session.onchainOverview().exits)
                     assertEquals(before, session.withOpen { it.transactions().map { tx -> tx.txid } })
-                    save("ids" to JsonArray(ids.map(::JsonPrimitive)), "broadcastFee" to JsonPrimitive(quote.chainFee), "claimFee" to JsonPrimitive(quote.fee), "net" to JsonPrimitive(quote.net), "readOnly" to JsonPrimitive(true))
+                    save("ids" to JsonArray(ids.map(::JsonPrimitive)), "broadcastFee" to JsonPrimitive(quote.chainFee),
+                        "claimFee" to JsonPrimitive(quote.fee), "net" to JsonPrimitive(quote.net), "readOnly" to JsonPrimitive(true))
                 }
                 "start" -> {
                     done()
@@ -129,7 +135,8 @@ class ExitLiveTest {
                     assertTrue(ids.isNotEmpty())
                     val quote = reviewExecute(OnchainAction.startExit, ids)
                     File(context.filesDir, "m6-started-ids.json").writeText(Json.encodeToString(ids))
-                    save("ids" to JsonArray(ids.map(::JsonPrimitive)), "broadcastFee" to JsonPrimitive(quote.chainFee), "claimFee" to JsonPrimitive(quote.fee), "receipt" to JsonPrimitive(session.onchainJournal.loadAll().last().receipt!!.message))
+                    save("ids" to JsonArray(ids.map(::JsonPrimitive)), "broadcastFee" to JsonPrimitive(quote.chainFee),
+                        "claimFee" to JsonPrimitive(quote.fee), "receipt" to JsonPrimitive(session.onchainJournal.loadAll().last().receipt!!.message))
                 }
                 "status", "claimed" -> {
                     val overview = session.onchainOverview()
@@ -154,7 +161,8 @@ class ExitLiveTest {
                     val destination = session.exitDepositAddress()
                     val quote = reviewExecute(OnchainAction.claim, ids, destination = destination)
                     val receipt = session.onchainJournal.loadAll().last().receipt!!
-                    save("ids" to JsonArray(ids.map(::JsonPrimitive)), "fee" to JsonPrimitive(quote.fee), "destination" to JsonPrimitive(destination), "txid" to JsonPrimitive(receipt.txid))
+                    save("ids" to JsonArray(ids.map(::JsonPrimitive)), "fee" to JsonPrimitive(quote.fee), "destination" to JsonPrimitive(destination),
+                        "txid" to JsonPrimitive(receipt.txid))
                 }
                 "cancel-cycle" -> {
                     session.sync(); done()
@@ -175,7 +183,9 @@ class ExitLiveTest {
                     assertFalse(activeCanceled)
                     assertTrue(exits.all { it.state == "Canceled" && it.timeline.last().state == "Canceled" })
                     assertTrue(ids.all { id -> session.onchainOverview().exits.any { it.id == id } })
-                    save("activeCanceled" to JsonPrimitive(activeCanceled), "ids" to JsonArray(ids.map(::JsonPrimitive)), "states" to JsonArray(exits.map { JsonPrimitive(it.state) }), "timeline" to JsonArray(exits.flatMap { it.timeline.map { item -> JsonPrimitive(item.state) } }),
+                    save("activeCanceled" to JsonPrimitive(activeCanceled), "ids" to JsonArray(ids.map(::JsonPrimitive)),
+                        "states" to JsonArray(exits.map { JsonPrimitive(it.state) }),
+                        "timeline" to JsonArray(exits.flatMap { it.timeline.map { item -> JsonPrimitive(item.state) } }),
                         "details" to JsonArray(exits.map { Json.encodeToJsonElement(it.details) }))
                 }
                 else -> error("Unknown stage")

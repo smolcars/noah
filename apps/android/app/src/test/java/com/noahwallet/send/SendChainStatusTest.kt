@@ -65,7 +65,8 @@ class SendChainStatusTest {
             assertEquals(existing, updated.status)
             assertTrue(updated.broadcastRetryPending)
         }
-        val conflict = withStatus(SendSource.offchain, ChainStatus(ChainStatus.Kind.confirmed, 123), receipt(SendSource.offchain, SendReceipt.Status.conflicted))
+        val conflict = withStatus(SendSource.offchain, ChainStatus(ChainStatus.Kind.confirmed, 123),
+            receipt(SendSource.offchain, SendReceipt.Status.conflicted))
         assertEquals(SendReceipt.Status.conflicted, conflict.status)
     }
     @Test fun notFoundCannotManufactureReceiptOrResolveUnknownAttempt() {

@@ -148,7 +148,9 @@ class ActivityRulesTest {
     }
 
     @Test fun settledLightningFeesComeFromTheBalanceTheyTook() {
-        val fixed = "lnbc15u1p3xnhl2pp5jptserfk3zk4qy42tlucycrfwxhydvlemu9pqr93tuzlv9cc7g3sdqsvfhkcap3xyhx7un8cqzpgxqzjcsp5f8c52y2stc300gl6s4xswtjpc37hrnnr3c9wvtgjfuvqmpm35evq9qyyssqy4lgd8tj637qcjp05rdpxxykjenthxftej7a2zzmwrmrl70fyj9hvj0rewhzj7jfyuwkwcg9g2jpwtk3wkjtwnkdks84hsnu8xps5vsq4gj5hs"
+        val fixed =
+            "lnbc15u1p3xnhl2pp5jptserfk3zk4qy42tlucycrfwxhydvlemu9pqr93tuzlv9cc7g3sdqsvfhkcap3xyhx7un8cqzpgxqzjcsp5f8c52y2stc300gl6s4xswtjpc37hrnnr3c9wvt" +
+                "gjfuvqmpm35evq9qyyssqy4lgd8tj637qcjp05rdpxxykjenthxftej7a2zzmwrmrl70fyj9hvj0rewhzj7jfyuwkwcg9g2jpwtk3wkjtwnkdks84hsnu8xps5vsq4gj5hs"
         fun fees(record: HistoryTransaction) = rows(record).single().let { ActivityRules.fees(record, it.home) to ActivityRules.total(record, it.home) }
         // A retried invoice: bark kept the first attempt's fee field (12), but the movement took 1,530 for 1,500.
         val retried = record("ln", Date(), type = "Bolt11", amount = 1_500).copy(subsystemName = "bark.lightning_send", offchainFeeSat = 12,
@@ -180,7 +182,9 @@ class ActivityRulesTest {
         assertEquals("", rowAmount(unproven.home, false, BitcoinAmountUnit.sats, Locale.US))
         assertEquals("Sent\nDate: Today\nVia: Lightning\nProof of payment: $proof", ActivityRules.receipt(unproven, null, "Today", null, words))
         // An invoice that sets its amount, and anything still in flight, keep the recorded amount.
-        val fixed = "lnbc15u1p3xnhl2pp5jptserfk3zk4qy42tlucycrfwxhydvlemu9pqr93tuzlv9cc7g3sdqsvfhkcap3xyhx7un8cqzpgxqzjcsp5f8c52y2stc300gl6s4xswtjpc37hrnnr3c9wvtgjfuvqmpm35evq9qyyssqy4lgd8tj637qcjp05rdpxxykjenthxftej7a2zzmwrmrl70fyj9hvj0rewhzj7jfyuwkwcg9g2jpwtk3wkjtwnkdks84hsnu8xps5vsq4gj5hs"
+        val fixed =
+            "lnbc15u1p3xnhl2pp5jptserfk3zk4qy42tlucycrfwxhydvlemu9pqr93tuzlv9cc7g3sdqsvfhkcap3xyhx7un8cqzpgxqzjcsp5f8c52y2stc300gl6s4xswtjpc37hrnnr3c9wvt" +
+                "gjfuvqmpm35evq9qyyssqy4lgd8tj637qcjp05rdpxxykjenthxftej7a2zzmwrmrl70fyj9hvj0rewhzj7jfyuwkwcg9g2jpwtk3wkjtwnkdks84hsnu8xps5vsq4gj5hs"
         assertEquals(1_000L, rows(retried.copy(sentTo = listOf(HistoryTransaction.Destination(fixed, 1_000, "invoice")))).single().home.amount)
         assertEquals(1_000L, rows(retried.copy(movementStatus = "pending")).single().home.amount)
     }

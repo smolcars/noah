@@ -10,7 +10,8 @@ class SendOffboardTest {
     private fun tx(amount: Long): String {
         val script = PaymentEncoding.bitcoinScript(address)!!
         val value = ByteArray(8) { i -> (amount ushr (i * 8)).toByte() }
-        return "0200000001" + "00".repeat(36) + "00ffffffff01" + PaymentEncoding.hex(value) + "%02x".format(script.size) + PaymentEncoding.hex(script) + "00000000"
+        return "0200000001" + "00".repeat(36) + "00ffffffff01" + PaymentEncoding.hex(value) +
+            "%02x".format(script.size) + PaymentEncoding.hex(script) + "00000000"
     }
     @Test fun maxReceiptWaitsForExactTxidAndUsesActualOutputAndFee() {
         val payment = SendPayment(address, "onchain", 10000, SendSource.offchain, max = true)

@@ -47,7 +47,8 @@ class RecurringSettlementTest {
                 key = w.controller.attempt!!.recurringOccurrenceKey!!
                 val result = w.journal.load().getValue(schedule.id).terminal!!
                 originalMessage = result.message
-                assertEquals(if (change == "failed") RecurringJournal.Outcome.failed else if (change == "ambiguous") RecurringJournal.Outcome.uncertain else RecurringJournal.Outcome.succeeded, result.outcome)
+                assertEquals(if (change == "failed") RecurringJournal.Outcome.failed else if (change == "ambiguous")
+                    RecurringJournal.Outcome.uncertain else RecurringJournal.Outcome.succeeded, result.outcome)
                 w.controller.acknowledge()
                 if (change == "ambiguous") assertTrue(w.controller.locked) else {
                     assertFalse(w.controller.locked)
@@ -115,7 +116,8 @@ class RecurringSettlementTest {
         var successfulPayments = 0
         w.wallet.payBlock = { successfulPayments++; SendReceipt(1000, proof = SendReceipt.Proof.submitReturnedArkSuccess) }
         w.beforeBinding = {
-            if (w.controller.state == SendController.State.succeeded && w.controller.attempt?.recurringOccurrenceKey != null && once.compareAndSet(false, true)) {
+            if (w.controller.state == SendController.State.succeeded && w.controller.attempt?.recurringOccurrenceKey != null &&
+                once.compareAndSet(false, true)) {
                 entered.complete(Unit)
                 check(release.await(10, TimeUnit.SECONDS))
             }
@@ -156,7 +158,8 @@ class RecurringSettlementTest {
                         "suspend" -> { w.generation = "stopped"; w.allowed = false }
                         "replace" -> w.binding = owner.copy(wallet = SendIdentity("other", "regtest"))
                         "restore" -> w.binding = owner.copy(instance = java.util.UUID.randomUUID().toString())
-                        "failureLatch" -> w.store.upsert(w.schedule!!.copy(status = "needs_attention", consecutiveFailures = 3, lastError = "Safety storage failed"))
+                        "failureLatch" -> w.store.upsert(w.schedule!!.copy(status = "needs_attention", consecutiveFailures = 3,
+                            lastError = "Safety storage failed"))
                     }
                     changed = w.schedule
                 }

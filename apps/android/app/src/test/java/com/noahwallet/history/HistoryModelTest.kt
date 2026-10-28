@@ -11,7 +11,8 @@ import java.util.Date
 
 class HistoryModelTest {
     private fun row(id: String = "movement-1") = HistoryTransaction(id, "Arkoor", 2100, "2026-07-15T12:00:00.000Z", "incoming", source = "ark")
-    private fun dependencies(rows: List<HistoryTransaction> = listOf(row())) = HistoryModel.Dependencies(load = { rows }, sync = {}, changes = { emptyFlow() }, blockTime = { null }, price = { _, _ -> 100000.0 })
+    private fun dependencies(rows: List<HistoryTransaction> = listOf(row())) =
+        HistoryModel.Dependencies(load = { rows }, sync = {}, changes = { emptyFlow() }, blockTime = { null }, price = { _, _ -> 100000.0 })
 
     @Test fun everyCompletedReadMovesTheRevisionEvenWhenNothingChanged() = runBlocking {
         val model = HistoryModel(dependencies())
@@ -66,7 +67,11 @@ class HistoryModelTest {
     }
     @Test fun missingMarketDataKeepsPayments() = runBlocking {
         val model = HistoryModel(dependencies().copy(price = { _, _ -> error("offline") }))
-        model.refresh("USD"); model.awaitEnrichment(); assertEquals(1, model.transactions.size); assertNull(model.transactions.single().btcPrice); assertNull(model.error)
+        model.refresh("USD")
+        model.awaitEnrichment()
+        assertEquals(1, model.transactions.size)
+        assertNull(model.transactions.single().btcPrice)
+        assertNull(model.error)
     }
     @Test fun missingHistoricalRateUsesUncachedCurrentRate() = runBlocking {
         var calls = 0

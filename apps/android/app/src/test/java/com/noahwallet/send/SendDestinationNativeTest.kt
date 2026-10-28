@@ -46,7 +46,8 @@ class SendBech32Test {
         // lnurl-rs 0.10's own encode_test vector.
         val url = "https://service.com/api?q=3fc3645b439ce8e7f2553a69e5267081d96dcd340693afabe04be7b0ccd178df"
         val encoded = PaymentEncoding.encodeBech32("lnurl", url.toByteArray())
-        assertEquals("LNURL1DP68GURN8GHJ7UM9WFMXJCM99E3K7MF0V9CXJ0M385EKVCENXC6R2C35XVUKXEFCV5MKVV34X5EKZD3EV56NYD3HXQURZEPEXEJXXEPNXSCRVWFNV9NXZCN9XQ6XYEFHVGCXXCMYXYMNSERXFQ5FNS", encoded.uppercase())
+        assertEquals("LNURL1DP68GURN8GHJ7UM9WFMXJCM99E3K7MF0V9CXJ0M385EKVCENXC6R2C35XVUKXEFCV5MKVV34X5EKZD3EV56NYD3HXQURZEPEXEJXXEPNXSCRVWFNV9NXZCN9XQ6XY" +
+            "EFHVGCXXCMYXYMNSERXFQ5FNS", encoded.uppercase())
         assertEquals(url, PaymentEncoding.bech32(encoded)!!.let { PaymentEncoding.bytes(it.words)!!.toString(Charsets.UTF_8) })
     }
 }

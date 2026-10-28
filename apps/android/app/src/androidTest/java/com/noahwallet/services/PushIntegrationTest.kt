@@ -107,7 +107,10 @@ class PushIntegrationTest {
                 { services.registration.state.isRegisteredWithServer == true },
                 { PushNotifications.permissionGranted(context) }, { true }, registration::endpoint,
                 { error("UnifiedPush must not fetch FCM") },
-                { com.noahwallet.api.generated.client.V0RegisterPushTokenClient(services.client).registerPushToken(com.noahwallet.api.generated.models.RegisterPushToken(it)).value() })
+                {
+                    com.noahwallet.api.generated.client.V0RegisterPushTokenClient(services.client)
+                        .registerPushToken(com.noahwallet.api.generated.models.RegisterPushToken(it)).value()
+                })
             assertEquals(PushRegistration.Outcome.registered, withTimeout(30_000) { submit.register() })
             stage = "mailbox authorization"
             services.ensureWalletOpen()
@@ -118,7 +121,8 @@ class PushIntegrationTest {
             File(context.noBackupFilesDir, "push-test-public-key").writeText(key)
             File(context.noBackupFilesDir, "push-test-lightning-address").writeText(services.registration.state.lightningAddress!!)
         } catch (error: Exception) {
-            fail("UnifiedPush integration failed at $stage (${error.javaClass.simpleName}, HTTP ${(error as? ServerFailure)?.status}); sensitive details suppressed")
+            fail("UnifiedPush integration failed at $stage (${error.javaClass.simpleName}, HTTP ${(error as? ServerFailure)?.status}); sensitive details " +
+                "suppressed")
         }
     }
 

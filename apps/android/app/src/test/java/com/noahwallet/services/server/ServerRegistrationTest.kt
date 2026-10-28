@@ -11,7 +11,9 @@ import org.junit.Test
 import com.noahwallet.api.generated.models.DeviceInfo as DevicePayload
 
 class ServerRegistrationTest {
-    private val response = """{"display_name":"New","email":null,"is_email_verified":false,"lightning_address":"new@localhost.com","nostr_pubkey":null,"status":"OK","user_status":"active"}"""
+    private val response =
+        """{"display_name":"New","email":null,"is_email_verified":false,"lightning_address":"new@localhost.com","nostr_pubkey":null,"status":"OK",""" +
+            """"user_status":"active"}"""
     private val device = DevicePayload(appVersion = "0.2.0", appBuild = "100")
 
     @Test fun resetRegistrationCommitsOnlyAfterLoadPushAndImmediateMailboxRenewal() = runBlocking {
@@ -237,7 +239,8 @@ class ServerRegistrationTest {
         var failRegister = true
         val engine = MockEngine { request ->
             when {
-                request.url.encodedPath == "/v0/app_version" -> respond("""{"update_required":true,"minimum_required_version":"9.0.0"}""", headers = headersOf(HttpHeaders.ContentType, "application/json"))
+                request.url.encodedPath == "/v0/app_version" ->
+                    respond("""{"update_required":true,"minimum_required_version":"9.0.0"}""", headers = headersOf(HttpHeaders.ContentType, "application/json"))
                 failRegister -> respond("unavailable", HttpStatusCode.ServiceUnavailable)
                 else -> respond(response, headers = headersOf(HttpHeaders.ContentType, "application/json"))
             }
@@ -263,7 +266,8 @@ class ServerRegistrationTest {
         val engine = MockEngine { request ->
             val body = when (request.url.encodedPath) {
                 "/v0/app_version" -> """{"update_required":false,"minimum_required_version":"0.0.1"}"""
-                "/v0/email/send_verification" -> if (already) """{"success":true,"message":"Email already verified","email":"canonical@example.com"}""" else """{"success":true,"message":"Sent"}"""
+                "/v0/email/send_verification" -> if (already)
+                    """{"success":true,"message":"Email already verified","email":"canonical@example.com"}""" else """{"success":true,"message":"Sent"}"""
                 "/v0/email/verify" -> """{"success":$verified}"""
                 else -> if (identityFails) return@MockEngine respond("failed", HttpStatusCode.BadRequest)
                 else """{"lightning_address":"changed@localhost.com","nostr_pubkey":null}"""

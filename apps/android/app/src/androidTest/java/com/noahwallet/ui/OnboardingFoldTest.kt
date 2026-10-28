@@ -79,7 +79,9 @@ class OnboardingFoldTest {
         for (node in nodes()) {
             val bounds: Rect = node.boundsInWindow
             if (bounds.width <= 0f || bounds.height <= 0f) continue
-            val label = "$step: ${node.config.getOrNull(SemanticsProperties.Text)?.joinToString() ?: node.config.getOrNull(SemanticsProperties.ContentDescription)?.joinToString()} $bounds $fold"
+            val text = node.config.getOrNull(SemanticsProperties.Text)?.joinToString()
+                ?: node.config.getOrNull(SemanticsProperties.ContentDescription)?.joinToString()
+            val label = "$step: $text $bounds $fold"
             if (vertical) assertFalse("crosses the vertical fold: $label", bounds.left < fold.left && bounds.right > fold.right)
             else assertFalse("crosses the horizontal fold: $label", bounds.top < fold.top && bounds.bottom > fold.bottom)
         }

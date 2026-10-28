@@ -15,7 +15,8 @@ class ReceiveFormatsTest {
     @Test fun eachFormatEncodesExactlyItself() {
         assertEquals(address, ReceiveFormats.payload(ReceiveFormat.lightningAddress, plain, address))
         assertEquals("bitcoin:bcrt1qpayme?ark=tark1qpayme", ReceiveFormats.payload(ReceiveFormat.request, plain, address))
-        assertEquals("bitcoin:bcrt1qpayme?amount=0.000021&lightning=lnbcrt21u1pinvoice&ark=tark1qpayme", ReceiveFormats.payload(ReceiveFormat.request, withAmount, address))
+        assertEquals("bitcoin:bcrt1qpayme?amount=0.000021&lightning=lnbcrt21u1pinvoice&ark=tark1qpayme",
+            ReceiveFormats.payload(ReceiveFormat.request, withAmount, address))
         assertEquals(withAmount.uri(), ReceiveFormats.payload(ReceiveFormat.request, withAmount, address))
         assertEquals("lnbcrt21u1pinvoice", ReceiveFormats.payload(ReceiveFormat.invoice, withAmount, address))
         assertEquals("tark1qpayme", ReceiveFormats.payload(ReceiveFormat.ark, withAmount, address))
@@ -48,9 +49,11 @@ class ReceiveFormatsTest {
         assertEquals(long.take(16) + "…" + long.takeLast(10), ReceiveFormats.preview(long))
     }
 
-    private fun chain(id: String, sats: Long, direction: String = "incoming", confirmed: Boolean = false) = HistoryTransaction("onchain-wallet-$id", "Onchain", sats,
-        "2026-10-22T10:00:00Z", direction, source = "onchain-wallet", txid = id, txHex = "hex-$id", balanceChangeSat = if (direction == "incoming") sats else -sats,
-        hasConfirmation = confirmed)
+    private fun chain(id: String, sats: Long, direction: String = "incoming", confirmed: Boolean = false) =
+        HistoryTransaction("onchain-wallet-$id", "Onchain", sats,
+            "2026-10-22T10:00:00Z", direction, source = "onchain-wallet", txid = id, txHex = "hex-$id",
+            balanceChangeSat = if (direction == "incoming") sats else -sats,
+            hasConfirmation = confirmed)
 
     @Test fun onchainArrivalsAreNewIncomingTransactionsPreferringThisAddress() {
         val old = chain("old", 5_000)
@@ -76,7 +79,8 @@ class ReceiveFormatsTest {
         assertEquals(viaAddress, ReceiveArrivals.viaAddress(listOf(viaAddress), emptySet(), setOf("tark1qpayme"), setOf("hash")))
         assertNull(ReceiveArrivals.viaAddress(listOf(viaAddress), setOf("a"), emptySet(), emptySet()))
         assertNull(ReceiveArrivals.viaAddress(listOf(receive("b", "arkoor-receive", "tark1qpayme")), emptySet(), setOf("tark1qpayme"), emptySet()))
-        assertNull(ReceiveArrivals.viaAddress(listOf(receive("c", "lightning-receive", metadata = """{"payment_hash":"hash"}""")), emptySet(), emptySet(), setOf("hash")))
+        assertNull(ReceiveArrivals.viaAddress(listOf(receive("c", "lightning-receive", metadata = """{"payment_hash":"hash"}""")), emptySet(),
+            emptySet(), setOf("hash")))
         assertNull(ReceiveArrivals.viaAddress(listOf(receive("d", "lightning-receive", status = "pending")), emptySet(), emptySet(), emptySet()))
         assertNotNull(ReceiveArrivals.viaAddress(listOf(receive("e", "arkoor-receive", "tark1qstatic")), emptySet(), setOf("tark1qpayme"), emptySet()))
         // A payment still pending when Receive appeared is announced once it succeeds; one already complete never is.
@@ -115,7 +119,8 @@ class ReceiveFormatsTest {
         val tracked = ReceiveArrival(ReceiveArrival.Rail.onchain, 9_500, 1, "a", listOf("c:0", "d:1"))
         val known = setOf(a.id)
         // A deposit's arrival remembers the coins its transaction spends.
-        assertEquals(tracked.inputs, ReceiveArrivals.next(listOf(a), ReceiveRecords(emptySet(), emptySet()), null, emptySet(), emptySet(), none, spends, 1)?.second?.inputs)
+        assertEquals(tracked.inputs, ReceiveArrivals.next(listOf(a), ReceiveRecords(emptySet(), emptySet()), null, emptySet(), emptySet(), none,
+            spends, 1)?.second?.inputs)
         // While it's in the records, it's followed as it is.
         assertEquals(tracked to null, ReceiveArrivals.followed(tracked, listOf(a), known, spends))
         // Replaced (RBF: it spends one of the same coins) and mined before the next refresh: the block row follows it.
@@ -137,7 +142,8 @@ class ReceiveFormatsTest {
             "hex-a3" to listOf("f:2"), "hex-x" to listOf("g:0"))[hex] }
         val none = { _: String, _: String -> null as Long? }
         val old = chain("old", 5_000, confirmed = true)
-        fun next(rows: List<HistoryTransaction>, records: ReceiveRecords) = ReceiveArrivals.next(rows, records, "bcrt1qpayme", emptySet(), emptySet(), none, spends, 1)
+        fun next(rows: List<HistoryTransaction>, records: ReceiveRecords) =
+            ReceiveArrivals.next(rows, records, "bcrt1qpayme", emptySet(), emptySet(), none, spends, 1)
         // A is announced (its card then finishes), then B: the block row moves on to B.
         val a = chain("a", 9_500)
         val (afterA, first) = checkNotNull(next(listOf(old, a), ReceiveRecords.baseline(listOf(old))))
@@ -167,7 +173,8 @@ class ReceiveFormatsTest {
         assertEquals("x", arrival?.txid)
         assertTrue(a2.id in both.known)
         // Records saved before this change (no coins) still decode.
-        assertEquals(ReceiveRecords(setOf("k"), setOf("s")), kotlinx.serialization.json.Json.decodeFromString<ReceiveRecords>("""{"known":["k"],"settled":["s"]}"""))
+        assertEquals(ReceiveRecords(setOf("k"), setOf("s")),
+            kotlinx.serialization.json.Json.decodeFromString<ReceiveRecords>("""{"known":["k"],"settled":["s"]}"""))
     }
 
     @Test fun anArrivalTakesAFreeCardOrOneShowingADeposit() {

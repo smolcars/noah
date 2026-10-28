@@ -140,7 +140,8 @@ class MMKVRecoveryTest {
             }
             if (wallet != "absent") {
                 writeRN(root, raw?.let { mapOf(PersistedWalletState.key to it) }.orEmpty())
-                if (wallet == "damaged") File(root, "$id.crc").let { file -> file.writeBytes(file.readBytes().apply { this[0] = (this[0].toInt() xor 255).toByte() }) }
+                if (wallet == "damaged") File(root, "$id.crc").let { file ->
+                    file.writeBytes(file.readBytes().apply { this[0] = (this[0].toInt() xor 255).toByte() }) }
             }
             val settings = SettingsStorage(context)
             val state = settings.persistedState<PersistedWalletState>(PersistedWalletState.key)

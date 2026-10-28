@@ -24,7 +24,8 @@ class EsploraTest {
         assertEquals(53, fixture.values.sumOf { it.jsonArray.size })
         fixture.getValue("normalization").jsonArray.forEach { value ->
             val test = value.jsonObject
-            assertEquals(test["endpoint"]?.jsonPrimitive?.contentOrNull, runCatching { EsploraEndpoint.normalize(test.getValue("input").jsonPrimitive.content) }.getOrNull())
+            assertEquals(test["endpoint"]?.jsonPrimitive?.contentOrNull,
+                runCatching { EsploraEndpoint.normalize(test.getValue("input").jsonPrimitive.content) }.getOrNull())
         }
         fixture.getValue("genesis").jsonArray.forEach { value ->
             val test = value.jsonObject
@@ -34,7 +35,8 @@ class EsploraTest {
         }
         fixture.getValue("tipHeight").jsonArray.forEach { value ->
             val test = value.jsonObject
-            assertEquals(test.getValue("valid").jsonPrimitive.boolean, runCatching { EsploraEndpoint.validateTip(test.getValue("value").jsonPrimitive.content) }.isSuccess)
+            assertEquals(test.getValue("valid").jsonPrimitive.boolean,
+                runCatching { EsploraEndpoint.validateTip(test.getValue("value").jsonPrimitive.content) }.isSuccess)
         }
     }
     @Test fun retiredEndpointsAreDurableBeforeAndAfterSimulatedRestart() = runBlocking {

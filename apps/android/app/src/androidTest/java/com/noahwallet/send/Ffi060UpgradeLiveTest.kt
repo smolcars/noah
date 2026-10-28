@@ -71,7 +71,8 @@ class Ffi060UpgradeLiveTest {
                         val config = WalletConfiguration.base("regtest").sdkConfig("noah-ffi060-peer/1")
                         val mnemonic = generateMnemonic()
                         val onchain = OnchainWallet.default(Network.REGTEST, mnemonic, config, peer.path)
-                        val wallet = Wallet.openWithOnchain(Network.REGTEST, mnemonic, config, WalletOpenArgs(runDaemon = false, datadir = peer.path, createIfNotExists = true), onchain)
+                        val wallet = Wallet.openWithOnchain(Network.REGTEST, mnemonic, config,
+                            WalletOpenArgs(runDaemon = false, datadir = peer.path, createIfNotExists = true), onchain)
                         try { send(scope, SendPayment(wallet.newAddress(), "ark", 3_000)) } finally { wallet.close(); onchain.close() }
                     } finally { peer.deleteRecursively() }
                     send(scope, SendPayment(checkNotNull(args.getString("invoice")), "lightning", 2_000))

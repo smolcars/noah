@@ -58,7 +58,8 @@ class RecurringProtectedReadRaceTest {
                 ensureOpen = { error("Read paths must not open the wallet") },
                 binding = { bindings++; w.binding }, allowed = {}, quote = { error("unused") }, automationGeneration = { null },
                 withWalletMutation = { work -> entered.complete(Unit); gate.withLock { work() } }), this)
-            val read = async { if (reminder) assertNull(reader.reminderSchedule(schedule.id, schedule.nextRunAt!!)) else assertFalse(reader.hasDuePayments(w.now)) }
+            val read = async { if (reminder)
+                assertNull(reader.reminderSchedule(schedule.id, schedule.nextRunAt!!)) else assertFalse(reader.hasDuePayments(w.now)) }
             withTimeout(5000) { entered.await() }
             assertEquals(0, bindings)
             w.policyDirectory.deleteRecursively()

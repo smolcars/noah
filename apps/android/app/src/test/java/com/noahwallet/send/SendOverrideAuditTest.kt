@@ -67,7 +67,8 @@ class SendOverrideAuditTest {
                     subject.reloadForWalletChange(); subject.startNewPaymentAfterHistoryCheck(true)
                     assertTrue(failure, subject.locked); assertEquals(original, saved)
                     if (failure == "quarantine") assertEquals("corrupt", file.readText())
-                    assertTrue(subject.message!!.startsWith(if (failure == "remove") "Unable to save payment status" else "Unable to save the override confirmation"))
+                    assertTrue(subject.message!!.startsWith(if (failure == "remove")
+                        "Unable to save payment status" else "Unable to save the override confirmation"))
                 }
             }
         } finally { directory.deleteRecursively() }

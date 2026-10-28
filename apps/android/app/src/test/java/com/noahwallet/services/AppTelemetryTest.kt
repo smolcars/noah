@@ -88,7 +88,8 @@ class AppTelemetryTest {
         assertFalse(options.feedbackOptions.isEnableAttachScreenshot)
         assertFalse(options.isAttachScreenshot)
         assertFalse(options.isAttachViewHierarchy)
-        assertNull(options.beforeSendTransaction!!.execute(SentryTransaction("synthetic", 0.0, 1.0, emptyList(), emptyMap(), TransactionInfo("custom")), Hint()))
+        assertNull(options.beforeSendTransaction!!.execute(SentryTransaction("synthetic", 0.0, 1.0, emptyList(), emptyMap(),
+            TransactionInfo("custom")), Hint()))
         assertNull(options.beforeSendFeedback!!.execute(event(), Hint()))
         assertNotNull(options.beforeSendReplay)
     }
@@ -194,7 +195,8 @@ class AppTelemetryTest {
 
     @Test fun SDKInfoIsDetachedAndDropsUnknownSDKAndPackageFields() {
         val event = event().apply {
-            sdk = serializer.deserialize(StringReader("""{"name":"sentry.java.android","version":"8.57.0","integrations":["ANR"],"packages":[{"name":"maven:io.sentry:sentry","version":"8.57.0","secret":"payload"}],"surprise":"payload"}"""), SdkVersion::class.java)
+            sdk = serializer.deserialize(StringReader("""{"name":"sentry.java.android","version":"8.57.0","integrations":["ANR"],""" +
+                """"packages":[{"name":"maven:io.sentry:sentry","version":"8.57.0","secret":"payload"}],"surprise":"payload"}"""), SdkVersion::class.java)
         }
         val clean = clean(event)
         assertEquals("sentry.java.android", clean.sdk!!.name)
@@ -376,7 +378,10 @@ class AppTelemetryTest {
     }
 
     @Test fun releaseHealthSessionsKeepRandomIDsAndStatusButDropIdentityAndUnknownAttributes() {
-        val payload = """{"sid":"60e12f74-8d9b-47cb-a162-903fa0b155a1","did":"22d5eb12-8839-493d-bf9d-f2540d210f30","init":true,"started":"2026-10-20T12:00:00Z","status":"ok","errors":0,"private":"payload","attrs":{"release":"com.noahwallet.mainnet@0.2.0+100","environment":"production","ip_address":"192.0.2.1","user_agent":"personal data"}}"""
+        val payload =
+            """{"sid":"60e12f74-8d9b-47cb-a162-903fa0b155a1","did":"22d5eb12-8839-493d-bf9d-f2540d210f30","init":true,"started":"2026-10-20T12:00:00Z",""" +
+                """"status":"ok","errors":0,"private":"payload","attrs":{"release":"com.noahwallet.mainnet@0.2.0+100","environment":"production",""" +
+                """"ip_address":"192.0.2.1","user_agent":"personal data"}}"""
         val filtered = requireNotNull(TelemetryTransport.filter(envelope(SentryItemType.Session, payload)))
         val actual = Json.parseToJsonElement(filtered.items.single().data.toString(Charsets.UTF_8)).jsonObject
         assertEquals("ok", actual["status"]!!.jsonPrimitive.content)

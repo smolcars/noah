@@ -185,7 +185,9 @@ class BackupCoordinatorTest {
     }
 
     @Test fun rnShapeAndExplicitNulls() {
-        val state = PersistedBackupState.decode("""{"state":{"backupPending":true,"lastBackupAt":1784160000000,"lastBackupAttemptAt":null,"lastBackupStatus":"in_progress","lastBackupError":null,"lastBackupId":"b1","lastUploadedSnapshotSha256":"ab"},"version":0}""")
+        val state =
+            PersistedBackupState.decode("""{"state":{"backupPending":true,"lastBackupAt":1784160000000,"lastBackupAttemptAt":null,""" +
+                """"lastBackupStatus":"in_progress","lastBackupError":null,"lastBackupId":"b1","lastUploadedSnapshotSha256":"ab"},"version":0}""")
         state.markPending(); assertEquals("in_progress", state.lastBackupStatus); assertEquals("ab", state.lastUploadedSnapshotSha256)
         assertTrue(state.forgetUploadedBackup("b1")); assertFalse(state.forgetUploadedBackup("other")); assertNull(state.lastUploadedSnapshotSha256)
         assertTrue(PersistedBackupState().encode().contains("\"lastBackupId\":null"))

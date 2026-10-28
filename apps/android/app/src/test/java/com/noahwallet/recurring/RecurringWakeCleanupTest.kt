@@ -37,7 +37,8 @@ class RecurringWakeCleanupTest {
             release.complete(Unit)
             val results = withTimeout(5000) { listOf(foreground.await(), wake.await()) }
             assertTrue("Targeted cleanup boundary was reached", hit)
-            assertTrue("Independent wake failed: ${results[1].exceptionOrNull()}; payments=${w.wallet.calls}; secondPaid=${w.store.load().schedules[second.id]?.occurrencesPaid}", results[1].isSuccess)
+            assertTrue("Independent wake failed: ${results[1].exceptionOrNull()}; payments=${w.wallet.calls}; " +
+                "secondPaid=${w.store.load().schedules[second.id]?.occurrencesPaid}", results[1].isSuccess)
             assertEquals(outcome == "revoked", results[0].isSuccess)
             assertEquals(2, w.wallet.calls)
             for (schedule in listOf(first, second)) {

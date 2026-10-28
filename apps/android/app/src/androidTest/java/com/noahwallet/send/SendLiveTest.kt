@@ -21,7 +21,8 @@ class SendLiveTest {
         assumeTrue(InstrumentationRegistry.getArguments().getString("noahSendStartup") == "disposable-emulator")
         val instrumentation = InstrumentationRegistry.getInstrumentation()
         val context = instrumentation.targetContext
-        val activity = instrumentation.startActivitySync(android.content.Intent(context, com.noahwallet.MainActivity::class.java).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
+        val activity = instrumentation.startActivitySync(android.content.Intent(context,
+            com.noahwallet.MainActivity::class.java).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
         val session = WalletSession.shared(context)
         val seed = (SeedStorage(context, "regtest").read() as SecretResult.Found).value
         session.ensureOpen(seed, false, BuildConfig.VERSION_NAME)

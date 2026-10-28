@@ -44,7 +44,8 @@ class ExitDeviceTest {
         var submits = 0
         val running = CompletableDeferred<Unit>()
         val model = OnchainModel(OnchainModel.Dependencies({ true }, { error("offline") },
-            { action, ids, _, _ -> OnchainQuote(action, "fixture", ids.sorted(), amount = 31_000, fee = 262, chainFee = 5_533, confirmed = 18_400, feeRate = 3, transactions = 4) },
+            { action, ids, _, _ -> OnchainQuote(action, "fixture", ids.sorted(), amount = 31_000, fee = 262, chainFee = 5_533, confirmed = 18_400,
+                feeRate = 3, transactions = 4) },
             { submits++; running.await(); "submitted" }, { emptyList() }, {}, { false }, {}, { null }, {}))
         compose.setContent { NoahTheme { ExitPreviewHost {
             val scope = rememberCoroutineScope()
@@ -198,7 +199,8 @@ class ExitDeviceTest {
         for (node in nodes()) {
             val bounds: Rect = node.boundsInWindow
             if (bounds.width <= 0f || bounds.height <= 0f) continue
-            val what = "$label: ${node.config.getOrNull(SemanticsProperties.Text)?.joinToString() ?: node.config.getOrNull(SemanticsProperties.TestTag)} $bounds $fold"
+            val what =
+                "$label: ${node.config.getOrNull(SemanticsProperties.Text)?.joinToString() ?: node.config.getOrNull(SemanticsProperties.TestTag)} $bounds $fold"
             if (vertical) assertFalse("crosses the vertical fold: $what", bounds.left < fold.left && bounds.right > fold.right)
             else assertFalse("crosses the horizontal fold: $what", bounds.top < fold.top && bounds.bottom > fold.bottom)
         }
@@ -211,12 +213,15 @@ class ExitDeviceTest {
     @Test fun bookAndTabletopKeepEveryPageOffTheHinge() {
         val estimate: suspend (List<String>) -> OnchainQuote? = { ids -> OnchainQuote(OnchainAction.startExit, "fixture", ids.sorted(), amount = 31_000,
             fee = 262, chainFee = 5_533, confirmed = 18_400, feeRate = 3, transactions = 4) }
-        val review = OnchainQuote(OnchainAction.startExit, "fixture", listOf(f.vtxos[0].id), amount = 31_000, fee = 262, chainFee = 5_533, confirmed = 18_400, feeRate = 3, transactions = 4)
+        val review = OnchainQuote(OnchainAction.startExit, "fixture", listOf(f.vtxos[0].id), amount = 31_000, fee = 262, chainFee = 5_533,
+            confirmed = 18_400, feeRate = 3, transactions = 4)
         val pages: List<Pair<String, @Composable () -> Unit>> = listOf(
             "warning" to @Composable { ExitWarningContent(f.list, f.tip, 144, 5_533, false, f.money, {}, {}, {}, {}) },
-            "choose" to @Composable { ExitChooseContent(f.vtxos, f.costs, 18_400, false, true, false, false, f.money, {}, estimate, {}, {}, initial = listOf(f.vtxos[0].id)) },
+            "choose" to @Composable { ExitChooseContent(f.vtxos, f.costs, 18_400, false, true, false, false, f.money, {}, estimate, {}, {},
+                initial = listOf(f.vtxos[0].id)) },
             "start" to @Composable { ExitStartContent(review, null, 18_400, false, false, 144, f.money, {}, {}, {}, {}) },
-            "claim" to @Composable { ExitClaimContent(listOf(f.claimable), f.tip, null, null, ClaimTo.other, "", null, null, false, false, false, f.money, {}, {}, {}, {}, {}, {}) },
+            "claim" to @Composable { ExitClaimContent(listOf(f.claimable), f.tip, null, null, ClaimTo.other, "", null, null, false, false, false, f.money,
+                {}, {}, {}, {}, {}, {}) },
             "list" to @Composable { ExitListContent(f.list, f.tip + 2, emptySet(), true, false, false, f.money, {}, {}, {}, {}) },
         ) + listOf(f.publish, f.bump, f.nofunds, f.wait, f.claimable, f.claimed, f.canceled).mapIndexed { i, exit -> "progress $i" to @Composable {
             val tip = exit.details.tip_height ?: f.tip

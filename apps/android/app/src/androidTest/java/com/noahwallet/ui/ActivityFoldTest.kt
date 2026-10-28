@@ -62,7 +62,9 @@ class ActivityFoldTest {
             val bounds = node.boundsInWindow
             if (bounds.width <= 0f || bounds.height <= 0f) continue
             if (node.config.getOrNull(SemanticsProperties.ContentDescription)?.contains("Close sheet") == true) continue
-            val what = "$label: ${node.config.getOrNull(SemanticsProperties.Text)?.joinToString() ?: node.config.getOrNull(SemanticsProperties.ContentDescription)?.joinToString()} $bounds $region"
+            val text = node.config.getOrNull(SemanticsProperties.Text)?.joinToString()
+                ?: node.config.getOrNull(SemanticsProperties.ContentDescription)?.joinToString()
+            val what = "$label: $text $bounds $region"
             if (vertical) assertFalse("crosses the vertical fold: $what", bounds.left < region.left && bounds.right > region.right)
             else assertFalse("crosses the horizontal fold: $what", bounds.top < region.top && bounds.bottom > region.bottom)
         }

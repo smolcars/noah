@@ -90,7 +90,8 @@ class TelemetryOutboxTest {
         }
     }
 
-    @Test fun rejectedEventBeforeAcceptedSessionDoesNotCompleteItsUpload() = pendingUpload(listOf(SentryEnvelopeItem.fromEvent(serializer, event(rejected = true)), sessionItem()), acceptedTypes = listOf(SentryItemType.Session))
+    @Test fun rejectedEventBeforeAcceptedSessionDoesNotCompleteItsUpload() = pendingUpload(listOf(SentryEnvelopeItem.fromEvent(serializer,
+        event(rejected = true)), sessionItem()), acceptedTypes = listOf(SentryItemType.Session))
 
     @Test fun acceptedSessionBeforeRejectedEventDoesNotWaitForTimeout() {
         Replay(listOf(sessionItem(), SentryEnvelopeItem.fromEvent(serializer, event(rejected = true)))).use { replay ->

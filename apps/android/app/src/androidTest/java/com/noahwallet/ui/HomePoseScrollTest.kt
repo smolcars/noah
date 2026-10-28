@@ -124,7 +124,8 @@ class HomePoseScrollTest {
     private fun onScreen(text: String, below: Float = 0f): Boolean {
         val window = compose.onNodeWithTag("home-window").fetchSemanticsNode()
         val node = compose.onNodeWithText(text, useUnmergedTree = true).fetchSemanticsNode()
-        return node.positionInRoot.y >= window.positionInRoot.y + below && node.positionInRoot.y + node.size.height <= window.positionInRoot.y + window.size.height
+        return node.positionInRoot.y >= window.positionInRoot.y + below &&
+            node.positionInRoot.y + node.size.height <= window.positionInRoot.y + window.size.height
     }
 
     @Test fun theFreshCardKeepsItsPlaceRecreatedIntoEitherLayout() {

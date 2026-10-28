@@ -20,8 +20,9 @@ class RecurringSettlementDurabilityTest {
         return s
     }
 
-    private fun restartedExecutor(w: RecurringWorld, c: SendController) = RecurringExecutor(RecurringExecutor.Dependencies(w.store, w.journal, c, ensureOpen = {}, binding = { w.binding }, allowed = {},
-        quote = { error("Recovery must not quote or pay") }, automationGeneration = { null }, now = { w.now }, zone = { w.zone }), w.scope)
+    private fun restartedExecutor(w: RecurringWorld, c: SendController) =
+        RecurringExecutor(RecurringExecutor.Dependencies(w.store, w.journal, c, ensureOpen = {}, binding = { w.binding }, allowed = {},
+            quote = { error("Recovery must not quote or pay") }, automationGeneration = { null }, now = { w.now }, zone = { w.zone }), w.scope)
 
     @Test fun restartedDoneMustNotEraseUnsettledPaidEvidence() = runBlocking {
         val w = RecurringWorld(this)
@@ -38,7 +39,8 @@ class RecurringSettlementDurabilityTest {
             assertEquals(SendController.State.succeeded, c.state)
             c.acknowledge() // Done on the recovered receipt.
             executor.execute(); executor.checkStatus(s.id)
-            assertTrue("Paid evidence lost after restart/Done: consumed=${w.journal.load().getValue(s.id).consumed}, count=${w.schedule!!.occurrencesPaid}, send=${w.sendJournal.attempt}",
+            assertTrue("Paid evidence lost after restart/Done: consumed=${w.journal.load().getValue(s.id).consumed}, " +
+                "count=${w.schedule!!.occurrencesPaid}, send=${w.sendJournal.attempt}",
                 w.journal.load().getValue(s.id).consumed && w.schedule!!.occurrencesPaid == 1)
             executor.execute(); executor.checkStatus(s.id)
             assertEquals(1, w.schedule!!.runs.count { it.status == "success" })
@@ -57,7 +59,8 @@ class RecurringSettlementDurabilityTest {
             c.reloadForWalletChange()
             val executor = restartedExecutor(w, c)
             executor.execute(); executor.checkStatus(s.id)
-            assertTrue("Replacement overwrote paid recurring proof before restart: consumed=${w.journal.load().getValue(s.id).consumed}, count=${w.schedule!!.occurrencesPaid}, key=${w.sendJournal.attempt?.recurringOccurrenceKey}",
+            assertTrue("Replacement overwrote paid recurring proof before restart: consumed=${w.journal.load().getValue(s.id).consumed}, " +
+                "count=${w.schedule!!.occurrencesPaid}, key=${w.sendJournal.attempt?.recurringOccurrenceKey}",
                 w.journal.load().getValue(s.id).consumed && w.schedule!!.occurrencesPaid == 1)
             executor.execute(); executor.checkStatus(s.id)
             assertEquals(1, w.schedule!!.runs.count { it.status == "success" })

@@ -137,7 +137,8 @@ class ActivityLiveTest {
 
     /** Ark → on-chain (send-onchain) to the host's address (`-e recipient`); it waits for two confirmations. */
     private suspend fun onchain() {
-        val (controller, _) = send(SendPayment(checkNotNull(args.getString("recipient")), "onchain", args.getString("amount")?.toLong() ?: 4_000, SendSource.offchain))
+        val (controller, _) = send(SendPayment(checkNotNull(args.getString("recipient")), "onchain",
+            args.getString("amount")?.toLong() ?: 4_000, SendSource.offchain))
         val receipt = checkNotNull(controller.attempt?.receipt) { "On-chain send did not succeed: ${controller.state}" }
         controller.acknowledge()
         evidence("onchain", buildJsonObject { put("txid", checkNotNull(receipt.txid)); put("movementID", receipt.movementID?.toLong()) })

@@ -27,7 +27,8 @@ class EndpointRecordPrivacyTest {
     private fun cases(kind: String) = Json.parseToJsonElement(javaClass.classLoader!!.getResource("esplora-log-records.json")!!.readText()).jsonArray
         .map { it.jsonObject }.filter { it.getValue("kind").jsonPrimitive.content == kind }
 
-    private fun headerCases() = Json.parseToJsonElement(javaClass.classLoader!!.getResource("esplora-log-headers.json")!!.readText()).jsonArray.map { it.jsonObject }
+    private fun headerCases() =
+        Json.parseToJsonElement(javaClass.classLoader!!.getResource("esplora-log-headers.json")!!.readText()).jsonArray.map { it.jsonObject }
 
     @Test fun sharedHeaderVectorsUseIsolatedSnapshots() {
         for (test in headerCases()) {
@@ -44,7 +45,8 @@ class EndpointRecordPrivacyTest {
             assertEquals(test.toString(), test.getValue("generalExpected").jsonPrimitive.content, general)
             if ("recordExpected" in test) {
                 // The date/boundary token itself must cause the whole-record replacement.
-                assertNotEquals(test.toString(), listOf("[custom-esplora]"), EndpointLogPrivacy.redactLogLines(input.lines(), registered, EndpointLogPrivacy.SecretMatcher(hostTokens), hosts))
+                assertNotEquals(test.toString(), listOf("[custom-esplora]"),
+                    EndpointLogPrivacy.redactLogLines(input.lines(), registered, EndpointLogPrivacy.SecretMatcher(hostTokens), hosts))
             }
         }
     }

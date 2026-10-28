@@ -15,9 +15,10 @@ import org.junit.Test
 class ReceiveRecordsTest {
     @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
 
-    private fun deposit(id: String, sats: Long, confirmed: Boolean = false, spending: String? = null) = HistoryTransaction("onchain-wallet-$id", "Onchain", sats,
-        "2026-10-22T10:00:00Z", "incoming", source = "onchain-wallet", txid = id, txHex = spending?.let { tx(it, sats) } ?: "hex-$id",
-        balanceChangeSat = sats, hasConfirmation = confirmed)
+    private fun deposit(id: String, sats: Long, confirmed: Boolean = false, spending: String? = null) =
+        HistoryTransaction("onchain-wallet-$id", "Onchain", sats,
+            "2026-10-22T10:00:00Z", "incoming", source = "onchain-wallet", txid = id, txHex = spending?.let { tx(it, sats) } ?: "hex-$id",
+            balanceChangeSat = sats, hasConfirmation = confirmed)
     /** A minimal one-input, one-output transaction spending output 0 of [coin] (a txid in hex). */
     private fun tx(coin: String, sats: Long): String {
         fun le(value: Long, bytes: Int) = (0 until bytes).joinToString("") { "%02x".format((value shr (8 * it)) and 0xff) }

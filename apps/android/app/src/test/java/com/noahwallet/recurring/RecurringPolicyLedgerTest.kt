@@ -14,7 +14,8 @@ class RecurringPolicyLedgerTest {
         val file = File(directory, "journal.json.policies")
         val marker = File("${file.path}.initialized")
         val binding = RecurringStore.Binding(SendIdentity("wallet", "regtest"), UUID.randomUUID().toString())
-        val policy = RecurringPayment("rent", "Rent", "recipient", "ark", 1000, interval = RecurringInterval("day", 1), startAt = 1000, createdAt = 0, updatedAt = 0)
+        val policy = RecurringPayment("rent", "Rent", "recipient", "ark", 1000, interval = RecurringInterval("day", 1), startAt = 1000,
+            createdAt = 0, updatedAt = 0)
         var raw: String? = null
         var writes = 0
         var beforeWrite: () -> Unit = {}

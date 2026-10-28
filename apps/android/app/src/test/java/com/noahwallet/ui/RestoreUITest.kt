@@ -352,7 +352,9 @@ class RestoreCompletionReplayTest {
                 location.directory.mkdirs(); location.database.writeText("committed wallet")
                 var fail = boundary
                 var armed = false
-                val journal = RestoreCompletionJournal(location) { if (armed && fail == "clear" && !java.io.File(location.restoreDirectory, "completion.json").exists()) error("crash") }
+                val journal = RestoreCompletionJournal(location) {
+                    if (armed && fail == "clear" && !java.io.File(location.restoreDirectory, "completion.json").exists()) error("crash")
+                }
                 // Engine callback persists the metadata before the seed commit.
                 journal.write(WalletRestorer.Outcome("backup", "snapshot"))
                 armed = true

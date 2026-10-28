@@ -38,7 +38,8 @@ class RecurringAdmissionRaceTest {
             assertFalse(File(location.directory, ".noah-recurring-automation.json").exists())
             location.directory.mkdirs()
             location.database.writeBytes(byteArrayOf())
-            assertTrue("A completed deletion must not let old work poison the replacement wallet", RecurringAutomationAuthority(location.directory) { file, bytes -> durableRecurringWrite(file, bytes) {} }.allowed())
+            assertTrue("A completed deletion must not let old work poison the replacement wallet",
+                RecurringAutomationAuthority(location.directory) { file, bytes -> durableRecurringWrite(file, bytes) {} }.allowed())
         } finally { w.policyDirectory.parentFile!!.deleteRecursively() }
     }
     @Test fun waitingTriggerRevalidatesAfterDeletionReleasesLifecycleGate() = runBlocking {

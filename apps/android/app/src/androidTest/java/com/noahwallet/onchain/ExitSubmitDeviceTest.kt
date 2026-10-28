@@ -76,7 +76,10 @@ class ExitSubmitDeviceTest {
             calls += "start"; gate?.await()
             spendable = false; exit = ExitState.Start(tip.toUInt())
         }
-        override suspend fun drain(ids: List<String>, destination: String): ExitClaimTransaction { calls += "drain"; return ExitClaimTransaction("psbt", drainFee) }
+        override suspend fun drain(ids: List<String>, destination: String): ExitClaimTransaction {
+            calls += "drain"
+            return ExitClaimTransaction("psbt", drainFee)
+        }
         override suspend fun claimTransaction(psbt: String) = ExitFixtures.signedClaim
         override suspend fun broadcastClaim(psbt: String): String {
             calls += "broadcast"; gate?.await()
@@ -137,7 +140,8 @@ class ExitSubmitDeviceTest {
             if (shown) {
                 val restored = remember { SaveableStateRegistry(saved) { true }.also { registry = it } }
                 CompositionLocalProvider(LocalSaveableStateRegistry provides restored) {
-                    val model = remember { OnchainModel(onchainDependencies(process.session, process.lifecycle, AutoBoardFunding({ null }, {}), claims, ExitSeen({ null }, {})) { true })
+                    val model = remember { OnchainModel(onchainDependencies(process.session, process.lifecycle, AutoBoardFunding({ null }, {}), claims,
+                        ExitSeen({ null }, {})) { true })
                         .also { models += it } }
                     LaunchedEffect(model) { model.load() }
                     page(model)

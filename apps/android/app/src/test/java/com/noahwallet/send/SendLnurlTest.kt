@@ -23,7 +23,8 @@ internal fun decoderInvoice(amount: String = "10u", network: String = "lnbcrt", 
 
 /** Decoder-only invoices; deliberately never submitted to the SDK. */
 class SendLnurlTest {
-    private fun invoice(amount: String = "10u", network: String = "lnbcrt", timestamp: Long = System.currentTimeMillis() / 1000) = decoderInvoice(amount, network, timestamp)
+    private fun invoice(amount: String = "10u", network: String = "lnbcrt", timestamp: Long = System.currentTimeMillis() / 1000) =
+        decoderInvoice(amount, network, timestamp)
     @Test fun validatesExactAmountNetworkAndExpiryBeforeBOLT11Submission() {
         SendRecipientService.validateInvoice(invoice(), 1000, "regtest")
         for (value in listOf(invoice("20u"), invoice(network = "lnbc"), invoice(timestamp = 1), invoice(amount = "")))
@@ -34,7 +35,9 @@ class SendLnurlTest {
         val service = SendRecipientService("regtest", warnings::add, fetch = { url ->
             requests++
             if (url.encodedPath == "/callback") {
-                assertEquals("1000000", url.queryParameter("amount")); assertEquals("note", url.queryParameter("comment")); assertEquals("keep", url.queryParameter("other"))
+                assertEquals("1000000", url.queryParameter("amount"))
+                assertEquals("note", url.queryParameter("comment"))
+                assertEquals("keep", url.queryParameter("other"))
                 buildJsonObject { put("pr", callbackInvoice) }
             } else buildJsonObject {
                 put("tag", "payRequest"); put("callback", "https://example.com/callback?other=keep&amount=old&comment=old")
@@ -46,7 +49,8 @@ class SendLnurlTest {
         requests = 0
         assertTrue(runCatching { service.invoice(SendPayment("alice@example.com", "lnurl", 3000)) }.isFailure); assertEquals(1, requests)
         requests = 0
-        assertTrue(runCatching { service.invoice(SendPayment("alice@example.com", "lnurl", 1000, comment = "x".repeat(11))) }.isFailure); assertEquals(1, requests)
+        assertTrue(runCatching { service.invoice(SendPayment("alice@example.com", "lnurl", 1000, comment = "x".repeat(11))) }.isFailure)
+        assertEquals(1, requests)
     }
     @Test fun onionOrUserinfoCallbacksAreNeverRequested() = runBlocking {
         for (callback in listOf("https://abc.onion/cb", "https://ABC.ONION./cb", "https://user:pass@example.com/cb", "https://user@example.com/cb")) {
@@ -59,10 +63,21 @@ class SendLnurlTest {
     }
     @Test fun malformedOrInsecureCallbacksAndUnvalidatedArkRoutesAreRejected() = runBlocking {
         for (callback in listOf("http://example.com/callback", "javascript:bad")) {
-            val service = SendRecipientService("regtest", fetch = { buildJsonObject { put("tag", "payRequest"); put("callback", callback); put("minSendable", 1); put("maxSendable", 1000) } })
+            val service = SendRecipientService("regtest", fetch = { buildJsonObject {
+                put("tag", "payRequest")
+                put("callback", callback)
+                put("minSendable", 1)
+                put("maxSendable", 1000)
+            } })
             assertTrue(runCatching { service.resolve("alice@example.com") }.isFailure)
         }
-        val service = SendRecipientService("regtest", fetch = { buildJsonObject { put("tag", "payRequest"); put("callback", "https://example.com/callback"); put("minSendable", 1); put("maxSendable", 1000); put("ark", "foreign") } })
+        val service = SendRecipientService("regtest", fetch = { buildJsonObject {
+            put("tag", "payRequest")
+            put("callback", "https://example.com/callback")
+            put("minSendable", 1)
+            put("maxSendable", 1000)
+            put("ark", "foreign")
+        } })
         assertNull(service.resolve("alice@example.com").arkAddress)
     }
 }

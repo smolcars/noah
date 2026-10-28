@@ -30,7 +30,8 @@ class SettingsHistoryPrivacyTest {
         try {
             val file = NativeSettingsFile(File(context.noBackupFilesDir, "settings.native.json"), sync = {})
             // Previous-process history: never register it in this process.
-            file.save(NativeSettingsFile.State(mapOf(EsploraSettings.key to """{"active":{"variant":"signet"},"logEndpoints":["https://fakeR4LostHistory.example/retiredFakeR4"]}""")))
+            file.save(NativeSettingsFile.State(mapOf(EsploraSettings.key to """{"active":{"variant":"signet"},""" +
+                """"logEndpoints":["https://fakeR4LostHistory.example/retiredFakeR4"]}""")))
             file.file.writeText(file.file.readText().replace("retiredFakeR4", "damagedFakeR4"))
             val logs = File(root, "logs").apply { mkdirs() }
             File(logs, "noah.log.1").writeText("HTTP failure https://fakeR4LostHistory.example/retiredFakeR4")

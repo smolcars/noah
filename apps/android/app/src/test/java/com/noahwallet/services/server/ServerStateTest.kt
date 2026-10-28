@@ -9,7 +9,11 @@ import com.noahwallet.api.generated.models.DeviceInfo as DevicePayload
 
 class ServerStateTest {
     companion object {
-        const val rnJSON = """{"state":{"isRegisteredWithServer":true,"lightningAddress":"alice@localhost.com","nostrPubkey":null,"isBackupEnabled":true,"emailAddress":"alice@example.com","isEmailVerified":true,"isEmailPromptDismissed":false,"mailboxAuthorizationExpiry":1790000000,"isMailboxAuthorizationEnabled":false,"lastReportedDeviceFingerprint":"[null,null,null,null,null,null]","lastDeviceReportAt":1784160000000},"version":0}"""
+        const val rnJSON =
+            """{"state":{"isRegisteredWithServer":true,"lightningAddress":"alice@localhost.com","nostrPubkey":null,"isBackupEnabled":true,""" +
+                """"emailAddress":"alice@example.com","isEmailVerified":true,"isEmailPromptDismissed":false,"mailboxAuthorizationExpiry":1790000000,""" +
+                """"isMailboxAuthorizationEnabled":false,"lastReportedDeviceFingerprint":"[null,null,null,null,null,null]",""" +
+                """"lastDeviceReportAt":1784160000000},"version":0}"""
     }
 
     @Test fun rnEnvelopeRoundTripsAndUpdatesPreservePreferences() {
@@ -36,7 +40,9 @@ class ServerStateTest {
     }
 
     @Test fun lenientFieldsAndMissingDefaultsMatchIOS() {
-        val state = PersistedServerState.decode("""{"state":{"isRegisteredWithServer":true,"emailAddress":42,"isEmailVerified":"yes","lightningAddress":"alice@localhost.com","futureField":true}}""")
+        val state =
+            PersistedServerState.decode("""{"state":{"isRegisteredWithServer":true,"emailAddress":42,"isEmailVerified":"yes",""" +
+                """"lightningAddress":"alice@localhost.com","futureField":true}}""")
         assertEquals(true, state.isRegisteredWithServer)
         assertEquals("alice@localhost.com", state.lightningAddress)
         assertNull(state.emailAddress)

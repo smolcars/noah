@@ -17,9 +17,11 @@ class OnchainJournalTest {
         try { withTimeout(10_000) { body(File(root, "attempt.json"), journal(File(root, "attempt.json"))) } }
         finally { root.deleteRecursively() }
     }
-    private fun quote(action: OnchainAction = OnchainAction.board, ids: List<String> = emptyList()) = OnchainQuote(action, "wallet", ids, amount = 30_000, fee = 330)
+    private fun quote(action: OnchainAction = OnchainAction.board, ids: List<String> = emptyList()) =
+        OnchainQuote(action, "wallet", ids, amount = 30_000, fee = 330)
     private suspend fun uncertain(journal: OnchainOperationJournal, quote: OnchainQuote) {
-        assertEquals(OnchainFailure.uncertain, (runCatching { journal.perform(quote) { throw BarkError("unclassified", BarkErrorCode.OTHER) } }.exceptionOrNull() as OnchainException).reason)
+        assertEquals(OnchainFailure.uncertain,
+            (runCatching { journal.perform(quote) { throw BarkError("unclassified", BarkErrorCode.OTHER) } }.exceptionOrNull() as OnchainException).reason)
     }
     @Test fun savesBeforeNativeAndSurvivesRestartWithoutResubmitting() = runBlocking { fixture { file, journal ->
         val quote = quote()
@@ -198,8 +200,9 @@ class OnchainJournalTest {
         assertTrue("an unresolved board still blocks", crashed.blocks(OnchainAction.board, emptyList()))
         assertFalse("an override still unblocks", overridden.blocks(OnchainAction.board, emptyList()))
         // A movement found later never locks an attempt the user already overrode.
-        assertFalse(journal.reconcile(overridden.id, OnchainOperationJournal.Evidence("wallet", chainStatuses = mapOf("overridden" to ChainStatus(ChainStatus.Kind.notFound)),
-            unspent = setOf("input:0"), boardMovementTransactionIDs = setOf("overridden"))))
+        assertFalse(journal.reconcile(overridden.id,
+            OnchainOperationJournal.Evidence("wallet", chainStatuses = mapOf("overridden" to ChainStatus(ChainStatus.Kind.notFound)),
+                unspent = setOf("input:0"), boardMovementTransactionIDs = setOf("overridden"))))
         assertFalse(journal.loadAll().last().blocks(OnchainAction.board, emptyList()))
         // A crash's unresolved board keeps today's override.
         journal.overrideUncertain(crashed.id, 2)
@@ -243,7 +246,11 @@ class OnchainJournalTest {
             val resolved = reopened.reconcile(quote.id, evidence)
             assertEquals(source, source !in listOf("missing", "lookalike"), resolved)
             val receipt = reopened.loadAll().single().receipt
-            if (resolved) { assertEquals("exact", receipt!!.txid); assertEquals(199L, receipt.onchainFee); assertEquals(source != "confirmed", receipt.broadcastRetryPending) }
+            if (resolved) {
+                assertEquals("exact", receipt!!.txid)
+                assertEquals(199L, receipt.onchainFee)
+                assertEquals(source != "confirmed", receipt.broadcastRetryPending)
+            }
             else assertNull(receipt)
         }
     }
@@ -334,7 +341,11 @@ class OnchainJournalTest {
         val reads = object : OnchainAttemptReads {
             override val walletID = "wallet"
             override suspend fun transactionIDs() = emptySet<String>()
-            override suspend fun transactionStatus(txid: String): ChainStatus { assertEquals("claim", txid); if (failure) error("offline"); return ChainStatus(ChainStatus.Kind.confirmed, 201) }
+            override suspend fun transactionStatus(txid: String): ChainStatus {
+                assertEquals("claim", txid)
+                if (failure) error("offline")
+                return ChainStatus(ChainStatus.Kind.confirmed, 201)
+            }
             override suspend fun vtxoState(id: String) = "Exited"
             override suspend fun exitState(id: String) = "Claimed"
         }

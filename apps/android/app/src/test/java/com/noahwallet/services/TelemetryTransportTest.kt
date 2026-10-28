@@ -46,12 +46,14 @@ class TelemetryTransportTest {
             val input = Json.parseToJsonElement(payload).jsonObject.toMutableMap().apply {
                 put("sid", JsonPrimitive(id)); put("did", JsonPrimitive(id))
             }
-            assertNotNull(id, TelemetryTransport.filter(SentryEnvelope(SentryEnvelopeHeader(), listOf(item(SentryItemType.Session, JsonObject(input).toString())))))
+            assertNotNull(id, TelemetryTransport.filter(SentryEnvelope(SentryEnvelopeHeader(),
+                listOf(item(SentryItemType.Session, JsonObject(input).toString())))))
         }
         for (id in listOf("", "1-1-1-1-1", "g".repeat(32), "a".repeat(31), "a".repeat(33), "alice@example.com", "60e12f74-8d9b47cb-a162-903fa0b155a1")) {
             for (key in listOf("sid", "did")) {
                 val input = Json.parseToJsonElement(payload).jsonObject.toMutableMap().apply { put(key, JsonPrimitive(id)) }
-                assertNull("$key=$id", TelemetryTransport.filter(SentryEnvelope(SentryEnvelopeHeader(), listOf(item(SentryItemType.Session, JsonObject(input).toString())))))
+                assertNull("$key=$id", TelemetryTransport.filter(SentryEnvelope(SentryEnvelopeHeader(),
+                    listOf(item(SentryItemType.Session, JsonObject(input).toString())))))
             }
         }
     }

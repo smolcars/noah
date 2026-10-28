@@ -14,7 +14,8 @@ class RecurringStoreTest {
         val state = root.getValue("state").jsonObject
         val schedules = state.getValue("schedules").jsonObject
         raw = JsonObject(root + ("futureEnvelope" to JsonPrimitive(7)) + ("state" to JsonObject(state + ("futureState" to JsonPrimitive(true)) +
-            ("schedules" to JsonObject(schedules + ("rent" to JsonObject(schedules.getValue("rent").jsonObject + ("futureSchedule" to JsonPrimitive("kept"))))))))).toString()
+            ("schedules" to JsonObject(schedules + ("rent" to JsonObject(schedules.getValue("rent").jsonObject +
+                ("futureSchedule" to JsonPrimitive("kept"))))))))).toString()
         val store = RecurringStore({ raw }, { raw = it })
         val original = store.load().schedules.getValue("rent")
         store.upsert(original.copy(status = "paused", inFlight = null))

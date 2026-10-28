@@ -17,7 +17,8 @@ class RecurringRNRequiredFieldsTest(private val name: String, private val row: S
     companion object {
         @JvmStatic
         @Parameterized.Parameters(name = "{0}")
-        fun cases() = listOf("recurring-rn-required-fields", "recurring-rn-numeric-types", "recurring-rn-numeric-ranges", "recurring-rn-duplicate-keys").flatMap { fixture ->
+        fun cases() = listOf("recurring-rn-required-fields", "recurring-rn-numeric-types", "recurring-rn-numeric-ranges",
+            "recurring-rn-duplicate-keys").flatMap { fixture ->
             val seen = mutableSetOf<String>()
             SharedFixtures.document(fixture).jsonObject.getValue("cases").jsonArray.map { it.jsonObject.let { c ->
                 val classification = c.getValue("classification").jsonPrimitive.content

@@ -20,7 +20,8 @@ class HomeRulesTest {
     @Test fun activeRoundsMatchRN() {
         SharedFixtures.load("home-status").filter { it.input.jsonObject["operation"]?.jsonPrimitive?.content == "round" }.forEach { case ->
             val i = case.input.jsonObject
-            assertEquals(case.name, case.expected.jsonPrimitive.boolean, HomeRules.activeRound(i.getValue("final").jsonPrimitive.boolean, i.getValue("status").jsonPrimitive.content))
+            assertEquals(case.name, case.expected.jsonPrimitive.boolean,
+                HomeRules.activeRound(i.getValue("final").jsonPrimitive.boolean, i.getValue("status").jsonPrimitive.content))
         }
     }
     @Test fun hiddenFiatDoesNotNeedAPriceAndUsesRNSymbols() {
@@ -176,7 +177,8 @@ class HomeRulesTest {
             source = "ark", movementStatus = "pending", effectiveBalanceSat = -5_000, offchainFeeSat = 0)
         val base = HomeRules.accounting(listOf(pending, ark))
         // Block times, prices and the re-sorting they cause don't move money.
-        val enriched = listOf(ark.copy(btcPrice = 112_000.0), pending.copy(date = "2026-10-22T09:00:00.000Z", dateLabel = null, sortTimestamp = 1.0, btcPrice = 111_000.0))
+        val enriched = listOf(ark.copy(btcPrice = 112_000.0),
+            pending.copy(date = "2026-10-22T09:00:00.000Z", dateLabel = null, sortTimestamp = 1.0, btcPrice = 111_000.0))
         assertEquals(base, HomeRules.accounting(enriched))
         // The same row confirming, or a pending send settling, does.
         assertNotEquals(base, HomeRules.accounting(listOf(pending.copy(hasConfirmation = true, confirmationHeight = 220u), ark)))

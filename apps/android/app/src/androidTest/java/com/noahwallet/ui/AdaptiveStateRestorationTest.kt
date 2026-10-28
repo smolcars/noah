@@ -149,12 +149,15 @@ class AdaptiveStateRestorationTest {
             assertTrue(bounds.toString(), bounds.left >= 0 && bounds.top >= 0 && bounds.right <= size.x && bounds.bottom <= size.y)
             val window = android.graphics.Rect().also { automation.rootInActiveWindow.getBoundsInScreen(it) }
             for (hinge in reportedHinges) {
-                assertFalse("Picker crosses a vertical hinge", hinge.top <= window.top && hinge.bottom >= window.bottom && window.left < hinge.left && window.right > hinge.right)
-                assertFalse("Picker crosses a horizontal hinge", hinge.left <= window.left && hinge.right >= window.right && window.top < hinge.top && window.bottom > hinge.bottom)
+                assertFalse("Picker crosses a vertical hinge", hinge.top <= window.top && hinge.bottom >= window.bottom && window.left < hinge.left &&
+                    window.right > hinge.right)
+                assertFalse("Picker crosses a horizontal hinge", hinge.left <= window.left && hinge.right >= window.right && window.top < hinge.top &&
+                    window.bottom > hinge.bottom)
             }
             val args = InstrumentationRegistry.getArguments()
             if (args.getString("noahAdaptive") == "owned-disposable-avd") {
-                val folder = java.io.File(InstrumentationRegistry.getInstrumentation().targetContext.filesDir, "adaptive-shots/${args.getString("label", "state")}").apply { mkdirs() }
+                val folder = java.io.File(InstrumentationRegistry.getInstrumentation().targetContext.filesDir,
+                    "adaptive-shots/${args.getString("label", "state")}").apply { mkdirs() }
                 java.io.File(folder, "picker-geometry.txt").appendText("window=$window action=$bounds hinges=$reportedHinges\n")
             }
             assertTrue(action.performAction(android.view.accessibility.AccessibilityNodeInfo.ACTION_CLICK))
@@ -164,7 +167,8 @@ class AdaptiveStateRestorationTest {
         confirmVisiblePicker()
         // The restored pick, not the default, becomes the first payment.
         first.set(java.util.Calendar.DAY_OF_MONTH, 23)
-        compose.waitUntil(5_000) { compose.onAllNodes(hasText(recurringDay(first.timeInMillis), substring = true) and hasClickAction()).fetchSemanticsNodes().size == 1 }
+        compose.waitUntil(5_000) { compose.onAllNodes(hasText(recurringDay(first.timeInMillis),
+            substring = true) and hasClickAction()).fetchSemanticsNodes().size == 1 }
     }
 
     @Test fun recoverySurfaceIsSecureBeforeAndAfterActivityRecreation() {
@@ -272,8 +276,10 @@ class AdaptiveStateRestorationTest {
         compose.runOnIdle {
             assertEquals(3, frames.size)
             for ((name, bounds) in frames) for (hinge in hinges) {
-                assertFalse("$name crosses a vertical fold: $bounds $hinge", hinge.height > hinge.width && bounds.left < hinge.left && bounds.right > hinge.right)
-                assertFalse("$name crosses a horizontal fold: $bounds $hinge", hinge.width > hinge.height && bounds.top < hinge.top && bounds.bottom > hinge.bottom)
+                assertFalse("$name crosses a vertical fold: $bounds $hinge", hinge.height > hinge.width && bounds.left < hinge.left &&
+                    bounds.right > hinge.right)
+                assertFalse("$name crosses a horizontal fold: $bounds $hinge", hinge.width > hinge.height && bounds.top < hinge.top &&
+                    bounds.bottom > hinge.bottom)
             }
         }
     }

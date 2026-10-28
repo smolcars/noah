@@ -75,7 +75,10 @@ class PaymentLinkScreensTest {
         return model
     }
     /** An invoice with its own amount goes straight to review, as a scanned one does. */
-    private fun review(model: SendModel) { compose.runOnIdle { main.launch { model.importRecipient(decoderInvoice("10u"), stay = true) } }; compose.waitForIdle() }
+    private fun review(model: SendModel) {
+        compose.runOnIdle { main.launch { model.importRecipient(decoderInvoice("10u"), stay = true) } }
+        compose.waitForIdle()
+    }
 
     @Test fun sendsReviewRejectsLinksUntilItsLeft() {
         val model = mountSend()

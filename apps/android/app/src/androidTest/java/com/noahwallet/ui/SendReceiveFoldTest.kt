@@ -55,7 +55,8 @@ class SendReceiveFoldTest {
         for (node in nodes()) {
             val bounds: Rect = node.boundsInWindow
             if (bounds.width <= 0f || bounds.height <= 0f) continue
-            val what = "$label: ${node.config.getOrNull(SemanticsProperties.Text)?.joinToString() ?: node.config.getOrNull(SemanticsProperties.TestTag)} $bounds $fold"
+            val what =
+                "$label: ${node.config.getOrNull(SemanticsProperties.Text)?.joinToString() ?: node.config.getOrNull(SemanticsProperties.TestTag)} $bounds $fold"
             if (vertical) assertFalse("crosses the vertical fold: $what", bounds.left < fold.left && bounds.right > fold.right)
             else assertFalse("crosses the horizontal fold: $what", bounds.top < fold.top && bounds.bottom > fold.bottom)
         }
@@ -92,7 +93,8 @@ class SendReceiveFoldTest {
             val method = send { it.model.amount = "500"; it.model.continueStage(); it.model.setRecipient(SendFixtures.request()); it.model.continueStage() }
             fold = show(hinge) { SendPreviewHost(method, SendFixtures.env()) }
             assertClear("$pose method", fold)
-            val sent = send { it.model.controller.submit(SendPayment(SendFixtures.ark, "ark", 500), SendQuote(500, 0, 500, walletIdentity = SendFixtures.owner))?.await() }
+            val sent = send { it.model.controller.submit(SendPayment(SendFixtures.ark, "ark", 500),
+                SendQuote(500, 0, 500, walletIdentity = SendFixtures.owner))?.await() }
             fold = show(hinge) { SendPreviewHost(sent, SendFixtures.env()) }
             assertClear("$pose sent", fold); leads("$pose sent", fold, "send-stage", "send-success-done")
         }

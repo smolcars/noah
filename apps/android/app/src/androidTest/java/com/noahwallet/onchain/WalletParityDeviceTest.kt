@@ -46,7 +46,8 @@ class WalletParityDeviceTest {
                 fun contains(node: android.view.accessibility.AccessibilityNodeInfo?, text: String): Boolean = node != null &&
                     (node.text?.toString()?.contains(text) == true || (0 until node.childCount).any { contains(node.getChild(it), text) })
                 val deadline = System.currentTimeMillis() + 10_000
-                while (!contains(instrumentation.uiAutomation.rootInActiveWindow, "Fees and amount to receive are unknown") && System.currentTimeMillis() < deadline) Thread.sleep(100)
+                while (!contains(instrumentation.uiAutomation.rootInActiveWindow, "Fees and amount to receive are unknown") &&
+                    System.currentTimeMillis() < deadline) Thread.sleep(100)
                 File(instrumentation.targetContext.getExternalFilesDir(null), "exit-fallback-${action.name}.png").outputStream().use {
                     checkNotNull(instrumentation.uiAutomation.takeScreenshot()).compress(Bitmap.CompressFormat.PNG, 100, it)
                 }

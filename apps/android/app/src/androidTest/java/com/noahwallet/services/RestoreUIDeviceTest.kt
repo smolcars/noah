@@ -211,7 +211,8 @@ class RestoreUIDeviceTest {
             automation.performGlobalAction(android.accessibilityservice.AccessibilityService.GLOBAL_ACTION_HOME)
             waitFor("Activity backgrounded") { !activity!!.lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.STARTED) }
             context.startActivity(Intent(context, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
-            waitFor("Phrase kept through background") { activity!!.lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED) && firstWord() == typedFirst }
+            waitFor("Phrase kept through background") { activity!!.lifecycle.currentState.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED) &&
+                firstWord() == typedFirst }
             assertTrue("Still secure after returning", activity!!.window.attributes.flags and WindowManager.LayoutParams.FLAG_SECURE != 0)
             instrumentation.runOnMainSync {
                 val clipboard = context.getSystemService(android.content.Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
@@ -299,7 +300,9 @@ class RestoreUIDeviceTest {
             assertTrue("Stored-seed movement details match", expectedMovements == seedOnly.second.session.transactionHistory())
             assertTrue(expected.fingerprint == seedOnlySummary.fingerprint)
             instrumentation.sendStatus(0, Bundle().apply {
-                putString("restoreEvidence", "balance=${actual.balance.totalSats};movements=${actual.movementCount};fingerprintMatches=true;backupStorageSeeded=true;missingBackupActionable=true;savedPhraseRestore=true")
+                putString("restoreEvidence",
+                    "balance=${actual.balance.totalSats};movements=${actual.movementCount};fingerprintMatches=true;backupStorageSeeded=true;" +
+                        "missingBackupActionable=true;savedPhraseRestore=true")
             })
         } catch (failure: Exception) {
             // Do not let provider/FFI or accessibility exceptions include secret input in runner output.

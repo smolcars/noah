@@ -5,7 +5,8 @@ import org.junit.Test
 
 class BtcMapLinksTest {
     @Test fun websitesOnlyAllowHTTPAndHTTPS() {
-        listOf("javascript:alert(1)", "intent://host/#Intent;end", "file:///tmp/a", "tel:1234", "mailto:a@b.com", "https:///path", "https://user:password@example.com", "https://example.com\n").forEach {
+        listOf("javascript:alert(1)", "intent://host/#Intent;end", "file:///tmp/a", "tel:1234", "mailto:a@b.com", "https:///path",
+            "https://user:password@example.com", "https://example.com\n").forEach {
             assertNull(it, BtcMapLinks.web(it))
         }
         assertEquals("https://example.com/a", BtcMapLinks.web("https://example.com/a"))

@@ -60,7 +60,8 @@ class Ffi070LiveTest {
         val quote = checkNotNull(review.prepare({ true }, { session.autoBoardFunding(store::kept) }, { session.autoBoardQuote(store::kept) },
             { session.discardBoardReview(it) })) {
             "Auto-board offered nothing: funding ${session.autoBoardFunding(store::kept)}, confirmed ${session.summary()!!.balance.onchain.confirmed}, " +
-                "minimum ${session.boardingMinimum()}, kept ${store.kept(walletID)}, unhandled ${session.autoBoardFunding(store::kept)?.let(store::hasUnhandled)}"
+                "minimum ${session.boardingMinimum()}, kept ${store.kept(walletID)}, unhandled " +
+                "${session.autoBoardFunding(store::kept)?.let(store::hasUnhandled)}"
         }
         val funding = review.fundingFor(quote)
         val board = checkNotNull(quote.preparedBoard)
@@ -83,7 +84,9 @@ class Ffi070LiveTest {
         val summary = session.summary()!!
         evidence("board-confirmed", buildJsonObject {
             put("arkSpendable", summary.spendableSats.toLong()); put("onchainConfirmed", summary.balance.onchain.confirmed.toLong())
-            put("boards", JsonArray(session.movements().filter { it.subsystemName == "bark.board" }.map { JsonPrimitive("${it.id}:${it.status}:${it.effectiveBalanceSats}") }))
+            put("boards", JsonArray(session.movements().filter { it.subsystemName == "bark.board" }.map {
+                JsonPrimitive("${it.id}:${it.status}:${it.effectiveBalanceSats}")
+            }))
         })
     }
 
@@ -99,7 +102,8 @@ class Ffi070LiveTest {
         assertFalse("bark priced it", quote.feesUnknown)
         evidence("exit-all", buildJsonObject {
             put("vtxos", JsonArray(vtxos.map { JsonPrimitive("${it.id}:${it.amount}:${it.state}") }))
-            put("excluded", JsonArray(excluded.sorted().map(::JsonPrimitive))); put("refused", JsonObject(ExitErrors.refused.mapValues { JsonPrimitive(it.value) }))
+            put("excluded", JsonArray(excluded.sorted().map(::JsonPrimitive)))
+            put("refused", JsonObject(ExitErrors.refused.mapValues { JsonPrimitive(it.value) }))
             put("all", JsonArray(all.map { JsonPrimitive(it.id) })); put("amount", quote.amount); put("networkFees", quote.chainFee)
             put("claimFee", quote.fee); put("feeRate", quote.feeRate); put("transactions", quote.transactions)
         })

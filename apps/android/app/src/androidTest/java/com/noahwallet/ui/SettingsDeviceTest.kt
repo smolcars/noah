@@ -67,7 +67,9 @@ class SettingsDeviceTest {
                         stack = rememberNavBackStack(*SettingsRoutes.chain(page).toTypedArray())
                         // Home's own Back under Settings: it leaves Settings once no page can pop.
                         androidx.activity.compose.BackHandler { closed++ }
-                        Box(width?.let { Modifier.fillMaxHeight().width(it) } ?: Modifier.fillMaxSize()) { SettingsHost(model, stack, close = { closed++ }, myCode = {}, preview = SettingsPreview(sheet, phrase), hold = hold) }
+                        Box(width?.let { Modifier.fillMaxHeight().width(it) } ?: Modifier.fillMaxSize()) {
+                            SettingsHost(model, stack, close = { closed++ }, myCode = {}, preview = SettingsPreview(sheet, phrase), hold = hold)
+                        }
                     }
                 } }
             }
@@ -134,7 +136,10 @@ class SettingsDeviceTest {
         val sample = "sample phrase only never use this example test word copy nothing real".split(' ')
         host(SettingsDestination.Seed)
         lateinit var revealed: RevealedPhrase
-        compose.activityRule.scenario.onActivity { revealed = ViewModelProvider(it)[RevealedPhrase::class.java]; revealed.show(sample, model.walletLock.generation) }
+        compose.activityRule.scenario.onActivity {
+            revealed = ViewModelProvider(it)[RevealedPhrase::class.java]
+            revealed.show(sample, model.walletLock.generation)
+        }
         compose.waitUntil(5_000) { compose.onAllNodesWithTag("recovery-copy").fetchSemanticsNodes().isNotEmpty() }
         compose.onNodeWithTag("recovery-copy").performClick()
         compose.waitForIdle()
@@ -249,7 +254,8 @@ class SettingsDeviceTest {
         compose.onNodeWithTag("delete-wallet-input").performClick()
         compose.onNode(hasSetTextAction() and hasAnyAncestor(hasTestTag("delete-wallet-input")).or(hasTestTag("delete-wallet-input"))).performTextInput("delet")
         compose.onNodeWithTag("delete-wallet-confirm").assertIsNotEnabled()
-        compose.onNode(hasSetTextAction() and hasAnyAncestor(hasTestTag("delete-wallet-input")).or(hasTestTag("delete-wallet-input"))).performTextReplacement("  DELETE ")
+        val input = hasSetTextAction() and hasAnyAncestor(hasTestTag("delete-wallet-input")).or(hasTestTag("delete-wallet-input"))
+        compose.onNode(input).performTextReplacement("  DELETE ")
         compose.onNodeWithTag("delete-wallet-confirm").assertIsEnabled()
         // Checklist: what you'd need to restore.
         val sheet = hasAnyAncestor(hasTestTag("delete-wallet-sheet"))
@@ -299,7 +305,8 @@ class SettingsDeviceTest {
 
     @Test fun hideAmountsIsHomesHideFlag() {
         val before = model.hidden
-        fun stored() = Json.parseToJsonElement(model.settings.string("privacy-storage")!!).jsonObject["state"]!!.jsonObject["isHomeBalanceHidden"]!!.jsonPrimitive.boolean
+        fun stored() =
+            Json.parseToJsonElement(model.settings.string("privacy-storage")!!).jsonObject["state"]!!.jsonObject["isHomeBalanceHidden"]!!.jsonPrimitive.boolean
         try {
             host(SettingsDestination.Settings)
             compose.onNodeWithTag("settings-hide-amounts").performScrollTo().performClick()
@@ -320,7 +327,9 @@ class SettingsDeviceTest {
         for (node in nodes()) {
             val bounds = node.boundsInWindow
             if (bounds.width <= 0f || bounds.height <= 0f) continue
-            val what = "$label: ${node.config.getOrNull(SemanticsProperties.Text)?.joinToString() ?: node.config.getOrNull(SemanticsProperties.ContentDescription)?.joinToString()} $bounds $region"
+            val text = node.config.getOrNull(SemanticsProperties.Text)?.joinToString()
+                ?: node.config.getOrNull(SemanticsProperties.ContentDescription)?.joinToString()
+            val what = "$label: $text $bounds $region"
             if (vertical) assertFalse("crosses the vertical fold: $what", bounds.left < region.left && bounds.right > region.right)
             else assertFalse("crosses the horizontal fold: $what", bounds.top < region.top && bounds.bottom > region.bottom)
         }
@@ -406,7 +415,10 @@ class SettingsDeviceTest {
         val sample = "sample phrase only never use this example test word copy nothing real".split(' ')
         host(SettingsDestination.Seed)
         lateinit var revealed: RevealedPhrase
-        compose.activityRule.scenario.onActivity { revealed = ViewModelProvider(it)[RevealedPhrase::class.java]; revealed.show(sample, model.walletLock.generation) }
+        compose.activityRule.scenario.onActivity {
+            revealed = ViewModelProvider(it)[RevealedPhrase::class.java]
+            revealed.show(sample, model.walletLock.generation)
+        }
         compose.waitUntil(5_000) { compose.onAllNodesWithTag("recovery-word-1", useUnmergedTree = true).fetchSemanticsNodes().isNotEmpty() }
         // A fold or rotation recreates the activity: the page and the words stay, without asking again.
         compose.activityRule.scenario.recreate()

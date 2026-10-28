@@ -31,10 +31,13 @@ class NotificationDataTest {
     }
 
     @Test fun preservesIntegerBoundariesAndOptionalUsd() {
-        val claim = json.decodeFromString<NotificationData>("""{"notification_type":"lightning_claim_request","amount_sat":9223372036854775807,"payment_hash":"test"}""") as NotificationDataLightningClaimRequest
+        val claim =
+            json.decodeFromString<NotificationData>("""{"notification_type":"lightning_claim_request","amount_sat":9223372036854775807,""" +
+                """"payment_hash":"test"}""") as NotificationDataLightningClaimRequest
         assertEquals(Long.MAX_VALUE, claim.amountSat)
         assertNull(claim.amountUsd)
-        val due = json.decodeFromString<NotificationData>("""{"notification_type":"recurring_payment_due","due_count":4294967295}""") as NotificationDataRecurringPaymentDue
+        val due = json.decodeFromString<NotificationData>("""{"notification_type":"recurring_payment_due","due_count":4294967295}""")
+            as NotificationDataRecurringPaymentDue
         assertEquals(4_294_967_295L, due.dueCount)
     }
 

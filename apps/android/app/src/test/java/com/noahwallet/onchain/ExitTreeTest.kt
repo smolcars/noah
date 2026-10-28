@@ -49,7 +49,8 @@ class ExitTreeTest {
             List(100) { if (it < 40) 921_000L + it else null })
         val drawn = long.fold(cap)
         assertEquals(cap, drawn.n); assertEquals("counts stay real", 100, drawn.count)
-        assertEquals("the oldest blocks are one stack at the base", 0 until 40 - (drawn.spans!!.count { it.first == it.last && it.first < 40 }), drawn.spans!!.first())
+        assertEquals("the oldest blocks are one stack at the base",
+            0 until 40 - (drawn.spans!!.count { it.first == it.last && it.first < 40 }), drawn.spans!!.first())
         assertEquals(921_000L, drawn.oldest!!.first()); assertTrue(drawn.folded(0) && drawn.mined(0))
         assertEquals("the waiting one is drawn on its own", 40, drawn.real(drawn.waiting)); assertFalse(drawn.folded(drawn.waiting))
         assertEquals("the next two to send too", listOf(41..41, 42..42), drawn.spans!!.subList(drawn.waiting + 1, drawn.waiting + 3))
@@ -58,7 +59,12 @@ class ExitTreeTest {
         assertEquals("every transaction is in exactly one level", (0 until 100).toList(), drawn.spans!!.flatten())
         // A path that fits isn't touched; the explainer draws 8 at most and says the real count.
         val four = ExitScene.sample(4); assertSame(four, four.fold(cap))
-        ExitScene.sample(100).fold(8).let { assertEquals(8, it.n); assertEquals(100, it.count); assertTrue(it.folded(6)); assertEquals(0..0, it.spans!!.first()) }
+        ExitScene.sample(100).fold(8).let {
+            assertEquals(8, it.n)
+            assertEquals(100, it.count)
+            assertTrue(it.folded(6))
+            assertEquals(0..0, it.spans!!.first())
+        }
         // Mined to the coin: the stack and the latest blocks, then the coin.
         val done = ExitScene(50, ExitStage.Phase.wait, List(50) { m.mined }, List(50) { 900L + it }).fold(10)
         assertEquals(10, done.n); assertTrue(done.folded(0)); assertTrue((1 until 10).none { done.folded(it) }); assertEquals(49..49, done.spans!!.last())
@@ -111,7 +117,8 @@ class ExitTreeTest {
         fun stage(phase: ExitStage.Phase) = ExitStage(phase)
         assertEquals(ExitCounts.Counts(6, 1), ExitCounts.of(List(6) { stage(ExitStage.Phase.bump) } + stage(ExitStage.Phase.claimable)))
         assertEquals("claiming is still in progress", ExitCounts.Counts(1, 0), ExitCounts.of(listOf(stage(ExitStage.Phase.claiming))))
-        assertEquals("finished ones count nowhere", ExitCounts.Counts(0, 0), ExitCounts.of(listOf(stage(ExitStage.Phase.claimed), stage(ExitStage.Phase.canceled))))
+        assertEquals("finished ones count nowhere", ExitCounts.Counts(0, 0),
+            ExitCounts.of(listOf(stage(ExitStage.Phase.claimed), stage(ExitStage.Phase.canceled))))
         assertEquals(ExitCounts.Counts(0, 2), ExitCounts.of(List(2) { stage(ExitStage.Phase.claimable) }))
     }
 
@@ -130,7 +137,8 @@ class ExitTreeTest {
     }
 
     @Test fun aSharedGutterDrawsEachTransactionOnce() {
-        val paths = listOf(listOf("root" to st.mined, "x" to st.waiting, "leafA" to st.unsent), listOf("root" to st.mined, "x" to st.waiting, "leafB" to st.unsent))
+        val paths = listOf(listOf("root" to st.mined, "x" to st.waiting, "leafA" to st.unsent),
+            listOf("root" to st.mined, "x" to st.waiting, "leafB" to st.unsent))
         val layout = ExitGutter.shared(paths, listOf(30f, 94f))
         assertEquals("root, x, and both coins", listOf("root", "x", "leafA", "leafB"), layout.nodes.map { it.id })
         assertEquals("a shared transaction sits between the rows it leads to", 62f, layout.nodes.single { it.id == "x" }.y, .01f)
@@ -140,7 +148,8 @@ class ExitTreeTest {
         assertTrue("ink only into mined ones", layout.links.first().ink && !layout.links.last().ink)
         assertEquals(62f, layout.root.second, .01f)
         // Nine transactions still end clear of the coins.
-        val long = ExitGutter.shared(listOf(List(9) { "t$it" to st.unsent }, List(9) { if (it < 3) "t$it" to st.unsent else "u$it" to st.unsent }), listOf(30f, 94f))
+        val long = ExitGutter.shared(listOf(List(9) { "t$it" to st.unsent },
+            List(9) { if (it < 3) "t$it" to st.unsent else "u$it" to st.unsent }), listOf(30f, 94f))
         assertTrue(long.nodes.filter { !it.coin }.all { it.x <= 90f - 14 })
     }
 
@@ -174,7 +183,11 @@ class ExitTreeTest {
     @Test fun exitsThatShareMoreSitTogetherSoBranchesNeverMeet() {
         // A and A' share a branch after the first transaction, B leaves there: listed A, B, A', the branch's transactions would
         // sit on B's row, on top of B's own. Sat together they each keep their band.
-        fun path(branch: String, r: Int) = List(20) { i -> (if (i == 0) "t0" else if (i < 10) "$branch$i" else "$branch$r.$i") to when { i < 6 -> st.mined; i == 6 -> st.waiting; else -> st.unsent } }
+        fun path(branch: String, r: Int) = List(20) { i -> (if (i == 0) "t0" else if (i < 10) "$branch$i" else "$branch$r.$i") to when { i < 6 ->
+            st.mined
+            i == 6 -> st.waiting
+            else -> st.unsent
+        } }
         val listed = listOf(path("a", 0), path("b", 1), path("a", 2))
         val rows = ExitGutter.tree(listed, { row -> row.dropLast(1).map { it.first } })
         assertEquals(listOf(listed[0], listed[2], listed[1]), rows)
@@ -194,7 +207,8 @@ class ExitTreeTest {
 
     @Test fun aRestartedExitNeverHidesASiblingsProgress() {
         // The first row restarted (Start: nothing listed yet); its sibling has the shared root in a block and the next one waiting.
-        val paths = listOf(listOf("root" to st.unsent, "x" to st.unsent, "leafA" to st.unsent), listOf("root" to st.mined, "x" to st.waiting, "leafB" to st.unsent))
+        val paths = listOf(listOf("root" to st.unsent, "x" to st.unsent, "leafA" to st.unsent),
+            listOf("root" to st.mined, "x" to st.waiting, "leafB" to st.unsent))
         assertEquals(mapOf("root" to st.mined, "x" to st.waiting, "leafA" to st.unsent, "leafB" to st.unsent), ExitGutter.states(paths))
         val layout = ExitGutter.shared(paths, listOf(30f, 94f))
         assertEquals(st.mined, layout.nodes.single { it.id == "root" }.st); assertEquals(st.waiting, layout.nodes.single { it.id == "x" }.st)

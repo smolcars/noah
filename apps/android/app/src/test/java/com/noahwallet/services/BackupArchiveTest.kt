@@ -131,7 +131,9 @@ class BackupArchiveTest {
             val entry = org.apache.commons.compress.archivers.zip.ZipArchiveEntry("db.sqlite").apply { unixMode = 0xa1ff }
             zip.putArchiveEntry(entry); zip.write("/other/wallet".toByteArray()); zip.closeArchiveEntry()
         }
-        val encrypted = File(root, "encrypted").apply { writeBytes(BackupCrypto.encrypt(bytes.toByteArray(), phrase, BackupCrypto.Version.snapshot, testRounds)) }
+        val encrypted = File(root, "encrypted").apply {
+            writeBytes(BackupCrypto.encrypt(bytes.toByteArray(), phrase, BackupCrypto.Version.snapshot, testRounds))
+        }
         assertEquals(BackupArchive.Reason.unexpectedEntry, failure { BackupArchive.open(encrypted, phrase, File(root, "out"), testRounds) })
         assertFalse(File(root, "out").exists())
     }
@@ -141,7 +143,8 @@ class BackupArchiveTest {
             listOf(prefix + "db.sqlite", prefix + "a//b") to BackupArchive.Reason.unexpectedEntry,
             listOf(prefix + "other.sqlite") to BackupArchive.Reason.snapshotMissing,
             listOf(prefix + "db.sqlite") + (0..255).map { prefix + "f$it" } to BackupArchive.Reason.tooLarge)) {
-            val sealed = BackupCrypto.encrypt(zip(*entries.map { it to byteArrayOf(1) }.toTypedArray()), phrase, BackupCrypto.Version.legacyDirectory, testRounds)
+            val sealed = BackupCrypto.encrypt(zip(*entries.map { it to byteArrayOf(1) }.toTypedArray()), phrase,
+                BackupCrypto.Version.legacyDirectory, testRounds)
             val out = File(root, "legacy")
             assertEquals(reason, failure { BackupArchive.openLegacy(Base64.getEncoder().encode(sealed), phrase, "regtest", out, testRounds) })
             assertFalse(out.exists())

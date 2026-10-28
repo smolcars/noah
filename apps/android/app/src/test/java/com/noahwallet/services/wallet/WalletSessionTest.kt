@@ -276,7 +276,8 @@ class WalletSessionTest {
         override suspend fun summary(): WalletSession.Summary {
             summaryEntered?.complete(Unit); summaryGate?.await()
             assertFalse(closed)
-            return WalletSession.Summary(Network.REGTEST, "abcd", WalletBalance(WalletBalance.Ark(1u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u), WalletBalance.Onchain(0u, 0u, 0u)), 2)
+            return WalletSession.Summary(Network.REGTEST, "abcd",
+                WalletBalance(WalletBalance.Ark(1u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u), WalletBalance.Onchain(0u, 0u, 0u)), 2)
         }
         override suspend fun sync() { assertFalse(closed) }
         override suspend fun maintenanceDelegated() { assertFalse(closed) }
@@ -368,7 +369,8 @@ class WalletSessionTest {
             val execution = async { world.executor.execute() }; entered.await()
             val lifecycle = WalletLifecycle(session, location, setSuspended = { world.allowed = !it }, deregister = {},
                 readSeed = { com.noahwallet.services.storage.SecretResult.NotFound }, deleteSeed = {}, clearToken = {},
-                clearSettings = {}, clearWidget = {}, sweepScratch = {}, syncIdentityDirectory = {}, stopAutomation = { world.generation = java.util.UUID.randomUUID().toString() })
+                clearSettings = {}, clearWidget = {}, sweepScratch = {}, syncIdentityDirectory = {},
+                stopAutomation = { world.generation = java.util.UUID.randomUUID().toString() })
             assertTrue(runCatching { if (delete) lifecycle.delete() else lifecycle.suspend() }.isFailure)
             assertTrue(world.allowed); assertNotNull(world.generation)
             gate.complete(Unit); execution.await()

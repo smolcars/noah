@@ -35,7 +35,9 @@ class LaunchAndSettingsTest {
         assertEquals(LaunchState.SeedStatus.invalid, LaunchState.SeedStatus.from(SecretResult.Found("")))
         assertEquals(LaunchState.SeedStatus.unavailable,
             LaunchState.SeedStatus.from(SecretResult.Unavailable(SecretFailure.missingKey)))
-        assertEquals(LaunchState.seedConflict, LaunchState.openFailure(io.github.niteshbalusu11.bark.BarkError("incorrect mnemonic for existing wallet", io.github.niteshbalusu11.bark.BarkErrorCode.OTHER)))
+        assertEquals(LaunchState.seedConflict,
+            LaunchState.openFailure(io.github.niteshbalusu11.bark.BarkError("incorrect mnemonic for existing wallet",
+                io.github.niteshbalusu11.bark.BarkErrorCode.OTHER)))
     }
 
     @Test fun optionalFieldsUnknownFieldsAndEnvelopes() {

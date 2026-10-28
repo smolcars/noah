@@ -13,7 +13,8 @@ class RecurringEditorTest {
         // Pasted or typed amounts aren't rewritten into other numbers ("1.5" was 15, "-1000" was 1000): they don't save.
         for (typed in listOf("1.5", "-1000", "1,000", "1e3", "0", "")) {
             assertEquals(typed, 0L, recurringAmount(typed))
-            assertEquals(typed, "Enter a whole amount in sats, up to 21 million BTC.", runCatching { draft(recurringAmount(typed)).validateInput(now) }.exceptionOrNull()?.message)
+            assertEquals(typed, "Enter a whole amount in sats, up to 21 million BTC.",
+                runCatching { draft(recurringAmount(typed)).validateInput(now) }.exceptionOrNull()?.message)
         }
     }
 }

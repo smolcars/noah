@@ -46,7 +46,8 @@ class RecurringLiveAdmissionTest(private val initialized: Boolean?) {
             RecurringRuntime.requireAdmission(location, wallet, false)
             store.bind(binding())
             assertTrue(RecurringAutomationAuthority(location.directory) { file, bytes -> durableRecurringWrite(file, bytes) {} }.allowed())
-            val schedule = RecurringPayment("rent", "Rent", "recipient", "ark", 1000, interval = RecurringInterval("day", 1), startAt = 1000, createdAt = 0, updatedAt = 0)
+            val schedule = RecurringPayment("rent", "Rent", "recipient", "ark", 1000, interval = RecurringInterval("day", 1), startAt = 1000,
+                createdAt = 0, updatedAt = 0)
             store.upsert(schedule)
             executor.timeChanged(); executor.execute(); executor.execute(manual = true)
             assertEquals(1, w.wallet.calls)

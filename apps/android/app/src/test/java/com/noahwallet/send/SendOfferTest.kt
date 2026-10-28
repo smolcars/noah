@@ -9,12 +9,15 @@ import org.junit.Test
 
 /** BOLT12 offers that fix their amount (ffi-phase-b.md row 12): bark's parser supplies the amount, the quote enforces it. */
 class SendOfferTest {
-    private val offer = SharedFixtures.load("send-utils").map { it.input.jsonObject.getValue("destination").jsonPrimitive.content }.first { it.startsWith("lno1") }
+    private val offer = SharedFixtures.load("send-utils").map {
+        it.input.jsonObject.getValue("destination").jsonPrimitive.content
+    }.first { it.startsWith("lno1") }
     private fun request(amount: ULong?, vararg errors: PaymentMethodParsingError): PaymentRequest {
         val option = PaymentOption(PaymentMethod("offer", offer), errors.toList(), amount == null, false)
         return PaymentRequest(amount, null, null, listOf(option), option.takeIf { errors.isEmpty() })
     }
-    private val fiatPriced: suspend (String) -> PaymentRequest = { throw BarkError("unsupported payment request (fiat-priced BOLT12 offer?)", BarkErrorCode.INVALID_PAYMENT_REQUEST) }
+    private val fiatPriced: suspend (String) -> PaymentRequest =
+        { throw BarkError("unsupported payment request (fiat-priced BOLT12 offer?)", BarkErrorCode.INVALID_PAYMENT_REQUEST) }
     private fun model(scope: CoroutineScope, parse: suspend (String) -> PaymentRequest, quote: suspend (SendPayment) -> SendQuote) =
         SendModel(controller(FakeSendWallet(), TestJournal(), scope), "regtest", { error("no LNURL here") }, quote, {}, scope,
             offerAmount = { SdkSendWallet.offerAmount(it, parse) }).apply { arkBalance = 10_000 }
@@ -62,7 +65,9 @@ class SendOfferTest {
         assertEquals("Unable to resolve this recipient. Please check the address.", m.error)
         assertFalse(m.progress.recipientConfirmed)
         assertEquals(0, quotes)
-        assertTrue(runCatching { SdkSendWallet.requireOfferAmount(SendPayment(offer, "offer", 1000)) { request(1000u, PaymentMethodParsingError.NetworkMismatch) } }.exceptionOrNull() is SendFailure)
+        assertTrue(runCatching { SdkSendWallet.requireOfferAmount(SendPayment(offer, "offer", 1000)) {
+            request(1000u, PaymentMethodParsingError.NetworkMismatch)
+        } }.exceptionOrNull() is SendFailure)
     }
 
     @Test fun anOfferBarkCannotParseKeepsTheTypedAmount() = runBlocking {

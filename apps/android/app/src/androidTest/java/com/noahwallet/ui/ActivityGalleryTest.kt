@@ -62,7 +62,8 @@ class ActivityGalleryTest {
         for (state in listOf("everyday", "busy", "empty", "loading", "error")) show(Scene("list-$state", ActivityFixtures.ui(state, now = now)))
         show(Scene("list-busy-hidden", ActivityFixtures.ui("busy", hidden = true, now = now)))
         show(Scene("list-filter-lightning", busy) { filter = HistoryFilter.Lightning })
-        show(Scene("list-filter-empty", ActivityFixtures.ui("everyday", now = now).let { ui -> ui.copy(records = ui.records.filter { it.type != "Arkoor" }) }) { filter = HistoryFilter.Ark })
+        show(Scene("list-filter-empty", ActivityFixtures.ui("everyday", now = now).let { ui ->
+            ui.copy(records = ui.records.filter { it.type != "Arkoor" }) }) { filter = HistoryFilter.Ark })
         show(Scene("list-search", busy) { searching = true; query = "bob" })
         show(Scene("list-search-none", busy) { searching = true; query = "zzz" })
         show(Scene("export-sheet", busy) { exporting = true }, wait = 2_000)
@@ -72,7 +73,8 @@ class ActivityGalleryTest {
             "movement-104" to "offboard-round", "movement-105" to "exit", "movement-201" to "failed", "movement-202" to "refunded")
         for ((id, name) in kinds) {
             val ui = if (id.removePrefix("movement-").toInt() > 100) busy else everyday
-            val record = ui.records.firstOrNull { it.id == id || (id == "movement-101" && it.source == "onchain-wallet" && it.hasConfirmation != true) } ?: continue
+            val record = ui.records.firstOrNull { it.id == id ||
+                (id == "movement-101" && it.source == "onchain-wallet" && it.hasConfirmation != true) } ?: continue
             show(Scene("detail-$name", ui) { open(record.id) })
         }
         show(Scene("detail-invoice-details", everyday) { open("movement-3"); details = true })

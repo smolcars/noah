@@ -66,7 +66,10 @@ class WalletRestorerTest {
             val source = File(root, "snapshot").apply { writeText("new wallet") }
             val encrypted = File(root, "backup")
             if (!encrypted.exists()) BackupArchive.seal(source,
-                BackupArchive.Manifest(2, "x", "sha", network, "abcd", null, null, 42), validSeed, encrypted, root, testRounds) { complete, target -> Files.createLink(target.toPath(), complete.toPath()); Unit }
+                BackupArchive.Manifest(2, "x", "sha", network, "abcd", null, null, 42), validSeed, encrypted, root, testRounds) { complete, target ->
+                Files.createLink(target.toPath(), complete.toPath())
+                Unit
+            }
             val legacyFile = File(root, "legacy")
             if (legacy) {
                 val bytes = java.io.ByteArrayOutputStream()
@@ -74,9 +77,12 @@ class WalletRestorerTest {
                     zip.putNextEntry(java.util.zip.ZipEntry("backup_staging/noah-data-regtest/db.sqlite"))
                     zip.write("new wallet".toByteArray()); zip.closeEntry()
                 }
-                legacyFile.writeBytes(java.util.Base64.getEncoder().encode(BackupCrypto.encrypt(bytes.toByteArray(), validSeed, BackupCrypto.Version.legacyDirectory, testRounds)))
+                legacyFile.writeBytes(java.util.Base64.getEncoder().encode(BackupCrypto.encrypt(bytes.toByteArray(), validSeed,
+                    BackupCrypto.Version.legacyDirectory, testRounds)))
             }
-            val info = """{"backup_id":"b1","created_at":"x","encrypted_sha256":"${reportedHash ?: BackupArchive.sha256(encrypted)}","encrypted_size":${reportedSize ?: encrypted.length()},"format_version":2}"""
+            val info =
+                """{"backup_id":"b1","created_at":"x","encrypted_sha256":"${reportedHash ?: BackupArchive.sha256(encrypted)}",""" +
+                    """"encrypted_size":${reportedSize ?: encrypted.length()},"format_version":2}"""
             return WalletRestorer("regtest", session, location, seed,
                 makeClient = { ServerClient.make("http://fake", engine = MockEngine { request ->
                     val body = when (request.url.encodedPath) {
@@ -207,7 +213,9 @@ class WalletRestorerTest {
     } }
     @Test fun writeLandedDespiteErrorCommits() = runBlocking { world {
         seed.fail = true; seed.lands = true; restorer().restore(validSeed)
-        assertTrue("Saved seed differs", validSeed == seed.value); assertEquals("new wallet", location.database.readText()); assertFalse(location.restorePending)
+        assertTrue("Saved seed differs", validSeed == seed.value)
+        assertEquals("new wallet", location.database.readText())
+        assertFalse(location.restorePending)
     } }
     @Test fun unknownSeedWaitsThenRecovers() = runBlocking { world {
         seed.fail = true; seed.lockAfterWrite = true

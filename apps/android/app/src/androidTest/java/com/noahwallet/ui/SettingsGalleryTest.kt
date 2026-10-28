@@ -76,7 +76,8 @@ class SettingsGalleryTest {
             Scene("ark", SettingsDestination.Ark), Scene("esplora", SettingsDestination.Esplora), Scene("logs", SettingsDestination.Logs),
             Scene("debug", SettingsDestination.Debug), Scene("feedback", SettingsDestination.Feedback), Scene("about", SettingsDestination.About),
             Scene("unit", SettingsDestination.Settings, SettingsPreview("unit")), Scene("currency", SettingsDestination.Settings, SettingsPreview("currency")),
-            Scene("language", SettingsDestination.Settings, SettingsPreview("language")), Scene("delete", SettingsDestination.Settings, SettingsPreview("delete")),
+            Scene("language", SettingsDestination.Settings, SettingsPreview("language")),
+            Scene("delete", SettingsDestination.Settings, SettingsPreview("delete")),
         ).filter { only == null || it.name in only }
         try {
             for (scene in scenes) {
@@ -96,7 +97,10 @@ class SettingsGalleryTest {
                 Thread.sleep(2_500)
                 if (scene.scroll) {
                     val size = android.graphics.Point().also { activity.windowManager.defaultDisplay.getRealSize(it) }
-                    repeat(3) { instrumentation.uiAutomation.executeShellCommand("input swipe ${size.x / 2} ${size.y * 8 / 10} ${size.x / 2} ${size.y / 10} 250").close(); Thread.sleep(700) }
+                    repeat(3) {
+                        instrumentation.uiAutomation.executeShellCommand("input swipe ${size.x / 2} ${size.y * 8 / 10} ${size.x / 2} ${size.y / 10} 250").close()
+                        Thread.sleep(700)
+                    }
                     Thread.sleep(800)
                 }
                 instrumentation.waitForIdleSync()

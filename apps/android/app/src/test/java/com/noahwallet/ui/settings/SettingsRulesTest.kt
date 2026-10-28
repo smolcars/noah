@@ -30,7 +30,8 @@ class SettingsRulesTest {
         assertEquals(SettingsRules.Vtxos.Count(2), SettingsRules.vtxos(listOf(vtxo("a"), vtxo("b"))))
         assertEquals(SettingsRules.Vtxos.Renew, SettingsRules.vtxos(listOf(vtxo("a"), vtxo("b", expiring = true))))
         // Locked or expired VTXOs can't be renewed, so they don't ask.
-        assertEquals(SettingsRules.Vtxos.Count(2), SettingsRules.vtxos(listOf(vtxo("a", state = "Locked", expiring = true), vtxo("b", expiry = 90, expiring = true))))
+        assertEquals(SettingsRules.Vtxos.Count(2),
+            SettingsRules.vtxos(listOf(vtxo("a", state = "Locked", expiring = true), vtxo("b", expiry = 90, expiring = true))))
     }
 
     @Test fun deleteChecklistAndTypedDelete() {
@@ -65,7 +66,8 @@ class SettingsRulesTest {
             assertEquals(name, link.second, stack)
         }
         assertEquals(listOf(settings, SettingsDestination.Profile, SettingsDestination.Lightning), SettingsRoutes.chain(SettingsDestination.Lightning))
-        assertEquals(listOf(settings, SettingsDestination.Notifications, SettingsDestination.UnifiedPush), SettingsRoutes.chain(SettingsDestination.UnifiedPush))
+        assertEquals(listOf(settings, SettingsDestination.Notifications, SettingsDestination.UnifiedPush),
+            SettingsRoutes.chain(SettingsDestination.UnifiedPush))
         assertEquals(listOf(settings, SettingsDestination.Advanced, SettingsDestination.Debug), SettingsRoutes.chain(SettingsDestination.Debug))
         assertEquals(listOf(settings, SettingsDestination.Recurring, EditorPage(null)), SettingsRoutes.chain(EditorPage(null)))
         // The emergency exit's pages sit above its warning and fill a wide window; nothing else does.

@@ -17,7 +17,8 @@ class SendJournalDeviceTest {
         val directory = File(context.cacheDir, "send-journal-test-${UUID.randomUUID()}").apply { mkdirs() }
         try {
             val file = File(directory, "attempt.json"); val journal = SendJournal(file)
-            val attempt = SendAttempt(walletIdentity = SendIdentity("test", "REGTEST"), payment = SendPayment("destination", "onchain", 1000, SendSource.onchain), broadcastingTxid = "exact")
+            val attempt = SendAttempt(walletIdentity = SendIdentity("test", "REGTEST"),
+                payment = SendPayment("destination", "onchain", 1000, SendSource.onchain), broadcastingTxid = "exact")
             journal.write(attempt)
             assertEquals(SendController.journalVersion, Json.parseToJsonElement(file.readText()).jsonObject.getValue("safetyVersion").jsonPrimitive.int)
             assertEquals(attempt, SendJournal(file).read())

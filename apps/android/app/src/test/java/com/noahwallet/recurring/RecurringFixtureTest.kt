@@ -32,8 +32,14 @@ class RecurringFixtureTest(private val name: String, private val domain: String,
                     RecurringFeeSchedule(s.getValue("minFeeSats").jsonPrimitive.long, s.getValue("baseFeeSats").jsonPrimitive.long,
                         s.getValue("ppmExpiryTable").jsonArray.maxOfOrNull { it.jsonObject.getValue("ppm").jsonPrimitive.long } ?: 0)
                 }
-                val d = RecurringFeePolicy.evaluate(i.getValue("amountSat").jsonPrimitive.long, i.getValue("method").jsonPrimitive.content, i.getValue("quoteFeeSat").jsonPrimitive.long, schedule)
-                assertEquals(expected, buildJsonObject { put("worstCaseFeeSat", d.worstCaseFeeSat?.let(::JsonPrimitive) ?: JsonNull); put("capSat", d.capSat?.let(::JsonPrimitive) ?: JsonNull); put("autoPay", d.autoPay); put("reason", d.reason) })
+                val d = RecurringFeePolicy.evaluate(i.getValue("amountSat").jsonPrimitive.long, i.getValue("method").jsonPrimitive.content,
+                    i.getValue("quoteFeeSat").jsonPrimitive.long, schedule)
+                assertEquals(expected, buildJsonObject {
+                    put("worstCaseFeeSat", d.worstCaseFeeSat?.let(::JsonPrimitive) ?: JsonNull)
+                    put("capSat", d.capSat?.let(::JsonPrimitive) ?: JsonNull)
+                    put("autoPay", d.autoPay)
+                    put("reason", d.reason)
+                })
             }
         }
     }

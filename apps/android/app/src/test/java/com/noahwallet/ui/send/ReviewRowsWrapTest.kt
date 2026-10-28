@@ -49,7 +49,8 @@ class ReviewRowsWrapTest {
                 // A 360 dp phone less Review's 20 dp margins.
                 Column(Modifier.width(320.dp)) {
                     rows.forEachIndexed { index, (label, value, number) ->
-                        ValueRow(label, value, number = number, icon = if (index == 0) HomeIcons.lightning else null, wraps = wraps, modifier = Modifier.testTag("row-$index"))
+                        ValueRow(label, value, number = number, icon = if (index == 0) HomeIcons.lightning else null, wraps = wraps,
+                            modifier = Modifier.testTag("row-$index"))
                     }
                 }
             }
