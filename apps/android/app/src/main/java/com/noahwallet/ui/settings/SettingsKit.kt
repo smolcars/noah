@@ -1,5 +1,7 @@
 package com.noahwallet.ui.settings
 
+import android.annotation.SuppressLint
+
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ScrollState
@@ -200,7 +202,7 @@ internal fun RowScope.FootPill(title: String, modifier: Modifier = Modifier, ena
 
 /** A group: its label, then rows, each told whether to draw its divider (not under the last). */
 @Composable
-internal fun SettingsGroup(label: String? = null, modifier: Modifier = Modifier, first: Boolean = false, rows: List<@Composable (divider: Boolean) -> Unit>) {
+internal fun SettingsGroup(rows: List<@Composable (divider: Boolean) -> Unit>, modifier: Modifier = Modifier, label: String? = null, first: Boolean = false) {
     val palette = LocalPalette.current
     Column(modifier.padding(top = if (first) 10.dp else 26.dp)) {
         label?.let { Text(it, Modifier.padding(bottom = 2.dp).semantics { heading() }, style = HomeType.header, color = palette.muted) }
@@ -224,6 +226,7 @@ internal enum class RowDot { attention, failure }
  * A Settings row (prototype `R`): an icon in a soft circle, the title (and an optional [sub] line), a live [value] and
  * what ends the row. A switch row toggles from anywhere on the row. [selected] is the open page beside a split list.
  */
+@SuppressLint("ModifierParameter") // the icon is every row's positional second argument, across Settings, Exit and Recurring
 @Composable
 internal fun SettingsRow(title: String, icon: Int? = null, glyph: String? = null, value: String? = null, sub: String? = null, dot: RowDot? = null,
     failed: Boolean = false, numeric: Boolean = false, end: RowEnd = RowEnd.Chevron, danger: Boolean = false, bold: Boolean = false,
@@ -312,7 +315,7 @@ internal fun RadioRow(title: String, detail: String? = null, selected: Boolean, 
 /** A Material sheet in Settings' look: the title, one line, then [content]; [locked] can't be dismissed (deleting). */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-internal fun SettingsSheet(onDismiss: () -> Unit, title: String, line: String? = null, locked: Boolean = false, modifier: Modifier = Modifier,
+internal fun SettingsSheet(onDismiss: () -> Unit, title: String, line: String?, modifier: Modifier = Modifier, locked: Boolean = false,
     content: @Composable ColumnScope.(close: () -> Unit) -> Unit) {
     val palette = LocalPalette.current
     val currentLocked by rememberUpdatedState(locked)
@@ -372,11 +375,11 @@ internal fun StatusMark(kind: MarkKind, icon: Int? = null, iconTint: Color? = nu
 
 /** The status block at the top of Backup and Notifications: the mark, a title and one line. */
 @Composable
-internal fun StatusHeader(mark: @Composable () -> Unit, title: String, line: String?, failed: Boolean = false, modifier: Modifier = Modifier) {
+internal fun StatusHeader(title: String, line: String?, modifier: Modifier = Modifier, failed: Boolean = false, content: @Composable () -> Unit) {
     val palette = LocalPalette.current
     Row(modifier.padding(top = 14.dp).semantics(mergeDescendants = true) { liveRegion = LiveRegionMode.Polite },
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-        mark()
+        content()
         Column {
             Text(title, style = SettingsType.status, color = if (failed) palette.failure else palette.foreground)
             line?.let { Text(it, Modifier.padding(top = 1.dp), style = HomeType.line, color = palette.muted) }
@@ -392,6 +395,7 @@ internal fun FinePrint(text: String, modifier: Modifier = Modifier, failed: Bool
 }
 
 /** A warning with its icon (prototype `.warn`). */
+@SuppressLint("ModifierParameter") // Exit's warnings pass the icon positionally, second after the text
 @Composable
 internal fun Warning(text: String, icon: Int = SettingsIcons.shield, failed: Boolean = false, modifier: Modifier = Modifier) {
     val palette = LocalPalette.current

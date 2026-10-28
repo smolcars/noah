@@ -80,7 +80,7 @@ private fun LaunchRouteContent(route: LaunchRoute, model: AppModel, gate: Platfo
     when (route) {
         LaunchRoute.customServer -> NoahForm("The custom server isn't responding.") {
             if (model.switchingToDefaultServer) Text(tr("The server isn't responding; switching back…"))
-            NoahButton("Use default server", !model.switchingToDefaultServer) { model.useDefaultEsploraServer() }
+            NoahButton("Use default server", enabled = !model.switchingToDefaultServer) { model.useDefaultEsploraServer() }
         }
         LaunchRoute.message -> LaunchMessage(model.launchState, model.error != null, model::start, model)
         LaunchRoute.loading -> LaunchMessage(null, false, model::start, model)

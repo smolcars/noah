@@ -50,7 +50,7 @@ private val topBarHeight = NoahTokens.Size.hitTarget + NoahTokens.Space.xs
 
 /** A column whose content is centred in the pane (or top-aligned), scrolling only when it doesn't fit. */
 @Composable
-private fun PaneColumn(top: Boolean, inset: Dp = topBarHeight, modifier: Modifier = Modifier, content: @Composable ColumnScope.() -> Unit) {
+private fun PaneColumn(top: Boolean, modifier: Modifier = Modifier, inset: Dp = topBarHeight, content: @Composable ColumnScope.() -> Unit) {
     BoxWithConstraints(modifier.fillMaxWidth().fillMaxHeight()) {
         val paneHeight = maxHeight
         Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState())) {

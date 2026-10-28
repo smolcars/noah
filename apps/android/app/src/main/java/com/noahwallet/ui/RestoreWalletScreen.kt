@@ -93,7 +93,7 @@ private fun StoredSeedRestoreScreen(model: AppModel) {
     BackHandler { }
     FormLayout(headline = { large ->
         Headline(tr("Recovery phrase found"),
-            tr("Your recovery phrase is still securely stored on this device. Use it to restore your wallet from its backup."), large)
+            tr("Your recovery phrase is still securely stored on this device. Use it to restore your wallet from its backup."), large = large)
     }, form = {}, actions = {
         // As on iOS, the error sits just above the button.
         Column(verticalArrangement = Arrangement.spacedBy(NoahTokens.Space.l)) {
@@ -162,7 +162,7 @@ private fun PhraseRestoreScreen(model: AppModel, clipboard: RestoreClipboard) {
         val label = tr("Back")
         IconButton({ if (!blocked) leave() }, Modifier.semantics { contentDescription = label }) { BackIcon(palette.foreground) }
     }, headline = { large ->
-        Headline(tr("Welcome back"), tr("Enter your recovery phrase."), large, modifier = Modifier.entrance(0, play))
+        Headline(tr("Welcome back"), tr("Enter your recovery phrase."), large = large, modifier = Modifier.entrance(0, play))
     }, form = {
         WordCountControl(words.size, enabled = !blocked, modifier = Modifier.padding(top = formGap(22.dp)).entrance(2, play), select = entry::selectCount)
         key(entry.clearGeneration, words.size) {

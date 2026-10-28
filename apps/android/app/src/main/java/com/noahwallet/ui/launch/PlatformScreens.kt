@@ -72,7 +72,7 @@ fun BatteryOptimizationScreen(model: AppModel, onBack: (() -> Unit)? = null, onC
             enabled = !proceeding) { proceed() }
     }, headline = { large ->
         com.noahwallet.ui.onboarding.Headline(tr("Let Noah run in the background"),
-            tr("Otherwise Android may pause Noah, and payments could stop arriving."), large)
+            tr("Otherwise Android may pause Noah, and payments could stop arriving."), large = large)
     }, form = {}, actions = {
         com.noahwallet.ui.onboarding.PillButton(tr("Open battery settings"), androidx.compose.ui.Modifier.fillMaxWidth()) {
             failed = !PlatformAccess.openBattery(context)
@@ -183,7 +183,7 @@ fun UnifiedPushScreen(fromOnboarding: Boolean, onContinue: () -> Unit) {
         if (loading) Text(tr("Loading distributors…"))
         else if (distributors.isEmpty()) Text(tr("No distributors detected. Install ntfy or another UnifiedPush distributor."))
         distributors.forEach { distributor ->
-            NoahButton(distributor.name, !registering && !loading, secondary = selected != distributor.id) { setup.select(distributor.id) }
+            NoahButton(distributor.name, enabled = !registering && !loading, secondary = selected != distributor.id) { setup.select(distributor.id) }
             Text(tr(distributor.id), style = MaterialTheme.typography.bodySmall)
         }
         Text(tr("Current Endpoint:"), style = MaterialTheme.typography.titleMedium)
@@ -193,8 +193,8 @@ fun UnifiedPushScreen(fromOnboarding: Boolean, onContinue: () -> Unit) {
         }
         if (setup.failed) Text(tr("Couldn't register with UnifiedPush. Please try again."), color = MaterialTheme.colorScheme.error)
         if (endpoint != null && !registering) NoahButton(if (fromOnboarding) "Continue" else "Done", onClick = onContinue)
-        else NoahButton(if (registering) "Registering..." else if (fromOnboarding) "Register" else "Register with UnifiedPush", !registering && !loading &&
-            setup.registration != null) {
+        else NoahButton(if (registering) "Registering..." else if (fromOnboarding) "Register" else "Register with UnifiedPush",
+            enabled = !registering && !loading && setup.registration != null) {
             setup.register()
         }
         Text(tr("Install a distributor app like \"ntfy\" from F-Droid to enable push notifications."))

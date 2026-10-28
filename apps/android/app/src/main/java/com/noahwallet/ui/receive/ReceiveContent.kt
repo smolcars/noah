@@ -546,7 +546,7 @@ internal fun ReceiveAmountSheet(ui: ReceiveUi, onDone: (Long, String) -> Unit) {
             style = SendType.strong.copy(fontSize = androidx.compose.ui.unit.TextUnit(22f, androidx.compose.ui.unit.TextUnitType.Sp)),
             color = palette.foreground)
         Box(Modifier.fillMaxWidth().padding(top = 10.dp).height(58.dp), contentAlignment = Alignment.BottomCenter) {
-            AmountFigure(text, amount.isEmpty(), shake.value, SendType.sheetAmount, Modifier.testTag("receive-amount-input"))
+            AmountFigure(text, amount.isEmpty(), shake.value, Modifier.testTag("receive-amount-input"), SendType.sheetAmount)
         }
         CurrencyLine(ui, fiat, sats) {
             haptics.selection()

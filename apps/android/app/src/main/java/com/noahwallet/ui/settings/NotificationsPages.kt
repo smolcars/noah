@@ -44,10 +44,12 @@ internal fun NotificationsPage(model: AppModel, nav: SettingsNav, live: Settings
         FootPill(tr("Open Settings"), Modifier.testTag("notifications-open-settings")) { PlatformAccess.openNotificationSettings(context) }
     }) else null) {
         if (known) {
-            if (on) StatusHeader({ StatusMark(MarkKind.idle, SettingsIcons.bell, palette.foreground, ring = palette.orange) }, tr("On"),
-                tr("Noah can receive and renew while closed."))
-            else StatusHeader({ StatusMark(MarkKind.failed, SettingsIcons.bellOff, palette.failure) }, tr("Off"),
-                tr("Noah can’t receive payments or renew your bitcoin."), failed = true)
+            if (on) StatusHeader(tr("On"), tr("Noah can receive and renew while closed.")) {
+                StatusMark(MarkKind.idle, SettingsIcons.bell, palette.foreground, ring = palette.orange)
+            }
+            else StatusHeader(tr("Off"), tr("Noah can’t receive payments or renew your bitcoin."), failed = true) {
+                StatusMark(MarkKind.failed, SettingsIcons.bellOff, palette.failure)
+            }
         }
         SettingsGroup(rows = listOfNotNull(
             { d -> SettingsRow(tr("Claim payments in the background"), SettingsIcons.bolt, sub = tr("Lets Noah wake up for Lightning"), divider = d,
@@ -97,7 +99,7 @@ internal fun UnifiedPushPage(nav: SettingsNav) {
             Text(tr("Install ntfy from F-Droid, then come back."), style = HomeType.line, color = palette.muted, textAlign = TextAlign.Center)
             return@SettingsFrame
         }
-        SettingsGroup(tr("Deliver with"), rows = setup.distributors.map { distributor -> { d ->
+        SettingsGroup(label = tr("Deliver with"), rows = setup.distributors.map { distributor -> { d ->
             RadioRow(distributor.name, distributor.id, setup.selected == distributor.id, divider = d,
                 modifier = Modifier.testTag("unifiedpush-${distributor.id}")) { haptics.selection(); setup.select(distributor.id) }
         } })

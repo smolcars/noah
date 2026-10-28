@@ -99,7 +99,7 @@ internal fun NameStep(model: AppModel, presentation: OnboardingPresentation) {
     FormLayout(trailingTop = {
         TextAction(tr("Skip"), Modifier.testTag("onboarding-name-skip"), muted = true, enabled = !model.busy) { haptics.light(); finish(null) }
     }, headline = { large ->
-        Headline(tr("Pick a name"), tr("This is how people pay you."), large, modifier = Modifier.entrance(0, play))
+        Headline(tr("Pick a name"), tr("This is how people pay you."), large = large, modifier = Modifier.entrance(0, play))
     }, form = {
         NameField(name, { presentation.name = it }, domain, !model.busy, focus, tr("Pick a name"), { save() },
             Modifier.padding(top = formGap(NoahTokens.Space.xxxl)).entrance(2, play).testTag("lightning-username-input"))

@@ -113,7 +113,7 @@ internal fun NameChip(address: String?, variant: String, onClick: () -> Unit) {
  * stay put. Columns are keyed from the right so the units digit stays the units digit as the number grows.
  */
 @Composable
-internal fun RollingText(text: String, style: TextStyle, color: Color, rollFromZero: Boolean, startDelay: Long = 0, modifier: Modifier = Modifier) {
+internal fun RollingText(text: String, style: TextStyle, color: Color, rollFromZero: Boolean, modifier: Modifier = Modifier, startDelay: Long = 0) {
     val reduceMotion = LocalReduceMotion.current
     val measurer = rememberTextMeasurer()
     val density = LocalDensity.current
@@ -132,31 +132,35 @@ internal fun RollingText(text: String, style: TextStyle, color: Color, rollFromZ
                 // One line box for every character so they share a baseline; separators' descenders may overflow it.
                 if (!char.isDigit()) Text(char.toString(), Modifier.height(lineHeight).testTag("home-balance-char"), style = style, color = color,
                     overflow = TextOverflow.Visible)
-                else {
-                    val target = char.digitToInt()
-                    val order = digitIndex.indexOf(index)
-                    val position = remember { Animatable(if ((rollFromZero || mounted) && !reduceMotion) 0f else target.toFloat()) }
-                    var from by remember { mutableFloatStateOf(position.value) }
-                    LaunchedEffect(target) {
-                        if (position.value == target.toFloat()) return@LaunchedEffect
-                        if (reduceMotion) { position.snapTo(target.toFloat()); return@LaunchedEffect }
-                        from = position.value
-                        delay(startDelay + order * 45L)
-                        position.animateTo(target.toFloat(), spring(dampingRatio = .85f, stiffness = 438.6491f / (1.7f * 1.7f)))
-                    }
-                    val travelled = if (target.toFloat() == from) 1f else ((position.value - from) / (target - from)).coerceIn(0f, 1f)
-                    val blur = 2.5f * 4 * travelled * (1 - travelled)
-                    Box(Modifier.width(widths[target]).height(lineHeight).clipToBounds().testTag("home-balance-char")
-                        .then(if (Build.VERSION.SDK_INT >= 31 && blur > .05f) Modifier.blur(blur.dp, BlurredEdgeTreatment.Unbounded) else Modifier)) {
-                        // Unbounded: the ten-digit column is taller than the one-line window it rolls through.
-                        Column(Modifier.align(Alignment.TopCenter).wrapContentHeight(Alignment.Top, unbounded = true).requiredWidth(widths.max())
-                            .offset { IntOffset(0, -(position.value * lineHeight.toPx()).roundToInt()) }) {
-                            for (digit in 0..9) Text("$digit", Modifier.height(lineHeight).fillMaxWidth(), style = style, color = color,
-                                textAlign = TextAlign.Center)
-                        }
-                    }
-                }
+                else RollingDigit(char.digitToInt(), style, color, widths, lineHeight,
+                    rollFromZero = (rollFromZero || mounted) && !reduceMotion, wait = startDelay + digitIndex.indexOf(index) * 45L)
             }
+        }
+    }
+}
+
+/** One digit's column rolling to [target] after [delay], from 0 when [rollFromZero]; it blurs a little while it moves. */
+@Composable
+private fun RollingDigit(target: Int, style: TextStyle, color: Color, widths: List<Dp>, lineHeight: Dp, rollFromZero: Boolean, wait: Long) {
+    val reduceMotion = LocalReduceMotion.current
+    val position = remember { Animatable(if (rollFromZero) 0f else target.toFloat()) }
+    var from by remember { mutableFloatStateOf(position.value) }
+    LaunchedEffect(target) {
+        if (position.value == target.toFloat()) return@LaunchedEffect
+        if (reduceMotion) { position.snapTo(target.toFloat()); return@LaunchedEffect }
+        from = position.value
+        delay(wait)
+        position.animateTo(target.toFloat(), spring(dampingRatio = .85f, stiffness = 438.6491f / (1.7f * 1.7f)))
+    }
+    val travelled = if (target.toFloat() == from) 1f else ((position.value - from) / (target - from)).coerceIn(0f, 1f)
+    val blur = 2.5f * 4 * travelled * (1 - travelled)
+    Box(Modifier.width(widths[target]).height(lineHeight).clipToBounds().testTag("home-balance-char")
+        .then(if (Build.VERSION.SDK_INT >= 31 && blur > .05f) Modifier.blur(blur.dp, BlurredEdgeTreatment.Unbounded) else Modifier)) {
+        // Unbounded: the ten-digit column is taller than the one-line window it rolls through.
+        Column(Modifier.align(Alignment.TopCenter).wrapContentHeight(Alignment.Top, unbounded = true).requiredWidth(widths.max())
+            .offset { IntOffset(0, -(position.value * lineHeight.toPx()).roundToInt()) }) {
+            for (digit in 0..9) Text("$digit", Modifier.height(lineHeight).fillMaxWidth(), style = style, color = color,
+                textAlign = TextAlign.Center)
         }
     }
 }
@@ -173,7 +177,7 @@ internal fun PulseDot(color: Color) {
 }
 
 @Composable
-internal fun StatusLine(text: String, emphasis: String? = null, failed: Boolean, dot: Boolean, onClick: (() -> Unit)?, modifier: Modifier = Modifier) {
+internal fun StatusLine(text: String, failed: Boolean, dot: Boolean, onClick: (() -> Unit)?, modifier: Modifier = Modifier, emphasis: String? = null) {
     val palette = LocalPalette.current
     // No onClick: plain text, not a button.
     Row(if (onClick != null) modifier.clickable(role = Role.Button, onClick = onClick) else modifier, verticalAlignment = Alignment.CenterVertically,
@@ -223,7 +227,7 @@ internal fun ActivityGlyph(running: String?, backedUpAt: Long?) {
 /** One nudge card: icon, two lines, an action pill and (for dismissible nudges) ×. */
 @Composable
 internal fun NudgeCard(icon: Int, title: String, subtitle: String?, action: String?, dismissLabel: String?,
-    enabled: Boolean = true, onAction: () -> Unit, onDismiss: () -> Unit, modifier: Modifier = Modifier) {
+    onAction: () -> Unit, onDismiss: () -> Unit, modifier: Modifier = Modifier, enabled: Boolean = true) {
     val palette = LocalPalette.current
     Row(modifier.fillMaxWidth().tonal(RoundedCornerShape(22.dp), palette.soft).padding(start = 16.dp, top = 12.dp, end = 12.dp, bottom = 12.dp),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -265,62 +269,86 @@ internal fun Pill(title: String, modifier: Modifier = Modifier, height: Dp = 36.
  * pending, failed and new marks. [fading] shrinks the new dot away (soft, prototype `fadeDot`), then [onSeen].
  */
 @Composable
-internal fun RowAvatar(row: HomeRow, new: Boolean, pop: Boolean, large: Boolean = false, fading: Boolean = false, onSeen: () -> Unit = {},
-    modifier: Modifier = Modifier) {
+internal fun RowAvatar(row: HomeRow, new: Boolean, pop: Boolean, modifier: Modifier = Modifier, large: Boolean = false, fading: Boolean = false,
+    onSeen: () -> Unit = {}) {
+    val side = if (large) 60.dp else 42.dp
+    Box(modifier.size(side)) {
+        AvatarFace(row.avatar, large)
+        if (row.pending) PendingRing(side, large, Modifier.align(Alignment.Center))
+        if (row.failed) FailedMark(large, Modifier.align(Alignment.BottomEnd))
+        if (new) NewDot(pop, fading, onSeen, Modifier.align(Alignment.TopEnd))
+    }
+}
+
+/** The soft circle with an initial for people and addresses, otherwise a rail glyph. */
+@Composable
+private fun AvatarFace(avatar: HomeRow.Avatar, large: Boolean) {
+    val palette = LocalPalette.current
+    Box(Modifier.fillMaxSize().background(palette.soft, CircleShape), contentAlignment = Alignment.Center) {
+        val icon = when (avatar) {
+            is HomeRow.Avatar.Initial -> null.also {
+                Text(avatar.letter, style = if (large) HomeType.avatar.copy(fontSize = 24.sp, lineHeight = 24.sp) else HomeType.avatar,
+                    color = palette.foreground)
+            }
+            HomeRow.Avatar.Lightning -> HomeIcons.lightning
+            HomeRow.Avatar.Chain -> HomeIcons.chain
+            HomeRow.Avatar.Received -> HomeIcons.receive
+            HomeRow.Avatar.Sent -> HomeIcons.send
+            HomeRow.Avatar.Recurring -> HomeIcons.repeat
+            HomeRow.Avatar.Renewal -> HomeIcons.renew
+            HomeRow.Avatar.Exit -> com.noahwallet.ui.settings.SettingsIcons.exit
+        }
+        icon?.let { Icon(painterResource(it), null, Modifier.size(if (large) 27.dp else 20.dp), tint = palette.foreground) }
+    }
+}
+
+/** A pending row's dashed ring, turning slowly (still under Reduce Motion). */
+@Composable
+private fun PendingRing(side: Dp, large: Boolean, modifier: Modifier) {
     val palette = LocalPalette.current
     val reduceMotion = LocalReduceMotion.current
-    val turn = if (row.pending && !reduceMotion) rememberInfiniteTransition(label = "pending").animateFloat(0f, 360f,
+    val turn = if (!reduceMotion) rememberInfiniteTransition(label = "pending").animateFloat(0f, 360f,
         infiniteRepeatable(tween(8_000, easing = LinearEasing)), label = "pending").value else 0f
-    val side = if (large) 60.dp else 42.dp
-    val glyph = if (large) 27.dp else 20.dp
-    Box(modifier.size(side)) {
-        Box(Modifier.fillMaxSize().background(palette.soft, CircleShape), contentAlignment = Alignment.Center) {
-            val icon = when (val avatar = row.avatar) {
-                is HomeRow.Avatar.Initial -> null.also {
-                    Text(avatar.letter, style = if (large) HomeType.avatar.copy(fontSize = 24.sp, lineHeight = 24.sp) else HomeType.avatar,
-                        color = palette.foreground)
-                }
-                HomeRow.Avatar.Lightning -> HomeIcons.lightning
-                HomeRow.Avatar.Chain -> HomeIcons.chain
-                HomeRow.Avatar.Received -> HomeIcons.receive
-                HomeRow.Avatar.Sent -> HomeIcons.send
-                HomeRow.Avatar.Recurring -> HomeIcons.repeat
-                HomeRow.Avatar.Renewal -> HomeIcons.renew
-                HomeRow.Avatar.Exit -> com.noahwallet.ui.settings.SettingsIcons.exit
-            }
-            icon?.let { Icon(painterResource(it), null, Modifier.size(glyph), tint = palette.foreground) }
-        }
-        if (row.pending) Canvas(Modifier.requiredSize(side + if (large) 8.dp else 6.dp).align(Alignment.Center).graphicsLayer { rotationZ = turn }) {
-            val width = (if (large) 2.dp else 1.5.dp).toPx()
-            drawCircle(palette.muted, (size.minDimension - width) / 2, style = Stroke(width,
-                pathEffect = PathEffect.dashPathEffect(floatArrayOf(4.5.dp.toPx(), 3.dp.toPx()))))
-        }
-        if (row.failed) Box(Modifier.align(Alignment.BottomEnd).offset(if (large) 4.dp else 5.dp, if (large) 4.dp else 5.dp)
-            .size(if (large) 26.dp else 21.dp).background(palette.background, CircleShape)
-            .padding(2.dp).background(palette.failure, CircleShape), contentAlignment = Alignment.Center) {
-            val size = if (large) 13.sp else 11.sp
-            Text("!", style = TextStyle(fontWeight = FontWeight.Bold, fontSize = size, lineHeight = size), color = Color.White)
-        }
-        if (new) {
-            val scale = remember { Animatable(if (pop && !reduceMotion) 0f else 1f) }
-            val gone = remember { Animatable(0f) }
-            LaunchedEffect(Unit) { if (scale.value < 1f) { delay(120); scale.animateTo(1f, NoahTokens.Motion.bouncy()) } }
-            LaunchedEffect(fading) {
-                if (!fading) return@LaunchedEffect
-                if (reduceMotion) gone.animateTo(1f, tween(NoahTokens.Motion.REDUCE_MOTION_FADE_MS))
-                else gone.animateTo(1f, tween((SpringCurve.soft.settle * 1_400).toInt(), easing = LinearEasing))
-                onSeen()
-            }
-            Box(Modifier.align(Alignment.TopEnd).offset(3.dp, (-3).dp).size(15.dp).graphicsLayer {
-                // Grows a little, then shrinks to nothing (prototype keyframes 1 → 1.35 at 25 % → 0).
-                val g = gone.value
-                val shrink = if (reduceMotion) 1f else if (g < .25f) lerp(1f, 1.35f, SpringCurve.soft.over(g / .25f)) else lerp(1.35f, 0f,
-                    SpringCurve.soft.over((g - .25f) / .75f))
-                scaleX = scale.value * shrink; scaleY = scale.value * shrink
-                alpha = if (reduceMotion) 1 - g else if (g < .25f) 1f else 1 - (g - .25f) / .75f
-            }.background(palette.background, CircleShape).padding(2.dp).background(palette.orange, CircleShape))
-        }
+    Canvas(modifier.requiredSize(side + if (large) 8.dp else 6.dp).graphicsLayer { rotationZ = turn }) {
+        val width = (if (large) 2.dp else 1.5.dp).toPx()
+        drawCircle(palette.muted, (size.minDimension - width) / 2, style = Stroke(width,
+            pathEffect = PathEffect.dashPathEffect(floatArrayOf(4.5.dp.toPx(), 3.dp.toPx()))))
     }
+}
+
+@Composable
+private fun FailedMark(large: Boolean, modifier: Modifier) {
+    val palette = LocalPalette.current
+    Box(modifier.offset(if (large) 4.dp else 5.dp, if (large) 4.dp else 5.dp)
+        .size(if (large) 26.dp else 21.dp).background(palette.background, CircleShape)
+        .padding(2.dp).background(palette.failure, CircleShape), contentAlignment = Alignment.Center) {
+        val size = if (large) 13.sp else 11.sp
+        Text("!", style = TextStyle(fontWeight = FontWeight.Bold, fontSize = size, lineHeight = size), color = Color.White)
+    }
+}
+
+/** The new row's orange dot: pops in with [pop]; [fading] grows it a little, shrinks it away, then [onSeen]. */
+@Composable
+private fun NewDot(pop: Boolean, fading: Boolean, onSeen: () -> Unit, modifier: Modifier) {
+    val palette = LocalPalette.current
+    val reduceMotion = LocalReduceMotion.current
+    val scale = remember { Animatable(if (pop && !reduceMotion) 0f else 1f) }
+    val gone = remember { Animatable(0f) }
+    LaunchedEffect(Unit) { if (scale.value < 1f) { delay(120); scale.animateTo(1f, NoahTokens.Motion.bouncy()) } }
+    LaunchedEffect(fading) {
+        if (!fading) return@LaunchedEffect
+        if (reduceMotion) gone.animateTo(1f, tween(NoahTokens.Motion.REDUCE_MOTION_FADE_MS))
+        else gone.animateTo(1f, tween((SpringCurve.soft.settle * 1_400).toInt(), easing = LinearEasing))
+        onSeen()
+    }
+    Box(modifier.offset(3.dp, (-3).dp).size(15.dp).graphicsLayer {
+        // Grows a little, then shrinks to nothing (prototype keyframes 1 → 1.35 at 25 % → 0).
+        val g = gone.value
+        val shrink = if (reduceMotion) 1f else if (g < .25f) lerp(1f, 1.35f, SpringCurve.soft.over(g / .25f)) else lerp(1.35f, 0f,
+            SpringCurve.soft.over((g - .25f) / .75f))
+        scaleX = scale.value * shrink; scaleY = scale.value * shrink
+        alpha = if (reduceMotion) 1 - g else if (g < .25f) 1f else 1 - (g - .25f) / .75f
+    }.background(palette.background, CircleShape).padding(2.dp).background(palette.orange, CircleShape))
 }
 
 /** Kind · time, or the row's state; "Failed" and "Canceled" read in the failure colour. */

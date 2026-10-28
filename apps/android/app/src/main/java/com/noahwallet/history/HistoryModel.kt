@@ -48,8 +48,8 @@ class HistoryModel(private val dependencies: Dependencies) {
                                 val call = explorer.newCall(request)
                                 continuation.invokeOnCancellation { call.cancel() }
                                 call.enqueue(object : okhttp3.Callback {
-                                    override fun onFailure(call: okhttp3.Call, failure: java.io.IOException) {
-                                        continuation.resumeWith(Result.failure(failure))
+                                    override fun onFailure(call: okhttp3.Call, e: java.io.IOException) {
+                                        continuation.resumeWith(Result.failure(e))
                                     }
                                     override fun onResponse(call: okhttp3.Call, response: okhttp3.Response) {
                                         continuation.resumeWith(runCatching {

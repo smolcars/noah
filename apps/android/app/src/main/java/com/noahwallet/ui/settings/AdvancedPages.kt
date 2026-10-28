@@ -66,7 +66,7 @@ internal fun AdvancedPage(model: AppModel, nav: SettingsNav, live: SettingsLive,
     val debugOff = tr("Debug off")
     val resumedText = tr("Wallet resumed")
     SettingsFrame(tr("Advanced"), nav.back) {
-        SettingsGroup(tr("Network"), rows = listOf(
+        SettingsGroup(label = tr("Network"), rows = listOf(
             { d -> SettingsRow(tr("Ark server"), SettingsIcons.server, value = host(config.arkServer), divider = d,
                 modifier = Modifier.testTag("advanced-ark")) { nav.open(SettingsDestination.Ark) } },
             { d -> SettingsRow(tr("Esplora"), SettingsIcons.chain, value = when {
@@ -75,7 +75,7 @@ internal fun AdvancedPage(model: AppModel, nav: SettingsNav, live: SettingsLive,
                 else -> config.esplora?.let(::host)
             }, divider = d, modifier = Modifier.testTag("advanced-esplora")) { nav.open(SettingsDestination.Esplora) } },
         ))
-        SettingsGroup(tr("Diagnostics"), rows = listOfNotNull(
+        SettingsGroup(label = tr("Diagnostics"), rows = listOfNotNull(
             { d -> SettingsRow(tr("Logs"), SettingsIcons.doc, divider = d,
                 modifier = Modifier.testTag("advanced-logs")) { nav.open(SettingsDestination.Logs) } },
             { d -> SettingsRow(tr("Reset registration"), SettingsIcons.refresh, divider = d, enabled = !model.busy && !model.isWalletSuspended,
@@ -91,7 +91,7 @@ internal fun AdvancedPage(model: AppModel, nav: SettingsNav, live: SettingsLive,
                 nav.open(SettingsDestination.Debug)
             } }) else null,
         ))
-        SettingsGroup(tr("Wallet"), rows = listOf({ d ->
+        SettingsGroup(label = tr("Wallet"), rows = listOf({ d ->
             SettingsRow(tr("Suspend wallet"), SettingsIcons.stop, sub = tr("Pauses all wallet activity"), divider = d,
                 modifier = Modifier.testTag("advanced-suspend"),
                 end = RowEnd.Toggle(model.isWalletSuspended, !model.busy) { suspend ->
@@ -248,7 +248,7 @@ internal fun EsploraPage(model: AppModel, nav: SettingsNav) {
                 keyboard = KeyboardOptions(capitalization = KeyboardCapitalization.None, keyboardType = KeyboardType.Uri, autoCorrectEnabled = false))
             error?.let { FinePrint(tr(it), failed = true) } ?: FinePrint(tr("Noah checks it’s on the right network before switching."))
             selection.attention?.let { FinePrint(tr(it), failed = true) }
-            Warning(tr("A custom server can see your addresses. Use one you trust."), SettingsIcons.eye)
+            Warning(tr("A custom server can see your addresses. Use one you trust."), icon = SettingsIcons.eye)
         }
     }
 }
@@ -356,7 +356,7 @@ internal fun DebugPage(model: AppModel, nav: SettingsNav) {
             }
         }
     }
-    if (picking) SettingsSheet({ picking = false }, tr("Action")) { close ->
+    if (picking) SettingsSheet({ picking = false }, tr("Action"), null) { close ->
         Column(Modifier.padding(top = 6.dp).heightIn(max = (height * .56f).dp).verticalScroll(rememberScrollState())) {
             DebugAction.entries.forEach { candidate ->
                 RadioRow(tr(candidate.title), selected = !push && action == candidate, danger = candidate.destructive) {

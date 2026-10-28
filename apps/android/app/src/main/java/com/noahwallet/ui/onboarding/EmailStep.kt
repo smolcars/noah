@@ -112,7 +112,7 @@ internal fun EmailStep(model: AppModel, presentation: OnboardingPresentation) {
             if (reduceMotion) fadeIn(tween(180)) togetherWith fadeOut(tween(180))
             else fadeIn(NoahTokens.Motion.snappy()) togetherWith fadeOut(NoahTokens.Motion.snappy())
         }, label = "email-headline") { entry ->
-            if (entry) Headline(tr("Add your email"), tr("Only for urgent alerts about your wallet."), large, modifier = Modifier.entrance(0, play))
+            if (entry) Headline(tr("Add your email"), tr("Only for urgent alerts about your wallet."), large = large, modifier = Modifier.entrance(0, play))
             else CodeHeadline(presentation, large, stage == EmailStage.verified) { presentation.emailStage = EmailStage.entry }
         }
     }, form = {

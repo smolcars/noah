@@ -57,7 +57,10 @@ fun BtcMapCanvas(model: BtcMapModel, places: List<BtcMapPlace>, dark: Boolean, s
         lifecycle.addObserver(observer)
         val memory = object : ComponentCallbacks2 {
             override fun onConfigurationChanged(newConfig: Configuration) = Unit
+            @Deprecated("Deprecated in Java")
             override fun onLowMemory() { canvas.view.onLowMemory() }
+            // Below API 34 the system still sends running-low levels, where the map should free its tiles early.
+            @Suppress("DEPRECATION")
             override fun onTrimMemory(level: Int) { if (level >= ComponentCallbacks2.TRIM_MEMORY_RUNNING_LOW) canvas.view.onLowMemory() }
         }
         context.registerComponentCallbacks(memory)

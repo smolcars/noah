@@ -41,6 +41,23 @@ data class HomeRow(
     companion object {
         private val chainKinds = setOf("onboard", "offboard", "send-onchain", "exit")
         fun of(row: HistoryTransaction, ownDomain: String?): HomeRow {
+            val facts = Facts(row, ownDomain)
+            val outgoing = facts.outgoing
+            val pending = when {
+                row.source == "onchain-wallet" -> row.hasConfirmation != true
+                else -> row.movementStatus == "pending"
+            }
+            val failed = row.movementStatus == "failed"
+            val sign = if (row.isInternalTransfer) "" else if (outgoing) "−" else "+"
+            val title = facts.title()
+            return HomeRow(row.id, facts.avatar(), title, facts.kind()?.takeIf { it != title },
+                row.timestamp?.takeIf { it.time > 0 && row.dateLabel == null }, row.provenAmount, sign, pending, failed, row.isCanceled,
+                unchanged = (failed || row.isCanceled) && provesNothingLeft(row),
+                incoming = !outgoing, counterparty = facts.address, refunded = row.isRefunded, pendingState = pendingState(row))
+        }
+
+        /** What a row says about its counterparty and rail, for its title, kind and avatar. */
+        private class Facts(val row: HistoryTransaction, ownDomain: String?) {
             val outgoing = row.direction == "outgoing"
             val address = row.destination?.takeIf { row.type == "Lnurl" && outgoing }?.let(RepeatPayment::normalizeLightningAddress)
             val local = address?.substringBefore('@')
@@ -49,7 +66,9 @@ data class HomeRow(
             val recurring = row.recurring?.takeIf { outgoing }
             // An invoice or offer names no one: its own description, else what happened.
             val invoiceRow = row.type == "Bolt11" || row.offer != null
-            val title = when {
+            val lightning = row.type == "Bolt11" || row.type == "Lnurl"
+
+            fun title(): String = when {
                 recurring != null -> recurring.label
                 noahUser -> local!!
                 address != null -> address
@@ -57,41 +76,32 @@ data class HomeRow(
                 invoiceRow -> row.description ?: if (outgoing) "Sent" else "Received"
                 else -> row.displayLabel
             }
-            val kind = when {
+            fun kind(): String? = when {
                 recurring != null -> "Recurring"
                 noahUser -> "Noah user"
                 address != null -> "Lightning"
                 chain -> "On-chain"
-                row.type == "Bolt11" || row.type == "Lnurl" -> "Lightning"
+                lightning -> "Lightning"
                 row.type == "Arkoor" -> "Ark"
                 else -> null
             }
-            val avatar = when {
+            fun avatar(): Avatar = when {
                 recurring != null -> Avatar.Recurring
                 local != null -> Avatar.Initial(local.take(1).lowercase(Locale.ROOT))
                 row.isRenewal -> Avatar.Renewal
                 row.exitFeeFor != null -> Avatar.Exit
                 chain -> Avatar.Chain
-                row.type == "Bolt11" || row.type == "Lnurl" -> Avatar.Lightning
+                lightning -> Avatar.Lightning
                 outgoing -> Avatar.Sent
                 else -> Avatar.Received
             }
-            val pending = when {
-                row.source == "onchain-wallet" -> row.hasConfirmation != true
-                else -> row.movementStatus == "pending"
-            }
-            val failed = row.movementStatus == "failed"
-            val sign = if (row.isInternalTransfer) "" else if (outgoing) "−" else "+"
-            val pendingState = when (row.movementKind) {
-                "exit" -> "Exiting"
-                // bark records the offboard transaction once the round signs it; until then it waits for a round.
-                "offboard", "send-onchain" -> if (HistoryMetadata.parse(row.metadataJson ?: "").offboardTxid == null) "In a round" else "Confirming"
-                else -> null
-            }
-            return HomeRow(row.id, avatar, title, kind?.takeIf { it != title },
-                row.timestamp?.takeIf { it.time > 0 && row.dateLabel == null }, row.provenAmount, sign, pending, failed, row.isCanceled,
-                unchanged = (failed || row.isCanceled) && provesNothingLeft(row),
-                incoming = !outgoing, counterparty = address, refunded = row.isRefunded, pendingState = pendingState)
+        }
+
+        private fun pendingState(row: HistoryTransaction) = when (row.movementKind) {
+            "exit" -> "Exiting"
+            // bark records the offboard transaction once the round signs it; until then it waits for a round.
+            "offboard", "send-onchain" -> if (HistoryMetadata.parse(row.metadataJson ?: "").offboardTxid == null) "In a round" else "Confirming"
+            else -> null
         }
 
         /**
@@ -104,7 +114,8 @@ data class HomeRow(
         internal fun provesNothingLeft(row: HistoryTransaction): Boolean {
             val fee = row.offchainFeeSat ?: return false
             val unpaid = row.movementStatus == "failed" && row.outputVtxos.isNullOrEmpty() && row.exitedVtxos.isNullOrEmpty()
-            if (row.source != "ark" || row.effectiveBalanceSat != 0L || (fee != 0L && !unpaid)) return false
+            if (row.source != "ark" || row.effectiveBalanceSat != 0L) return false
+            if (fee != 0L && !unpaid) return false
             return if (row.movementKind in chainKinds) row.balanceChangeSat == 0L && row.onchainFeeSat == 0L
             else (row.balanceChangeSat ?: 0L) == 0L && (row.onchainFeeSat ?: 0L) == 0L
         }

@@ -125,7 +125,7 @@ internal fun SettingsRoot(model: AppModel, live: SettingsLive, nav: SettingsNav,
         BitcoinGroup(model, live, schedules, selected, nav)
         DisplayGroup(model, locale) { state.sheet = it }
         AppGroup(model, live, selected, open)
-        SettingsGroup(tr("Help"), rows = listOf(
+        SettingsGroup(label = tr("Help"), rows = listOf(
             { d -> SettingsRow(tr("Feedback"), SettingsIcons.chat, selected = selected == SettingsDestination.Feedback, divider = d,
                 modifier = Modifier.testTag("settings-feedback")) { open(SettingsDestination.Feedback) } },
             { d -> SettingsRow(tr("About Noah"), SettingsIcons.ark, selected = selected == SettingsDestination.About, divider = d,
@@ -172,7 +172,7 @@ internal fun rememberSettingsListState(initialSheet: String?) = SettingsListStat
 private fun SecurityGroup(model: AppModel, live: SettingsLive, selected: NavKey?, open: (NavKey) -> Unit) {
     val activity = LocalContext.current as? FragmentActivity
     val backup = SettingsRules.backup(model.server.state.isBackupEnabled == true, live.backup.lastBackupStatus)
-    SettingsGroup(tr("Security"), rows = listOfNotNull(
+    SettingsGroup(label = tr("Security"), rows = listOfNotNull(
         { d -> SettingsRow(tr("Backup"), SettingsIcons.cloud, value = when (backup) {
             SettingsRules.Backup.failed -> tr("Failed"); SettingsRules.Backup.running -> tr("Backing up…")
             SettingsRules.Backup.on -> tr("On"); SettingsRules.Backup.off -> tr("Off")
@@ -201,7 +201,7 @@ private fun BitcoinGroup(model: AppModel, live: SettingsLive, schedules: List<co
     val vtxos = SettingsRules.vtxos(live.overview?.vtxos)
     val recurring = SettingsRules.recurring(schedules)
     val onchain = model.summary?.balance?.onchain?.total?.toLong()
-    SettingsGroup(tr("Bitcoin"), rows = listOf(
+    SettingsGroup(label = tr("Bitcoin"), rows = listOf(
         { d -> SettingsRow(tr("VTXOs"), SettingsIcons.coins, value = when (vtxos) {
             SettingsRules.Vtxos.Renew -> tr("Renew"); is SettingsRules.Vtxos.Count -> vtxos.count.toString(); SettingsRules.Vtxos.Unknown -> null
         }, dot = if (vtxos == SettingsRules.Vtxos.Renew) RowDot.attention else null, selected = selected == SettingsDestination.Vtxos, divider = d,
@@ -225,7 +225,7 @@ private fun BitcoinGroup(model: AppModel, live: SettingsLive, schedules: List<co
 @Composable
 private fun DisplayGroup(model: AppModel, locale: Locale, sheet: (String) -> Unit) {
     val sats = model.amountUnit == BitcoinAmountUnit.sats
-    SettingsGroup(tr("Display"), rows = listOf(
+    SettingsGroup(label = tr("Display"), rows = listOf(
         { d -> SettingsRow(tr("Bitcoin unit"), glyph = if (sats) "s" else "₿",
             value = if (sats) tr("sats") else "₿", divider = d,
             modifier = Modifier.testTag("settings-bitcoinUnit")) { sheet("unit") } },
@@ -243,7 +243,7 @@ private fun AppGroup(model: AppModel, live: SettingsLive, selected: NavKey?, ope
     val notifications = live.permission
     val on = notifications == PlatformGateRules.Permission.granted || notifications == PlatformGateRules.Permission.checking
     val blocked = notifications == PlatformGateRules.Permission.denied || notifications == PlatformGateRules.Permission.undetermined
-    SettingsGroup(tr("App"), rows = listOf(
+    SettingsGroup(label = tr("App"), rows = listOf(
         { d -> SettingsRow(tr("Notifications"), if (on) SettingsIcons.bell else SettingsIcons.bellOff, value = when (notifications) {
             PlatformGateRules.Permission.granted -> tr("On"); PlatformGateRules.Permission.checking -> null; else -> tr("Off")
         }, failed = blocked, dot = if (blocked) RowDot.failure else null,
@@ -352,7 +352,7 @@ private fun CurrencySheet(model: AppModel, dismiss: () -> Unit) {
 @Composable
 private fun LanguageSheet(model: AppModel, dismiss: () -> Unit) {
     val languages = listOf("en", "es", "ja", "ko", "sv")
-    SettingsSheet(dismiss, tr("Language")) { close ->
+    SettingsSheet(dismiss, tr("Language"), null) { close ->
         val choose = rememberChoice(model, close)
         Column(Modifier.padding(top = 10.dp)) {
             languages.forEachIndexed { index, code ->

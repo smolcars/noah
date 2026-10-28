@@ -126,18 +126,83 @@ private val compactTop = 60.dp
  * card or the activity list) and tabletop (top half: the same leading content; bottom half: card or list).
  * Must sit inside [OnboardingFrame], which resolves the pose from the full window and the fold.
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeContent(ui: HomeUi, actions: HomeActions, memory: HomeMemory, toasts: HomeToasts, refreshing: Boolean) {
-    val palette = LocalPalette.current
     val reduceMotion = LocalReduceMotion.current
     val haptics = rememberHaptics()
-    val context = LocalContext.current
     val pose = LocalPose.current
     var sheet by rememberSaveable { mutableStateOf(false) }
     val homeScroll = rememberHomeScroll()
     if (memory.enteredAt == null) memory.enteredAt = SystemClock.elapsedRealtime()
     val entered = rememberElapsed(memory.enteredAt, 1_600)
+    val payment = memory.firstPayment
+    val paymentElapsed = rememberFirstPayment(memory, reduceMotion)
+    val revealed = rememberElapsed(memory.recentRevealAt, 1_000)
+    // While the first payment plays, Home is still the Fresh card turning into the receipt.
+    val state = if (payment != null) HomeRules.State.fresh else ui.state
+    val shownTotal = if (payment != null && paymentElapsed < 300) 0uL else ui.balance?.totalSats
+    val (copy, share) = rememberAddressActions(toasts)
+    val openSheet = { haptics.light(); sheet = true }
+    val toggle = { haptics.medium(); actions.toggleHidden() }
+    // The prototype's entrance: top bar, balance, fiat, status (when shown), nudge, card or Recent; 40 ms apart.
+    val after = if (ui.status != null) 40L else 0L
+    val leading = @Composable { tuck: Float -> HomeLeading(ui, state, shownTotal, tuck, entered, after, actions, openSheet, toggle) }
+    val primary = @Composable { wide: Boolean ->
+        when (state) {
+            HomeRules.State.fresh -> GetPaidCard(ui, payment, paymentElapsed, wide, onCopy = copy, onShare = share, onProfile = actions.profile,
+                modifier = Modifier.onGloballyPositioned { homeScroll.measureCard(it, wide) }.rise(entered, 220 + after, 14f, reduceMotion))
+            HomeRules.State.everyday -> if (!wide) Box(Modifier.rise(entered, 220 + after, 14f, reduceMotion).rise(revealed, 0, 12f, reduceMotion)) {
+                Recent(ui, entered, memory, actions, onFirstRow = homeScroll::measureRecent)
+            }
+            else -> Unit
+        }
+    }
+    val trailing = @Composable { TrailingPane(ui, state, entered, revealed, memory, actions, homeScroll) { primary(true) } }
+    val topBar: @Composable BoxScope.(Float, Modifier) -> Unit = { tuck, modifier -> TopBar(ui, actions, state, tuck, modifier, entered) }
+    val toast = @Composable { modifier: Modifier -> HomeToast(toasts.current, modifier) }
+    HomeScrollAnchor(ui, state, homeScroll, pose !is OnboardingPose.Compact)
+    val refresh = @Composable { content: @Composable BoxScope.() -> Unit -> HomeRefreshBox(refreshing, actions.refresh, content) }
+    when (pose) {
+        OnboardingPose.Compact -> CompactHome(state, homeScroll, refresh, leading, primary, topBar, toast)
+        is OnboardingPose.Wide -> Row(Modifier.fillMaxSize()) {
+            Box(Modifier.width(pose.start).fillMaxHeight()) {
+                refresh {
+                    Pane(homeScroll.leading, top = 70.dp, horizontal = 24.dp) { leading(0f) }
+                    topBar(0f, Modifier.padding(top = 10.dp).padding(horizontal = 20.dp))
+                    toast(Modifier.align(Alignment.TopCenter).padding(top = 22.dp))
+                }
+            }
+            Spacer(Modifier.width(pose.end - pose.start))
+            Box(Modifier.weight(1f).fillMaxHeight(), contentAlignment = Alignment.TopCenter) { trailing() }
+        }
+        is OnboardingPose.Tabletop -> TabletopHome(pose, homeScroll, refresh, leading, trailing, topBar, toast)
+    }
+    if (sheet) BalanceSheet(ui) { sheet = false }
+}
+
+/** Tabletop: the leading content above the fold, the card or list below it. */
+@Composable
+private fun TabletopHome(pose: OnboardingPose.Tabletop, homeScroll: HomeScroll, refresh: @Composable (@Composable BoxScope.() -> Unit) -> Unit,
+    leading: @Composable (Float) -> Unit, trailing: @Composable () -> Unit, topBar: @Composable BoxScope.(Float, Modifier) -> Unit,
+    toast: @Composable (Modifier) -> Unit) {
+    Column(Modifier.fillMaxSize()) {
+        Box(Modifier.height(pose.top).fillMaxWidth().clipToBounds()) {
+            refresh {
+                Pane(homeScroll.leading, top = compactTop, horizontal = 24.dp) { leading(0f) }
+                // Lined up with the content column below it (the bar sits 8 dp outside the content's edges).
+                topBar(0f, Modifier.widthIn(max = OnboardingPose.paneContent.dp).padding(horizontal = 16.dp))
+                toast(Modifier.align(Alignment.TopCenter).padding(top = 76.dp))
+            }
+        }
+        Spacer(Modifier.height(pose.bottom - pose.top))
+        Box(Modifier.weight(1f).fillMaxWidth().clipToBounds(), contentAlignment = Alignment.TopCenter) { trailing() }
+    }
+}
+
+/** The first payment's time so far; when it has played, Recent reveals the new row. */
+@Composable
+private fun rememberFirstPayment(memory: HomeMemory, reduceMotion: Boolean): Long {
+    val haptics = rememberHaptics()
     val payment = memory.firstPayment
     val paymentEnd = Receipt.end(reduceMotion)
     val paymentElapsed = rememberElapsed(payment?.startedAt, paymentEnd)
@@ -148,11 +213,14 @@ fun HomeContent(ui: HomeUi, actions: HomeActions, memory: HomeMemory, toasts: Ho
             haptics.light()
         }
     }
-    val revealed = rememberElapsed(memory.recentRevealAt, 1_000)
-    // While the first payment plays, Home is still the Fresh card turning into the receipt.
-    val state = if (payment != null) HomeRules.State.fresh else ui.state
-    val total = ui.balance?.totalSats
-    val shownTotal = if (payment != null && paymentElapsed < 300) 0uL else total
+    return paymentElapsed
+}
+
+/** Copy (with a toast) and Share for your Lightning address. */
+@Composable
+private fun rememberAddressActions(toasts: HomeToasts): Pair<(String) -> Unit, (String) -> Unit> {
+    val context = LocalContext.current
+    val haptics = rememberHaptics()
     val copied = tr("Copied")
     val copy = { address: String ->
         (context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(ClipData.newPlainText("Lightning address", address))
@@ -163,44 +231,40 @@ fun HomeContent(ui: HomeUi, actions: HomeActions, memory: HomeMemory, toasts: Ho
         haptics.light()
         context.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, address), null))
     }
-    val openSheet = { haptics.light(); sheet = true }
-    val toggle = { haptics.medium(); actions.toggleHidden() }
+    return copy to share
+}
 
-    // The prototype's entrance: top bar, balance, fiat, status (when shown), nudge, card or Recent; 40 ms apart.
-    val after = if (ui.status != null) 40L else 0L
-    @Composable fun Leading(tuck: Float) {
-        if (state == HomeRules.State.suspended) { Box(Modifier.rise(entered, 100, 14f, reduceMotion)) { Suspended(actions.suspended) }; return }
-        BalanceBlock(ui, shownTotal, tuck, entered, onTap = openSheet, onToggle = toggle)
-        Box(Modifier.padding(top = 10.dp).height(20.dp).rise(entered, 140, 14f, reduceMotion)) {
-            ui.fiat?.let { Text(it, style = HomeType.line, color = palette.muted, maxLines = 1) }
-        }
-        Box(Modifier.rise(entered, 180, 14f, reduceMotion)) {
-            StatusBlock(ui, onBalance = openSheet, onRounds = actions.rounds)
-        }
-        Box(Modifier.rise(entered, 180 + after, 14f, reduceMotion)) {
-            NudgeHost(ui, onAction = { nudge ->
-                if (nudge is HomeRules.Nudge.Renewal) haptics.medium() else haptics.light()
-                actions.nudge(nudge)
-            }, onDismiss = { haptics.light(); actions.dismiss(it) })
-        }
+/** The leading content: the balance, fiat, status and nudge, rising in turn; the suspended note instead while suspended. */
+@Composable
+private fun HomeLeading(ui: HomeUi, state: HomeRules.State, shownTotal: ULong?, tuck: Float, entered: Long, after: Long, actions: HomeActions,
+    openSheet: () -> Unit, toggle: () -> Unit) {
+    val palette = LocalPalette.current
+    val reduceMotion = LocalReduceMotion.current
+    val haptics = rememberHaptics()
+    if (state == HomeRules.State.suspended) { Box(Modifier.rise(entered, 100, 14f, reduceMotion)) { Suspended(actions.suspended) }; return }
+    BalanceBlock(ui, shownTotal, tuck, entered, onTap = openSheet, onToggle = toggle)
+    Box(Modifier.padding(top = 10.dp).height(20.dp).rise(entered, 140, 14f, reduceMotion)) {
+        ui.fiat?.let { Text(it, style = HomeType.line, color = palette.muted, maxLines = 1) }
     }
-    @Composable fun Primary(wide: Boolean) {
-        when (state) {
-            HomeRules.State.fresh -> GetPaidCard(ui, payment, paymentElapsed, wide, onCopy = copy, onShare = share, onProfile = actions.profile,
-                modifier = Modifier.onGloballyPositioned { homeScroll.measureCard(it, wide) }.rise(entered, 220 + after, 14f, reduceMotion))
-            HomeRules.State.everyday -> if (!wide) Box(Modifier.rise(entered, 220 + after, 14f, reduceMotion).rise(revealed, 0, 12f, reduceMotion)) {
-                Recent(ui, entered, memory, actions, onFirstRow = homeScroll::measureRecent)
-            }
-            else -> {}
-        }
+    Box(Modifier.rise(entered, 180, 14f, reduceMotion)) {
+        StatusBlock(ui, onBalance = openSheet, onRounds = actions.rounds)
     }
+    Box(Modifier.rise(entered, 180 + after, 14f, reduceMotion)) {
+        NudgeHost(ui, onAction = { nudge ->
+            if (nudge is HomeRules.Nudge.Renewal) haptics.medium() else haptics.light()
+            actions.nudge(nudge)
+        }, onDismiss = { haptics.light(); actions.dismiss(it) })
+    }
+}
 
-    val pullState = rememberPullToRefreshState()
-    // Scroll positions live above the pose switch, so folding, unfolding and bending keep them; the saved anchor
-    // carries the place between one column and two panes and across recreation. Whenever Home is laid out (and after
-    // a switch) it puts the anchor in place, but only once history is known, so a slow or failed load can't drop it
-    // to the top or have it overwritten; only then does the anchor follow the reader's scrolling.
-    val paned = pose !is OnboardingPose.Compact
+/**
+ * Scroll positions live above the pose switch, so folding, unfolding and bending keep them; the saved anchor
+ * carries the place between one column and two panes and across recreation. Whenever Home is laid out (and after
+ * a switch) it puts the anchor in place, but only once history is known, so a slow or failed load can't drop it
+ * to the top or have it overwritten; only then does the anchor follow the reader's scrolling.
+ */
+@Composable
+private fun HomeScrollAnchor(ui: HomeUi, state: HomeRules.State, homeScroll: HomeScroll, paned: Boolean) {
     val items = remember(ui.rows, ui.domain, ui.now) {
         ActivityItems(HomeDays.grouped(ui.rows.map { HomeRow.of(it, ui.domain) }, { it.date }, ui.now).map { (_, rows) -> rows.map { it.id } },
             ui.rows.isEmpty())
@@ -216,68 +280,42 @@ fun HomeContent(ui: HomeUi, actions: HomeActions, memory: HomeMemory, toasts: Ho
         snapshotFlow { if (paned) homeScroll.panesAnchor(currentState, currentItems) else homeScroll.compactAnchor(currentState, currentItems, currentRecent) }
             .collect { homeScroll.anchor = it }
     }
-    when (pose) {
-        OnboardingPose.Compact -> {
-            val scroll = homeScroll.compact
-            val tuck = ((with(androidx.compose.ui.platform.LocalDensity.current) { scroll.value.toDp().value } - 4f) / 52f).coerceIn(0f, 1f)
-            PullToRefreshBox(refreshing, actions.refresh, state = pullState, indicator = {
-                PullToRefreshDefaults.Indicator(state = pullState, isRefreshing = refreshing,
-                    modifier = Modifier.align(Alignment.TopCenter).padding(top = compactTop),
-                    containerColor = palette.sheet, color = palette.foreground)
-            }) {
-                Column(Modifier.fillMaxSize().verticalScroll(scroll).onGloballyPositioned { homeScroll.content = it }.testTag("home-scroll"),
-                    horizontalAlignment = Alignment.CenterHorizontally) {
-                    Column(Modifier.widthIn(max = 640.dp).fillMaxWidth().padding(start = 24.dp, end = 24.dp, top = compactTop, bottom = 32.dp)) {
-                        Leading(tuck)
-                        if (state != HomeRules.State.suspended) Primary(false)
-                    }
-                }
-                ScrollEdge(scroll.value > 2)
-                TopBar(ui, actions, state, tuck, Modifier.padding(horizontal = 16.dp), entered)
-                HomeToast(toasts.current, Modifier.align(Alignment.TopCenter).padding(top = 76.dp))
+}
+
+/** Pull to refresh, its indicator under the top bar. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun HomeRefreshBox(refreshing: Boolean, refresh: () -> Unit, content: @Composable BoxScope.() -> Unit) {
+    val palette = LocalPalette.current
+    val pullState = rememberPullToRefreshState()
+    PullToRefreshBox(refreshing, refresh, state = pullState, indicator = {
+        PullToRefreshDefaults.Indicator(state = pullState, isRefreshing = refreshing,
+            modifier = Modifier.align(Alignment.TopCenter).padding(top = compactTop),
+            containerColor = palette.sheet, color = palette.foreground)
+    }, content = content)
+}
+
+/** One column: the top bar tucks the balance as it scrolls, and the content fades under it. */
+@Composable
+private fun CompactHome(state: HomeRules.State, homeScroll: HomeScroll, refresh: @Composable (@Composable BoxScope.() -> Unit) -> Unit,
+    leading: @Composable (Float) -> Unit, primary: @Composable (Boolean) -> Unit, topBar: @Composable BoxScope.(Float, Modifier) -> Unit,
+    toast: @Composable (Modifier) -> Unit) {
+    val scroll = homeScroll.compact
+    val density = androidx.compose.ui.platform.LocalDensity.current
+    val tuck by remember(scroll, density) { derivedStateOf { ((with(density) { scroll.value.toDp().value } - 4f) / 52f).coerceIn(0f, 1f) } }
+    val scrolled by remember(scroll) { derivedStateOf { scroll.value > 2 } }
+    refresh {
+        Column(Modifier.fillMaxSize().verticalScroll(scroll).onGloballyPositioned { homeScroll.content = it }.testTag("home-scroll"),
+            horizontalAlignment = Alignment.CenterHorizontally) {
+            Column(Modifier.widthIn(max = 640.dp).fillMaxWidth().padding(start = 24.dp, end = 24.dp, top = compactTop, bottom = 32.dp)) {
+                leading(tuck)
+                if (state != HomeRules.State.suspended) primary(false)
             }
         }
-        is OnboardingPose.Wide -> Row(Modifier.fillMaxSize()) {
-            Box(Modifier.width(pose.start).fillMaxHeight()) {
-                PullToRefreshBox(refreshing, actions.refresh, state = pullState, indicator = {
-                    PullToRefreshDefaults.Indicator(state = pullState, isRefreshing = refreshing,
-                        modifier = Modifier.align(Alignment.TopCenter).padding(top = compactTop),
-                        containerColor = palette.sheet, color = palette.foreground)
-                }) {
-                    Pane(homeScroll.leading, top = 70.dp, horizontal = 24.dp) {
-                        Leading(0f)
-                    }
-                    TopBar(ui, actions, state, 0f, Modifier.padding(top = 10.dp).padding(horizontal = 20.dp), entered)
-                    HomeToast(toasts.current, Modifier.align(Alignment.TopCenter).padding(top = 22.dp))
-                }
-            }
-            Spacer(Modifier.width(pose.end - pose.start))
-            Box(Modifier.weight(1f).fillMaxHeight(), contentAlignment = Alignment.TopCenter) {
-                TrailingPane(ui, state, entered, revealed, memory, actions, homeScroll) { Primary(true) }
-            }
-        }
-        is OnboardingPose.Tabletop -> Column(Modifier.fillMaxSize()) {
-            Box(Modifier.height(pose.top).fillMaxWidth().clipToBounds()) {
-                PullToRefreshBox(refreshing, actions.refresh, state = pullState, indicator = {
-                    PullToRefreshDefaults.Indicator(state = pullState, isRefreshing = refreshing,
-                        modifier = Modifier.align(Alignment.TopCenter).padding(top = compactTop),
-                        containerColor = palette.sheet, color = palette.foreground)
-                }) {
-                    Pane(homeScroll.leading, top = compactTop, horizontal = 24.dp) {
-                        Leading(0f)
-                    }
-                    // Lined up with the content column below it (the bar sits 8 dp outside the content's edges).
-                    TopBar(ui, actions, state, 0f, Modifier.widthIn(max = OnboardingPose.paneContent.dp).padding(horizontal = 16.dp), entered)
-                    HomeToast(toasts.current, Modifier.align(Alignment.TopCenter).padding(top = 76.dp))
-                }
-            }
-            Spacer(Modifier.height(pose.bottom - pose.top))
-            Box(Modifier.weight(1f).fillMaxWidth().clipToBounds(), contentAlignment = Alignment.TopCenter) {
-                TrailingPane(ui, state, entered, revealed, memory, actions, homeScroll) { Primary(true) }
-            }
-        }
+        ScrollEdge(scrolled)
+        topBar(tuck, Modifier.padding(horizontal = 16.dp))
+        toast(Modifier.align(Alignment.TopCenter).padding(top = 76.dp))
     }
-    if (sheet) BalanceSheet(ui) { sheet = false }
 }
 
 @Composable
@@ -308,28 +346,8 @@ private fun BoxScope.TopBar(ui: HomeUi, actions: HomeActions, state: HomeRules.S
         // centred in the gap between them, so a long name never pushes the buttons out of a narrow pane.
         androidx.compose.ui.layout.Layout(contents = listOf(
             { if (!suspended) NameChip(ui.address, ui.variant) { haptics.light(); actions.profile() } },
-            {
-                if (!suspended) {
-                    val shown = tuck > .7f
-                    val alpha by androidx.compose.animation.core.animateFloatAsState(if (shown) 1f else 0f,
-                        androidx.compose.animation.core.tween(if (reduceMotion) 180 else 250), label = "mini")
-                    val rise by androidx.compose.animation.core.animateFloatAsState(if (shown || reduceMotion) 0f else 6f,
-                        androidx.compose.animation.core.tween(300), label = "mini-rise")
-                    Text(if (ui.hidden) BitcoinAmount.format(0, ui.unit, ui.locale).replace("0",
-                        "••••") else ui.balance?.let { BitcoinAmount.format(it.totalSats.toLong(), ui.unit, ui.locale) } ?: "",
-                        Modifier.padding(horizontal = 8.dp).graphicsLayer { this.alpha = alpha; translationY = rise * density }.clearAndSetSemantics { },
-                        style = HomeType.mini, color = palette.foreground, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                }
-            },
-            {
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    if (!suspended) ActivityGlyph(ui.activity, ui.backedUpAt)
-                    if (!suspended) CircleButton(HomeIcons.scan, tr("Scan")) { haptics.light(); actions.scan() }
-                    val entry = com.noahwallet.ui.settings.LocalSettingsEntry.current
-                    CircleButton(HomeIcons.settings, tr("Settings"), Modifier.testTag("home-settings-button").then(if (entry == null) Modifier
-                    else Modifier.onGloballyPositioned { entry.gear = it.boundsInWindow() })) { haptics.light(); actions.settings() }
-                }
-            },
+            { if (!suspended) MiniBalance(ui, tuck) },
+            { TopBarButtons(ui, actions, suspended) },
         ), Modifier.fillMaxSize()) { (chip, mini, buttons), constraints ->
             val loose = constraints.copy(minWidth = 0, minHeight = 0)
             val end = buttons.first().measure(loose)
@@ -344,6 +362,35 @@ private fun BoxScope.TopBar(ui: HomeUi, actions: HomeActions, state: HomeRules.S
                 middle?.place(gapStart + (gapEnd - gapStart - middle.width) / 2, centreY(middle.height))
             }
         }
+    }
+}
+
+/** The balance in the top bar once the big one has tucked under it. */
+@Composable
+private fun MiniBalance(ui: HomeUi, tuck: Float) {
+    val palette = LocalPalette.current
+    val reduceMotion = LocalReduceMotion.current
+    val shown = tuck > .7f
+    val alpha by androidx.compose.animation.core.animateFloatAsState(if (shown) 1f else 0f,
+        androidx.compose.animation.core.tween(if (reduceMotion) 180 else 250), label = "mini")
+    val rise by androidx.compose.animation.core.animateFloatAsState(if (shown || reduceMotion) 0f else 6f,
+        androidx.compose.animation.core.tween(300), label = "mini-rise")
+    Text(if (ui.hidden) BitcoinAmount.format(0, ui.unit, ui.locale).replace("0",
+        "••••") else ui.balance?.let { BitcoinAmount.format(it.totalSats.toLong(), ui.unit, ui.locale) } ?: "",
+        Modifier.padding(horizontal = 8.dp).graphicsLayer { this.alpha = alpha; translationY = rise * density }.clearAndSetSemantics { },
+        style = HomeType.mini, color = palette.foreground, maxLines = 1, overflow = TextOverflow.Ellipsis)
+}
+
+/** The top bar's end: background work, Scan and the Settings gear (Settings opens out of it). */
+@Composable
+private fun TopBarButtons(ui: HomeUi, actions: HomeActions, suspended: Boolean) {
+    val haptics = rememberHaptics()
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        if (!suspended) ActivityGlyph(ui.activity, ui.backedUpAt)
+        if (!suspended) CircleButton(HomeIcons.scan, tr("Scan")) { haptics.light(); actions.scan() }
+        val entry = com.noahwallet.ui.settings.LocalSettingsEntry.current
+        CircleButton(HomeIcons.settings, tr("Settings"), Modifier.testTag("home-settings-button").then(if (entry == null) Modifier
+        else Modifier.onGloballyPositioned { entry.gear = it.boundsInWindow() })) { haptics.light(); actions.settings() }
     }
 }
 
@@ -417,35 +464,14 @@ internal fun BalanceFigures(text: String?, hidden: Boolean, rollFromZero: Boolea
     val measurer = androidx.compose.ui.text.rememberTextMeasurer()
     // BIP-177's ₿ sits 3 dp from the digits at this size (prototype `.bal .b`), not a full no-break space.
     val symbol = text?.startsWith("₿\u00a0") == true
-    val digits = if (symbol) text!!.removePrefix("₿\u00a0") else text
+    val digits = if (symbol) text.removePrefix("₿\u00a0") else text
     val base = HomeType.balance
     val baseLine = with(density) { base.lineHeight.toDp() }
     BoxWithConstraints(modifier.heightIn(min = baseLine), contentAlignment = Alignment.BottomStart) {
         val available = constraints.maxWidth
         val bounded = constraints.hasBoundedWidth
         val scale = remember(digits, symbol, hidden, density, available, bounded) {
-            // The row's width in px at a scale: ₿ and its gap, then each character's own box (a digit's column is
-            // its measured width, rounded through dp as RollingText lays it out), or the hidden dots as one line.
-            fun needed(scale: Float): Int = with(density) {
-                val style = base.copy(fontSize = base.fontSize * scale, lineHeight = base.lineHeight * scale)
-                val head = if (symbol || text == null) measurer.measure("₿", style).size.width + (3.dp * scale).roundToPx() else 0
-                head + when {
-                    digits == null -> 0
-                    hidden -> measurer.measure(digits, style.copy(letterSpacing = .06.em)).size.width
-                    else -> digits.sumOf { char ->
-                        val width = measurer.measure(char.toString(), style).size.width
-                        if (char.isDigit()) width.toDp().roundToPx() else width
-                    }
-                }
-            }
-            var scale = 1f
-            if (bounded) repeat(24) {
-                val width = needed(scale)
-                if (width <= available || scale <= .1f) return@remember scale
-                // Shrinking the size in proportion undershoots when the font scales nonlinearly; measure again.
-                scale = (scale * minOf(available.toFloat() / width, .98f)).coerceAtLeast(.1f)
-            }
-            scale
+            if (!bounded) 1f else balanceScale(available) { scale -> with(density) { figuresWidth(measurer, scale, digits, hidden, symbol || text == null) } }
         }
         val style = base.copy(fontSize = base.fontSize * scale, lineHeight = base.lineHeight * scale)
         val line = with(density) { style.lineHeight.toDp() }
@@ -458,6 +484,37 @@ internal fun BalanceFigures(text: String?, hidden: Boolean, rollFromZero: Boolea
                     color = palette.foreground, maxLines = 1, overflow = TextOverflow.Visible)
                 else RollingText(digits, style, palette.foreground, rollFromZero = rollFromZero, startDelay = startDelay)
             }
+        }
+    }
+}
+
+/** The largest scale (to a tenth of the size) at which the figures fit [available] px, measured each try. */
+private fun balanceScale(available: Int, needed: (Float) -> Int): Float {
+    var scale = 1f
+    repeat(24) {
+        val width = needed(scale)
+        if (width <= available || scale <= .1f) return scale
+        // Shrinking the size in proportion undershoots when the font scales nonlinearly; measure again.
+        scale = (scale * minOf(available.toFloat() / width, .98f)).coerceAtLeast(.1f)
+    }
+    return scale
+}
+
+/**
+ * The row's width in px at [scale]: ₿ and its gap ([withSymbol]), then each character's own box (a digit's column is
+ * its measured width, rounded through dp as RollingText lays it out), or the hidden dots as one line.
+ */
+private fun androidx.compose.ui.unit.Density.figuresWidth(measurer: androidx.compose.ui.text.TextMeasurer, scale: Float, digits: String?,
+    hidden: Boolean, withSymbol: Boolean): Int {
+    val base = HomeType.balance
+    val style = base.copy(fontSize = base.fontSize * scale, lineHeight = base.lineHeight * scale)
+    val head = if (withSymbol) measurer.measure("₿", style).size.width + (3.dp * scale).roundToPx() else 0
+    return head + when {
+        digits == null -> 0
+        hidden -> measurer.measure(digits, style.copy(letterSpacing = .06.em)).size.width
+        else -> digits.sumOf { char ->
+            val width = measurer.measure(char.toString(), style).size.width
+            if (char.isDigit()) width.toDp().roundToPx() else width
         }
     }
 }
@@ -497,64 +554,86 @@ private fun StatusBlock(ui: HomeUi, onBalance: () -> Unit, onRounds: () -> Unit)
 @Composable
 private fun NudgeHost(ui: HomeUi, onAction: (HomeRules.Nudge) -> Unit, onDismiss: (HomeRules.Nudge) -> Unit) {
     val reduceMotion = LocalReduceMotion.current
-    var shown by remember { mutableStateOf(ui.nudge) }
-    val fold = remember { androidx.compose.animation.core.Animatable(0f) }
-    val slide = remember { androidx.compose.animation.core.Animatable(1f) }
-    LaunchedEffect(ui.nudge?.key) {
+    val motion = rememberNudgeMotion(ui.nudge, reduceMotion)
+    // The same nudge keeps its place and updates in place (for example a new renew amount).
+    val nudge = if (motion.shown?.key == ui.nudge?.key) ui.nudge else motion.shown
+    if (nudge == null) return
+    val f = motion.fold.value
+    // Clipped while it folds, like the prototype's overflow: hidden, so it never paints over what follows.
+    Box(Modifier.clipToBounds().collapse(f).padding(top = (24 * (1 - f)).dp).graphicsLayer {
+        alpha = (1 - f) * motion.slide.value.coerceIn(0f, 1f)
+        if (!reduceMotion) { translationX = 30 * f * density; translationY = 14 * (1 - motion.slide.value) * density }
+    }) {
+        val (icon, title, subtitle) = nudgeWords(nudge, ui)
+        NudgeCard(icon, title, subtitle, nudgeAction(nudge, ui.retrying), nudgeDismiss(nudge),
+            enabled = !(nudge is HomeRules.Nudge.BackupFailed && ui.retrying),
+            onAction = { onAction(nudge) }, onDismiss = { onDismiss(nudge) },
+            modifier = Modifier.testTag("home-nudge-${nudge.key.substringBefore(':')}"))
+    }
+}
+
+/** The nudge on screen, its fold away and the next one's slide in. */
+private class NudgeMotion(initial: HomeRules.Nudge?) {
+    var shown by mutableStateOf(initial)
+    val fold = androidx.compose.animation.core.Animatable(0f)
+    val slide = androidx.compose.animation.core.Animatable(1f)
+}
+
+@Composable
+private fun rememberNudgeMotion(nudge: HomeRules.Nudge?, reduceMotion: Boolean): NudgeMotion {
+    val motion = remember { NudgeMotion(nudge) }
+    val fold = motion.fold
+    val slide = motion.slide
+    LaunchedEffect(nudge?.key) {
         // Back to the nudge still on screen (it changed and changed back mid-fold): unfold it in place.
-        if (shown?.key == ui.nudge?.key) {
+        if (motion.shown?.key == nudge?.key) {
             kotlinx.coroutines.coroutineScope {
                 launch { if (fold.value > 0f) fold.animateTo(0f, NoahTokens.Motion.snappy()) }
                 launch { if (slide.value < 1f) slide.animateTo(1f, NoahTokens.Motion.snappy()) }
             }
             return@LaunchedEffect
         }
-        if (shown != null) {
+        if (motion.shown != null) {
             if (reduceMotion) fold.animateTo(1f, androidx.compose.animation.core.tween(NoahTokens.Motion.REDUCE_MOTION_FADE_MS))
             else fold.animateTo(1f, androidx.compose.animation.core.tween(420, easing = androidx.compose.animation.core.Easing { SpringCurve.soft.over(it) }))
         }
-        shown = ui.nudge
+        motion.shown = nudge
         fold.snapTo(0f)
-        if (shown != null) {
+        if (motion.shown != null) {
             slide.snapTo(0f)
             if (reduceMotion) slide.animateTo(1f, androidx.compose.animation.core.tween(NoahTokens.Motion.REDUCE_MOTION_FADE_MS))
             else slide.animateTo(1f, NoahTokens.Motion.snappy())
         }
     }
-    // The same nudge keeps its place and updates in place (for example a new renew amount).
-    val nudge = if (shown?.key == ui.nudge?.key) ui.nudge else shown
-    if (nudge == null) return
-    val f = fold.value
-    // Clipped while it folds, like the prototype's overflow: hidden, so it never paints over what follows.
-    Box(Modifier.clipToBounds().collapse(f).padding(top = (24 * (1 - f)).dp).graphicsLayer {
-        alpha = (1 - f) * slide.value.coerceIn(0f, 1f)
-        if (!reduceMotion) { translationX = 30 * f * density; translationY = 14 * (1 - slide.value) * density }
-    }) {
-        val (icon, title, subtitle) = when (nudge) {
-            is HomeRules.Nudge.Notice -> Triple(HomeIcons.notice, tr(nudge.message), null)
-            is HomeRules.Nudge.Renewal -> Triple(HomeIcons.renew, renewTitle(nudge.renew, ui.unit, ui.locale, ui.hidden), renewSubtitle(nudge.renew))
-            is HomeRules.Nudge.BackupFailed -> Triple(HomeIcons.backupFailed, tr(nudge.banner.title), tr(nudge.banner.message))
-            HomeRules.Nudge.BackUp -> Triple(HomeIcons.backup, tr("Back up your wallet"), tr("Save your recovery phrase"))
-            HomeRules.Nudge.Email -> Triple(HomeIcons.email, tr("Add your email"), tr("For urgent wallet alerts"))
-            HomeRules.Nudge.Update -> Triple(HomeIcons.update, tr("Update available"), tr("Get the latest fixes"))
-        }
-        val action = when (nudge) {
-            is HomeRules.Nudge.Notice -> null
-            is HomeRules.Nudge.Renewal -> tr("Renew")
-            is HomeRules.Nudge.BackupFailed -> tr(if (ui.retrying) "Working" else "Retry")
-            HomeRules.Nudge.BackUp -> tr("Back up")
-            HomeRules.Nudge.Email -> tr("Add")
-            HomeRules.Nudge.Update -> tr("Update")
-        }
-        val dismiss = when (nudge) {
-            is HomeRules.Nudge.Notice -> tr("Close")
-            HomeRules.Nudge.Email -> tr("Dismiss emergency email prompt")
-            else -> null
-        }
-        NudgeCard(icon, title, subtitle, action, dismiss, enabled = !(nudge is HomeRules.Nudge.BackupFailed && ui.retrying),
-            onAction = { onAction(nudge) }, onDismiss = { onDismiss(nudge) },
-            modifier = Modifier.testTag("home-nudge-${nudge.key.substringBefore(':')}"))
-    }
+    return motion
+}
+
+/** A nudge's icon, title and subtitle. */
+@Composable
+private fun nudgeWords(nudge: HomeRules.Nudge, ui: HomeUi): Triple<Int, String, String?> = when (nudge) {
+    is HomeRules.Nudge.Notice -> Triple(HomeIcons.notice, tr(nudge.message), null)
+    is HomeRules.Nudge.Renewal -> Triple(HomeIcons.renew, renewTitle(nudge.renew, ui.unit, ui.locale, ui.hidden), renewSubtitle(nudge.renew))
+    is HomeRules.Nudge.BackupFailed -> Triple(HomeIcons.backupFailed, tr(nudge.banner.title), tr(nudge.banner.message))
+    HomeRules.Nudge.BackUp -> Triple(HomeIcons.backup, tr("Back up your wallet"), tr("Save your recovery phrase"))
+    HomeRules.Nudge.Email -> Triple(HomeIcons.email, tr("Add your email"), tr("For urgent wallet alerts"))
+    HomeRules.Nudge.Update -> Triple(HomeIcons.update, tr("Update available"), tr("Get the latest fixes"))
+}
+
+@Composable
+private fun nudgeAction(nudge: HomeRules.Nudge, retrying: Boolean): String? = when (nudge) {
+    is HomeRules.Nudge.Notice -> null
+    is HomeRules.Nudge.Renewal -> tr("Renew")
+    is HomeRules.Nudge.BackupFailed -> tr(if (retrying) "Working" else "Retry")
+    HomeRules.Nudge.BackUp -> tr("Back up")
+    HomeRules.Nudge.Email -> tr("Add")
+    HomeRules.Nudge.Update -> tr("Update")
+}
+
+@Composable
+private fun nudgeDismiss(nudge: HomeRules.Nudge): String? = when (nudge) {
+    is HomeRules.Nudge.Notice -> tr("Close")
+    HomeRules.Nudge.Email -> tr("Dismiss emergency email prompt")
+    else -> null
 }
 
 /** Today's suspended state, restyled: no balance, nudge or list. */
@@ -573,7 +652,7 @@ private fun Suspended(settings: () -> Unit) {
 /** Wide and tabletop's second pane: the get-paid card centred, or the full activity list grouped by day. */
 @Composable
 private fun TrailingPane(ui: HomeUi, state: HomeRules.State, entered: Long, revealed: Long, memory: HomeMemory, actions: HomeActions,
-    scroll: HomeScroll, card: @Composable () -> Unit) {
+    scroll: HomeScroll, content: @Composable () -> Unit) {
     val reduceMotion = LocalReduceMotion.current
     when (state) {
         HomeRules.State.fresh -> BoxWithConstraints(Modifier.fillMaxSize()) {
@@ -581,7 +660,7 @@ private fun TrailingPane(ui: HomeUi, state: HomeRules.State, entered: Long, reve
             Column(Modifier.fillMaxSize().verticalScroll(scroll.card).onGloballyPositioned { scroll.paneContent = it },
                 horizontalAlignment = Alignment.CenterHorizontally) {
                 Box(Modifier.heightIn(min = height).widthIn(max = OnboardingPose.paneContent.dp).fillMaxWidth().padding(horizontal = 32.dp, vertical = 28.dp),
-                    contentAlignment = Alignment.Center) { card() }
+                    contentAlignment = Alignment.Center) { content() }
             }
         }
         HomeRules.State.everyday -> Box(Modifier.fillMaxSize().rise(revealed, 0, 12f, reduceMotion), contentAlignment = Alignment.TopCenter) {
@@ -658,30 +737,14 @@ private fun GetPaidCard(ui: HomeUi, payment: HomeMemory.FirstPayment?, elapsed: 
     val t = if (payment == null) 0L else elapsed
     val playing = payment != null
     val frame = if (playing) Receipt.at(t, reduceMotion) else Receipt.idle
-    val qrOut = frame.qrOut
-    val gotIn = frame.gotIn
-    val ring = frame.ring
-    val check = frame.check
-    val amountIn = frame.amountIn
-    val fromIn = frame.fromIn
-    val buttonsOut = frame.buttonsOut
     val folding = frame.folding
     // Folding collapses and shrinks the card; under Reduce Motion it only fades.
     val collapsing = if (frame.collapse) folding else 0f
     val cardHeight = remember { IntArray(1) }
-    val qrSide = if (wide) 228.dp else 212.dp
     Column(modifier.fillMaxWidth().padding(top = if (wide) 0.dp else 24.dp)
-        .then(if (collapsing > 0f) Modifier.clipToBounds() else Modifier)
-        .layout { measurable, constraints ->
-            val placeable = measurable.measure(constraints)
-            if (cardHeight[0] == 0 || !playing) cardHeight[0] = placeable.height
-            // The prototype folds max-height from height + 80 px to 0, so the card shrinks late in the fold.
-            val max = ((cardHeight[0] + 80 * density) * (1 - collapsing)).toInt()
-            layout(placeable.width, minOf(placeable.height, max.coerceAtLeast(0))) { placeable.place(0, 0) }
-        }
+        .fold(cardHeight, collapsing, playing)
         .graphicsLayer { alpha = 1 - folding.coerceIn(0f, 1f); val sc = 1 - .04f * collapsing; scaleX = sc; scaleY = sc }
         .testTag("home-get-paid")) {
-        val ink = NoahTokens.Light.qrInk
         val copyLabel = tr("Copy Lightning address")
         Box(Modifier.fillMaxWidth()
             .shadow(if (palette === NoahTokens.Dark) 0.dp else 14.dp, RoundedCornerShape(30.dp), ambientColor = Color.Black.copy(alpha = .08f),
@@ -690,52 +753,86 @@ private fun GetPaidCard(ui: HomeUi, payment: HomeMemory.FirstPayment?, elapsed: 
             .border(1.dp, Color.Black.copy(alpha = .07f), RoundedCornerShape(30.dp))
             .then(if (address != null && !playing) Modifier.clickable(onClickLabel = copyLabel, role = Role.Button) { onCopy(address) } else Modifier)
             .padding(start = 20.dp, end = 20.dp, top = 20.dp, bottom = 18.dp), contentAlignment = Alignment.TopCenter) {
-            if (address == null) Column(Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                Text(tr("Lightning address unavailable"), style = NoahTokens.Typography.sheetTitle, color = ink)
-                Text(tr("Finish setting up your Lightning address before sharing your QR."), style = HomeType.line, color = Color(0xFF6B6B6B))
-                Pill(tr("Open Profile"), height = 44.dp, container = ink, content = Color.White, onClick = onProfile)
-            } else Column(Modifier.fillMaxWidth().semantics(mergeDescendants = true) { contentDescription = copyLabel },
-                horizontalAlignment = Alignment.CenterHorizontally) {
-                Box(Modifier.size(qrSide).graphicsLayer {
-                    alpha = 1 - qrOut.coerceIn(0f, 1f)
-                    if (!reduceMotion) { val sc = 1 - .14f * qrOut; scaleX = sc; scaleY = sc }
-                }.then(if (Build.VERSION.SDK_INT >= 31 && playing && !reduceMotion && qrOut > .01f) Modifier.blur((6 * qrOut.coerceIn(0f, 1f)).dp,
-                    BlurredEdgeTreatment.Unbounded) else Modifier)
-                    .testTag("home-qr")) {
-                    StyledQR(address, Modifier.fillMaxSize(), reveal = true, reduceMotion = reduceMotion)
-                }
-                Text(address, Modifier.padding(top = 14.dp).graphicsLayer { alpha = 1 - qrOut.coerceIn(0f, 1f) }, style = HomeType.qrName, color = ink,
-                    maxLines = 1, overflow = TextOverflow.Ellipsis)
-                Text(tr("Scan with any Lightning wallet"), Modifier.padding(top = 2.dp).graphicsLayer { alpha = 1 - qrOut.coerceIn(0f, 1f) },
-                    style = HomeType.small, color = Color(0xFF6B6B6B), textAlign = TextAlign.Center)
-            }
-            if (playing) Column(Modifier.matchParentSize().graphicsLayer { alpha = gotIn.coerceIn(0f,
-                1f) }.semantics(mergeDescendants = true) { liveRegion = LiveRegionMode.Polite },
-                horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
-                Canvas(Modifier.size(84.dp)) {
-                    val unit = size.width / 84f
-                    drawArc(NoahTokens.Light.orange, -90f, 360f * ring.coerceIn(0f, 1f), false, Offset(2 * unit, 2 * unit),
-                        androidx.compose.ui.geometry.Size(80 * unit, 80 * unit), style = Stroke(2.5f * unit))
-                    val path = Path().apply { moveTo(27 * unit, 43 * unit); relativeLineTo(10 * unit, 10 * unit); relativeLineTo(21 * unit, -22 * unit) }
-                    val measure = PathMeasure().apply { setPath(path, false) }
-                    val partial = Path()
-                    measure.getSegment(0f, measure.length * check.coerceIn(0f, 1f), partial, true)
-                    drawPath(partial, ink, style = Stroke(3.2f * unit, cap = StrokeCap.Round, join = StrokeJoin.Round))
-                }
-                Text("+" + if (ui.hidden) "••••" else BitcoinAmount.format(payment.sats, ui.unit, ui.locale),
-                    Modifier.padding(top = 18.dp).graphicsLayer { alpha = amountIn.coerceIn(0f, 1f)
-                        if (!reduceMotion) translationY = 8 * (1 - amountIn) * density },
-                    style = HomeType.got, color = ink)
-                payment.from?.let { from ->
-                    Text(tr("from {name}", from), Modifier.padding(top = 6.dp).graphicsLayer { alpha = fromIn.coerceIn(0f, 1f) }, style = HomeType.line,
-                        color = Color(0xFF6B6B6B))
-                }
+            if (address == null) AddressUnavailable(onProfile)
+            else AddressFace(address, copyLabel, if (wide) 228.dp else 212.dp, frame.qrOut, playing)
+            if (payment != null) ReceiptFace(ui, payment, frame, Modifier.matchParentSize())
+        }
+        if (address != null) {
+            Row(Modifier.fillMaxWidth().padding(top = 12.dp).graphicsLayer { alpha = 1 - frame.buttonsOut.coerceIn(0f, 1f) },
+                horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Pill(tr("Copy"), Modifier.weight(1f), height = 48.dp, outlined = true, style = HomeType.button, enabled = !playing) { onCopy(address) }
+                Pill(tr("Share"), Modifier.weight(1f), height = 48.dp, style = HomeType.button, enabled = !playing) { onShare(address) }
             }
         }
-        if (address != null) Row(Modifier.fillMaxWidth().padding(top = 12.dp).graphicsLayer { alpha = 1 - buttonsOut.coerceIn(0f, 1f) },
-            horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            Pill(tr("Copy"), Modifier.weight(1f), height = 48.dp, outlined = true, style = HomeType.button, enabled = !playing) { onCopy(address) }
-            Pill(tr("Share"), Modifier.weight(1f), height = 48.dp, style = HomeType.button, enabled = !playing) { onShare(address) }
+    }
+}
+
+/** The fold's height: the prototype folds max-height from height + 80 px to 0, so the card shrinks late in the fold. */
+private fun Modifier.fold(cardHeight: IntArray, collapsing: Float, playing: Boolean) = then(if (collapsing > 0f) Modifier.clipToBounds() else Modifier)
+    .layout { measurable, constraints ->
+        val placeable = measurable.measure(constraints)
+        if (cardHeight[0] == 0 || !playing) cardHeight[0] = placeable.height
+        val max = ((cardHeight[0] + 80 * density) * (1 - collapsing)).toInt()
+        layout(placeable.width, minOf(placeable.height, max.coerceAtLeast(0))) { placeable.place(0, 0) }
+    }
+
+@Composable
+private fun AddressUnavailable(onProfile: () -> Unit) {
+    val ink = NoahTokens.Light.qrInk
+    Column(Modifier.fillMaxWidth().padding(vertical = 8.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Text(tr("Lightning address unavailable"), style = NoahTokens.Typography.sheetTitle, color = ink)
+        Text(tr("Finish setting up your Lightning address before sharing your QR."), style = HomeType.line, color = Color(0xFF6B6B6B))
+        Pill(tr("Open Profile"), height = 44.dp, container = ink, content = Color.White, onClick = onProfile)
+    }
+}
+
+/** Your address's QR and the address itself, blurring and shrinking out as the receipt arrives ([qrOut]). */
+@Composable
+private fun AddressFace(address: String, copyLabel: String, qrSide: Dp, qrOut: Float, playing: Boolean) {
+    val reduceMotion = LocalReduceMotion.current
+    val ink = NoahTokens.Light.qrInk
+    val blurring = playing && !reduceMotion && qrOut > .01f
+    Column(Modifier.fillMaxWidth().semantics(mergeDescendants = true) { contentDescription = copyLabel },
+        horizontalAlignment = Alignment.CenterHorizontally) {
+        Box(Modifier.size(qrSide).graphicsLayer {
+            alpha = 1 - qrOut.coerceIn(0f, 1f)
+            if (!reduceMotion) { val sc = 1 - .14f * qrOut; scaleX = sc; scaleY = sc }
+        }.then(if (Build.VERSION.SDK_INT >= 31 && blurring) Modifier.blur((6 * qrOut.coerceIn(0f, 1f)).dp,
+            BlurredEdgeTreatment.Unbounded) else Modifier)
+            .testTag("home-qr")) {
+            StyledQR(address, Modifier.fillMaxSize(), reveal = true, reduceMotion = reduceMotion)
+        }
+        Text(address, Modifier.padding(top = 14.dp).graphicsLayer { alpha = 1 - qrOut.coerceIn(0f, 1f) }, style = HomeType.qrName, color = ink,
+            maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Text(tr("Scan with any Lightning wallet"), Modifier.padding(top = 2.dp).graphicsLayer { alpha = 1 - qrOut.coerceIn(0f, 1f) },
+            style = HomeType.small, color = Color(0xFF6B6B6B), textAlign = TextAlign.Center)
+    }
+}
+
+/** The first payment's receipt over the card: the ring and check, "+₿X" and who it's from. */
+@Composable
+private fun ReceiptFace(ui: HomeUi, payment: HomeMemory.FirstPayment, frame: ReceiptFrame, modifier: Modifier) {
+    val reduceMotion = LocalReduceMotion.current
+    val ink = NoahTokens.Light.qrInk
+    Column(modifier.graphicsLayer { alpha = frame.gotIn.coerceIn(0f, 1f) }.semantics(mergeDescendants = true) { liveRegion = LiveRegionMode.Polite },
+        horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
+        Canvas(Modifier.size(84.dp)) {
+            val unit = size.width / 84f
+            drawArc(NoahTokens.Light.orange, -90f, 360f * frame.ring.coerceIn(0f, 1f), false, Offset(2 * unit, 2 * unit),
+                androidx.compose.ui.geometry.Size(80 * unit, 80 * unit), style = Stroke(2.5f * unit))
+            val path = Path().apply { moveTo(27 * unit, 43 * unit); relativeLineTo(10 * unit, 10 * unit); relativeLineTo(21 * unit, -22 * unit) }
+            val measure = PathMeasure().apply { setPath(path, false) }
+            val partial = Path()
+            measure.getSegment(0f, measure.length * frame.check.coerceIn(0f, 1f), partial, true)
+            drawPath(partial, ink, style = Stroke(3.2f * unit, cap = StrokeCap.Round, join = StrokeJoin.Round))
+        }
+        Text("+" + if (ui.hidden) "••••" else BitcoinAmount.format(payment.sats, ui.unit, ui.locale),
+            Modifier.padding(top = 18.dp).graphicsLayer { alpha = frame.amountIn.coerceIn(0f, 1f)
+                if (!reduceMotion) translationY = 8 * (1 - frame.amountIn) * density },
+            style = HomeType.got, color = ink)
+        payment.from?.let { from ->
+            Text(tr("from {name}", from), Modifier.padding(top = 6.dp).graphicsLayer { alpha = frame.fromIn.coerceIn(0f, 1f) }, style = HomeType.line,
+                color = Color(0xFF6B6B6B))
         }
     }
 }
@@ -754,7 +851,8 @@ private fun BalanceSheet(ui: HomeUi, onDismiss: () -> Unit) {
                 "••••••") else BitcoinAmount.format(balance.totalSats.toLong(), ui.unit, ui.locale),
                 Modifier.padding(top = 12.dp, bottom = 16.dp), style = HomeType.total, color = palette.foreground)
             balance?.details?.forEachIndexed { index, row ->
-                Row(Modifier.fillMaxWidth().height(46.dp).then(if (index < balance.details.lastIndex) Modifier.drawBehindHairline(palette.hairline) else Modifier),
+                val hairline = if (index < balance.details.lastIndex) Modifier.drawBehindHairline(palette.hairline) else Modifier
+                Row(Modifier.fillMaxWidth().height(46.dp).then(hairline),
                     verticalAlignment = Alignment.CenterVertically) {
                     Text(tr(row.label), Modifier.weight(1f), style = HomeType.rowTitle, color = palette.muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     Text(ui.amount(row.sats), style = HomeType.amount, color = palette.foreground)

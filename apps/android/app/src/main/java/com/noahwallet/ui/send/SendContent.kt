@@ -114,7 +114,7 @@ enum class SendEnding { sending, arkSent, lightningSent, chainSent, pending, ref
                 SendController.State.succeeded -> sent(route)
                 SendController.State.failed -> failed(route, refund)
                 SendController.State.alreadyPaid -> alreadyPaid
-                SendController.State.uncertain -> if (route == SendRoute.lightning && attempt?.existingLightning != null) pending else unknown
+                SendController.State.uncertain -> if (route == SendRoute.lightning && attempt.existingLightning != null) pending else unknown
                 SendController.State.storageBlocked -> unavailable
             }
         }

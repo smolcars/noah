@@ -130,7 +130,7 @@ internal fun SendChip(title: String, modifier: Modifier = Modifier, container: C
  * shake when it's more than you can send.
  */
 @Composable
-internal fun AmountFigure(text: String, empty: Boolean, shake: Float, style: TextStyle = SendType.amount, modifier: Modifier = Modifier) {
+internal fun AmountFigure(text: String, empty: Boolean, shake: Float, modifier: Modifier = Modifier, style: TextStyle = SendType.amount) {
     val palette = LocalPalette.current
     val reduceMotion = LocalReduceMotion.current
     var previous by remember { mutableStateOf(text) }
@@ -236,7 +236,7 @@ internal fun ToField(value: String, onValue: (String) -> Unit, enabled: Boolean,
 
 /** A result or recent row (64 dp): avatar, name and its type. */
 @Composable
-internal fun WhoRow(who: SendWho, subtitle: String, divider: Boolean, enabled: Boolean = true, busy: Boolean = false, modifier: Modifier = Modifier,
+internal fun WhoRow(who: SendWho, subtitle: String, divider: Boolean, modifier: Modifier = Modifier, enabled: Boolean = true, busy: Boolean = false,
     onClick: () -> Unit) {
     val palette = LocalPalette.current
     Row(modifier.fillMaxWidth().height(64.dp).clickable(enabled = enabled, role = Role.Button, onClick = onClick).semantics(mergeDescendants = true) { }
@@ -253,7 +253,7 @@ internal fun WhoRow(who: SendWho, subtitle: String, divider: Boolean, enabled: B
 
 /** A rail card on Method (or a balance card on Balance): glyph, name, one line and an optional "Best" badge. */
 @Composable
-internal fun RailCard(icon: Int?, name: String, line: String, best: Boolean, enabled: Boolean, selected: Boolean = false, modifier: Modifier = Modifier,
+internal fun RailCard(icon: Int?, name: String, line: String, best: Boolean, enabled: Boolean, modifier: Modifier = Modifier, selected: Boolean = false,
     onClick: () -> Unit) {
     val palette = LocalPalette.current
     val interaction = remember { MutableInteractionSource() }
@@ -282,8 +282,8 @@ internal fun RailCard(icon: Int?, name: String, line: String, best: Boolean, ena
  * one line puts its label above its value and both wrap rather than ellipsize (Review's rows, as on iOS).
  */
 @Composable
-internal fun ValueRow(label: String, value: String, number: Boolean = false, icon: Int? = null, divider: Boolean = true, copy: (() -> Unit)? = null,
-    wraps: Boolean = false, modifier: Modifier = Modifier) {
+internal fun ValueRow(label: String, value: String, modifier: Modifier = Modifier, number: Boolean = false, icon: Int? = null, divider: Boolean = true,
+    copy: (() -> Unit)? = null, wraps: Boolean = false) {
     val palette = LocalPalette.current
     val row = modifier.fillMaxWidth().heightIn(min = 48.dp)
         .drawBehind { if (divider) drawRect(palette.hairline, Offset(0f, size.height - 1.dp.toPx()), Size(size.width, 1.dp.toPx())) }

@@ -152,15 +152,15 @@ internal fun BackupPage(model: AppModel, nav: SettingsNav, live: SettingsLive, i
     SettingsFrame(tr("Backup"), nav.back) {
         val never = state.lastBackupAt == null
         when (kind) {
-            SettingsRules.Backup.running -> StatusHeader({ StatusMark(MarkKind.running) }, tr("Backing up…"), tr("Encrypting and uploading"))
-            SettingsRules.Backup.failed -> StatusHeader({ StatusMark(MarkKind.failed) }, tr("Backup failed"),
-                last?.let { tr("Last good backup {date}", it) } ?: tr("Not backed up yet"), failed = true)
-            SettingsRules.Backup.off -> StatusHeader({ StatusMark(MarkKind.idle, SettingsIcons.cloud) },
+            SettingsRules.Backup.running -> StatusHeader(tr("Backing up…"), tr("Encrypting and uploading")) { StatusMark(MarkKind.running) }
+            SettingsRules.Backup.failed -> StatusHeader(tr("Backup failed"),
+                last?.let { tr("Last good backup {date}", it) } ?: tr("Not backed up yet"), failed = true) { StatusMark(MarkKind.failed) }
+            SettingsRules.Backup.off -> StatusHeader(
                 if (never) tr("Not backed up yet") else tr("Automatic backups off"),
-                if (never) tr("Turn it on or back up now") else tr("Last backup {date}", last!!))
-            SettingsRules.Backup.on -> if (never) StatusHeader({ StatusMark(MarkKind.idle, SettingsIcons.cloud) }, tr("Not backed up yet"),
-                if (state.backupPending) tr("Backup pending") else tr("Backs up when your wallet changes"))
-            else StatusHeader({ StatusMark(MarkKind.ok, check = check.value) }, tr("Backed up"), if (state.backupPending) tr("Backup pending") else last)
+                if (never) tr("Turn it on or back up now") else tr("Last backup {date}", last!!)) { StatusMark(MarkKind.idle, SettingsIcons.cloud) }
+            SettingsRules.Backup.on -> if (never) StatusHeader(tr("Not backed up yet"),
+                if (state.backupPending) tr("Backup pending") else tr("Backs up when your wallet changes")) { StatusMark(MarkKind.idle, SettingsIcons.cloud) }
+            else StatusHeader(tr("Backed up"), if (state.backupPending) tr("Backup pending") else last) { StatusMark(MarkKind.ok, check = check.value) }
         }
         SettingsGroup(rows = listOf(
             { d -> SettingsRow(if (kind == SettingsRules.Backup.failed) tr("Try again") else tr("Back up now"), SettingsIcons.refresh, bold = true,
