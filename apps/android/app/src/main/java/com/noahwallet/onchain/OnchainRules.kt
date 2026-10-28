@@ -43,6 +43,7 @@ data class ExitReviewInputs(
 }
 
 @Serializable
+@Suppress("ConstructorParameterNaming") // bark's exit JSON field names
 data class ExitDetails(
     val kind: String? = null, val tip_height: Long? = null, val transactions: List<Transaction>? = null,
     val confirmed_block: Block? = null, val claimable_height: Long? = null, val claimable_since: Block? = null,

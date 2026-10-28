@@ -41,6 +41,7 @@ class OnchainOperationJournal internal constructor(private val storage: OnchainF
     companion object {
         const val maxOverriddenAttempts = 100
         const val overrideTitle = "Override repeat protection?"
+        @Suppress("MaxLineLength") // one translation source string
         const val overrideWarning = "This does not cancel the original operation. Submitting again may spend additional funds or fees. Noah keeps this attempt and checks its status as your wallet syncs."
         const val overrideConfirmation = "I understand this may repeat the operation"
     }
@@ -58,14 +59,17 @@ class OnchainOperationJournal internal constructor(private val storage: OnchainF
         val id get() = quote.id
         fun blocks(action: OnchainAction, ids: List<String>): Boolean {
             if (overrideAudit != null && !uncertainBoard || quote.action != action) return false
-            if (action == OnchainAction.board && receipt?.txid != null &&
-                (txid == null || txid == receipt.txid) &&
-                (quote.preparedBoard == null || quote.preparedBoard.txid == receipt.txid) &&
-                !receipt.broadcastRetryPending && receipt.chainStatus?.kind == ChainStatus.Kind.confirmed) return false
+            if (action == OnchainAction.board && confirmedBoard()) return false
             // Bark skips active starts and already-canceled cancels. Claims/CPFP can spend again.
             if (receipt == null && action in setOf(OnchainAction.startExit, OnchainAction.cancel)) return false
             return action == OnchainAction.board || quote.ids.any { it in ids }
         }
+        /** A board whose recorded transaction confirmed, with no broadcast retry left. */
+        private fun confirmedBoard() = receipt?.txid != null && (txid == null || txid == receipt.txid) &&
+            (quote.preparedBoard == null || quote.preparedBoard.txid == receipt.txid) &&
+            !receipt.broadcastRetryPending && receipt.chainStatus?.kind == ChainStatus.Kind.confirmed
+        /** An unresolved attempt the user may still override. */
+        internal fun overridable() = receipt == null && overrideAudit == null && !uncertainBoard
     }
     /**
      * [boardTransactionIDs]: funding txids bark's pending boards (checkpoints) and stored board VTXOs name;
@@ -93,15 +97,22 @@ class OnchainOperationJournal internal constructor(private val storage: OnchainF
         }
         fun receipt(attempt: Attempt): OnchainReceipt? {
             if (walletID != attempt.quote.walletID) return null
-            if (attempt.txid != null && (attempt.txid in transactionIDs || attempt.txid in boardTransactionIDs ||
-                    chainStatuses[attempt.txid]?.kind in setOf(ChainStatus.Kind.inMempool, ChainStatus.Kind.confirmed))) {
-                val prepared = attempt.quote.preparedBoard
-                val status = chainStatuses[attempt.txid]
-                val retry = prepared != null && status?.kind != ChainStatus.Kind.confirmed
-                return OnchainReceipt(if (retry) "Boarding submitted, but delivery is unconfirmed. Noah will keep retrying the broadcast. Do not board again."
-                else "The recorded transaction was found. Review its network status.", attempt.txid,
-                    prepared?.let { attempt.quote.chainFee }, retry, status)
-            }
+            if (attempt.txid != null && found(attempt.txid)) return foundReceipt(attempt, attempt.txid)
+            return resolvedReceipt(attempt)
+        }
+        private fun found(txid: String) = txid in transactionIDs || txid in boardTransactionIDs ||
+            chainStatuses[txid]?.kind in setOf(ChainStatus.Kind.inMempool, ChainStatus.Kind.confirmed)
+        private fun foundReceipt(attempt: Attempt, txid: String): OnchainReceipt {
+            val prepared = attempt.quote.preparedBoard
+            val status = chainStatuses[txid]
+            val retry = prepared != null && status?.kind != ChainStatus.Kind.confirmed
+            return OnchainReceipt(
+                if (retry) "Boarding submitted, but delivery is unconfirmed. Noah will keep retrying the broadcast. Do not board again."
+                else "The recorded transaction was found. Review its network status.", txid,
+                prepared?.let { attempt.quote.chainFee }, retry, status)
+        }
+        /** The selected items reached a state only this attempt's success explains. */
+        private fun resolvedReceipt(attempt: Attempt): OnchainReceipt? {
             val ids = attempt.quote.ids
             if (ids.isEmpty()) return null
             val resolved = when (attempt.quote.action) {
@@ -112,7 +123,10 @@ class OnchainOperationJournal internal constructor(private val storage: OnchainF
                 OnchainAction.progress -> ids.all { exitStates[it] in ExitTimeline.terminal + "Claimable" + "ClaimInProgress" }
                 OnchainAction.board -> false // Never infer a board from an amount or missing transaction.
             }
-            return if (resolved) OnchainReceipt("The selected items have reached a state that resolves this attempt. Review their current status and history before continuing.") else null
+            return if (resolved) {
+                @Suppress("MaxLineLength") // one translation source string
+                OnchainReceipt("The selected items have reached a state that resolves this attempt. Review their current status and history before continuing.")
+            } else null
         }
     }
     private val mutex = Mutex()
@@ -126,7 +140,8 @@ class OnchainOperationJournal internal constructor(private val storage: OnchainF
         return saved.map { it.copy(receipt = it.receipt?.copy(statusError = statusErrors[it.id])) }
     }
     private fun save(attempts: List<Attempt>) {
-        val retained = attempts.filter { it.overrideAudit != null }.sortedWith(compareByDescending<Attempt> { it.overrideAudit!!.overriddenAt }.thenByDescending { it.id })
+        val retained = attempts.filter { it.overrideAudit != null }
+            .sortedWith(compareByDescending<Attempt> { it.overrideAudit!!.overriddenAt }.thenByDescending { it.id })
             .take(maxOverriddenAttempts).map { it.id }.toSet()
         storage.write(json.encodeToString(attempts.filter { it.overrideAudit == null || it.id in retained }))
     }
@@ -145,10 +160,12 @@ class OnchainOperationJournal internal constructor(private val storage: OnchainF
             val receipt = action { txid -> recordTransaction(quote.id, txid) }
             save(read().map { if (it.id == quote.id) it.copy(receipt = receipt) else it })
             receipt.message
-        } catch (error: Exception) {
+        } catch (error: ExitNotPossible) {
             // bark refused the start: bark's exits list shows any exit it registered first, and starting again skips those.
-            if (error is ExitNotPossible) { save(read().filter { it.id != quote.id }); throw error }
-            if (error is BoardUncertain) { save(read().map { if (it.id == quote.id) it.copy(uncertainBoard = true) else it }); fail(OnchainFailure.uncertain) }
+            save(read().filter { it.id != quote.id }); throw error
+        } catch (_: BoardUncertain) {
+            save(read().map { if (it.id == quote.id) it.copy(uncertainBoard = true) else it }); fail(OnchainFailure.uncertain)
+        } catch (@Suppress("TooGenericExceptionCaught") error: Exception) { // uncertain unless proven not submitted
             val failure = if (quote.preparedBoard != null) (error as? BoardNotSubmitted)?.reason
             else OnchainSubmission.preBroadcast(error, quote.action)
             if (failure != null) { save(read().filter { it.id != quote.id }); fail(failure) }
@@ -173,8 +190,12 @@ class OnchainOperationJournal internal constructor(private val storage: OnchainF
         val updated = attempts.map { attempt ->
             val receipt = attempt.receipt
             val fee = fees[receipt?.txid]
-            if (attempt.quote.walletID == walletID && attempt.quote.action == OnchainAction.board && receipt != null && receipt.onchainFee == null && fee != null)
-                attempt.copy(receipt = receipt.copy(onchainFee = fee, message = OnchainReceipt.boardingMessage(fee))) else attempt
+            val board = attempt.quote.walletID == walletID && attempt.quote.action == OnchainAction.board
+            when {
+                !board || fee == null -> attempt
+                receipt == null || receipt.onchainFee != null -> attempt
+                else -> attempt.copy(receipt = receipt.copy(onchainFee = fee, message = OnchainReceipt.boardingMessage(fee)))
+            }
         }
         if (updated != attempts) save(updated)
     }
@@ -187,7 +208,8 @@ class OnchainOperationJournal internal constructor(private val storage: OnchainF
                 val confirmed = status?.kind == ChainStatus.Kind.confirmed
                 attempt.copy(receipt = receipt.copy(chainStatus = status ?: receipt.chainStatus, statusError = error,
                     broadcastRetryPending = receipt.broadcastRetryPending && !confirmed,
-                    message = if (confirmed && attempt.quote.action == OnchainAction.board) OnchainReceipt.boardingMessage(receipt.onchainFee) else receipt.message))
+                    message = if (confirmed && attempt.quote.action == OnchainAction.board) OnchainReceipt.boardingMessage(receipt.onchainFee)
+                    else receipt.message))
             }
         }
         if (updated != attempts) save(updated)
@@ -202,7 +224,7 @@ class OnchainOperationJournal internal constructor(private val storage: OnchainF
     /** Caller must display the exact destructive consent above. Retain the original quote and IDs. */
     suspend fun overrideUncertain(id: String, now: Long = System.currentTimeMillis()) = mutex.withLock {
         val attempts = read()
-        if (attempts.none { it.id == id && it.receipt == null && it.overrideAudit == null && !it.uncertainBoard }) fail(OnchainFailure.busy)
+        if (attempts.none { it.id == id && it.overridable() }) fail(OnchainFailure.busy)
         save(attempts.map { if (it.id == id) it.copy(overrideAudit = OverrideAudit(now)) else it })
     }
 }
@@ -223,27 +245,42 @@ suspend fun checkOnchainAttempt(id: String, journal: OnchainOperationJournal, re
     val attempt = journal.loadAll().find { it.id == id } ?: fail(OnchainFailure.changed)
     if (attempt.quote.walletID != reads.walletID) fail(OnchainFailure.changed)
     val txid = attempt.receipt?.txid ?: attempt.txid
-    var lookupError: Exception? = null
-    val status = try { txid?.let { reads.transactionStatus(it) } }
-    catch (cancelled: CancellationException) { throw cancelled }
-    catch (error: Exception) { lookupError = error; null }
+    val (status, lookupError) = chainStatus(reads, txid)
     val transactions = reads.transactionIDs()
-    val board = attempt.quote.action == OnchainAction.board && txid != null
-    val boards = if (board) reads.boardTransactionIDs() else emptySet()
-    val movements = if (board) reads.boardMovementTransactionIDs() else emptySet()
+    val board = if (attempt.quote.action == OnchainAction.board && txid != null) boardReads(attempt, reads) else BoardReads()
+    val (vtxos, exits) = itemStates(attempt, reads)
+    val resolved = journal.reconcile(id, OnchainOperationJournal.Evidence(reads.walletID, vtxos, exits, transactions,
+        if (txid != null && status != null) mapOf(txid to status) else emptyMap(), board.boards, board.unspent, board.movements))
+    // Exact local evidence remains useful even when the optional chain source is unavailable.
+    journal.refreshStatus(id, status, if (lookupError != null) ChainStatus.errorText else null)
+    if (!resolved && attempt.receipt == null) lookupError?.let { throw it }
+    return resolved || attempt.receipt != null
+}
+private class BoardReads(val boards: Set<String> = emptySet(), val movements: Set<String> = emptySet(), val unspent: Set<String>? = null)
+private suspend fun boardReads(attempt: OnchainOperationJournal.Attempt, reads: OnchainAttemptReads): BoardReads {
+    val boards = reads.boardTransactionIDs()
+    val movements = reads.boardMovementTransactionIDs()
     // Unknown coins can't prove a board never happened, so it stays locked.
-    val unspent = if (board && attempt.receipt == null) try { reads.unspentOutpoints() }
-    catch (cancelled: CancellationException) { throw cancelled } catch (_: Exception) { null } else null
+    val unspent = if (attempt.receipt == null) unspentOutpoints(reads) else null
+    return BoardReads(boards, movements, unspent)
+}
+/** The selected items' VTXO states (for a refresh) and exit states, read in order. */
+private suspend fun itemStates(attempt: OnchainOperationJournal.Attempt, reads: OnchainAttemptReads): Pair<Map<String, String>, Map<String, String?>> {
     val vtxos = mutableMapOf<String, String>()
     val exits = mutableMapOf<String, String?>()
     for (item in attempt.quote.ids) {
         if (attempt.quote.action == OnchainAction.refresh) vtxos[item] = reads.vtxoState(item)
         exits[item] = reads.exitState(item)
     }
-    val resolved = journal.reconcile(id, OnchainOperationJournal.Evidence(reads.walletID, vtxos, exits, transactions,
-        if (txid != null && status != null) mapOf(txid to status) else emptyMap(), boards, unspent, movements))
-    // Exact local evidence remains useful even when the optional chain source is unavailable.
-    journal.refreshStatus(id, status, if (lookupError != null) ChainStatus.errorText else null)
-    if (!resolved && attempt.receipt == null) lookupError?.let { throw it }
-    return resolved || attempt.receipt != null
+    return vtxos to exits
 }
+/** The optional chain source's status for [txid], or why it couldn't say; its failure is reported after local evidence. */
+private suspend fun chainStatus(reads: OnchainAttemptReads, txid: String?): Pair<ChainStatus?, Exception?> = try {
+    txid?.let { reads.transactionStatus(it) } to null
+} catch (cancelled: CancellationException) {
+    throw cancelled
+} catch (@Suppress("TooGenericExceptionCaught") error: Exception) { // the chain source's failure, kept to report after local evidence
+    null to error
+}
+private suspend fun unspentOutpoints(reads: OnchainAttemptReads): Set<String>? = try { reads.unspentOutpoints() }
+catch (cancelled: CancellationException) { throw cancelled } catch (_: Exception) { null }

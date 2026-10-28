@@ -51,9 +51,10 @@ internal class OnchainOperations(
     suspend fun exitCosts(ids: List<String>): Map<String, ExitCosts.Cost?> {
         if (!ready()) fail(OnchainFailure.unavailable)
         return ids.associateWith { id ->
-            try { wallet.exitFee(listOf(id),
-                null).let { ExitCosts.Cost(it.exitBroadcastFeeSats.toLong(), it.claimFeeSats.toLong(), it.txsToBroadcast.toLong()) } }
-            catch (cancelled: CancellationException) { throw cancelled } catch (failure: Exception) { refusal(failure, listOf(id)); null }
+            try {
+                wallet.exitFee(listOf(id), null).let { ExitCosts.Cost(it.exitBroadcastFeeSats.toLong(), it.claimFeeSats.toLong(), it.txsToBroadcast.toLong()) }
+            } catch (cancelled: CancellationException) { throw cancelled }
+            catch (@Suppress("TooGenericExceptionCaught") failure: Exception) { refusal(failure, listOf(id)); null } // FFI: an unknown cost
         }
     }
     /** What bark's "All" estimate leaves out (SDK 0.7.0): non-standard and dust VTXOs, which need renewing before they can exit. */
@@ -120,8 +121,8 @@ internal class OnchainOperations(
         try {
             currentCoroutineContext().ensureActive()
             // The input check is cheap defence; bark was told not to spend them.
-            if (prepared.reserveLeft - keptValue < BoardingRules.reserve || prepared.net < BoardingRules.threshold(minimum) || !ready() ||
-                checkNotNull(prepared.preparedBoard).inputs.any { "${it.txid}:${it.vout}" in claimed }) return null
+            val tooSmall = prepared.reserveLeft - keptValue < BoardingRules.reserve || prepared.net < BoardingRules.threshold(minimum)
+            if (tooSmall || !ready() || checkNotNull(prepared.preparedBoard).inputs.any { "${it.txid}:${it.vout}" in claimed }) return null
             reviewed = true
             return prepared
         } finally {
@@ -129,73 +130,80 @@ internal class OnchainOperations(
         }
     }
     /** [excluded]: outpoints ("txid:vout") a board never spends; manual Move to Ark passes none. */
+    @Suppress("LongParameterList") // optional quote inputs; each caller passes its own
     suspend fun quote(action: OnchainAction, ids: List<String> = emptyList(), amount: Long = 0,
         destination: String? = null, automatic: Boolean = false, estimate: Boolean = true, excluded: Set<String> = emptySet()): OnchainQuote {
         if (!ready()) fail(OnchainFailure.unavailable)
         val balance = wallet.confirmed()
-        var quote = OnchainQuote(action, wallet.walletID, ids.sorted(), destination, amount, confirmed = balance, automatic = automatic, createdAt = now(),
+        val quote = OnchainQuote(action, wallet.walletID, ids.sorted(), destination, amount, confirmed = balance, automatic = automatic, createdAt = now(),
             reviewedAt = elapsed())
         if (ids.distinct().size != ids.size) fail(OnchainFailure.invalid)
-        when (action) {
-            OnchainAction.board -> {
-                if (amount < 0 || amount > 2_100_000_000_000_000L) fail(OnchainFailure.invalid)
-                val rate = ((wallet.regularSatPerKwu() + 249) / 250).coerceAtLeast(1).toULong()
-                val prepared = try { wallet.prepareBoard(amount, amount == 0L, rate, excluded) }
-                catch (error: BarkError) { throw OnchainException(boardFailure(error)) }
-                try {
-                    currentCoroutineContext().ensureActive()
-                    if (!ready() || prepared.grossSats > Long.MAX_VALUE.toULong() ||
-                        prepared.netSats + prepared.arkFeeSats != prepared.grossSats) fail(OnchainFailure.changed)
-                    quote = quote.copy(amount = prepared.grossSats.toLong(), fee = prepared.arkFeeSats.toLong(),
-                        chainFee = prepared.onchainFeeSats.toLong(), boardAll = amount == 0L, feeRate = rate.toLong(),
-                        preparedBoard = BoardPrepared(prepared.id, prepared.txid, prepared.vsize.toLong(),
-                            prepared.inputs.map { BoardInput(it.txid, it.vout) }))
-                    wallet.bindBoard(quote)
-                } catch (error: Exception) {
-                    withContext(NonCancellable) { wallet.discardBoard(prepared.id) }
-                    throw error
-                }
-            }
-            OnchainAction.refresh, OnchainAction.startExit -> {
-                val selected = wallet.vtxos().filter { vtxoState(it.state) == "Spendable" && it.id in ids }
-                if (ids.isEmpty() || selected.size != ids.size) fail(OnchainFailure.changed)
-                quote = quote.copy(amount = selected.sumOf { it.amountSats.toLong() })
-                if (action == OnchainAction.refresh) quote = quote.copy(fee = wallet.refreshFee(ids).feeSats.toLong())
-                else {
-                    if (selected.any { it.amountSats.toLong() < ExitRules.dust }) fail(OnchainFailure.invalid)
-                    quote = exitEstimate(quote, estimate)
-                }
-            }
-            OnchainAction.progress, OnchainAction.claim -> {
-                val eligible = wallet.exits().filter { if (action == OnchainAction.claim) it.isClaimable else exitState(it.state).first !in ExitTimeline.terminal }
-                val selected = eligible.filter { it.vtxoId in ids }
-                if (ids.isEmpty() || selected.size != ids.size || (action == OnchainAction.progress && eligible.map { it.vtxoId }.toSet() != ids.toSet())) fail(OnchainFailure.changed)
-                if (action == OnchainAction.claim && destination.isNullOrBlank()) fail(OnchainFailure.invalid)
-                if (action == OnchainAction.claim) quote = quote.copy(destinationIsMine = wallet.destinationIsMine(checkNotNull(destination)))
-                quote = quote.copy(amount = selected.sumOf { it.amountSats.toLong() })
-                quote = exitEstimate(quote, estimate)
-            }
-            OnchainAction.cancel -> {
-                if (ids.size != 1) fail(OnchainFailure.invalid)
-                val exit = wallet.exits().find { it.vtxoId == ids[0] } ?: fail(OnchainFailure.changed)
-                val status = wallet.status(ids[0]) ?: fail(OnchainFailure.changed)
-                val state = exitState(status.state)
-                if (!ExitRules.cancelable(state.first, state.second.transactions?.lastOrNull()?.status?.kind)) fail(OnchainFailure.cancellationRefused)
-                quote = quote.copy(amount = exit.amountSats.toLong())
-            }
+        return when (action) {
+            OnchainAction.board -> boardQuote(quote, amount, excluded)
+            OnchainAction.refresh, OnchainAction.startExit -> vtxoQuote(quote, ids, estimate)
+            OnchainAction.progress, OnchainAction.claim -> exitQuote(quote, ids, destination, estimate)
+            OnchainAction.cancel -> cancelQuote(quote, ids)
         }
-        return quote
+    }
+    private suspend fun boardQuote(base: OnchainQuote, amount: Long, excluded: Set<String>): OnchainQuote {
+        if (amount < 0 || amount > 2_100_000_000_000_000L) fail(OnchainFailure.invalid)
+        val rate = ((wallet.regularSatPerKwu() + 249) / 250).coerceAtLeast(1).toULong()
+        val prepared = try { wallet.prepareBoard(amount, amount == 0L, rate, excluded) }
+        catch (error: BarkError) { throw OnchainException(boardFailure(error)) }
+        var bound = false
+        try {
+            currentCoroutineContext().ensureActive()
+            if (!ready() || prepared.grossSats > Long.MAX_VALUE.toULong() ||
+                prepared.netSats + prepared.arkFeeSats != prepared.grossSats) fail(OnchainFailure.changed)
+            val quote = base.copy(amount = prepared.grossSats.toLong(), fee = prepared.arkFeeSats.toLong(),
+                chainFee = prepared.onchainFeeSats.toLong(), boardAll = amount == 0L, feeRate = rate.toLong(),
+                preparedBoard = BoardPrepared(prepared.id, prepared.txid, prepared.vsize.toLong(),
+                    prepared.inputs.map { BoardInput(it.txid, it.vout) }))
+            wallet.bindBoard(quote)
+            bound = true
+            return quote
+        } finally {
+            if (!bound) withContext(NonCancellable) { wallet.discardBoard(prepared.id) }
+        }
+    }
+    private suspend fun vtxoQuote(base: OnchainQuote, ids: List<String>, estimate: Boolean): OnchainQuote {
+        val selected = wallet.vtxos().filter { vtxoState(it.state) == "Spendable" && it.id in ids }
+        if (ids.isEmpty() || selected.size != ids.size) fail(OnchainFailure.changed)
+        val quote = base.copy(amount = selected.sumOf { it.amountSats.toLong() })
+        if (base.action == OnchainAction.refresh) return quote.copy(fee = wallet.refreshFee(ids).feeSats.toLong())
+        if (selected.any { it.amountSats.toLong() < ExitRules.dust }) fail(OnchainFailure.invalid)
+        return exitEstimate(quote, estimate)
+    }
+    private suspend fun exitQuote(base: OnchainQuote, ids: List<String>, destination: String?, estimate: Boolean): OnchainQuote {
+        val claim = base.action == OnchainAction.claim
+        val eligible = wallet.exits().filter { if (claim) it.isClaimable else exitState(it.state).first !in ExitTimeline.terminal }
+        val selected = eligible.filter { it.vtxoId in ids }
+        // Moving exits forward covers every pending one.
+        val everyPending = claim || eligible.map { it.vtxoId }.toSet() == ids.toSet()
+        if (ids.isEmpty() || selected.size != ids.size || !everyPending) fail(OnchainFailure.changed)
+        if (claim && destination.isNullOrBlank()) fail(OnchainFailure.invalid)
+        var quote = base
+        if (claim) quote = quote.copy(destinationIsMine = wallet.destinationIsMine(checkNotNull(destination)))
+        quote = quote.copy(amount = selected.sumOf { it.amountSats.toLong() })
+        return exitEstimate(quote, estimate)
+    }
+    private suspend fun cancelQuote(base: OnchainQuote, ids: List<String>): OnchainQuote {
+        if (ids.size != 1) fail(OnchainFailure.invalid)
+        val exit = wallet.exits().find { it.vtxoId == ids[0] } ?: fail(OnchainFailure.changed)
+        val status = wallet.status(ids[0]) ?: fail(OnchainFailure.changed)
+        val state = exitState(status.state)
+        if (!ExitRules.cancelable(state.first, state.second.transactions?.lastOrNull()?.status?.kind)) fail(OnchainFailure.cancellationRefused)
+        return base.copy(amount = exit.amountSats.toLong())
     }
     private suspend fun exitEstimate(validated: OnchainQuote, estimate: Boolean): OnchainQuote {
         val unknown = validated.copy(fee = null, chainFee = null, feeRate = null, transactions = null)
         val fallbackAllowed = validated.action in setOf(OnchainAction.startExit, OnchainAction.claim)
         if (!estimate && fallbackAllowed) return unknown
         val fee = try { wallet.exitFee(validated.ids, validated.destination) }
-        catch (failure: Exception) {
+        catch (@Suppress("TooGenericExceptionCaught") failure: Exception) { // FFI: classified below, else rethrown as is
             // Starting would fail the same way, so no "Continue without estimate".
-            refusal(failure, validated.ids)?.let { throw it }
-            if (fallbackAllowed && ExitEstimateUnavailable.allowsFallback(failure)) throw ExitEstimateUnavailable(unknown)
-            throw failure
+            throw refusal(failure, validated.ids)
+                ?: if (fallbackAllowed && ExitEstimateUnavailable.allowsFallback(failure)) ExitEstimateUnavailable(unknown) else failure
         }
         return validated.copy(fee = fee.claimFeeSats.toLong(),
             chainFee = if (validated.action == OnchainAction.claim) 0 else fee.exitBroadcastFeeSats.toLong(),
@@ -205,102 +213,129 @@ internal class OnchainOperations(
     /**
      * [renewalThreshold]: the review was Home's Renew, so every VTXO must still be due (in the expiring set at this
      * threshold, spendable, not expired), checked last, under the caller's locks, just before submitting.
-     */
-    /**
+     *
      * [keepOnchain]: a claim to this wallet records its outputs in auto-board's handled ledger (exit.md, Decision 8)
      * before it's broadcast, so auto-board never offers them back to Ark.
-     */
-    /**
+     *
      * [recordClaim]: where a claim's fee, exits and destination are kept for its exits' pages, before it's broadcast.
      * [newRun]: told which exits a start or cancel just changed, inside the native call (which outlives its caller), so their
      * evidence from the last run is forgotten. A failure in either changes nothing.
      */
+    @Suppress("LongParameterList") // optional hooks; each caller passes only the ones it records
     suspend fun execute(reviewed: OnchainQuote, funding: AutoBoardFunding.Snapshot? = null, renewalThreshold: UInt? = null,
         keepOnchain: (Set<String>) -> Unit = {}, kept: (String) -> Set<String> = { emptySet() },
         recordClaim: (ExitClaimRecords.Record) -> Unit = {}, newRun: (List<String>) -> Unit = {},
         shortOfFunds: (Map<String, Long>) -> Unit = {}): String {
         if (!ready() || !reviewed.current(elapsed(), now()) || reviewed.walletID != wallet.walletID) fail(OnchainFailure.changed)
-        if (reviewed.action == OnchainAction.board) {
-            if (funding != null && (!reviewed.automatic || funding.walletID != wallet.walletID || autoBoardFunding(kept) != funding)) fail(OnchainFailure.changed)
-            if (reviewed.preparedBoard == null) fail(OnchainFailure.changed)
-            // Added funds leave at least the reviewed reserve; only a decrease can break it (iOS parity).
-            if (reviewed.automatic && (wallet.confirmed() < reviewed.confirmed || reviewed.reserveLeft < BoardingRules.reserve)) fail(OnchainFailure.changed)
-            wallet.claimBoard(reviewed)
-        } else {
-            if (reviewed.feesUnknown && !reviewed.hasUnknownFeeConsent) fail(OnchainFailure.changed)
-            val fresh = try {
-                quote(reviewed.action, reviewed.ids, reviewed.amount, reviewed.destination, reviewed.automatic,
-                    estimate = !reviewed.hasUnknownFeeConsent)
-            } catch (failure: ExitEstimateUnavailable) { throw failure.preserving(reviewed, elapsed(), now()) }
-            if (!ready() || !reviewed.matches(fresh) || !reviewed.current(elapsed(), now())) fail(OnchainFailure.changed)
-            // A sync while this waited for the locks can move the tip past an expiry; the quote above can't tell.
-            if (renewalThreshold != null && (reviewed.action != OnchainAction.refresh || !renewable(reviewed.ids,
-                    renewalThreshold))) fail(OnchainFailure.changed)
-        }
-        try { return journal.perform(reviewed) { recordTransaction ->
-            when (reviewed.action) {
-                OnchainAction.board -> {
-                    // This save must complete before the first SDK call that can accept/broadcast the board.
-                    recordTransaction(checkNotNull(reviewed.preparedBoard).txid)
-                    val result = try { wallet.submitBoard(reviewed) }
-                    catch (error: BarkError) {
-                        // SDK 0.7.0 throws only before bark records the board, a reorged parent included; failures after return an outcome.
-                        if (error.code in setOf(BarkErrorCode.PREPARED_TRANSACTION_NOT_FOUND, BarkErrorCode.PREPARED_INPUTS_UNAVAILABLE,
-                                BarkErrorCode.PREPARED_BOARD_CHANGED))
-                            throw BoardNotSubmitted(boardFailure(error))
-                        // An unreachable chain source while re-checking the inputs.
-                        if (error.code == BarkErrorCode.OTHER) throw BoardNotSubmitted(OnchainFailure.boardNotAttempted)
-                        throw error
-                    }
-                    if (result.txid != reviewed.preparedBoard.txid) fail(OnchainFailure.uncertain)
-                    if (result.broadcast is BroadcastOutcome.NotAttempted) throw BoardNotSubmitted(OnchainFailure.boardNotAttempted)
-                    // bark failed after it may have recorded the board. The SDK refuses a resubmit; Check status reconciles it.
-                    if (result.broadcast is BroadcastOutcome.Uncertain) throw BoardUncertain()
-                    val retry = result.broadcast is BroadcastOutcome.Failed
-                    OnchainReceipt(if (retry) OnchainReceipt.broadcastFailedMessage
-                    else OnchainReceipt.boardingMessage(reviewed.chainFee), result.txid, reviewed.chainFee, retry)
-                }
-                OnchainAction.refresh -> OnchainReceipt(wallet.refresh(reviewed.ids)?.let { "Refresh submitted to delegated round ${it.id}." } ?: "No refresh round was needed.")
-                OnchainAction.startExit -> {
-                    // bark refuses a VTXO after registering the ones before it, which it skips when they're started again.
-                    val refusedStart = try { wallet.start(reviewed.ids); null } catch (error: BarkError) { refusal(error, reviewed.ids) ?: throw error }
-                    runCatching { newRun(reviewed.ids) }
-                    refusedStart?.let { throw it }
-                    OnchainReceipt("Exit started. Noah progresses it on its own, including in the background when the system lets it, paying broadcast and fee-bump fees from your onchain balance.")
-                }
-                OnchainAction.progress -> {
-                    val failures = progressed(reviewed.feeRate, shortOfFunds)
-                    OnchainReceipt(if (failures == 0) OnchainReceipt.progressedMessage
-                    else "Exit progression returned $failures errors. Transactions may have been broadcast or fee-bumped. Refresh exit details before continuing.")
-                }
-                OnchainAction.claim -> {
-                    val claim = wallet.drain(reviewed.ids, checkNotNull(reviewed.destination))
-                    if (!reviewed.hasUnknownFeeConsent && claim.feeSats.toLong() != reviewed.fee) fail(OnchainFailure.claimFeeChanged)
-                    val mine = reviewed.destinationIsMine == true
-                    // The signed claim, before it's sent: its outputs for this phone's wallet, its txid for the display record.
-                    val signed = try { ExitTransactions.parse(wallet.claimTransaction(claim.psbtBase64)) }
-                    catch (cancelled: CancellationException) { throw cancelled } catch (_: Exception) { null }
-                    if (mine) try {
-                        val tx = checkNotNull(signed)
-                        keepOnchain((0 until tx.outputs).map { "${tx.txid}:$it" }.toSet())
-                    } catch (cancelled: CancellationException) { throw cancelled } catch (_: Exception) { fail(OnchainFailure.keepFailed) }
-                    // Kept before broadcast, so a broadcast that went through but timed out still shows what it paid; display only.
-                    fun record(txid: String) = runCatching { recordClaim(ExitClaimRecords.Record(txid, claim.feeSats.toLong(), reviewed.ids, mine,
-                        reviewed.destination.takeIf { !mine })) }
-                    signed?.let { record(it.txid) }
-                    // Every error after entering broadcast remains uncertain, including typed BDK errors.
-                    val txid = try { wallet.broadcastClaim(claim.psbtBase64) } catch (_: Exception) { fail(OnchainFailure.uncertain) }
-                    recordTransaction(txid)
-                    if (txid != signed?.txid) record(txid)
-                    OnchainReceipt("Claim submitted. Refresh to check confirmation.", txid)
-                }
-                OnchainAction.cancel -> {
-                    if (!wallet.cancel(reviewed.ids.single())) fail(OnchainFailure.cancellationRefused)
-                    runCatching { newRun(reviewed.ids) }
-                    OnchainReceipt("Exit canceled. The VTXO remains spendable.")
+        if (reviewed.action == OnchainAction.board) requireBoardCurrent(reviewed, funding, kept)
+        else requireExitCurrent(reviewed, renewalThreshold)
+        try {
+            return journal.perform(reviewed) { recordTransaction ->
+                when (reviewed.action) {
+                    OnchainAction.board -> submitBoard(reviewed, recordTransaction)
+                    OnchainAction.refresh ->
+                        OnchainReceipt(wallet.refresh(reviewed.ids)?.let { "Refresh submitted to delegated round ${it.id}." } ?: "No refresh round was needed.")
+                    OnchainAction.startExit -> startExits(reviewed, newRun)
+                    OnchainAction.progress -> progress(reviewed, shortOfFunds)
+                    OnchainAction.claim -> claim(reviewed, ClaimHooks(keepOnchain, recordClaim, recordTransaction))
+                    OnchainAction.cancel -> cancelExit(reviewed, newRun)
                 }
             }
-        } } finally { reviewed.preparedBoard?.let { wallet.discardBoard(it.id, includingClaimed = true) } }
+        } finally { reviewed.preparedBoard?.let { wallet.discardBoard(it.id, includingClaimed = true) } }
+    }
+    private suspend fun progress(reviewed: OnchainQuote, shortOfFunds: (Map<String, Long>) -> Unit): OnchainReceipt {
+        val failures = progressed(reviewed.feeRate, shortOfFunds)
+        if (failures == 0) return OnchainReceipt(OnchainReceipt.progressedMessage)
+        @Suppress("MaxLineLength") // one translation source string
+        val message = "Exit progression returned $failures errors. Transactions may have been broadcast or fee-bumped. Refresh exit details before continuing."
+        return OnchainReceipt(message)
+    }
+    private suspend fun cancelExit(reviewed: OnchainQuote, newRun: (List<String>) -> Unit): OnchainReceipt {
+        if (!wallet.cancel(reviewed.ids.single())) fail(OnchainFailure.cancellationRefused)
+        runCatching { newRun(reviewed.ids) }
+        return OnchainReceipt("Exit canceled. The VTXO remains spendable.")
+    }
+    private suspend fun requireBoardCurrent(reviewed: OnchainQuote, funding: AutoBoardFunding.Snapshot?, kept: (String) -> Set<String>) {
+        if (funding != null) {
+            val sameFunding = reviewed.automatic && funding.walletID == wallet.walletID
+            if (!sameFunding || autoBoardFunding(kept) != funding) fail(OnchainFailure.changed)
+        }
+        if (reviewed.preparedBoard == null) fail(OnchainFailure.changed)
+        // Added funds leave at least the reviewed reserve; only a decrease can break it (iOS parity).
+        if (reviewed.automatic && reserveBroken(reviewed)) fail(OnchainFailure.changed)
+        wallet.claimBoard(reviewed)
+    }
+    private suspend fun reserveBroken(reviewed: OnchainQuote) = wallet.confirmed() < reviewed.confirmed || reviewed.reserveLeft < BoardingRules.reserve
+    private suspend fun requireExitCurrent(reviewed: OnchainQuote, renewalThreshold: UInt?) {
+        if (reviewed.feesUnknown && !reviewed.hasUnknownFeeConsent) fail(OnchainFailure.changed)
+        val fresh = try {
+            quote(reviewed.action, reviewed.ids, reviewed.amount, reviewed.destination, reviewed.automatic,
+                estimate = !reviewed.hasUnknownFeeConsent)
+        } catch (failure: ExitEstimateUnavailable) { throw failure.preserving(reviewed, elapsed(), now()) }
+        if (!ready() || !reviewed.matches(fresh) || !reviewed.current(elapsed(), now())) fail(OnchainFailure.changed)
+        // A sync while this waited for the locks can move the tip past an expiry; the quote above can't tell.
+        if (renewalThreshold != null && (reviewed.action != OnchainAction.refresh || !renewable(reviewed.ids,
+                renewalThreshold))) fail(OnchainFailure.changed)
+    }
+    private suspend fun submitBoard(reviewed: OnchainQuote, recordTransaction: (String) -> Unit): OnchainReceipt {
+        // This save must complete before the first SDK call that can accept/broadcast the board.
+        recordTransaction(checkNotNull(reviewed.preparedBoard).txid)
+        val result = try { wallet.submitBoard(reviewed) }
+        catch (error: BarkError) { throw boardRejection(error) }
+        requireBroadcast(reviewed, result)
+        val retry = result.broadcast is BroadcastOutcome.Failed
+        return OnchainReceipt(if (retry) OnchainReceipt.broadcastFailedMessage
+        else OnchainReceipt.boardingMessage(reviewed.chainFee), result.txid, reviewed.chainFee, retry)
+    }
+    private fun requireBroadcast(reviewed: OnchainQuote, result: BoardResult) {
+        if (result.txid != checkNotNull(reviewed.preparedBoard).txid) fail(OnchainFailure.uncertain)
+        if (result.broadcast is BroadcastOutcome.NotAttempted) throw BoardNotSubmitted(OnchainFailure.boardNotAttempted)
+        // bark failed after it may have recorded the board. The SDK refuses a resubmit; Check status reconciles it.
+        if (result.broadcast is BroadcastOutcome.Uncertain) throw BoardUncertain()
+    }
+    /** SDK 0.7.0 throws only before bark records the board, a reorged parent included; failures after return an outcome. */
+    private fun boardRejection(error: BarkError): Exception = when (error.code) {
+        BarkErrorCode.PREPARED_TRANSACTION_NOT_FOUND, BarkErrorCode.PREPARED_INPUTS_UNAVAILABLE,
+        BarkErrorCode.PREPARED_BOARD_CHANGED -> BoardNotSubmitted(boardFailure(error))
+        // An unreachable chain source while re-checking the inputs.
+        BarkErrorCode.OTHER -> BoardNotSubmitted(OnchainFailure.boardNotAttempted)
+        else -> error
+    }
+    private suspend fun startExits(reviewed: OnchainQuote, newRun: (List<String>) -> Unit): OnchainReceipt {
+        // bark refuses a VTXO after registering the ones before it, which it skips when they're started again.
+        val refusedStart = try { wallet.start(reviewed.ids); null } catch (error: BarkError) { refusal(error, reviewed.ids) ?: throw error }
+        runCatching { newRun(reviewed.ids) }
+        refusedStart?.let { throw it }
+        @Suppress("MaxLineLength") // one translation source string
+        val started = "Exit started. Noah progresses it on its own, including in the background when the system lets it, paying broadcast and fee-bump fees from your onchain balance."
+        return OnchainReceipt(started)
+    }
+    private class ClaimHooks(val keepOnchain: (Set<String>) -> Unit, val recordClaim: (ExitClaimRecords.Record) -> Unit,
+        val recordTransaction: (String) -> Unit)
+    private suspend fun claim(reviewed: OnchainQuote, hooks: ClaimHooks): OnchainReceipt {
+        val claim = wallet.drain(reviewed.ids, checkNotNull(reviewed.destination))
+        if (!reviewed.hasUnknownFeeConsent && claim.feeSats.toLong() != reviewed.fee) fail(OnchainFailure.claimFeeChanged)
+        val mine = reviewed.destinationIsMine == true
+        // The signed claim, before it's sent: its outputs for this phone's wallet, its txid for the display record.
+        val signed = signedClaim(claim.psbtBase64)
+        if (mine) keepClaimOutputs(signed, hooks.keepOnchain)
+        // Kept before broadcast, so a broadcast that went through but timed out still shows what it paid; display only.
+        fun record(txid: String) = runCatching { hooks.recordClaim(ExitClaimRecords.Record(txid, claim.feeSats.toLong(), reviewed.ids, mine,
+            reviewed.destination.takeIf { !mine })) }
+        signed?.let { record(it.txid) }
+        // Every error after entering broadcast remains uncertain, including typed BDK errors.
+        val txid = try { wallet.broadcastClaim(claim.psbtBase64) } catch (_: Exception) { fail(OnchainFailure.uncertain) }
+        hooks.recordTransaction(txid)
+        if (txid != signed?.txid) record(txid)
+        return OnchainReceipt("Claim submitted. Refresh to check confirmation.", txid)
+    }
+    private suspend fun signedClaim(psbt: String) = try { ExitTransactions.parse(wallet.claimTransaction(psbt)) }
+    catch (cancelled: CancellationException) { throw cancelled } catch (_: Exception) { null }
+    private fun keepClaimOutputs(signed: ExitTransactions.Parsed?, keepOnchain: (Set<String>) -> Unit) {
+        try {
+            val tx = checkNotNull(signed)
+            keepOnchain((0 until tx.outputs).map { "${tx.txid}:$it" }.toSet())
+        } catch (cancelled: CancellationException) { throw cancelled } catch (_: Exception) { fail(OnchainFailure.keepFailed) }
     }
     /** One exit progress at [feeRate] (null: bark's own), telling [shortOfFunds] what it reported short; how many failed otherwise. */
     private suspend fun progressed(feeRate: Long?, shortOfFunds: (Map<String, Long>) -> Unit): Int {
@@ -321,17 +356,22 @@ internal class OnchainOperations(
         admitted()
         val failures = try { progressed(null, funding::reported) }
         catch (cancelled: CancellationException) { throw cancelled }
-        catch (error: Exception) { funding.checked(emptyList(), completed = false); throw error }
-        // Read after the call: what's still parked is what bark tried and couldn't pay.
-        val exits = try { wallet.allExits().map(::exitModel) } catch (cancelled: CancellationException) { throw cancelled } catch (_: Exception) { emptyList() }
-        funding.checked(exits, completed = failures == 0)
+        catch (@Suppress("TooGenericExceptionCaught") error: Exception) { // recorded as an incomplete check, then rethrown
+            funding.checked(emptyList(), completed = false); throw error
+        }
+        funding.checked(parkedExits(), completed = failures == 0)
         return true
     }
+    /** Read after the call: what's still parked is what bark tried and couldn't pay. */
+    private suspend fun parkedExits(): List<ExitModel> = try { wallet.allExits().map(::exitModel) }
+    catch (cancelled: CancellationException) { throw cancelled } catch (_: Exception) { emptyList() }
     suspend fun abandonUnsubmittedAutoBoard(quote: OnchainQuote): Boolean {
         if (!quote.automatic || quote.action != OnchainAction.board || quote.walletID != wallet.walletID) return false
         val prepared = quote.preparedBoard ?: return false
-        if (journal.loadAll().any { it.id == quote.id || it.quote.preparedBoard?.id == prepared.id ||
-                it.txid == prepared.txid || it.quote.preparedBoard?.txid == prepared.txid }) return false
+        val journaled = journal.loadAll().any {
+            it.id == quote.id || it.quote.preparedBoard?.id == prepared.id || it.txid == prepared.txid || it.quote.preparedBoard?.txid == prepared.txid
+        }
+        if (journaled) return false
         return wallet.abandonUnsubmittedBoard(quote)
     }
     suspend fun check(id: String): Boolean = checkOnchainAttempt(id, journal, object : OnchainAttemptReads {
@@ -345,7 +385,10 @@ internal class OnchainOperations(
         override suspend fun exitState(id: String) = wallet.status(id)?.let { exitState(it.state).first }
     })
     suspend fun refreshReceiptFees() {
-        if (journal.loadAll().none { it.quote.walletID == wallet.walletID && it.quote.action == OnchainAction.board && it.receipt?.txid != null && it.receipt.onchainFee == null }) return
+        val missingFee = journal.loadAll().any {
+            it.quote.walletID == wallet.walletID && it.quote.action == OnchainAction.board && it.receipt?.txid != null && it.receipt.onchainFee == null
+        }
+        if (!missingFee) return
         journal.refreshBoardFees(wallet.walletID, wallet.transactions().mapNotNull { tx -> tx.onchainFeeSats?.let { tx.txid to it.toLong() } }.toMap())
     }
 }

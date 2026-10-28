@@ -297,7 +297,8 @@ private fun Fact(icon: Int, title: String, line: String, divider: Boolean = true
     val palette = LocalPalette.current
     Row(Modifier.fillMaxWidth().heightIn(min = 58.dp).drawBehind {
         if (divider) drawRect(palette.hairline, Offset(0f, size.height - 1.dp.toPx()), Size(size.width, 1.dp.toPx()))
-    }.padding(vertical = 9.dp).semantics(mergeDescendants = true) {}, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+    }.padding(vertical = 9.dp).semantics(mergeDescendants = true) {}, verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(14.dp)) {
         Box(Modifier.size(34.dp).background(palette.soft, CircleShape), contentAlignment = Alignment.Center) {
             Icon(painterResource(icon), null, Modifier.size(19.dp), tint = palette.foreground)
         }
@@ -369,7 +370,8 @@ internal fun ExitChoosePage(app: AppModel, nav: SettingsNav) {
         // bark's estimate for exactly the selection (shared transactions once); read-only.
         estimate = { ids -> try { withContext(Dispatchers.IO) { app.session.quoteOnchain(OnchainAction.startExit, ids) } }
         catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled } catch (_: Exception) { null } },
-        review = { nav.open(ExitStartPage(it)) }, deposit = { deposit = it }, retry = { retries++ }, refused = ExitErrors.refused, excluded = excluded) { OnchainStatus(app, model) }
+        review = { nav.open(ExitStartPage(it)) }, deposit = { deposit = it }, retry = { retries++ }, refused = ExitErrors.refused,
+        excluded = excluded) { OnchainStatus(app, model) }
     deposit?.let { need -> if (!app.isWalletSuspended) ExitDepositSheet(app, need) { deposit = null } }
 }
 

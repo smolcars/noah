@@ -316,7 +316,8 @@ private fun exitExplanation(stage: ExitStage, delta: Long?): String = when {
         ExitStage.Phase.mempool -> tr("Each one is sent only after the one before it is in a block.")
         ExitStage.Phase.bump -> tr("Every exit transaction has a fee anchor. Noah attaches a fee to it, paid from your on-chain bitcoin.")
         ExitStage.Phase.confirm -> tr("One transaction per block: about ten minutes each.")
-        ExitStage.Phase.onchain, ExitStage.Phase.wait -> delta?.let { trPlural("Your bitcoin is on-chain, locked for {n} blocks. The lock gives Ark time to stop a VTXO that was already spent.", it) }
+        ExitStage.Phase.onchain,
+        ExitStage.Phase.wait -> delta?.let { trPlural("Your bitcoin is on-chain, locked for {n} blocks. The lock gives Ark time to stop a VTXO that was already spent.", it) }
             ?: tr("Your bitcoin is on-chain and locked for a while. The lock gives Ark time to stop a VTXO that was already spent.")
         ExitStage.Phase.claimable -> tr("The lock is open. Claim it to another wallet or to this phone’s on-chain wallet.")
         ExitStage.Phase.claiming -> tr("One last transaction. Its fee comes out of the amount.")

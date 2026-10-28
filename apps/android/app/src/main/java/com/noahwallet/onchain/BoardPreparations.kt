@@ -29,12 +29,14 @@ internal class BoardPreparations(
     }
     fun claim(quote: OnchainQuote) = synchronized(lock) {
         val held = reviews[quote.preparedBoard?.id] ?: fail(OnchainFailure.changed)
-        if (!quote.current() || held.quote != quote || held.claimed || held.discardRequested) fail(OnchainFailure.changed)
+        val free = !held.claimed && !held.discardRequested
+        if (!quote.current() || held.quote != quote || !free) fail(OnchainFailure.changed)
         held.claimed = true; held.timeout?.cancel(); held.timeout = null
     }
     fun consume(quote: OnchainQuote) = synchronized(lock) {
         val held = reviews[quote.preparedBoard?.id] ?: fail(OnchainFailure.changed)
-        if (!held.claimed || held.submitting || held.discardRequested || held.quote != quote) fail(OnchainFailure.changed)
+        val claimed = held.claimed && !held.submitting && !held.discardRequested
+        if (!claimed || held.quote != quote) fail(OnchainFailure.changed)
         held.submitting = true
     }
     suspend fun discard(id: String, includingClaimed: Boolean = false) = withContext(NonCancellable) {

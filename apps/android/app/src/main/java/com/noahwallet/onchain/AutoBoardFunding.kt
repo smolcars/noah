@@ -116,6 +116,8 @@ class AutoBoardReview(private val store: AutoBoardFunding, private val now: () -
                 return prepared
             } finally { if (!presented) discard(prepared) }
         } catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
-        catch (failure: Exception) { retryAfter = now() + 30_000; throw failure }
+        catch (@Suppress("TooGenericExceptionCaught") failure: Exception) { // any failure backs off, then propagates
+            retryAfter = now() + 30_000; throw failure
+        }
     }
 }
