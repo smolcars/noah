@@ -196,4 +196,83 @@ class PaymentLinksTest {
         restored.newIntent(view(warm))
         assertEquals(warm, restored.get().links.pending)
     }
+
+    /** The widget's explicit intent: the same URI iOS opens, as the data of an intent to MainActivity. */
+    private fun widget(route: String, variant: String = "regtest") =
+        Intent(Intent.ACTION_VIEW, Uri.parse("com.noahwallet.$variant://widget/$route")).setClassName("com.noahwallet.regtest", "com.noahwallet.MainActivity")
+    private fun PaymentLinks.route(send: SendController, reviews: Int = 0): List<WidgetRoute> =
+        mutableListOf<WidgetRoute>().also { opened -> deliverRoute(send, mutableIntStateOf(reviews)) { opened += it } }
+
+    @Test fun widgetRoutesAreTheirOwnAndNeverPaymentLinks() {
+        for (route in WidgetRoute.entries) {
+            val links = PaymentLinks()
+            links.receive(widget(route.name))
+            assertEquals(route, links.route); assertNull(links.pending)
+            assertEquals(listOf(route), links.route(send()))
+            assertNull(links.route)
+        }
+        // Another variant's scheme, another host or path, or another action stays out.
+        val links = PaymentLinks()
+        for (other in listOf(widget("home", "mainnet"), widget("pay"), Intent(Intent.ACTION_VIEW, Uri.parse("com.noahwallet.regtest://send")),
+            Intent(Intent.ACTION_VIEW, Uri.parse("com.noahwallet.regtest://widget/home/extra")),
+            Intent(Intent.ACTION_MAIN, Uri.parse("com.noahwallet.regtest://widget/home"))))
+            links.receive(other)
+        assertNull(links.route); assertNull(links.pending)
+    }
+
+    @Test fun aWidgetRouteIsHeldWhileLockedAndIgnoredWithNoWallet() {
+        val ready = send()
+        val held = PaymentLinks()
+        held.receive(widget("receive"))
+        // Locked over the wallet's tabs: NoahApp doesn't get the links, so the route waits.
+        assertEquals(LinkStep.wait, linkStep(LaunchRoute.app, true, false, wallet, false, false))
+        assertEquals(WidgetRoute.receive, held.route)
+        assertEquals(LinkStep.open, linkStep(LaunchRoute.app, false, false, wallet, false, false))
+        assertEquals(listOf(WidgetRoute.receive), held.route(ready))
+        // Onboarding (no wallet) or a gate drops it when it arrives, as LaunchGateView does for links.
+        val ignored = PaymentLinks()
+        ignored.receive(widget("send"))
+        if (linkStep(LaunchRoute.onboarding, true, false, LaunchState.onboarding, false, false) == LinkStep.ignore) ignored.drop()
+        assertNull(ignored.route)
+        assertEquals(emptyList<WidgetRoute>(), ignored.route(ready))
+    }
+
+    @Test fun aWidgetRouteNeverDiscardsAPaymentReviewOrApproval() {
+        // Send hasn't read its saved payment yet: the route waits.
+        val links = PaymentLinks()
+        links.receive(widget("scan"))
+        assertEquals(emptyList<WidgetRoute>(), links.route(send().apply { invalidateForWalletChange() }))
+        assertEquals(WidgetRoute.scan, links.route)
+        // A payment in flight: Scan opens the Send tab as it is; Send, Home and Receive go where they say.
+        val inFlight = send(SendAttempt(payment = arkPayment))
+        assertEquals(listOf(WidgetRoute.send), links.route(inFlight))
+        for (route in listOf(WidgetRoute.send, WidgetRoute.home, WidgetRoute.receive)) {
+            links.receive(widget(route.name)); assertEquals(listOf(route), links.route(inFlight))
+        }
+        // A review or recurring approval on screen stays exactly as it is, and the route is used up.
+        for (route in WidgetRoute.entries) {
+            links.receive(widget(route.name))
+            assertEquals(emptyList<WidgetRoute>(), links.route(send(), reviews = 1))
+            assertNull(links.route)
+        }
+        assertFalse("a widget route never shows the payment-link block", links.blocked)
+    }
+
+    @Test fun aWidgetRouteIsAppliedOnceAcrossRecreationAndRestore() {
+        val ready = send()
+        val activity = Robolectric.buildActivity(Host::class.java, widget("send")).setup()
+        assertEquals(listOf(WidgetRoute.send), activity.get().links.route(ready))
+        activity.recreate()
+        assertNull(activity.get().links.route)
+        // Warm: held through a fold before it's applied, then once.
+        activity.newIntent(widget("receive"))
+        activity.recreate()
+        assertEquals(listOf(WidgetRoute.receive), activity.get().links.route(ready))
+        activity.recreate()
+        assertEquals(emptyList<WidgetRoute>(), activity.get().links.route(ready))
+        // Process restore and Recents never repeat it.
+        val saved = Bundle().also { activity.saveInstanceState(it) }
+        assertNull(Robolectric.buildActivity(Host::class.java, widget("send")).setup(saved).get().links.route)
+        assertNull(Robolectric.buildActivity(Host::class.java, widget("send").addFlags(Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY)).setup().get().links.route)
+    }
 }

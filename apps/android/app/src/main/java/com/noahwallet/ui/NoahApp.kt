@@ -135,6 +135,18 @@ private fun LinkDelivery(model: AppModel, links: PaymentLinks, nav: AppNavigator
     val context = androidx.compose.ui.platform.LocalContext.current
     val send = remember(context) { com.noahwallet.send.SendRuntime.shared(context).controller }
     LaunchedEffect(links.pending, send.loading) { links.deliver(send, model.openReviews, nav::scanned) }
+    LaunchedEffect(links.route, send.loading) {
+        links.deliverRoute(send, model.openReviews) { route ->
+            when (route) {
+                WidgetRoute.home -> nav.showHome()
+                WidgetRoute.receive -> nav.select(Destination.Receive)
+                // The Send tab as it is: its draft, review or payment in flight stays.
+                WidgetRoute.send -> nav.select(Destination.Send)
+                // Home's scan button: the QR hub, scanning.
+                WidgetRoute.scan -> { nav.showHome(); nav.backStack.add(QRDestination(true)) }
+            }
+        }
+    }
     if (links.blocked) WalletAlertDialog(onDismissRequest = { links.blocked = false },
         title = { Text(tr("Payment in progress")) }, text = { Text(tr(PaymentLinks.blockedMessage)) },
         confirmButton = { androidx.compose.material3.TextButton({ links.blocked = false }) { Text(tr("OK")) } })
