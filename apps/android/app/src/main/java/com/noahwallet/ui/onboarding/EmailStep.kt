@@ -60,36 +60,7 @@ internal fun EmailStep(model: AppModel, presentation: OnboardingPresentation) {
         val state = model.server.state
         if (presentation.email.isEmpty() && state.isEmailVerified == true) state.emailAddress?.let { presentation.email = it }
     }
-    fun verified() {
-        presentation.verifiedAt = SystemClock.elapsedRealtime(); presentation.emailStage = EmailStage.verified
-        presentation.otp = presentation.otp.accepted()
-        if (presentation.felt.add("email-verified")) haptics.success()
-    }
-    fun send(resend: Boolean = false) {
-        val email = presentation.email
-        if (!EmailRules.isValid(email) || model.busy) return
-        haptics.light()
-        model.action("Failed to send verification code. Please try again.", useServerMessage = true) {
-            if (model.server.sendEmail(email)) { verified(); return@action }
-            presentation.otp = OtpEntry(); presentation.codeSentAt = SystemClock.elapsedRealtime()
-            if (!resend) { presentation.emailStage = EmailStage.code; haptics.success() }
-        }
-    }
-    fun verify(code: String) {
-        model.action("Invalid or expired verification code. Please try again.", useServerMessage = true) {
-            @Suppress("TooGenericExceptionCaught") // any failure but a wrong code clears the entry, then reaches the action's alert
-            try { model.server.verifyEmail(code, presentation.email) }
-            catch (failure: Exception) {
-                if (!wrongCode(failure)) { presentation.otp = presentation.otp.copy(verifying = false).cleared(); throw failure }
-                presentation.otp = presentation.otp.rejected(); haptics.error()
-                delay(650)
-                presentation.otp = presentation.otp.cleared()
-                return@action
-            }
-            focusManager.clearFocus()
-            verified()
-        }
-    }
+    val email = EmailVerification(model, presentation, haptics, focusManager)
     LaunchedEffect(stage) {
         if (stage != EmailStage.verified) return@LaunchedEffect
         delay((1500 - (SystemClock.elapsedRealtime() - presentation.verifiedAt)).coerceAtLeast(0))
@@ -118,17 +89,64 @@ internal fun EmailStep(model: AppModel, presentation: OnboardingPresentation) {
     }, form = {
         AnimatedContent(stage, transitionSpec = transition, label = "email-form") { shown ->
             when (shown) {
-                EmailStage.entry -> EmailEntry(presentation, play, enabled = !model.busy) { send() }
-                else -> CodeEntry(model, presentation, onTyped = { input ->
-                    val (next, verifyNow) = presentation.otp.input(input, busy = model.busy)
-                    presentation.otp = next
-                    if (verifyNow) verify(next.code)
-                }, resend = { send(resend = true) })
+                EmailStage.entry -> EmailEntry(presentation, play, enabled = !model.busy) { email.send() }
+                else -> CodeEntry(model, presentation, onTyped = email::typed, resend = { email.send(resend = true) })
             }
         }
     }, actions = {
-        if (stage == EmailStage.entry) SendButton(enabled = EmailRules.isValid(presentation.email), sending = model.busy) { send() }
+        if (stage == EmailStage.entry) SendButton(enabled = EmailRules.isValid(presentation.email), sending = model.busy) { email.send() }
     })
+}
+
+/**
+ * Sending, resending and verifying the emergency email's code, as onboarding and Settings both do. [beforeSend] runs first
+ * in the send (Settings registers); [onVerified] runs as the address is accepted.
+ */
+internal class EmailVerification(
+    private val model: AppModel, private val presentation: OnboardingPresentation, private val haptics: Haptics,
+    private val focusManager: androidx.compose.ui.focus.FocusManager, private val beforeSend: suspend () -> Unit = {},
+    private val onVerified: () -> Unit = {},
+) {
+    private fun verified() {
+        presentation.verifiedAt = SystemClock.elapsedRealtime(); presentation.emailStage = EmailStage.verified
+        presentation.otp = presentation.otp.accepted(); onVerified()
+        if (presentation.felt.add("email-verified")) haptics.success()
+    }
+
+    fun send(resend: Boolean = false) {
+        val email = presentation.email
+        if (!EmailRules.isValid(email) || model.busy) return
+        haptics.light()
+        model.action("Failed to send verification code. Please try again.", useServerMessage = true) {
+            beforeSend()
+            if (model.server.sendEmail(email)) { verified(); return@action }
+            presentation.otp = OtpEntry(); presentation.codeSentAt = SystemClock.elapsedRealtime()
+            if (!resend) { presentation.emailStage = EmailStage.code; haptics.success() }
+        }
+    }
+
+    /** A typed digit (or an autofilled code); a full code verifies at once. */
+    fun typed(input: String) {
+        val (next, verifyNow) = presentation.otp.input(input, busy = model.busy)
+        presentation.otp = next
+        if (verifyNow) verify(next.code)
+    }
+
+    private fun verify(code: String) {
+        model.action("Invalid or expired verification code. Please try again.", useServerMessage = true) {
+            @Suppress("TooGenericExceptionCaught") // any failure but a wrong code clears the entry, then reaches the action's alert
+            try { model.server.verifyEmail(code, presentation.email) }
+            catch (failure: Exception) {
+                if (!wrongCode(failure)) { presentation.otp = presentation.otp.copy(verifying = false).cleared(); throw failure }
+                presentation.otp = presentation.otp.rejected(); haptics.error()
+                delay(650)
+                presentation.otp = presentation.otp.cleared()
+                return@action
+            }
+            focusManager.clearFocus()
+            verified()
+        }
+    }
 }
 
 @Composable

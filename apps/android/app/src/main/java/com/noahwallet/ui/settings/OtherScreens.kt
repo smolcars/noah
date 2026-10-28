@@ -2,6 +2,7 @@ package com.noahwallet.ui.settings
 
 import android.media.MediaPlayer
 import android.util.Base64
+import androidx.activity.compose.LocalActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.Image
@@ -60,7 +61,6 @@ internal const val privacyURL = "https://github.com/smolcars/noah/blob/master/PR
  */
 @Composable
 internal fun FeedbackPage(model: AppModel, nav: SettingsNav) {
-    val palette = LocalPalette.current
     val haptics = rememberHaptics()
     var name by rememberSaveable { mutableStateOf("") }
     var email by rememberSaveable { mutableStateOf("") }
@@ -69,91 +69,122 @@ internal fun FeedbackPage(model: AppModel, nav: SettingsNav) {
     var success by rememberSaveable { mutableStateOf(false) }
     val attachments = androidx.lifecycle.viewmodel.compose.viewModel<FeedbackAttachments>()
     var screenshot by attachments::screenshot
-    var cropImage by attachments::cropImage
-    val activity = LocalContext.current as android.app.Activity
+    val activity = requireNotNull(LocalActivity.current)
     DisposableEffect(activity) { onDispose {
         if (!activity.isChangingConfigurations) { attachments.screenshot = null; attachments.cropImage = null }
     } }
-    var loading by remember { mutableStateOf(false) }
-    var error by remember { mutableStateOf<String?>(null) }
-    val context = LocalContext.current
-    val scope = rememberCoroutineScope()
+    val work = remember { FeedbackWork() }
     val uri = LocalUriHandler.current
-    val picker = rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { picked ->
-        if (picked != null) scope.launch {
-            loading = true; error = null
-            try {
-                cropImage = withContext(Dispatchers.IO) {
-                    val bytes = context.contentResolver.openInputStream(picked)?.use(FeedbackDraft::readScreenshot) ?: error("""Unreadable image""")
-                    decodeScreenshot(bytes)
-                }
-            } catch (validation: IllegalArgumentException) { error = validation.message }
-            catch (_: Exception) { error = "Couldn't read the screenshot. Please try again." }
-            finally { loading = false }
-        }
-    }
+    val picker = rememberScreenshotPicker(attachments, work)
     SettingsFrame(tr("Feedback"), nav.back, hero = success, line = if (success) null else tr("Report a bug or share an idea."), foot = {
         if (success) FootPill(tr("Done")) { nav.pop() }
         else FootPill(tr("Send"), Modifier.testTag("feedback-send"), loading = model.busy,
-            enabled = !model.busy && !loading && cropImage == null && name.isNotBlank() && subject.isNotBlank() && body.isNotBlank()) {
+            enabled = !model.busy && !work.loading && attachments.cropImage == null && name.isNotBlank() && subject.isNotBlank() && body.isNotBlank()) {
             model.action("Failed to submit feedback. Please try again.") {
                 val payload = try { FeedbackDraft(name, email, subject, body,
                     screenshot).payload(DeviceInfo.current()) { Base64.encodeToString(it, Base64.NO_WRAP) } }
-                catch (validation: IllegalArgumentException) { error = validation.message; return@action }
+                catch (validation: IllegalArgumentException) { work.error = validation.message; return@action }
                 V0SupportTicketClient(model.services.client).submitSupportTicket(payload).value()
                 success = true; haptics.success(); name = ""; email = ""; subject = ""; body = ""; screenshot = null
             }
         }
     }) {
         if (success) {
-            Column(Modifier.padding(top = 6.dp)) {
-                StatusMark(MarkKind.ok)
-                Text(tr("Thank you"), Modifier.padding(top = 16.dp), style = SettingsType.hero, color = palette.foreground)
-                Text(tr("It’s with the Noah team."), Modifier.padding(top = 3.dp), style = HomeType.line, color = palette.muted)
-            }
+            FeedbackThanks()
             return@SettingsFrame
         }
-        SettingsField(name, { name = it }, tr("Your name"), Modifier.testTag("feedback-name"), label = tr("Name"), enabled = !model.busy,
+        val enabled = !model.busy
+        SettingsField(name, { name = it }, tr("Your name"), Modifier.testTag("feedback-name"), label = tr("Name"), enabled = enabled,
             keyboard = KeyboardOptions(capitalization = KeyboardCapitalization.Words))
-        SettingsField(email, { email = it }, "you@example.com", label = tr("Email (optional)"), enabled = !model.busy,
+        SettingsField(email, { email = it }, "you@example.com", label = tr("Email (optional)"), enabled = enabled,
             keyboard = KeyboardOptions(keyboardType = KeyboardType.Email, autoCorrectEnabled = false))
-        SettingsField(subject, { subject = it }, tr("Short summary"), Modifier.testTag("feedback-subject"), label = tr("Subject"), enabled = !model.busy,
+        SettingsField(subject, { subject = it }, tr("Short summary"), Modifier.testTag("feedback-subject"), label = tr("Subject"), enabled = enabled,
             keyboard = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences))
         SettingsField(body, { body = it }, tr("What happened, or what would help?"), Modifier.testTag("feedback-message"), label = tr("Message"),
-            enabled = !model.busy,
+            enabled = enabled,
             lines = 5, keyboard = KeyboardOptions(capitalization = KeyboardCapitalization.Sentences))
-        FieldLabel(tr("Screenshot (optional)"))
-        val shot = screenshot
-        if (shot != null) {
-            val preview = remember(shot) { android.graphics.BitmapFactory.decodeByteArray(shot, 0, shot.size)?.asImageBitmap() }
-            preview?.let { Image(it, tr("Selected screenshot"), Modifier.padding(top = 8.dp).heightIn(max = 180.dp).clip(RoundedCornerShape(18.dp))) }
-            SettingsLink(tr("Remove screenshot"), enabled = !model.busy) { screenshot = null }
-        } else Row(Modifier.padding(top = 8.dp).fillMaxWidth().height(84.dp).clip(RoundedCornerShape(18.dp)).border(1.5.dp, palette.hairline,
-            RoundedCornerShape(18.dp))
-            .clickable(enabled = !model.busy && !loading, role = Role.Button) { picker.launch("image/*") }.testTag("feedback-screenshot"),
-            horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
-            Icon(painterResource(SettingsIcons.image), null, Modifier.size(20.dp), tint = palette.muted)
-            Spacer(Modifier.width(8.dp))
-            Text(tr("Add screenshot"), style = HomeType.line.copy(fontWeight = FontWeight.Medium), color = palette.muted)
-        }
-        Text(tr("JPEG or PNG, 5 MB or smaller"), Modifier.padding(top = 6.dp), style = HomeType.small, color = palette.muted)
-        error?.let { FinePrint(tr(it), failed = true) }
+        ScreenshotField(screenshot, enabled, canPick = enabled && !work.loading, pick = { picker.launch("image/*") }) { screenshot = null }
+        work.error?.let { FinePrint(tr(it), failed = true) }
         FinePrint(tr("Your app version and phone model are attached."))
         SettingsGroup(rows = listOf({ d -> SettingsRow(tr("Chat on Telegram"), SettingsIcons.send, end = RowEnd.External,
             divider = d) { uri.openUri(telegramURL) } }))
     }
-    cropImage?.let { image ->
-        ScreenshotCropDialog(image, onCancel = { cropImage = null }) { crop ->
-            cropImage = null
+    ScreenshotCrop(attachments, work)
+}
+
+/** The screenshot's read and crop in progress, and why the last one failed. */
+@Stable
+private class FeedbackWork {
+    var loading by mutableStateOf(false)
+    var error by mutableStateOf<String?>(null)
+}
+
+/** Picks an image and opens it for cropping; a file that isn't a JPEG or PNG of 5 MB or less says why. */
+@Composable
+private fun rememberScreenshotPicker(attachments: FeedbackAttachments, work: FeedbackWork) = run {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    rememberLauncherForActivityResult(ActivityResultContracts.GetContent()) { picked ->
+        if (picked != null) scope.launch {
+            work.loading = true; work.error = null
+            try {
+                attachments.cropImage = withContext(Dispatchers.IO) {
+                    val bytes = context.contentResolver.openInputStream(picked)?.use(FeedbackDraft::readScreenshot) ?: error("""Unreadable image""")
+                    decodeScreenshot(bytes)
+                }
+            } catch (validation: IllegalArgumentException) { work.error = validation.message }
+            catch (_: Exception) { work.error = "Couldn't read the screenshot. Please try again." }
+            finally { work.loading = false }
+        }
+    }
+}
+
+/** The picked image's crop; cropping it makes the attached screenshot. */
+@Composable
+private fun ScreenshotCrop(attachments: FeedbackAttachments, work: FeedbackWork) {
+    val scope = rememberCoroutineScope()
+    attachments.cropImage?.let { image ->
+        ScreenshotCropDialog(image, onCancel = { attachments.cropImage = null }) { crop ->
+            attachments.cropImage = null
             scope.launch {
-                loading = true
-                try { screenshot = withContext(Dispatchers.Default) { cropScreenshot(image, crop) } }
-                catch (validation: IllegalArgumentException) { error = validation.message }
-                catch (_: Exception) { error = "Could not read the selected screenshot." }
-                finally { loading = false }
+                work.loading = true
+                try { attachments.screenshot = withContext(Dispatchers.Default) { cropScreenshot(image, crop) } }
+                catch (validation: IllegalArgumentException) { work.error = validation.message }
+                catch (_: Exception) { work.error = "Could not read the selected screenshot." }
+                finally { work.loading = false }
             }
         }
     }
+}
+
+@Composable
+private fun FeedbackThanks() {
+    val palette = LocalPalette.current
+    Column(Modifier.padding(top = 6.dp)) {
+        StatusMark(MarkKind.ok)
+        Text(tr("Thank you"), Modifier.padding(top = 16.dp), style = SettingsType.hero, color = palette.foreground)
+        Text(tr("It’s with the Noah team."), Modifier.padding(top = 3.dp), style = HomeType.line, color = palette.muted)
+    }
+}
+
+/** The optional screenshot: its preview and Remove, or the dashed Add field. */
+@Composable
+private fun ScreenshotField(shot: ByteArray?, enabled: Boolean, canPick: Boolean, pick: () -> Unit, remove: () -> Unit) {
+    val palette = LocalPalette.current
+    FieldLabel(tr("Screenshot (optional)"))
+    if (shot != null) {
+        val preview = remember(shot) { android.graphics.BitmapFactory.decodeByteArray(shot, 0, shot.size)?.asImageBitmap() }
+        preview?.let { Image(it, tr("Selected screenshot"), Modifier.padding(top = 8.dp).heightIn(max = 180.dp).clip(RoundedCornerShape(18.dp))) }
+        SettingsLink(tr("Remove screenshot"), enabled = enabled, onClick = remove)
+    } else Row(Modifier.padding(top = 8.dp).fillMaxWidth().height(84.dp).clip(RoundedCornerShape(18.dp)).border(1.5.dp, palette.hairline,
+        RoundedCornerShape(18.dp))
+        .clickable(enabled = canPick, role = Role.Button, onClick = pick).testTag("feedback-screenshot"),
+        horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
+        Icon(painterResource(SettingsIcons.image), null, Modifier.size(20.dp), tint = palette.muted)
+        Spacer(Modifier.width(8.dp))
+        Text(tr("Add screenshot"), style = HomeType.line.copy(fontWeight = FontWeight.Medium), color = palette.muted)
+    }
+    Text(tr("JPEG or PNG, 5 MB or smaller"), Modifier.padding(top = 6.dp), style = HomeType.small, color = palette.muted)
 }
 
 /**

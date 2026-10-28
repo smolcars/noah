@@ -69,7 +69,6 @@ internal fun ProfilePage(model: AppModel, nav: SettingsNav) {
         } catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled } catch (_: Exception) { toasts.show(failed) }
     }
     val address = server.lightningAddress?.takeIf { it.isNotEmpty() }
-    val npub = Nostr.npub(server.nostrPubkey)
     SettingsFrame(tr("Profile"), nav.back, hero = true) {
         Column(Modifier.padding(top = 6.dp)) {
             SettingsAvatar(84.dp, you = true, initial = address?.take(1) ?: name?.take(1), icon = SettingsIcons.person)
@@ -77,19 +76,29 @@ internal fun ProfilePage(model: AppModel, nav: SettingsNav) {
                 maxLines = 2, overflow = TextOverflow.Ellipsis)
             address?.let { Text(it, Modifier.padding(top = 2.dp), style = HomeType.line, color = palette.muted) }
         }
-        Column(Modifier.padding(top = 22.dp)) {
-            DetailRow(tr("Name"), name ?: tr("Add"), toasts = toasts) { naming = true }
-            DetailRow(tr("Lightning address"), address ?: tr("Add"), toasts = toasts) { nav.open(SettingsDestination.Lightning) }
-            val verified = server.isEmailVerified == true && server.emailAddress != null
-            DetailRow(tr("Email"), if (verified) server.emailAddress!! else if (server.emailAddress != null) tr("Not verified") else tr("Add"),
-                ok = verified, dot = !verified && server.emailAddress != null, toasts = toasts) { nav.open(SettingsDestination.Email) }
-            if (npub.isNotEmpty()) DetailRow(tr("Nostr key"), short(npub, 9, 4), ValueKind.mono, toasts = toasts) { nav.open(SettingsDestination.Lightning) }
-            if (key.isNotEmpty()) DetailRow(tr("Wallet key"), short(key, 8, 4), ValueKind.mono, copy = key, toasts = toasts)
-            DetailRow(tr("My code"), "", glyph = SettingsIcons.qr, toasts = toasts, last = true) { nav.myCode() }
-        }
+        ProfileRows(server, name, key, nav) { naming = true }
         FinePrint(tr("Your email is only for urgent alerts about your wallet."))
     }
     if (naming) NameSheet(model, name.orEmpty(), { name = profileName(model) }) { naming = false }
+}
+
+/** Your name, address, email, keys and My code, each opening where it's changed (the wallet key copies). */
+@Composable
+private fun ProfileRows(server: com.noahwallet.services.storage.PersistedServerState, name: String?, key: String, nav: SettingsNav, rename: () -> Unit) {
+    val toasts = LocalSettingsToasts.current
+    val address = server.lightningAddress?.takeIf { it.isNotEmpty() }
+    val npub = Nostr.npub(server.nostrPubkey)
+    val email = server.emailAddress
+    Column(Modifier.padding(top = 22.dp)) {
+        DetailRow(tr("Name"), name ?: tr("Add"), toasts = toasts, onClick = rename)
+        DetailRow(tr("Lightning address"), address ?: tr("Add"), toasts = toasts) { nav.open(SettingsDestination.Lightning) }
+        val verified = server.isEmailVerified == true && email != null
+        DetailRow(tr("Email"), if (verified) email else if (email != null) tr("Not verified") else tr("Add"),
+            ok = verified, dot = !verified && email != null, toasts = toasts) { nav.open(SettingsDestination.Email) }
+        if (npub.isNotEmpty()) DetailRow(tr("Nostr key"), short(npub, 9, 4), ValueKind.mono, toasts = toasts) { nav.open(SettingsDestination.Lightning) }
+        if (key.isNotEmpty()) DetailRow(tr("Wallet key"), short(key, 8, 4), ValueKind.mono, copy = key, toasts = toasts)
+        DetailRow(tr("My code"), "", glyph = SettingsIcons.qr, toasts = toasts, last = true) { nav.myCode() }
+    }
 }
 
 /** Name: shown to people you pay (max 80). */
@@ -129,33 +138,23 @@ internal fun LightningAddressPage(model: AppModel, nav: SettingsNav) {
     val own = server.lightningAddress?.substringBefore('@')
     var name by rememberSaveable { mutableStateOf(own.orEmpty()) }
     var npub by rememberSaveable { mutableStateOf(Nostr.npub(server.nostrPubkey)) }
-    var availability by remember { mutableStateOf(NameAvailability.typing(name)) }
+    val availabilityState = remember { mutableStateOf(NameAvailability.typing(name)) }
+    var availability by availabilityState
     var error by remember { mutableStateOf<String?>(null) }
     LaunchedEffect(name) {
         error = null
-        val typing = NameAvailability.typing(name)
-        if (typing != NameAvailability.checking) { availability = typing; return@LaunchedEffect }
-        if (name == own) { availability = NameAvailability.available; return@LaunchedEffect }
-        availability = NameAvailability.checking
-        delay(500)
-        val answer = NameAvailability.answered(name, lookup(model, name), own)
-        availability = answer
-        if (answer == NameAvailability.taken) haptics.warning() else if (answer == NameAvailability.available) haptics.selection()
+        checkName(model, name, own, availabilityState, haptics)
     }
     val nsec = npub.trim().startsWith("nsec", ignoreCase = true)
     val unchanged = LightningIdentity.unchanged(name, npub, server.lightningAddress, server.nostrPubkey, domain)
     val saved = tr("Saved")
     fun save() {
-        if (unchanged || nsec || !availability.canContinue || model.busy) return
+        if (unchanged || nsec) return
+        if (!availability.canContinue || model.busy) return
         try { LightningIdentity.payload(name, npub) } catch (failure: IllegalArgumentException) { error = failure.message; return }
         focusManager.clearFocus()
         nav.save(model, "Failed to update Lightning address. Please try again.", useServerMessage = true) {
-            try { model.server.saveIdentity(name, npub) }
-            catch (failure: ServerFailure) {
-                if (!NameRules.takenByServer(failure)) throw failure
-                availability = NameAvailability.taken; haptics.warning()
-                return@save
-            }
+            if (!saveIdentity(model, name, npub)) { availability = NameAvailability.taken; haptics.warning(); return@save }
             haptics.success(); toasts.show(saved); nav.pop()
         }
     }
@@ -164,18 +163,61 @@ internal fun LightningAddressPage(model: AppModel, nav: SettingsNav) {
     }) {
         NameField(name, { name = it }, domain, !model.busy, focus, tr("Lightning address"), { save() },
             Modifier.padding(top = 30.dp).testTag("lightning-username-input"))
-        if (nsec || error != null) Row(Modifier.padding(top = 14.dp).heightIn(min = 22.dp), verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            androidx.compose.foundation.layout.Box(Modifier.size(8.dp).background(palette.failure, CircleShape))
-            Text(if (nsec) tr("Never paste a private key. Use your npub.") else tr(error!!), style = HomeType.line, color = palette.failure)
-        } else AvailabilityRow(availability, Modifier.padding(top = 14.dp), mine = name == own && name.isNotEmpty())
-        if (availability == NameAvailability.taken) FlowRow(Modifier.padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            NameRules.suggestions(name).forEach { suggestion -> Chip(suggestion) { haptics.selection(); name = suggestion } }
-        }
+        NameStatus(if (nsec) tr("Never paste a private key. Use your npub.") else error?.let { tr(it) }, availability, name, own) { name = it }
         SettingsField(npub, { npub = it.trim() }, "npub1…", Modifier.testTag("lightning-npub-input"), label = tr("Nostr key (optional)"),
             failed = nsec, enabled = !model.busy, keyboard = KeyboardOptions(capitalization = KeyboardCapitalization.None, autoCorrectEnabled = false))
         FinePrint(tr("Adds a NIP-05 identity to the same address. Never paste an nsec."))
+    }
+}
+
+/** Saves the address and key; false when the server says someone else just took the name. */
+private suspend fun saveIdentity(model: AppModel, name: String, npub: String): Boolean {
+    try { model.server.saveIdentity(name, npub) }
+    catch (failure: ServerFailure) {
+        if (!NameRules.takenByServer(failure)) throw failure
+        return false
+    }
+    return true
+}
+
+/** Whether [name] is free: at once while typing or when it's yours, else asked after a half-second pause. */
+private suspend fun checkName(model: AppModel, name: String, own: String?, availability: MutableState<NameAvailability>,
+    haptics: com.noahwallet.ui.onboarding.Haptics) {
+    val typing = NameAvailability.typing(name)
+    if (typing != NameAvailability.checking) { availability.value = typing; return }
+    if (name == own) { availability.value = NameAvailability.available; return }
+    availability.value = NameAvailability.checking
+    delay(500)
+    val answer = NameAvailability.answered(name, lookup(model, name), own)
+    availability.value = answer
+    if (answer == NameAvailability.taken) haptics.warning() else if (answer == NameAvailability.available) haptics.selection()
+}
+
+/** Under the name: what's wrong with it, else whether it's free (with free names like it when it's taken). */
+@Composable
+private fun NameStatus(problem: String?, availability: NameAvailability, name: String, own: String?, pick: (String) -> Unit) {
+    if (problem != null) NameProblem(problem)
+    else AvailabilityRow(availability, Modifier.padding(top = 14.dp), mine = name == own && name.isNotEmpty())
+    if (availability == NameAvailability.taken) Suggestions(name, pick)
+}
+
+@Composable
+private fun NameProblem(text: String) {
+    val palette = LocalPalette.current
+    Row(Modifier.padding(top = 14.dp).heightIn(min = 22.dp), verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        androidx.compose.foundation.layout.Box(Modifier.size(8.dp).background(palette.failure, CircleShape))
+        Text(text, style = HomeType.line, color = palette.failure)
+    }
+}
+
+/** Names like [taken] that may be free, each a tap to [pick]. */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun Suggestions(taken: String, pick: (String) -> Unit) {
+    val haptics = rememberHaptics()
+    FlowRow(Modifier.padding(top = 12.dp), horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+        NameRules.suggestions(taken).forEach { suggestion -> Chip(suggestion) { haptics.selection(); pick(suggestion) } }
     }
 }
 
@@ -193,36 +235,8 @@ internal fun EmailPage(model: AppModel, nav: SettingsNav) {
     rememberSaveable { presentation.reset(); true }
     var server by rememberServerState(model)
     val stage = presentation.emailStage
-    fun verified() {
-        presentation.verifiedAt = SystemClock.elapsedRealtime(); presentation.emailStage = EmailStage.verified
-        presentation.otp = presentation.otp.accepted(); server = model.server.state
-        if (presentation.felt.add("email-verified")) haptics.success()
-    }
-    fun send(resend: Boolean = false) {
-        val email = presentation.email
-        if (!EmailRules.isValid(email) || model.busy) return
-        haptics.light()
-        model.action("Failed to send verification code. Please try again.", useServerMessage = true) {
-            model.server.ensureRegistered()
-            if (model.server.sendEmail(email)) { verified(); return@action }
-            presentation.otp = OtpEntry(); presentation.codeSentAt = SystemClock.elapsedRealtime()
-            if (!resend) { presentation.emailStage = EmailStage.code; haptics.success() }
-        }
-    }
-    fun verify(code: String) {
-        model.action("Invalid or expired verification code. Please try again.", useServerMessage = true) {
-            @Suppress("TooGenericExceptionCaught") // any failure but a wrong code clears the entry, then reaches the action's alert
-            try { model.server.verifyEmail(code, presentation.email) }
-            catch (failure: Exception) {
-                if (!wrongCode(failure)) { presentation.otp = presentation.otp.copy(verifying = false).cleared(); throw failure }
-                presentation.otp = presentation.otp.rejected(); haptics.error()
-                delay(650)
-                presentation.otp = presentation.otp.cleared()
-                return@action
-            }
-            focusManager.clearFocus()
-            verified()
-        }
+    val email = EmailVerification(model, presentation, haptics, focusManager, beforeSend = { model.server.ensureRegistered() }) {
+        server = model.server.state
     }
     BackHandler(enabled = stage == EmailStage.code) { if (!model.busy) presentation.emailStage = EmailStage.entry }
     val line = when (stage) {
@@ -232,29 +246,17 @@ internal fun EmailPage(model: AppModel, nav: SettingsNav) {
     }
     SettingsFrame(tr("Email"), nav.back, line = line, foot = when (stage) {
         EmailStage.entry -> ({ FootPill(tr("Send code"), Modifier.testTag("email-send"), enabled = EmailRules.isValid(presentation.email),
-            loading = model.busy) { send() } })
+            loading = model.busy) { email.send() } })
         EmailStage.verified -> ({ FootPill(tr("Done")) { nav.pop() } })
         EmailStage.code -> null
     }) {
         if (stage == EmailStage.entry) {
-            server.emailAddress?.let { current ->
-                Column(Modifier.padding(top = 20.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    Text(current, style = SettingsType.current, color = palette.foreground, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
-                        if (server.isEmailVerified == true) VerifiedMark() else androidx.compose.foundation.layout.Box(Modifier.size(8.dp).background(palette.orange, CircleShape))
-                        Text(if (server.isEmailVerified == true) tr("Verified") else tr("Not verified"), style = HomeType.line, color = palette.muted)
-                    }
-                }
-            }
-            EmailEntry(presentation, play = false, enabled = !model.busy) { send() }
+            server.emailAddress?.let { CurrentEmail(it, server.isEmailVerified == true) }
+            EmailEntry(presentation, play = false, enabled = !model.busy) { email.send() }
             FinePrint(if (server.isEmailVerified == true) tr("Your current email stays until the new one is verified.")
             else tr("Optional. We only write when your bitcoin needs you."))
         } else {
-            CodeEntry(model, presentation, onTyped = { input ->
-                val (next, verifyNow) = presentation.otp.input(input, busy = model.busy)
-                presentation.otp = next
-                if (verifyNow) verify(next.code)
-            }, resend = { send(resend = true) })
+            CodeEntry(model, presentation, onTyped = email::typed, resend = { email.send(resend = true) })
             if (stage == EmailStage.code) SettingsLink(tr("Change email")) { presentation.emailStage = EmailStage.entry }
         }
     }
@@ -267,5 +269,18 @@ private fun VerifiedMark() {
     androidx.compose.foundation.layout.Box(Modifier.size(16.dp).background(palette.orange, CircleShape), contentAlignment = Alignment.Center) {
         androidx.compose.material3.Icon(androidx.compose.ui.res.painterResource(SettingsIcons.check), null, Modifier.size(11.dp),
             tint = androidx.compose.ui.graphics.Color.White)
+    }
+}
+
+/** The address on file, and whether it's verified. */
+@Composable
+private fun CurrentEmail(current: String, verified: Boolean) {
+    val palette = LocalPalette.current
+    Column(Modifier.padding(top = 20.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Text(current, style = SettingsType.current, color = palette.foreground, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+            if (verified) VerifiedMark() else androidx.compose.foundation.layout.Box(Modifier.size(8.dp).background(palette.orange, CircleShape))
+            Text(if (verified) tr("Verified") else tr("Not verified"), style = HomeType.line, color = palette.muted)
+        }
     }
 }
