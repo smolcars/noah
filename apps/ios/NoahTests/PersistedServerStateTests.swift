@@ -37,8 +37,8 @@ struct PersistedServerStateTests {
     }
 
     @Test func lenientDecodeKeepsValidFields() throws {
-        let data = Data(#"{"state":{"isRegisteredWithServer":true,"emailAddress":42,"isEmailVerified":"yes","lightningAddress":"alice@localhost.com","futureField":true}}"#
-            .utf8)
+        let data = Data((#"{"state":{"isRegisteredWithServer":true,"emailAddress":42,"isEmailVerified":"yes","#
+                + #""lightningAddress":"alice@localhost.com","futureField":true}}"#).utf8)
         let envelope = try JSONDecoder().decode(PersistedEnvelope<PersistedServerState>.self, from: data)
         #expect(envelope.version == nil)
         #expect(envelope.state.isRegisteredWithServer == true)

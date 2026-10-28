@@ -76,8 +76,8 @@ struct ServerRegistrationTests {
                                        key: PersistedProfileState.key, version: 0)
         let service = ServerRegistration(variant: .regtest, settings: settings)
         let response = try JSONDecoder().decode(Components.Schemas.RegisterResponse.self, from: Data(
-            #"{"display_name":"New","email":null,"is_email_verified":false,"lightning_address":"new@localhost.com","nostr_pubkey":null,"status":"OK","user_status":"active"}"#
-                .utf8))
+            (#"{"display_name":"New","email":null,"is_email_verified":false,"lightning_address":"new@localhost.com","#
+                + #""nostr_pubkey":null,"status":"OK","user_status":"active"}"#).utf8))
         try service.apply(response, device: .init())
         #expect(service.state.isRegisteredWithServer == true)
         #expect(service.state.isBackupEnabled == true)
