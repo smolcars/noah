@@ -287,6 +287,73 @@ class NoahWidgetProviderTest {
         assertTrue(empty.shown(R.id.widget_boat)); assertNull(empty.findViewById<View>(R.id.widget_balance))
     }
 
+    /** Medium: the label takes the width it needs and the balance column the rest, down to 45% of the balance's size. */
+    @Test fun theMediumLabelTakesTheWidthItNeeds() {
+        // 320 dp leaves a 270 dp row: the label's 162 dp leaves 108 for a balance 160 wide at full size.
+        assertEquals(WidgetViews.Label(162f, true), WidgetViews.label(320f, 162f, 103f, 160f))
+        assertEquals(WidgetViews.Box(108f, 38f, 34f, .45f), WidgetViews.balanceBox(WidgetLayout.medium, 320f, 162f))
+        // The floor: 76.5 dp of a balance 170 wide.
+        assertEquals(WidgetViews.Label(190f, true), WidgetViews.label(320f, 190f, 130f, 170f))
+        assertEquals(WidgetViews.Label(130f, false), WidgetViews.label(320f, 195f, 130f, 170f))
+        // Where the balance would fall below it, " · 30 days" goes and the amount stays.
+        assertEquals(WidgetViews.Label(154f, false), WidgetViews.label(320f, 206f, 154f, 217f))
+        assertEquals(WidgetViews.Label(206f, true), WidgetViews.label(553f, 206f, 154f, 217f))
+        // The other layouts keep their boxes, and the balance's half-size floor.
+        assertEquals(WidgetViews.Box(144f, 34f, 30f, .5f), WidgetViews.balanceBox(WidgetLayout.small, 180f))
+    }
+
+    /**
+     * "+₿ 30,142 · 30 days" was cut to "+₿ 30,142 · …" by a fixed 60/40 split: every medium size from 320 dp now shows it
+     * whole, in English and Swedish, in ₿ and sats; the longest amounts drop " · 30 days" before any digit.
+     */
+    @GraphicsMode(GraphicsMode.Mode.NATIVE)
+    @Test
+    fun theMediumLabelIsNeverCutShort() {
+        val d = context.resources.displayMetrics.density
+        fun laidOut(content: WidgetContent, width: Float, height: Float = 180f): View =
+            WidgetViews.build(context, "regtest", content, width, height, d).apply(context, FrameLayout(context)).apply {
+                measure(View.MeasureSpec.makeMeasureSpec((width * d).toInt(), View.MeasureSpec.EXACTLY),
+                    View.MeasureSpec.makeMeasureSpec((height * d).toInt(), View.MeasureSpec.EXACTLY))
+                layout(0, 0, (width * d).toInt(), (height * d).toInt())
+            }
+        fun View.whole(id: Int): Boolean =
+            findViewById<TextView>(id).let { it.layout.getEllipsisCount(0) == 0 && it.width >= kotlin.math.ceil(it.paint.measureText(it.text.toString())) }
+        fun View.left(id: Int) = generateSequence(findViewById<View>(id)) { it.parent as? View }.sumOf { it.left }
+        fun View.right(id: Int) = left(id) + findViewById<View>(id).width
+        // The edges, the phone's 4×2 (360.38 and 676.57 dp) and the Fold's two-column 4×4 (368 to 595.81 dp), as the
+        // launchers report them.
+        val widths = listOf(320f, 360.38f, 368f, 380.57f, 553.14f, 595.81f, 676.57f, 720f)
+        for ((code, unit) in listOf("en", "sv").flatMap { code -> listOf("bip177", "sats").map { code to it } }) {
+            language(code)
+            val content = WidgetContent.of(context, month.copy(amountUnit = unit), "regtest", now)
+            for (width in widths) {
+                val view = laidOut(content, width)
+                val at = "$code $unit $width dp"
+                assertEquals(at, content.days, view.text(R.id.widget_change_days))
+                for (id in listOf(R.id.widget_chip, R.id.widget_change, R.id.widget_change_days)) assertTrue("$at: ${view.text(id)}", view.whole(id))
+                assertTrue("$at: inside the padding", view.right(R.id.widget_change_days) <= ((width - 18f) * d).toInt() + 1)
+                assertTrue("$at: the balance column ends before the label", view.right(R.id.widget_balance) <= view.left(R.id.widget_chip))
+                // The balance's box is the column the label leaves, and the figures are drawn for it: within the text's
+                // rounding at 1×, where drawn at half size and scaled down they'd be 11% over.
+                val box = WidgetViews.balanceBox(WidgetLayout.medium, width, WidgetViews.label(context, content, width).width).width
+                val balance = view.findViewById<android.widget.ImageView>(R.id.widget_balance)
+                assertEquals(at, box * d, balance.width.toFloat(), d)
+                assertTrue(at, balance.drawable.intrinsicWidth <= balance.width * 1.05f)
+                // The status (here "+₿ 100,000 arriving") runs under both columns, clear of the boat.
+                assertTrue("$at: ${view.text(R.id.widget_status_title)}", view.whole(R.id.widget_status_title))
+            }
+        }
+        language("sv")
+        assertEquals("+30\u00a0142 sats", laidOut(WidgetContent.of(context, month.copy(amountUnit = "sats"), "regtest", now), 320f).text(R.id.widget_change))
+        // The longest: eight figures in sats, in Swedish, at 320 dp.
+        val large = WidgetContent.of(context, month.copy(balance = 12_480_315, daily = List(30) { 1_000_000L } + 12_480_315, amountUnit = "sats"),
+            "regtest", now)
+        val narrow = laidOut(large, 320f)
+        assertEquals("+11\u00a0480\u00a0315 sats", narrow.text(R.id.widget_change)); assertTrue(narrow.whole(R.id.widget_change))
+        assertEquals("", narrow.text(R.id.widget_change_days))
+        assertEquals(" · 30 dagar", laidOut(large, 553.14f).text(R.id.widget_change_days))
+    }
+
     /** The placed widget renders through the provider, from the old keys before the app runs, then the full snapshot. */
     @Test fun placedWidgetRendersOldKeysThenTheSnapshot() {
         language("en")
