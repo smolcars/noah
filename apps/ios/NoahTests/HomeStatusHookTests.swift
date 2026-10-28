@@ -18,7 +18,7 @@ struct HomeStatusHookTests {
         #expect(unchanged == world.state)
         #expect(unchanged?.lastBackupStatus == .idle)
         #expect(unchanged?.lastBackupAt == uploaded?.lastBackupAt)
-        #expect(world.calls.count == 2 && world.calls.last! == "sha-1")
+        #expect(world.calls.count == 2 && world.calls.last == "sha-1")
     }
 
     @Test func journalEventsFollowDurableWritesWithoutChangingReceiptsOrRepeatProtection() async throws {

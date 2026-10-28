@@ -13,9 +13,9 @@ struct ActivityListTests {
         HomeRulesTests.row(id, type: type, amount: amount, direction: direction, status: status, kind: kind, date: date)
     }
 
-    static func calendar(_ zone: String) -> Calendar {
+    static func calendar(_ zone: String) throws -> Calendar {
         var calendar = Calendar(identifier: .gregorian)
-        calendar.timeZone = TimeZone(identifier: zone)!
+        calendar.timeZone = try #require(TimeZone(identifier: zone))
         return calendar
     }
 
@@ -35,12 +35,12 @@ struct ActivityListTests {
         let now = try #require(HistoryRules.parseDate("2026-10-23T14:00:00Z"))
 
         // New York: 04:30Z is 00:30 today, 03:30Z is 23:30 yesterday.
-        let york = ActivityList.groups(rows, now: now, calendar: Self.calendar("America/New_York"))
+        let york = ActivityList.groups(rows, now: now, calendar: try Self.calendar("America/New_York"))
         #expect(york.prefix(3).map(\.title) == [.pending, .day(.today), .day(.yesterday)])
         #expect(york.map { $0.transactions.map(\.id) } == [["onchain-wallet-a", "lightning", "exit"], ["after-midnight"],
                                                            ["before-midnight"], ["older"]])
         // Tokyo: both are the same afternoon, today.
-        let tokyo = ActivityList.groups(rows, now: now, calendar: Self.calendar("Asia/Tokyo"))
+        let tokyo = ActivityList.groups(rows, now: now, calendar: try Self.calendar("Asia/Tokyo"))
         #expect(tokyo.map { $0.transactions.map(\.id) } == [["onchain-wallet-a", "lightning", "exit"],
                                                             ["after-midnight", "before-midnight"], ["older"]])
         // Nothing pending: no Pending group.
@@ -91,7 +91,7 @@ struct ActivityListTests {
         #expect(rows.filter(HistoryFilter.ark.includes).map(\.id) == ["ark"])
         #expect(rows.filter(HistoryFilter.onchain.includes).map(\.id) == ["chain"])
         #expect(rows.filter(HistoryFilter.all.includes).count == 3)
-        #expect([lightning].filter(HistoryFilter.ark.includes).isEmpty)
+        #expect(![lightning].contains(where: HistoryFilter.ark.includes))
     }
 
     @Test func csvKeepsTodaysColumnsNarrowedByTheFilterWithoutFailedRows() {

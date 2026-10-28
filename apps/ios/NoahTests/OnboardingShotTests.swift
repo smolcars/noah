@@ -16,7 +16,7 @@ struct OnboardingShotTests {
 
     @Test(.timeLimit(.minutes(60))) func presentStates() async throws {
         let scene = try #require(UIApplication.shared.connectedScenes.first as? UIWindowScene)
-        let window = try #require(scene.windows.first { $0.isKeyWindow })
+        let window = try #require(scene.keyWindow)
         let original = window.rootViewController
         let app = AppModel()
         let folder = URL.documentsDirectory
@@ -37,7 +37,7 @@ struct OnboardingShotTests {
                 // A new host each time, so screen state never leaks between fixtures.
                 host.rootView = AnyView(Color.clear)
                 try await Task.sleep(for: .milliseconds(100))
-                host.rootView = AnyView(try await view(state).environment(app).environment(app.walletLock).environment(\.scenePhase, .active))
+                host.rootView = AnyView(await view(state).environment(app).environment(app.walletLock).environment(\.scenePhase, .active))
                 try await Task.sleep(for: .milliseconds(400))
                 try state.write(to: ready, atomically: true, encoding: .utf8)
                 current = state
@@ -77,9 +77,11 @@ struct OnboardingShotTests {
         return draft
     }
 
-    private func view(_ state: String) async throws -> some View {
+    private func view(_ state: String) async -> some View {
         let past = Date().addingTimeInterval(-6)
         let haptics = OnboardingHaptics()
+        if let account = await accountView(state, past: past, haptics: haptics) { return account }
+        if let restore = restoreView(state, past: past, haptics: haptics) { return restore }
         switch state {
         case "welcome":
             return AnyView(ShotHost(scene: .init(mode: .welcome, start: past)) { layout in
@@ -100,15 +102,24 @@ struct OnboardingShotTests {
             return AnyView(ShotHost(scene: .init(mode: .create, start: past)) { layout in
                 OnboardingProgressScreen(layout: layout, mode: .create, phase: "Ready")
             })
+        default:
+            Issue.record("Unknown onboarding fixture \(state)")
+            return AnyView(Color.red)
+        }
+    }
+
+    /// Name, email, notifications and the finish.
+    private func accountView(_ state: String, past: Date, haptics: OnboardingHaptics) async -> AnyView? {
+        switch state {
         case "name", "name-short", "name-available", "name-taken":
-            let text = ["name": "", "name-short": "ma", "name-available": "maya", "name-taken": "satoshi"][state]!
+            let text = ["name-short": "ma", "name-available": "maya", "name-taken": "satoshi"][state, default: ""]
             let model = await name(text)
             return AnyView(ShotHost { layout in
                 NameScreen(layout: layout, name: model, domain: "noahwallet.io", saving: false, error: nil,
                            haptics: haptics, onContinue: {}, onSkip: {})
             })
         case "email", "email-typo", "email-complete", "email-valid":
-            let text = ["email": "", "email-typo": "maya@gmial.com", "email-complete": "maya@", "email-valid": "maya@gmail.com"][state]!
+            let text = ["email-typo": "maya@gmial.com", "email-complete": "maya@", "email-valid": "maya@gmail.com"][state, default: ""]
             let model = await email(text)
             return AnyView(ShotHost { layout in EmailScreen(layout: layout, email: model, haptics: haptics, onSkip: {}) })
         case "email-code", "email-wrong", "email-verified":
@@ -126,6 +137,12 @@ struct OnboardingShotTests {
             return AnyView(ShotHost { layout in
                 DoneScreen(layout: layout, address: state == "done" ? "maya@noahwallet.io" : nil, finishing: false) {}
             })
+        default: return nil
+        }
+    }
+
+    private func restoreView(_ state: String, past: Date, haptics: OnboardingHaptics) -> AnyView? {
+        switch state {
         case "restore", "restore-filled", "restore-24", "restore-invalid", "restore-checksum", "restore-keyboard":
             let phrase = switch state {
             case "restore-filled", "restore-keyboard": Self.vector
@@ -160,15 +177,14 @@ struct OnboardingShotTests {
                     RestoreWalletScreen(layout: layout,
                                         draft: binding,
                                         issue: RestoreIssue(
-                                            message: "No backup was found for this recovery phrase. Check the words and make sure this wallet had backups enabled."),
+                                            message: "No backup was found for this recovery phrase. Check the words and make sure this wallet had backups "
+                                                + "enabled."),
                                         haptics: haptics, onPaste: { _, _ in }, onRestore: {}, onBack: {})
                 }
             })
         case "stored-seed":
             return AnyView(ShotHost { layout in StoredSeedRestoreScreen(layout: layout, issue: nil) {} })
-        default:
-            Issue.record("Unknown onboarding fixture \(state)")
-            return AnyView(Color.red)
+        default: return nil
         }
     }
 }
@@ -214,7 +230,11 @@ extension ShotHost where Sheet == EmptyView {
 }
 
 private struct RestoreBinding<Content: View>: View {
-    @State var draft: RestoreDraft
+    @State private var draft: RestoreDraft
     @ViewBuilder var content: (Binding<RestoreDraft>) -> Content
+    init(draft: RestoreDraft, @ViewBuilder content: @escaping (Binding<RestoreDraft>) -> Content) {
+        _draft = State(initialValue: draft)
+        self.content = content
+    }
     var body: some View { content($draft) }
 }

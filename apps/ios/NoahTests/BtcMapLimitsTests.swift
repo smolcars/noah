@@ -45,7 +45,8 @@ struct BtcMapLimitsTests {
         let folder = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
         try FileManager.default.createDirectory(at: folder, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: folder) }
-        let raw = Data(#"{"schemaVersion":1,"generatedAt":"today","source":"btcmap.org","places":[{"id":1,"lat":1,"lon":2,"icon":"cafe","name":"Cafe","updated_at":"today"}]}"#
+        let raw = Data((#"{"schemaVersion":1,"generatedAt":"today","source":"btcmap.org","places":[{"id":1,"lat":1,"lon":2,"ic"#
+                + #"on":"cafe","name":"Cafe","updated_at":"today"}]}"#)
             .utf8)
         let cache = folder.appending(path: "places")
         try raw.write(to: cache)
@@ -101,7 +102,8 @@ struct BtcMapLimitsTests {
     }
 
     @Test func encodedSizeMatchesFullEncodingIncludingUTF8EscapesAndMetadata() throws {
-        let raw = Data(#"{"schemaVersion":1,"generatedAt":"é\n","source":"é\\\"","places":[{"id":1,"lat":1,"lon":2,"icon":"cafe","name":"é🚀\"\n","updated_at":"today"}]}"#
+        let raw = Data((#"{"schemaVersion":1,"generatedAt":"é\n","source":"é\\\"","places":[{"id":1,"lat":1,"lon":2,"icon":"ca"#
+                + #"fe","name":"é🚀\"\n","updated_at":"today"}]}"#)
             .utf8)
         var snapshot = try BtcMapSnapshot.parse(raw)
         let place = try #require(snapshot.places.first)

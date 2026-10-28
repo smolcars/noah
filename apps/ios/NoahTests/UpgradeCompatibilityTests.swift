@@ -7,22 +7,22 @@ import Testing
 @Suite(.enabled(if: ProcessInfo.processInfo.environment["NOAH_UPGRADE_CHECK"] == "1"))
 @MainActor
 struct UpgradeCompatibilityTests {
+    struct ExpectedMovement: Decodable {
+        let id: UInt32
+        let status: String
+        let subsystem_name: String
+        let movement_kind: String
+        let intended_balance: Int64
+        let effective_balance: Int64
+        let offchain_fee: UInt64
+    }
     struct Expected: Decodable {
-        struct Movement: Decodable {
-            let id: UInt32
-            let status: String
-            let subsystem_name: String
-            let movement_kind: String
-            let intended_balance: Int64
-            let effective_balance: Int64
-            let offchain_fee: UInt64
-        }
         let funded: Bool
         let fingerprint: String
         let spendable: UInt64
         let onchain: UInt64
         let locale: String?
-        let movements: [Movement]
+        let movements: [ExpectedMovement]
     }
     private func expected() throws -> Expected {
         try JSONDecoder().decode(Expected.self, from: Data(contentsOf: URL.documentsDirectory.appending(path: "noah-upgrade-check.json")))

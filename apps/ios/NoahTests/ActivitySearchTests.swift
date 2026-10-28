@@ -11,7 +11,7 @@ import UIKit
 struct ActivitySearchTests {
     @Test func searchIsNoahsFieldNotTheSystemSearchBar() async throws {
         let scene = try #require(UIApplication.shared.connectedScenes.first as? UIWindowScene)
-        let window = try #require(scene.windows.first { $0.isKeyWindow })
+        let window = try #require(scene.keyWindow)
         let original = window.rootViewController
         let root = FileManager.default.temporaryDirectory.appending(path: "activity-search-\(UUID())")
         defer {

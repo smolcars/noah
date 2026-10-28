@@ -7,7 +7,7 @@ The map uses the committed RN assets by resource reference, without copying them
 ## Coverage
 
 - `BtcMapFixtureTests`, `BtcMapRepositoryTests` and `BtcMapModelTests` (all in
-  `NoahTests/BtcMapTests.swift`): the shared `btc-map.json` and `city-search.json`
+  `NoahTests/BtcMapFixtureTests.swift`): the shared `btc-map.json` and `city-search.json`
   cases ported from RN's `btcMap.test.js` and `citySearch.test.js` (snapshot
   validation, UTC sync cursors, patch deletion/replacement/insertion, Unicode
   normalization, viewport-biased city ranking), plus atomic-cache failures, request

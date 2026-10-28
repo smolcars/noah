@@ -11,7 +11,7 @@ import UIKit
 struct AdaptivePresentationTests {
     @Test(.timeLimit(.minutes(15))) func presentFixtures() async throws {
         let scene = try #require(UIApplication.shared.connectedScenes.first as? UIWindowScene)
-        let keyWindow = scene.windows.first { $0.isKeyWindow }
+        let keyWindow = scene.keyWindow
         let window = try #require(keyWindow)
         let original = window.rootViewController
         let app = AppModel()
@@ -25,16 +25,8 @@ struct AdaptivePresentationTests {
         let history = HistoryModel(dependencies: .init(load: { [transaction] }, sync: {},
                                                        changes: { AsyncThrowingStream { $0.finish() } }, blockTime: { _ in nil }, price: { _, _ in nil }))
         await history.refresh(currency: "USD")
-        let recurring = try RecurringExecutorTests.Harness()
+        let recurring = try recurringFixture()
         defer { try? FileManager.default.removeItem(at: recurring.directory) }
-        try recurring.store.bind(recurring.owner.withLock { $0 })
-        for index in 0..<3 {
-            var schedule = RecurringScheduleTests.schedule(start: recurring.now + Double(index + 1) * 86_400_000)
-            schedule.id = "layout-\(index)"
-            schedule.label = "Layout \(index + 1)"
-            schedule.status = "paused"
-            try recurring.store.upsert(schedule)
-        }
         let folder = URL.documentsDirectory
         let request = folder.appending(path: "adaptive-screen")
         let ready = folder.appending(path: "adaptive-ready")
@@ -70,27 +62,12 @@ struct AdaptivePresentationTests {
                 case "lock": view = AnyView(WalletLockView())
                 case "push-permission": view = AnyView(PushNotificationsRequiredView())
                 case "onboarding": view = AnyView(OnboardingFlow(model: app))
-                case "email": view = AnyView(NavigationStack { SettingsHost(page: .email) })
-                case "lightning": view = AnyView(NavigationStack { SettingsHost(page: .lightningAddress) })
-                case "debug": view = AnyView(NavigationStack { DebugView() })
-                case "settings": view = AnyView(NavigationStack { SettingsHost(page: nil) })
-                case "profile": view = AnyView(NavigationStack { SettingsHost(page: .profile) })
-                case "backup": view = AnyView(NavigationStack { SettingsHost(page: .backup) })
-                case "boarding": view = AnyView(NavigationStack { BoardArkView() })
-                case "exits": view = AnyView(NavigationStack { UnilateralExitView() })
-                case "recurring-editor": view = AnyView(NavigationStack { RecurringPaymentEditorView(executor: recurring.executor) })
-                case "recurring-list": view = AnyView(NavigationStack { RecurringPaymentsView(executor: recurring.executor) })
-                case "feedback": view = AnyView(NavigationStack { FeedbackView() })
-                case "story": view = AnyView(NavigationStack { NoahStoryView() })
-                case "ark-info": view = AnyView(NavigationStack { ArkInfoView() })
-                case "esplora": view = AnyView(NavigationStack { EsploraSettingsScreen() })
-                case "delete": view = AnyView(DeleteWalletSheet())
-                case "vtxos": view = AnyView(NavigationStack { VtxosView(model: onchainModel()) })
-                case "vtxo-detail": view = AnyView(NavigationStack { VtxoDetailView(id: "layout-vtxo") })
-                case "exit-detail": view = AnyView(NavigationStack { ExitVtxoDetailView(id: "layout-exit", model: onchainModel(detailID: "layout-exit")) })
                 default:
-                    Issue.record("Unknown adaptive fixture screen")
-                    return
+                    guard let other = settingsView(screen, recurring: recurring) ?? toolView(screen) else {
+                        Issue.record("Unknown adaptive fixture screen")
+                        return
+                    }
+                    view = other
                 }
                 host.rootView = AnyView(view.environment(app).environment(app.walletLock).environment(history).environment(SettingsSummary())
                     .environment(\.scenePhase, .active))
@@ -103,6 +80,50 @@ struct AdaptivePresentationTests {
             try await Task.sleep(for: .milliseconds(200))
         }
         Issue.record("Adaptive fixture session was not stopped")
+    }
+
+    /// Three paused schedules, so the recurring screens have rows.
+    private func recurringFixture() throws -> RecurringExecutorTests.Harness {
+        let recurring = try RecurringExecutorTests.Harness()
+        try recurring.store.bind(recurring.owner.withLock { $0 })
+        for index in 0..<3 {
+            var schedule = RecurringScheduleTests.schedule(start: recurring.now + Double(index + 1) * 86_400_000)
+            schedule.id = "layout-\(index)"
+            schedule.label = "Layout \(index + 1)"
+            schedule.status = "paused"
+            try recurring.store.upsert(schedule)
+        }
+        return recurring
+    }
+
+    private func settingsView(_ screen: String, recurring: RecurringExecutorTests.Harness) -> AnyView? {
+        switch screen {
+        case "email": AnyView(NavigationStack { SettingsHost(page: .email) })
+        case "lightning": AnyView(NavigationStack { SettingsHost(page: .lightningAddress) })
+        case "debug": AnyView(NavigationStack { DebugView() })
+        case "settings": AnyView(NavigationStack { SettingsHost(page: nil) })
+        case "profile": AnyView(NavigationStack { SettingsHost(page: .profile) })
+        case "backup": AnyView(NavigationStack { SettingsHost(page: .backup) })
+        case "boarding": AnyView(NavigationStack { BoardArkView() })
+        case "exits": AnyView(NavigationStack { UnilateralExitView() })
+        case "recurring-editor": AnyView(NavigationStack { RecurringPaymentEditorView(executor: recurring.executor) })
+        case "recurring-list": AnyView(NavigationStack { RecurringPaymentsView(executor: recurring.executor) })
+        default: nil
+        }
+    }
+
+    private func toolView(_ screen: String) -> AnyView? {
+        switch screen {
+        case "feedback": AnyView(NavigationStack { FeedbackView() })
+        case "story": AnyView(NavigationStack { NoahStoryView() })
+        case "ark-info": AnyView(NavigationStack { ArkInfoView() })
+        case "esplora": AnyView(NavigationStack { EsploraSettingsScreen() })
+        case "delete": AnyView(DeleteWalletSheet())
+        case "vtxos": AnyView(NavigationStack { VtxosView(model: onchainModel()) })
+        case "vtxo-detail": AnyView(NavigationStack { VtxoDetailView(id: "layout-vtxo") })
+        case "exit-detail": AnyView(NavigationStack { ExitVtxoDetailView(id: "layout-exit", model: onchainModel(detailID: "layout-exit")) })
+        default: nil
+        }
     }
 
     private func onchainModel(detailID: String? = nil) -> OnchainModel {

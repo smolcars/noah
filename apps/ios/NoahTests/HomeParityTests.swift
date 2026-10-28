@@ -7,9 +7,11 @@ struct HomeParityTests {
     struct StatusInput: Decodable {
         let operation: String
         let status: String
+        // swiftlint:disable:next discouraged_optional_boolean - only backup cases carry it; #require checks presence
         let pending: Bool?
         let at: Double?
         let now: Double?
+        // swiftlint:disable:next discouraged_optional_boolean - only round cases carry it; #require checks presence
         let final: Bool?
     }
     enum StatusExpected: Decodable, Equatable {
@@ -24,7 +26,7 @@ struct HomeParityTests {
     struct StatusFixtures: Decodable {
         let facts: [String]
         let symbols: [String: String]
-        let cases: [Fixtures.File<StatusInput, StatusExpected>.Case]
+        let cases: [Fixtures.Case<StatusInput, StatusExpected>]
     }
 
     @Test func statusMatchesSharedRNFixtures() throws {
@@ -36,13 +38,15 @@ struct HomeParityTests {
             case "backup":
                 var state = PersistedBackupState()
                 state.lastBackupStatus = try #require(.init(rawValue: input.status))
-                state.backupPending = try #require(input.pending)
+                try #require(input.pending != nil)
+                state.backupPending = input.pending == true
                 state.lastBackupAt = input.at
                 let banner = HomeBanner.backup(state, now: try #require(input.now), locale: Locale(identifier: "en"))
                 #expect(.banner(banner?.title) == fixture.expected, "\(fixture.name)")
                 #expect((banner?.retry == true) == (state.lastBackupStatus == .failed))
             case "round":
-                let round = HomeRound(roundID: 1, status: input.status, isFinal: try #require(input.final), isSuccess: false)
+                try #require(input.final != nil)
+                let round = HomeRound(roundID: 1, status: input.status, isFinal: input.final == true, isSuccess: false)
                 #expect(.round(round.active) == fixture.expected, "\(fixture.name)")
             default: Issue.record("Unknown Home fixture operation: \(input.operation)")
             }
@@ -137,7 +141,7 @@ struct HomeParityTests {
         #expect(calls == 1)
     }
 
-    @Test func shortBackgroundJobRefreshesIdleRoundsBetweenTicks() async {
+    @Test func shortBackgroundJobRefreshesIdleRoundsBetweenTicks() async throws {
         let activity = WalletBackgroundActivity()
         let stream = await activity.changes()
         var iterator = stream.makeAsyncIterator()
@@ -146,7 +150,8 @@ struct HomeParityTests {
         var deps = dependencies()
         deps.rounds = { calls += 1; return rounds }
         let model = HomeModel(dependencies: deps)
-        await model.backgroundChanged(await iterator.next()!)
+        let started = try #require(await iterator.next())
+        await model.backgroundChanged(started)
         await model.refreshRounds(force: true)
         #expect(calls == 1 && model.activeRounds.isEmpty)
         // Both edges happen before the consumer gets another turn (and without a tick).
@@ -154,7 +159,7 @@ struct HomeParityTests {
         #expect(await activity.isRunning)
         rounds = [.init(roundID: 2, status: "pending", isFinal: false, isSuccess: false)]
         await activity.end()
-        let completed = await iterator.next()!
+        let completed = try #require(await iterator.next())
         #expect(!completed.isRunning && completed.completionRevision == 1)
         #expect(!(await activity.isRunning))
         await model.backgroundChanged(completed)

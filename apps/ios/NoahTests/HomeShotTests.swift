@@ -15,7 +15,7 @@ import UIKit
 struct HomeShotTests {
     @Test(.timeLimit(.minutes(60))) func presentStates() async throws {
         let scene = try #require(UIApplication.shared.connectedScenes.first as? UIWindowScene)
-        let window = try #require(scene.windows.first { $0.isKeyWindow })
+        let window = try #require(scene.keyWindow)
         let original = window.rootViewController
         let folder = URL.documentsDirectory
         let request = folder.appending(path: "home-shot"), ready = folder.appending(path: "home-shot-ready")
@@ -58,8 +58,10 @@ struct HomeShotTests {
 
     static func at(_ days: Int, _ hour: Int, _ minute: Int) -> String {
         let calendar = Calendar.current
-        let day = calendar.date(byAdding: .day, value: -days, to: calendar.startOfDay(for: Date()))!
-        return HistoryRules.isoDate(calendar.date(bySettingHour: hour, minute: minute, second: 0, of: day)!)
+        let date = calendar.date(byAdding: .day, value: -days, to: calendar.startOfDay(for: Date()))
+            .flatMap { calendar.date(bySettingHour: hour, minute: minute, second: 0, of: $0)
+            }! // swiftlint:disable:this force_unwrapping - near-today Gregorian arithmetic stays in range
+        return HistoryRules.isoDate(date)
     }
 
     static func row(_ id: String, _ type: String, _ amount: Int64, _ direction: String, _ date: String,
@@ -152,8 +154,14 @@ private struct FixtureHost: View {
     let history: HistoryModel
     let home: HomeModel
     let rows: HomeShotTests.Rows
-    @State var fixture: HomeFixture
+    @State private var fixture: HomeFixture
     let paysAfter: Double?
+
+    init(app: AppModel, history: HistoryModel, home: HomeModel, rows: HomeShotTests.Rows, fixture: HomeFixture, paysAfter: Double?) {
+        self.app = app; self.history = history; self.home = home; self.rows = rows
+        _fixture = State(initialValue: fixture)
+        self.paysAfter = paysAfter
+    }
 
     var body: some View {
         WalletTabs(history: history, home: home)

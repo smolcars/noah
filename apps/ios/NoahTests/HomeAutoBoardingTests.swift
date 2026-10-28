@@ -16,12 +16,13 @@ struct HomeAutoBoardingTests {
     }
 
     @Test func homeMountsExactlyOneAutoBoardingService() throws {
-        var mounts: [(file: String, line: String, previous: [String])] = []
+        struct Mount { let file: String; let line: String; let previous: [String] }
+        var mounts: [Mount] = []
         for file in try Self.swiftFiles() {
             let lines = try String(contentsOf: file, encoding: .utf8).components(separatedBy: .newlines)
             for (index, line) in lines.enumerated() where line.contains("AutoBoardingService(")
                 && !line.contains("struct AutoBoardingService") && !line.trimmingCharacters(in: .whitespaces).hasPrefix("//") {
-                mounts.append((file.lastPathComponent, line, Array(lines[max(0, index - 3)..<index])))
+                mounts.append(Mount(file: file.lastPathComponent, line: line, previous: Array(lines[max(0, index - 3)..<index])))
             }
         }
         #expect(mounts.count == 1, "\(mounts.map(\.file))")

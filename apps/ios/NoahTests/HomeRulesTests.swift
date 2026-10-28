@@ -226,7 +226,7 @@ struct HomeRulesTests {
 
         // On-chain movements get the link; a board is a transfer between your own balances.
         row = HomeActivityRow(Self.row(type: "Onchain", kind: "onboard"), ownDomain: own)
-        #expect(row.title == "Board" && row.kind == .onchain && row.avatar == .chain && row.sign == "")
+        #expect(row.title == "Board" && row.kind == .onchain && row.avatar == .chain && row.sign.isEmpty)
         var deposit = Self.row("onchain-wallet-tx", type: "Onchain", status: nil, source: "onchain-wallet")
         deposit.hasConfirmation = false
         row = HomeActivityRow(deposit, ownDomain: own)

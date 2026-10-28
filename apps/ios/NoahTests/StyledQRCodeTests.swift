@@ -27,7 +27,7 @@ struct StyledQRCodeTests {
 
     @Test func matrixMatchesTheSymbolSizeAndKeepsFinderEyes() throws {
         let matrix = try #require(QRMatrix("maya@noahwallet.io"))
-        #expect((matrix.count - 21) % 4 == 0)
+        #expect((matrix.count - 21).isMultiple(of: 4))
         // Finder corners are dark, the separator next to them light.
         for (row, column) in [(0, 0), (0, matrix.count - 1), (matrix.count - 1, 0)] { #expect(matrix.isDark(row, column)) }
         #expect(!matrix.isDark(7, 7))

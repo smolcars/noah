@@ -27,7 +27,9 @@ struct OnboardingNameTests {
     private func type(_ text: String, into model: NameAvailability) async {
         model.text = text
         // The view calls this on every change, including the normalizing rewrite.
-        while !model.textChanged() {}
+        while !model.textChanged() {
+            // Call again, as the view would for the rewrite, until the text settles.
+        }
         await model.settle()
     }
 

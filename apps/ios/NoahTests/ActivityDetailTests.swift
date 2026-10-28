@@ -32,10 +32,11 @@ struct ActivityDetailTests {
     }
 
     static func onchainSend(status: String = "successful", broadcast: Bool = true) -> HistoryTransaction {
+        let destination = "bcrt1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh"
         var row = HomeRulesTests.row("movement-8", type: "Onchain", amount: 53_000, direction: "outgoing", status: status,
-                                     kind: "send-onchain", destination: "bcrt1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh",
+                                     kind: "send-onchain", destination: destination,
                                      effective: -55_550, offchainFee: 2_550)
-        row.sentTo = [.init(destination: row.destination!, amount_sat: 53_000, paymentMethod: "bitcoin")]
+        row.sentTo = [.init(destination: destination, amount_sat: 53_000, paymentMethod: "bitcoin")]
         row.txid = txid
         row.metadataJson = broadcast ? #"{"offboard_txid":"\#(txid)"}"# : "{}"
         return row
@@ -250,8 +251,9 @@ struct ActivityDetailTests {
     @Test func aCoinIDIsNeverATransactionID() {
         // Before an offboard's transaction exists, today's txid falls back to an input coin's ID.
         var offboard = Self.onchainSend(status: "pending", broadcast: false)
-        offboard.txid = String(repeating: "ef", count: 32) + ":1"
-        offboard.inputVtxos = [offboard.txid!]
+        let coin = String(repeating: "ef", count: 32) + ":1"
+        offboard.txid = coin
+        offboard.inputVtxos = [coin]
         #expect(offboard.chainTxid == nil)
         let detail = ActivityDetail(offboard, ownDomain: Self.own)
         #expect(detail.chainTxid == nil && detail.blockTxid == nil)

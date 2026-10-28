@@ -18,14 +18,14 @@ struct TranslationsTests {
     }
 
     struct Input: Decodable { let locale: String; let source: String; let args: [String] }
+    struct Platform: Decodable { let used: [String] }
     struct Coverage: Decodable {
-        struct Platform: Decodable { let used: [String] }
         let locales: [String]
         let coverage: [String: Platform]
     }
+    struct PluralEntry: Decodable { let source: String; let translations: [String: [String: String]] }
     struct Plurals: Decodable {
-        struct Entry: Decodable { let source: String; let translations: [String: [String: String]] }
-        let plurals: [Entry]
+        let plurals: [PluralEntry]
     }
 
     @Test func everyTypedDeletePromptAsksForTheWordTheCheckAccepts() {
