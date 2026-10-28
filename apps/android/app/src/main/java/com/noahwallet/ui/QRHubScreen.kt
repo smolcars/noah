@@ -6,6 +6,7 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.content.pm.PackageManager
 import androidx.activity.compose.BackHandler
+import androidx.activity.compose.LocalActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -44,7 +45,6 @@ fun QRHubScreen(lightningAddress: String?, displayName: String, onBack: () -> Un
     var askedToScan by rememberSaveable { mutableStateOf(false) }
     var permissionDenied by remember { mutableStateOf(false) }
     var copied by remember { mutableStateOf(false) }
-    val lifecycle = LocalLifecycleOwner.current.lifecycle
     val permission = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
         scanning = granted; permissionDenied = !granted
     }
@@ -52,42 +52,48 @@ fun QRHubScreen(lightningAddress: String?, displayName: String, onBack: () -> Un
     LaunchedEffect(Unit) { if (startScanning && !cameraGranted && !askedToScan) { askedToScan = true; permission.launch(Manifest.permission.CAMERA) } }
     LaunchedEffect(copied) { if (copied) { delay(1800); copied = false } }
     fun close() { scanning = false; if (startScanning) onBack() }
-    DisposableEffect(lifecycle) {
-        val observer = LifecycleEventObserver { _,
-                                                event -> if (event == Lifecycle.Event.ON_STOP && !(context as android.app.Activity).isChangingConfigurations && scanning) close() }
-        lifecycle.addObserver(observer)
-        onDispose { lifecycle.removeObserver(observer) }
-    }
+    CloseScannerOnStop({ scanning }, ::close)
     BackHandler { if (scanning) close() else onBack() }
     fun scan(value: String) { scanning = false; onScan(value) }
+    fun copy(value: String) { clipboard.setPrimaryClip(ClipData.newPlainText("Lightning address", value)); copied = true }
     if (scanning) Column(Modifier.fillMaxSize()) {
         Box(Modifier.weight(1f)) { SendScanner(onClose = ::close, onScan = ::scan) }
         TextButton({ clipboard.primaryClip?.getItemAt(0)?.coerceToText(context)?.toString()?.takeIf { it.trim().isNotEmpty() }?.let(::scan) },
             modifier = Modifier.fillMaxWidth()) { Text(tr("Paste")) }
-    } else if (!startScanning) BoxWithConstraints(Modifier.fillMaxSize()) {
+    } else if (!startScanning) MyCode(address, displayName, copied, onBack, onProfile, ::copy)
+    if (permissionDenied) WalletAlertDialog(onDismissRequest = { permissionDenied = false; close() }, title = { Text(tr("Permission required")) },
+        text = { Text(tr("Camera permission is required to scan QR codes.")) },
+        confirmButton = { TextButton({ permissionDenied = false; close() }) { Text(tr("OK")) } })
+}
+
+/** Leaving the app (not a rotation) while [scanning] closes the scanner. */
+@Composable
+private fun CloseScannerOnStop(scanning: () -> Boolean, close: () -> Unit) {
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    val activity = LocalActivity.current
+    DisposableEffect(lifecycle) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_STOP && activity?.isChangingConfigurations != true && scanning()) close()
+        }
+        lifecycle.addObserver(observer)
+        onDispose { lifecycle.removeObserver(observer) }
+    }
+}
+
+/** Your Lightning address as a QR, with your name and the address (tap either to [copy]); beside each other when wide. */
+@Composable
+private fun MyCode(address: String?, displayName: String, copied: Boolean, onBack: () -> Unit, onProfile: () -> Unit, copy: (String) -> Unit) {
+    BoxWithConstraints(Modifier.fillMaxSize()) {
         val wide = AdaptiveLayout.useDetailPane(maxWidth.value, maxHeight.value)
         val qrSide = AdaptiveLayout.qrSide(maxHeight.value - if (wide) 0f else 160f).dp
         val controls: @Composable () -> Unit = { TextButton(onBack) { Text(tr("Back")) } }
-        val code: @Composable () -> Unit = {
-            if (address != null) LightningAddressQR(address, qrSide) {
-                clipboard.setPrimaryClip(ClipData.newPlainText("Lightning address", address)); copied = true
-            }
-        }
-        val identity: @Composable () -> Unit = {
-            if (address != null) Column(verticalArrangement = Arrangement.spacedBy(20.dp)) {
-                if (displayName.trim().isNotEmpty()) Text(tr(displayName), style = MaterialTheme.typography.titleLarge)
-                Text(tr(if (copied) "Copied" else address.replace("@", "@\u200b").replace(".", ".\u200b")),
-                    Modifier.clickable { clipboard.setPrimaryClip(ClipData.newPlainText("Lightning address", address)); copied = true })
-                Text(tr("This QR contains only your Lightning address."))
-            }
-        }
         NoahForm("QR Code") {
             if (wide && address != null) Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(24.dp)) {
-                Box(Modifier.weight(1f)) { code() }
-                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(20.dp)) { controls(); identity() }
+                Box(Modifier.weight(1f)) { LightningAddressQR(address, qrSide) { copy(address) } }
+                Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(20.dp)) { controls(); Identity(address, displayName, copied, copy) }
             } else {
                 controls()
-                if (address != null) { code(); identity() }
+                if (address != null) { LightningAddressQR(address, qrSide) { copy(address) }; Identity(address, displayName, copied, copy) }
                 else Card(Modifier.fillMaxWidth()) {
                     Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         Text(tr("Lightning address unavailable"), style = MaterialTheme.typography.titleLarge)
@@ -98,9 +104,15 @@ fun QRHubScreen(lightningAddress: String?, displayName: String, onBack: () -> Un
             }
         }
     }
-    if (permissionDenied) WalletAlertDialog(onDismissRequest = { permissionDenied = false; close() }, title = { Text(tr("Permission required")) },
-        text = { Text(tr("Camera permission is required to scan QR codes.")) },
-        confirmButton = { TextButton({ permissionDenied = false; close() }) { Text(tr("OK")) } })
+}
+
+@Composable
+private fun Identity(address: String, displayName: String, copied: Boolean, copy: (String) -> Unit) {
+    Column(verticalArrangement = Arrangement.spacedBy(20.dp)) {
+        if (displayName.trim().isNotEmpty()) Text(tr(displayName), style = MaterialTheme.typography.titleLarge)
+        Text(tr(if (copied) "Copied" else address.replace("@", "@\u200b").replace(".", ".\u200b")), Modifier.clickable { copy(address) })
+        Text(tr("This QR contains only your Lightning address."))
+    }
 }
 
 /** My code: the styled QR of the literal Lightning address on its always-white tile; tapping copies it. */
