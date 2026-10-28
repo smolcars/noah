@@ -221,33 +221,11 @@ class WidgetDataWriterTest {
         assertEquals(WidgetDataWriter.Display(BitcoinAmountUnit.sats, true, "EUR"), WidgetDataWriter.Display.read(settings))
     }
 
-    private fun vtxo(id: String, expiry: UInt, state: VtxoState = VtxoState.Spendable, amount: ULong = 30_000u) =
-        Vtxo("server", 144u, OutPoint("anchor", 0u), OutPoint("point", 0u), id, amount, expiry, "pubkey", state, 1u, 500u, true)
-
     private class Chain(val items: List<Vtxo>, val due: Set<String>, val tipHeight: Long) : OnchainWalletAccess {
         override val walletID = "fixture"
         override suspend fun tip() = tipHeight
         override suspend fun vtxos() = items
         override suspend fun expiring(threshold: UInt) = due
-    }
-
-    private class Handles(override val m6: OnchainWalletAccess, val movements: List<Movement> = emptyList()) : WalletSession.Handles {
-        override fun notifications(): WalletSession.Notifications = error("unused")
-        override suspend fun history(): List<Movement> = movements
-        override suspend fun transactions(): List<WalletTransaction> = emptyList()
-        override suspend fun receiveRequest(): com.noahwallet.services.wallet.ReceiveRequest = error("unused")
-        override suspend fun receiveInvoice(request: ReceiveRequest, amountSat: Long, description: String): ReceiveRequest = error("unused")
-        override suspend fun initializeAddress() = Unit
-        override suspend fun peekPublicKey(index: UInt): String = error("unused")
-        override suspend fun peekAddress(index: UInt): String = error("unused")
-        override suspend fun summary(): WalletSession.Summary = error("unused")
-        override suspend fun sync() = Unit
-        override suspend fun maintenanceDelegated() = Unit
-        override suspend fun bolt11Invoice(amountSats: ULong): String = error("unused")
-        override suspend fun claimLightningReceives() = Unit
-        override suspend fun createSnapshot(destination: File): WalletSnapshotInfo = error("unused")
-        override suspend fun stopDaemonWait() = Unit
-        override fun close() = Unit
     }
 
     /** Home's Renew rule, for the same VTXOs: expiring, spendable and not yet expired; the soonest one's blocks. */
@@ -262,18 +240,57 @@ class WidgetDataWriterTest {
         for ((chain, blocks) in cases) {
             val home = HomeRules.renew(chain.items.map { vtxoModel(it, chain.tipHeight, chain.due) })
             assertEquals(home?.blocks, blocks)
-            assertEquals(blocks, WidgetDataWriter.extras(Handles(chain), "regtest").renewBlocks)
+            assertEquals(blocks, WidgetDataWriter.extras(WidgetHandles(chain), "regtest").renewBlocks)
         }
         // A failed read is no Renew line, and doesn't stop the wave.
         val broken = object : OnchainWalletAccess { override val walletID = "x"; override suspend fun tip() = 100L }
-        assertEquals(WidgetDataWriter.Extras(emptyList(), 100, null), WidgetDataWriter.extras(Handles(broken), "regtest"))
+        assertEquals(WidgetDataWriter.Extras(emptyList(), 100, null, balance = WidgetHandles.empty), WidgetDataWriter.extras(WidgetHandles(broken), "regtest"))
     }
+}
+
+internal fun vtxo(id: String, expiry: UInt = 200u, state: VtxoState = VtxoState.Spendable, amount: ULong = 30_000u) =
+    Vtxo("server", 144u, OutPoint("anchor", 0u), OutPoint("point", 0u), id, amount, expiry, "pubkey", state, 1u, 500u, true)
+
+/**
+ * A wallet for the widget's reads: each read returns the next of its list, the last one repeated, so a payment can
+ * settle between them. A null receives entry is a failed read.
+ */
+internal class WidgetHandles(override val m6: OnchainWalletAccess, val balances: List<WalletBalance> = listOf(empty),
+    val histories: List<List<Movement>> = listOf(emptyList()), val receives: List<List<LightningReceive>?> = listOf(emptyList()),
+    val boards: List<List<String>> = listOf(emptyList())) : WalletSession.Handles {
+    companion object {
+        val empty = WalletBalance(WalletBalance.Ark(0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u), WalletBalance.Onchain(0u, 0u, 0u))
+    }
+    var balanceReads = 0
+    var historyReads = 0
+    private var receiveReads = 0
+    private var boardReads = 0
+    private fun <T> List<T>.read(index: Int) = this[minOf(index, lastIndex)]
+    override suspend fun balance() = balances.read(balanceReads++)
+    override suspend fun history() = histories.read(historyReads++)
+    override suspend fun transactions(): List<WalletTransaction> = emptyList()
+    override suspend fun pendingLightningReceives() = receives.read(receiveReads++) ?: error("unavailable")
+    override suspend fun pendingBoardVtxos() = boards.read(boardReads++).map { vtxo(it) }
+    override fun notifications(): WalletSession.Notifications = error("unused")
+    override suspend fun receiveRequest(): ReceiveRequest = error("unused")
+    override suspend fun receiveInvoice(request: ReceiveRequest, amountSat: Long, description: String): ReceiveRequest = error("unused")
+    override suspend fun initializeAddress() = Unit
+    override suspend fun peekPublicKey(index: UInt): String = error("unused")
+    override suspend fun peekAddress(index: UInt): String = error("unused")
+    override suspend fun summary(): WalletSession.Summary = error("unused")
+    override suspend fun sync() = Unit
+    override suspend fun maintenanceDelegated() = Unit
+    override suspend fun bolt11Invoice(amountSats: ULong): String = error("unused")
+    override suspend fun claimLightningReceives() = Unit
+    override suspend fun createSnapshot(destination: File): WalletSnapshotInfo = error("unused")
+    override suspend fun stopDaemonWait() = Unit
+    override fun close() = Unit
 }
 
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35], application = android.app.Application::class)
 class RecurringWidgetExpiryTest {
-    /** Recurring writes the whole snapshot like every writer; a wave or Renew it couldn't read just isn't drawn. */
+    /** Recurring writes the whole snapshot like every writer; a wave it couldn't read keeps the earlier days, a Renew isn't drawn. */
     @Test fun recurringWriteIsWhole() = runBlocking {
         val context = RuntimeEnvironment.getApplication()
         val balance = WalletBalance(WalletBalance.Ark(1234u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u), WalletBalance.Onchain(0u, 0u, 0u))
@@ -281,6 +298,6 @@ class RecurringWidgetExpiryTest {
         WidgetDataWriter.write(context, balance, WidgetDataWriter.Extras(emptyList(), 100, 12), { display }, "regtest", WidgetDataWriter.ticket())
         WidgetDataWriter.write(context, balance, WidgetDataWriter.Extras(), { display }, "regtest", WidgetDataWriter.ticket())
         val stored = WidgetSnapshot.read(context.getSharedPreferences("com.noahwallet.regtest", Context.MODE_PRIVATE))!!
-        assertEquals(1234L, stored.balance); assertNull(stored.renewDue); assertNull(stored.daily)
+        assertEquals(1234L, stored.balance); assertNull(stored.renewDue); assertEquals(List(31) { 1234L }, stored.daily)
     }
 }

@@ -14,7 +14,7 @@ object WidgetWave {
     /** Ten minutes a block, as Home's Renew counts them. */
     const val BLOCK_MILLIS = 600_000L
 
-    /** A settled balance change: [at] in epoch milliseconds, [sats] signed. */
+    /** A balance change: [at] in epoch milliseconds, [sats] signed. */
     data class Change(val at: Long, val sats: Long)
 
     /**
@@ -87,29 +87,64 @@ object WidgetWave {
     }
 
     /**
-     * Settled balance changes in the rows Activity reads (bark's movements and the wallet's transactions, before
-     * Activity merges them), the same as the iOS widget. A movement counts once successful, dated by its creation (the
-     * date Activity shows). A confirmed transaction a movement names counts on that movement's day once the movement
-     * isn't pending, so a board moves the balance by its fee alone; any other confirmed transaction counts at its
-     * [chainDates] date (txid → epoch ms, see [ChainDate]), or not at all without one.
+     * What bark-bolt-ffi reports about pending items, read with the rows: the movements of Lightning receives whose
+     * preimage is out (`pendingLightningReceives`, "preimage-revealed", which `claimable_lightning_receive` counts) and
+     * the board VTXOs `pending_board` counts (`pendingBoardVtxos`).
      */
-    fun changes(rows: List<HistoryTransaction>, chainDates: Map<String, Long>): List<Change> {
+    data class Pending(val claimableReceives: Set<UInt> = emptySet(), val boardVtxos: Set<String> = emptySet())
+
+    /**
+     * The balance changes in the rows Activity reads (bark's movements and the wallet's transactions, before Activity
+     * merges them), the same as the iOS widget: anything the displayed total already reflects. Settled movements count at
+     * their creation (the date Activity shows). A pending movement holds its sats in the total until it settles (a
+     * Lightning or Ark send, a round, an exit), so it isn't a change yet; except a Lightning receive or a board the
+     * total already counts ([pending]), and an offboard once its transaction is out ([offboarded]). Transactions are all
+     * in the on-chain total, confirmed or not: they count on the day of the movement that names them, any other at its
+     * [chainDates] date (txid → epoch ms, see [ChainDate]), or not at all without one. Failed and canceled movements
+     * aren't changes.
+     */
+    fun changes(rows: List<HistoryTransaction>, chainDates: Map<String, Long>, pending: Pending = Pending()): List<Change> {
         val movements = rows.filter { it.source != "onchain-wallet" }
         val owners = owners(movements)
         val changes = movements.mapNotNull { row ->
-            val sats = row.effectiveBalanceSat?.takeIf { it != 0L && row.movementStatus == "successful" } ?: return@mapNotNull null
+            val sats = row.effectiveBalanceSat?.takeIf { it != 0L && (row.movementStatus == "successful" || counts(row, pending)) }
+                ?: return@mapNotNull null
             row.timestamp?.let { Change(it.time, sats) }
         }.toMutableList()
         for (row in rows) chainChange(row, owners, chainDates)?.let { changes += it }
         return changes
     }
 
-    /** A confirmed wallet transaction's change: on its owner's day once the owner isn't pending, else at its chain date. */
+    /** A pending Lightning receive or board the total already counts. */
+    private fun counts(row: HistoryTransaction, pending: Pending): Boolean = row.movementStatus == "pending" && when (row.movementKind) {
+        "lightning-receive" -> row.movementId in pending.claimableReceives
+        "onboard" -> row.outputVtxos.orEmpty().any { it in pending.boardVtxos }
+        else -> false
+    }
+
+    /** Each pending offboard's amount, for [offboarded]. */
+    fun offboards(rows: List<HistoryTransaction>): List<Change> = rows.mapNotNull { row ->
+        val sats = row.effectiveBalanceSat?.takeIf { it < 0 && row.movementStatus == "pending" && row.subsystemName == "bark.offboard" }
+        sats?.let { row.timestamp?.let { at -> Change(at.time, it) } }
+    }
+
+    /**
+     * The part of the pending [offboards] the total no longer counts, as one change: bark-bolt-ffi doesn't say which
+     * offboard's transaction is out, only what `pending_offboard` still [held] (before broadcast it holds an offboard's
+     * sats, or more while change is split off). Dated by the oldest, usually the only one.
+     */
+    fun offboarded(offboards: List<Change>, held: Long): List<Change> {
+        val left = -offboards.sumOf { it.sats } - held
+        val oldest = offboards.minOfOrNull { it.at } ?: return emptyList()
+        return if (left > 0) listOf(Change(oldest, -left)) else emptyList()
+    }
+
+    /** A wallet transaction's change, confirmed or not: on the day of the movement that names it, else at its chain date. */
     private fun chainChange(row: HistoryTransaction, owners: Map<String, HistoryTransaction>, chainDates: Map<String, Long>): Change? {
-        if (row.source != "onchain-wallet" || row.hasConfirmation != true) return null
+        if (row.source != "onchain-wallet") return null
         val sats = row.balanceChangeSat?.takeIf { it != 0L } ?: return null
         val owner = row.txid?.let(owners::get)
-        if (owner != null) return if (owner.movementStatus != "pending") owner.timestamp?.let { Change(it.time, sats) } else null
+        if (owner != null) return owner.timestamp?.let { Change(it.time, sats) }
         return row.txid?.let(chainDates::get)?.let { Change(it, sats) }
     }
 
@@ -136,18 +171,23 @@ object WidgetWave {
     }
 
     /**
-     * When a confirmed transaction was confirmed. bark reports only its height, so the first sighting estimates it as
+     * When a wallet transaction happened. One first seen unconfirmed takes that moment ([exact] true), which confirming
+     * never moves. bark reports a confirmed one's height only, so its first sighting estimates it as
      * now − (tip − height) × 10 min and keeps that ([exact] false) rather than recomputing it, which would drift a day
-     * per day while the tip stands still; a block time Activity has read replaces it ([exact] true).
+     * per day while the tip stands still; a block time Activity has read replaces an estimate, never an exact date.
      */
     @kotlinx.serialization.Serializable
     data class ChainDate(val at: Long, val exact: Boolean = false)
 
-    /** The confirmed wallet transactions' dates in [rows]: [known] block times, else [stored], else a first estimate. */
+    /**
+     * The wallet transactions' dates in [rows]: an unconfirmed one [stored] or seen [now]; a confirmed one's [stored]
+     * exact date, else a [known] block time, else [stored], else a first estimate.
+     */
     fun chainDates(rows: List<HistoryTransaction>, stored: Map<String, ChainDate>, known: Map<String, Long>, tip: Long?, now: Long): Map<String, ChainDate> =
-        rows.filter { it.source == "onchain-wallet" && it.hasConfirmation == true && !it.txid.isNullOrEmpty() }.mapNotNull { row ->
+        rows.filter { it.source == "onchain-wallet" && !it.txid.isNullOrEmpty() }.mapNotNull { row ->
             val txid = row.txid!!
-            val date = known[txid]?.takeIf { it > 0 }?.let { ChainDate(it, exact = true) } ?: stored[txid]
+            val date = if (row.hasConfirmation != true) stored[txid] ?: ChainDate(now, exact = true)
+            else stored[txid]?.takeIf { it.exact } ?: known[txid]?.takeIf { it > 0 }?.let { ChainDate(it, exact = true) } ?: stored[txid]
                 ?: row.confirmationHeight?.toLong()?.let { height -> tip?.let { ChainDate(now - (it - height).coerceAtLeast(0) * BLOCK_MILLIS) } }
             date?.let { txid to it }
         }.toMap()

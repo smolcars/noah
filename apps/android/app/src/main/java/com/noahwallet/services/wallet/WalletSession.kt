@@ -81,6 +81,10 @@ class WalletSession internal constructor(
         suspend fun peekPublicKey(index: UInt): String
         suspend fun peekAddress(index: UInt): String
         suspend fun summary(): Summary
+        /** The balances alone, without the summary's history read (the widget checks them around its reads). */
+        suspend fun balance(): WalletBalance = summary().balance
+        suspend fun pendingLightningReceives(): List<io.github.niteshbalusu11.bark.LightningReceive> = throw UnsupportedOperationException()
+        suspend fun pendingBoardVtxos(): List<io.github.niteshbalusu11.bark.Vtxo> = throw UnsupportedOperationException()
         suspend fun sync()
         suspend fun maintenanceDelegated()
         suspend fun bolt11Invoice(amountSats: ULong): String
@@ -756,17 +760,20 @@ class WalletSession internal constructor(
         override suspend fun initializeAddress() { wallet.deriveStoreNextKeypair() }
         override suspend fun peekPublicKey(index: UInt) = wallet.peekPublicKey(index)
         override suspend fun peekAddress(index: UInt): String = wallet.peekAddress(index)
-        override suspend fun summary(): Summary {
+        override suspend fun summary() = Summary(wallet.network(), wallet.fingerprint(), balance(), wallet.history().size)
+        override suspend fun balance(): WalletBalance {
             val ark = wallet.balance()
             val chain = onchain.balance()
-            return Summary(wallet.network(), wallet.fingerprint(), WalletBalance(
+            return WalletBalance(
                 WalletBalance.Ark(ark.spendableSats, ark.needsRefreshSats, ark.pendingLightningSendSats,
                     ark.claimableLightningReceiveSats, ark.pendingInRoundSats, ark.pendingExitSats,
                     ark.pendingBoardSats, ark.pendingArkoorSendSats, ark.pendingOffboardSats,
                     pending = ark.pendingSats, total = ark.totalSats),
                 WalletBalance.Onchain(chain.confirmedSats, chain.pendingSats, chain.totalSats),
-            ), wallet.history().size)
+            )
         }
+        override suspend fun pendingLightningReceives() = wallet.pendingLightningReceives()
+        override suspend fun pendingBoardVtxos() = wallet.pendingBoardVtxos()
         override suspend fun sync() { WalletSync.attemptAll({ onchain.sync() }, { wallet.sync() }) }
         override suspend fun maintenanceDelegated() { wallet.maintenanceDelegated() }
         override suspend fun bolt11Invoice(amountSats: ULong) = wallet.bolt11Invoice(amountSats, null).invoice

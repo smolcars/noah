@@ -88,7 +88,9 @@ class WidgetWaveTest {
 
     /**
      * The movement → balance change mapping, against the history fixtures' own rows: a successful movement moves the
-     * balance by its effective delta; pending, failed and canceled movements, and unconfirmed transactions, don't.
+     * balance by its effective delta; failed and canceled movements don't, nor pending ones that still hold their sats
+     * (receives and boards count by their own state, [com.noahwallet.services.push.WidgetPendingPaymentsTest]); a
+     * transaction does, confirmed or not, at its date (an unconfirmed one when first seen).
      */
     @Test fun historyFixtureRowsMapToSettledChanges() {
         val now = instant("2026-10-27T15:00:00Z"); val confirmed = instant("2026-10-25T09:00:00Z")
@@ -108,8 +110,8 @@ class WidgetWaveTest {
                 else assertEquals(case.name, emptyList<WidgetWave.Change>(), changes)
             } else {
                 transactions++
-                if (row.hasConfirmation == true) assertEquals(case.name, listOf(WidgetWave.Change(confirmed, row.balanceChangeSat!!)), changes)
-                else assertEquals(case.name, emptyList<WidgetWave.Change>(), changes)
+                val at = if (row.hasConfirmation == true) confirmed else now
+                assertEquals(case.name, listOf(WidgetWave.Change(at, row.balanceChangeSat!!)), changes)
             }
         }
         assertTrue(movements > 20); assertTrue(transactions > 0)
@@ -131,16 +133,25 @@ class WidgetWaveTest {
         val changes = WidgetWave.changes(listOf(board, chain, deposit, pending), dates)
         assertEquals(setOf(WidgetWave.Change(instant("2026-10-20T12:00:00Z"), 50_000), WidgetWave.Change(instant("2026-10-20T12:00:00Z"), -50_500),
             WidgetWave.Change(instant("2026-10-26T08:00:00Z"), 60_000)), changes.toSet())
-        // An offboard counts its Ark half once settled, and its on-chain half once that's confirmed.
+        // A settled offboard to this wallet moves it by the fee, its credit confirmed or not.
         val offboard = board.copy(id = "movement-8", txid = "offboard-txid", movementKind = "offboard", effectiveBalanceSat = -30_000,
             metadataJson = """{"offboard_txid":"offboard-txid"}""")
         val credit = chain.copy(id = "onchain-wallet-offboard-txid", txid = "offboard-txid", balanceChangeSat = 29_700, hasConfirmation = false,
             confirmationHeight = null)
-        assertEquals(-30_000L, WidgetWave.changes(listOf(offboard, credit), emptyMap()).sumOf { it.sats })
+        assertEquals(-300L, WidgetWave.changes(listOf(offboard, credit), emptyMap()).sumOf { it.sats })
         val confirmed = credit.copy(hasConfirmation = true, confirmationHeight = 990u)
         assertEquals(-300L, WidgetWave.changes(listOf(offboard, confirmed), emptyMap()).sumOf { it.sats })
-        // A pending board changes nothing, either half.
-        assertEquals(emptyList<WidgetWave.Change>(), WidgetWave.changes(listOf(board.copy(movementStatus = "pending"), chain), emptyMap()))
+        // A pending board: its funding transaction as the on-chain total counts it, the board once bark reports its VTXO
+        // in pending_board (pendingBoardVtxos), confirmed funding or not; another board's VTXO doesn't count it.
+        val boarding = board.copy(movementStatus = "pending", outputVtxos = listOf("board-vtxo"))
+        val funding = WidgetWave.Change(instant("2026-10-20T12:00:00Z"), -50_500)
+        for (transaction in listOf(chain, chain.copy(hasConfirmation = false, confirmationHeight = null))) {
+            assertEquals(listOf(funding), WidgetWave.changes(listOf(boarding, transaction), emptyMap()))
+            val another = WidgetWave.Pending(boardVtxos = setOf("another-board"))
+            assertEquals(listOf(funding), WidgetWave.changes(listOf(boarding, transaction), emptyMap(), another))
+            assertEquals(setOf(WidgetWave.Change(instant("2026-10-20T12:00:00Z"), 50_000), funding),
+                WidgetWave.changes(listOf(boarding, transaction), emptyMap(), WidgetWave.Pending(boardVtxos = setOf("board-vtxo"))).toSet())
+        }
     }
 
     /**
@@ -184,10 +195,11 @@ class WidgetWaveTest {
             val rows = listOf(offboard.copy(movementStatus = offboardStatus), renewal.copy(movementStatus = renewalStatus))
             for (order in listOf(rows, rows.reversed())) {
                 val changes = WidgetWave.changes(order + credit, emptyMap())
-                val expected = (if (offboardStatus == "successful") -50_000L + 49_700 else 0L) + (if (renewalStatus == "successful") -120L else 0L)
+                // The credit is in the on-chain total either way; the round's Ark side holds its sats until it settles.
+                val expected = 49_700L + (if (offboardStatus == "successful") -50_000L else 0L) + (if (renewalStatus == "successful") -120L else 0L)
                 assertEquals("offboard $offboardStatus, renewal $renewalStatus, ${order.first().movementKind} first", expected, changes.sumOf { it.sats })
                 // The credit lands on the offboard's day, never the renewal's.
-                if (offboardStatus == "successful") assertTrue(changes.filter { it.sats == 49_700L }.all { it.at == instant("2026-10-25T12:00:00Z") })
+                assertTrue(changes.filter { it.sats == 49_700L }.all { it.at == instant("2026-10-25T12:00:00Z") })
                 assertEquals("offboard owns it", "movement-10", WidgetWave.owners(order)["round-txid"]?.id)
             }
         }
@@ -209,9 +221,13 @@ class WidgetWaveTest {
         val exact = WidgetWave.chainDates(listOf(deposit), first, mapOf("deposit" to instant("2026-10-27T13:30:00Z")), 1_000, later)
         assertEquals(WidgetWave.ChainDate(instant("2026-10-27T13:30:00Z"), exact = true), exact["deposit"])
         assertEquals(exact, WidgetWave.chainDates(listOf(deposit), exact, emptyMap(), 2_000, later))
-        // Unconfirmed transactions have no date; transactions no longer listed are dropped; no tip, no estimate.
-        assertEquals(emptyMap<String, WidgetWave.ChainDate>(),
-            WidgetWave.chainDates(listOf(deposit.copy(hasConfirmation = false)), first, emptyMap(), 1_000, now))
+        // An unconfirmed one is dated when first seen, exactly: confirming, even with Activity's block time, never moves it.
+        val unconfirmed = deposit.copy(hasConfirmation = false, confirmationHeight = null)
+        val seen = WidgetWave.chainDates(listOf(unconfirmed), emptyMap(), emptyMap(), 1_000, now)
+        assertEquals(WidgetWave.ChainDate(now, exact = true), seen["deposit"])
+        assertEquals(seen, WidgetWave.chainDates(listOf(unconfirmed), seen, emptyMap(), 1_000, later))
+        assertEquals(seen, WidgetWave.chainDates(listOf(deposit), seen, mapOf("deposit" to instant("2026-10-30T10:00:00Z")), 1_001, later))
+        // Transactions no longer listed are dropped; no tip, no estimate.
         assertEquals(emptyMap<String, WidgetWave.ChainDate>(), WidgetWave.chainDates(emptyList(), first, emptyMap(), 1_000, now))
         assertEquals(emptyMap<String, WidgetWave.ChainDate>(), WidgetWave.chainDates(listOf(deposit), emptyMap(), emptyMap(), null, now))
     }

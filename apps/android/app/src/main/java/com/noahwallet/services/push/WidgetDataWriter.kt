@@ -36,9 +36,11 @@ object WidgetDataWriter {
     /**
      * The rows Activity reads, before it merges them (the wave's changes; merged, Home's Arriving rule), the chain tip
      * they're dated against and Home's Renew (blocks to the soonest due expiry); each null when unreadable or none.
+     * [pending]: what bark reports pending, null when unread or not consistent with the rows (the wave then keeps the
+     * earlier days); [balance]: the balance the rows and [pending] were read against, which the snapshot then shows.
      */
     data class Extras(val rows: List<com.noahwallet.history.HistoryTransaction>? = null, val tip: Long? = null,
-        val renewBlocks: Long? = null)
+        val renewBlocks: Long? = null, val pending: WidgetWave.Pending? = WidgetWave.Pending(), val balance: WalletBalance? = null)
 
     /** Home's persisted keys the widget follows. */
     data class Display(val unit: BitcoinAmountUnit, val hidden: Boolean, val currency: String) {
@@ -77,7 +79,7 @@ object WidgetDataWriter {
      * wallet), is dropped. Every writer takes it the same way.
      */
     fun ticket(): Long = reads.incrementAndGet()
-    /** Confirmed transactions' dates by txid ([WidgetWave.ChainDate]), kept beside the snapshot and cleared with it. */
+    /** Wallet transactions' dates by txid ([WidgetWave.ChainDate]), kept beside the snapshot and cleared with it. */
     internal const val CHAIN_DATES = "widgetChainDates"
     private val dateMap = MapSerializer(String.serializer(), WidgetWave.ChainDate.serializer())
     private fun dates(raw: String?): Map<String, WidgetWave.ChainDate> =
@@ -89,11 +91,7 @@ object WidgetDataWriter {
 
     /** Reads [Extras] inside the caller's counted session call. */
     internal suspend fun extras(handles: WalletSession.Handles, variant: String): Extras {
-        // Every movement, so one that only names a transaction (a free renewal) still claims it, as on iOS.
-        val rows = optional {
-            handles.history().map { HistoryMapping.transaction(it) } +
-                handles.transactions().filter { it.balanceChangeSats != 0L }.map { HistoryMapping.transaction(it) }
-        }
+        val records = records(handles)
         val tip = optional { handles.m6.tip() }
         val renew = optional {
             // Home's Renew rule: refreshable VTXOs in bark's expiring set for the refresh threshold.
@@ -102,18 +100,61 @@ object WidgetDataWriter {
             val expiring = handles.m6.expiring(threshold)
             HomeRules.renew(handles.m6.vtxos().map { com.noahwallet.onchain.vtxoModel(it, height, expiring) })?.blocks
         }
-        return Extras(rows, tip, renew)
+        return Extras(records?.rows, tip, renew, records?.pending, records?.balance)
     }
 
+    /**
+     * The rows and what bark reports pending, between two balance reads that agree on what the changes depend on: a
+     * receive or board settling in between would be counted by neither read. Collected once more if they don't; then,
+     * or if a read fails, [Extras.pending] is null. Null when the history can't be read.
+     */
+    private suspend fun records(handles: WalletSession.Handles): Extras? {
+        var records: Extras? = null
+        repeat(2) {
+            val before = optional { handles.balance() }
+            // Every movement, so one that only names a transaction (a free renewal) still claims it, as on iOS.
+            val rows = optional {
+                handles.history().map { HistoryMapping.transaction(it) } +
+                    handles.transactions().filter { it.balanceChangeSats != 0L }.map { HistoryMapping.transaction(it) }
+            } ?: return records
+            val pending = optional {
+                WidgetWave.Pending(handles.pendingLightningReceives().filter { it.state == "preimage-revealed" }.mapNotNull { it.movementId }.toSet(),
+                    handles.pendingBoardVtxos().map { it.id }.toSet())
+            }
+            val after = optional { handles.balance() }
+            records = Extras(rows, pending = null)
+            if (pending == null || before == null || after == null) return records
+            if (settled(before, after)) return Extras(rows, pending = pending, balance = after)
+        }
+        return records
+    }
+
+    /** The buckets the wave's pending rules read, and the total, are the same in both reads. */
+    private fun settled(before: WalletBalance, after: WalletBalance) = before.totalSats == after.totalSats &&
+        before.ark.claimableLightningReceive == after.ark.claimableLightningReceive && before.ark.pendingBoard == after.ark.pendingBoard &&
+        before.ark.pendingOffboard == after.ark.pendingOffboard
+
+    /**
+     * The snapshot for [balance], or for the balance [extras] were read against. Without the wave's records the earlier
+     * days stay as [previous] wrote them and today takes the balance; with neither, calm water.
+     */
     @Suppress("LongParameterList") // now and zone are test seams
     internal fun snapshot(balance: WalletBalance, extras: Extras?, display: Display, quote: Quote?, chainDates: Map<String, Long> = emptyMap(),
-        now: Long = System.currentTimeMillis(), zone: TimeZone = TimeZone.getDefault()): WidgetSnapshot {
-        val total = balance.totalSats.toLong()
-        val changes = extras?.rows?.let { WidgetWave.changes(it, chainDates) }
+        now: Long = System.currentTimeMillis(), zone: TimeZone = TimeZone.getDefault(), previous: WidgetSnapshot? = null): WidgetSnapshot {
+        val shown = extras?.balance ?: balance
+        val total = shown.totalSats.toLong()
+        val changes = extras?.rows?.let { rows ->
+            extras.pending?.let {
+                WidgetWave.changes(rows, chainDates, it) + WidgetWave.offboarded(WidgetWave.offboards(rows), shown.ark.pendingOffboard.toLong())
+            }
+        }
+        val kept = previous?.daily?.let { days ->
+            (previous.writtenAt?.let { WidgetWave.shifted(days, WidgetWave.day(it, zone), WidgetWave.day(now, zone)) } ?: days).dropLast(1) + total
+        }
         val price = quote?.takeIf { it.currency == display.currency && it.price.isFinite() && it.price > 0 }?.price
         // Home counts what's arriving in Activity's merged rows.
-        return WidgetSnapshot(balance = total, arriving = HomeRules.arriving(balance, HistoryRules.unified(extras?.rows.orEmpty())).toLong(),
-            daily = changes?.let { WidgetWave.dailyBalances(total, it, now, zone) }, writtenAt = now,
+        return WidgetSnapshot(balance = total, arriving = HomeRules.arriving(shown, HistoryRules.unified(extras?.rows.orEmpty())).toLong(),
+            daily = changes?.let { WidgetWave.dailyBalances(total, it, now, zone) } ?: kept, writtenAt = now,
             amountUnit = display.unit.name, hidden = display.hidden,
             fiatCurrency = price?.let { display.currency }, fiatPrice = price,
             renewDue = extras?.renewBlocks?.let { now + it * WidgetWave.BLOCK_MILLIS })
@@ -156,7 +197,8 @@ object WidgetDataWriter {
             val committed = prefs.commitEdit {
                 clear()
                     .putString(WidgetSnapshot.KEY,
-                        snapshot(balance, extras, display, quote(display.currency, stored), chainDates.mapValues { it.value.at }, now).encode())
+                        snapshot(balance, extras, display, quote(display.currency, stored), chainDates.mapValues { it.value.at }, now,
+                            previous = stored).encode())
                     .putString(CHAIN_DATES, kotlinx.serialization.json.Json.encodeToString(dateMap, chainDates))
                 checkStage()
             }
