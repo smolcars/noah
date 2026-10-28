@@ -98,7 +98,9 @@ struct HomeView: View {
         .overlay(alignment: .top) { settingsToastLayer }
         // Activity's links and a recurring payment notification open their page with Settings beneath.
         .onChange(of: settingsRoute.page != nil && isActive, initial: true) { _, ready in
-            guard ready, let next = settingsRoute.take() else { return }
+            guard ready else { return }
+            let next = settingsRoute.take()
+            guard !next.isEmpty else { return }
             sheet = nil
             path = next
         }

@@ -3,6 +3,7 @@ import Foundation
 
 /// Write-ahead policy authority. A recovered MMKV snapshot can never repair this evidence.
 final class RecurringPolicyLedger: @unchecked Sendable {
+    // swiftlint:disable:next line_length - one literal: translations.mjs reads copy as a single string
     static let message = "Recurring policy evidence needs attention. Saved schedules are preserved; edit or resume them to approve a new revision. Sending remains stopped."
     static let logMessage = "Recurring policy rollback or unavailable evidence detected; sending stopped"
     struct Marker: Codable { let version: Int; let binding: RecurringStore.Binding }
@@ -18,6 +19,7 @@ final class RecurringPolicyLedger: @unchecked Sendable {
         var predecessor: String?
         var digestVersion: Int?
         var predecessorVersion: Int?
+        // swiftlint:disable:next discouraged_optional_boolean - ledger files omit it outside migrations; nil keeps that format
         var formatMigration: Bool?
     }
     private struct State: Codable {
@@ -33,7 +35,8 @@ final class RecurringPolicyLedger: @unchecked Sendable {
     init(file: URL, sync: @escaping @Sendable (URL) throws -> Void = RestoreTransaction.fullSync) { self.file = file; self.sync = sync }
     private func key(_ binding: RecurringStore.Binding, _ id: String) throws -> String {
         let encoder = JSONEncoder(); encoder.outputFormatting = .sortedKeys
-        return SHA256.hash(data: try encoder.encode(binding)).map { String(format: "%02x", $0) }.joined() + ":" + id
+        let data = try encoder.encode(binding)
+        return SHA256.hash(data: data).map { String(format: "%02x", $0) }.joined() + ":" + id
     }
     // Frozen projections preserve the exact encoder tokens, including escaped strings and numbers.
     private func digest(_ schedule: RecurringPayment, version: Int) throws -> String {
@@ -46,12 +49,13 @@ final class RecurringPolicyLedger: @unchecked Sendable {
             return object
         }
         let names =
-            "id label destination destinationType amountSat comment interval startAt endAt maxOccurrences nativeRevision status nextOccurrenceIndex nextRunAt occurrencesPaid consecutiveFailures lastError retryNotBefore inFlight runs createdAt updatedAt" +
-            (version == 2 ? " issue" : "")
-        var row = try fields(String(decoding: encoder.encode(schedule), as: UTF8.self), names)
-        row.fields["interval"] = try fields(row.fields["interval"]!, "unit every").json()
+            "id label destination destinationType amountSat comment interval startAt endAt maxOccurrences nativeRevision status nextOccurrenceIndex "
+                + "nextRunAt occurrencesPaid consecutiveFailures lastError retryNotBefore inFlight runs createdAt updatedAt"
+                + (version == 2 ? " issue" : "")
+        var row = try fields(RawObject.text(encoder.encode(schedule)), names)
+        row.fields["interval"] = try fields(row.required("interval"), "unit every").json()
         if let flight = row.fields["inFlight"] { row.fields["inFlight"] = try fields(flight, "occurrenceIndex startedAt").json() }
-        let runs = try RawObject.arrayObjects(row.fields["runs"]!)
+        let runs = try RawObject.arrayObjects(row.required("runs"))
         row.fields["runs"] = "[" + (try runs.map { try fields($0.json(), "occurrenceIndex scheduledFor attemptedAt status amountSat error").json() })
             .joined(separator: ",") + "]"
         if let issue = row.fields["issue"] { row.fields["issue"] = try fields(issue, "code arguments").json() }
@@ -138,7 +142,10 @@ final class RecurringPolicyLedger: @unchecked Sendable {
                 next.settlementKey = settlementKey ?? state.entries[key]?.settlementKey
                 if settlementKey != nil || migrationIDs.contains(id) {
                     next.pending = schedule; next.predecessor = state.entries[key]?.digest
-                    next.predecessorVersion = try state.entries[key].map { try matchingVersion($0, before[id]!) }
+                    if let previous = state.entries[key] {
+                        guard let original = before[id] else { throw RecurringError.message(Self.message) }
+                        next.predecessorVersion = try matchingVersion(previous, original)
+                    } else { next.predecessorVersion = nil }
                     next.formatMigration = migrationIDs.contains(id)
                 }
                 state.entries[key] = next

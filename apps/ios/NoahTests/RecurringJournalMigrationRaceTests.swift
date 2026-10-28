@@ -9,7 +9,8 @@ import Testing
         let s = try h.add(), binding = h.owner.withLock { $0 }, now = h.now
         let entry = RecurringJournal.Entry(binding: binding, scheduleID: s.id, plan: s.plan(now: now), markedAt: now, policyRevision: s.nativeRevision)
         try h.journal.save(entry)
-        let (payment, quote, _) = h.quoted(s, fees: RecurringFeePolicy.fallback)
+        let quoted = h.quoted(s, fees: RecurringFeePolicy.fallback)
+        let payment = quoted.payment, quote = quoted.quote
         await h.controller.submitAndWait(payment, quote: quote, recurringKey: entry.key, beforeSubmit: {})
         let paid = try #require(h.saved)
         #expect(paid.receipt != nil)

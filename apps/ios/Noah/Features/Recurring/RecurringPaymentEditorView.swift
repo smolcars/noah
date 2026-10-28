@@ -33,7 +33,8 @@ struct RecurringPaymentEditorView: View {
         _frequency = State(initialValue: schedule?.interval.unit ?? "month")
         _periodEvery = State(initialValue: schedule?.interval.unit == "day" ? 1 : (schedule?.interval.every ?? 1))
         _customDays = State(initialValue: schedule.map { String($0.interval.every) } ?? "14")
-        let tomorrow = Calendar.current.date(bySettingHour: 9, minute: 0, second: 0, of: Calendar.current.date(byAdding: .day, value: 1, to: Date())!)!
+        let nextDay = Calendar.current.date(byAdding: .day, value: 1, to: Date()) ?? Date(timeIntervalSinceNow: 86_400)
+        let tomorrow = Calendar.current.date(bySettingHour: 9, minute: 0, second: 0, of: nextDay) ?? nextDay
         _start = State(initialValue: schedule.map { Date(timeIntervalSince1970: $0.startAt / 1000) } ?? tomorrow)
         _endMode = State(initialValue: schedule?.endAt != nil ? "date" : schedule?.maxOccurrences != nil ? "count" : "never")
         _endDate = State(initialValue: schedule?.endAt.map { Date(timeIntervalSince1970: $0 / 1000) } ?? tomorrow)
@@ -50,78 +51,17 @@ struct RecurringPaymentEditorView: View {
     private var destination: (destination: String, type: String)? { try? RecurringRecipient.resolve(recipient) }
     var body: some View {
         SettingsScroll(line: L10n.text(
+            // swiftlint:disable:next line_length - one literal: translations.mjs reads copy as a single string
             "Noah sends this payment automatically from your Ark balance. Only this recipient and amount are ever allowed, and you can pause or cancel at any time.",
             locale: language)) {
                 if original != nil {
                     SettingsFine(text: L10n.text("Saving starts a new schedule at the first payment date. Previous attempts remain visible.", locale: language))
                 }
                 amountField.padding(.top, 14)
-                SettingsField(label: L10n.text("To", locale: language), placeholder: L10n.text("Name, address or offer", locale: language),
-                              text: $recipient, failure: recipientError != nil, tag: recipientTag, id: "recurring-recipient-input",
-                              focusChanged: { editingRecipient = $0 })
-                if let recipientError { SettingsFine(text: recipientError, failure: true).padding(.top, -8) }
-                SettingsField(label: L10n.text("Name", locale: language), placeholder: L10n.text("e.g. Rent", locale: language), text: $label,
-                              id: "recurring-label-input")
-                    .onChange(of: label) { _, value in label = Self.limitedText(value, limit: 64) }
-                if destination?.type == "lnurl" {
-                    SettingsField(label: L10n.text("Note (optional)", locale: language), placeholder: L10n.text("Shared with the recipient", locale: language),
-                                  text: $comment)
-                        .onChange(of: comment) { _, value in comment = Self.limitedText(value, limit: 140) }
-                }
-                label(L10n.text("Repeats", locale: language))
-                Picker(L10n.text("Repeats", locale: language), selection: $frequency) {
-                    Text(L10n.text("Weekly", locale: language)).tag("week")
-                    Text(L10n.text("Monthly", locale: language)).tag("month")
-                    Text(L10n.text("Custom", locale: language)).tag("day")
-                }
-                .pickerStyle(.segmented)
-                .padding(.top, 8)
-                if frequency == "day" {
-                    SettingsField(placeholder: L10n.text("Every … days", locale: language), text: $customDays, keyboard: .numberPad,
-                                  tag: L10n.text("days", locale: language))
-                        .padding(.top, -10)
-                } else {
-                    stepper(periodEvery == 1 ? L10n.text(frequency == "week" ? "Every week" : "Every month", locale: language)
-                        : frequency == "week" ? L10n.plural("Every {n} weeks", count: periodEvery, locale: language)
-                        : L10n.plural("Every {n} months", count: periodEvery, locale: language),
-                        value: $periodEvery, range: 1...12)
-                }
-                label(L10n.text("First payment", locale: language))
-                DatePicker(L10n.text("First payment", locale: language), selection: $start)
-                    .labelsHidden()
-                    .padding(.top, 8)
-                label(L10n.text("Ends", locale: language))
-                Picker(L10n.text("Ends", locale: language), selection: $endMode) {
-                    Text(L10n.text("Never", locale: language)).tag("never")
-                    Text(L10n.text("On a date", locale: language)).tag("date")
-                    Text(L10n.text("After", locale: language)).tag("count")
-                }
-                .pickerStyle(.segmented)
-                .padding(.top, 8)
-                if endMode == "date" {
-                    DatePicker(L10n.text("End date", locale: language), selection: $endDate, displayedComponents: .date)
-                        .labelsHidden()
-                        .padding(.top, 10)
-                }
-                if endMode == "count" {
-                    SettingsField(placeholder: L10n.text("Number of payments", locale: language), text: $count, keyboard: .numberPad,
-                                  tag: L10n.text("payments", locale: language))
-                        .padding(.top, -10)
-                }
-                if interval.valid {
-                    label(interval.text(locale: language))
-                    WrapLayout(spacing: NoahTokens.Space.s, lineSpacing: NoahTokens.Space.s) {
-                        ForEach(preview, id: \.self) { next in
-                            Text(verbatim: Date(timeIntervalSince1970: next / 1000)
-                                .formatted(.dateTime.month(.abbreviated).day().hour().minute().locale(locale)))
-                                .noahText(NoahTokens.Typography.control)
-                                .padding(.horizontal, 14).frame(minHeight: NoahTokens.Size.chip)
-                                .overlay { Capsule().strokeBorder(NoahTokens.Colors.hairline, lineWidth: 1) }
-                        }
-                    }
-                    .padding(.top, 8)
-                    SettingsFine(text: L10n.text("A reminder comes the day before. A missed payment is skipped, never paid twice.", locale: language))
-                }
+                recipientFields
+                repeatsFields
+                datesFields
+                previewSection
                 if let error { SettingsFine(text: L10n.text(error, locale: language), failure: true) }
             }
             .settingsChrome(original == nil ? "New payment" : "Edit payment")
@@ -140,8 +80,87 @@ struct RecurringPaymentEditorView: View {
 
     private var language: String { locale.identifier }
 
+    @ViewBuilder private var recipientFields: some View {
+        SettingsField(label: L10n.text("To", locale: language), placeholder: L10n.text("Name, address or offer", locale: language),
+                      text: $recipient, failure: recipientError != nil, tag: recipientTag, id: "recurring-recipient-input",
+                      focusChanged: { editingRecipient = $0 })
+        if let recipientError { SettingsFine(text: recipientError, failure: true).padding(.top, -8) }
+        SettingsField(label: L10n.text("Name", locale: language), placeholder: L10n.text("e.g. Rent", locale: language), text: $label,
+                      id: "recurring-label-input")
+            .onChange(of: label) { _, value in label = Self.limitedText(value, limit: 64) }
+        if destination?.type == "lnurl" {
+            SettingsField(label: L10n.text("Note (optional)", locale: language), placeholder: L10n.text("Shared with the recipient", locale: language),
+                          text: $comment)
+                .onChange(of: comment) { _, value in comment = Self.limitedText(value, limit: 140) }
+        }
+    }
+
+    @ViewBuilder private var repeatsFields: some View {
+        label(L10n.text("Repeats", locale: language))
+        Picker(L10n.text("Repeats", locale: language), selection: $frequency) {
+            Text(L10n.text("Weekly", locale: language)).tag("week")
+            Text(L10n.text("Monthly", locale: language)).tag("month")
+            Text(L10n.text("Custom", locale: language)).tag("day")
+        }
+        .pickerStyle(.segmented)
+        .padding(.top, 8)
+        if frequency == "day" {
+            SettingsField(placeholder: L10n.text("Every … days", locale: language), text: $customDays, keyboard: .numberPad,
+                          tag: L10n.text("days", locale: language))
+                .padding(.top, -10)
+        } else {
+            stepper(periodEvery == 1 ? L10n.text(frequency == "week" ? "Every week" : "Every month", locale: language)
+                : frequency == "week" ? L10n.plural("Every {n} weeks", count: periodEvery, locale: language)
+                : L10n.plural("Every {n} months", count: periodEvery, locale: language),
+                value: $periodEvery, range: 1...12)
+        }
+    }
+
+    @ViewBuilder private var datesFields: some View {
+        label(L10n.text("First payment", locale: language))
+        DatePicker(L10n.text("First payment", locale: language), selection: $start)
+            .labelsHidden()
+            .padding(.top, 8)
+        label(L10n.text("Ends", locale: language))
+        Picker(L10n.text("Ends", locale: language), selection: $endMode) {
+            Text(L10n.text("Never", locale: language)).tag("never")
+            Text(L10n.text("On a date", locale: language)).tag("date")
+            Text(L10n.text("After", locale: language)).tag("count")
+        }
+        .pickerStyle(.segmented)
+        .padding(.top, 8)
+        if endMode == "date" {
+            DatePicker(L10n.text("End date", locale: language), selection: $endDate, displayedComponents: .date)
+                .labelsHidden()
+                .padding(.top, 10)
+        }
+        if endMode == "count" {
+            SettingsField(placeholder: L10n.text("Number of payments", locale: language), text: $count, keyboard: .numberPad,
+                          tag: L10n.text("payments", locale: language))
+                .padding(.top, -10)
+        }
+    }
+
+    @ViewBuilder private var previewSection: some View {
+        if interval.valid {
+            label(interval.text(locale: language))
+            WrapLayout(spacing: NoahTokens.Space.s, lineSpacing: NoahTokens.Space.s) {
+                ForEach(preview, id: \.self) { next in
+                    Text(verbatim: Date(timeIntervalSince1970: next / 1000)
+                        .formatted(.dateTime.month(.abbreviated).day().hour().minute().locale(locale)))
+                        .noahText(NoahTokens.Typography.control)
+                        .padding(.horizontal, 14).frame(minHeight: NoahTokens.Size.chip)
+                        .overlay { Capsule().strokeBorder(NoahTokens.Colors.hairline, lineWidth: 1) }
+                }
+            }
+            .padding(.top, 8)
+            SettingsFine(text: L10n.text("A reminder comes the day before. A missed payment is skipped, never paid twice.", locale: language))
+        }
+    }
+
     /// The big amount, in sats each time.
     private var amountField: some View {
+        // swiftlint:disable:next accessibility_trait_for_button - the tap only focuses the field; the TextField is the accessible control
         HStack(alignment: .firstTextBaseline, spacing: 6) {
             TextField(text: $amount, prompt: Text(verbatim: "0").foregroundStyle(NoahTokens.Colors.muted)) { Text("Amount in sats") }
                 .noahText(SettingsText.big)
@@ -219,7 +238,8 @@ struct RecurringPaymentEditorView: View {
     static func endDateTimestamp(_ date: Date, zone: TimeZone = .current) -> Double {
         var calendar = Calendar(identifier: .gregorian); calendar.timeZone = zone
         // RN parses the chosen end date with "23:59", seconds and milliseconds both zero.
-        return calendar.date(bySettingHour: 23, minute: 59, second: 0, of: date)!.timeIntervalSince1970 * 1000
+        guard let end = calendar.date(bySettingHour: 23, minute: 59, second: 0, of: date) else { preconditionFailure("Every Gregorian day has 23:59") }
+        return end.timeIntervalSince1970 * 1000
     }
     private func save() {
         error = nil; saving = true

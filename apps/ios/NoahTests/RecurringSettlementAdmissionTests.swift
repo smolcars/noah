@@ -53,7 +53,8 @@ import Testing
         }
         if change == "replacement" || change == "sameKeyReplacement" {
             h.beforePay = { throw SendNotSubmitted(reason: .recurringStopped) }
-            let (payment, quote, _) = h.quoted(schedule, fees: RecurringFeePolicy.fallback)
+            let quoted = h.quoted(schedule, fees: RecurringFeePolicy.fallback)
+            let payment = quoted.payment, quote = quoted.quote
             await h.controller.submitAndWait(payment, quote: quote,
                                              recurringKey: change == "sameKeyReplacement" ? key : "another-occurrence", beforeSubmit: {})
         } else if change == "reload" { h.controller.reloadForWalletChange() }
@@ -150,7 +151,8 @@ import Testing
             h.controller.reloadForWalletChange()
         } else if change != "done" {
             h.beforePay = { throw SendNotSubmitted(reason: .recurringStopped) }
-            let (payment, quote, _) = h.quoted(schedule, fees: RecurringFeePolicy.fallback)
+            let quoted = h.quoted(schedule, fees: RecurringFeePolicy.fallback)
+            let payment = quoted.payment, quote = quoted.quote
             let key = change == "sameKeyReplacement" ? originalAttempt?.recurringOccurrenceKey ?? "missing" : "another-occurrence"
             await h.controller.submitAndWait(payment, quote: quote, recurringKey: key, beforeSubmit: {})
             #expect(h.controller.state == .storageBlocked)

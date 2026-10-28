@@ -18,47 +18,7 @@ struct RecurringPaymentsView: View {
 
     var body: some View {
         SettingsScroll(line: schedules.isEmpty ? nil : L10n.text("Paid from your Ark balance.", locale: language)) {
-            if schedules.isEmpty {
-                VStack(spacing: 6) {
-                    Image(systemName: "arrow.triangle.2.circlepath").font(.system(size: 22, weight: .medium))
-                        .frame(width: 56, height: 56).background(NoahTokens.Colors.soft, in: Circle())
-                    Text(L10n.text("No recurring payments", locale: language)).noahText(ActivityText.emptyTitle).padding(.top, 20)
-                    Text(L10n.text("Rent, allowances or donations, paid on time.", locale: language))
-                        .noahText(NoahTokens.Typography.sub).foregroundStyle(NoahTokens.Colors.muted).multilineTextAlignment(.center)
-                    Button(L10n.text("New payment", locale: language)) { open(.editor(nil)) }
-                        .buttonStyle(HomePillStyle(height: 40))
-                        .padding(.top, 12)
-                        .accessibilityIdentifier("recurring-new-button")
-                }
-                .frame(maxWidth: .infinity)
-                .padding(.top, 40)
-            } else {
-                VStack(spacing: 0) {
-                    ForEach(Array(schedules.enumerated()), id: \.element.id) { index, schedule in
-                        RecurringRow(schedule: schedule, sending: schedule.inFlight != nil && executor.running, hairline: index < schedules.count - 1) {
-                            open(.schedule(schedule.id))
-                        }
-                    }
-                }
-                .padding(.top, 8)
-                if schedules.contains(where: { $0.status == "active" }) {
-                    Button {
-                        haptics.play(.light)
-                        Task { await ForegroundExecution.run { await executor.execute(manual: true) } }
-                    } label: {
-                        HStack(spacing: 8) {
-                            Text(L10n.text("Run due payments now", locale: language))
-                            if executor.running { ProgressView() }
-                        }
-                        .noahText(HomeText.strong)
-                        .frame(minHeight: NoahTokens.Size.hitTarget)
-                    }
-                    .buttonStyle(.plain)
-                    .disabled(executor.running)
-                    .padding(.top, 10)
-                    .accessibilityIdentifier("recurring-run-now-button")
-                }
-            }
+            if schedules.isEmpty { emptyState } else { scheduleList }
             if executor.syncPending {
                 SettingsFine(text: L10n.text("Wake-up schedule hasn't synced yet. Noah will retry when opened.", locale: language))
             }
@@ -77,6 +37,51 @@ struct RecurringPaymentsView: View {
         }
         .onboardingHaptics(haptics)
         .task { await executor.reload(); await ForegroundExecution.run { await executor.execute() } }
+    }
+
+    private var emptyState: some View {
+        VStack(spacing: 6) {
+            Image(systemName: "arrow.triangle.2.circlepath").font(.system(size: 22, weight: .medium))
+                .accessibilityHidden(true)
+                .frame(width: 56, height: 56).background(NoahTokens.Colors.soft, in: Circle())
+            Text(L10n.text("No recurring payments", locale: language)).noahText(ActivityText.emptyTitle).padding(.top, 20)
+            Text(L10n.text("Rent, allowances or donations, paid on time.", locale: language))
+                .noahText(NoahTokens.Typography.sub).foregroundStyle(NoahTokens.Colors.muted).multilineTextAlignment(.center)
+            Button(L10n.text("New payment", locale: language)) { open(.editor(nil)) }
+                .buttonStyle(HomePillStyle(height: 40))
+                .padding(.top, 12)
+                .accessibilityIdentifier("recurring-new-button")
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.top, 40)
+    }
+
+    @ViewBuilder private var scheduleList: some View {
+        VStack(spacing: 0) {
+            ForEach(Array(schedules.enumerated()), id: \.element.id) { index, schedule in
+                RecurringRow(schedule: schedule, sending: schedule.inFlight != nil && executor.running, hairline: index < schedules.count - 1) {
+                    open(.schedule(schedule.id))
+                }
+            }
+        }
+        .padding(.top, 8)
+        if schedules.contains(where: { $0.status == "active" }) {
+            Button {
+                haptics.play(.light)
+                Task { await ForegroundExecution.run { await executor.execute(manual: true) } }
+            } label: {
+                HStack(spacing: 8) {
+                    Text(L10n.text("Run due payments now", locale: language))
+                    if executor.running { ProgressView() }
+                }
+                .noahText(HomeText.strong)
+                .frame(minHeight: NoahTokens.Size.hitTarget)
+            }
+            .buttonStyle(.plain)
+            .disabled(executor.running)
+            .padding(.top, 10)
+            .accessibilityIdentifier("recurring-run-now-button")
+        }
     }
 
     private func open(_ page: SettingsPage) {
@@ -197,70 +202,9 @@ struct RecurringSchedulePage: View {
             && (schedule.status != "needs_attention" || schedule.requiresPolicyApproval)
         let checkable = !schedule.unsupportedStorage && (schedule.status == "needs_attention" || schedule.inFlight != nil)
         return SettingsScroll {
-            HomeAvatar(avatar: schedule.avatar, pending: sending, failed: schedule.needsYou, isNew: false, size: 60).padding(.top, 6)
-            Text(verbatim: app.isBalanceHidden ? "₿••••" : schedule.formattedAmount(unit: app.amountUnit, locale: locale))
-                .noahText(ActivityDetailText.amount).monospacedDigit().lineLimit(1).minimumScaleFactor(0.5)
-                .padding(.top, 18)
-            Text(verbatim: schedule.statusWord(sending: sending).map { L10n.text($0, locale: language) } ?? schedule.nextLine(locale: locale))
-                .noahText(NoahTokens.Typography.label)
-                .foregroundStyle(schedule.needsYou ? NoahTokens.Colors.failure : schedule.status == "paused" ? NoahTokens.Colors.muted : NoahTokens.Colors
-                    .foreground)
-                .padding(.top, 12)
-            Text(verbatim: schedule.label).noahText(NoahTokens.Typography.sub).foregroundStyle(NoahTokens.Colors.muted).padding(.top, 3)
-            VStack(spacing: 0) {
-                SettingsDetailRow(label: L10n.text("To", locale: language), value: schedule.destination, mono: schedule.destination.count > 40,
-                                  copy: schedule.destination)
-                SettingsDetailRow(label: L10n.text("Via", locale: language), value: L10n.text(schedule.via, locale: language))
-                SettingsDetailRow(label: L10n.text("Repeats", locale: language), value: schedule.interval.text(locale: language))
-                if schedule.status == "active", let next = schedule.nextRunAt {
-                    SettingsDetailRow(label: L10n.text("Next", locale: language),
-                                      value: Date(timeIntervalSince1970: next / 1000).formatted(date: .abbreviated, time: .shortened))
-                }
-                SettingsDetailRow(label: L10n.text("Ends", locale: language), value: ends(schedule))
-                SettingsDetailRow(label: L10n.text("Paid", locale: language),
-                                  value: schedule.maxOccurrences.map { L10n.text("{n} of {total}", schedule.occurrencesPaid, $0, locale: language) }
-                                      ?? L10n.plural("{n} payments", count: schedule.occurrencesPaid, locale: language), numeric: true)
-                if let run = schedule.runs.first {
-                    SettingsDetailRow(label: L10n.text("Last", locale: language),
-                                      value: Date(timeIntervalSince1970: run.attemptedAt / 1000).formatted(.dateTime.month(.abbreviated).day().locale(locale))
-                                          + " · " + L10n.text(
-                                              run.status == "success" ? "Sent" : run.status == "skipped" ? "Skipped" : "Failed",
-                                              locale: language),
-                                      hairline: false)
-                }
-            }
-            .padding(.top, 22)
-            if let issue = schedule.lastError {
-                SettingsFine(text: schedule.issue?.message(locale: language) ?? L10n.text(issue, locale: language), failure: true)
-            }
-            SettingsGroup {
-                if editable {
-                    SettingsRow(title: L10n.text("Edit", locale: language), id: "recurring-edit-\(schedule.id)") {
-                        haptics.play(.light)
-                        settings.open(.editor(schedule.id))
-                    }
-                }
-                if checkable {
-                    SettingsRow(title: L10n.text("Check status", locale: language), trailing: .none) {
-                        haptics.play(.light)
-                        Task { await executor.checkStatus(schedule.id) }
-                    }
-                    .disabled(executor.running)
-                    if !schedule.requiresPolicyApproval {
-                        SettingsRow(title: L10n.text("Resume after checking history", locale: language), id: "recurring-override-\(schedule.id)") {
-                            haptics.play(.light)
-                            sheet = .checked
-                        }
-                        .disabled(executor.running)
-                    }
-                }
-                if schedule.status == "needs_approval" && editable { toggleRow(schedule) }
-                SettingsRow(title: L10n.text(schedule.status == "completed" ? "Remove payment" : "Cancel payment", locale: language), danger: true,
-                            trailing: .none, hairline: false, id: "recurring-cancel-\(schedule.id)") {
-                    haptics.play(.light)
-                    sheet = .cancel
-                }
-            }
+            header(schedule, sending: sending)
+            details(schedule)
+            actions(schedule, editable: editable, checkable: checkable)
             if let error { SettingsFine(text: L10n.text(error, locale: language), failure: true) }
         }
         .settingsChrome(nil)
@@ -288,55 +232,130 @@ struct RecurringSchedulePage: View {
                     Button("OK", role: .cancel) {}
                 } message: { Text(WalletTabs.blockedMessage(link: true)) }
         }
-        .settingsSheet(item: $sheet) { sheet in
-            switch sheet {
-            case .cancel:
-                SettingsSheetBody(title: L10n.text("Cancel {name}?", schedule.label, locale: language),
-                                  line: L10n.text(
-                                      "No more payments will be sent. Payments already sent can't be undone. An in-progress payment may still complete.",
-                                      locale: language)) {
-                    EmptyView()
-                } actions: {
-                    SettingsSheetButtons(cancel: L10n.text("Keep payment", locale: language),
-                                         action: L10n.text(schedule.status == "completed" ? "Remove payment" : "Cancel payment", locale: language),
-                                         destructive: true, actionID: "recurring-cancel-confirm", onCancel: { self.sheet = nil }) {
-                        self.sheet = nil
-                        run {
-                            try await executor.cancel(schedule.id)
-                            haptics.play(.success)
-                            settings.toast("Canceled")
-                            settings.leave(currentPage)
-                        }
+        .settingsSheet(item: $sheet) { sheet in sheetBody(sheet, schedule) }
+    }
+
+    @ViewBuilder private func header(_ schedule: RecurringPayment, sending: Bool) -> some View {
+        HomeAvatar(avatar: schedule.avatar, pending: sending, failed: schedule.needsYou, isNew: false, size: 60).padding(.top, 6)
+        Text(verbatim: app.isBalanceHidden ? "₿••••" : schedule.formattedAmount(unit: app.amountUnit, locale: locale))
+            .noahText(ActivityDetailText.amount).monospacedDigit().lineLimit(1).minimumScaleFactor(0.5)
+            .padding(.top, 18)
+        Text(verbatim: schedule.statusWord(sending: sending).map { L10n.text($0, locale: language) } ?? schedule.nextLine(locale: locale))
+            .noahText(NoahTokens.Typography.label)
+            .foregroundStyle(schedule.needsYou ? NoahTokens.Colors.failure : schedule.status == "paused" ? NoahTokens.Colors.muted : NoahTokens.Colors
+                .foreground)
+            .padding(.top, 12)
+        Text(verbatim: schedule.label).noahText(NoahTokens.Typography.sub).foregroundStyle(NoahTokens.Colors.muted).padding(.top, 3)
+    }
+
+    private func details(_ schedule: RecurringPayment) -> some View {
+        VStack(spacing: 0) {
+            SettingsDetailRow(label: L10n.text("To", locale: language), value: schedule.destination, mono: schedule.destination.count > 40,
+                              copy: schedule.destination)
+            SettingsDetailRow(label: L10n.text("Via", locale: language), value: L10n.text(schedule.via, locale: language))
+            SettingsDetailRow(label: L10n.text("Repeats", locale: language), value: schedule.interval.text(locale: language))
+            if schedule.status == "active", let next = schedule.nextRunAt {
+                SettingsDetailRow(label: L10n.text("Next", locale: language),
+                                  value: Date(timeIntervalSince1970: next / 1000).formatted(date: .abbreviated, time: .shortened))
+            }
+            SettingsDetailRow(label: L10n.text("Ends", locale: language), value: ends(schedule))
+            SettingsDetailRow(label: L10n.text("Paid", locale: language),
+                              value: schedule.maxOccurrences.map { L10n.text("{n} of {total}", schedule.occurrencesPaid, $0, locale: language) }
+                                  ?? L10n.plural("{n} payments", count: schedule.occurrencesPaid, locale: language), numeric: true)
+            if let run = schedule.runs.first {
+                SettingsDetailRow(label: L10n.text("Last", locale: language),
+                                  value: Date(timeIntervalSince1970: run.attemptedAt / 1000).formatted(.dateTime.month(.abbreviated).day().locale(locale))
+                                      + " · " + L10n.text(
+                                          run.status == "success" ? "Sent" : run.status == "skipped" ? "Skipped" : "Failed",
+                                          locale: language),
+                                  hairline: false)
+            }
+        }
+        .padding(.top, 22)
+    }
+
+    @ViewBuilder private func actions(_ schedule: RecurringPayment, editable: Bool, checkable: Bool) -> some View {
+        if let issue = schedule.lastError {
+            SettingsFine(text: schedule.issue?.message(locale: language) ?? L10n.text(issue, locale: language), failure: true)
+        }
+        SettingsGroup {
+            if editable {
+                SettingsRow(title: L10n.text("Edit", locale: language), id: "recurring-edit-\(schedule.id)") {
+                    haptics.play(.light)
+                    settings.open(.editor(schedule.id))
+                }
+            }
+            if checkable {
+                SettingsRow(title: L10n.text("Check status", locale: language), trailing: .none) {
+                    haptics.play(.light)
+                    Task { await executor.checkStatus(schedule.id) }
+                }
+                .disabled(executor.running)
+                if !schedule.requiresPolicyApproval {
+                    SettingsRow(title: L10n.text("Resume after checking history", locale: language), id: "recurring-override-\(schedule.id)") {
+                        haptics.play(.light)
+                        sheet = .checked
+                    }
+                    .disabled(executor.running)
+                }
+            }
+            if schedule.status == "needs_approval" && editable { toggleRow(schedule) }
+            SettingsRow(title: L10n.text(schedule.status == "completed" ? "Remove payment" : "Cancel payment", locale: language), danger: true,
+                        trailing: .none, hairline: false, id: "recurring-cancel-\(schedule.id)") {
+                haptics.play(.light)
+                sheet = .cancel
+            }
+        }
+    }
+
+    @ViewBuilder private func sheetBody(_ sheet: Sheet, _ schedule: RecurringPayment) -> some View {
+        switch sheet {
+        case .cancel:
+            SettingsSheetBody(title: L10n.text("Cancel {name}?", schedule.label, locale: language),
+                              line: L10n.text(
+                                  "No more payments will be sent. Payments already sent can't be undone. An in-progress payment may still complete.",
+                                  locale: language)) {
+                EmptyView()
+            } actions: {
+                SettingsSheetButtons(cancel: L10n.text("Keep payment", locale: language),
+                                     action: L10n.text(schedule.status == "completed" ? "Remove payment" : "Cancel payment", locale: language),
+                                     destructive: true, actionID: "recurring-cancel-confirm", onCancel: { self.sheet = nil }) {
+                    self.sheet = nil
+                    run {
+                        try await executor.cancel(schedule.id)
+                        haptics.play(.success)
+                        settings.toast("Canceled")
+                        settings.leave(currentPage)
                     }
                 }
-            case .checked:
-                // The first resume step: check history before anything can be sent again.
-                SettingsSheetBody(title: L10n.text("Have you checked?", locale: language),
-                                  line: L10n.text(
-                                      "Check Activity for this payment's last attempt and ask the recipient whether it arrived.",
-                                      locale: language)) {
-                    EmptyView()
-                } actions: {
-                    SettingsSheetButtons(cancel: L10n.text("Keep stopped", locale: language), action: L10n.text("I checked", locale: language),
-                                         actionID: "recurring-checked", onCancel: { self.sheet = nil }) {
-                        self.sheet = nil
-                        Task {
-                            try? await Task.sleep(for: .milliseconds(350))
-                            self.sheet = .twice
-                        }
+            }
+        case .checked:
+            // The first resume step: check history before anything can be sent again.
+            SettingsSheetBody(title: L10n.text("Have you checked?", locale: language),
+                              line: L10n.text(
+                                  "Check Activity for this payment's last attempt and ask the recipient whether it arrived.",
+                                  locale: language)) {
+                EmptyView()
+            } actions: {
+                SettingsSheetButtons(cancel: L10n.text("Keep stopped", locale: language), action: L10n.text("I checked", locale: language),
+                                     actionID: "recurring-checked", onCancel: { self.sheet = nil }) {
+                    self.sheet = nil
+                    Task {
+                        try? await Task.sleep(for: .milliseconds(350))
+                        self.sheet = .twice
                     }
                 }
-            case .twice:
-                SettingsSheetBody(title: L10n.text(SendOverrideAudit.titleText, locale: language),
-                                  line: L10n.text(RecurringExecutor.overrideWarning, locale: language)) {
-                    EmptyView()
-                } actions: {
-                    SettingsSheetButtons(cancel: L10n.text("Keep stopped", locale: language),
-                                         action: L10n.text(RecurringExecutor.overrideConfirmation, locale: language), destructive: true,
-                                         actionID: "recurring-resume-anyway", onCancel: { self.sheet = nil }) {
-                        self.sheet = nil
-                        run { try await executor.overrideAndResume(schedule.id, confirmed: true) }
-                    }
+            }
+        case .twice:
+            SettingsSheetBody(title: L10n.text(SendOverrideAudit.titleText, locale: language),
+                              line: L10n.text(RecurringExecutor.overrideWarning, locale: language)) {
+                EmptyView()
+            } actions: {
+                SettingsSheetButtons(cancel: L10n.text("Keep stopped", locale: language),
+                                     action: L10n.text(RecurringExecutor.overrideConfirmation, locale: language), destructive: true,
+                                     actionID: "recurring-resume-anyway", onCancel: { self.sheet = nil }) {
+                    self.sheet = nil
+                    run { try await executor.overrideAndResume(schedule.id, confirmed: true) }
                 }
             }
         }

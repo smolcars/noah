@@ -80,6 +80,7 @@ struct OnchainOverview: Sendable {
 }
 
 enum OnchainAction: String, Codable, Sendable {
+    // swiftlint:disable:next redundant_string_enum_value - explicit raw values pin the persisted strings (raw_value_for_camel_cased_codable_enum)
     case board, refresh, startExit, progress, claim, cancel
     var title: String {
         switch self {

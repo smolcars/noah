@@ -59,7 +59,12 @@ struct SendReceipt: Codable, Equatable, Sendable {
         case amount, txid, paymentHash, movementID, amountIsEstimated, amountIsPending, status, fee, proof
         case broadcastRetryPending, confirmedConflictTxid, chainStatus
     }
-    enum Proof: String, Codable, Sendable { case preparedTxid, submitReturnedTxid, actualMovement, submitReturnedArkSuccess }
+    enum Proof: String, Codable, Sendable {
+        // swiftlint:disable redundant_string_enum_value - explicit raw values pin the persisted strings (raw_value_for_camel_cased_codable_enum)
+        case preparedTxid, submitReturnedTxid, actualMovement
+        case submitReturnedArkSuccess
+        // swiftlint:enable redundant_string_enum_value
+    }
     enum Status: String, Codable, Sendable { case submitted, confirmed, unlocated, conflicted }
     var isUnresolved: Bool { status == .unlocated || status == .conflicted }
     var conflictDescription: String? {
