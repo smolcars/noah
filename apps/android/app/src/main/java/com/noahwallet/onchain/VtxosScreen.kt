@@ -17,6 +17,7 @@ import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
@@ -90,16 +91,14 @@ internal fun VtxosPage(app: AppModel, nav: SettingsNav) {
     val scope = rememberCoroutineScope()
     val lifetime = rememberLifetime(app)
     OnchainEffects(app, model, reloadOnChange = true)
-    RenewReview(model, take = { app.renewVtxos?.also { app.renewVtxos = null } },
-        due = { ids -> app.session.onchainOverview().vtxos.filter { it.id in ids && it.renewable }.map { it.id } },
+    RenewReview(model, take = { takeRenewal(app) }, due = { ids -> renewableIDs(app, ids) },
         onStart = { ids -> selecting = true; selected = ids })
     val vtxos = model.overview?.vtxos.orEmpty()
     val chosen = OnchainDisplay.currentSelection(vtxos, selected.toSet())
     val visible = VtxoRules.visible(vtxos, filter)
     fun renew(ids: List<String>) { scope.launch { model.review(OnchainAction.refresh, ids) } }
-    SettingsFrame(tr("VTXOs"), nav.back, chip = if (filter == VtxoRules.Filter.all) null else ({
-        FilterChip(filterName(filter)) { filter = VtxoRules.Filter.all }
-    }), actions = {
+    val idle = !model.busy && !app.isWalletSuspended
+    SettingsFrame(tr("VTXOs"), nav.back, chip = filterChip(filter) { filter = VtxoRules.Filter.all }, actions = {
         VtxoMenu(filter, enabled = !model.busy, onFilter = {
             if (it != filter) haptics.selection()
             filter = it
@@ -107,42 +106,20 @@ internal fun VtxosPage(app: AppModel, nav: SettingsNav) {
             onSelect = { selecting = true; selected = VtxoRules.preselected(vtxos).toList(); model.invalidate() },
             onRefresh = { model.invalidate(); scope.launch { model.load() } })
     }, foot = if (!selecting) null else ({
-        FootPill(tr("Cancel"), outlined = true, weight = .6f) { selecting = false; selected = emptyList() }
-        FootPill(if (chosen.isEmpty()) tr("Renew") else tr("Renew {n}", chosen.size.toString()), Modifier.testTag("vtxos-renew-selected"),
-            enabled = chosen.isNotEmpty() && !model.busy && !app.isWalletSuspended, loading = model.busy) { renew(chosen.map { it.id }) }
+        RenewFoot(chosen.size, enabled = chosen.isNotEmpty() && idle, loading = model.busy,
+            cancel = { selecting = false; selected = emptyList() }) { renew(chosen.map { it.id }) }
     })) {
         when {
             app.isWalletSuspended -> FinePrint(tr("Wallet suspended. Resume your wallet in Settings."))
             model.overview == null -> FinePrint(if (model.loading) tr("Loading…") else tr("Couldn't read wallet status. Pull to refresh."))
             vtxos.isEmpty() -> EmptyVtxos()
             else -> {
-                BigTotal(money(app, vtxos.sumOf { it.amount }), trPlural("In {n} VTXOs", vtxos.size))
-                ExpiryLine(vtxos, lifetime ?: vtxos.maxOf { it.expiry - it.tip }.coerceAtLeast(144))
-                val due = VtxoRules.due(vtxos)
-                if (due.isNotEmpty()) {
-                    Row(Modifier.padding(top = 6.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Box(Modifier.size(8.dp).background(palette.orange, CircleShape))
-                        Text(trPlural("{n} VTXOs expire within a day", due.size), style = HomeType.line.copy(fontWeight = FontWeight.Medium),
-                            color = palette.foreground)
-                    }
-                    if (!selecting) SendPill(tr("Renew {amount}", money(app, due.sumOf { it.amount })),
-                        Modifier.padding(top = 14.dp).testTag("vtxos-renew-due"),
-                        outlined = true, height = 40.dp, enabled = !model.busy && !app.isWalletSuspended) { haptics.light(); renew(due.map { it.id }) }
-                } else vtxos.filter { it.refreshable }.minOfOrNull { it.expiry - it.tip }?.let { soonest ->
-                    Row(Modifier.padding(top = 6.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        Icon(painterResource(SettingsIcons.clock), null, Modifier.size(17.dp), tint = palette.muted)
-                        Text(tr("Next expiry in {time} · renews automatically", timeLeft(soonest)), style = HomeType.line, color = palette.muted)
-                    }
-                }
+                VtxoSummary(app, vtxos, lifetime)
+                DueLine(app, vtxos, offer = !selecting, enabled = idle) { due -> haptics.light(); renew(due) }
                 if (visible.isEmpty()) FinePrint(tr("No VTXOs in this view."))
-                for ((group, list) in VtxoRules.groups(visible)) {
-                    Text(groupName(group), Modifier.padding(top = 18.dp, bottom = 2.dp).semantics { heading() }, style = HomeType.header, color = palette.muted)
-                    list.forEachIndexed { index, vtxo ->
-                        VtxoRow(app, vtxo, selecting, vtxo.id in selected, divider = index < list.lastIndex, enabled = !model.busy) {
-                            if (selecting) { haptics.selection(); selected = VtxoRules.toggle(selected.toSet(), vtxo).toList() }
-                            else nav.open(com.noahwallet.ui.settings.VtxoPage(vtxo.id))
-                        }
-                    }
+                VtxoGroups(app, visible, selecting, selected, enabled = !model.busy) { vtxo ->
+                    if (selecting) { haptics.selection(); selected = VtxoRules.toggle(selected.toSet(), vtxo).toList() }
+                    else nav.open(com.noahwallet.ui.settings.VtxoPage(vtxo.id))
                 }
             }
         }
@@ -150,6 +127,74 @@ internal fun VtxosPage(app: AppModel, nav: SettingsNav) {
     }
     model.quote?.takeIf { it.action == OnchainAction.refresh }?.let { quote ->
         RenewSheet(app, model, quote, scope) { selecting = false; selected = emptyList() }
+    }
+}
+
+/** Home's Renew hands its VTXOs over once. */
+private fun takeRenewal(app: AppModel) = app.renewVtxos?.also { app.renewVtxos = null }
+
+private suspend fun renewableIDs(app: AppModel, ids: Collection<String>) =
+    app.session.onchainOverview().vtxos.filter { it.id in ids && it.renewable }.map { it.id }
+
+@Composable
+private fun VtxoSummary(app: AppModel, vtxos: List<VtxoModel>, lifetime: Long?) {
+    BigTotal(money(app, vtxos.sumOf { it.amount }), trPlural("In {n} VTXOs", vtxos.size))
+    ExpiryLine(vtxos, lifetime ?: vtxos.maxOf { it.expiry - it.tip }.coerceAtLeast(144))
+}
+
+@Composable
+private fun RowScope.RenewFoot(count: Int, enabled: Boolean, loading: Boolean, cancel: () -> Unit, renew: () -> Unit) {
+    FootPill(tr("Cancel"), outlined = true, weight = .6f, onClick = cancel)
+    FootPill(if (count == 0) tr("Renew") else tr("Renew {n}", count.toString()), Modifier.testTag("vtxos-renew-selected"),
+        enabled = enabled, loading = loading, onClick = renew)
+}
+
+/** The VTXOs due within a day, with Renew when [offer]; else when the next one expires. */
+@Composable
+private fun DueLine(app: AppModel, vtxos: List<VtxoModel>, offer: Boolean, enabled: Boolean, renew: (List<String>) -> Unit) {
+    val palette = LocalPalette.current
+    val due = VtxoRules.due(vtxos)
+    if (due.isNotEmpty()) {
+        Row(Modifier.padding(top = 6.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Box(Modifier.size(8.dp).background(palette.orange, CircleShape))
+            Text(trPlural("{n} VTXOs expire within a day", due.size), style = HomeType.line.copy(fontWeight = FontWeight.Medium),
+                color = palette.foreground)
+        }
+        if (offer) SendPill(tr("Renew {amount}", money(app, due.sumOf { it.amount })),
+            Modifier.padding(top = 14.dp).testTag("vtxos-renew-due"),
+            outlined = true, height = 40.dp, enabled = enabled) { renew(due.map { it.id }) }
+    } else vtxos.filter { it.refreshable }.minOfOrNull { it.expiry - it.tip }?.let { soonest ->
+        Row(Modifier.padding(top = 6.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Icon(painterResource(SettingsIcons.clock), null, Modifier.size(17.dp), tint = palette.muted)
+            Text(tr("Next expiry in {time} · renews automatically", timeLeft(soonest)), style = HomeType.line, color = palette.muted)
+        }
+    }
+}
+
+/** The visible VTXOs by group; checkboxes while [selecting]. */
+@Composable
+private fun VtxoGroups(app: AppModel, visible: List<VtxoModel>, selecting: Boolean, selected: List<String>, enabled: Boolean, tap: (VtxoModel) -> Unit) {
+    val palette = LocalPalette.current
+    for ((group, list) in VtxoRules.groups(visible)) {
+        Text(groupName(group), Modifier.padding(top = 18.dp, bottom = 2.dp).semantics { heading() }, style = HomeType.header, color = palette.muted)
+        list.forEachIndexed { index, vtxo ->
+            VtxoRow(app, vtxo, selecting, vtxo.id in selected, divider = index < list.lastIndex, enabled = enabled) { tap(vtxo) }
+        }
+    }
+}
+
+/** The active filter as a chip that clears it; none for All. */
+private fun filterChip(filter: VtxoRules.Filter, clear: () -> Unit): (@Composable () -> Unit)? =
+    if (filter == VtxoRules.Filter.all) null else ({ FilterChip(filterName(filter), onClear = clear) })
+
+@Composable
+private fun expiryLabel(blocks: Long, step: Long, unit: String): String {
+    val n = (blocks / if (unit == "h") 6 else step * 1).toString()
+    return when {
+        blocks == 0L -> tr("Now")
+        unit == "w" -> tr("{n} wk", n)
+        unit == "d" -> tr("{n} d", n)
+        else -> tr("{n} h", n)
     }
 }
 
@@ -274,16 +319,8 @@ private fun ExpiryLine(vtxos: List<VtxoModel>, lifetime: Long) {
     val measurer = rememberTextMeasurer()
     val threshold = com.noahwallet.services.wallet.WalletConfiguration.base(BuildConfig.APP_VARIANT).vtxoRefreshExpiryThreshold.toLong()
     // Weeks across a long lifetime, days or hours across shorter ones (regtest, signet).
-    val (step, unit) = when { lifetime >= 1008 -> 1008L to "w"; lifetime >= 144 -> 144L to "d"; else -> maxOf(6L, lifetime / 30 * 6) to "h" }
-    val labels = (0..7).map { it * step }.filter { it <= lifetime }.take(5).map { blocks ->
-        val n = (blocks / if (unit == "h") 6 else step * 1).toString()
-        blocks to when {
-            blocks == 0L -> tr("Now")
-            unit == "w" -> tr("{n} wk", n)
-            unit == "d" -> tr("{n} d", n)
-            else -> tr("{n} h", n)
-        }
-    }
+    val (step, unit) = expiryStep(lifetime)
+    val labels = (0..7).map { it * step }.filter { it <= lifetime }.take(5).map { blocks -> blocks to expiryLabel(blocks, step, unit) }
     val style = TextStyle(fontFamily = NoahTokens.Display, fontWeight = FontWeight.Medium, fontSize = 11.sp)
     val description = tr("When your VTXOs expire")
     val biggest = vtxos.maxOf { it.amount }.coerceAtLeast(1)
@@ -309,14 +346,24 @@ private fun ExpiryLine(vtxos: List<VtxoModel>, lifetime: Long) {
             while (tries++ < 60 && placed.any { (px, py, pr) -> kotlin.math.hypot(px - cx, py - cy) < pr + r + 1.5f * density }) cy -= 1.5f * density
             placed += Triple(cx, cy, r)
             val locked = vtxo.state == "Locked"
-            val due = !locked && vtxo.expiry - vtxo.tip <= threshold
-            if (locked) drawCircle(palette.foreground, r, Offset(cx, cy),
-                style = Stroke(1.4.dp.toPx(), pathEffect = PathEffect.dashPathEffect(floatArrayOf(2.5.dp.toPx(), 2.dp.toPx()))))
-            else {
-                drawCircle(palette.foreground.copy(alpha = if (due) 1f else .85f), r, Offset(cx, cy))
-                if (due) drawCircle(palette.orange, r + 2.5.dp.toPx(), Offset(cx, cy), style = Stroke(2.dp.toPx()))
-            }
+            expiryCoin(Offset(cx, cy), r, locked, due = !locked && vtxo.expiry - vtxo.tip <= threshold, palette)
         }
+    }
+}
+
+private fun expiryStep(lifetime: Long) = when {
+    lifetime >= 1008 -> 1008L to "w"
+    lifetime >= 144 -> 144L to "d"
+    else -> maxOf(6L, lifetime / 30 * 6) to "h"
+}
+
+/** One VTXO on the expiry line: dashed when locked, ringed in orange when due. */
+private fun DrawScope.expiryCoin(center: Offset, r: Float, locked: Boolean, due: Boolean, palette: NoahTokens.Palette) {
+    if (locked) drawCircle(palette.foreground, r, center,
+        style = Stroke(1.4.dp.toPx(), pathEffect = PathEffect.dashPathEffect(floatArrayOf(2.5.dp.toPx(), 2.dp.toPx()))))
+    else {
+        drawCircle(palette.foreground.copy(alpha = if (due) 1f else .85f), r, center)
+        if (due) drawCircle(palette.orange, r + 2.5.dp.toPx(), center, style = Stroke(2.dp.toPx()))
     }
 }
 
@@ -385,52 +432,76 @@ internal fun VtxoDetailPage(app: AppModel, nav: SettingsNav, id: String) {
         }
     }) else null) {
         if (vtxo == null) {
-            if (stored != null) {
-                DetailRow(tr("VTXO ID"), short(id), ValueKind.mono, copy = id, toasts = toasts, last = true)
-                FinePrint(tr("Couldn't read wallet status. Pull to refresh."))
-            } else if (!model.loading && model.overview == null) {
-                @Suppress("MaxLineLength") // one translation source string
-                FinePrint(tr("This VTXO is no longer in the wallet's current VTXOs. Refresh to check its status."))
-            }
+            MissingVtxo(id, read = stored != null, gone = !model.loading && model.overview == null)
             OnchainStatus(app, model)
             return@SettingsFrame
         }
-        val locked = vtxo.state == "Locked"
-        Column(Modifier.padding(top = 6.dp)) {
-            VtxoAvatar(60.dp, glyphAvatar = !locked, unit = app.amountUnit, icon = if (locked) SettingsIcons.lock else null, due = vtxo.renewable)
-            Text(money(app, vtxo.amount), Modifier.padding(top = 18.dp), style = ActivityType.big, color = palette.foreground, maxLines = 1)
-            Row(Modifier.padding(top = 10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                if (vtxo.renewable) PulseDot(palette.orange)
-                Text(expiresText(vtxo), style = ActivityType.status, color = if (vtxo.expired && !locked) palette.failure else palette.foreground)
-            }
-            lifetime?.let { life -> LifetimeBar(vtxo, life, number) }
-        }
-        Column(Modifier.padding(top = 22.dp)) {
-            DetailRow(tr("State"), when (vtxo.state) { "Spendable" -> tr("Spendable"); "Locked" -> tr("Locked"); else -> vtxo.state }, toasts = toasts)
-            DetailRow(tr("Expires"), tr("Block {height}", number.format(vtxo.expiry)), toasts = toasts)
-            DetailRow(tr("Blocks left"), if (vtxo.expiry <= vtxo.tip) tr("Expired") else number.format(vtxo.expiry - vtxo.tip), ValueKind.number,
-                toasts = toasts)
-            DetailRow(tr("VTXO ID"), short(id), ValueKind.mono, copy = id, toasts = toasts)
-            DetailRow(tr("Anchor"), short(vtxo.anchorPoint), ValueKind.mono, copy = vtxo.anchorPoint,
-                explorer = OnchainDisplay.explorerURL(vtxo.anchorPoint, BuildConfig.APP_VARIANT), toasts = toasts, last = true, onExplorer = { url ->
-                    try { context.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, url.toUri())) }
-                    catch (_: android.content.ActivityNotFoundException) { toasts.show(noBrowser) }
-                })
-        }
+        VtxoHeader(app, vtxo, lifetime, number)
+        VtxoRows(vtxo, id, number, noBrowser)
         if ((vtxo.expired || vtxo.expiring) && vtxo.refreshable) FinePrint(tr("Renew this VTXO to keep it available."))
-        Details(details, { details = it }, scroll) {
-            DetailRow(tr("Type"), vtxo.kind, small = true, toasts = toasts)
-            DetailRow(tr("Status"), if (vtxo.registered) tr("Registered") else tr("Not registered"), small = true, toasts = toasts)
-            DetailRow(tr("Exit delta"), trPlural("{n} blocks", vtxo.exitDelta), small = true, toasts = toasts)
-            DetailRow(tr("Exit depth"), number.format(vtxo.exitDepth), ValueKind.number, small = true, toasts = toasts)
-            DetailRow(tr("Exit weight"), tr("{n} wu", number.format(vtxo.exitWeight)), small = true, toasts = toasts)
-            DetailBlock(tr("Server key"), vtxo.serverPubkey, toasts)
-            DetailBlock(tr("Point"), vtxo.point, toasts)
-            DetailRow(tr("Current block"), number.format(vtxo.tip), ValueKind.number, small = true, toasts = toasts, last = true)
-        }
+        Details(details, { details = it }, scroll) { VtxoDetailRows(vtxo, number) }
         OnchainStatus(app, model)
     }
     model.quote?.takeIf { it.action == OnchainAction.refresh }?.let { quote -> RenewSheet(app, model, quote, scope) {} }
+}
+
+/** A VTXO not in the overview: its ID once read failed ([read]), or that it's gone. */
+@Composable
+private fun MissingVtxo(id: String, read: Boolean, gone: Boolean) {
+    val toasts = LocalSettingsToasts.current
+    if (read) {
+        DetailRow(tr("VTXO ID"), short(id), ValueKind.mono, copy = id, toasts = toasts, last = true)
+        FinePrint(tr("Couldn't read wallet status. Pull to refresh."))
+    } else if (gone) {
+        @Suppress("MaxLineLength") // one translation source string
+        FinePrint(tr("This VTXO is no longer in the wallet's current VTXOs. Refresh to check its status."))
+    }
+}
+
+@Composable
+private fun VtxoHeader(app: AppModel, vtxo: VtxoModel, lifetime: Long?, number: java.text.NumberFormat) {
+    val palette = LocalPalette.current
+    val locked = vtxo.state == "Locked"
+    Column(Modifier.padding(top = 6.dp)) {
+        VtxoAvatar(60.dp, glyphAvatar = !locked, unit = app.amountUnit, icon = if (locked) SettingsIcons.lock else null, due = vtxo.renewable)
+        Text(money(app, vtxo.amount), Modifier.padding(top = 18.dp), style = ActivityType.big, color = palette.foreground, maxLines = 1)
+        Row(Modifier.padding(top = 10.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            if (vtxo.renewable) PulseDot(palette.orange)
+            Text(expiresText(vtxo), style = ActivityType.status, color = if (vtxo.expired && !locked) palette.failure else palette.foreground)
+        }
+        lifetime?.let { life -> LifetimeBar(vtxo, life, number) }
+    }
+}
+
+@Composable
+private fun VtxoRows(vtxo: VtxoModel, id: String, number: java.text.NumberFormat, noBrowser: String) {
+    val toasts = LocalSettingsToasts.current
+    val context = LocalContext.current
+    Column(Modifier.padding(top = 22.dp)) {
+        DetailRow(tr("State"), when (vtxo.state) { "Spendable" -> tr("Spendable"); "Locked" -> tr("Locked"); else -> vtxo.state }, toasts = toasts)
+        DetailRow(tr("Expires"), tr("Block {height}", number.format(vtxo.expiry)), toasts = toasts)
+        DetailRow(tr("Blocks left"), if (vtxo.expiry <= vtxo.tip) tr("Expired") else number.format(vtxo.expiry - vtxo.tip), ValueKind.number,
+            toasts = toasts)
+        DetailRow(tr("VTXO ID"), short(id), ValueKind.mono, copy = id, toasts = toasts)
+        DetailRow(tr("Anchor"), short(vtxo.anchorPoint), ValueKind.mono, copy = vtxo.anchorPoint,
+            explorer = OnchainDisplay.explorerURL(vtxo.anchorPoint, BuildConfig.APP_VARIANT), toasts = toasts, last = true, onExplorer = { url ->
+                try { context.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, url.toUri())) }
+                catch (_: android.content.ActivityNotFoundException) { toasts.show(noBrowser) }
+            })
+    }
+}
+
+@Composable
+private fun VtxoDetailRows(vtxo: VtxoModel, number: java.text.NumberFormat) {
+    val toasts = LocalSettingsToasts.current
+    DetailRow(tr("Type"), vtxo.kind, small = true, toasts = toasts)
+    DetailRow(tr("Status"), if (vtxo.registered) tr("Registered") else tr("Not registered"), small = true, toasts = toasts)
+    DetailRow(tr("Exit delta"), trPlural("{n} blocks", vtxo.exitDelta), small = true, toasts = toasts)
+    DetailRow(tr("Exit depth"), number.format(vtxo.exitDepth), ValueKind.number, small = true, toasts = toasts)
+    DetailRow(tr("Exit weight"), tr("{n} wu", number.format(vtxo.exitWeight)), small = true, toasts = toasts)
+    DetailBlock(tr("Server key"), vtxo.serverPubkey, toasts)
+    DetailBlock(tr("Point"), vtxo.point, toasts)
+    DetailRow(tr("Current block"), number.format(vtxo.tip), ValueKind.number, small = true, toasts = toasts, last = true)
 }
 
 /** How much of its lifetime a VTXO has used (prototype `.life`): created at expiry − lifetime, an orange mark for now. */
