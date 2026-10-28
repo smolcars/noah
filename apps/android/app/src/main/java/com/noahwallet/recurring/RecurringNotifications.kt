@@ -48,7 +48,8 @@ object RecurringNotifications {
         }
     }
     fun amount(context: Context, sats: Long): String {
-        val unit = com.noahwallet.services.storage.SettingsPreferences.amountUnit(com.noahwallet.services.storage.SettingsStorage(context).string("profile-storage"))
+        val profile = com.noahwallet.services.storage.SettingsStorage(context).string("profile-storage")
+        val unit = com.noahwallet.services.storage.SettingsPreferences.amountUnit(profile)
         return com.noahwallet.formatting.BitcoinAmount.format(sats, unit,
             java.util.Locale.forLanguageTag(com.noahwallet.services.storage.LegacyLocale.resolved(context)))
     }
@@ -66,7 +67,8 @@ object RecurringNotifications {
 class RecurringReminderWorker(context: Context, parameters: WorkerParameters) : CoroutineWorker(context, parameters) {
     override suspend fun doWork(): Result {
         return try {
-            if (com.noahwallet.services.launch.LaunchState.current(applicationContext) != com.noahwallet.services.launch.LaunchState.existingWallet) return Result.success()
+            val launch = com.noahwallet.services.launch.LaunchState.current(applicationContext)
+            if (launch != com.noahwallet.services.launch.LaunchState.existingWallet) return Result.success()
             val s = RecurringRuntime.shared(applicationContext).executor.reminderSchedule(inputData.getString("id"),
                 inputData.getLong("due", -1)) ?: return Result.success()
             val reminder = inputData.getString("kind") == "reminder"

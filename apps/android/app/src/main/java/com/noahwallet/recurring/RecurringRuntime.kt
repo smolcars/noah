@@ -22,7 +22,11 @@ class RecurringRuntime private constructor(context: Context) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     val executor = RecurringExecutor(RecurringExecutor.Dependencies(store,
         RecurringJournal.shared(File(location.directory, "noah-recurring-journal.json")), SendRuntime.shared(context).controller,
-        ensureOpen = { services.ensureWalletOpen(walletMutationHeld = true) }, binding = { if (!location.databaseExists) throw RecurringExecutor.NoWallet(); RecurringStore.binding(location) },
+        ensureOpen = { services.ensureWalletOpen(walletMutationHeld = true) },
+        binding = {
+            if (!location.databaseExists) throw RecurringExecutor.NoWallet()
+            RecurringStore.binding(location)
+        },
         allowed = {
             requireAdmission(location, settings.persistedState<PersistedWalletState>(PersistedWalletState.key), services.recurringAutomationStorageFailed)
         }, quote = { RecurringRecipient.quote(it, services.session) },
@@ -70,7 +74,8 @@ class RecurringRuntime private constructor(context: Context) {
         }
         internal fun requireAdmission(location: WalletDataLocation, wallet: PersistedWalletState?, storageFailed: Boolean) {
             if (!location.databaseExists) throw RecurringExecutor.NoWallet()
-            check(!storageFailed && !location.restorePending && !location.deletionMarker.exists() && wallet?.isInitialized != false && wallet?.isWalletSuspended != true) { "Wallet suspended or replacement pending. Sending is stopped." }
+            check(!storageFailed && !location.restorePending && !location.deletionMarker.exists() &&
+                wallet?.isInitialized != false && wallet?.isWalletSuspended != true) { "Wallet suspended or replacement pending. Sending is stopped." }
         }
         @Volatile private var instance: RecurringRuntime? = null
         fun shared(context: Context) = instance ?: synchronized(this) { instance ?: RecurringRuntime(context.applicationContext).also { instance = it } }

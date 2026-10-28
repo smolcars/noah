@@ -13,31 +13,31 @@ object EsploraEndpoint {
     fun normalize(value: String): String {
         val trimmed = value.trim().filterNot { it == '\t' || it == '\n' || it == '\r' }.replace('\\', '/')
         val url = parse(trimmed)
-        urlFailure(url)?.let { throw Failure(it) }
+        urlFailure(url)?.let { throw it }
         var path = url.encodedPath.trimEnd('/')
         listOf("/blocks/tip/height", "/blocks/tip/hash", "/block-height/0").firstOrNull { path.endsWith(it) }?.let { path = path.dropLast(it.length) }
         return url.newBuilder().host(ipv4Host(url.host)).encodedPath(path.ifEmpty { "/" }).build().toString().trimEnd('/')
     }
     private fun parse(trimmed: String): okhttp3.HttpUrl {
-        inputFailure(trimmed)?.let { throw Failure(it) }
+        inputFailure(trimmed)?.let { throw it }
         val input = withScheme(trimmed)
         return input.toHttpUrlOrNull() ?: throw Failure("Enter a valid Esplora API URL.")
     }
     private fun withScheme(trimmed: String) = if (Regex("^https?://", RegexOption.IGNORE_CASE).containsMatchIn(trimmed)) trimmed else "https://$trimmed"
-    private fun inputFailure(trimmed: String): String? {
-        if (trimmed.isEmpty()) return "Enter an Esplora API endpoint."
+    private fun inputFailure(trimmed: String): Failure? {
+        if (trimmed.isEmpty()) return Failure("Enter an Esplora API endpoint.")
         val input = withScheme(trimmed)
         val authority = input.substringAfter("://").substringBefore('/').substringBefore('?').substringBefore('#')
         return when {
             !Regex("^https?://[^/]", RegexOption.IGNORE_CASE).containsMatchIn(input) || Regex("%(?![0-9a-fA-F]{2})").containsMatchIn(input) ->
-                "Enter a valid Esplora API URL."
-            '@' in authority -> "The Esplora endpoint cannot include credentials."
+                Failure("Enter a valid Esplora API URL.")
+            '@' in authority -> Failure("The Esplora endpoint cannot include credentials.")
             else -> null
         }
     }
-    private fun urlFailure(url: okhttp3.HttpUrl): String? = when {
-        url.username.isNotEmpty() || url.password.isNotEmpty() -> "The Esplora endpoint cannot include credentials."
-        !url.query.isNullOrEmpty() || !url.fragment.isNullOrEmpty() -> "The Esplora endpoint cannot include a query string or fragment."
+    private fun urlFailure(url: okhttp3.HttpUrl): Failure? = when {
+        url.username.isNotEmpty() || url.password.isNotEmpty() -> Failure("The Esplora endpoint cannot include credentials.")
+        !url.query.isNullOrEmpty() || !url.fragment.isNullOrEmpty() -> Failure("The Esplora endpoint cannot include a query string or fragment.")
         else -> null
     }
     /** WHATWG IPv4 numbers include shortened, hex and octal forms. */
@@ -59,12 +59,12 @@ object EsploraEndpoint {
     fun validateGenesis(value: String, variant: String) {
         val hash = value.trim().lowercase()
         val failure = when {
-            variant == "regtest" -> "Regtest wallets use Bitcoin Core instead of Esplora."
-            !Regex("[0-9a-f]{64}").matches(hash) -> "The endpoint returned an invalid block hash."
-            hash != genesis[variant] -> "The Esplora endpoint is for a different Bitcoin network."
+            variant == "regtest" -> Failure("Regtest wallets use Bitcoin Core instead of Esplora.")
+            !Regex("[0-9a-f]{64}").matches(hash) -> Failure("The endpoint returned an invalid block hash.")
+            hash != genesis[variant] -> Failure("The Esplora endpoint is for a different Bitcoin network.")
             else -> null
         }
-        failure?.let { throw Failure(it) }
+        failure?.let { throw it }
     }
     private val genesis = mapOf(
         "mainnet" to "000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f",

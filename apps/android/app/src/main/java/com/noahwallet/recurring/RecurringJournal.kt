@@ -12,12 +12,13 @@ class RecurringJournal internal constructor(val file: File, private val read: ()
     private val write: (String) -> Unit = { durableRecurringWrite(file, it.toByteArray(), ::syncDirectory) },
     private val quarantine: (ByteArray) -> Unit = { durableRecurringWrite(File("${file.path}.quarantine"), it) }) {
     @Serializable data class Entry(val binding: RecurringStore.Binding, val scheduleID: String, val plan: RecurringPayment.Plan,
-        val markedAt: Long, val policyRevision: String? = null, val resolved: Boolean = false, val consumed: Boolean = false, val policyApplied: Boolean = false,
-        val terminal: TerminalEvidence? = null, val historyApplied: Boolean = false, val released: Boolean = false, val policy: RecurringPayment? = null) {
+        val markedAt: Long, val policyRevision: String? = null, val resolved: Boolean = false, val consumed: Boolean = false,
+        val policyApplied: Boolean = false, val terminal: TerminalEvidence? = null, val historyApplied: Boolean = false, val released: Boolean = false,
+        val policy: RecurringPayment? = null) {
         val key get() = "$scheduleID:${plan.occurrenceIndex}"
     }
-    @Serializable data class TerminalEvidence(val settlementID: String, val attempt: SendAttempt, val generation: Int, val walletGeneration: Int,
-        val outcome: Outcome, val message: String?, val recordedAt: Long) {
+    @Serializable data class TerminalEvidence(val settlementID: String, val attempt: SendAttempt, val generation: Int,
+        val walletGeneration: Int, val outcome: Outcome, val message: String?, val recordedAt: Long) {
         val paid get() = outcome == Outcome.succeeded || outcome == Outcome.alreadyPaid
     }
     @Serializable enum class Outcome { succeeded, alreadyPaid, failed, uncertain }
@@ -52,7 +53,10 @@ class RecurringJournal internal constructor(val file: File, private val read: ()
         if (walletBinding != null && walletBinding != binding) blocked = false
         walletBinding = binding
     }
-    private fun persist(state: State) { try { write(json.encodeToString(state)) } catch (failure: Exception) { blocked = true; throw failure } }
+    private fun persist(state: State) {
+        var written = false
+        try { write(json.encodeToString(state)); written = true } finally { if (!written) blocked = true }
+    }
     private fun state(): State {
         check(!blocked && !quarantineFile.exists()) { invalidMessage }
         val raw = read() ?: return State()
@@ -101,41 +105,54 @@ class RecurringJournal internal constructor(val file: File, private val read: ()
         return migrated
     }
     private fun validate(state: State, complete: Boolean = true) {
-        fun uuid(value: String) { require(UUID.fromString(value).toString().equals(value, ignoreCase = true)) }
-        fun scope(binding: RecurringStore.Binding, id: String) {
-            require(id.isNotBlank() && binding.wallet.fingerprint.isNotBlank() && binding.wallet.network.isNotBlank())
-            uuid(binding.instance)
-        }
-        state.attempts.forEach { (id, e) ->
-            scope(e.binding, id)
-            e.policyRevision?.let(::uuid)
-            require(id == e.scheduleID && e.plan.kind == "pay" && e.plan.occurrenceIndex != null && e.plan.occurrenceIndex >= 0 && e.plan.scheduledFor != null && (!e.consumed || e.resolved) && (!e.policyApplied || e.resolved))
-            e.terminal?.let { terminal ->
-                UUID.fromString(terminal.settlementID)
-                require(terminal.attempt.recurringOccurrenceKey == e.key && terminal.attempt.walletIdentity == e.binding.wallet && terminal.generation >= 0 && terminal.walletGeneration >= 0)
-                if (terminal.outcome == Outcome.succeeded) require(terminal.attempt.receipt?.let { !it.isUnresolved && !it.broadcastRetryPending && it.isProven(terminal.attempt.payment, terminal.attempt.paymentHash) } == true)
-                if (terminal.outcome == Outcome.alreadyPaid) require(terminal.attempt.alreadyPaid?.isProven(terminal.attempt.payment,
-                    terminal.attempt.paymentHash, true) == true)
-                require(terminal.outcome != Outcome.failed || terminal.attempt.failed)
-            }
-            require(!e.historyApplied || e.terminal != null && e.resolved)
-            require(!e.released || e.historyApplied)
-            if (complete && e.consumed) {
-                require(state.consumed.any { sameScope(it.binding, it.scheduleID, e.binding, id) && it.through >= e.plan.scheduledFor } &&
-                    state.consumedIndices.any { sameScope(it.binding, it.scheduleID, e.binding, id) && sameRevision(it.policyRevision,
-                        e.policyRevision) && e.plan.occurrenceIndex in it.indices })
-            }
-        }
-        state.consumed.forEach { scope(it.binding, it.scheduleID) }
+        state.attempts.forEach { (id, e) -> validateAttempt(state, id, e, complete) }
+        state.consumed.forEach { requireScope(it.binding, it.scheduleID) }
         state.consumedIndices.forEach {
-            scope(it.binding, it.scheduleID)
-            it.policyRevision?.let(::uuid)
+            requireScope(it.binding, it.scheduleID)
+            it.policyRevision?.let(::requireUUID)
             require(it.indices.isNotEmpty() && it.indices.all { index -> index >= 0 } && it.indices == it.indices.distinct().sorted())
         }
-        state.legacyUncertainty.forEach { scope(it.binding, it.scheduleID) }
+        state.legacyUncertainty.forEach { requireScope(it.binding, it.scheduleID) }
+    }
+    private fun requireUUID(value: String) { require(UUID.fromString(value).toString().equals(value, ignoreCase = true)) }
+    private fun requireScope(binding: RecurringStore.Binding, id: String) {
+        require(id.isNotBlank() && binding.wallet.fingerprint.isNotBlank() && binding.wallet.network.isNotBlank())
+        requireUUID(binding.instance)
+    }
+    private fun validateAttempt(state: State, id: String, e: Entry, complete: Boolean) {
+        requireScope(e.binding, id)
+        e.policyRevision?.let(::requireUUID)
+        require(wellFormed(id, e))
+        e.terminal?.let { terminal -> validateTerminal(e, terminal) }
+        require(!e.historyApplied || e.terminal != null && e.resolved)
+        require(!e.released || e.historyApplied)
+        if (complete && e.consumed) requireConsumedEvidence(state, id, e)
+    }
+    private fun wellFormed(id: String, e: Entry): Boolean = id == e.scheduleID && e.plan.kind == "pay" && e.plan.occurrenceIndex != null &&
+        e.plan.occurrenceIndex >= 0 && e.plan.scheduledFor != null && (!e.consumed || e.resolved) && (!e.policyApplied || e.resolved)
+    private fun requireConsumedEvidence(state: State, id: String, e: Entry) {
+        val scheduledFor = checkNotNull(e.plan.scheduledFor)
+        require(state.consumed.any { sameScope(it.binding, it.scheduleID, e.binding, id) && it.through >= scheduledFor } &&
+            state.consumedIndices.any { sameScope(it.binding, it.scheduleID, e.binding, id) && sameRevision(it.policyRevision,
+                e.policyRevision) && e.plan.occurrenceIndex in it.indices })
+    }
+    private fun validateTerminal(e: Entry, terminal: TerminalEvidence) {
+        UUID.fromString(terminal.settlementID)
+        require(terminal.attempt.recurringOccurrenceKey == e.key && terminal.attempt.walletIdentity == e.binding.wallet &&
+            terminal.generation >= 0 && terminal.walletGeneration >= 0)
+        if (terminal.outcome == Outcome.succeeded) {
+            require(terminal.attempt.receipt?.let {
+                !it.isUnresolved && !it.broadcastRetryPending && it.isProven(terminal.attempt.payment, terminal.attempt.paymentHash)
+            } == true)
+        }
+        if (terminal.outcome == Outcome.alreadyPaid) require(terminal.attempt.alreadyPaid?.isProven(terminal.attempt.payment,
+            terminal.attempt.paymentHash, true) == true)
+        require(terminal.outcome != Outcome.failed || terminal.attempt.failed)
     }
     /** Runs inside Send's wallet reservation before its terminal outcome is published. */
-    @Synchronized fun record(attempt: SendAttempt, generation: Int, walletGeneration: Int, message: String?, binding: RecurringStore.Binding, now: Long) {
+    @Suppress("LongParameterList") // Send's evidence callback arguments, plus the binding and clock
+    @Synchronized
+    fun record(attempt: SendAttempt, generation: Int, walletGeneration: Int, message: String?, binding: RecurringStore.Binding, now: Long) {
         val outcome = when {
             attempt.alreadyPaid != null -> Outcome.alreadyPaid
             attempt.receipt?.let { !it.isUnresolved && !it.broadcastRetryPending } == true -> Outcome.succeeded
@@ -203,9 +220,9 @@ class RecurringJournal internal constructor(val file: File, private val read: ()
         }
 
         const val invalidMessage = "Recurring payment history needs attention. Its saved evidence has been preserved; sending remains stopped."
-        private fun sameScope(a: RecurringStore.Binding, aID: String, b: RecurringStore.Binding, bID: String) =
+        internal fun sameScope(a: RecurringStore.Binding, aID: String, b: RecurringStore.Binding, bID: String) =
             aID == bID && a.wallet == b.wallet && UUID.fromString(a.instance) == UUID.fromString(b.instance)
-        private fun sameRevision(a: String?, b: String?) = a.equals(b, ignoreCase = true)
+        internal fun sameRevision(a: String?, b: String?) = a.equals(b, ignoreCase = true)
         val legacyReason = RecurringIssue(RecurringIssue.Code.legacyHistory)
         const val legacyMessage = "Noah can't reconstruct this schedule's earlier payment history. Cancel it and explicitly approve a new recurring payment."
     }

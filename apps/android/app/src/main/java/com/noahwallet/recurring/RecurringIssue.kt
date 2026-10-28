@@ -17,7 +17,8 @@ import kotlinx.serialization.Serializable
         Code.quoteExceedsCap -> L10n.text(context,
             "The fee for this payment ({fee} sats) is above your automatic limit of {cap} sats. Review it to pay manually.", arguments[0], arguments[1])
         Code.scheduleExceedsCap -> L10n.text(context,
-            "Ark's published Lightning fees for this amount can reach {fee} sats, above your automatic limit of {cap} sats. Review it to pay manually.", arguments[0], arguments[1])
+            "Ark's published Lightning fees for this amount can reach {fee} sats, above your automatic limit of {cap} sats. Review it to pay manually.",
+            arguments[0], arguments[1])
         Code.policyEvidence -> L10n.text(context, RecurringPolicyLedger.message)
         Code.automationStopped -> L10n.text(context, RecurringAutomationAuthority.message)
         Code.legacyHistory -> L10n.text(context, RecurringJournal.legacyMessage)
@@ -51,10 +52,10 @@ import kotlinx.serialization.Serializable
                 RecurringPayment.amountLimitMessage to Code.amountLimit
             )
             fixed[text]?.let { return RecurringIssue(it) }
-            for ((pattern, code) in listOf(
-                """^The fee for this payment \(([0-9]+) sats\) is above your automatic limit of ([0-9]+) sats\. Review it to pay manually\.$""" to Code.quoteExceedsCap,
-                """^Ark's published Lightning fees for this amount can reach ([0-9]+) sats, above your automatic limit of ([0-9]+) sats\. Review it to pay manually\.$""" to Code.scheduleExceedsCap
-            )) {
+            val quoteCap = """^The fee for this payment \(([0-9]+) sats\) is above your automatic limit of ([0-9]+) sats\. Review it to pay manually\.$"""
+            val scheduleCap = """^Ark's published Lightning fees for this amount can reach ([0-9]+) sats, """ +
+                """above your automatic limit of ([0-9]+) sats\. Review it to pay manually\.$"""
+            for ((pattern, code) in listOf(quoteCap to Code.quoteExceedsCap, scheduleCap to Code.scheduleExceedsCap)) {
                 Regex(pattern).matchEntire(text)?.let { match ->
                     val issue = RecurringIssue(code, match.groupValues.drop(1))
                     if (issue.valid) return issue
