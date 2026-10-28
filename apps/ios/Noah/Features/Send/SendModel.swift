@@ -192,6 +192,21 @@ import Observation
     }
     /// `keepingKeypad`: a recipient without its own amount leaves the amount unconfirmed, even
     /// one confirmed by an earlier Next, so Amount comes next with whatever is typed.
+    /// An offer that fixes its amount behaves like an invoice with one. False: stop here, superseded or unresolved.
+    private func applyOfferAmount() async -> Bool {
+        let revision = recipientRevision
+        do {
+            let fixed = try await offerAmount(SendDestination.cleaned(destination))
+            guard revision == recipientRevision else { return false }
+            if let fixed { parsed.amount = Decimal(fixed); parsed.isAmountEditable = false }
+            return true
+        } catch {
+            guard revision == recipientRevision else { return false }
+            self.error = "Unable to resolve this recipient. Please check the address."
+            return false
+        }
+    }
+
     func acceptRecipient(keepingKeypad: Bool = false) async {
         guard !busy, !controller.locked else { return }
         busy = true
@@ -214,20 +229,9 @@ import Observation
             error = "MAX requires an on-chain address without a fixed amount."
             return
         }
-        if type == "offer" {
-            let revision = recipientRevision
-            do {
-                let fixed = try await offerAmount(SendDestination.cleaned(destination))
-                guard revision == recipientRevision else { return }
-                // An offer that fixes its amount behaves like an invoice with one.
-                if let fixed { parsed.amount = Decimal(fixed); parsed.isAmountEditable = false }
-            } catch {
-                guard revision == recipientRevision else { return }
-                self.error = "Unable to resolve this recipient. Please check the address."
-                return
-            }
-        }
+        if type == "offer", await !applyOfferAmount() { return }
         if let fixed = parsed.amount {
+            // swiftlint:disable:next legacy_objc_type - Decimal converts to an integer only through NSDecimalNumber
             let number = NSDecimalNumber(decimal: fixed)
             guard fixed <= 2_100_000_000_000_000, fixed == Decimal(number.uint64Value) else {
                 error = "The invoice must request whole satoshis."
@@ -314,12 +318,8 @@ import Observation
             if let request = parsed.bip321 {
                 guard let selected = SendFlow.method(rail: rail, request: request) else { throw SendFailure.invalid }
                 method = selected
-                target = request[
-                    [
-                        "ark": "arkAddress", "lightning": "lightningInvoice", "offer": "offer",
-                        "onchain": "onchainAddress",
-                    ][selected]!
-                ]!
+                guard let key = SendDestination.requestKeys[selected], let value = request[key] else { throw SendFailure.invalid }
+                target = value
             }
             if method == "lnurl" {
                 guard let route = matchingRoute else { throw SendFailure.invalid }

@@ -26,7 +26,7 @@ enum LaunchState: String, Equatable, Sendable {
     }
 
     /// `walletDatabaseExists` means "the datadir holds any wallet data".
-    static func resolve(seed: SeedStatus, walletDatabaseExists: Bool) -> LaunchState {
+    static func resolve(seed: SeedStatus, walletDatabaseExists: Bool) -> Self {
         switch (seed, walletDatabaseExists) {
         case (.invalid, _): .invalidSeed
         case (.conflict, _): .seedConflict
@@ -53,7 +53,7 @@ extension LaunchState.SeedStatus {
 }
 
 extension LaunchState {
-    enum Diagnostic: String { case none, invalidMnemonic, sourceUnavailable, sourceConflict, walletFingerprintMismatch, multipleDatabases }
+    enum Diagnostic: String { case healthy = "none", invalidMnemonic, sourceUnavailable, sourceConflict, walletFingerprintMismatch, multipleDatabases }
     struct Inspection { let state: LaunchState; let reason: Diagnostic }
 
     static func inspect(sources: [KeychainPassword.ReadResult], walletDatabaseExists: Bool,
@@ -67,7 +67,7 @@ extension LaunchState {
         case .invalid: .invalidMnemonic
         case .conflict: .sourceConflict
         case .unavailable: .sourceUnavailable
-        case .present, .absent: .none
+        case .present, .absent: .healthy
         }
         return .init(state: resolve(seed: status, walletDatabaseExists: walletDatabaseExists), reason: reason)
     }

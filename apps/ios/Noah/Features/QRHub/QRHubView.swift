@@ -24,52 +24,9 @@ struct QRHubView: View {
             ScrollView {
                 VStack(spacing: 28) {
                     if hub.mode == .myCode {
-                        if let address = app.server.state.lightningAddress, !address.isEmpty {
-                            AdaptiveColumns { _ in
-                                StyledQRCode(content: address)
-                                    .frame(maxWidth: qrSide, maxHeight: qrSide).padding(20)
-                                    .background(.white, in: RoundedRectangle(cornerRadius: 28))
-                                    .frame(maxWidth: .infinity)
-                                VStack(spacing: 28) {
-                                    if !displayName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                                        Text(displayName).font(NoahFont.title)
-                                    }
-                                    Button {
-                                        UIPasteboard.general.string = address
-                                        hub.copied = true
-                                    } label: {
-                                        Text(LocalizedStringKey(hub.copied ? "Copied" : QRHubModel.displayAddress(address)))
-                                            .multilineTextAlignment(.center).font(NoahFont.headline)
-                                    }
-                                    .accessibilityIdentifier("qr-copy-address")
-                                    .task(id: hub.copied) {
-                                        guard hub.copied else { return }
-                                        do { try await Task.sleep(for: .milliseconds(1800)) } catch { return }
-                                        hub.copied = false
-                                    }
-                                    Text("This QR contains only your Lightning address.")
-                                        .font(NoahFont.footnote).foregroundStyle(NoahColor.mutedForeground)
-                                        .multilineTextAlignment(.center)
-                                }.frame(maxWidth: .infinity)
-                            }
-                        } else {
-                            NoahCard {
-                                VStack(alignment: .leading, spacing: 16) {
-                                    Text("Lightning address unavailable").font(NoahFont.headline)
-                                    Text("Finish setting up your Lightning address before sharing your QR.")
-                                    Button("Open Profile") { settings.open(.profile) }
-                                }
-                            }
-                        }
+                        myCode(qrSide: qrSide)
                     } else {
-                        NoahCard {
-                            VStack(spacing: 12) {
-                                Image(systemName: "qrcode.viewfinder").font(.largeTitle)
-                                Text("Scan to pay").font(NoahFont.title)
-                                Text("Scan a Bitcoin, Lightning, or Ark QR code and send from Noah.")
-                                    .font(NoahFont.footnote).multilineTextAlignment(.center)
-                            }.frame(maxWidth: .infinity)
-                        }
+                        scanCard
                     }
                 }
                 .padding(24).frame(maxWidth: AdaptiveLayout.pairedWidth).frame(maxWidth: .infinity)
@@ -103,6 +60,57 @@ struct QRHubView: View {
                     .accessibilityIdentifier("qr-scanner-paste")
                     .padding().frame(maxWidth: .infinity).background(NoahColor.background)
                 }
+        }
+    }
+
+    @ViewBuilder private func myCode(qrSide: CGFloat) -> some View {
+        if let address = app.server.state.lightningAddress, !address.isEmpty {
+            AdaptiveColumns { _ in
+                StyledQRCode(content: address)
+                    .frame(maxWidth: qrSide, maxHeight: qrSide).padding(20)
+                    .background(.white, in: RoundedRectangle(cornerRadius: 28))
+                    .frame(maxWidth: .infinity)
+                VStack(spacing: 28) {
+                    if !displayName.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                        Text(displayName).font(NoahFont.title)
+                    }
+                    Button {
+                        UIPasteboard.general.string = address
+                        hub.copied = true
+                    } label: {
+                        Text(LocalizedStringKey(hub.copied ? "Copied" : QRHubModel.displayAddress(address)))
+                            .multilineTextAlignment(.center).font(NoahFont.headline)
+                    }
+                    .accessibilityIdentifier("qr-copy-address")
+                    .task(id: hub.copied) {
+                        guard hub.copied else { return }
+                        do { try await Task.sleep(for: .milliseconds(1800)) } catch { return }
+                        hub.copied = false
+                    }
+                    Text("This QR contains only your Lightning address.")
+                        .font(NoahFont.footnote).foregroundStyle(NoahColor.mutedForeground)
+                        .multilineTextAlignment(.center)
+                }.frame(maxWidth: .infinity)
+            }
+        } else {
+            NoahCard {
+                VStack(alignment: .leading, spacing: 16) {
+                    Text("Lightning address unavailable").font(NoahFont.headline)
+                    Text("Finish setting up your Lightning address before sharing your QR.")
+                    Button("Open Profile") { settings.open(.profile) }
+                }
+            }
+        }
+    }
+
+    private var scanCard: some View {
+        NoahCard {
+            VStack(spacing: 12) {
+                Image(systemName: "qrcode.viewfinder").accessibilityHidden(true).font(.largeTitle)
+                Text("Scan to pay").font(NoahFont.title)
+                Text("Scan a Bitcoin, Lightning, or Ark QR code and send from Noah.")
+                    .font(NoahFont.footnote).multilineTextAlignment(.center)
+            }.frame(maxWidth: .infinity)
         }
     }
 

@@ -63,6 +63,7 @@ enum SendMotion {
     /// What the controller's state means for the motion. `refund` is nil while the
     /// refund evidence for a failed Lightning send is still being read.
     static func outcome(state: SendPaymentController.State, attempt: SendPaymentController.Attempt?,
+                        // swiftlint:disable:next discouraged_optional_boolean - nil: the refund is not known yet
                         checking: Bool, refund: Bool?) -> Outcome {
         let lightning = attempt.map { Rail($0.payment) == .lightning } ?? false
         switch state {
@@ -90,7 +91,7 @@ enum SendMotion {
 
     /// The phase at `t` seconds after submission. `outcomeAt` is when the outcome was
     /// first seen and `confirmedAt` when an on-chain confirmation was first seen.
-    static func phase(rail: Rail, outcome: Outcome, outcomeAt: Double, confirmedAt: Double? = nil, at t: Double) -> Phase {
+    static func phase(rail: Rail, outcome: Outcome, outcomeAt: Double, at t: Double, confirmedAt: Double? = nil) -> Phase {
         switch outcome {
         case .inFlight: return inFlight(rail, t)
         case .pending:
@@ -166,30 +167,35 @@ enum SendMotion {
     }
 
     enum Haptic: Equatable, Sendable { case light, success, error }
+    /// One haptic of the stage: its key (each plays once), when, and which.
+    struct Cue {
+        let key: String, at: Double, kind: Haptic
+        init(_ key: String, _ at: Double, _ kind: Haptic) { self.key = key; self.at = at; self.kind = kind }
+    }
 
     /// Every haptic the stage plays, keyed so each plays once (prototype `hap` calls).
     static func haptics(rail: Rail, outcome: Outcome, outcomeAt: Double, confirmations: Int = 0,
-                        required: Int = 1, confirmedAt: Double? = nil) -> [(key: String, at: Double, kind: Haptic)] {
-        var list: [(key: String, at: Double, kind: Haptic)] = []
-        if rail != .onchainWallet { list.append(("split", 0.42, .light)) }
+                        required: Int = 1, confirmedAt: Double? = nil) -> [Cue] {
+        var list: [Cue] = []
+        if rail != .onchainWallet { list.append(Cue("split", 0.42, .light)) }
         switch rail {
-        case .ark: list += [("signatures", 1.57, .light), ("seal", 2.05, .light)]
-        case .lightning: list.append(("lock", 1.15, .light))
+        case .ark: list += [Cue("signatures", 1.57, .light), Cue("seal", 2.05, .light)]
+        case .lightning: list.append(Cue("lock", 1.15, .light))
         default: break
         }
         let ending = endingStart(rail: rail, outcomeAt: outcomeAt)
         switch (outcome, rail) {
-        case (.succeeded, .ark): list.append(("finale", ending + 0.35, .success))
+        case (.succeeded, .ark): list.append(Cue("finale", ending + 0.35, .success))
         case (.succeeded, .lightning):
-            list += [("unlock", ending + 0.9, .light), ("finale", ending + 1.45, .success)]
+            list += [Cue("unlock", ending + 0.9, .light), Cue("finale", ending + 1.45, .success)]
         case (.succeeded, .onchainSwap), (.succeeded, .onchainWallet):
-            list.append(("drop", ending + (rail == .onchainSwap ? 0.25 : 0), .light))
+            list.append(Cue("drop", ending + (rail == .onchainSwap ? 0.25 : 0), .light))
             if let confirmedAt, confirmations > 0 {
                 let at = max(ending + 0.6, confirmedAt)
-                list.append(("confirmed-\(min(confirmations, required))", at, confirmations >= required ? .success : .light))
+                list.append(Cue("confirmed-\(min(confirmations, required))", at, confirmations >= required ? .success : .light))
             }
         case (.refunded, .lightning):
-            list += [("fizzle", ending, .error), ("refund", ending + 1.2, .success)]
+            list += [Cue("fizzle", ending, .error), Cue("refund", ending + 1.2, .success)]
         default: break
         }
         return list

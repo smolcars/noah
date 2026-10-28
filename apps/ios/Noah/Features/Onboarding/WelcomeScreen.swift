@@ -111,7 +111,7 @@ struct LanguageSheet: View {
                     HStack {
                         Text(verbatim: Self.name(code)).noahText(NoahTokens.Typography.body)
                         Spacer()
-                        Image(systemName: "checkmark")
+                        Image(systemName: "checkmark").accessibilityHidden(true)
                             .font(.body.weight(.semibold))
                             .foregroundStyle(NoahTokens.Colors.orange)
                             .opacity(code == selected ? 1 : 0)
@@ -138,14 +138,7 @@ struct BetaSheet: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            Text("Beta")
-                .noahText(NoahTokens.Typography.caption)
-                .bold()
-                .foregroundStyle(NoahTokens.Colors.orangeText)
-                .padding(.horizontal, 11)
-                .frame(minHeight: 26)
-                .background(NoahTokens.Colors.orangeTint, in: Capsule())
-                .padding(.bottom, 14)
+            betaBadge
             Text("Before you start")
                 .noahText(NoahTokens.Typography.sheetTitle)
                 .foregroundStyle(NoahTokens.Colors.foreground)
@@ -160,17 +153,32 @@ struct BetaSheet: View {
                     .foregroundStyle(NoahTokens.Colors.failure)
                     .padding(.top, NoahTokens.Space.m)
             }
-            Button(action: onConfirm) {
-                ZStack {
-                    Text("Got it").opacity(busy ? 0 : 1)
-                    if busy { ProgressView().tint(NoahTokens.Colors.background) }
-                }
-            }
-            .buttonStyle(OnboardingPrimaryButtonStyle())
-            .allowsHitTesting(!busy)
-            .accessibilityIdentifier("onboarding-beta-confirm")
-            .padding(.top, NoahTokens.Space.screen)
+            confirmButton
         }
         .fixedSize(horizontal: false, vertical: true)
+    }
+
+    private var betaBadge: some View {
+        Text("Beta")
+            .noahText(NoahTokens.Typography.caption)
+            .bold()
+            .foregroundStyle(NoahTokens.Colors.orangeText)
+            .padding(.horizontal, 11)
+            .frame(minHeight: 26)
+            .background(NoahTokens.Colors.orangeTint, in: Capsule())
+            .padding(.bottom, 14)
+    }
+
+    private var confirmButton: some View {
+        Button(action: onConfirm) {
+            ZStack {
+                Text("Got it").opacity(busy ? 0 : 1)
+                if busy { ProgressView().tint(NoahTokens.Colors.background) }
+            }
+        }
+        .buttonStyle(OnboardingPrimaryButtonStyle())
+        .allowsHitTesting(!busy)
+        .accessibilityIdentifier("onboarding-beta-confirm")
+        .padding(.top, NoahTokens.Space.screen)
     }
 }

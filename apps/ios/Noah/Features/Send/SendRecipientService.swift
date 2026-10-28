@@ -30,7 +30,9 @@ enum SendRecipientService {
     }
     private final class RefuseRedirects: NSObject, URLSessionTaskDelegate, Sendable {
         func urlSession(_: URLSession, task _: URLSessionTask, willPerformHTTPRedirection _: HTTPURLResponse,
-                        newRequest _: URLRequest) async -> URLRequest? { nil }
+                        // swiftlint:disable:next async_without_await - URLSession's async delegate requirement; a sync one is never called
+                        newRequest _: URLRequest) async
+            -> URLRequest? { nil }
     }
     static func resolve(_ destination: String, session: WalletSession = .shared,
                         fetch: Fetch = fetch) async throws -> SendRecipientRoute {
@@ -44,7 +46,7 @@ enum SendRecipientService {
             }
         } else if let decoded = PaymentEncoding.bech32(value), decoded.prefix == "lnurl",
                   let bytes = PaymentEncoding.bytes(decoded.words) {
-            endpoint = SendDestination.urlText(String(decoding: bytes, as: UTF8.self)).flatMap(URLComponents.init(string:))
+            endpoint = String(bytes: bytes, encoding: .utf8).flatMap(SendDestination.urlText).flatMap(URLComponents.init(string:))
             // As Android's HttpUrl requests it: dot segments resolved.
             if let path = endpoint?.percentEncodedPath { endpoint?.percentEncodedPath = SendDestination.removingDotSegments(path) }
         }

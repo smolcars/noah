@@ -16,6 +16,7 @@ struct SendProgress: Codable {
     var sourceConfirmed = false
     var rails: [SendRail] = []
     var selectedRail: SendRail?
+    // swiftlint:disable:next discouraged_optional_boolean - nil: unknown, or not a BIP-321 request (parse output)
     var selectedRailAvailable: Bool?
     var sourceOptions: [SendSource] = []
     var next: SendStage {
@@ -30,6 +31,7 @@ struct SendProgress: Codable {
     }
 }
 enum SendFlow {
+    // swiftlint:disable:next discouraged_optional_collection - nil: unknown, or not a BIP-321 request (parse output)
     static func rails(type: String?, request: [String: String]?) -> [SendRail] {
         if type == "bip321", let request {
             return SendRail.allCases.filter { method(rail: $0, request: request) != nil }
@@ -54,6 +56,7 @@ enum SendFlow {
         rails.first { availability[$0.rawValue] != false } ?? rails.first
     }
     static func canNote(type: String?, allowed: Int) -> Bool { type == "lnurl" && allowed > 0 }
+    // swiftlint:disable:next discouraged_optional_collection - nil: unknown, or not a BIP-321 request (parse output)
     static func canMax(type: String?, request: [String: String]?) -> Bool {
         type == "onchain" || (type == "bip321" && request?["onchainAddress"] != nil)
     }
@@ -62,5 +65,5 @@ enum SendFlow {
     }
     static func satsPerVByte(satsPerKwu: UInt64) -> Double { Double(satsPerKwu) * 4 / 1000 }
     // FFI accepts integer sat/vB. Round up, never truncate a fractional fee rate.
-    static func sdkFeeRate(satsPerKwu: UInt64) -> UInt64 { satsPerKwu / 250 + (satsPerKwu % 250 == 0 ? 0 : 1) }
+    static func sdkFeeRate(satsPerKwu: UInt64) -> UInt64 { satsPerKwu / 250 + (satsPerKwu.isMultiple(of: 250) ? 0 : 1) }
 }

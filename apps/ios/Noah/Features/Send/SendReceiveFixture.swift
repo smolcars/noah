@@ -6,7 +6,7 @@ struct SendReceiveFixture {
     var summary: WalletSession.Summary?
     var tip: UInt32?
     /// Whether a failed Lightning send's refund is recorded.
-    var refunded: Bool?
+    var refunded: Bool? // swiftlint:disable:this discouraged_optional_boolean - fixture JSON omits it
     var history: [HistoryTransaction] = []
     var chain: (@Sendable (String) async throws -> ReceiveChainSnapshot)?
     var fees: [SendRail: UInt64] = [:]

@@ -41,7 +41,7 @@ private struct ScannerCamera: UIViewRepresentable {
         context.coordinator.start { [weak view] in view?.setNeedsLayout() }
         return view
     }
-    func updateUIView(_: CameraPreview, context _: Context) {}
+    func updateUIView(_: CameraPreview, context _: Context) { /* The preview layer follows its session. */ }
     static func dismantleUIView(_: CameraPreview, coordinator: CameraDriver) { coordinator.stop() }
 }
 enum ScannerPreviewLayout {
@@ -56,8 +56,11 @@ enum ScannerPreviewLayout {
 }
 
 private final class CameraPreview: UIView {
-    override class var layerClass: AnyClass { AVCaptureVideoPreviewLayer.self }
-    var preview: AVCaptureVideoPreviewLayer { layer as! AVCaptureVideoPreviewLayer }
+    override static var layerClass: AnyClass { AVCaptureVideoPreviewLayer.self }
+    var preview: AVCaptureVideoPreviewLayer {
+        guard let preview = layer as? AVCaptureVideoPreviewLayer else { preconditionFailure("layerClass is AVCaptureVideoPreviewLayer") }
+        return preview
+    }
     override func layoutSubviews() {
         super.layoutSubviews()
         guard let scene = window?.windowScene, let connection = preview.connection else { return }

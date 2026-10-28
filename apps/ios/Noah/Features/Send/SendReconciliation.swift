@@ -65,8 +65,12 @@ enum SendReconciliation {
             return true
         }
         if let hash {
-            return lightningAttempt(candidates, hash: hash, amount: payment.amount, snapshot: attempt.snapshot,
-                                    startedAt: attempt.startedAt, fixed: fixesAmount(attempt.snapshot.resolvedInvoice ?? payment.destination))
+            return lightningAttempt(
+                candidates,
+                paying: .init(hash: hash, amount: payment.amount),
+                snapshot: attempt.snapshot,
+                startedAt: attempt.startedAt,
+                fixed: fixesAmount(attempt.snapshot.resolvedInvoice ?? payment.destination))
         }
         return .candidates(
             candidates.map {
@@ -112,8 +116,11 @@ enum SendReconciliation {
     /// without it go by whether the movement completed after `startedAt`), with the fee its effective balance took
     /// beyond the amount: the fee field keeps the first attempt's. Failure needs the movement to have completed after
     /// `startedAt`; until then the attempt may still be running.
-    static func lightningAttempt(_ candidates: [Movement], hash: String, amount: UInt64, snapshot: SendSnapshot,
+    /// The invoice's payment hash and the amount Noah meant to pay it.
+    struct PaymentID { var hash: String; var amount: UInt64 }
+    static func lightningAttempt(_ candidates: [Movement], paying: PaymentID, snapshot: SendSnapshot,
                                  startedAt: Date?, fixed: Bool) -> SendPaymentController.Resolution {
+        let hash = paying.hash, amount = paying.amount
         guard let (movement, actual) = sent(candidates, hash: hash) else { return .uncertain }
         guard snapshot.movementIDs.contains(movement.id) else {
             return lightning(candidates, hash: hash, amount: amount, snapshot: snapshot, fixed: fixed)
@@ -283,7 +290,7 @@ enum SendTransaction {
         return amount
     }
     static func parse(hex: String) throws -> (inputs: [Input], outputs: [(amount: UInt64, script: [UInt8])]) {
-        guard hex.count % 2 == 0 else { throw SendFailure.unresolved }
+        guard hex.count.isMultiple(of: 2) else { throw SendFailure.unresolved }
         var bytes: [UInt8] = []
         var index = hex.startIndex
         while index < hex.endIndex {

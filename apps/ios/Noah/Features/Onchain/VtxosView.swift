@@ -112,7 +112,7 @@ struct VtxosView: View {
             .accessibilityIdentifier("vtxos-renew-due")
         } else if let soonest = vtxos.filter(\.refreshable).map({ Int64($0.expiry) - Int64($0.tip) }).min() {
             HStack(spacing: 8) {
-                Image(systemName: "clock").font(.system(size: 15))
+                Image(systemName: "clock").accessibilityHidden(true).font(.system(size: 15))
                 Text(verbatim: L10n.text("Next expiry in {time} · renews automatically", VtxoList.timeLeft(soonest, locale: language), locale: language))
             }
             .noahText(NoahTokens.Typography.sub).foregroundStyle(NoahTokens.Colors.muted)
@@ -144,7 +144,7 @@ struct VtxosView: View {
 
     private var empty: some View {
         VStack(spacing: 6) {
-            Image(systemName: "bitcoinsign").font(.system(size: 22, weight: .medium))
+            Image(systemName: "bitcoinsign").accessibilityHidden(true).font(.system(size: 22, weight: .medium))
                 .frame(width: 56, height: 56).background(NoahTokens.Colors.soft, in: Circle())
             Text(L10n.text("No VTXOs yet", locale: language)).noahText(ActivityText.emptyTitle).padding(.top, 20)
             Text(L10n.text("Bitcoin you receive shows up here as VTXOs.", locale: language))
@@ -273,7 +273,7 @@ struct VtxoRow: View {
         Button(action: action) {
             HStack(spacing: 14) {
                 if selecting {
-                    Image(systemName: selected ? "checkmark.circle.fill" : "circle")
+                    Image(systemName: selected ? "checkmark.circle.fill" : "circle").accessibilityHidden(true)
                         .font(.system(size: 24))
                         .foregroundStyle(vtxo.refreshable ? NoahTokens.Colors.foreground : NoahTokens.Colors.hairline)
                         .frame(width: 42, height: 42)
@@ -345,44 +345,48 @@ private struct VtxoTimeline: View {
         let span = max(lefts.max() ?? 0, Int64(threshold) * 4, 24)
         let largest = Double(vtxos.map(\.amount).max() ?? 1)
         Canvas { context, size in
-            let x0: CGFloat = 6, x1 = size.width - 6, base: CGFloat = 50
-            func x(_ blocks: Int64) -> CGFloat { x0 + (x1 - x0) * CGFloat(min(blocks, span)) / CGFloat(span) }
-            if vtxos.contains(where: VtxoList.isDue) {
-                context.fill(Path(roundedRect: CGRect(x: x0, y: 6, width: x(Int64(threshold)) - x0 + 4, height: base - 6), cornerRadius: 4),
-                             with: .color(NoahTokens.Colors.orangeTint))
-            }
-            context.fill(Path(CGRect(x: x0, y: base + 6, width: x1 - x0, height: 1)), with: .color(NoahTokens.Colors.hairline))
-            for tick in 0...4 {
-                let blocks = span * Int64(tick) / 4, at = x(blocks)
-                context.fill(Path(CGRect(x: at - 0.5, y: base + 3, width: 1, height: 6)), with: .color(NoahTokens.Colors.muted))
-                let label = tick == 0 ? L10n.text("Now", locale: locale.identifier) : VtxoList.span(blocks, locale: locale.identifier)
-                context.draw(Text(verbatim: label).font(NoahTokens.Typography.caption.font(size: 11)).foregroundStyle(NoahTokens.Colors.muted),
-                             at: CGPoint(x: at, y: base + 22), anchor: tick == 0 ? .leading : tick == 4 ? .trailing : .center)
-            }
-            var placed: [(CGPoint, CGFloat)] = []
-            for (vtxo, left) in zip(vtxos, lefts).sorted(by: { $0.0.amount > $1.0.amount }) {
-                let radius = 3 + 7 * CGFloat((Double(vtxo.amount) / largest).squareRoot())
-                var center = CGPoint(x: min(max(x(left), x0 + radius), x1 - radius), y: base - radius)
-                for _ in 0..<60 where placed.contains(where: { hypot($0.0.x - center.x, $0.0.y - center.y) < $0.1 + radius + 1.5 }) {
-                    center.y -= 1.5
-                }
-                placed.append((center, radius))
-                let dot = Path(ellipseIn: CGRect(x: center.x - radius, y: center.y - radius, width: radius * 2, height: radius * 2))
-                if vtxo.state == "Locked" {
-                    context.stroke(dot, with: .color(NoahTokens.Colors.foreground), style: StrokeStyle(lineWidth: 1.4, dash: [2.5, 2]))
-                } else {
-                    let due = VtxoList.isDue(vtxo)
-                    context.fill(dot, with: .color(NoahTokens.Colors.foreground.opacity(due ? 1 : 0.85)))
-                    if due {
-                        let ring = radius + 2.5
-                        context.stroke(Path(ellipseIn: CGRect(x: center.x - ring, y: center.y - ring, width: ring * 2, height: ring * 2)),
-                                       with: .color(NoahTokens.Colors.orange), lineWidth: 2)
-                    }
-                }
-            }
+            draw(context, size: size, lefts: lefts, span: span, largest: largest)
         }
         .accessibilityElement()
         .accessibilityLabel(Text(L10n.text("When your VTXOs expire", locale: locale.identifier)))
+    }
+
+    private func draw(_ context: GraphicsContext, size: CGSize, lefts: [Int64], span: Int64, largest: Double) {
+        let x0: CGFloat = 6, x1 = size.width - 6, base: CGFloat = 50
+        func x(_ blocks: Int64) -> CGFloat { x0 + (x1 - x0) * CGFloat(min(blocks, span)) / CGFloat(span) }
+        if vtxos.contains(where: VtxoList.isDue) {
+            context.fill(Path(roundedRect: CGRect(x: x0, y: 6, width: x(Int64(threshold)) - x0 + 4, height: base - 6), cornerRadius: 4),
+                         with: .color(NoahTokens.Colors.orangeTint))
+        }
+        context.fill(Path(CGRect(x: x0, y: base + 6, width: x1 - x0, height: 1)), with: .color(NoahTokens.Colors.hairline))
+        for tick in 0...4 {
+            let blocks = span * Int64(tick) / 4, at = x(blocks)
+            context.fill(Path(CGRect(x: at - 0.5, y: base + 3, width: 1, height: 6)), with: .color(NoahTokens.Colors.muted))
+            let label = tick == 0 ? L10n.text("Now", locale: locale.identifier) : VtxoList.span(blocks, locale: locale.identifier)
+            context.draw(Text(verbatim: label).font(NoahTokens.Typography.caption.font(size: 11)).foregroundStyle(NoahTokens.Colors.muted),
+                         at: CGPoint(x: at, y: base + 22), anchor: tick == 0 ? .leading : tick == 4 ? .trailing : .center)
+        }
+        var placed: [(CGPoint, CGFloat)] = []
+        for (vtxo, left) in zip(vtxos, lefts).sorted(by: { $0.0.amount > $1.0.amount }) {
+            let radius = 3 + 7 * CGFloat((Double(vtxo.amount) / largest).squareRoot())
+            var center = CGPoint(x: min(max(x(left), x0 + radius), x1 - radius), y: base - radius)
+            for _ in 0..<60 where placed.contains(where: { hypot($0.0.x - center.x, $0.0.y - center.y) < $0.1 + radius + 1.5 }) {
+                center.y -= 1.5
+            }
+            placed.append((center, radius))
+            let dot = Path(ellipseIn: CGRect(x: center.x - radius, y: center.y - radius, width: radius * 2, height: radius * 2))
+            if vtxo.state == "Locked" {
+                context.stroke(dot, with: .color(NoahTokens.Colors.foreground), style: StrokeStyle(lineWidth: 1.4, dash: [2.5, 2]))
+            } else {
+                let due = VtxoList.isDue(vtxo)
+                context.fill(dot, with: .color(NoahTokens.Colors.foreground.opacity(due ? 1 : 0.85)))
+                if due {
+                    let ring = radius + 2.5
+                    context.stroke(Path(ellipseIn: CGRect(x: center.x - ring, y: center.y - ring, width: ring * 2, height: ring * 2)),
+                                   with: .color(NoahTokens.Colors.orange), lineWidth: 2)
+                }
+            }
+        }
     }
 }
 
@@ -421,46 +425,8 @@ struct VtxoDetailView: View {
         SettingsScroll {
             if let vtxo {
                 hero(vtxo)
-                VStack(spacing: 0) {
-                    SettingsDetailRow(label: L10n.text("State", locale: language), value: L10n.text(vtxo.state, locale: language))
-                    SettingsDetailRow(label: L10n.text("Expires", locale: language),
-                                      value: L10n.text("Block {height}", vtxo.expiry.formatted(.number.locale(locale)), locale: language))
-                    if vtxo.tip > 0 {
-                        SettingsDetailRow(label: L10n.text("Blocks left", locale: language),
-                                          value: vtxo.expiry <= vtxo.tip ? L10n.text("Expired", locale: language) : (vtxo.expiry - vtxo.tip)
-                                              .formatted(.number.locale(locale)),
-                                          numeric: true)
-                    }
-                    SettingsDetailRow(label: L10n.text("VTXO ID", locale: language), value: vtxo.id, mono: true, copy: vtxo.id)
-                    SettingsDetailRow(label: L10n.text("Anchor", locale: language), value: vtxo.anchorPoint, mono: true, copy: vtxo.anchorPoint,
-                                      explorer: OnchainDisplay.explorerURL(vtxo.anchorPoint, variant: app.variant), hairline: false)
-                }
-                .padding(.top, 22)
-                SettingsDetails(open: $details) {
-                    SettingsDetailRow(label: L10n.text("Type", locale: language), value: vtxo.kind, compact: true)
-                    SettingsDetailRow(label: L10n.text("Status", locale: language),
-                                      value: L10n.text(vtxo.registered ? "Registered" : "Not registered", locale: language), compact: true)
-                    SettingsDetailRow(
-                        label: L10n.text("Exit delta", locale: language),
-                        value: L10n.plural("{n} blocks", count: Int(vtxo.exitDelta), locale: language),
-                        compact: true)
-                    SettingsDetailRow(label: L10n.text("Exit depth", locale: language), value: "\(vtxo.exitDepth)", compact: true)
-                    SettingsDetailRow(
-                        label: L10n.text("Exit weight", locale: language),
-                        value: L10n.text("{n} wu", vtxo.exitWeight.formatted(.number.locale(locale)), locale: language),
-                        compact: true)
-                    SettingsDetailRow(
-                        label: L10n.text("Server key", locale: language),
-                        value: vtxo.serverPubkey,
-                        mono: true,
-                        compact: true,
-                        copy: vtxo.serverPubkey)
-                    SettingsDetailRow(label: L10n.text("Point", locale: language), value: vtxo.point, mono: true, compact: true, copy: vtxo.point)
-                    if vtxo.tip > 0 {
-                        SettingsDetailRow(label: L10n.text("Current block", locale: language), value: vtxo.tip.formatted(.number.locale(locale)),
-                                          compact: true, hairline: false)
-                    }
-                }
+                facts(vtxo)
+                moreDetails(vtxo)
             }
             if vtxo == nil {
                 // The ID stays, whatever the read says.
@@ -508,6 +474,52 @@ struct VtxoDetailView: View {
             lifetime = (try? await WalletSession.shared.withOpenWallet { try await $0.wallet.arkInfo() })??.vtxoLifetime
         }
         .accessibilityIdentifier("vtxo-detail")
+    }
+
+    private func facts(_ vtxo: VtxoModel) -> some View {
+        VStack(spacing: 0) {
+            SettingsDetailRow(label: L10n.text("State", locale: language), value: L10n.text(vtxo.state, locale: language))
+            SettingsDetailRow(label: L10n.text("Expires", locale: language),
+                              value: L10n.text("Block {height}", vtxo.expiry.formatted(.number.locale(locale)), locale: language))
+            if vtxo.tip > 0 {
+                SettingsDetailRow(label: L10n.text("Blocks left", locale: language),
+                                  value: vtxo.expiry <= vtxo.tip ? L10n.text("Expired", locale: language) : (vtxo.expiry - vtxo.tip)
+                                      .formatted(.number.locale(locale)),
+                                  numeric: true)
+            }
+            SettingsDetailRow(label: L10n.text("VTXO ID", locale: language), value: vtxo.id, mono: true, copy: vtxo.id)
+            SettingsDetailRow(label: L10n.text("Anchor", locale: language), value: vtxo.anchorPoint, mono: true, copy: vtxo.anchorPoint,
+                              explorer: OnchainDisplay.explorerURL(vtxo.anchorPoint, variant: app.variant), hairline: false)
+        }
+        .padding(.top, 22)
+    }
+
+    private func moreDetails(_ vtxo: VtxoModel) -> some View {
+        SettingsDetails(open: $details) {
+            SettingsDetailRow(label: L10n.text("Type", locale: language), value: vtxo.kind, compact: true)
+            SettingsDetailRow(label: L10n.text("Status", locale: language),
+                              value: L10n.text(vtxo.registered ? "Registered" : "Not registered", locale: language), compact: true)
+            SettingsDetailRow(
+                label: L10n.text("Exit delta", locale: language),
+                value: L10n.plural("{n} blocks", count: Int(vtxo.exitDelta), locale: language),
+                compact: true)
+            SettingsDetailRow(label: L10n.text("Exit depth", locale: language), value: "\(vtxo.exitDepth)", compact: true)
+            SettingsDetailRow(
+                label: L10n.text("Exit weight", locale: language),
+                value: L10n.text("{n} wu", vtxo.exitWeight.formatted(.number.locale(locale)), locale: language),
+                compact: true)
+            SettingsDetailRow(
+                label: L10n.text("Server key", locale: language),
+                value: vtxo.serverPubkey,
+                mono: true,
+                compact: true,
+                copy: vtxo.serverPubkey)
+            SettingsDetailRow(label: L10n.text("Point", locale: language), value: vtxo.point, mono: true, compact: true, copy: vtxo.point)
+            if vtxo.tip > 0 {
+                SettingsDetailRow(label: L10n.text("Current block", locale: language), value: vtxo.tip.formatted(.number.locale(locale)),
+                                  compact: true, hairline: false)
+            }
+        }
     }
 
     @ViewBuilder private func hero(_ vtxo: VtxoModel) -> some View {

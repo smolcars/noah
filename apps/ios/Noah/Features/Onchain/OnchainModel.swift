@@ -101,6 +101,7 @@ final class OnchainModel {
     private let detailID: String?
     private(set) var exit: ExitModel?
     private(set) var claimDestination = ""
+    // swiftlint:disable:next discouraged_optional_boolean - nil until the address is checked
     private(set) var claimDestinationIsMine: Bool?
     private(set) var claimDestinationError: String?
     func editClaimDestination(_ value: String) {
@@ -182,7 +183,7 @@ final class OnchainModel {
     @ObservationIgnored private var reloadPending = false
 
     /// Reloads as soon as `changes` reports one, rather than at the page's next minute. `canLoad` is the page's guard.
-    func observeChanges(canLoad: @escaping () -> Bool) async {
+    func observeChanges(canLoad: () -> Bool) async {
         for await _ in await dependencies.changes() where canLoad() { await load() }
     }
 
@@ -326,8 +327,12 @@ final class OnchainModel {
     func progress(_ exit: ExitModel, now: Date = Date()) -> ExitProgress {
         let parkedSince = exit.parkedEpisode.flatMap { sightings.value.seen[$0]?.at }
         let needsFunds = overview.map {
-            ExitFunds.needsFunds(exit, confirmed: $0.confirmed, packageFee: $0.packageFees[exit.id], proven: $0.provenParked,
-                                 parkedSince: parkedSince, daemonSince: $0.daemonSince.map { max($0, sceneChangedAt) }, now: now)
+            ExitFunds.needsFunds(
+                exit,
+                confirmed: $0.confirmed,
+                packageFee: $0.packageFees[exit.id],
+                proven: $0.provenParked,
+                timing: .init(parkedSince: parkedSince, daemonSince: $0.daemonSince.map { max($0, sceneChangedAt) }, now: now))
         } ?? false
         let claimSent = attempts.contains { attempt in
             attempt.quote.action == .claim && attempt.quote.ids.contains(exit.id) && attempt.receipt?.txid.map(exit.awaitsClaim) == true
@@ -422,8 +427,8 @@ final class OnchainModel {
 /// Native equivalent of RN's isBackgroundJobRunning query gate; counts overlapping pushes.
 actor WalletBackgroundActivity {
     static let shared = WalletBackgroundActivity()
-    private var count = 0
-    var isRunning: Bool { count > 0 }
+    private var running = 0
+    var isRunning: Bool { running > 0 }
     struct Snapshot: Equatable, Sendable {
         var isRunning: Bool
         var completionRevision: UInt64
@@ -445,8 +450,8 @@ actor WalletBackgroundActivity {
     private func removeObserver(_ id: UUID) { observers[id] = nil }
     private func publish() { for observer in observers.values { observer.yield(snapshot) } }
 
-    func begin() { count += 1; revision += 1; publish() }
-    func end() { count -= 1; completionRevision += 1; revision += 1; publish() }
+    func begin() { running += 1; revision += 1; publish() }
+    func end() { running -= 1; completionRevision += 1; revision += 1; publish() }
 }
 
 /// The freshest overview any page's model has read since the last submission one made (an exit started, canceled or
@@ -461,7 +466,7 @@ final class SharedOverview {
     /// Counts submissions: a read that began before the latest one is dropped.
     @ObservationIgnored private(set) var epoch = 0
 
-    nonisolated init() {}
+    nonisolated init() { /* No overview until the first read. */ }
 
     func read(_ overview: OnchainOverview, since: Int) { if since == epoch { self.overview = overview } }
     func changed() {

@@ -60,8 +60,12 @@ import Testing
                     return self.state
                 }
             guard case .paid(let paidHash, let preimage) = status, !preimage.isEmpty else { throw SendFailure.unresolved }
-            switch SendReconciliation.lightningAttempt(movements, hash: paidHash, amount: payment.amount, snapshot: snapshot, startedAt: nil,
-                                                       fixed: SendReconciliation.fixesAmount(payment.destination)) {
+            switch SendReconciliation.lightningAttempt(
+                movements,
+                paying: .init(hash: paidHash, amount: payment.amount),
+                snapshot: snapshot,
+                startedAt: nil,
+                fixed: SendReconciliation.fixesAmount(payment.destination)) {
             case .paid(let receipt): return receipt
             case .alreadyPaid(let receipt): throw SendAlreadyPaid(receipt: receipt)
             default: throw SendFailure.unresolved
@@ -188,12 +192,16 @@ import Testing
         #expect(bark.calls == 0)
         // Bound by the paid record from before the attempt, even with the movement completing afterwards.
         let later = reused("successful", effective: -1083, completedAt: Date().addingTimeInterval(1), fee: 83)
-        #expect(SendReconciliation.lightningAttempt([later], hash: hash, amount: 1000, snapshot: .init(movementIDs: [5], invoicePaid: true),
-                                                    startedAt: longAgo, fixed: false) == .alreadyPaid(.init(
-                amount: 0,
-                paymentHash: hash,
-                movementID: 5,
-                proof: .actualMovement)))
+        #expect(SendReconciliation.lightningAttempt(
+            [later],
+            paying: .init(hash: hash, amount: 1000),
+            snapshot: .init(movementIDs: [5], invoicePaid: true),
+            startedAt: longAgo,
+            fixed: false) == .alreadyPaid(.init(
+            amount: 0,
+            paymentHash: hash,
+            movementID: 5,
+            proof: .actualMovement)))
     }
 
     @Test func aFixedAmountInvoicePaidByARetryIsAlreadyPaidWithTheRetrysFee() async throws {
@@ -217,7 +225,11 @@ import Testing
         #expect(bark.calls == 1)
         // Reconciliation reads it the same way.
         guard case .alreadyPaid(let reconciled) = SendReconciliation.lightningAttempt(
-            bark.movements, hash: hash, amount: 1000, snapshot: .init(movementIDs: [5], invoicePaid: true), startedAt: longAgo, fixed: true)
+            bark.movements,
+            paying: .init(hash: hash, amount: 1000),
+            snapshot: .init(movementIDs: [5], invoicePaid: true),
+            startedAt: longAgo,
+            fixed: true)
         else { Issue.record("Expected already paid"); return }
         #expect(reconciled.amount == 1000 && reconciled.fee == 79)
     }
@@ -241,7 +253,11 @@ import Testing
         #expect(receipt.amount == 0 && receipt.fee == nil)
         #expect(bark.calls == 1)
         guard case .alreadyPaid(let reconciled) = SendReconciliation.lightningAttempt(
-            bark.movements, hash: hash, amount: 1000, snapshot: .init(movementIDs: [5], invoicePaid: true), startedAt: longAgo, fixed: false)
+            bark.movements,
+            paying: .init(hash: hash, amount: 1000),
+            snapshot: .init(movementIDs: [5], invoicePaid: true),
+            startedAt: longAgo,
+            fixed: false)
         else { Issue.record("Expected already paid"); return }
         #expect(reconciled.amount == 0 && reconciled.fee == nil)
         // A restart keeps "already paid", and such a receipt never proves a payment of its own.
@@ -268,13 +284,21 @@ import Testing
         #expect(try restart(bark, storage).state == .alreadyPaid(receipt))
         // Reconciliation reads it the same way.
         guard case .alreadyPaid(let reconciled) = SendReconciliation.lightningAttempt(
-            bark.movements, hash: hash, amount: 1000, snapshot: .init(movementIDs: [5], invoicePaid: true), startedAt: longAgo, fixed: false)
+            bark.movements,
+            paying: .init(hash: hash, amount: 1000),
+            snapshot: .init(movementIDs: [5], invoicePaid: true),
+            startedAt: longAgo,
+            fixed: false)
         else { Issue.record("Expected already paid"); return }
         #expect(reconciled.amount == 0 && reconciled.fee == nil)
         // Never this attempt's success: the movement's amount isn't the one it sent.
         let amount: UInt64 = first == 1000 ? 2000 : 1000
-        #expect(SendReconciliation.lightningAttempt(bark.movements, hash: hash, amount: amount, snapshot: .init(movementIDs: [5], invoicePaid: false),
-                                                    startedAt: nil, fixed: false) == .uncertain)
+        #expect(SendReconciliation.lightningAttempt(
+            bark.movements,
+            paying: .init(hash: hash, amount: amount),
+            snapshot: .init(movementIDs: [5], invoicePaid: false),
+            startedAt: nil,
+            fixed: false) == .uncertain)
     }
 
     @Test func aJournalFromBeforeThePaidFlagGoesByTheMovementsCompletion() async throws {
@@ -364,25 +388,36 @@ import Testing
     @Test func theReusedMovementMustMatchTheAmountAndShowARealFee() {
         let snapshot = SendSnapshot(movementIDs: [5], invoicePaid: false)
         // An amountless invoice retried for another amount: bark keeps the first attempt's destination amount.
-        #expect(SendReconciliation.lightningAttempt([reused("successful", effective: -2079, completedAt: longAgo)], hash: hash, amount: 2000,
-                                                    snapshot: snapshot, startedAt: nil, fixed: false) == .uncertain)
+        #expect(SendReconciliation.lightningAttempt(
+            [reused("successful", effective: -2079, completedAt: longAgo)],
+            paying: .init(hash: hash, amount: 2000),
+            snapshot: snapshot,
+            startedAt: nil,
+            fixed: false) == .uncertain)
         // An effective balance that doesn't cover the amount can't give a fee.
-        #expect(SendReconciliation.lightningAttempt([reused("successful", effective: -900, completedAt: longAgo)], hash: hash, amount: 1000,
-                                                    snapshot: snapshot, startedAt: nil, fixed: false) == .uncertain)
+        #expect(SendReconciliation.lightningAttempt(
+            [reused("successful", effective: -900, completedAt: longAgo)],
+            paying: .init(hash: hash, amount: 1000),
+            snapshot: snapshot,
+            startedAt: nil,
+            fixed: false) == .uncertain)
         // A movement made by this attempt keeps today's reading.
         let fresh = reused("successful", effective: -1083, completedAt: longAgo, fee: 83)
         guard case .paid(let receipt) = SendReconciliation.lightningAttempt(
             [fresh],
-            hash: hash,
-            amount: 1000,
+            paying: .init(hash: hash, amount: 1000),
             snapshot: .init(movementIDs: [], invoicePaid: false),
             startedAt: nil,
             fixed: false)
         else { Issue.record("Expected Paid"); return }
         #expect(receipt.fee == 83)
         // A still-pending reused movement is nothing yet.
-        #expect(SendReconciliation.lightningAttempt([reused("pending", effective: -1079, completedAt: nil)], hash: hash, amount: 1000,
-                                                    snapshot: snapshot, startedAt: longAgo, fixed: false) == .uncertain)
+        #expect(SendReconciliation.lightningAttempt(
+            [reused("pending", effective: -1079, completedAt: nil)],
+            paying: .init(hash: hash, amount: 1000),
+            snapshot: snapshot,
+            startedAt: longAgo,
+            fixed: false) == .uncertain)
         // Overflowing or positive effective balances fall back to the fee field.
         #expect(SendReconciliation.lightningFee(reused("successful", effective: .min, completedAt: nil), actual: 1000) == nil)
         #expect(SendReconciliation.lightningFee(reused("successful", effective: 5, completedAt: nil), actual: 1000) == nil)

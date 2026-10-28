@@ -43,11 +43,7 @@ final class HistoryModel {
                     request.timeoutInterval = 10
                     let (data, response) = try await URLSession.shared.data(for: request)
                     guard (response as? HTTPURLResponse)?.statusCode == 200 else { return nil }
-                    struct Transaction: Decodable {
-                        struct Status: Decodable { var confirmed: Bool?; var block_time: Double? }
-                        var status: Status?
-                    }
-                    let status = try JSONDecoder().decode(Transaction.self, from: data).status
+                    let status = try JSONDecoder().decode(EsploraTransaction.self, from: data).status
                     return status?.confirmed == true ? status?.block_time.map(Date.init(timeIntervalSince1970:)) : nil
                 },
                 price: { timestamp, currency in
@@ -81,7 +77,8 @@ final class HistoryModel {
     private var enrichment: Task<Void, Never>?
     /// The last recurring join, applied at once so rows don't flicker on each refresh.
     private var recurringLinks: [HistoryMapping.RecurringLink] = []
-    private var quote: (currency: String, price: Double, at: Date)?
+    private struct Quote { let currency: String; let price: Double; let at: Date }
+    private var quote: Quote?
 
     func awaitEnrichment() async { await enrichment?.value }
 
@@ -91,7 +88,7 @@ final class HistoryModel {
         guard let price = try? await dependencies.currentPrice(currency), price.isFinite, price > 0 else {
             return quote?.currency == currency ? quote?.price : nil
         }
-        quote = (currency, price, Date())
+        quote = Quote(currency: currency, price: price, at: Date())
         return price
     }
 
@@ -105,8 +102,8 @@ final class HistoryModel {
     /// One read of the chain tip and, when there's a txid, its status (Send's block row data).
     func chainState(txid: String?) async -> (tip: UInt32?, status: ChainTransactionStatus?) {
         let tip = try? await dependencies.chainTip()
-        guard let txid else { return (tip ?? nil, nil) }
-        return (tip ?? nil, (try? await dependencies.chainStatus(txid)) ?? nil)
+        guard let txid else { return (tip, nil) }
+        return (tip, try? await dependencies.chainStatus(txid))
     }
     private let log = AppLog("history")
 
@@ -176,6 +173,13 @@ final class HistoryModel {
         }
     }
 
+    /// The cached block time, or a fetch after publishing what's ready (a miss can stall the single worker).
+    private func blockTime(_ txid: String, publishFirst publish: () async -> Void) async -> Date? {
+        if let cached = blockTimes[txid] { return cached }
+        await publish()
+        return try? await dependencies.blockTime(txid)
+    }
+
     private func enrich(_ rows: [HistoryTransaction], currency: String, generation: UUID) async {
         var latest = rows
         var dirty = false
@@ -197,9 +201,7 @@ final class HistoryModel {
             if Task.isCancelled || self.generation != generation { return }
             if latest[index].source == "onchain-wallet", latest[index].hasConfirmation == true,
                let txid = latest[index].txid {
-                let time: Date?
-                if let cached = blockTimes[txid] { time = cached }
-                else { await publish(); time = try? await dependencies.blockTime(txid) }
+                let time = await blockTime(txid, publishFirst: publish)
                 guard !Task.isCancelled, self.generation == generation else { return }
                 if let time {
                     blockTimes[txid] = time
@@ -230,7 +232,16 @@ final class HistoryModel {
             guard !Task.isCancelled, self.generation == generation else { return }
             dirty = true
             // Cached quotes never suspend: bound merge/sort work and let wallet events run.
-            if (index + 1) % 32 == 0 || index == latest.indices.last { await publish() }
+            if (index + 1).isMultiple(of: 32) || index == latest.indices.last { await publish() }
         }
     }
+}
+
+/// The fields of Esplora's `/tx/:txid` that date a confirmation.
+private struct EsploraTransaction: Decodable {
+    struct Status: Decodable {
+        var confirmed: Bool? // swiftlint:disable:this discouraged_optional_boolean - Esplora's JSON omits it
+        var block_time: Double?
+    }
+    var status: Status?
 }

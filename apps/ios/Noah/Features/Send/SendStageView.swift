@@ -25,7 +25,7 @@ struct SendRecipientLabel: Equatable {
     }
 
     /// From the destination as typed (a Lightning address keeps its name), or the reviewed payment.
-    static func of(destination: String, payment: SendPayment? = nil, ownDomain: String) -> Self {
+    static func of(destination: String, ownDomain: String, payment: SendPayment? = nil) -> Self {
         let typed = SendDestination.cleaned(destination)
         let metadata = payment?.repeatMetadata.flatMap { RepeatPayment.normalizeLightningAddress(Self.metadataDestination($0) ?? "") }
         if let address = metadata ?? (SendDestination.isLightningAddress(typed) ? typed.lowercased() : nil)
@@ -176,8 +176,6 @@ struct SendStagePainter {
         var rail: SendMotion.Rail { state.rail }
         var refunded: Bool { state.outcome == .refunded }
         var succeeded: Bool { state.outcome == .succeeded }
-        typealias M = MotionTime
-
         func draw() {
             drawChain()
             drawCoins()
@@ -199,18 +197,33 @@ struct SendStagePainter {
             if rail != .onchainWallet {
                 // Your coin appears, then splits into the payment and your change.
                 let appear = time.p(0, .bouncy), gone = time.p(split, .snappy)
-                canvas.layer(center: c, scale: M.mix(0.7, 1, appear) * M.mix(1, 0.82, gone),
-                             opacity: time.o(0, .bouncy) * (1 - time.o(split, .snappy))) { $0.mineCoin(c.x, c.y, 44) }
+                canvas
+                    .layer(
+                        center: c,
+                        opacity: time.o(0, .bouncy) * (1 - time.o(split, .snappy)),
+                        scale: MotionTime.mix(0.7, 1, appear) * MotionTime.mix(1, 0.82, gone)) {
+                            $0.mineCoin(
+                                c.x,
+                                c.y,
+                                44)
+                    }
                 let roll = time.p(1.05, .soft)
                 let out = time.p(split, .bouncy)
-                canvas.layer(center: c, offset: CGSize(width: M.mix(0, -62, out) + M.mix(0, -78, roll), height: M.mix(0, 34, out) + M.mix(0, 62, roll)),
-                             scale: M.mix(0.5, 1, out) * M.mix(1, 0.6, roll),
-                             opacity: time.o(split, .bouncy) * (1 - time.o(1.05, .soft))) { $0.mineCoin(c.x, c.y, 20) }
+                canvas.layer(center: c, opacity: time.o(split, .bouncy) * (1 - time.o(1.05, .soft)), offset: CGSize(
+                    width: MotionTime.mix(0, -62, out) + MotionTime.mix(0, -78, roll),
+                    height: MotionTime.mix(0, 34, out) + MotionTime.mix(0, 62, roll)), scale: MotionTime.mix(0.5, 1, out) * MotionTime.mix(1, 0.6, roll)) {
+                        $0.mineCoin(
+                            c.x,
+                            c.y,
+                            20)
+                    }
             } else {
                 // From the on-chain wallet there is no Ark coin: the transaction is the motion.
                 let appear = time.p(0, .bouncy)
-                canvas.layer(center: c, scale: M.mix(0.7, 1, appear) * M.mix(1, 0.3, time.p(ending, .soft)),
-                             opacity: time.o(0, .bouncy) * (1 - time.o(ending, .soft))) { $0.payCoin(c.x, c.y, 30) }
+                canvas.layer(
+                    center: c,
+                    opacity: time.o(0, .bouncy) * (1 - time.o(ending, .soft)),
+                    scale: MotionTime.mix(0.7, 1, appear) * MotionTime.mix(1, 0.3, time.p(ending, .soft))) { $0.payCoin(c.x, c.y, 30) }
             }
         }
 
@@ -218,8 +231,11 @@ struct SendStagePainter {
         func payLayer(offset: CGSize, scale: Double, opacity: Double) {
             let c = SendStagePainter.coin
             let out = time.p(split, .bouncy)
-            canvas.layer(center: c, offset: CGSize(width: M.mix(0, 40, out) + offset.width, height: offset.height),
-                         scale: M.mix(0.5, 1, out) * scale, opacity: time.o(split, .bouncy) * opacity) { $0.payCoin(c.x, c.y, 30) }
+            canvas.layer(
+                center: c,
+                opacity: time.o(split, .bouncy) * opacity,
+                offset: CGSize(width: MotionTime.mix(0, 40, out) + offset.width, height: offset.height),
+                scale: MotionTime.mix(0.5, 1, out) * scale) { $0.payCoin(c.x, c.y, 30) }
         }
 
         // MARK: Ark: you and the server sign, then it's delivered
@@ -227,10 +243,20 @@ struct SendStagePainter {
         func drawArk() {
             let x = SendStagePainter.pay.x, y = SendStagePainter.pay.y
             let fade = 1 - time.o(ending, .snappy)
-            canvas.layer(center: CGPoint(x: x - 70, y: y - 72), scale: M.mix(0.4, 1, time.p(1.15, .bouncy)),
-                         opacity: time.o(1.15, .bouncy) * fade) { $0.badge(server: false, x - 70, y - 72) }
-            canvas.layer(center: CGPoint(x: x + 70, y: y - 72), scale: M.mix(0.4, 1, time.p(1.26, .bouncy)),
-                         opacity: time.o(1.26, .bouncy) * fade) { $0.badge(server: true, x + 70, y - 72) }
+            canvas
+                .layer(center: CGPoint(x: x - 70, y: y - 72), opacity: time.o(1.15, .bouncy) * fade, scale: MotionTime.mix(0.4, 1, time.p(1.15, .bouncy))) {
+                    $0.badge(
+                        server: false,
+                        x - 70,
+                        y - 72)
+                }
+            canvas
+                .layer(center: CGPoint(x: x + 70, y: y - 72), opacity: time.o(1.26, .bouncy) * fade, scale: MotionTime.mix(0.4, 1, time.p(1.26, .bouncy))) {
+                    $0.badge(
+                        server: true,
+                        x + 70,
+                        y - 72)
+                }
             var lines = canvas
             lines.context.opacity *= fade
             let first = time.timed(1.57, 0.32), second = time.timed(1.73, 0.32)
@@ -246,10 +272,10 @@ struct SendStagePainter {
                     let since = t - 2.05
                     let pulse = since < 1.4 || t < ending ? since.truncatingRemainder(dividingBy: 1.4) : 2
                     if pulse < 1.2 {
-                        let p = M.spring(pulse, .soft)
+                        let p = MotionTime.spring(pulse, .soft)
                         var seal = lines
                         seal.context.opacity *= 1 - min(1, p)
-                        seal.layer(center: SendStagePainter.pay, scale: M.mix(1, 1.7, p), opacity: 1) {
+                        seal.layer(center: SendStagePainter.pay, opacity: 1, scale: MotionTime.mix(1, 1.7, p)) {
                             $0.stroke($0.circle(x, y, 30), $0.colors.foreground, 2)
                         }
                     }
@@ -257,7 +283,7 @@ struct SendStagePainter {
             }
             // Delivering: the payment travels into their mailbox.
             let travel = time.p(ending, .snappy)
-            payLayer(offset: CGSize(width: M.mix(0, 110, travel), height: 0), scale: M.mix(1, 0.35, travel),
+            payLayer(offset: CGSize(width: MotionTime.mix(0, 110, travel), height: 0), scale: MotionTime.mix(1, 0.35, travel),
                      opacity: 1 - time.o(ending, .snappy))
         }
 
@@ -270,24 +296,29 @@ struct SendStagePainter {
             // The payment piece: held until paid (into the server) or refunded (fades).
             let into = succeeded ? time.p(paid, .snappy) : 0
             let refundFade = refunded ? time.o(ending + 1.2, .snappy) : 0
-            payLayer(offset: CGSize(width: M.mix(0, 56, into), height: M.mix(0, -74, into)),
-                     scale: M.mix(1, 0.3, into) * M.mix(1, 0.6, refundFade),
+            payLayer(offset: CGSize(width: MotionTime.mix(0, 56, into), height: MotionTime.mix(0, -74, into)),
+                     scale: MotionTime.mix(1, 0.3, into) * MotionTime.mix(1, 0.6, refundFade),
                      opacity: (1 - (succeeded ? time.o(paid, .snappy) : 0)) * (1 - refundFade))
             // Padlock on the payment.
             let lockOpacity = time.o(1.15, .bouncy) * (1 - time.o(succeeded ? paid : refunded ? ending + 1.2 : .infinity, .snappy))
             let drop = time.p(1.15, .bouncy)
             let opening = succeeded ? time.p(ending + 0.9, .bouncy) : refunded ? time.p(ending + 0.65, .bouncy) : 0
-            canvas.layer(center: CGPoint(x: x, y: y - 32), offset: CGSize(width: 0, height: M.mix(-10, 0, drop)),
-                         scale: M.mix(0.6, 1, drop), opacity: lockOpacity) {
-                $0.shackle(x, y - 32, open: opening)
-                $0.padlockBody(x, y - 32)
-            }
+            canvas.layer(
+                center: CGPoint(x: x, y: y - 32),
+                opacity: lockOpacity,
+                offset: CGSize(width: 0, height: MotionTime.mix(-10, 0, drop)),
+                scale: MotionTime.mix(0.6, 1, drop)) {
+                    $0.shackle(x, y - 32, open: opening)
+                    $0.padlockBody(x, y - 32)
+                }
             // Ark holds it: the server and the tether.
             let serverFade: Double = succeeded ? 1 - time.o(finale + 0.3, .soft)
-                : refunded ? M.mix(1, 0.35, time.o(ending + 0.65, .soft)) * (1 - time.o(ending + 1.2, .soft)) : 1
+                : refunded ? MotionTime.mix(1, 0.35, time.o(ending + 0.65, .soft)) * (1 - time.o(ending + 1.2, .soft)) : 1
             let pulse = succeeded && t >= finale && !time.reduceMotion ? 0.15 * sin(min(1, (t - finale) / 0.4) * .pi) : 0
-            canvas.layer(center: sv, scale: M.mix(0.4, 1, time.p(1.7, .bouncy)) + pulse,
-                         opacity: time.o(1.7, .bouncy) * serverFade) { $0.badge(server: true, sv.x, sv.y) }
+            canvas.layer(center: sv, opacity: time.o(1.7, .bouncy) * serverFade, scale: MotionTime.mix(0.4, 1, time.p(1.7, .bouncy)) + pulse) { $0.badge(
+                server: true,
+                sv.x,
+                sv.y) }
             let tetherFade = 1 - time.o(succeeded ? paid : refunded ? ending + 0.65 : .infinity, .snappy)
             var tether = canvas
             tether.context.opacity *= min(1, max(0, (t - 1.85) / 0.3)) * tetherFade
@@ -299,8 +330,8 @@ struct SendStagePainter {
                 let start = CGPoint(x: SendStagePainter.dest.x - 8, y: SendStagePainter.dest.y - 34)
                 let end = CGPoint(x: x, y: y - 30)
                 let position = k < 0.5
-                    ? CGPoint(x: M.mix(start.x, sv.x, k * 2), y: M.mix(start.y, sv.y, k * 2))
-                    : CGPoint(x: M.mix(sv.x, end.x, (k - 0.5) * 2), y: M.mix(sv.y, end.y, (k - 0.5) * 2))
+                    ? CGPoint(x: MotionTime.mix(start.x, sv.x, k * 2), y: MotionTime.mix(start.y, sv.y, k * 2))
+                    : CGPoint(x: MotionTime.mix(sv.x, end.x, (k - 0.5) * 2), y: MotionTime.mix(sv.y, end.y, (k - 0.5) * 2))
                 var key = canvas
                 key.context.opacity *= time.reduceMotion ? 1 : min(1, k * 2)
                 key.key(position.x, position.y)
@@ -309,11 +340,14 @@ struct SendStagePainter {
             if refunded {
                 let settle = time.p(ending + 1.2, .soft)
                 let c = SendStagePainter.pay
-                canvas.layer(center: c, offset: CGSize(width: M.mix(0, -10, settle), height: 0), scale: M.mix(0.6, 1.45, settle),
-                             opacity: time.o(ending + 1.2, .soft)) {
-                    $0.mineCoin(c.x, c.y, 30, ring: 2.5)
-                    $0.text("₿", c.x, c.y + 0.6, size: 30, color: $0.colors.foreground)
-                }
+                canvas.layer(
+                    center: c,
+                    opacity: time.o(ending + 1.2, .soft),
+                    offset: CGSize(width: MotionTime.mix(0, -10, settle), height: 0),
+                    scale: MotionTime.mix(0.6, 1.45, settle)) {
+                        $0.mineCoin(c.x, c.y, 30, ring: 2.5)
+                        $0.text("₿", c.x, c.y + 0.6, size: 30, color: $0.colors.foreground)
+                    }
             }
         }
 
@@ -348,7 +382,7 @@ struct SendStagePainter {
             let k = cubicBezier(min(1, (since - zapStart) / duration), 0.4, 0, 0.2, 1)
             guard k < 1 else { return }
             // SVG dashoffset 34 → −140, wrapped into the 174-point pattern for Core Graphics.
-            let offset = M.mix(34, -140, k).truncatingRemainder(dividingBy: 174)
+            let offset = MotionTime.mix(34, -140, k).truncatingRemainder(dividingBy: 174)
             bolt.stroke(path, bolt.colors.orange, 3, dash: [34, 140], phase: CGFloat(offset < 0 ? offset + 174 : offset))
         }
 
@@ -370,12 +404,14 @@ struct SendStagePainter {
             let x = SendStagePainter.pay.x, y = SendStagePainter.pay.y, sv = SendStagePainter.server
             // Your coin goes into Ark, which pays the address from its own coins.
             let into = succeeded ? time.p(ending, .snappy) : 0
-            payLayer(offset: CGSize(width: M.mix(0, 56, into), height: M.mix(0, -74, into)), scale: M.mix(1, 0.3, into),
+            payLayer(offset: CGSize(width: MotionTime.mix(0, 56, into), height: MotionTime.mix(0, -74, into)), scale: MotionTime.mix(1, 0.3, into),
                      opacity: 1 - (succeeded ? time.o(ending, .snappy) : 0))
-            canvas.layer(center: sv, scale: M.mix(0.4, 1, time.p(1.15, .bouncy)),
-                         opacity: time.o(1.15, .bouncy) * (1 - (succeeded ? time.o(ending + 0.6, .soft) : 0))) {
-                $0.badge(server: true, sv.x, sv.y)
-            }
+            canvas.layer(
+                center: sv,
+                opacity: time.o(1.15, .bouncy) * (1 - (succeeded ? time.o(ending + 0.6, .soft) : 0)),
+                scale: MotionTime.mix(0.4, 1, time.p(1.15, .bouncy))) {
+                    $0.badge(server: true, sv.x, sv.y)
+                }
             var tether = canvas
             tether.context.opacity *= min(1, max(0, (t - 1.3) / 0.3)) * (1 - (succeeded ? time.o(ending, .snappy) : 0))
             tether.stroke(tether.line(CGPoint(x: x + 14, y: y - 26), CGPoint(x: sv.x - 13, y: sv.y + 12)), tether.colors.foreground, 2, dash: [3, 5])
@@ -393,7 +429,7 @@ struct SendStagePainter {
             let p = time.p(begin, .soft)
             var dot = canvas
             dot.context.opacity *= time.o(begin, .soft)
-            dot.fill(dot.circle(M.mix(start.x, slot.x, p), M.mix(start.y, slot.y, p), 6), dot.colors.orange)
+            dot.fill(dot.circle(MotionTime.mix(start.x, slot.x, p), MotionTime.mix(start.y, slot.y, p), 6), dot.colors.orange)
         }
 
         // MARK: Them, and the finale
@@ -404,27 +440,30 @@ struct SendStagePainter {
             let move = time.p(finale + 0.12, .snappy)
             let shake: Double = refunded && t >= ending && t < ending + 0.3 && !time.reduceMotion
                 ? [0, -6, 5, 0][min(3, Int((t - ending) / 0.1))] : 0
-            let dim = refunded ? M.mix(1, 0.3, time.o(ending + 1.2, .soft)) : 1
-            canvas.layer(center: d, offset: CGSize(width: M.mix(20, 0, time.p(0.08, .snappy)) + M.mix(0, 180 - d.x, move) + shake, height: 0),
-                         scale: M.mix(1, 1.5, move), opacity: time.o(0.08, .snappy) * dim) { canvas in
-                canvas.fill(canvas.circle(d.x, d.y, 26), canvas.colors.soft)
-                switch state.recipient.avatar {
-                case .initial(let letter): canvas.text(letter, d.x, d.y, size: 20, color: canvas.colors.foreground)
-                default: canvas.symbol(state.recipient.glyph ?? "bolt", d.x, d.y, size: 17, color: canvas.colors.foreground)
+            let dim = refunded ? MotionTime.mix(1, 0.3, time.o(ending + 1.2, .soft)) : 1
+            canvas.layer(
+                center: d,
+                opacity: time.o(0.08, .snappy) * dim,
+                offset: CGSize(width: MotionTime.mix(20, 0, time.p(0.08, .snappy)) + MotionTime.mix(0, 180 - d.x, move) + shake, height: 0),
+                scale: MotionTime.mix(1, 1.5, move)) { canvas in
+                    canvas.fill(canvas.circle(d.x, d.y, 26), canvas.colors.soft)
+                    switch state.recipient.avatar {
+                    case .initial(let letter): canvas.text(letter, d.x, d.y, size: 20, color: canvas.colors.foreground)
+                    default: canvas.symbol(state.recipient.glyph ?? "bolt", d.x, d.y, size: 17, color: canvas.colors.foreground)
+                    }
+                    // The orange ring draws, then the check pops.
+                    let ring = time.reduceMotion ? (t >= finale + 0.26 ? 1 : 0) : min(1, max(0, MotionTime.spring(t - finale - 0.26, .soft)))
+                    if ring > 0 {
+                        var path = Path()
+                        path.addArc(center: canvas.point(d.x, d.y), radius: 33 * canvas.scale, startAngle: .degrees(-90),
+                                    endAngle: .degrees(-90 + 360 * ring), clockwise: false)
+                        canvas.stroke(path, canvas.colors.orange, 2)
+                    }
+                    let pop = time.p(finale + 0.52, .bouncy)
+                    canvas.layer(center: CGPoint(x: d.x + 19, y: d.y - 19), opacity: time.o(finale + 0.52, .bouncy), scale: pop) {
+                        $0.checkBadge(d.x + 19, d.y - 19)
+                    }
                 }
-                // The orange ring draws, then the check pops.
-                let ring = time.reduceMotion ? (t >= finale + 0.26 ? 1 : 0) : min(1, max(0, M.spring(t - finale - 0.26, .soft)))
-                if ring > 0 {
-                    var path = Path()
-                    path.addArc(center: canvas.point(d.x, d.y), radius: 33 * canvas.scale, startAngle: .degrees(-90),
-                                endAngle: .degrees(-90 + 360 * ring), clockwise: false)
-                    canvas.stroke(path, canvas.colors.orange, 2)
-                }
-                let pop = time.p(finale + 0.52, .bouncy)
-                canvas.layer(center: CGPoint(x: d.x + 19, y: d.y - 19), scale: pop, opacity: time.o(finale + 0.52, .bouncy)) {
-                    $0.checkBadge(d.x + 19, d.y - 19)
-                }
-            }
         }
 
         /// CSS `cubic-bezier(x1, y1, x2, y2)` at `x`.

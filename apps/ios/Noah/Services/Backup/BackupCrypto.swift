@@ -100,8 +100,8 @@ enum BackupCrypto {
 
     private static func randomBytes(_ count: Int) -> Data {
         var bytes = Data(count: count)
-        let status = bytes.withUnsafeMutableBytes {
-            SecRandomCopyBytes(kSecRandomDefault, count, $0.baseAddress!)
+        let status = bytes.withUnsafeMutableBytes { buffer in
+            buffer.baseAddress.map { SecRandomCopyBytes(kSecRandomDefault, count, $0) } ?? errSecAllocate
         }
         precondition(status == errSecSuccess, "SecRandomCopyBytes failed")
         return bytes

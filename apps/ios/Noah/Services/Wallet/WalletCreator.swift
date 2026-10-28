@@ -59,7 +59,8 @@ actor WalletCreator {
 
     func createOrResume() async throws {
         if let inFlight {
-            return try await inFlight.value
+            try await inFlight.value
+            return
         }
         let attempt = Task { try await dependencies.mutation.withLock { try await self.run() } }
         inFlight = attempt

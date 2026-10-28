@@ -42,7 +42,8 @@ enum Nostr {
         guard let hex, hex.count == 64,
               hex.range(of: "^[0-9a-fA-F]{64}$", options: .regularExpression) != nil else { return "" }
         let chars = Array(hex)
-        let bytes = stride(from: 0, to: 64, by: 2).map { UInt8(String(chars[$0...($0 + 1)]), radix: 16)! }
+        let bytes = stride(from: 0, to: 64, by: 2).compactMap { UInt8(String(chars[$0...($0 + 1)]), radix: 16) }
+        guard bytes.count == 32 else { return "" }
         var words: [UInt8] = []
         var accumulator: UInt32 = 0
         var bits = 0

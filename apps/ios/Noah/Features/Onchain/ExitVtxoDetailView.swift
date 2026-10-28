@@ -36,67 +36,9 @@ struct ExitVtxoDetailView: View {
                 let text = ExitText(progress: progress, exit: exit, tip: tip, overview: model.overview, attempts: model.attempts,
                                     money: money, language: language)
                 ExitPanes {
-                    if !settings.wide {
-                        ExitHeadline(amount: money(text.amount))
-                        ExitStatusLine(text: text.status, kind: text.statusKind)
-                    }
-                    if progress.picture != .none {
-                        // 300 pt; 236 on the iPhone SE.
-                        ExitStageView(scene: text.scene, wide: settings.wide, accessibilityText: text.pictureLabel)
-                            .frame(height: settings.wide ? max(280, paneHeight - 110) : window.size.height > 0 && window.size.height < 700 ? 236 : 300)
-                            .padding(.top, 8)
-                            .padding(.horizontal, settings.wide ? -12 : -NoahTokens.Space.screen)
-                    }
-                    Text(verbatim: text.phase).noahText(NoahTokens.Typography.control).monospacedDigit()
-                        .foregroundStyle(text.statusKind == .failure ? NoahTokens.Colors.failure : text.statusKind == .live ? NoahTokens.Colors
-                            .muted : NoahTokens.Colors.foreground)
-                        .multilineTextAlignment(.center).frame(maxWidth: .infinity)
-                        .id(text.phase).transition(.homeRise(reduceMotion, 6))
-                        .accessibilityAddTraits(.updatesFrequently)
-                        .accessibilityIdentifier("exit-phase")
-                    if settings.wide {
-                        Text(verbatim: text.explanation).noahText(NoahTokens.Typography.sub).foregroundStyle(NoahTokens.Colors.muted)
-                            .multilineTextAlignment(.center).frame(maxWidth: .infinity).padding(.top, 4)
-                    }
+                    leadingPane(progress, text, money: money)
                 } trailing: {
-                    if settings.wide {
-                        ExitHeadline(amount: money(text.amount))
-                        ExitStatusLine(text: text.status, kind: text.statusKind)
-                    }
-                    if progress.phase == .needsFunds, let need = text.need {
-                        ExitWarning(text: L10n.text(
-                            "Add about {amount} on-chain. Noah sends the next transaction once it confirms.",
-                            money(need),
-                            locale: language))
-                    }
-                    if progress.stale {
-                        ExitWarning(
-                            text: L10n.text(
-                                "This exit is behind the current chain height. Move it forward to catch up; this can also send exit transactions.",
-                                locale: language),
-                            symbol: "clock",
-                            muted: true)
-                    }
-                    VStack(spacing: 0) {
-                        ForEach(Array(text.rows.enumerated()), id: \.offset) { index, row in
-                            ExitDetailRow(label: row.label, value: row.value, note: row.note, numeric: row.numeric, failure: row.failure,
-                                          hairline: index < text.rows.count - 1)
-                        }
-                    }
-                    .padding(.top, 22)
-                    if let line = text.batchLine { SettingsFine(text: line) }
-                    // The explorer without opening Details: the transaction that says the most about where the exit is.
-                    if let url = exit.explorerTxid.flatMap(explorer) {
-                        Link(destination: url) {
-                            Label(L10n.text("View in explorer", locale: language), systemImage: "arrow.up.right.square").noahText(HomeText.strong)
-                        }
-                        .foregroundStyle(NoahTokens.Colors.foreground)
-                        .frame(minHeight: NoahTokens.Size.hitTarget)
-                        .padding(.top, 12)
-                        .accessibilityIdentifier("exit-explorer")
-                    }
-                    SettingsDetails(open: $details) { detailRows(exit, progress, text) }
-                    OnchainStatusSection(model: model).settingsReceipts().padding(.top, 18)
+                    trailingPane(exit, progress, text, money: money)
                 } footer: {
                     footer(exit, progress, text)
                 }
@@ -131,6 +73,72 @@ struct ExitVtxoDetailView: View {
             case .cancel: cancelSheet
             }
         }
+    }
+
+    @ViewBuilder private func leadingPane(_ progress: ExitProgress, _ text: ExitText, money: ExitMoney) -> some View {
+        if !settings.wide {
+            ExitHeadline(amount: money(text.amount))
+            ExitStatusLine(text: text.status, kind: text.statusKind)
+        }
+        if progress.picture != .blank {
+            // 300 pt; 236 on the iPhone SE.
+            ExitStageView(scene: text.scene, wide: settings.wide, accessibilityText: text.pictureLabel)
+                .frame(height: settings.wide ? max(280, paneHeight - 110) : window.size.height > 0 && window.size.height < 700 ? 236 : 300)
+                .padding(.top, 8)
+                .padding(.horizontal, settings.wide ? -12 : -NoahTokens.Space.screen)
+        }
+        Text(verbatim: text.phase).noahText(NoahTokens.Typography.control).monospacedDigit()
+            .foregroundStyle(text.statusKind == .failure ? NoahTokens.Colors.failure : text.statusKind == .live ? NoahTokens.Colors
+                .muted : NoahTokens.Colors.foreground)
+            .multilineTextAlignment(.center).frame(maxWidth: .infinity)
+            .id(text.phase).transition(.homeRise(reduceMotion, 6))
+            .accessibilityAddTraits(.updatesFrequently)
+            .accessibilityIdentifier("exit-phase")
+        if settings.wide {
+            Text(verbatim: text.explanation).noahText(NoahTokens.Typography.sub).foregroundStyle(NoahTokens.Colors.muted)
+                .multilineTextAlignment(.center).frame(maxWidth: .infinity).padding(.top, 4)
+        }
+    }
+
+    @ViewBuilder private func trailingPane(_ exit: ExitModel, _ progress: ExitProgress, _ text: ExitText, money: ExitMoney) -> some View {
+        if settings.wide {
+            ExitHeadline(amount: money(text.amount))
+            ExitStatusLine(text: text.status, kind: text.statusKind)
+        }
+        if progress.phase == .needsFunds, let need = text.need {
+            ExitWarning(text: L10n.text(
+                "Add about {amount} on-chain. Noah sends the next transaction once it confirms.",
+                money(need),
+                locale: language))
+        }
+        if progress.stale {
+            ExitWarning(
+                text: L10n.text(
+                    "This exit is behind the current chain height. Move it forward to catch up; this can also send exit transactions.",
+                    locale: language),
+                symbol: "clock",
+                muted: true)
+        }
+        VStack(spacing: 0) {
+            ForEach(Array(text.rows.enumerated()), id: \.offset) { index, row in
+                ExitDetailRow(label: row.label, value: row.value, note: row.note, numeric: row.numeric, failure: row.failure,
+                              hairline: index < text.rows.count - 1)
+            }
+        }
+        .padding(.top, 22)
+        if let line = text.batchLine { SettingsFine(text: line) }
+        // The explorer without opening Details: the transaction that says the most about where the exit is.
+        if let url = exit.explorerTxid.flatMap(explorer) {
+            Link(destination: url) {
+                Label(L10n.text("View in explorer", locale: language), systemImage: "arrow.up.right.square").noahText(HomeText.strong)
+            }
+            .foregroundStyle(NoahTokens.Colors.foreground)
+            .frame(minHeight: NoahTokens.Size.hitTarget)
+            .padding(.top, 12)
+            .accessibilityIdentifier("exit-explorer")
+        }
+        SettingsDetails(open: $details) { detailRows(exit, progress, text) }
+        OnchainStatusSection(model: model).settingsReceipts().padding(.top, 18)
     }
 
     /// Today's cancel, behind a confirmation that stays in the trailing pane on wide windows.
@@ -208,6 +216,7 @@ struct ExitVtxoDetailView: View {
     private func checkSheet(_ money: ExitMoney) -> some View {
         SettingsSheetBody(title: L10n.text("Move your exit forward?", locale: language),
                           line: L10n.text(
+                              // swiftlint:disable:next line_length - one literal: translations.mjs reads copy as a single string
                               "Sends the next step of your exit, or raises the fee on a step that’s stuck. Fees come from your on-chain bitcoin. Noah also does this on its own, including in the background when the system lets it.",
                               locale: language)) {
             if let quote = model.quote, quote.action == .progress, let chainFee = quote.chainFee {
@@ -307,7 +316,7 @@ struct ExitStatusLine: View {
 
 /// Everything the progress page says about one exit, from the same state the picture uses.
 @MainActor struct ExitText {
-    struct Row { var label: String; var value: String; var numeric = false; var failure = false; var note: String? = nil }
+    struct Row { var label: String; var value: String; var numeric = false; var failure = false; var note: String? }
 
     let progress: ExitProgress
     let exit: ExitModel
@@ -416,7 +425,7 @@ struct ExitStatusLine: View {
         case .waiting:
             let left = progress.left(tip: tip) ?? 0
             guard left > 0 else { return tr("Unlocks at block {height}", block(progress.claimableHeight ?? tip)) }
-            return L10n.plural("Claimable in {n} blocks · {time}", count: Int(left), ExitText.about(left, language), locale: language)
+            return L10n.plural("Claimable in {n} blocks · {time}", count: Int(left), Self.about(left, language), locale: language)
         case .claimable: return tr("Unlocked at block {height}", block(progress.claimableHeight ?? tip))
         case .claiming: return tr("Claiming · waiting for block {height}", block(tip + 1))
         case .claimed: return tr("Claimed in block {height}", block(progress.claimedHeight ?? tip))
@@ -465,7 +474,7 @@ struct ExitStatusLine: View {
             if let took {
                 rows.append(.init(
                     label: tr("Took"),
-                    value: L10n.plural("{n} blocks · {time}", count: Int(took), ExitText.about(took, language), locale: language)))
+                    value: L10n.plural("{n} blocks · {time}", count: Int(took), Self.about(took, language), locale: language)))
             }
             return rows
         case .canceled:
@@ -548,7 +557,7 @@ struct ExitStatusLine: View {
         let settled = [.lock, .unlocked, .claim, .claimed].contains(progress.picture)
         let levels: [ExitStageScene.Level] = progress.total == 0 ? Array(repeating: settled ? .mined(nil) : .unsent, count: 4) : (0..<progress.total)
             .map { index in
-                if index < progress.confirmed { return .mined(progress.heights[safe: index] ?? nil) }
+                if index < progress.confirmed { return .mined(progress.heights[safe: index].flatMap(\.self)) }
                 guard index == progress.confirmed else { return .unsent }
                 switch progress.phase {
                 case .sending: return .ready

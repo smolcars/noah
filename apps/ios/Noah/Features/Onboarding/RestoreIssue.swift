@@ -15,30 +15,7 @@ struct RestoreIssue: Equatable {
 
     static func from(_ error: Error) -> Self {
         if let error = error as? ClientError { return from(error.underlyingError) }
-        if let failure = error as? WalletRestorer.Failure {
-            switch failure {
-            case .wrongNetwork:
-                return Self(message: "This backup belongs to a different Bitcoin network. Use the matching version of Noah.")
-            case .identityMismatch:
-                return Self(message: "The backup's wallet information doesn't match. Noah couldn't safely restore it.")
-            case .noUsableBackup:
-                return Self(message: "No usable backup was found for this recovery phrase. Check the words and try again.")
-            case .unsupportedFormat:
-                return newerBackup
-            case .downloadMismatch:
-                return Self(message: "The downloaded backup is incomplete or damaged. Check your connection and try again.")
-            case .secureStorageUnavailable:
-                return Self(message: "Noah couldn't access secure storage. Unlock your device and try again.")
-            case .rollbackFailed:
-                return Self(
-                    message: "Noah couldn't safely undo the restore. Do not retry. Close and restart Noah so it can recover your wallet.",
-                    requiresRestart: true)
-            case .seedStateUnknown:
-                return Self(
-                    message: "Noah couldn't confirm that your recovery phrase was saved. Do not retry. Unlock your device, then close and restart Noah to recover safely.",
-                    requiresRestart: true)
-            }
-        }
+        if let failure = error as? WalletRestorer.Failure { return from(failure) }
         if error is RestoreTransaction.Failure || error is RestoreCompletion.RestartRequired {
             return Self(message: "An earlier restore needs recovery. Do not retry. Close and restart Noah to continue safely.", requiresRestart: true)
         }
@@ -61,5 +38,31 @@ struct RestoreIssue: Equatable {
             return Self(message: "Noah couldn't download your backup. Check your internet connection and try again.")
         }
         return Self(message: "Noah couldn't restore your wallet. Please try again later.")
+    }
+
+    private static func from(_ failure: WalletRestorer.Failure) -> Self {
+        switch failure {
+        case .wrongNetwork:
+            return Self(message: "This backup belongs to a different Bitcoin network. Use the matching version of Noah.")
+        case .identityMismatch:
+            return Self(message: "The backup's wallet information doesn't match. Noah couldn't safely restore it.")
+        case .noUsableBackup:
+            return Self(message: "No usable backup was found for this recovery phrase. Check the words and try again.")
+        case .unsupportedFormat:
+            return newerBackup
+        case .downloadMismatch:
+            return Self(message: "The downloaded backup is incomplete or damaged. Check your connection and try again.")
+        case .secureStorageUnavailable:
+            return Self(message: "Noah couldn't access secure storage. Unlock your device and try again.")
+        case .rollbackFailed:
+            return Self(
+                message: "Noah couldn't safely undo the restore. Do not retry. Close and restart Noah so it can recover your wallet.",
+                requiresRestart: true)
+        case .seedStateUnknown:
+            return Self(
+                // swiftlint:disable:next line_length - one literal: translations.mjs reads copy as a single string
+                message: "Noah couldn't confirm that your recovery phrase was saved. Do not retry. Unlock your device, then close and restart Noah to recover safely.",
+                requiresRestart: true)
+        }
     }
 }

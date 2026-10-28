@@ -16,7 +16,7 @@ struct SendOutcomeView: View {
     var unit: BitcoinAmountUnit = .bip177
     var recipient: SendRecipientLabel?
     /// Nil measures its own window (a host without Send around it).
-    var wide: Bool?
+    var wide: Bool? // swiftlint:disable:this discouraged_optional_boolean - nil measures its own window
     var sideInsets: (leading: CGFloat, trailing: CGFloat) = (0, 0)
     /// Done while Lightning is still paying, or Close on an unresolved result: leave, keeping
     /// the attempt and the send lock. Required, so no host can leave it doing nothing.
@@ -61,7 +61,7 @@ struct SendOutcomeView: View {
         rail == .onchainSwap ? Int(WalletConfiguration.base(for: .current).roundTxRequiredConfirmations) : 1
     }
     private var label: SendRecipientLabel {
-        recipient ?? payment.map { .of(destination: $0.destination, payment: $0, ownDomain: LightningIdentity.domain(for: .current)) }
+        recipient ?? payment.map { .of(destination: $0.destination, ownDomain: LightningIdentity.domain(for: .current), payment: $0) }
             ?? SendRecipientLabel(name: "", nameIsVerbatim: true, avatar: .lightning)
     }
     private var recipientName: String { label.nameIsVerbatim ? label.name : L10n.text(label.name, locale: locale.identifier) }
@@ -72,37 +72,10 @@ struct SendOutcomeView: View {
         Group {
             if isWide {
                 // The stage leads; the result and Done trail. Nothing crosses the fold.
-                OnboardingPanes(wide: true, sideInsets: wide == nil ? (window.insets.leading, window.insets.trailing) : sideInsets) {
-                    leading
-                        .padding(.horizontal, 34)
-                        .padding(.bottom, 96)
-                        .frame(maxWidth: OnboardingLayout.paneContentWidth + 68)
-                        .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-                    VStack(alignment: .leading, spacing: 0) {
-                        Color.clear.frame(height: 66)
-                        ScrollView { resultSection }.scrollBounceBehavior(.basedOnSize)
-                        Spacer(minLength: 24)
-                        actions
-                    }
-                    .padding(.leading, 40).padding(.trailing, 34).padding(.vertical, 24)
-                    .frame(maxWidth: OnboardingLayout.paneContentWidth + 74)
-                    .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
-                }
+                panes
             } else {
                 // One column; long results scroll above Done.
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 0) {
-                        leading
-                        resultSection.padding(.top, 18)
-                    }
-                    .padding(.horizontal, 20)
-                    .padding(.bottom, 12)
-                }
-                .scrollBounceBehavior(.basedOnSize)
-                .safeAreaInset(edge: .bottom, spacing: 0) {
-                    actions.padding(.horizontal, 20).padding(.top, 8).padding(.bottom, 12)
-                        .background(NoahTokens.Colors.background)
-                }
+                column
             }
         }
         .background(NoahTokens.Colors.background.ignoresSafeArea())
@@ -128,6 +101,41 @@ struct SendOutcomeView: View {
             }
         } message: {
             Text(LocalizedStringKey(controller.overrideWarning))
+        }
+    }
+
+    private var panes: some View {
+        OnboardingPanes(wide: true, sideInsets: wide == nil ? (window.insets.leading, window.insets.trailing) : sideInsets) {
+            leading
+                .padding(.horizontal, 34)
+                .padding(.bottom, 96)
+                .frame(maxWidth: OnboardingLayout.paneContentWidth + 68)
+                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+            VStack(alignment: .leading, spacing: 0) {
+                Color.clear.frame(height: 66)
+                ScrollView { resultSection }.scrollBounceBehavior(.basedOnSize)
+                Spacer(minLength: 24)
+                actions
+            }
+            .padding(.leading, 40).padding(.trailing, 34).padding(.vertical, 24)
+            .frame(maxWidth: OnboardingLayout.paneContentWidth + 74)
+            .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .top)
+        }
+    }
+
+    private var column: some View {
+        ScrollView {
+            VStack(alignment: .leading, spacing: 0) {
+                leading
+                resultSection.padding(.top, 18)
+            }
+            .padding(.horizontal, 20)
+            .padding(.bottom, 12)
+        }
+        .scrollBounceBehavior(.basedOnSize)
+        .safeAreaInset(edge: .bottom, spacing: 0) {
+            actions.padding(.horizontal, 20).padding(.top, 8).padding(.bottom, 12)
+                .background(NoahTokens.Colors.background)
         }
     }
 
@@ -205,8 +213,12 @@ struct SendOutcomeView: View {
         } ?? []
         return TimelineView(.explicit([now] + boundaries)) { timeline in
             let t = motion.elapsed(timeline.date)
-            let phase = SendMotion.phase(rail: rail, outcome: motion.outcome, outcomeAt: motion.since(motion.outcomeAt) ?? .infinity,
-                                         confirmedAt: motion.since(motion.confirmedAt), at: t)
+            let phase = SendMotion.phase(
+                rail: rail,
+                outcome: motion.outcome,
+                outcomeAt: motion.since(motion.outcomeAt) ?? .infinity,
+                at: t,
+                confirmedAt: motion.since(motion.confirmedAt))
             let text = phaseText(phase)
             Text(verbatim: text)
                 .noahText(NoahTokens.Typography.control)
@@ -231,6 +243,17 @@ struct SendOutcomeView: View {
         case .sign: return L10n.text("Signing with Ark", locale: language)
         case .deliver: return L10n.text("Delivering", locale: language)
         case .delivered: return L10n.text("Delivered", locale: language)
+        case .swap: return L10n.text("Swapping with Ark", locale: language)
+        case .waiting:
+            return tip.map { L10n.text("Waiting for block {height}", ($0 + 1).formatted(.number.locale(locale)), locale: language) } ?? ""
+        case .confirmed: return confirmedText(language)
+        default: return lightningPhaseText(phase, language: language)
+        }
+    }
+
+    /// Lightning's lock, pay and refund steps.
+    private func lightningPhaseText(_ phase: SendMotion.Phase, language: String) -> String {
+        switch phase {
         case .lock: return L10n.text("Locking {amount}", format(sendingAmount), locale: language)
         case .hold: return L10n.text("Ark holds it while Lightning pays", locale: language)
         case .paying: return L10n.text("Paying over Lightning", locale: language)
@@ -240,16 +263,16 @@ struct SendOutcomeView: View {
         case .fizzle: return L10n.text("That payment didn’t go through", locale: language)
         case .signBack: return L10n.text("Ark signs it back to you", locale: language)
         case .refunded: return L10n.text("Back in your wallet", locale: language)
-        case .swap: return L10n.text("Swapping with Ark", locale: language)
-        case .waiting:
-            return tip.map { L10n.text("Waiting for block {height}", ($0 + 1).formatted(.number.locale(locale)), locale: language) } ?? ""
-        case .confirmed:
-            guard let height = motion.confirmedHeight else { return "" }
-            let line = L10n.text("Confirmed in block {height}", height.formatted(.number.locale(locale)), locale: language)
-            guard requiredConfirmations > 1 else { return line }
-            let count = min(SendMotion.confirmations(height: height, tip: tip), requiredConfirmations)
-            return line + " · " + L10n.text("{n} of {total}", count, requiredConfirmations, locale: language)
+        default: return ""
         }
+    }
+
+    private func confirmedText(_ language: String) -> String {
+        guard let height = motion.confirmedHeight else { return "" }
+        let line = L10n.text("Confirmed in block {height}", height.formatted(.number.locale(locale)), locale: language)
+        guard requiredConfirmations > 1 else { return line }
+        let count = min(SendMotion.confirmations(height: height, tip: tip), requiredConfirmations)
+        return line + " · " + L10n.text("{n} of {total}", count, requiredConfirmations, locale: language)
     }
 
     // MARK: Trailing: the result
@@ -323,7 +346,10 @@ struct SendOutcomeView: View {
             fine(L10n.text(message, locale: locale.identifier))
         }
     }
+}
 
+/// The result's rows, actions and the haptics and refund reads behind them.
+extension SendOutcomeView {
     private var line: String? {
         let language = locale.identifier
         switch kind {

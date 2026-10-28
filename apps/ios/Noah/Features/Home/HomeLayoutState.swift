@@ -87,8 +87,10 @@ enum HomeNudge: Equatable, Identifiable {
         var renewal: HomeRenewal?
         var backup: HomeBanner?
         var needsRecoveryPhraseBackup = false
+        // swiftlint:disable discouraged_optional_boolean - mirrors the server state: unset is not false / nil until the first snapshot
         var isEmailVerified: Bool?
         var isEmailPromptDismissed: Bool?
+        // swiftlint:enable discouraged_optional_boolean
         var updateRequired = false
         /// A suspended wallet shows only its suspended state.
         var suspended = false
@@ -348,6 +350,7 @@ final class HomeActivityTracker {
     /// now on is live. Each visit (and each wallet) starts disarmed: whatever its
     /// first refresh brings in arrived while you were away.
     private(set) var armed = false
+    // swiftlint:disable:next discouraged_optional_collection - mirrors the server state: unset is not false / nil until the first snapshot
     private var baseline: Set<String>?
     private var visible = false
     private var walletKey: String?

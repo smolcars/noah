@@ -17,17 +17,7 @@ enum EsploraEndpoint {
               input.range(of: "%(?![0-9a-fA-F]{2})", options: .regularExpression) == nil else {
             throw Failure(message: "Enter a valid Esplora API URL.")
         }
-        // Validate raw authority before Foundation can discard an overflowing port or IPv6 scope.
-        let authority = input.components(separatedBy: "://")[1].prefix { !"/?#".contains($0) }
-        let hostPort = authority.split(separator: "@", omittingEmptySubsequences: false).last!
-        let portStart = hostPort.hasPrefix("[") ? hostPort.firstIndex(of: "]").map { hostPort.index(after: $0) } : hostPort.firstIndex(of: ":")
-        guard !hostPort.contains("%") || !hostPort.hasPrefix("[") else { throw Failure(message: "Enter a valid Esplora API URL.") }
-        if let start = portStart, start < hostPort.endIndex {
-            let suffix = hostPort[start...]
-            guard suffix.first == ":", !suffix.dropFirst().isEmpty,
-                  suffix.dropFirst().allSatisfy({ $0.isASCII && $0.isNumber }),
-                  let port = UInt16(suffix.dropFirst()), port > 0 else { throw Failure(message: "Enter a valid Esplora API URL.") }
-        }
+        try validateAuthority(input)
         guard var url = URLComponents(string: input.replacingOccurrences(of: "\\", with: "/")), let host = url.host, !host.isEmpty,
               !host.contains(where: \.isWhitespace), url.url != nil else {
             throw Failure(message: "Enter a valid Esplora API URL.")
@@ -39,15 +29,10 @@ enum EsploraEndpoint {
         url.scheme = url.scheme?.lowercased(); url.host = try canonicalHost(host.lowercased())
         if url.port == (url.scheme == "http" ? 80 : 443) { url.port = nil }
         // WHATWG special schemes treat backslashes as separators and recognize encoded dot segments.
-        var segments: [String] = []
-        for segment in url.percentEncodedPath.split(separator: "/", omittingEmptySubsequences: false).dropFirst() {
-            switch segment.replacingOccurrences(of: "%2e", with: ".", options: .caseInsensitive) {
-            case ".": continue
-            case "..": if !segments.isEmpty { segments.removeLast() }
-            default: segments.append(String(segment))
-            }
-        }
-        var path = ("/" + segments.joined(separator: "/")).replacingOccurrences(of: "/+$", with: "", options: .regularExpression)
+        var path = ("/" + resolvedSegments(url.percentEncodedPath).joined(separator: "/")).replacingOccurrences(
+            of: "/+$",
+            with: "",
+            options: .regularExpression)
         for suffix in ["/blocks/tip/height", "/blocks/tip/hash", "/block-height/0"] where path.hasSuffix(suffix) {
             path.removeLast(suffix.count); break
         }
@@ -55,6 +40,33 @@ enum EsploraEndpoint {
         url.percentEncodedPath = path
         guard let result = url.string else { throw Failure(message: "Enter a valid Esplora API URL.") }
         return result.replacingOccurrences(of: "/+$", with: "", options: .regularExpression)
+    }
+
+    /// The raw authority, checked before Foundation can discard an overflowing port or IPv6 scope.
+    private static func validateAuthority(_ input: String) throws {
+        let authority = input.components(separatedBy: "://")[1].prefix { !"/?#".contains($0) }
+        let hostPort = authority.lastIndex(of: "@").map { authority[authority.index(after: $0)...] } ?? authority
+        let portStart = hostPort.hasPrefix("[") ? hostPort.firstIndex(of: "]").map { hostPort.index(after: $0) } : hostPort.firstIndex(of: ":")
+        guard !hostPort.contains("%") || !hostPort.hasPrefix("[") else { throw Failure(message: "Enter a valid Esplora API URL.") }
+        if let start = portStart, start < hostPort.endIndex {
+            let suffix = hostPort[start...]
+            guard suffix.first == ":", !suffix.dropFirst().isEmpty,
+                  suffix.dropFirst().allSatisfy({ $0.isASCII && $0.isNumber }),
+                  let port = UInt16(suffix.dropFirst()), port > 0 else { throw Failure(message: "Enter a valid Esplora API URL.") }
+        }
+    }
+
+    /// The path's segments with dot segments (encoded too) resolved.
+    private static func resolvedSegments(_ percentEncodedPath: String) -> [String] {
+        var segments: [String] = []
+        for segment in percentEncodedPath.split(separator: "/", omittingEmptySubsequences: false).dropFirst() {
+            switch segment.replacingOccurrences(of: "%2e", with: ".", options: .caseInsensitive) {
+            case ".": continue
+            case "..": if !segments.isEmpty { segments.removeLast() }
+            default: segments.append(String(segment))
+            }
+        }
+        return segments
     }
     static func canonicalHost(_ host: String) throws -> String {
         guard host.hasPrefix("["), host.hasSuffix("]") else { return try ipv4Host(host) }
@@ -66,12 +78,15 @@ enum EsploraEndpoint {
         guard inet_ntop(AF_INET6, &address, &buffer, socklen_t(buffer.count)) != nil else {
             throw Failure(message: "Enter a valid Esplora API URL.")
         }
-        return "[" + String(cString: buffer) + "]"
+        guard let text = String(bytes: buffer.prefix { $0 != 0 }.map { UInt8(bitPattern: $0) }, encoding: .utf8) else {
+            throw Failure(message: "Enter a valid Esplora API URL.")
+        }
+        return "[" + text + "]"
     }
     /// WHATWG's IPv4 numbers allow fewer than four components (127.1), hex and octal.
     private static func ipv4Host(_ host: String) throws -> String {
         var parts = host.split(separator: ".", omittingEmptySubsequences: false).map(String.init)
-        if parts.last == "" { parts.removeLast() }
+        if parts.last?.isEmpty == true { parts.removeLast() }
         func number(_ part: String) -> UInt64? {
             if part.lowercased().hasPrefix("0x") { return UInt64(part.dropFirst(2), radix: 16) ?? (part.count == 2 ? 0 : nil) }
             if part.count > 1, part.first == "0" { return UInt64(part.dropFirst(), radix: 8) }
@@ -82,10 +97,10 @@ enum EsploraEndpoint {
         let numbers = parts.compactMap(number)
         guard numbers.count == parts.count, (1...4).contains(numbers.count),
               numbers.dropLast().allSatisfy({ $0 <= 255 }),
-              numbers.last! < (UInt64(1) << (8 * (5 - numbers.count))) else {
+              let lastNumber = numbers.last, lastNumber < (UInt64(1) << (8 * (5 - numbers.count))) else {
             throw Failure(message: "Enter a valid Esplora API URL.")
         }
-        var address = numbers.last!
+        var address = lastNumber
         for (index, value) in numbers.dropLast().enumerated() { address += value << (8 * (3 - index)) }
         return [24, 16, 8, 0].map { String((address >> $0) & 255) }.joined(separator: ".")
     }
@@ -95,7 +110,9 @@ enum EsploraEndpoint {
         guard hash.range(of: "^[0-9a-f]{64}$", options: .regularExpression) != nil else {
             throw Failure(message: "The endpoint returned an invalid block hash.")
         }
-        let expected = variant == .mainnet ? "000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f" : "00000008819873e925422c1ff0f99f7cc9bbb232af63a077a480a3633bee1ef6"
+        let expected = variant == .mainnet
+            ? "000000000019d6689c085ae165831e934ff763ae46a2a6c172b3f1b60a8ce26f"
+            : "00000008819873e925422c1ff0f99f7cc9bbb232af63a077a480a3633bee1ef6"
         guard hash == expected else { throw Failure(message: "The Esplora endpoint is for a different Bitcoin network.") }
     }
     static func validateTip(_ value: String) throws {

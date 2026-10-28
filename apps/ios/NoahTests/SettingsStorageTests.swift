@@ -82,7 +82,7 @@ struct SettingsStorageTests {
         // A damaged file still resets to defaults with the notice, as when every read went to disk.
         try Data("damaged generation".utf8).write(to: storage.nativeFile.file)
         #expect(storage.string(forKey: "k") == nil)
-        #expect(try storage.takeUpgradeNotices() == [SettingsStorage.settingsNotice])
+        #expect(storage.takeUpgradeNotices() == [SettingsStorage.settingsNotice])
     }
 
     /// Another writer racing a save: writing into our pending file before its rename (it shares the path), or

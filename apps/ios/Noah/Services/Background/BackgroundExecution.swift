@@ -56,7 +56,7 @@ import Foundation
     /// timeout ends the execution, from a main-queue timer that needs no cooperative thread;
     /// a report under way at the deadline holds completion until it ends or times out.
     nonisolated static func report(_ body: () async -> Void) async {
-        guard let execution = BackgroundReport.execution else { return await body() }
+        guard let execution = BackgroundReport.execution else { await body(); return }
         guard await execution.admitReport() else { return }
         // Expiry can land after admission; it cancels the work before completing, so a cancelled
         // report never starts. Later awaits in the report path stop on cancellation themselves.

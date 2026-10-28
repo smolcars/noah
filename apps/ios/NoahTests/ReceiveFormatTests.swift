@@ -303,8 +303,8 @@ struct ReceiveFormatTests {
     static func row(_ arrival: ReceiveArrival, at t: Double, reduceMotion: Bool) throws -> Data {
         let view = Canvas { context, size in
             ReceiveBlockRow.draw(MotionCanvas(context: context, size: size, viewBox: CGRect(x: 0, y: 0, width: 300, height: 58), colors: .theme(.light)),
-                                 arrival: arrival, tip: 101, time: MotionTime(t: t, reduceMotion: reduceMotion), nextLabel: "next",
-                                 locale: Locale(identifier: "en"))
+                                 arrival: arrival, tip: 101, time: MotionTime(t: t, reduceMotion: reduceMotion),
+                                 copy: (next: "next", locale: Locale(identifier: "en")))
         }
         .frame(width: 300, height: 58)
         return try #require(ImageRenderer(content: view).uiImage?.pngData())

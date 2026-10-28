@@ -12,7 +12,7 @@ enum DebugJSON {
     }
     static func format(_ value: Any) throws -> String {
         let data = try JSONSerialization.data(withJSONObject: value, options: [.prettyPrinted, .sortedKeys, .fragmentsAllowed, .withoutEscapingSlashes])
-        return String(decoding: data, as: UTF8.self)
+        return try String(json: data)
     }
     private static func value(_ result: ArkInfo) -> [String: Any] {
         [

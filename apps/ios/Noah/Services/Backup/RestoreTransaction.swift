@@ -102,7 +102,9 @@ struct RestoreTransaction: Sendable {
     /// `previous/` and `staged/` into its place. If this throws, call `undo`.
     func begin(seed mnemonic: String) throws {
         var salt = Data(count: 32)
-        let status = salt.withUnsafeMutableBytes { SecRandomCopyBytes(kSecRandomDefault, 32, $0.baseAddress!) }
+        let status = salt.withUnsafeMutableBytes { bytes in
+            bytes.baseAddress.map { SecRandomCopyBytes(kSecRandomDefault, 32, $0) } ?? errSecAllocate
+        }
         guard status == errSecSuccess else { throw Failure.randomUnavailable }
         let journal = Journal(
             id: UUID(), phase: .installing, hadPreviousData: exists(datadir),
@@ -140,7 +142,7 @@ struct RestoreTransaction: Sendable {
     }
 
     /// The seed is saved: retain settings completion, then drop the journal last.
-    func finish(sync: @Sendable (URL) throws -> Void = RestoreTransaction.fullSync) throws {
+    func finish(sync: @Sendable (URL) throws -> Void = Self.fullSync) throws {
         try Data().write(to: settingsCompletion)
         try sync(settingsCompletion)
         try sync(directory)
@@ -269,7 +271,7 @@ struct RestoreTransaction: Sendable {
 
     /// Settled: the journal's removal is on disk before anyone else may touch
     /// the datadir, so it can't reappear after a power loss.
-    private func removeJournal(sync: @Sendable (URL) throws -> Void = RestoreTransaction.fullSync) throws {
+    private func removeJournal(sync: @Sendable (URL) throws -> Void = Self.fullSync) throws {
         try removeIfPresent(journalURL)
         try sync(directory)
     }

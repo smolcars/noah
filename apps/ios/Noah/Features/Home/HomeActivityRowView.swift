@@ -140,7 +140,7 @@ struct HomeAvatar: View {
     }
 
     private func icon(_ name: String, _ points: CGFloat) -> some View {
-        Image(systemName: name).font(.system(size: points * (size > 42 ? 27.0 / 20 : 1), weight: .medium))
+        Image(systemName: name).accessibilityHidden(true).font(.system(size: points * (size > 42 ? 27.0 / 20 : 1), weight: .medium))
     }
 }
 
@@ -176,42 +176,50 @@ struct HomeRecentList: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
-            HStack(alignment: .firstTextBaseline) {
-                Text("Recent").noahText(HomeText.section).foregroundStyle(NoahTokens.Colors.muted)
-                    .accessibilityAddTraits(.isHeader)
-                Spacer()
-                Button("See all", action: onSeeAll)
-                    .noahText(HomeText.strong)
-                    .foregroundStyle(NoahTokens.Colors.foreground)
-                    .frame(minHeight: NoahTokens.Size.hitTarget)
-                    .accessibilityIdentifier("home-see-all")
-            }
-            .padding(.bottom, -10)
-            if history.isLoading {
-                ProgressView("Loading activity").frame(maxWidth: .infinity).padding(.vertical, 24)
-            } else if let error = history.error {
-                VStack(alignment: .leading, spacing: NoahTokens.Space.s) {
-                    Text(LocalizedStringKey(error)).noahText(HomeText.footnote).foregroundStyle(NoahTokens.Colors.muted)
-                    Button("Retry", action: onRetry).noahText(HomeText.strong)
-                }
-                .padding(.vertical, NoahTokens.Space.l)
-            } else {
-                let rows = Array(history.transactions.prefix(5))
-                ForEach(Array(rows.enumerated()), id: \.element.id) { index, transaction in
-                    Button { onSelect(transaction) } label: {
-                        HomeActivityRowView(transaction: transaction, ownDomain: ownDomain, unit: unit, hidden: hidden,
-                                            isNew: newIDs.contains(transaction.id))
-                    }
-                    .buttonStyle(.plain)
-                    .overlay(alignment: .bottom) {
-                        if index < rows.count - 1 { HomeHairline().padding(.leading, 56) }
-                    }
-                    .onboardingAppear(index, base: 0.3, step: 0.04, distance: 10, animated: animateRows)
-                    .transition(.homeRise(reduceMotion, 10))
-                }
-            }
+            header
+            content
         }
         .animation(NoahTokens.Motion.travel(reduceMotion), value: history.transactions.prefix(5).map(\.id))
+    }
+
+    private var header: some View {
+        HStack(alignment: .firstTextBaseline) {
+            Text("Recent").noahText(HomeText.section).foregroundStyle(NoahTokens.Colors.muted)
+                .accessibilityAddTraits(.isHeader)
+            Spacer()
+            Button("See all", action: onSeeAll)
+                .noahText(HomeText.strong)
+                .foregroundStyle(NoahTokens.Colors.foreground)
+                .frame(minHeight: NoahTokens.Size.hitTarget)
+                .accessibilityIdentifier("home-see-all")
+        }
+        .padding(.bottom, -10)
+    }
+
+    @ViewBuilder private var content: some View {
+        if history.isLoading {
+            ProgressView("Loading activity").frame(maxWidth: .infinity).padding(.vertical, 24)
+        } else if let error = history.error {
+            VStack(alignment: .leading, spacing: NoahTokens.Space.s) {
+                Text(LocalizedStringKey(error)).noahText(HomeText.footnote).foregroundStyle(NoahTokens.Colors.muted)
+                Button("Retry", action: onRetry).noahText(HomeText.strong)
+            }
+            .padding(.vertical, NoahTokens.Space.l)
+        } else {
+            let rows = Array(history.transactions.prefix(5))
+            ForEach(Array(rows.enumerated()), id: \.element.id) { index, transaction in
+                Button { onSelect(transaction) } label: {
+                    HomeActivityRowView(transaction: transaction, ownDomain: ownDomain, unit: unit, hidden: hidden,
+                                        isNew: newIDs.contains(transaction.id))
+                }
+                .buttonStyle(.plain)
+                .overlay(alignment: .bottom) {
+                    if index < rows.count - 1 { HomeHairline().padding(.leading, 56) }
+                }
+                .onboardingAppear(index, base: 0.3, step: 0.04, distance: 10, animated: animateRows)
+                .transition(.homeRise(reduceMotion, 10))
+            }
+        }
     }
 }
 
@@ -268,9 +276,11 @@ struct HomeActivityList: View {
         case .today: L10n.text("Today", locale: locale.identifier)
         case .yesterday: L10n.text("Yesterday", locale: locale.identifier)
         case .date(let date):
-            Calendar.current.isDate(date, equalTo: Date(), toGranularity: .year)
-                ? date.formatted(.dateTime.month(.abbreviated).day().locale(locale))
-                : date.formatted(.dateTime.year().month(.abbreviated).day().locale(locale))
+            if Calendar.current.isDate(date, equalTo: Date(), toGranularity: .year) {
+                date.formatted(.dateTime.month(.abbreviated).day().locale(locale))
+            } else {
+                date.formatted(.dateTime.year().month(.abbreviated).day().locale(locale))
+            }
         }
     }
 }

@@ -106,7 +106,7 @@ struct EsploraTests {
         #expect(throws: (any Error).self) { try EsploraSettings(storage: fallback).restoreLogPrivacy() }
         try fallback.setDurably("fake fallback write", forKey: "fake-test-setting")
         fallback.useDefaultEsplora(for: .signet)
-        _ = try fallback.takeUpgradeNotices()
+        _ = fallback.takeUpgradeNotices()
         // A fresh instance reads the committed generation, not the process fallback.
         let restarted = try SettingsStorage(rootPath: path)
         #expect(throws: (any Error).self) { try EsploraSettings(storage: restarted).restoreLogPrivacy() }

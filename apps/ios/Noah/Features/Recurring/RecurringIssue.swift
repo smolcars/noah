@@ -3,9 +3,11 @@ import Foundation
 /// Persist identifiers and quote arguments; resolve copy only at the display boundary.
 struct RecurringIssue: Codable, Equatable, Sendable {
     enum Code: String, Codable, Sendable {
+        // swiftlint:disable raw_value_for_camel_cased_codable_enum - case names are the wire strings; SwiftFormat strips equal raw values
         case policyEvidence, automationStopped, legacyHistory, invalidJournal, interrupted, tooManyMissed
         case quoteExceedsCap, scheduleExceedsCap, arkFee, uncertain, retryableFailure, alreadyPaid
         case unsupported, amountLimit, unknown
+        // swiftlint:enable raw_value_for_camel_cased_codable_enum
     }
     var code: Code
     var arguments: [String] = []
@@ -68,7 +70,8 @@ struct RecurringIssue: Codable, Equatable, Sendable {
                 #"^The fee for this payment \(([0-9]+) sats\) is above your automatic limit of ([0-9]+) sats\. Review it to pay manually\.$"#,
                 Code.quoteExceedsCap),
             (
-                #"^Ark's published Lightning fees for this amount can reach ([0-9]+) sats, above your automatic limit of ([0-9]+) sats\. Review it to pay manually\.$"#,
+                #"^Ark's published Lightning fees for this amount can reach ([0-9]+) sats, "#
+                    + #"above your automatic limit of ([0-9]+) sats\. Review it to pay manually\.$"#,
                 Code.scheduleExceedsCap),
         ] {
             if let match = try? NSRegularExpression(pattern: pattern).firstMatch(in: text, range: NSRange(text.startIndex..., in: text)) {

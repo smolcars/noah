@@ -90,7 +90,7 @@ enum BackupArchive {
             for entry in archive {
                 let name = entry.path.hasPrefix("./") ? String(entry.path.dropFirst(2)) : entry.path
                 guard entry.type == .file, name == manifestName || name == snapshotName else {
-                    if entry.type == .directory && (name == "" || name == "/") { continue }
+                    if entry.type == .directory && (name.isEmpty || name == "/") { continue }
                     throw Failure.unexpectedEntry(name)
                 }
                 guard extracted.insert(name).inserted else { throw Failure.unexpectedEntry(name) }
@@ -113,8 +113,8 @@ enum BackupArchive {
     static func openLegacy(base64: Data, mnemonic: String, variant: AppVariant, into directory: URL) throws {
         let fileManager = FileManager.default
         guard !fileManager.fileExists(atPath: directory.path) else { throw Failure.destinationExists }
-        let text = String(decoding: base64, as: UTF8.self).trimmingCharacters(in: .whitespacesAndNewlines)
-        guard let envelope = Data(base64Encoded: text) else { throw Failure.notLegacyBackup }
+        guard let text = String(bytes: base64, encoding: .utf8)?.trimmingCharacters(in: .whitespacesAndNewlines),
+              let envelope = Data(base64Encoded: text) else { throw Failure.notLegacyBackup }
         let zip = try BackupCrypto.decrypt(envelope, mnemonic: mnemonic, expecting: .legacyDirectory)
 
         try fileManager.createDirectory(at: directory, withIntermediateDirectories: false)
@@ -190,12 +190,12 @@ enum BackupArchive {
     }
 
     /// Same keys and order as the RN app's `JSON.stringify(manifest)`.
-    static func encode(_ manifest: Manifest) throws -> Data {
+    static func encode(_ manifest: Manifest) -> Data {
         let encoder = JSONEncoder()
         encoder.outputFormatting = .withoutEscapingSlashes
         func string(_ value: String?) -> String {
             guard let value else { return "null" }
-            return String(decoding: (try? encoder.encode(value)) ?? Data("\"\"".utf8), as: UTF8.self)
+            return (try? String(json: encoder.encode(value))) ?? "\"\""
         }
         let json = """
         {"formatVersion":\(manifest.formatVersion),"createdAt":\(string(manifest.createdAt)),\

@@ -132,47 +132,9 @@ private struct MoveToArkSheet: View {
 
     var body: some View {
         SettingsSheetBody(title: L10n.text("Move to Ark", locale: language), line: L10n.text("From your on-chain balance.", locale: language)) {
-            HStack(alignment: .firstTextBaseline) {
-                if max {
-                    Text(L10n.text("Max", locale: language)).noahText(SettingsText.big)
-                } else {
-                    TextField(text: $amount, prompt: Text(verbatim: "0").foregroundStyle(NoahTokens.Colors.muted)) { Text("Amount in sats") }
-                        .noahText(SettingsText.big)
-                        .keyboardType(.numberPad)
-                        .tint(NoahTokens.Colors.orange)
-                        .focused($focused)
-                        .accessibilityIdentifier("board-amount")
-                    Text(verbatim: "sats").noahText(NoahTokens.Typography.label).foregroundStyle(NoahTokens.Colors.muted)
-                }
-                Spacer()
-                Button(L10n.text("Max", locale: language)) { amount = max ? "" : "MAX" }
-                    .buttonStyle(OnboardingChipStyle(bold: max))
-                    .disabled(model.locked || model.overview?.confirmed ?? 0 == 0)
-                    .accessibilityIdentifier("board-max")
-            }
-            .padding(.top, 16)
-            .disabled(model.busy)
+            amountField
             if let quote = model.quote {
-                VStack(spacing: 0) {
-                    row("Amount", quote.amount)
-                    if let fee = quote.fee, let chainFee = quote.chainFee {
-                        row("Ark fee", fee)
-                        row("Network fee", chainFee)
-                        row("Arrives in Ark", quote.net)
-                        row("Total", quote.amount + chainFee)
-                    }
-                    if let prepared = quote.prepared {
-                        SettingsDetailRow(label: L10n.text("Signed transaction size", locale: language), value: "\(prepared.vsize) vB", compact: true)
-                        SettingsDetailRow(label: L10n.text("Funding inputs", locale: language), value: "\(prepared.inputCount)", compact: true, hairline: false)
-                    }
-                }
-                .padding(.top, 8)
-                SettingsFine(text: L10n.text(
-                    "Move onchain bitcoin into Ark using this exact signed funding transaction. The boarding amount includes the Ark fee; the onchain fee is paid in addition. Funds become spendable after the board completes. This review expires after two minutes.",
-                    locale: language)
-                    + (quote.boardAll == true ? " " + L10n.text(
-                        "MAX uses confirmed funds only and deducts the onchain fee from that balance.",
-                        locale: language) : ""))
+                quoteRows(quote)
             } else if !amount.isEmpty && requested == nil {
                 SettingsFine(text: L10n.text("Enter whole sats.", locale: language), failure: true)
             } else if let minimum {
@@ -196,6 +158,53 @@ private struct MoveToArkSheet: View {
             }
         }
         .onAppear { focused = true }
+    }
+
+    private var amountField: some View {
+        HStack(alignment: .firstTextBaseline) {
+            if max {
+                Text(L10n.text("Max", locale: language)).noahText(SettingsText.big)
+            } else {
+                TextField(text: $amount, prompt: Text(verbatim: "0").foregroundStyle(NoahTokens.Colors.muted)) { Text("Amount in sats") }
+                    .noahText(SettingsText.big)
+                    .keyboardType(.numberPad)
+                    .tint(NoahTokens.Colors.orange)
+                    .focused($focused)
+                    .accessibilityIdentifier("board-amount")
+                Text(verbatim: "sats").noahText(NoahTokens.Typography.label).foregroundStyle(NoahTokens.Colors.muted)
+            }
+            Spacer()
+            Button(L10n.text("Max", locale: language)) { amount = max ? "" : "MAX" }
+                .buttonStyle(OnboardingChipStyle(bold: max))
+                .disabled(model.locked || model.overview?.confirmed ?? 0 == 0)
+                .accessibilityIdentifier("board-max")
+        }
+        .padding(.top, 16)
+        .disabled(model.busy)
+    }
+
+    @ViewBuilder private func quoteRows(_ quote: OnchainQuote) -> some View {
+        VStack(spacing: 0) {
+            row("Amount", quote.amount)
+            if let fee = quote.fee, let chainFee = quote.chainFee {
+                row("Ark fee", fee)
+                row("Network fee", chainFee)
+                row("Arrives in Ark", quote.net)
+                row("Total", quote.amount + chainFee)
+            }
+            if let prepared = quote.prepared {
+                SettingsDetailRow(label: L10n.text("Signed transaction size", locale: language), value: "\(prepared.vsize) vB", compact: true)
+                SettingsDetailRow(label: L10n.text("Funding inputs", locale: language), value: "\(prepared.inputCount)", compact: true, hairline: false)
+            }
+        }
+        .padding(.top, 8)
+        SettingsFine(text: L10n.text(
+            // swiftlint:disable:next line_length - one literal: translations.mjs reads copy as a single string
+            "Move onchain bitcoin into Ark using this exact signed funding transaction. The boarding amount includes the Ark fee; the onchain fee is paid in addition. Funds become spendable after the board completes. This review expires after two minutes.",
+            locale: language)
+            + (quote.boardAll == true ? " " + L10n.text(
+                "MAX uses confirmed funds only and deducts the onchain fee from that balance.",
+                locale: language) : ""))
     }
 
     private func row(_ label: String, _ sats: UInt64) -> some View {
@@ -251,42 +260,46 @@ struct AutoBoardingService: View {
         .sheet(item: $plan) { quote in
             OnchainReviewSheet(
                 quote: quote,
-                confirm: {
-                    busy = true
-                    plan = nil
-                    Task {
-                        defer { busy = false; Task { await check() } }
-                        defer { Task { await app.session.discardBoard(quote) } }
-                        // A board changes what every page shows, as the pages' own submissions do (SharedOverview).
-                        SharedOverview.shared.changed()
-                        defer { SharedOverview.shared.changed() }
-                        do {
-                            guard !(await WalletBackgroundActivity.shared.isRunning),
-                                  !app.isWalletSuspended, phase == .active,
-                                  PersistedTransactionState.load(from: .shared).isAutoBoardingEnabled
-                            else { throw OnchainFailure.unavailable }
-                            report(try await app.session.executeOnchain(quote, funding: review.fundingFor(quote)))
-                            // Retain the receipt independently of admission for a later board.
-                            await app.refresh()
-                        } catch {
-                            let failure = error
-                            try? await review.failedConfirm(quote, changed: (failure as? OnchainFailure) == .changed) {
-                                try await app.session.abandonUnsubmittedAutoBoard(quote)
-                            }
-                            report((error as? OnchainFailure)?.errorDescription
-                                ?? OnchainFailure.uncertain.errorDescription)
-                        }
-                    }
-                }, cancelTitle: "No, turn off",
-                onCancel: {
-                    var state = PersistedTransactionState.load(from: .shared)
-                    state.setAutoBoarding(false)
-                    do {
-                        try SettingsStorage.shared.setPersistedState(
-                            state, key: PersistedTransactionState.key, version: PersistedTransactionState.version)
-                    } catch { report("Couldn't save auto-board preference.") }
-                })
+                confirm: { confirmAutoBoard(quote) }, cancelTitle: "No, turn off",
+                onCancel: turnOffAutoBoard)
         }
+    }
+
+    private func confirmAutoBoard(_ quote: OnchainQuote) {
+        busy = true
+        plan = nil
+        Task<Void, Never> {
+            defer { busy = false; Task { await check() } }
+            defer { Task { await app.session.discardBoard(quote) } }
+            // A board changes what every page shows, as the pages' own submissions do (SharedOverview).
+            SharedOverview.shared.changed()
+            defer { SharedOverview.shared.changed() }
+            do {
+                guard !(await WalletBackgroundActivity.shared.isRunning),
+                      !app.isWalletSuspended, phase == .active,
+                      PersistedTransactionState.load(from: .shared).isAutoBoardingEnabled
+                else { throw OnchainFailure.unavailable }
+                report(try await app.session.executeOnchain(quote, funding: review.fundingFor(quote)))
+                // Retain the receipt independently of admission for a later board.
+                await app.refresh()
+            } catch {
+                let failure = error
+                try? await review.failedConfirm(quote, changed: (failure as? OnchainFailure) == .changed) {
+                    try await app.session.abandonUnsubmittedAutoBoard(quote)
+                }
+                report((error as? OnchainFailure)?.errorDescription
+                    ?? OnchainFailure.uncertain.errorDescription)
+            }
+        }
+    }
+
+    private func turnOffAutoBoard() {
+        var state = PersistedTransactionState.load(from: .shared)
+        state.setAutoBoarding(false)
+        do {
+            try SettingsStorage.shared.setPersistedState(
+                state, key: PersistedTransactionState.key, version: PersistedTransactionState.version)
+        } catch { report("Couldn't save auto-board preference.") }
     }
     private func check() async {
         guard !checking, !busy, plan == nil, !app.isWalletSuspended, phase == .active else { return }

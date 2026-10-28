@@ -20,6 +20,7 @@ struct RepeatPayment: Codable, Equatable, Sendable {
 
     static func parse(_ value: Any?) -> Self? {
         guard let object = value as? [String: Any],
+              // swiftlint:disable:next legacy_objc_type - only NSNumber tells a JSON Bool from a number (CFBoolean)
               let version = object["version"] as? NSNumber,
               CFGetTypeID(version) != CFBooleanGetTypeID(), version == 1,
               let rawDestination = object["destination"] as? String,
@@ -56,7 +57,7 @@ struct RepeatPayment: Codable, Equatable, Sendable {
 
     /// Preserves a comment by routing through LNURL instead of the direct Ark shortcut.
     static func usesDirectArkRoute(method: String, comment: String?) -> Bool {
-        method == "ark" && (comment == nil || comment == "")
+        method == "ark" && comment?.isEmpty != false
     }
 
     /// Associates RN repeat metadata with the newly committed Ark-routed send.

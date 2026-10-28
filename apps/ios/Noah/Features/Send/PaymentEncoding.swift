@@ -42,6 +42,7 @@ enum PaymentEncoding {
         }
         return check
     }
+    // swiftlint:disable:next discouraged_optional_collection - nil: invalid input, unlike an empty result
     static func bytes(_ words: [UInt8]) -> [UInt8]? {
         var accumulator: UInt32 = 0, bits = 0, output: [UInt8] = []
         for word in words {
@@ -62,6 +63,7 @@ enum PaymentEncoding {
         guard let decoded = base58Address(address) else { return nil }
         switch decoded[0] { case 0, 5: return "mainnet"; case 111, 196: return "testnet"; default: return nil }
     }
+    // swiftlint:disable:next discouraged_optional_collection - nil: invalid input, unlike an empty result
     private static func base58Address(_ address: String) -> [UInt8]? {
         let alphabet = Array("123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz")
         guard address.count <= 60 else { return nil }
@@ -77,6 +79,7 @@ enum PaymentEncoding {
         guard Array(decoded.suffix(4)) == checksum else { return nil }
         return Array(decoded.dropLast(4))
     }
+    // swiftlint:disable:next discouraged_optional_collection - nil: invalid input, unlike an empty result
     static func bitcoinScript(_ address: String) -> [UInt8]? {
         guard bitcoinNetwork(address) != nil else { return nil }
         if let decoded = bech32(address), let version = decoded.words.first,
@@ -88,41 +91,48 @@ enum PaymentEncoding {
         return [0, 111].contains(decoded[0]) ? [0x76, 0xA9, 0x14] + hash + [0x88, 0xAC] : [0xA9, 0x14] + hash + [0x87]
     }
     struct Invoice {
-        let network: String; let sats: Decimal?; let hash: String?; let expires: Date; let descriptionHash: String?; var description: String? = nil
+        let network: String; let sats: Decimal?; let hash: String?; let expires: Date; let descriptionHash: String?; var description: String?
     }
     static func invoice(_ value: String) -> Invoice? {
         guard let decoded = bech32(value), !decoded.isM, decoded.words.count >= 111,
               let networkPrefix = ["lnbcrt", "lntbs", "lnbc", "lntb"].first(where: { decoded.prefix.hasPrefix($0) }) else { return nil }
         let hrpAmount = String(decoded.prefix.dropFirst(networkPrefix.count))
         var amount: Decimal?
-        if !hrpAmount.isEmpty {
-            let unit = hrpAmount.last!, suffix = ["m", "u", "n", "p"].contains(String(unit))
+        if let unit = hrpAmount.last {
+            let suffix = ["m", "u", "n", "p"].contains(String(unit))
             let digits = suffix ? String(hrpAmount.dropLast()) : hrpAmount
             guard !digits.isEmpty, digits.allSatisfy(\.isNumber), let value = Decimal(string: digits) else { return nil }
             if suffix && unit == "p" && !digits.hasSuffix("0") { return nil }
-            let factors: [Character: Decimal] = ["m": 100000, "u": 100, "n": Decimal(string: "0.1")!, "p": Decimal(string: "0.0001")!]
-            amount = value * (suffix ? factors[unit]! : 100000000)
+            let factors: [Character: Decimal] = ["m": 100000, "u": 100, "n": Decimal(sign: .plus, exponent: -1, significand: 1),
+                                                 "p": Decimal(sign: .plus, exponent: -4, significand: 1)]
+            amount = value * (factors[unit] ?? 100000000)
         }
         let payload = Array(decoded.words.dropLast(104))
-        var index = 7, hash: String?, descriptionHash: String?, description: String?, expiry: UInt64 = 3600
+        guard let fields = taggedFields(payload), fields.hash != nil else { return nil }
+        let timestamp = payload.prefix(7).reduce(UInt64(0)) { $0 * 32 + UInt64($1) }
+        let network = switch networkPrefix { case "lnbc": "mainnet"; case "lntb": "testnet"; case "lntbs": "signet"; default: "regtest" }
+        return Invoice(
+            network: network,
+            sats: amount,
+            hash: fields.hash,
+            expires: Date(timeIntervalSince1970: Double(timestamp) + Double(fields.expiry)),
+            descriptionHash: fields.descriptionHash,
+            description: fields.description)
+    }
+    private struct TaggedFields { var hash: String?; var descriptionHash: String?; var description: String?; var expiry: UInt64 = 3600 }
+    /// BOLT11's tagged fields after the 7-word timestamp; nil when one runs past the payload or an expiry is too long.
+    private static func taggedFields(_ payload: [UInt8]) -> TaggedFields? {
+        var index = 7, fields = TaggedFields()
         while index + 3 <= payload.count {
             let tag = payload[index], count = Int(payload[index + 1]) * 32 + Int(payload[index + 2]); index += 3
             guard index + count <= payload.count else { return nil }
             let data = Array(payload[index..<(index + count)]); index += count
-            if tag == 1, let raw = bytes(data), raw.count == 32 { hash = raw.map { String(format: "%02x", $0) }.joined() }
-            if tag == 23, let raw = bytes(data), raw.count == 32 { descriptionHash = raw.map { String(format: "%02x", $0) }.joined() }
-            if tag == 13, let raw = bytes(data) { description = String(bytes: raw, encoding: .utf8) }
-            if tag == 6 { guard data.count <= 12 else { return nil }; expiry = data.reduce(0) { $0 * 32 + UInt64($1) } }
+            if tag == 1, let raw = bytes(data), raw.count == 32 { fields.hash = raw.map { String(format: "%02x", $0) }.joined() }
+            if tag == 23, let raw = bytes(data), raw.count == 32 { fields.descriptionHash = raw.map { String(format: "%02x", $0) }.joined() }
+            if tag == 13, let raw = bytes(data) { fields.description = String(bytes: raw, encoding: .utf8) }
+            if tag == 6 { guard data.count <= 12 else { return nil }; fields.expiry = data.reduce(0) { $0 * 32 + UInt64($1) } }
         }
-        guard hash != nil, index == payload.count else { return nil }
-        let timestamp = payload.prefix(7).reduce(UInt64(0)) { $0 * 32 + UInt64($1) }
-        return Invoice(
-            network: ["lnbc": "mainnet", "lntb": "testnet", "lntbs": "signet", "lnbcrt": "regtest"][networkPrefix]!,
-            sats: amount,
-            hash: hash,
-            expires: Date(timeIntervalSince1970: Double(timestamp) + Double(expiry)),
-            descriptionHash: descriptionHash,
-            description: description)
+        return index == payload.count ? fields : nil
     }
     /// A BOLT12 offer's `offer_description` (TLV 10). Offers are bech32 without a checksum.
     static func offerDescription(_ offer: String) -> String? {

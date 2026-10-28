@@ -49,32 +49,7 @@ struct HomeQRCard: View {
     var body: some View {
         ZStack {
             VStack(spacing: 0) {
-                if let address {
-                    StyledQRCode(content: address, animate: animateQR)
-                        .frame(width: qrSide, height: qrSide)
-                    Text(verbatim: address)
-                        .noahText(NoahTokens.Typography.button)
-                        .foregroundStyle(NoahTokens.Colors.qrInk)
-                        .lineLimit(1).truncationMode(.middle)
-                        .padding(.top, 14)
-                    Text("Scan with any Lightning wallet")
-                        .noahText(HomeText.footnote)
-                        .foregroundStyle(Color(hex: 0x6B6B6B))
-                        .padding(.top, 2)
-                } else {
-                    VStack(alignment: .leading, spacing: NoahTokens.Space.s) {
-                        Text("Lightning address unavailable").noahText(NoahTokens.Typography.button)
-                        Text("Finish setting up your Lightning address before sharing your QR.")
-                            .noahText(HomeText.footnote).foregroundStyle(Color(hex: 0x6B6B6B))
-                        Button("Open Profile", action: onProfile)
-                            .noahText(HomeText.strong)
-                            .foregroundStyle(NoahTokens.Colors.orangeText)
-                            .padding(.top, NoahTokens.Space.xs)
-                    }
-                    .foregroundStyle(NoahTokens.Colors.qrInk)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .fixedSize(horizontal: false, vertical: true)
-                }
+                addressCard
             }
             .modifier(HomeReceiptFade(celebration: celebration))
             if let celebration {
@@ -97,6 +72,35 @@ struct HomeQRCard: View {
         }
         .accessibilityElement(children: .combine)
     }
+
+    @ViewBuilder private var addressCard: some View {
+        if let address {
+            StyledQRCode(content: address, animate: animateQR)
+                .frame(width: qrSide, height: qrSide)
+            Text(verbatim: address)
+                .noahText(NoahTokens.Typography.button)
+                .foregroundStyle(NoahTokens.Colors.qrInk)
+                .lineLimit(1).truncationMode(.middle)
+                .padding(.top, 14)
+            Text("Scan with any Lightning wallet")
+                .noahText(HomeText.footnote)
+                .foregroundStyle(Color(hex: 0x6B6B6B))
+                .padding(.top, 2)
+        } else {
+            VStack(alignment: .leading, spacing: NoahTokens.Space.s) {
+                Text("Lightning address unavailable").noahText(NoahTokens.Typography.button)
+                Text("Finish setting up your Lightning address before sharing your QR.")
+                    .noahText(HomeText.footnote).foregroundStyle(Color(hex: 0x6B6B6B))
+                Button("Open Profile", action: onProfile)
+                    .noahText(HomeText.strong)
+                    .foregroundStyle(NoahTokens.Colors.orangeText)
+                    .padding(.top, NoahTokens.Space.xs)
+            }
+            .foregroundStyle(NoahTokens.Colors.qrInk)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .fixedSize(horizontal: false, vertical: true)
+        }
+    }
 }
 
 private struct HomeCardActions: View {
@@ -114,6 +118,7 @@ private struct HomeCardActions: View {
                     .buttonStyle(HomePillStyle(prominent: false, height: NoahTokens.Size.buttonCompact, font: NoahTokens.Typography.button))
                     .frame(maxWidth: .infinity)
                     .accessibilityIdentifier("home-copy-address")
+                // swiftlint:disable:next accessibility_trait_for_button - ShareLink is a button; the gesture only records the tap
                 ShareLink(item: address) { Text("Share").frame(maxWidth: .infinity) }
                     .buttonStyle(HomePillStyle(height: NoahTokens.Size.buttonCompact, font: NoahTokens.Typography.button))
                     .simultaneousGesture(TapGesture().onEnded(onShare))
@@ -195,13 +200,15 @@ private struct HomeReceipt: View {
     }
 
     private func play() async {
-        let steps: [(Double, Animation, () -> Void)] = [
-            (0.12, NoahTokens.Motion.snappy, { shown = true }),
-            (0.16, NoahTokens.Motion.soft, { ring = true }),
-            (0.56, NoahTokens.Motion.bouncy, { amount = true }),
-            (0.62, NoahTokens.Motion.soft, { check = true }),
+        struct Step { let time: Double; let animation: Animation; let change: () -> Void }
+        let steps = [
+            Step(time: 0.12, animation: NoahTokens.Motion.snappy) { shown = true },
+            Step(time: 0.16, animation: NoahTokens.Motion.soft) { ring = true },
+            Step(time: 0.56, animation: NoahTokens.Motion.bouncy) { amount = true },
+            Step(time: 0.62, animation: NoahTokens.Motion.soft) { check = true },
         ]
-        for (time, animation, change) in steps {
+        for step in steps {
+            let time = step.time, animation = step.animation, change = step.change
             let wait = time - Date().timeIntervalSince(celebration.start)
             if wait > 0 {
                 do { try await Task.sleep(for: .seconds(wait)) } catch { return }

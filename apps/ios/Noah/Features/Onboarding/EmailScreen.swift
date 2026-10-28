@@ -100,25 +100,7 @@ struct EmailScreen: View {
     private var addressEntry: some View {
         VStack(alignment: .leading, spacing: 0) {
             VStack(spacing: 12) {
-                HStack(spacing: 10) {
-                    TextField("you@example.com", text: $email.text)
-                        .noahText(NoahTokens.Typography.field)
-                        .foregroundStyle(NoahTokens.Colors.foreground)
-                        .tint(NoahTokens.Colors.orange)
-                        .keyboardType(.emailAddress)
-                        .textContentType(.emailAddress)
-                        .textInputAutocapitalization(.never)
-                        .autocorrectionDisabled()
-                        .submitLabel(.send)
-                        .focused($focus, equals: .email)
-                        .onSubmit(send)
-                        .disabled(email.stage == .sending)
-                        .accessibilityLabel(Text("Email Address"))
-                        .accessibilityIdentifier("email-address-input")
-                    CheckStroke(drawn: email.isValid)
-                        .frame(width: 24, height: 24)
-                        .accessibilityHidden(true)
-                }
+                addressField
                 OnboardingUnderline(focused: focus == .email)
             }
             .padding(.top, column.firstTop(compact: 36))
@@ -132,6 +114,28 @@ struct EmailScreen: View {
             }
         }
         .onChange(of: email.isValid) { _, valid in if valid { haptics.play(.selection) } }
+    }
+
+    private var addressField: some View {
+        HStack(spacing: 10) {
+            TextField("you@example.com", text: $email.text)
+                .noahText(NoahTokens.Typography.field)
+                .foregroundStyle(NoahTokens.Colors.foreground)
+                .tint(NoahTokens.Colors.orange)
+                .keyboardType(.emailAddress)
+                .textContentType(.emailAddress)
+                .textInputAutocapitalization(.never)
+                .autocorrectionDisabled()
+                .submitLabel(.send)
+                .focused($focus, equals: .email)
+                .onSubmit(send)
+                .disabled(email.stage == .sending)
+                .accessibilityLabel(Text("Email Address"))
+                .accessibilityIdentifier("email-address-input")
+            CheckStroke(drawn: email.isValid)
+                .frame(width: 24, height: 24)
+                .accessibilityHidden(true)
+        }
     }
 
     /// "Send code" morphs into a spinner (one glass shape on iOS 26).
@@ -229,8 +233,8 @@ struct CodeBoxes: View {
         }
         .frame(height: NoahTokens.Size.otpBox)
         .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { rowWidth = $0 }
-        .keyframeAnimator(initialValue: CGFloat.zero, trigger: email.failures) { content, offset in
-            content.offset(x: reduceMotion ? 0 : offset)
+        .keyframeAnimator(initialValue: CGFloat.zero, trigger: email.failures) { [still = reduceMotion] content, offset in
+            content.offset(x: still ? 0 : offset)
         } keyframes: { _ in
             LinearKeyframe(-10, duration: 0.1)
             LinearKeyframe(9, duration: 0.1)
@@ -343,7 +347,7 @@ struct EmailHints: View {
         GlassGroup(spacing: NoahTokens.Space.s) {
             WrapLayout(spacing: NoahTokens.Space.s, lineSpacing: 0) {
                 switch email.hint {
-                case .none:
+                case .hidden:
                     EmptyView()
                 case .didYouMean(let fixed):
                     Text("Did you mean")
@@ -352,7 +356,7 @@ struct EmailHints: View {
                     chip(fixed, label: fixed)
                 case .complete(let addresses):
                     ForEach(addresses, id: \.self) { address in
-                        chip(address, label: String(address[address.firstIndex(of: "@")!...]))
+                        chip(address, label: address.firstIndex(of: "@").map { String(address[$0...]) } ?? address)
                     }
                 }
             }

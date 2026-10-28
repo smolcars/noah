@@ -68,7 +68,7 @@ struct MMKVRecoveryTests {
             let before = try bytes(root)
             let store = try SettingsStorage(rootPath: root.path)
             #expect(try store.nativeFile.load().values == [EsploraSettings.historyUnavailableKey: "1"])
-            #expect(try store.takeUpgradeNotices() == [SettingsStorage.settingsNotice])
+            #expect(store.takeUpgradeNotices() == [SettingsStorage.settingsNotice])
             #expect(try bytes(root) == before)
         }
     }
@@ -77,7 +77,7 @@ struct MMKVRecoveryTests {
         defer { Self.clean(root) }
         let store = try SettingsStorage(rootPath: root.path)
         #expect(!FileManager.default.fileExists(atPath: root.path))
-        #expect(try store.takeUpgradeNotices().isEmpty)
+        #expect(store.takeUpgradeNotices().isEmpty)
         try Self.writeRN(root, values: [PersistedWalletState.key: #"{"state":{"isInitialized":false},"version":0}"#])
         #expect(try SettingsStorage(rootPath: root.path).string(forKey: PersistedWalletState.key) == nil)
         try store.removeAllDurably()
@@ -92,13 +92,13 @@ struct MMKVRecoveryTests {
         let root = try Self.copyFixture(); defer { Self.clean(root) }
         try Self.writeRN(root, values: [RecurringStore.key: #"{"state":{"schedules":{"old":{"id":"old"}}},"version":0}"#])
         let store = try SettingsStorage(rootPath: root.path)
-        #expect(try store.takeUpgradeNotices().contains(SettingsStorage.recurringNotice))
+        #expect(store.takeUpgradeNotices().contains(SettingsStorage.recurringNotice))
         #expect(try SettingsStorage(rootPath: root.path).takeUpgradeNotices().isEmpty)
         try Data("damaged generation".utf8).write(to: store.nativeFile.file)
         let reset = try SettingsStorage(rootPath: root.path)
         #expect(reset.string(forKey: PersistedWalletState.key) == nil)
-        #expect(try reset.takeUpgradeNotices() == [SettingsStorage.settingsNotice])
-        #expect(try reset.takeUpgradeNotices().isEmpty)
+        #expect(reset.takeUpgradeNotices() == [SettingsStorage.settingsNotice])
+        #expect(reset.takeUpgradeNotices().isEmpty)
     }
     @Test func sharedSettingsLaunchPolicyAndBackgroundImport() throws {
         struct Input: Decodable { let wallet: String }
@@ -167,7 +167,7 @@ struct MMKVRecoveryTests {
             return results
         }
         var notices = 0
-        notices += try stores.count(where: { try !$0.takeUpgradeNotices().isEmpty })
+        notices += stores.count(where: { !$0.takeUpgradeNotices().isEmpty })
         #expect(notices == 1)
     }
 

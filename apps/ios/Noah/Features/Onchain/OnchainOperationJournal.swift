@@ -4,13 +4,14 @@ import Foundation
 actor OnchainOperationJournal {
     struct OverrideAudit: Codable, Sendable {
         static let titleText = "Override repeat protection?"
+        // swiftlint:disable:next line_length - one literal: translations.mjs reads copy as a single string
         static let warningText = "This does not cancel the original operation. Submitting again may spend additional funds or fees. Noah keeps this attempt and checks its status as your wallet syncs."
         static let confirmationText = "I understand this may repeat the operation"
         var overriddenAt: Date
         var title = OverrideAudit.titleText
         var warning = OverrideAudit.warningText
         var confirmation = OverrideAudit.confirmationText
-        var statusMessage = OnchainFailure.uncertain.errorDescription!
+        var statusMessage = OnchainFailure.uncertain.message
         var acknowledgedAt: Date?
     }
     // Bound audit storage without aging out sparse history or pruning active attempts.
@@ -19,13 +20,14 @@ actor OnchainOperationJournal {
         var quote: OnchainQuote
         var receipt: OnchainReceipt?
         var txid: String?
-        var chainStatusError: String? = nil
+        var chainStatusError: String?
+        // swiftlint:disable:next nesting - Codable synthesis needs CodingKeys inside the type
         private enum CodingKeys: String, CodingKey { case quote, receipt, txid, overrideAudit, uncertainBoard }
         var overrideAudit: OverrideAudit?
         /// FFI 0.7.0's `uncertain` board: bark may have partly recorded it, so repeat protection can't be
         /// overridden; only Check status resolves it (boarded, or proven never boarded). A crash before the
         /// SDK answered leaves no flag, and today's override.
-        var uncertainBoard: Bool?
+        var uncertainBoard: Bool? // swiftlint:disable:this discouraged_optional_boolean - absent unless the SDK reported one
         var id: UUID { quote.id }
 
         func blocks(_ action: OnchainAction, ids: [String]) -> Bool {
@@ -110,10 +112,9 @@ actor OnchainOperationJournal {
     }
     func load() throws -> Attempt? { try loadAll().first }
     private func save(_ values: [Attempt]) throws {
-        let retainedOverrides = Set(values.filter { $0.overrideAudit != nil }.sorted {
-            let left = $0.overrideAudit!.overriddenAt
-            let right = $1.overrideAudit!.overriddenAt
-            return left == right ? $0.id.uuidString > $1.id.uuidString : left > right
+        let audited = values.compactMap { value in value.overrideAudit.map { (id: value.id, at: $0.overriddenAt) } }
+        let retainedOverrides = Set(audited.sorted {
+            $0.at == $1.at ? $0.id.uuidString > $1.id.uuidString : $0.at > $1.at
         }.prefix(Self.maxOverriddenAttempts).map(\.id))
         let retained = values.filter { $0.overrideAudit == nil || retainedOverrides.contains($0.id) }
         try JSONEncoder().encode(retained).write(
@@ -148,7 +149,7 @@ actor OnchainOperationJournal {
         try save(attempts.filter { $0.id != id })
     }
 
-    func recordStatusError(for id: UUID) throws {
+    func recordStatusError(for id: UUID) {
         guard !running else { return }
         guard statusErrors[id] != ChainTransactionStatus.errorText else { return }
         statusErrors[id] = ChainTransactionStatus.errorText

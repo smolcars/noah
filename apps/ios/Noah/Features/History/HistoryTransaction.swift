@@ -25,14 +25,18 @@ struct HistoryTransaction: Codable, Equatable, Identifiable, Sendable {
     var offchainFeeSat: Int64?
     var onchainFeeSat: Int64?
     var chainAnchor: String?
+    // swiftlint:disable discouraged_optional_collection - persisted history rows omit what the source didn't report
     var sentTo: [Destination]?
     var receivedOn: [Destination]?
     var inputVtxos: [String]?
     var outputVtxos: [String]?
     var exitedVtxos: [String]?
+    // swiftlint:enable discouraged_optional_collection
     var balanceChangeSat: Int64?
+    // swiftlint:disable discouraged_optional_boolean - persisted history rows omit what the source didn't report
     var hasOnchainFee: Bool?
     var hasConfirmation: Bool?
+    // swiftlint:enable discouraged_optional_boolean
     var confirmationHeight: UInt32?
     var confirmationHash: String?
     var repeatPayment: RepeatPayment?
@@ -185,6 +189,7 @@ struct HistoryMetadata: Codable, Equatable, Sendable {
     static func parse(_ json: String) -> Self {
         guard let data = json.data(using: .utf8),
               let object = (try? JSONSerialization.jsonObject(with: data)) as? [String: Any] else { return Self() }
+        // swiftlint:disable:next legacy_objc_type - only NSNumber tells a JSON Bool from a number (CFBoolean)
         let fee = object["onchain_fee_sat"] as? NSNumber
         return Self(
             offboardTxid: object["offboard_txid"] as? String,

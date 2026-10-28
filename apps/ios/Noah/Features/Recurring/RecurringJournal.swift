@@ -12,21 +12,22 @@ struct RecurringJournal {
         var markedAt: Double
         var policyRevision: UUID?
         var resolved = false
+        // swiftlint:disable discouraged_optional_boolean - journal files omit these until set; nil keeps that format
         var consumed: Bool?
         var policyApplied: Bool? // Legacy v2 claim; never used as the history completion flag.
         var terminal: TerminalEvidence?
         var historyApplied: Bool?
         var released: Bool?
+        // swiftlint:enable discouraged_optional_boolean
         var policy: RecurringPayment?
-        var key: String { "\(scheduleID):\(plan.occurrenceIndex!)" }
+        var key: String { "\(scheduleID):\(plan.due.index)" }
     }
     struct TerminalEvidence: Codable, Sendable {
-        enum Outcome: String, Codable, Sendable { case succeeded, alreadyPaid, failed, uncertain }
         var settlementID: UUID
         var attempt: SendPaymentController.Attempt
         var generation: Int
         var walletGeneration: Int
-        var outcome: Outcome
+        var outcome: TerminalOutcome
         var message: String?
         var recordedAt: Double
         var paid: Bool { outcome == .succeeded || outcome == .alreadyPaid }
@@ -114,9 +115,9 @@ struct RecurringJournal {
             try require(entry.historyApplied != true || entry.terminal != nil && entry.resolved)
             try require(entry.released != true || entry.historyApplied == true)
             if complete, entry.consumed == true {
-                try require(state.consumed.contains { $0.binding == entry.binding && $0.scheduleID == id && $0.through >= entry.plan.scheduledFor! }
+                try require(state.consumed.contains { $0.binding == entry.binding && $0.scheduleID == id && $0.through >= entry.plan.due.at }
                     && state.consumedIndices.contains { $0.binding == entry.binding && $0.scheduleID == id
-                        && $0.policyRevision == entry.policyRevision && $0.indices.contains(entry.plan.occurrenceIndex!)
+                        && $0.policyRevision == entry.policyRevision && $0.indices.contains(entry.plan.due.index)
                     })
             }
         }
@@ -132,7 +133,7 @@ struct RecurringJournal {
         for uncertain in state.legacyUncertainty { try scope(uncertain.binding, uncertain.scheduleID) }
     }
     private struct Header: Decodable { var version: Int }
-    private struct V1: Decodable { var attempts: [String: Entry]; var consumed: [Watermark] }
+    private struct Version1: Decodable { var attempts: [String: Entry]; var consumed: [Watermark] }
     var file: URL
     var persist: @Sendable (Data, URL) throws -> Void = { try RecurringStore.durableWrite($0, to: $1) }
     private func state() throws -> State {
@@ -165,7 +166,7 @@ struct RecurringJournal {
                     binding: $0.binding,
                     scheduleID: $0.scheduleID) }
             case 1:
-                let old = try decoder.decode(V1.self, from: bytes)
+                let old = try decoder.decode(Version1.self, from: bytes)
                 migrated = State(attempts: old.attempts, consumed: old.consumed)
                 // Watermarks can cover overwritten revisions whose indices are unknowable.
                 migrated.legacyUncertainty = old.consumed.map { Scope(binding: $0.binding, scheduleID: $0.scheduleID) }
@@ -183,10 +184,13 @@ struct RecurringJournal {
         return migrated
     }
     /// Durable handoff before Send publishes a terminal result.
-    func record(_ attempt: SendPaymentController.Attempt, generation: Int, walletGeneration: Int,
+    /// The Send controller's generations when the attempt finished.
+    struct Generations { var generation: Int; var walletGeneration: Int }
+    func record(_ attempt: SendPaymentController.Attempt, generations: Generations,
                 message: String?, binding: RecurringStore.Binding, now: Double) throws {
+        let generation = generations.generation, walletGeneration = generations.walletGeneration
         Self.lock.lock(); defer { Self.lock.unlock() }
-        let outcome: TerminalEvidence.Outcome
+        let outcome: TerminalOutcome
         if attempt.alreadyPaid != nil { outcome = .alreadyPaid }
         else if let receipt = attempt.receipt, !receipt.isUnresolved, receipt.broadcastRetryPending != true { outcome = .succeeded }
         else if attempt.failed { outcome = .failed }
@@ -237,4 +241,9 @@ struct RecurringJournal {
         try state.remember(entry)
         try write(state)
     }
+}
+
+extension RecurringJournal {
+    // swiftlint:disable:next raw_value_for_camel_cased_codable_enum - case names are the wire strings; SwiftFormat strips equal raw values
+    enum TerminalOutcome: String, Codable, Sendable { case succeeded, alreadyPaid, failed, uncertain }
 }

@@ -25,7 +25,7 @@ struct SendMotionTests {
     /// Every phase the stage shows over a minute, sampled every 50 ms.
     static func phases(_ rail: SendMotion.Rail, _ outcome: SendMotion.Outcome, outcomeAt: Double, confirmedAt: Double? = nil) -> [SendMotion.Phase] {
         stride(from: 0.0, through: 60, by: 0.05).map {
-            SendMotion.phase(rail: rail, outcome: outcome, outcomeAt: outcomeAt, confirmedAt: confirmedAt, at: $0)
+            SendMotion.phase(rail: rail, outcome: outcome, outcomeAt: outcomeAt, at: $0, confirmedAt: confirmedAt)
         }
     }
 
@@ -102,8 +102,8 @@ struct SendMotionTests {
         #expect(late[Int(20.1 / 0.05)] == .unlock)
         // On-chain confirms only once the confirmation is seen.
         #expect(SendMotion.phase(rail: .onchainSwap, outcome: .succeeded, outcomeAt: 2, at: 10) == .waiting)
-        #expect(SendMotion.phase(rail: .onchainSwap, outcome: .succeeded, outcomeAt: 2, confirmedAt: 30, at: 29) == .waiting)
-        #expect(SendMotion.phase(rail: .onchainSwap, outcome: .succeeded, outcomeAt: 2, confirmedAt: 30, at: 31) == .confirmed)
+        #expect(SendMotion.phase(rail: .onchainSwap, outcome: .succeeded, outcomeAt: 2, at: 29, confirmedAt: 30) == .waiting)
+        #expect(SendMotion.phase(rail: .onchainSwap, outcome: .succeeded, outcomeAt: 2, at: 31, confirmedAt: 30) == .confirmed)
         #expect(SendMotion.confirmations(height: 101, tip: 102) == 2)
     }
 
@@ -129,9 +129,9 @@ struct SendMotionTests {
                 let outcomeAt = outcome == .inFlight ? Double.infinity : seen
                 let confirmedAt: Double? = rail.isOnchain ? 20.4 : nil
                 let boundaries = SendMotion.phaseBoundaries(rail: rail, outcomeAt: outcomeAt, confirmedAt: confirmedAt)
-                var last = SendMotion.phase(rail: rail, outcome: outcome, outcomeAt: outcomeAt, confirmedAt: confirmedAt, at: 0)
+                var last = SendMotion.phase(rail: rail, outcome: outcome, outcomeAt: outcomeAt, at: 0, confirmedAt: confirmedAt)
                 for t in stride(from: 0.0, through: 40, by: 0.005) {
-                    let phase = SendMotion.phase(rail: rail, outcome: outcome, outcomeAt: outcomeAt, confirmedAt: confirmedAt, at: t)
+                    let phase = SendMotion.phase(rail: rail, outcome: outcome, outcomeAt: outcomeAt, at: t, confirmedAt: confirmedAt)
                     guard phase != last else { continue }
                     last = phase
                     #expect(boundaries.contains { $0 <= t + 1e-9 && t - $0 < 0.006 }, "\(outcome) after \(seen) s changes at \(t)")
@@ -181,7 +181,7 @@ struct SendMotionTests {
         #expect(schedule.allSatisfy { $0.at <= t && !clock.shouldPlay($0.key, at: $0.at) })
         #expect((SendMotion.resultAt(rail: rail, outcome: .succeeded, outcomeAt: outcomeAt) ?? .infinity) <= t)
         let end: SendMotion.Phase = switch rail { case .ark: .delivered; case .lightning: .paid; default: .confirmed }
-        #expect(SendMotion.phase(rail: rail, outcome: .succeeded, outcomeAt: outcomeAt, confirmedAt: clock.since(clock.confirmedAt), at: t) == end)
+        #expect(SendMotion.phase(rail: rail, outcome: .succeeded, outcomeAt: outcomeAt, at: t, confirmedAt: clock.since(clock.confirmedAt)) == end)
         // A confirmation that arrives later is news, and plays.
         let later = SendMotionClock()
         later.observe(.succeeded, at: now)
@@ -326,9 +326,12 @@ struct SendMotionTests {
         #expect(SendOutcomeView.actions(kind: kind, uncertain: true, resultShown: true).last == .close)
         let before = (controller.attempt?.payment, controller.attempt?.receipt, controller.generation)
         var dismissed = 0
-        let sheet = RecurringPaymentsView.approval(payment: SendPaymentTests().payment, quote: SendPaymentTests().quote,
-                                                   controller: controller, pay: { Issue.record("Close paid") },
-                                                   dismiss: { dismissed += 1 }, done: { Issue.record("Close acknowledged") })
+        let sheet = RecurringPaymentsView.approval(
+            review: .init(payment: SendPaymentTests().payment, quote: SendPaymentTests().quote),
+            controller: controller,
+            pay: { Issue.record("Close paid") },
+            dismiss: { dismissed += 1 },
+            done: { Issue.record("Close acknowledged") })
         sheet.onLeave()
         #expect(dismissed == 1)
         #expect(controller.locked && controller.state == .uncertain && controller.generation == before.2)

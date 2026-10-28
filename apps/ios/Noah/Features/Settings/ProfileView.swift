@@ -25,43 +25,8 @@ struct ProfileView: View {
 
     var body: some View {
         SettingsScroll {
-            VStack(alignment: .leading, spacing: 0) {
-                SettingsInitial(name: username, size: 84).padding(.top, 6)
-                Text(verbatim: name.isEmpty ? (username ?? L10n.text("Profile", locale: language)) : name)
-                    .noahText(SettingsText.heroName).padding(.top, 16)
-                if let address = server.lightningAddress {
-                    Text(verbatim: address).noahText(NoahTokens.Typography.sub).foregroundStyle(NoahTokens.Colors.muted).padding(.top, 2)
-                }
-            }
-            .accessibilityElement(children: .combine)
-            VStack(spacing: 0) {
-                SettingsDetailRow(label: L10n.text("Name", locale: language), value: name.isEmpty ? L10n.text("Add", locale: language) : name) {
-                    haptics.play(.light)
-                    nameDraft.begin(name)
-                    sheet = .name
-                }
-                .accessibilityIdentifier("profile-name")
-                SettingsDetailRow(label: L10n.text("Lightning address", locale: language), value: server.lightningAddress ?? L10n.text("Add", locale: language),
-                                  copy: copies.address) {
-                    open(.lightningAddress)
-                }
-                .accessibilityIdentifier("profile-lightning-address")
-                SettingsDetailRow(label: L10n.text("Email", locale: language), value: emailValue, copy: copies.email,
-                                  glyph: server.isEmailVerified == true ? "checkmark.circle.fill" : nil,
-                                  glyphColor: NoahTokens.Colors.orange) { open(.email) }
-                    .accessibilityIdentifier("profile-email")
-                if !npub.isEmpty {
-                    SettingsDetailRow(label: L10n.text("Nostr key", locale: language), value: npub, mono: true, copy: copies.npub) { open(.lightningAddress) }
-                }
-                if !key.isEmpty {
-                    SettingsDetailRow(label: L10n.text("Wallet key", locale: language), value: key, mono: true, copy: key)
-                }
-                SettingsDetailRow(label: L10n.text("My code", locale: language), value: "", glyph: "qrcode", hairline: false) {
-                    haptics.play(.light)
-                    settings.myCode()
-                }
-            }
-            .padding(.top, 22)
+            header
+            details
             SettingsFine(text: L10n.text("Your email is only for urgent alerts about your wallet.", locale: language))
             if let message { SettingsFine(text: L10n.text(message, locale: language), failure: true) }
         }
@@ -82,6 +47,49 @@ struct ProfileView: View {
                 try await model.server.refreshProfile()
             } catch { message = "Couldn't refresh your profile. Please try again." }
         }
+    }
+
+    private var header: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            SettingsInitial(name: username, size: 84).padding(.top, 6)
+            Text(verbatim: name.isEmpty ? (username ?? L10n.text("Profile", locale: language)) : name)
+                .noahText(SettingsText.heroName).padding(.top, 16)
+            if let address = server.lightningAddress {
+                Text(verbatim: address).noahText(NoahTokens.Typography.sub).foregroundStyle(NoahTokens.Colors.muted).padding(.top, 2)
+            }
+        }
+        .accessibilityElement(children: .combine)
+    }
+
+    private var details: some View {
+        VStack(spacing: 0) {
+            SettingsDetailRow(label: L10n.text("Name", locale: language), value: name.isEmpty ? L10n.text("Add", locale: language) : name) {
+                haptics.play(.light)
+                nameDraft.begin(name)
+                sheet = .name
+            }
+            .accessibilityIdentifier("profile-name")
+            SettingsDetailRow(label: L10n.text("Lightning address", locale: language), value: server.lightningAddress ?? L10n.text("Add", locale: language),
+                              copy: copies.address) {
+                open(.lightningAddress)
+            }
+            .accessibilityIdentifier("profile-lightning-address")
+            SettingsDetailRow(label: L10n.text("Email", locale: language), value: emailValue, copy: copies.email,
+                              glyph: server.isEmailVerified == true ? "checkmark.circle.fill" : nil,
+                              glyphColor: NoahTokens.Colors.orange) { open(.email) }
+                .accessibilityIdentifier("profile-email")
+            if !npub.isEmpty {
+                SettingsDetailRow(label: L10n.text("Nostr key", locale: language), value: npub, mono: true, copy: copies.npub) { open(.lightningAddress) }
+            }
+            if !key.isEmpty {
+                SettingsDetailRow(label: L10n.text("Wallet key", locale: language), value: key, mono: true, copy: key)
+            }
+            SettingsDetailRow(label: L10n.text("My code", locale: language), value: "", glyph: "qrcode", hairline: false) {
+                haptics.play(.light)
+                settings.myCode()
+            }
+        }
+        .padding(.top, 22)
     }
 
     private var emailValue: String {
@@ -176,7 +184,7 @@ private struct ProfileNameSheet: View {
     }
 
     private func save() {
-        Task {
+        Task<Void, Never> {
             guard let saved = await draft.save({ try await model.server.saveDisplayName($0) }) else { return }
             summary?.reloadLocal()
             haptics.play(.success)
@@ -419,7 +427,7 @@ struct EmailPage: View {
                 Text(verbatim: current).noahText(SettingsText.current).lineLimit(1).truncationMode(.middle)
                 HStack(spacing: 6) {
                     if server.isEmailVerified == true {
-                        Image(systemName: "checkmark.circle.fill").foregroundStyle(NoahTokens.Colors.orange)
+                        Image(systemName: "checkmark.circle.fill").accessibilityHidden(true).foregroundStyle(NoahTokens.Colors.orange)
                         Text(L10n.text("Verified", locale: language))
                     } else {
                         Circle().fill(NoahTokens.Colors.orange).frame(width: 8, height: 8)

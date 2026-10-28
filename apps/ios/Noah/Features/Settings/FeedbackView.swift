@@ -20,32 +20,9 @@ struct FeedbackView: View {
     var body: some View {
         SettingsScroll(line: success ? nil : L10n.text("Report a bug or share an idea.", locale: language)) {
             if success {
-                VStack(alignment: .leading, spacing: 0) {
-                    VerifiedCheck().frame(width: 72, height: 72).padding(.top, 10)
-                    Text(L10n.text("Thank you", locale: language)).noahText(SettingsText.heroName).padding(.top, 16)
-                    Text(L10n.text("It’s with the Noah team.", locale: language)).noahText(NoahTokens.Typography.sub)
-                        .foregroundStyle(NoahTokens.Colors.muted).padding(.top, 3)
-                }
-                .accessibilityElement(children: .combine)
+                thanks
             } else {
-                Group {
-                    SettingsField(label: L10n.text("Name", locale: language), placeholder: L10n.text("Your name", locale: language), text: $draft.name)
-                    SettingsField(label: L10n.text("Email (optional)", locale: language), placeholder: "you@example.com", text: $draft.email,
-                                  keyboard: .emailAddress)
-                    SettingsField(
-                        label: L10n.text("Subject", locale: language),
-                        placeholder: L10n.text("Short summary", locale: language),
-                        text: $draft.subject)
-                    SettingsField(label: L10n.text("Message", locale: language), placeholder: L10n.text("What happened, or what would help?", locale: language),
-                                  text: $draft.body, multiline: true)
-                }
-                .disabled(busy)
-                Text(L10n.text("Screenshot (optional)", locale: language)).noahText(HomeText.section).foregroundStyle(NoahTokens.Colors.muted)
-                    .padding(.top, 20)
-                screenshot.padding(.top, 8)
-                SettingsFine(text: L10n.text("JPEG or PNG, 5 MB or smaller", locale: language) + ". "
-                    + L10n.text("Your app version and phone model are attached.", locale: language))
-                if let error { SettingsFine(text: L10n.text(error, locale: language), failure: true) }
+                form
             }
             SettingsGroup {
                 SettingsRow(icon: "paperplane", title: L10n.text("Chat on Telegram", locale: language), trailing: .external, hairline: false) {
@@ -81,6 +58,37 @@ struct FeedbackView: View {
                 catch { self.error = "Could not read the selected screenshot." }
             }
         }
+    }
+
+    private var thanks: some View {
+        VStack(alignment: .leading, spacing: 0) {
+            VerifiedCheck().frame(width: 72, height: 72).padding(.top, 10)
+            Text(L10n.text("Thank you", locale: language)).noahText(SettingsText.heroName).padding(.top, 16)
+            Text(L10n.text("It’s with the Noah team.", locale: language)).noahText(NoahTokens.Typography.sub)
+                .foregroundStyle(NoahTokens.Colors.muted).padding(.top, 3)
+        }
+        .accessibilityElement(children: .combine)
+    }
+
+    @ViewBuilder private var form: some View {
+        Group {
+            SettingsField(label: L10n.text("Name", locale: language), placeholder: L10n.text("Your name", locale: language), text: $draft.name)
+            SettingsField(label: L10n.text("Email (optional)", locale: language), placeholder: "you@example.com", text: $draft.email,
+                          keyboard: .emailAddress)
+            SettingsField(
+                label: L10n.text("Subject", locale: language),
+                placeholder: L10n.text("Short summary", locale: language),
+                text: $draft.subject)
+            SettingsField(label: L10n.text("Message", locale: language), placeholder: L10n.text("What happened, or what would help?", locale: language),
+                          text: $draft.body, multiline: true)
+        }
+        .disabled(busy)
+        Text(L10n.text("Screenshot (optional)", locale: language)).noahText(HomeText.section).foregroundStyle(NoahTokens.Colors.muted)
+            .padding(.top, 20)
+        screenshot.padding(.top, 8)
+        SettingsFine(text: L10n.text("JPEG or PNG, 5 MB or smaller", locale: language) + ". "
+            + L10n.text("Your app version and phone model are attached.", locale: language))
+        if let error { SettingsFine(text: L10n.text(error, locale: language), failure: true) }
     }
 
     @ViewBuilder private var screenshot: some View {
@@ -139,7 +147,7 @@ private struct FeedbackImagePicker: UIViewControllerRepresentable {
         picker.delegate = context.coordinator
         return picker
     }
-    func updateUIViewController(_: UIImagePickerController, context _: Context) {}
+    func updateUIViewController(_: UIImagePickerController, context _: Context) { /* Configured once in make. */ }
 
     final class Coordinator: NSObject, UIImagePickerControllerDelegate, UINavigationControllerDelegate {
         let parent: FeedbackImagePicker

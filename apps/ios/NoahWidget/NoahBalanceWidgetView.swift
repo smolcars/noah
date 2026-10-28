@@ -29,12 +29,14 @@ class BalanceProvider: TimelineProvider {
             expiryThreshold: 288)
     }
 
+    // swiftlint:disable:next unneeded_escaping - TimelineProvider's requirement
     func getSnapshot(in _: Context, completion: @escaping (BalanceEntry) -> Void) {
         let entry = loadBalanceEntry()
         completion(entry)
     }
 
     func getTimeline(
+        // swiftlint:disable:next unneeded_escaping - TimelineProvider's requirement
         in _: Context, completion: @escaping (Timeline<BalanceEntry>) -> Void) {
         let entry = loadBalanceEntry()
 
@@ -103,13 +105,9 @@ struct NoahBalanceWidgetView: View {
         // Also includes expired VTXOs (negative blocks).
         let criticalThreshold = threshold * 0.2
 
-        if blocks <= criticalThreshold {
-            return ("exclamationmark.triangle.fill", .red)
-        } else if blocks <= threshold {
-            return ("bell.fill", .orange)
-        } else {
-            return ("checkmark.circle.fill", .green)
-        }
+        if blocks <= criticalThreshold { return ("exclamationmark.triangle.fill", .red) }
+        if blocks <= threshold { return ("bell.fill", .orange) }
+        return ("checkmark.circle.fill", .green)
     }
 
     private var shouldShowExpiry: Bool {
@@ -125,57 +123,11 @@ struct NoahBalanceWidgetView: View {
 
     private var smallWidgetLayout: some View {
         VStack(alignment: .leading, spacing: shouldUseCompactSmallLayout ? 4 : 6) {
-            HStack(alignment: .top) {
-                Text(L10n.text("Noah Wallet", locale: language))
-                    .font(.caption2)
-                    .fontWeight(.semibold)
-                    .foregroundColor(.white)
-                Spacer(minLength: 4)
-                if let variantName, let variantColor {
-                    Text(variantName)
-                        .font(.caption2)
-                        .fontWeight(.bold)
-                        .padding(.horizontal, 5)
-                        .padding(.vertical, 2)
-                        .background(badgeBackground(color: variantColor))
-                        .foregroundColor(badgeForeground(color: variantColor))
-                        .cornerRadius(3)
-                }
-            }
+            smallHeader
 
             Spacer(minLength: shouldUseCompactSmallLayout ? 2 : 6)
 
-            VStack(alignment: .leading, spacing: shouldUseCompactSmallLayout ? 2 : 3) {
-                Text("₿\u{00A0}\(formatSatsCompact(entry.totalBalance))")
-                    .font(.title3)
-                    .fontWeight(.bold)
-                    .foregroundColor(.white)
-                    .minimumScaleFactor(0.7)
-                    .lineLimit(1)
-
-                if entry.pendingBalance > 0 {
-                    Text(L10n.text("Pending: {amount}", "₿\u{00A0}\(formatSatsCompact(entry.pendingBalance))", locale: language))
-                        .font(.caption2)
-                        .foregroundColor(.yellow)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.75)
-                }
-
-                // Expiry status - only show if VTXOs exist
-                if shouldShowExpiry {
-                    HStack(spacing: 3) {
-                        let expiryStatus = getExpiryStatus()
-                        Image(systemName: expiryStatus.icon)
-                            .font(.system(size: 10))
-                            .foregroundColor(expiryStatus.color)
-                        Text(L10n.plural("{n} blocks", count: Int(entry.closestExpiryBlocks), locale: language))
-                            .font(.caption2)
-                            .foregroundColor(expiryStatus.color)
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.75)
-                    }
-                }
-            }
+            smallBalances
 
             Spacer(minLength: shouldUseCompactSmallLayout ? 2 : 6)
 
@@ -187,6 +139,60 @@ struct NoahBalanceWidgetView: View {
         }
         .padding(.horizontal, shouldUseCompactSmallLayout ? 10 : 12)
         .padding(.vertical, shouldUseCompactSmallLayout ? 10 : 12)
+    }
+
+    private var smallHeader: some View {
+        HStack(alignment: .top) {
+            Text(L10n.text("Noah Wallet", locale: language))
+                .font(.caption2)
+                .fontWeight(.semibold)
+                .foregroundColor(.white)
+            Spacer(minLength: 4)
+            if let variantName, let variantColor {
+                Text(variantName)
+                    .font(.caption2)
+                    .fontWeight(.bold)
+                    .padding(.horizontal, 5)
+                    .padding(.vertical, 2)
+                    .background(badgeBackground(color: variantColor))
+                    .foregroundColor(badgeForeground(color: variantColor))
+                    .cornerRadius(3)
+            }
+        }
+    }
+
+    private var smallBalances: some View {
+        VStack(alignment: .leading, spacing: shouldUseCompactSmallLayout ? 2 : 3) {
+            Text("₿\u{00A0}\(formatSatsCompact(entry.totalBalance))")
+                .font(.title3)
+                .fontWeight(.bold)
+                .foregroundColor(.white)
+                .minimumScaleFactor(0.7)
+                .lineLimit(1)
+
+            if entry.pendingBalance > 0 {
+                Text(L10n.text("Pending: {amount}", "₿\u{00A0}\(formatSatsCompact(entry.pendingBalance))", locale: language))
+                    .font(.caption2)
+                    .foregroundColor(.yellow)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.75)
+            }
+
+            // Expiry status - only show if VTXOs exist
+            if shouldShowExpiry {
+                HStack(spacing: 3) {
+                    let expiryStatus = getExpiryStatus()
+                    Image(systemName: expiryStatus.icon).accessibilityHidden(true)
+                        .font(.system(size: 10))
+                        .foregroundColor(expiryStatus.color)
+                    Text(L10n.plural("{n} blocks", count: Int(entry.closestExpiryBlocks), locale: language))
+                        .font(.caption2)
+                        .foregroundColor(expiryStatus.color)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.75)
+                }
+            }
+        }
     }
 
     private func smallBalanceRow(_ label: String, _ value: Double) -> some View {
@@ -209,83 +215,95 @@ struct NoahBalanceWidgetView: View {
 
     private var mediumWidgetLayout: some View {
         VStack(alignment: .leading, spacing: 8) {
-            HStack {
-                Text(L10n.text("Noah Wallet", locale: language))
-                    .font(.caption)
-                    .fontWeight(.semibold)
-                    .foregroundColor(.white)
-                Spacer()
-                if let variantName, let variantColor {
-                    Text(variantName)
-                        .font(.caption2)
-                        .fontWeight(.bold)
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 2)
-                        .background(badgeBackground(color: variantColor))
-                        .foregroundColor(badgeForeground(color: variantColor))
-                        .cornerRadius(4)
-                }
-            }
+            mediumHeader
 
             Spacer()
 
-            VStack(alignment: .leading, spacing: 4) {
-                Text("₿\u{00A0}\(formatSats(entry.totalBalance))")
-                    .font(.title2)
-                    .fontWeight(.bold)
-                    .foregroundColor(.white)
-
-                if entry.pendingBalance > 0 {
-                    Text(L10n.text("Pending: {amount}", "₿\u{00A0}\(formatSats(entry.pendingBalance))", locale: language))
-                        .font(.caption2)
-                        .foregroundColor(.yellow)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.75)
-                }
-
-                // Expiry status - only show if VTXOs exist
-                if shouldShowExpiry {
-                    HStack(spacing: 4) {
-                        let expiryStatus = getExpiryStatus()
-                        Image(systemName: expiryStatus.icon)
-                            .font(.system(size: 12))
-                            .foregroundColor(expiryStatus.color)
-                        Text(L10n.plural("VTXO expires: {n} blocks", count: Int(entry.closestExpiryBlocks), locale: language))
-                            .font(.caption)
-                            .foregroundColor(expiryStatus.color)
-                    }
-                }
-            }
+            mediumBalances
 
             Spacer()
 
-            HStack {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(L10n.text("Onchain", locale: language))
-                        .font(.caption2)
-                        .foregroundColor(.gray)
-                    Text("\(formatSats(entry.onchainBalance))")
-                        .font(.caption)
-                        .foregroundColor(.white)
-                }
-
-                Spacer()
-
-                VStack(alignment: .trailing, spacing: 2) {
-                    Text(L10n.text("Offchain", locale: language))
-                        .font(.caption2)
-                        .foregroundColor(.gray)
-                    Text("\(formatSats(entry.offchainBalance))")
-                        .font(.caption)
-                        .foregroundColor(.white)
-                }
-            }
+            mediumSplit
         }
         .padding(14)
     }
 
+    private var mediumHeader: some View {
+        HStack {
+            Text(L10n.text("Noah Wallet", locale: language))
+                .font(.caption)
+                .fontWeight(.semibold)
+                .foregroundColor(.white)
+            Spacer()
+            if let variantName, let variantColor {
+                Text(variantName)
+                    .font(.caption2)
+                    .fontWeight(.bold)
+                    .padding(.horizontal, 6)
+                    .padding(.vertical, 2)
+                    .background(badgeBackground(color: variantColor))
+                    .foregroundColor(badgeForeground(color: variantColor))
+                    .cornerRadius(4)
+            }
+        }
+    }
+
+    private var mediumBalances: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text("₿\u{00A0}\(formatSats(entry.totalBalance))")
+                .font(.title2)
+                .fontWeight(.bold)
+                .foregroundColor(.white)
+
+            if entry.pendingBalance > 0 {
+                Text(L10n.text("Pending: {amount}", "₿\u{00A0}\(formatSats(entry.pendingBalance))", locale: language))
+                    .font(.caption2)
+                    .foregroundColor(.yellow)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.75)
+            }
+
+            // Expiry status - only show if VTXOs exist
+            if shouldShowExpiry {
+                HStack(spacing: 4) {
+                    let expiryStatus = getExpiryStatus()
+                    Image(systemName: expiryStatus.icon).accessibilityHidden(true)
+                        .font(.system(size: 12))
+                        .foregroundColor(expiryStatus.color)
+                    Text(L10n.plural("VTXO expires: {n} blocks", count: Int(entry.closestExpiryBlocks), locale: language))
+                        .font(.caption)
+                        .foregroundColor(expiryStatus.color)
+                }
+            }
+        }
+    }
+
+    private var mediumSplit: some View {
+        HStack {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(L10n.text("Onchain", locale: language))
+                    .font(.caption2)
+                    .foregroundColor(.gray)
+                Text("\(formatSats(entry.onchainBalance))")
+                    .font(.caption)
+                    .foregroundColor(.white)
+            }
+
+            Spacer()
+
+            VStack(alignment: .trailing, spacing: 2) {
+                Text(L10n.text("Offchain", locale: language))
+                    .font(.caption2)
+                    .foregroundColor(.gray)
+                Text("\(formatSats(entry.offchainBalance))")
+                    .font(.caption)
+                    .foregroundColor(.white)
+            }
+        }
+    }
+
     private func formatSats(_ value: Double) -> String {
-        Self.numberFormatter.string(from: NSNumber(value: value)) ?? "0"
+        Self.numberFormatter.string(for: value) ?? "0"
     }
 
     private func formatSatsCompact(_ value: Double) -> String {
@@ -293,18 +311,19 @@ struct NoahBalanceWidgetView: View {
             // 1M+ sats - show as "1.5M" format
             let millions = value / 1_000_000
             return String(format: "%.1fM", millions)
-        } else if value >= 100_000 {
+        }
+        if value >= 100_000 {
             // 100K+ sats - show as "123K" format
             let thousands = value / 1_000
             return String(format: "%.0fK", thousands)
-        } else if value >= 10_000 {
+        }
+        if value >= 10_000 {
             // 10K+ sats - show as "12.3K" format
             let thousands = value / 1_000
             return String(format: "%.1fK", thousands)
-        } else {
-            // Less than 10K - show full number
-            return formatSats(value)
         }
+        // Less than 10K - show full number
+        return formatSats(value)
     }
 
     private func badgeBackground(color: Color) -> Color {

@@ -4,6 +4,12 @@ import Observation
 
 @MainActor @Observable final class RecurringExecutor {
     struct NoWallet: Error {}
+    struct Quote {
+        var payment: SendPayment
+        var quote: SendQuote
+        /// The published Lightning fee schedule; nil for Ark.
+        var fees: LightningSendFees?
+    }
     struct Dependencies {
         var store: RecurringStore
         var journal: RecurringJournal
@@ -11,7 +17,7 @@ import Observation
         var ensureOpen: @Sendable () async throws -> Void
         var binding: @Sendable () throws -> RecurringStore.Binding
         var allowed: @Sendable () throws -> Void
-        var quote: @Sendable (RecurringPayment) async throws -> (SendPayment, SendQuote, LightningSendFees?)
+        var quote: @Sendable (RecurringPayment) async throws -> Quote
         var automationGeneration: @Sendable () -> String? = { nil }
         var zone: @Sendable () -> TimeZone = { .current }
         var now: @Sendable () -> Double = { RecurringPayment.now }
@@ -19,6 +25,20 @@ import Observation
         var notifications: @Sendable ([RecurringPayment], RecurringPayment?) async -> Void = { _, _ in }
         var refresh: @Sendable () async -> Void = {}
         var mutation: WalletMutationGate = .shared
+    }
+    /// What one `run` checks every schedule against.
+    private struct Pass {
+        var manual: Bool
+        var approval: Review?
+        var initial: RecurringStore.State
+        var automationGeneration: String?
+        var durableGeneration: UUID?
+    }
+    private struct Turn {
+        var id: String
+        var plan: RecurringPayment.Plan
+        var planning: RecurringPayment
+        var original: RecurringPayment
     }
     struct Review: Identifiable {
         let id = UUID()
@@ -46,7 +66,12 @@ import Observation
             guard FileManager.default.fileExists(atPath: journal.file.deletingLastPathComponent().path) else { throw NoWallet() }
             let owner = try binding()
             guard try binding() == owner else { throw NoWallet() }
-            try journal.record(attempt, generation: generation, walletGeneration: walletGeneration, message: message, binding: owner, now: now())
+            try journal.record(
+                attempt,
+                generations: .init(generation: generation, walletGeneration: walletGeneration),
+                message: message,
+                binding: owner,
+                now: now())
         }
         if d.controller.state == .storageBlocked, d.controller.attempt?.recurringOccurrenceKey != nil { d.controller.reloadForWalletChange() }
     }
@@ -131,55 +156,60 @@ import Observation
         else {
             throw RecurringError
                 .message(
+                    // swiftlint:disable:next line_length - one literal: translations.mjs reads copy as a single string
                     "These recurring payments belong to a previous wallet. They are preserved but cannot run. Cancel them and create new schedules for this wallet.")
         }
         return state
     }
     private func recoverMarkers(_ state: RecurringStore.State) async throws {
-        let notifications = try await storage { [self] in
-            var notifications: [RecurringPayment] = []
-            let entries: [String: RecurringJournal.Entry]
-            do { entries = try d.journal.load() }
-            catch {
-                // A corrupt journal cannot identify which policies are safe in this wallet.
-                for var schedule in state.schedules.values where !schedule.requiresPolicyApproval {
-                    schedule.status = "needs_attention"
-                    schedule.lastError = error.localizedDescription
-                    schedule.issue = .init(code: .invalidJournal)
-                    try d.store.upsert(schedule)
-                }
-                throw error
-            }
-            for var schedule in state.schedules.values where !schedule.unsupportedStorage && !schedule.requiresPolicyApproval {
-                let current = try boundStateNow()
-                guard current.binding == state.binding, current.schedules[schedule.id] == schedule else { continue }
-                let entry = entries[schedule.id]
-                let legacyUncertain = try d.journal.legacyUncertain(binding: state.binding!, scheduleID: schedule.id)
-                let pendingMarker = entry.map { !$0.resolved && $0.binding == state.binding } == true
-                var planning = schedule
-                if planning.status == "needs_approval" { planning.status = "active" }
-                let plan = planning.plan(now: d.now(), zone: d.zone(), ignoreBackoff: true)
-                let consumed = try plan.scheduledFor.map { at in
-                    try d.journal.consumed(binding: state.binding!, scheduleID: schedule.id, at: at,
-                                           policyRevision: schedule.nativeRevision, occurrenceIndex: plan.occurrenceIndex!)
-                } ?? false
-                if ((legacyUncertain || schedule.inFlight != nil || pendingMarker || consumed) && schedule.status != "needs_attention")
-                    || (legacyUncertain && schedule.issue != RecurringJournal.legacyReason) {
-                    schedule.status = "needs_attention"
-                    schedule.issue = legacyUncertain ? RecurringJournal.legacyReason : .init(code: .interrupted)
-                    schedule.lastError = legacyUncertain ? RecurringJournal.legacyMessage : "Noah was interrupted while sending this payment. Check your transaction history before resuming."
-                    // Retain the marker; ordinary pause/resume/edit cannot erase uncertainty.
-                    try d.store.upsert(schedule)
-                    notifications.append(schedule)
-                }
-            }
-            return notifications
-        }
+        let notifications = try await storage { [self] in try markInterrupted(state) }
         for schedule in notifications {
-            if try await storage({ [self] in try d.store.load().schedules[schedule.id] }) == schedule {
-                await d.notifications([], schedule)
+            guard try await storage({ [self] in try d.store.load().schedules[schedule.id] }) == schedule else { continue }
+            await d.notifications([], schedule)
+        }
+    }
+    /// Stops schedules whose last occurrence may have been sent, returning the ones to notify about.
+    private func markInterrupted(_ state: RecurringStore.State) throws -> [RecurringPayment] {
+        var notifications: [RecurringPayment] = []
+        let entries: [String: RecurringJournal.Entry]
+        do { entries = try d.journal.load() }
+        catch {
+            // A corrupt journal cannot identify which policies are safe in this wallet.
+            for var schedule in state.schedules.values where !schedule.requiresPolicyApproval {
+                schedule.status = "needs_attention"
+                schedule.lastError = error.localizedDescription
+                schedule.issue = .init(code: .invalidJournal)
+                try d.store.upsert(schedule)
+            }
+            throw error
+        }
+        for var schedule in state.schedules.values where !schedule.unsupportedStorage && !schedule.requiresPolicyApproval {
+            let current = try boundStateNow()
+            guard current.binding == state.binding, current.schedules[schedule.id] == schedule else { continue }
+            // boundState() always binds the state it returns.
+            guard let binding = state.binding else { throw NoWallet() }
+            let entry = entries[schedule.id]
+            let legacyUncertain = try d.journal.legacyUncertain(binding: binding, scheduleID: schedule.id)
+            let pendingMarker = entry.map { !$0.resolved && $0.binding == state.binding } == true
+            var planning = schedule
+            if planning.status == "needs_approval" { planning.status = "active" }
+            let plan = planning.plan(now: d.now(), zone: d.zone(), ignoreBackoff: true)
+            let consumed = try plan.scheduledFor.map { at in
+                try d.journal.consumed(binding: binding, scheduleID: schedule.id, at: at,
+                                       policyRevision: schedule.nativeRevision, occurrenceIndex: plan.due.index)
+            } ?? false
+            if ((legacyUncertain || schedule.inFlight != nil || pendingMarker || consumed) && schedule.status != "needs_attention")
+                || (legacyUncertain && schedule.issue != RecurringJournal.legacyReason) {
+                schedule.status = "needs_attention"
+                schedule.issue = legacyUncertain ? RecurringJournal.legacyReason : .init(code: .interrupted)
+                schedule.lastError = legacyUncertain ? RecurringJournal.legacyMessage
+                    : "Noah was interrupted while sending this payment. Check your transaction history before resuming."
+                // Retain the marker; ordinary pause/resume/edit cannot erase uncertainty.
+                try d.store.upsert(schedule)
+                notifications.append(schedule)
             }
         }
+        return notifications
     }
     private func run(manual: Bool, approval: Review?) async {
         running = true
@@ -209,138 +239,10 @@ import Observation
             try await refreshDates()
             let initial = try await boundState()
             try await recoverMarkers(initial)
+            let pass = Pass(manual: manual, approval: approval, initial: initial,
+                            automationGeneration: automationGeneration, durableGeneration: durableGeneration)
             for id in initial.schedules.keys.sorted() {
-                if let approval, approval.schedule.id != id { continue }
-                guard (try? ForegroundExecution.checkActiveNow()) != nil,
-                      RecurringSubmissionBudget.available, RecurringExecutionBudget.available else { break }
-                guard var schedule = try await boundState().schedules[id], !schedule.unsupportedStorage else { continue }
-                let original = schedule
-                guard schedule.validPolicy else { throw SendFailure.invalid }
-                var planning = schedule
-                if let approval {
-                    guard schedule == approval.schedule, schedule.status == "needs_approval" else { continue }
-                    planning.status = "active"
-                }
-                let plan = planning.plan(now: d.now(), zone: d.zone(), ignoreBackoff: manual)
-                if plan.kind == "too_many_missed" {
-                    schedule.status = "needs_attention"
-                    schedule.issue = .init(code: .tooManyMissed)
-                    schedule.lastError = "This schedule has more than 5,000 missed occurrences. Cancel it and create a schedule with a future first payment."
-                    try await storage { [self, schedule] in
-                        if try d.store.load().schedules[id] == original { try d.store.upsert(schedule) }
-                    }
-                    continue
-                }
-                if plan.kind == "complete" {
-                    schedule.status = "completed"; schedule.nextRunAt = nil
-                    try await storage { [self, schedule] in
-                        if try d.store.load().schedules[id] == original { try d.store.upsert(schedule) }
-                    }
-                    continue
-                }
-                guard plan.kind == "pay", !d.controller.locked else { continue }
-                try ForegroundExecution.checkActiveNow()
-                try BackgroundExecution.checkActive()
-                do {
-                    let payment: SendPayment, quote: SendQuote
-                    let fees: LightningSendFees?
-                    if let approval {
-                        guard plan == approval.plan else { continue }
-                        (payment, quote, fees) = (approval.payment, approval.quote, nil)
-                    } else { (payment, quote, fees) = try await d.quote(schedule) }
-                    guard (try? ForegroundExecution.checkActiveNow()) != nil,
-                          RecurringSubmissionBudget.available, RecurringExecutionBudget.available else { break }
-                    let state = try await boundState()
-                    try ForegroundExecution.checkActiveNow()
-                    try BackgroundExecution.checkActive()
-                    guard let latest = state.schedules[id], latest == schedule,
-                          planning.plan(now: d.now(), zone: d.zone(), ignoreBackoff: manual) == plan,
-                          quote.walletIdentity == state.binding?.wallet else { continue }
-                    if approval == nil, let reason = RecurringFeePolicy.evaluate(
-                        amount: payment.amount,
-                        method: payment.method,
-                        quoteFee: quote.fee,
-                        schedule: fees).approvalIssue(quoteFee: quote.fee) {
-                        schedule.status = "needs_approval"
-                        schedule.issue = reason
-                        schedule.lastError = RecurringFeePolicy.evaluate(amount: payment.amount, method: payment.method, quoteFee: quote.fee, schedule: fees)
-                            .approvalMessage(quoteFee: quote.fee)
-                        schedule.retryNotBefore = nil
-                        schedule.updatedAt = d.now()
-                        let updated = try await storage { [self, schedule] in
-                            guard try d.store.load().schedules[id] == original else { return false }
-                            try d.store.upsert(schedule)
-                            return true
-                        }
-                        if updated { await d.notifications([], schedule) }
-                        continue
-                    }
-                    // Automation never adopts a pre-existing Lightning checkpoint: no user fee review.
-                    guard quote.checkpoint == nil else { throw SendFailure.lightningInProgress }
-                    let entry = RecurringJournal.Entry(
-                        binding: state.binding!,
-                        scheduleID: id,
-                        plan: plan,
-                        markedAt: d.now(),
-                        policyRevision: schedule.nativeRevision,
-                        policy: schedule)
-                    schedule.inFlight = .init(occurrenceIndex: plan.occurrenceIndex!, startedAt: d.now())
-                    schedule.updatedAt = d.now()
-                    let admitted = try await storage { [self, schedule] in
-                        guard try boundStateNow().schedules[id] == original else { return false }
-                        try ForegroundExecution.checkActiveNow()
-                        try BackgroundExecution.checkActive()
-                        try d.journal.save(entry)
-                        try d.store.upsert(schedule)
-                        return true
-                    }
-                    guard admitted else { continue }
-                    let marked = schedule
-                    let unattended = approval == nil
-                    let store = d.store, binding = d.binding, allowed = d.allowed, generation = d.automationGeneration, now = d.now, zone = d.zone
-                    await d.controller.submitAndWait(payment, quote: quote, recurringKey: entry.key) {
-                        do {
-                            try allowed()
-                            guard try binding() == entry.binding, generation() == automationGeneration else { throw NoWallet() }
-                            try store.checkAutomationAllowed()
-                        } catch { throw SendNotSubmitted(reason: .recurringStopped) }
-                        let state = try store.load()
-                        // Remove only our marker; the persisted policy must still match below.
-                        var currentPlan = marked
-                        currentPlan.inFlight = nil
-                        if !unattended { currentPlan.status = "active" }
-                        guard RecurringSubmissionBudget.available, RecurringExecutionBudget.available,
-                              currentPlan.plan(now: now(), zone: zone(), ignoreBackoff: manual) == entry.plan,
-                              generation() == automationGeneration,
-                              durableGeneration == (try store.automationGeneration()),
-                              state.binding == (try binding()), state.binding == entry.binding,
-                              state.schedules[id] == marked,
-                              marked.amountSat <= RecurringPayment.maximumAmount,
-                              marked.status == (unattended ? "active" : "needs_approval"),
-                              !unattended || RecurringFeePolicy.evaluate(amount: payment.amount, method: payment.method, quoteFee: quote.fee, schedule: fees)
-                              .autoPay else {
-                            throw SendNotSubmitted(reason: .recurringStopped)
-                        }
-                    }
-                    try await settle(entry, retainReceipt: approval != nil, notifyOriginal: true)
-                } catch is CancellationError { break }
-                catch is NoWallet { throw NoWallet() }
-                catch {
-                    // Only a failure before the independent marker exists is automatically retryable.
-                    let entry = try await storage { [self] in try d.journal.load()[id] }
-                    if let entry, !entry.resolved, entry.plan == plan,
-                       entry.binding == initial.binding, entry.policyRevision == schedule.nativeRevision {
-                        try await markUncertain(entry)
-                    } else if let current = try await storage({ [self] in try d.store.load().schedules[id] }), current == schedule {
-                        schedule.failure(plan, message: error.localizedDescription, retryable: true, now: d.now())
-                        let updated = try await storage { [self, schedule] in
-                            guard try d.store.load().schedules[id] == original else { return false }
-                            try d.store.upsert(schedule)
-                            return true
-                        }
-                        if updated, schedule.status == "active", schedule.consecutiveFailures == 1 || manual { await d.notifications([], schedule) }
-                    }
-                }
+                guard try await runSchedule(id, pass) else { break }
             }
             try await refreshDates()
             await syncServer()
@@ -350,6 +252,154 @@ import Observation
         catch { self.error = error.localizedDescription }
         await reload()
         await d.notifications(schedules, nil)
+    }
+    /// One schedule's turn in `run`. False ends the run: out of budget, in the background or canceled.
+    private func runSchedule(_ id: String, _ pass: Pass) async throws -> Bool {
+        let manual = pass.manual, approval = pass.approval
+        if let approval, approval.schedule.id != id { return true }
+        guard (try? ForegroundExecution.checkActiveNow()) != nil,
+              RecurringSubmissionBudget.available, RecurringExecutionBudget.available else { return false }
+        guard var schedule = try await boundState().schedules[id], !schedule.unsupportedStorage else { return true }
+        let original = schedule
+        guard schedule.validPolicy else { throw SendFailure.invalid }
+        var planning = schedule
+        if let approval {
+            guard schedule == approval.schedule, schedule.status == "needs_approval" else { return true }
+            planning.status = "active"
+        }
+        let plan = planning.plan(now: d.now(), zone: d.zone(), ignoreBackoff: manual)
+        if plan.kind == "too_many_missed" || plan.kind == "complete" {
+            if plan.kind == "complete" {
+                schedule.status = "completed"; schedule.nextRunAt = nil
+            } else {
+                schedule.status = "needs_attention"
+                schedule.issue = .init(code: .tooManyMissed)
+                schedule.lastError = "This schedule has more than 5,000 missed occurrences. Cancel it and create a schedule with a future first payment."
+            }
+            try await storage { [self, schedule] in
+                if try d.store.load().schedules[id] == original { try d.store.upsert(schedule) }
+            }
+            return true
+        }
+        guard plan.kind == "pay", !d.controller.locked else { return true }
+        try ForegroundExecution.checkActiveNow()
+        try BackgroundExecution.checkActive()
+        let turn = Turn(id: id, plan: plan, planning: planning, original: original)
+        do {
+            return try await pay(turn, schedule: &schedule, pass)
+        } catch is CancellationError { return false }
+        catch is NoWallet { throw NoWallet() }
+        catch { try await recordFailure(error, turn, schedule: &schedule, pass) }
+        return true
+    }
+    private func recordFailure(_ error: any Error, _ turn: Turn, schedule: inout RecurringPayment, _ pass: Pass) async throws {
+        let id = turn.id, plan = turn.plan, original = turn.original
+        // Only a failure before the independent marker exists is automatically retryable.
+        let entry = try await storage { [self] in try d.journal.load()[id] }
+        if let entry, !entry.resolved, entry.plan == plan,
+           entry.binding == pass.initial.binding, entry.policyRevision == schedule.nativeRevision {
+            try await markUncertain(entry)
+        } else if let current = try await storage({ [self] in try d.store.load().schedules[id] }), current == schedule {
+            schedule.failure(plan, message: error.localizedDescription, retryable: true, now: d.now())
+            let updated = try await storage { [self, schedule] in
+                guard try d.store.load().schedules[id] == original else { return false }
+                try d.store.upsert(schedule)
+                return true
+            }
+            if updated, schedule.status == "active", schedule.consecutiveFailures == 1 || pass.manual { await d.notifications([], schedule) }
+        }
+    }
+    /// Quotes, admits and submits a due pay plan. False ends the run, like `runSchedule`.
+    private func pay(_ turn: Turn, schedule: inout RecurringPayment, _ pass: Pass) async throws -> Bool {
+        let id = turn.id, plan = turn.plan, planning = turn.planning, original = turn.original
+        let manual = pass.manual, approval = pass.approval
+        let automationGeneration = pass.automationGeneration, durableGeneration = pass.durableGeneration
+        let payment: SendPayment, quote: SendQuote
+        let fees: LightningSendFees?
+        if let approval {
+            guard plan == approval.plan else { return true }
+            (payment, quote, fees) = (approval.payment, approval.quote, nil)
+        } else {
+            let quoted = try await d.quote(schedule)
+            (payment, quote, fees) = (quoted.payment, quoted.quote, quoted.fees)
+        }
+        guard (try? ForegroundExecution.checkActiveNow()) != nil,
+              RecurringSubmissionBudget.available, RecurringExecutionBudget.available else { return false }
+        let state = try await boundState()
+        try ForegroundExecution.checkActiveNow()
+        try BackgroundExecution.checkActive()
+        guard let latest = state.schedules[id], latest == schedule, let owner = state.binding,
+              planning.plan(now: d.now(), zone: d.zone(), ignoreBackoff: manual) == plan,
+              quote.walletIdentity == state.binding?.wallet else { return true }
+        let decision = RecurringFeePolicy.evaluate(amount: payment.amount, method: payment.method, quoteFee: quote.fee, schedule: fees)
+        if approval == nil, let reason = decision.approvalIssue(quoteFee: quote.fee) {
+            try await holdForApproval(turn, schedule: &schedule, issue: reason, message: decision.approvalMessage(quoteFee: quote.fee))
+            return true
+        }
+        // Automation never adopts a pre-existing Lightning checkpoint: no user fee review.
+        guard quote.checkpoint == nil else { throw SendFailure.lightningInProgress }
+        let entry = RecurringJournal.Entry(
+            binding: owner,
+            scheduleID: id,
+            plan: plan,
+            markedAt: d.now(),
+            policyRevision: schedule.nativeRevision,
+            policy: schedule)
+        schedule.inFlight = .init(occurrenceIndex: plan.due.index, startedAt: d.now())
+        schedule.updatedAt = d.now()
+        let admitted = try await storage { [self, schedule] in
+            guard try boundStateNow().schedules[id] == original else { return false }
+            try ForegroundExecution.checkActiveNow()
+            try BackgroundExecution.checkActive()
+            try d.journal.save(entry)
+            try d.store.upsert(schedule)
+            return true
+        }
+        guard admitted else { return true }
+        let marked = schedule
+        let unattended = approval == nil
+        let store = d.store, binding = d.binding, allowed = d.allowed, generation = d.automationGeneration, now = d.now, zone = d.zone
+        await d.controller.submitAndWait(payment, quote: quote, recurringKey: entry.key) {
+            do {
+                try allowed()
+                guard try binding() == entry.binding, generation() == automationGeneration else { throw NoWallet() }
+                try store.checkAutomationAllowed()
+            } catch { throw SendNotSubmitted(reason: .recurringStopped) }
+            let state = try store.load()
+            // Remove only our marker; the persisted policy must still match below.
+            var currentPlan = marked
+            currentPlan.inFlight = nil
+            if !unattended { currentPlan.status = "active" }
+            guard RecurringSubmissionBudget.available, RecurringExecutionBudget.available,
+                  currentPlan.plan(now: now(), zone: zone(), ignoreBackoff: manual) == entry.plan,
+                  generation() == automationGeneration,
+                  durableGeneration == (try store.automationGeneration()),
+                  state.binding == (try binding()), state.binding == entry.binding,
+                  state.schedules[id] == marked,
+                  marked.amountSat <= RecurringPayment.maximumAmount,
+                  marked.status == (unattended ? "active" : "needs_approval"),
+                  !unattended || RecurringFeePolicy.evaluate(amount: payment.amount, method: payment.method, quoteFee: quote.fee, schedule: fees)
+                  .autoPay else {
+                throw SendNotSubmitted(reason: .recurringStopped)
+            }
+        }
+        try await settle(entry, retainReceipt: approval != nil, notifyOriginal: true)
+        return true
+    }
+    /// The fee is above the automatic limit: stop for the user's review instead of paying.
+    private func holdForApproval(_ turn: Turn, schedule: inout RecurringPayment, issue: RecurringIssue, message: String?) async throws {
+        let id = turn.id, original = turn.original
+        schedule.status = "needs_approval"
+        schedule.issue = issue
+        schedule.lastError = message
+        schedule.retryNotBefore = nil
+        schedule.updatedAt = d.now()
+        let updated = try await storage { [self, schedule] in
+            guard try d.store.load().schedules[id] == original else { return false }
+            try d.store.upsert(schedule)
+            return true
+        }
+        if updated { await d.notifications([], schedule) }
     }
     private func markUncertain(_ entry: RecurringJournal.Entry, message: String? = nil) async throws {
         let stopped = try await storage { [self] () throws -> RecurringPayment? in
@@ -388,53 +438,59 @@ import Observation
     }
     private func applySettlement(_ entry: RecurringJournal.Entry, evidence: RecurringJournal.TerminalEvidence,
                                  notifyOriginal: Bool = false) throws -> RecurringPayment? {
-        try d.journal.withLock {
-            guard try d.binding() == entry.binding,
-                  var saved = try d.journal.load()[entry.scheduleID], saved.terminal?.settlementID == evidence.settlementID else { return nil }
-            if saved.released == true { return nil }
-            let state = saved.historyApplied != true ? try d.store.settlementState() : nil
-            if let state, state.binding != entry.binding { return nil }
-            if !saved.resolved {
-                saved.resolved = true; saved.consumed = evidence.paid
-                try d.journal.save(saved)
-            }
-            var notification: RecurringPayment?
-            if saved.historyApplied != true {
-                guard let state else { return nil }
-                if try !d.store.settlementApplied(entry.scheduleID, token: evidence.settlementID.uuidString),
-                   var latest = state.schedules[entry.scheduleID], latest.nativeRevision == entry.policyRevision {
-                    if evidence.outcome == .succeeded {
-                        let stopped = latest
-                        latest.status = "active"
-                        latest.success(entry.plan, now: evidence.recordedAt, zone: d.zone())
-                        if stopped.status != "active", stopped.status != "needs_approval", latest.status == "active" {
-                            latest.status = stopped.status; latest.consecutiveFailures = stopped.consecutiveFailures
-                            latest.lastError = stopped.lastError; latest.issue = stopped.issue; latest.retryNotBefore = stopped.retryNotBefore
-                        }
-                    } else {
-                        latest.failure(
-                            entry.plan,
-                            message: evidence
-                                .paid ? "This invoice was already paid. This occurrence was not sent again. Check the recipient before resuming." : evidence
-                                .message ?? "No payment was submitted.",
-                            retryable: !evidence.paid,
-                            now: evidence.recordedAt,
-                            issue: .init(code: evidence.paid ? .alreadyPaid : .retryableFailure))
-                    }
-                    try d.store.upsert(latest, settlementKey: evidence.settlementID.uuidString)
-                    notification = latest
-                } else if notifyOriginal, evidence.outcome == .succeeded, var original = entry.policy, original.nativeRevision == entry.policyRevision {
-                    original.status = "active"; original.success(entry.plan, now: evidence.recordedAt, zone: d.zone())
-                    notification = original
-                }
-                saved.historyApplied = true; saved.policyApplied = true
-                try d.journal.save(saved)
-            }
-            saved.released = true
-            try d.journal.save(saved)
-            return notification
-        }
+        try d.journal.withLock { try applySettlementLocked(entry, evidence: evidence, notifyOriginal: notifyOriginal) }
     }
+    private func applySettlementLocked(_ entry: RecurringJournal.Entry, evidence: RecurringJournal.TerminalEvidence,
+                                       notifyOriginal: Bool) throws -> RecurringPayment? {
+        guard try d.binding() == entry.binding,
+              var saved = try d.journal.load()[entry.scheduleID], saved.terminal?.settlementID == evidence.settlementID else { return nil }
+        if saved.released == true { return nil }
+        let state = saved.historyApplied != true ? try d.store.settlementState() : nil
+        if let state, state.binding != entry.binding { return nil }
+        if !saved.resolved {
+            saved.resolved = true; saved.consumed = evidence.paid
+            try d.journal.save(saved)
+        }
+        var notification: RecurringPayment?
+        if saved.historyApplied != true {
+            guard let state else { return nil }
+            if try !d.store.settlementApplied(entry.scheduleID, token: evidence.settlementID.uuidString),
+               var latest = state.schedules[entry.scheduleID], latest.nativeRevision == entry.policyRevision {
+                if evidence.outcome == .succeeded {
+                    let stopped = latest
+                    latest.status = "active"
+                    latest.success(entry.plan, now: evidence.recordedAt, zone: d.zone())
+                    if stopped.status != "active", stopped.status != "needs_approval", latest.status == "active" {
+                        latest.status = stopped.status; latest.consecutiveFailures = stopped.consecutiveFailures
+                        latest.lastError = stopped.lastError; latest.issue = stopped.issue; latest.retryNotBefore = stopped.retryNotBefore
+                    }
+                } else {
+                    latest.failure(
+                        entry.plan,
+                        message: evidence
+                            .paid ? "This invoice was already paid. This occurrence was not sent again. Check the recipient before resuming." : evidence
+                            .message ?? "No payment was submitted.",
+                        retryable: !evidence.paid,
+                        now: evidence.recordedAt,
+                        issue: .init(code: evidence.paid ? .alreadyPaid : .retryableFailure))
+                }
+                try d.store.upsert(latest, settlementKey: evidence.settlementID.uuidString)
+                notification = latest
+            } else if notifyOriginal, evidence.outcome == .succeeded, var original = entry.policy, original.nativeRevision == entry.policyRevision {
+                original.status = "active"; original.success(entry.plan, now: evidence.recordedAt, zone: d.zone())
+                notification = original
+            }
+            saved.historyApplied = true; saved.policyApplied = true
+            try d.journal.save(saved)
+        }
+        saved.released = true
+        try d.journal.save(saved)
+        return notification
+    }
+}
+
+/// Status checks, the user's schedule changes and the server wake sync.
+extension RecurringExecutor {
     func checkStatus(_ id: String) async {
         guard !running else { return }
         do {
@@ -455,7 +511,8 @@ import Observation
         var planning = schedule; planning.status = "active"
         let plan = planning.plan(now: d.now(), zone: d.zone(), ignoreBackoff: true)
         guard plan.kind == "pay" else { throw RecurringError.message("This payment is no longer due.") }
-        let (payment, quote, _) = try await d.quote(schedule)
+        let quoted = try await d.quote(schedule)
+        let payment = quoted.payment, quote = quoted.quote
         guard try await boundState().schedules[id] == schedule else { throw SendFailure.invalid }
         return Review(schedule: schedule, plan: plan, payment: payment, quote: quote)
     }
@@ -623,6 +680,8 @@ import Observation
     }
     static func entries(_ schedules: [RecurringPayment]) -> [Components.Schemas.RecurringPaymentScheduleEntry] {
         schedules.filter { $0.status == "active" && $0.inFlight == nil && $0.nextRunAt != nil }
-            .sorted { $0.id < $1.id }.map { .init(nextRunAt: Int64(floor($0.nextRunAt! / 1000)), scheduleId: $0.id) }
+            .sorted { $0.id < $1.id }.compactMap { schedule in
+                schedule.nextRunAt.map { .init(nextRunAt: Int64(floor($0 / 1000)), scheduleId: schedule.id) }
+            }
     }
 }

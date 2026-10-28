@@ -66,9 +66,15 @@ struct ReviewClockTests {
         let stale = quote
         await #expect(throws: OnchainFailure.changed) {
             try await WalletSession.submitRenewal(
-                stale, threshold: 144, journal: OnchainOperationJournal(file: file), flight: WalletSync(),
-                requote: { stale }, expiring: { _ in [RenewSubmissionTests.coin] }, tip: { 1_000 },
-                refresh: { _ in Issue.record("A stale review never refreshes"); return OnchainReceipt(message: "submitted") })
+                stale,
+                threshold: 144,
+                journal: OnchainOperationJournal(file: file),
+                flight: WalletSync(),
+                reads: .init(
+                    requote: { stale },
+                    expiring: { _ in [RenewSubmissionTests.coin] },
+                    tip: { 1_000 },
+                    refresh: { _ in Issue.record("A stale review never refreshes"); return OnchainReceipt(message: "submitted") }))
         }
     }
 

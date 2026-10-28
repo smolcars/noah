@@ -74,18 +74,7 @@ struct ReceiveAmountSheet: View {
                 SendAmountDisplay(text: display.text, empty: display.empty, value: Double(sats), style: SendText.sheetAmount)
                     .frame(height: 58).padding(.top, 10)
                     .accessibilityIdentifier("receive-amount-input")
-                Button(action: toggleCurrency) {
-                    HStack(spacing: 8) {
-                        Text(verbatim: fiatLine).noahText(NoahTokens.Typography.body)
-                        if btcPrice != nil { Image(systemName: "arrow.up.arrow.down").font(.system(size: 14, weight: .medium)) }
-                    }
-                    .foregroundStyle(NoahTokens.Colors.muted)
-                    .frame(minHeight: NoahTokens.Size.hitTarget)
-                }
-                .buttonStyle(.plain)
-                .disabled(btcPrice == nil || model.isSaving)
-                .accessibilityLabel(useFiat ? Text("Switch to sats") : Text(L10n.text("Switch to {value1}", app.preferredCurrency, locale: locale.identifier)))
-                .accessibilityIdentifier("receive-currency-toggle")
+                currencyToggle
                 note.padding(.top, 4)
                 if noteTooLong {
                     Text("Note must be 639 characters or fewer.").noahText(HomeText.footnote).foregroundStyle(NoahTokens.Colors.failure)
@@ -102,17 +91,7 @@ struct ReceiveAmountSheet: View {
                         haptics.play(.selection)
                     }
                 }
-                Button(action: done) {
-                    ZStack {
-                        Text("Done").opacity(model.isSaving ? 0 : 1)
-                        if model.isSaving { ProgressView().tint(NoahTokens.Colors.background) }
-                    }
-                    .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(HomePillStyle(height: 52, font: NoahTokens.Typography.button))
-                .disabled(!valid || model.isSaving)
-                .accessibilityIdentifier("receive-amount-submit")
-                .padding(.top, 12)
+                doneButton
             }
         }
         .padding(.horizontal, 22).padding(.top, 24).padding(.bottom, 16)
@@ -125,6 +104,35 @@ struct ReceiveAmountSheet: View {
                 Button("Done") { noteFocused = false }
             }
         }
+    }
+
+    private var currencyToggle: some View {
+        Button(action: toggleCurrency) {
+            HStack(spacing: 8) {
+                Text(verbatim: fiatLine).noahText(NoahTokens.Typography.body)
+                if btcPrice != nil { Image(systemName: "arrow.up.arrow.down").font(.system(size: 14, weight: .medium)) }
+            }
+            .foregroundStyle(NoahTokens.Colors.muted)
+            .frame(minHeight: NoahTokens.Size.hitTarget)
+        }
+        .buttonStyle(.plain)
+        .disabled(btcPrice == nil || model.isSaving)
+        .accessibilityLabel(useFiat ? Text("Switch to sats") : Text(L10n.text("Switch to {value1}", app.preferredCurrency, locale: locale.identifier)))
+        .accessibilityIdentifier("receive-currency-toggle")
+    }
+
+    private var doneButton: some View {
+        Button(action: done) {
+            ZStack {
+                Text("Done").opacity(model.isSaving ? 0 : 1)
+                if model.isSaving { ProgressView().tint(NoahTokens.Colors.background) }
+            }
+            .frame(maxWidth: .infinity)
+        }
+        .buttonStyle(HomePillStyle(height: 52, font: NoahTokens.Typography.button))
+        .disabled(!valid || model.isSaving)
+        .accessibilityIdentifier("receive-amount-submit")
+        .padding(.top, 12)
     }
 
     /// "Add a note": a chip that opens into today's description field.

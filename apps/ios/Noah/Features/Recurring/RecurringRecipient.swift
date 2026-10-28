@@ -48,7 +48,8 @@ enum RecurringRecipient {
         let parsed = SendDestination.parse(cleaned)
         if let error = parsed.error { throw error }
         switch parsed.destinationType {
-        case "ark", "offer": return (cleaned, parsed.destinationType!)
+        case "ark": return (cleaned, "ark")
+        case "offer": return (cleaned, "offer")
         case "lnurl": return (cleaned.lowercased(), "lnurl")
         case "bip321":
             if let ark = parsed.bip321?["arkAddress"] { return (ark, "ark") }
@@ -59,7 +60,7 @@ enum RecurringRecipient {
         default: throw RecurringError.message("Unsupported recipient")
         }
     }
-    static func quote(_ schedule: RecurringPayment, session: WalletSession) async throws -> (SendPayment, SendQuote, LightningSendFees?) {
+    static func quote(_ schedule: RecurringPayment, session: WalletSession) async throws -> RecurringExecutor.Quote {
         guard schedule.validPolicy, schedule.amountSat <= RecurringPayment.maximumAmount else { throw SendFailure.invalid }
         let recipient = try resolve(schedule.destination)
         guard recipient.type == schedule.destinationType else { throw SendFailure.invalid }
@@ -77,7 +78,7 @@ enum RecurringRecipient {
         let fees = payment.method == "ark" ? nil : await lightningFees {
             try await session.withOpenWallet { try await $0.wallet.arkInfo()?.feeSchedule.lightningSend }
         }
-        return (payment, quote, fees)
+        return .init(payment: payment, quote: quote, fees: fees)
     }
     static func lnurlPayment(_ input: SendPayment, route: SendRecipientRoute) throws -> SendPayment {
         var payment = input
@@ -101,7 +102,7 @@ enum RecurringRecipient {
 /// iOS uses the same server wake + foreground execution and local reminder policy as RN.
 enum RecurringNotifications {
     @MainActor private static var revision = UUID()
-    @MainActor static func refresh(_ schedules: [RecurringPayment], result: RecurringPayment?) async {
+    @MainActor static func refresh(_ schedules: [RecurringPayment], result: RecurringPayment?) {
         let center = UNUserNotificationCenter.current()
         if let result {
             let content = UNMutableNotificationContent()
@@ -189,19 +190,25 @@ enum RecurringFeePolicy {
         let cap: UInt64?
         let reason: Reason
         var autoPay: Bool { reason == .withinCap }
+        /// `evaluate` sets both for every Lightning decision; only Ark's, which never exceed a cap, have neither.
+        private var limits: (worstCaseFee: UInt64, cap: UInt64) {
+            guard let worstCaseFee, let cap else { preconditionFailure("a Lightning fee decision has its cap") }
+            return (worstCaseFee, cap)
+        }
         func approvalIssue(quoteFee: UInt64) -> RecurringIssue? {
             switch reason {
             case .withinCap: nil
-            case .quoteExceedsCap: .init(code: .quoteExceedsCap, arguments: [String(quoteFee), String(cap!)])
-            case .scheduleExceedsCap: .init(code: .scheduleExceedsCap, arguments: [String(worstCaseFee!), String(cap!)])
+            case .quoteExceedsCap: .init(code: .quoteExceedsCap, arguments: [String(quoteFee), String(limits.cap)])
+            case .scheduleExceedsCap: .init(code: .scheduleExceedsCap, arguments: [String(limits.worstCaseFee), String(limits.cap)])
             case .arkFee: .init(code: .arkFee)
             }
         }
         func approvalMessage(quoteFee: UInt64) -> String? {
             switch reason {
             case .withinCap: nil
-            case .quoteExceedsCap: "The fee for this payment (\(quoteFee) sats) is above your automatic limit of \(cap!) sats. Review it to pay manually."
-            case .scheduleExceedsCap: "Ark's published Lightning fees for this amount can reach \(worstCaseFee!) sats, above your automatic limit of \(cap!) sats. Review it to pay manually."
+            case .quoteExceedsCap: "The fee for this payment (\(quoteFee) sats) is above your automatic limit of \(limits.cap) sats. Review it to pay manually."
+            case .scheduleExceedsCap:
+                "Ark's published Lightning fees for this amount can reach \(limits.worstCaseFee) sats, above your automatic limit of \(limits.cap) sats. Review it to pay manually."
             case .arkFee: "The fee for this Ark payment must be 0 sats to pay automatically. Review it to pay manually."
             }
         }
@@ -240,9 +247,10 @@ enum RecurringFeePolicy {
         if Self.opensSchedules(userInfo) { page = .recurring }
     }
     /// Home's path for the pending page, once.
-    func take() -> [HomeView.Route]? {
+    /// Empty when no page is pending.
+    func take() -> [HomeView.Route] {
         defer { page = nil }
-        return page.map { SettingsPath.deepLink($0) }
+        return page.map { SettingsPath.deepLink($0) } ?? []
     }
     nonisolated static func opensSchedules(_ info: [AnyHashable: Any]) -> Bool {
         if let type = info["notification_type"] as? String,

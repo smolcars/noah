@@ -20,7 +20,10 @@ enum DeviceInfo {
         let encoder = JSONEncoder()
         encoder.outputFormatting = .withoutEscapingSlashes
         // Arrays of optional strings always encode, including null entries.
-        return String(decoding: try! encoder.encode(values), as: UTF8.self)
+        guard let data = try? encoder.encode(values), let json = String(bytes: data, encoding: .utf8) else {
+            preconditionFailure("optional strings always encode as UTF-8 JSON")
+        }
+        return json
     }
 
     static func shouldReport(_ info: Components.Schemas.DeviceInfo, fingerprint previous: String?,

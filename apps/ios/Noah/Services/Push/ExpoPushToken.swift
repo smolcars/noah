@@ -7,10 +7,10 @@ import Foundation
 struct ExpoPushToken: Sendable {
     /// EAS project (`extra.eas.projectId` in client/app.config.ts).
     static let projectID = "6e79dffb-dcd4-4f3d-b596-638b16377eb0"
-    static let baseURL = URL(string: "https://exp.host/--/api/v2/")!
+    static let baseURL = URL(literal: "https://exp.host/--/api/v2/")
 
     var session: URLSession = .shared
-    var baseURL: URL = ExpoPushToken.baseURL
+    var baseURL: URL = Self.baseURL
 
     struct Request: Encodable, Equatable {
         let type = "apns"
@@ -37,10 +37,8 @@ struct ExpoPushToken: Sendable {
 
     /// POST push/getExpoPushToken → `ExponentPushToken[…]`.
     func fetch(_ request: Request) async throws -> String {
-        struct Response: Decodable {
-            struct Payload: Decodable { let expoPushToken: String }
-            let data: Payload
-        }
+        struct Payload: Decodable { let expoPushToken: String }
+        struct Response: Decodable { let data: Payload }
         let data = try await post(path: "push/getExpoPushToken", body: request)
         return try JSONDecoder().decode(Response.self, from: data).data.expoPushToken
     }

@@ -18,33 +18,7 @@ struct RootView: View {
             if showsOnboarding {
                 OnboardingFlow(model: model, storedSeed: model.phase == .blocked(.seedWithoutWalletData))
             } else {
-                switch model.phase {
-                case .launching:
-                    if model.customServerUnresponsive {
-                        VStack(spacing: 16) {
-                            Text(model.switchingToDefaultServer ? L10n.text("The server isn't responding; switching back…") : L10n
-                                .text("The custom server isn't responding."))
-                            Button("Use default server") { model.useDefaultEsploraServer() }
-                                .disabled(model.switchingToDefaultServer)
-                        }.padding()
-                    } else { NoahColor.background.ignoresSafeArea() }
-                case .onboarding:
-                    EmptyView()
-                case .wallet:
-                    if model.pushPermission.blocksWallet(initialized: true) {
-                        PushNotificationsRequiredView()
-                    } else {
-                        WalletTabs()
-                    }
-                case .blocked(let state):
-                    LaunchMessageView(state: state)
-                case .restoreIncomplete:
-                    LaunchMessageView(
-                        title: model.walletError == nil ? "Restore didn't finish" : "Wallet cleanup didn't finish",
-                        message: LocalizedStringKey(model
-                            .walletError ??
-                            "Noah couldn't finish or undo an interrupted restore. Your wallet files were left as they are. Restart Noah to try again."))
-                }
+                phaseView
             }
         }
         .onOpenURL { model.paymentLink.receive($0, gate: model.paymentLinkGate) }
@@ -87,6 +61,36 @@ struct RootView: View {
                     await model.appBecameActive()
                 }
             }
+        }
+    }
+
+    @ViewBuilder private var phaseView: some View {
+        switch model.phase {
+        case .launching:
+            if model.customServerUnresponsive {
+                VStack(spacing: 16) {
+                    Text(model.switchingToDefaultServer ? L10n.text("The server isn't responding; switching back…") : L10n
+                        .text("The custom server isn't responding."))
+                    Button("Use default server") { model.useDefaultEsploraServer() }
+                        .disabled(model.switchingToDefaultServer)
+                }.padding()
+            } else { NoahColor.background.ignoresSafeArea() }
+        case .onboarding:
+            EmptyView()
+        case .wallet:
+            if model.pushPermission.blocksWallet(initialized: true) {
+                PushNotificationsRequiredView()
+            } else {
+                WalletTabs()
+            }
+        case .blocked(let state):
+            LaunchMessageView(state: state)
+        case .restoreIncomplete:
+            LaunchMessageView(
+                title: model.walletError == nil ? "Restore didn't finish" : "Wallet cleanup didn't finish",
+                message: LocalizedStringKey(model
+                    .walletError ??
+                    "Noah couldn't finish or undo an interrupted restore. Your wallet files were left as they are. Restart Noah to try again."))
         }
     }
 }
@@ -194,7 +198,7 @@ struct WalletTabs: View {
         .environment(history)
         .environment(tracker)
         .environment(settingsSummary)
-        .environment(\.scanPayment, scanned)
+        .environment(\.scanPayment, ScanPaymentAction(handle: scanned))
         // Activity's links and a recurring payment notification: Home opens the page with Settings beneath.
         .onChange(of: settingsRoute.page != nil, initial: true) { _, pending in if pending { selection = .home } }
         .task(id: app.summary == nil ? nil : "\(app.preferredCurrency):\(app.walletSessionRevision)") {
@@ -284,12 +288,15 @@ private struct LaunchMessageView: View {
         case .seedWithoutWalletData:
             "Use the recovery phrase stored on this device to restore your backup."
         case .walletDataWithoutSeed:
+            // swiftlint:disable:next line_length - one literal: translations.mjs reads copy as a single string
             "Wallet data exists on this device, but its recovery phrase is missing. Noah won't replace these files. Keep your recovery phrase and contact support for help recovering this wallet."
         case .secureStorageUnavailable:
             "Noah can't read its secure storage yet. Unlock your device to continue."
         case .invalidSeed:
+            // swiftlint:disable:next line_length - one literal: translations.mjs reads copy as a single string
             "Support code: SEED_INVALID. The stored recovery phrase could not be validated. Keep this app installed and contact Noah support at github.com/smolcars/noah. Never send anyone your recovery phrase, private keys, or a wallet database."
         case .seedConflict:
+            // swiftlint:disable:next line_length - one literal: translations.mjs reads copy as a single string
             "Support code: WALLET_CONFLICT. Noah found wallet records that cannot be safely matched. Keep this app installed and contact Noah support at github.com/smolcars/noah. Never send anyone your recovery phrase, private keys, or a wallet database."
         case .existingWallet, .onboarding:
             ""
@@ -331,7 +338,7 @@ private struct WideTabBar: View {
                         withAnimation(NoahTokens.Motion.travel(reduceMotion)) { selection = tab }
                     } label: {
                         VStack(spacing: 2) {
-                            Image(systemName: tab.symbol).font(.system(size: 19, weight: .medium)).frame(height: 24)
+                            Image(systemName: tab.symbol).accessibilityHidden(true).font(.system(size: 19, weight: .medium)).frame(height: 24)
                             Text(tab.title).noahText(HomeText.tab).lineLimit(1)
                         }
                         .foregroundStyle(NoahTokens.Colors.foreground)

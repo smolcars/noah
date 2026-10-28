@@ -119,15 +119,14 @@ extension RecurringExecutorTests {
             if feeFetchFails { throw URLError(.notConnectedToInternet) }
             return fees
         }
-        // swiftlint:disable:next large_tuple - the shape RecurringExecutor.Dependencies.quote returns
-        func quoted(_ schedule: RecurringPayment, fees: LightningSendFees) -> (SendPayment, SendQuote, LightningSendFees?) {
-            (
-                SendPayment(
+        func quoted(_ schedule: RecurringPayment, fees: LightningSendFees) -> RecurringExecutor.Quote {
+            .init(
+                payment: SendPayment(
                     destination: method == "lightning" ? lightningDestination : schedule.destination,
                     method: method,
                     amount: schedule.amountSat),
-                .init(amount: schedule.amountSat, fee: fee, total: schedule.amountSat + fee, walletIdentity: owner.withLock { $0.wallet }),
-                fees)
+                quote: .init(amount: schedule.amountSat, fee: fee, total: schedule.amountSat + fee, walletIdentity: owner.withLock { $0.wallet }),
+                fees: fees)
         }
         func notification(_ schedules: [RecurringPayment], _ result: RecurringPayment?) async {
             if let result { notified.append(result); try? await notificationHook?(result) } else { reminders = schedules }

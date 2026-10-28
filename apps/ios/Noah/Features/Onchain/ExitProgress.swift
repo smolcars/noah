@@ -24,7 +24,7 @@ struct ExitProgress: Equatable, Sendable {
         case waiting, claimable, claiming, claimed, canceled, alreadySpent, swept
     }
 
-    enum Picture: Equatable, Sendable { case lift, path, lock, unlocked, claim, claimed, canceled, none }
+    enum Picture: Equatable, Sendable { case lift, path, lock, unlocked, claim, claimed, canceled, blank }
 
     var phase: Phase
     /// Exit transactions on the path; 0 until bark lists them.
@@ -60,7 +60,7 @@ struct ExitProgress: Equatable, Sendable {
         case .claiming: .claim
         case .claimed: .claimed
         case .canceled: .canceled
-        case .alreadySpent, .swept: .none
+        case .alreadySpent, .swept: .blank
         }
     }
 
@@ -105,28 +105,34 @@ struct ExitProgress: Equatable, Sendable {
         case "VtxoSwept": phase = .swept
         default:
             phase = .publishing
-            guard exit.state == "Processing", let current = path.first(where: { $0.status.block == nil }) else {
-                if exit.state == "Processing", !path.isEmpty { phase = .onchain }
-                return
-            }
-            let index = confirmed
-            switch current.status.kind {
-            case "awaiting-cpfp-broadcast":
-                step = index + 1
-                phase = needsFunds ? .needsFunds : .sending
-            case "awaiting-confirmation":
-                step = index + 1
-                phase = current.status.origin == "wallet" || current.status.origin == nil ? .mempool : .shared
-                // Blocks since Noah first saw it in the mempool (bark keeps a state's height until it changes).
-                if let since = seen[exit.episode(current)], tip > since { stuck = tip - since }
-                // Its child when bark first recorded it in the mempool this episode: a different one now
-                // means a re-bump. Children from before an eviction or reorg don't count.
-                let child = exit.records[exit.runStart(current)].transactions?.first { $0.txid == current.txid }?.status.child_txid
-                bumped = child != nil && current.status.child_txid != nil && child != current.status.child_txid
-            default:
-                // Waiting for its parent's block: the root's parent is the round, already on-chain.
-                if index > 0 { phase = .confirmed }
-            }
+            readProcessing(exit, tip: tip, needsFunds: needsFunds, seen: seen)
+        }
+    }
+
+    /// Processing: the transaction being sent, waiting in the mempool, or stuck behind its parent.
+    private mutating func readProcessing(_ exit: ExitModel, tip: UInt32, needsFunds: Bool, seen: [String: UInt32]) {
+        let path = exit.path
+        guard exit.state == "Processing", let current = path.first(where: { $0.status.block == nil }) else {
+            if exit.state == "Processing", !path.isEmpty { phase = .onchain }
+            return
+        }
+        let index = confirmed
+        switch current.status.kind {
+        case "awaiting-cpfp-broadcast":
+            step = index + 1
+            phase = needsFunds ? .needsFunds : .sending
+        case "awaiting-confirmation":
+            step = index + 1
+            phase = current.status.origin == "wallet" || current.status.origin == nil ? .mempool : .shared
+            // Blocks since Noah first saw it in the mempool (bark keeps a state's height until it changes).
+            if let since = seen[exit.episode(current)], tip > since { stuck = tip - since }
+            // Its child when bark first recorded it in the mempool this episode: a different one now
+            // means a re-bump. Children from before an eviction or reorg don't count.
+            let child = exit.records[exit.runStart(current)].transactions?.first { $0.txid == current.txid }?.status.child_txid
+            bumped = child != nil && current.status.child_txid != nil && child != current.status.child_txid
+        default:
+            // Waiting for its parent's block: the root's parent is the round, already on-chain.
+            if index > 0 { phase = .confirmed }
         }
     }
 }
@@ -229,7 +235,7 @@ struct ExitSightings: Codable, Equatable, Sendable {
     var tips: [String: UInt32] { seen.mapValues(\.tip) }
 
     static let key = "native-exit-sightings-v1"
-    typealias Store = ExitWalletStore<ExitSightings>
+    typealias Store = ExitWalletStore<Self>
 }
 
 /// Noah's id for each exit run, by VTXO, new each time it starts one (`ExitModel.run`).
@@ -253,10 +259,10 @@ struct ExitClaimRecord: Codable, Equatable, Sendable {
     var fee: UInt64
     var toPhone: Bool
     /// Another wallet's address, for the Claimed picture once the journal entry is gone.
-    var destination: String? = nil
+    var destination: String?
 
     static let key = "native-exit-claim-records-v1"
-    typealias Store = ExitWalletStore<[String: ExitClaimRecord]>
+    typealias Store = ExitWalletStore<[String: Self]>
 }
 
 /// One value per wallet in settings storage, written durably.
@@ -277,7 +283,7 @@ struct ExitWalletStore<Value: Codable & Sendable>: Sendable {
     func save(_ value: Value, walletID: String) throws {
         var all = all()
         all[walletID] = value
-        try write(String(decoding: JSONEncoder().encode(all), as: UTF8.self))
+        try write(String(json: JSONEncoder().encode(all)))
     }
 }
 
@@ -300,8 +306,10 @@ enum ExitFunds {
 
     /// `proven`: the episode a completed Check the chain left parked, by exit. `parkedSince`: Noah's first
     /// sighting of this episode. `daemonSince`: since when bark's daemon has run uninterrupted.
-    static func needsFunds(_ exit: ExitModel, confirmed: UInt64, packageFee: UInt64?, proven: [String: String],
-                           parkedSince: Date?, daemonSince: Date?, now: Date) -> Bool {
+    /// `parkedSince`: Noah's first sighting of this episode. `daemonSince`: since when bark's daemon has run uninterrupted.
+    struct Timing { var parkedSince: Date?; var daemonSince: Date?; var now: Date }
+    static func needsFunds(_ exit: ExitModel, confirmed: UInt64, packageFee: UInt64?, proven: [String: String], timing: Timing) -> Bool {
+        let parkedSince = timing.parkedSince, daemonSince = timing.daemonSince, now = timing.now
         guard let episode = exit.parkedEpisode, let packageFee, confirmed < packageFee else { return false }
         if proven[exit.id] == episode { return true }
         // Only after bark has had a full daemon cycle to fund it, so the label doesn't flash before it tried.
@@ -356,11 +364,11 @@ enum ExitClaimSplit {
         let total = amounts.values.reduce(0, +)
         guard total > 0 else { return amounts.mapValues { _ in 0 } }
         var parts = amounts.mapValues { UInt64((UInt128($0) * UInt128(fee)) / UInt128(total)) }
-        let order = amounts.keys.sorted {
-            let a = (UInt128(amounts[$0]!) * UInt128(fee)) % UInt128(total), b = (UInt128(amounts[$1]!) * UInt128(fee)) % UInt128(total)
-            return a == b ? $0 < $1 : a > b
-        }
-        for id in order.prefix(Int(fee - parts.values.reduce(0, +))) { parts[id]! += 1 }
+        let order = amounts.sorted {
+            let a = (UInt128($0.value) * UInt128(fee)) % UInt128(total), b = (UInt128($1.value) * UInt128(fee)) % UInt128(total)
+            return a == b ? $0.key < $1.key : a > b
+        }.map(\.key)
+        for id in order.prefix(Int(fee - parts.values.reduce(0, +))) { parts[id, default: 0] += 1 }
         return parts
     }
 }

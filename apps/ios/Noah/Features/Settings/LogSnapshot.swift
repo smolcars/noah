@@ -12,6 +12,6 @@ final class LogSnapshot {
         loading = true; error = nil
         defer { loading = false }
         do { lines = try await read(); updatedAt = now() }
-        catch is CancellationError {} catch { self.error = "Failed to fetch logs." }
+        catch is CancellationError { /* Superseded by a newer read. */ } catch { self.error = "Failed to fetch logs." }
     }
 }

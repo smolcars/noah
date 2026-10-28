@@ -22,7 +22,7 @@ struct SettingsNavigationTests {
         route.page = page
         #expect(route.take() == [.settings, .page(page)])
         #expect(route.page == nil)
-        #expect(route.take() == nil) // Opened once: Home coming back doesn't open it again.
+        #expect(route.take().isEmpty) // Opened once: Home coming back doesn't open it again.
     }
 
     @Test func phonesPushRowsAndWideWindowsReplaceTheTrailingPage() {

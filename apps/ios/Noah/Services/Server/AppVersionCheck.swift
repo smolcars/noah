@@ -38,8 +38,8 @@ final class AppVersionCheck {
     }
 
     static func updateURL(variant: AppVariant) -> URL {
-        URL(string: variant == .mainnet
-            ? "itms-beta://testflight.apple.com/join/YQW6fu9w"
-            : "itms-beta://testflight.apple.com/join/E4P44dXF")!
+        variant == .mainnet
+            ? URL(literal: "itms-beta://testflight.apple.com/join/YQW6fu9w")
+            : URL(literal: "itms-beta://testflight.apple.com/join/E4P44dXF")
     }
 }

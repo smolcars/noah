@@ -11,7 +11,7 @@ struct OnboardingFlow: View {
         case storedSeed
 
         /// An interrupted onboarding (wallet exists, not initialized) resumes at Name.
-        static func initial(resuming: Bool, storedSeed: Bool) -> Step {
+        static func initial(resuming: Bool, storedSeed: Bool) -> Self {
             storedSeed ? .storedSeed : resuming ? .name : .welcome
         }
 

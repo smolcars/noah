@@ -84,7 +84,7 @@ actor WalletSession {
     /// created or replaced. Only its holder may open the wallet
     /// (`verify`, `createNew`) until `release`.
     struct Reservation: Sendable, Equatable {
-        fileprivate let id: UUID
+        fileprivate let id: UUID // swiftlint:disable:this strict_fileprivate - WalletSession, which encloses it, compares it
     }
 
     /// The one session per app process. bark-bolt-ffi locks the datadir, so a
@@ -454,7 +454,10 @@ actor WalletSession {
         guard runningCalls > 0 else { return }
         await withCheckedContinuation { drainWaiters.append($0) }
     }
+}
 
+/// Reads, receive requests, observers and sync through the open wallet.
+extension WalletSession {
     func peekPublicKey(index: UInt32) async throws -> String {
         try await withOpenWallet { try await $0.wallet.peekPublicKey(index: index) }
     }

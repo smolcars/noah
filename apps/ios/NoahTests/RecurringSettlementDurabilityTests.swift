@@ -14,7 +14,8 @@ import Testing
         var marked = s
         marked.inFlight = try .init(occurrenceIndex: #require(plan.occurrenceIndex), startedAt: h.now)
         try h.store.upsert(marked)
-        let (payment, quote, _) = h.quoted(s, fees: RecurringFeePolicy.fallback)
+        let quoted = h.quoted(s, fees: RecurringFeePolicy.fallback)
+        let payment = quoted.payment, quote = quoted.quote
         await h.controller.submitAndWait(payment, quote: quote, recurringKey: e.key, beforeSubmit: {})
         switch h.controller.state {
         case .succeeded: break
@@ -79,7 +80,8 @@ import Testing
             pay: { payment, _, _ in manualCalls.withLock { $0 += 1 }; return .init(amount: payment.amount, proof: .submitReturnedArkSuccess) },
             reconcile: { _ in .uncertain }, read: { h.saved }, write: { h.saved = $0 },
             identity: { h.owner.withLock { $0.wallet } }))
-        let (payment, quote, _) = h.quoted(s, fees: RecurringFeePolicy.fallback)
+        let quoted = h.quoted(s, fees: RecurringFeePolicy.fallback)
+        let payment = quoted.payment, quote = quoted.quote
         // The shared single-slot journal is used by normal Send too.
         manual.submit(payment, quote: quote)
         try await SendPaymentTests.waitUntil { manual.state != .submitting }

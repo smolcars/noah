@@ -28,7 +28,7 @@ enum TreeScene {
     static let paths = (0..<tree.leaves.count).map { tree.path(toLeaf: $0) }
     static let specks: [CGPoint] = (0..<12).map { index in
         let angle = Double(index) / 12 * 2 * .pi + 0.4, radius = 90 + Double((index * 53) % 50)
-        let you = tree.leaves[TreeScene.you].point
+        let you = tree.leaves[Self.you].point
         return CGPoint(x: you.x + cos(angle) * radius * 1.2, y: you.y + sin(angle) * radius * 0.9 + 30)
     }
 
@@ -162,7 +162,10 @@ struct TreePainter {
         return CGPoint(x: x, y: y)
     }
 
-    private func link(_ p: CGPoint, _ c: CGPoint, _ u0: Double, _ u1: Double, orange: Bool, alpha: Double, width: CGFloat) {
+    /// A link's ink: orange or the tree's, its opacity and its width.
+    private struct LinkStyle { var orange: Bool; var alpha: Double; var width: CGFloat }
+    private func link(_ p: CGPoint, _ c: CGPoint, _ u0: Double, _ u1: Double, style: LinkStyle) {
+        let orange = style.orange, alpha = style.alpha, width = style.width
         guard u1 > u0, alpha > 0 else { return }
         var path = Path()
         for step in 0...14 {
@@ -180,7 +183,8 @@ struct TreePainter {
                             with: .color(color(orange, alpha)))
     }
 
-    private func ring(_ p: CGPoint, _ r: Double, orange: Bool, alpha: Double, width: CGFloat) {
+    private func ring(_ p: CGPoint, _ r: Double, style: LinkStyle) {
+        let orange = style.orange, alpha = style.alpha, width = style.width
         guard r > 0, alpha > 0 else { return }
         let q = placement.point(p), radius = r * scale
         shaded(orange).stroke(Path(ellipseIn: CGRect(x: q.x - radius, y: q.y - radius, width: radius * 2, height: radius * 2)),
@@ -218,7 +222,12 @@ struct TreePainter {
             let width: CGFloat = [1.3, 1, 0.7][tier], opacity = [0.24, 0.2, 0.16][tier]
             for parent in tree.levels[depth - d] {
                 for child in parent.children {
-                    link(parent.point, tree.levels[depth - d - 1][child].point, 0, grow[d], orange: false, alpha: opacity * alpha, width: width)
+                    link(
+                        parent.point,
+                        tree.levels[depth - d - 1][child].point,
+                        0,
+                        grow[d],
+                        style: LinkStyle(orange: false, alpha: opacity * alpha, width: width))
                 }
             }
         }
@@ -266,7 +275,7 @@ struct TreePainter {
         let slot = pr(t, 1.55, 1.95)
         if slot > 0 {
             let breathe = reduceMotion || t < 1.95 ? 1 : 1 + 0.18 * sin((t - 1.95) * 3.6)
-            ring(you, 3.4 * ease(slot) * breathe, orange: true, alpha: 1, width: 1.4)
+            ring(you, 3.4 * ease(slot) * breathe, style: LinkStyle(orange: true, alpha: 1, width: 1.4))
         }
     }
 
@@ -290,20 +299,20 @@ struct TreePainter {
             let e = q * q
             dot(CGPoint(x: speck.x + (you.x - speck.x) * e, y: speck.y + (you.y - speck.y) * e), 1.8, orange: true, alpha: 0.95)
         }
-        ring(you, 3.4, orange: true, alpha: 1, width: 1.4)
+        ring(you, 3.4, style: LinkStyle(orange: true, alpha: 1, width: 1.4))
         let fill = pr(t, 1, 1.3)
         if fill > 0 { dot(you, 4.2 * ease(fill), orange: true, alpha: 1) }
         // Your exit branch traces up from the root.
         if pr(t, 1.4, 1.75) > 0 { dot(branch[0], 4.4, orange: true, alpha: 1) }
         for (k, segment) in [(1.4, 1.75), (1.75, 2.1), (2.1, 2.45)].enumerated() {
             let u = ease(pr(t, segment.0, segment.1))
-            link(branch[k], branch[k + 1], 0, u, orange: true, alpha: 0.95, width: 1.6)
+            link(branch[k], branch[k + 1], 0, u, style: LinkStyle(orange: true, alpha: 0.95, width: 1.6))
             if u >= 1 && k < 2 { dot(branch[k + 1], 2.6, orange: true, alpha: 1) }
         }
         if !reduceMotion {
             for k in 0..<2 {
                 let q = pr(t, 2.55 + Double(k) * 0.22, 3.45 + Double(k) * 0.22)
-                if q > 0 && q < 1 { ring(you, 4 + 30 * ease(q), orange: true, alpha: 0.7 * (1 - q), width: 1.2) }
+                if q > 0 && q < 1 { ring(you, 4 + 30 * ease(q), style: LinkStyle(orange: true, alpha: 0.7 * (1 - q), width: 1.2)) }
             }
         }
     }
@@ -332,14 +341,14 @@ struct TreePainter {
             let start = TreeScene.foundAt(index), u = ease(pr(r, start, start + 0.45)), path = TreeScene.paths[index]
             for k in stride(from: 2, through: 0, by: -1) {
                 let su = clamp(u * 3 - Double(2 - k))
-                if su > 0 { link(path[k], path[k + 1], 1 - su, 1, orange: true, alpha: 0.9, width: 1.4) }
+                if su > 0 { link(path[k], path[k + 1], 1 - su, 1, style: LinkStyle(orange: true, alpha: 0.9, width: 1.4)) }
             }
             if u >= 1 { dot(path[0], 4.4, orange: true, alpha: 1) }
             dot(leaf, 3.6, orange: true, alpha: 1)
         }
         if !reduceMotion && r > band.end + 0.3 {
             let q = clamp((r - band.end - 0.3) / 0.9)
-            for index in lit { ring(tree.leaves[index].point, 4 + 18 * ease(q), orange: true, alpha: 0.6 * (1 - q), width: 1.1) }
+            for index in lit { ring(tree.leaves[index].point, 4 + 18 * ease(q), style: LinkStyle(orange: true, alpha: 0.6 * (1 - q), width: 1.1)) }
         }
     }
 
@@ -370,9 +379,9 @@ struct TreePainter {
         }
         let pathA = a.path(toLeaf: mine), pathB = b.path(toLeaf: mine)
         let fade = (u < 1.1 ? 1 : 1 - pr(u, 1.1, 1.5)) * (1 - w)
-        for s in 0..<2 { link(pathA[s], pathA[s + 1], 0, 1, orange: true, alpha: 0.9 * fade * oa, width: 1.4) }
+        for s in 0..<2 { link(pathA[s], pathA[s + 1], 0, 1, style: LinkStyle(orange: true, alpha: 0.9 * fade * oa, width: 1.4)) }
         let trace = ease(pr(u, 1.8, 2.2))
-        for s in 0..<2 { link(pathB[s], pathB[s + 1], 0, clamp(trace * 2 - Double(s)), orange: true, alpha: 0.9 * oa, width: 1.4) }
+        for s in 0..<2 { link(pathB[s], pathB[s + 1], 0, clamp(trace * 2 - Double(s)), style: LinkStyle(orange: true, alpha: 0.9 * oa, width: 1.4)) }
         // Your leaf hops across.
         let from = a.leaves[mine].point, to = b.leaves[mine].point
         func hop(_ h: Double) -> CGPoint {

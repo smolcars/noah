@@ -35,17 +35,7 @@ struct NameScreen: View {
                             .padding(.top, NoahTokens.Space.s)
                     }
                     Spacer(minLength: NoahTokens.Space.screen).frame(maxHeight: column.gap)
-                    Button(action: onContinue) {
-                        ZStack {
-                            Text("Continue").opacity(saving ? 0 : 1)
-                            if saving { ProgressView().tint(NoahTokens.Colors.background) }
-                        }
-                    }
-                    .buttonStyle(OnboardingPrimaryButtonStyle())
-                    .disabled(!name.canContinue && !saving)
-                    .allowsHitTesting(!saving)
-                    .accessibilityIdentifier("onboarding-name-continue")
-                    .padding(.bottom, NoahTokens.Space.l)
+                    continueButton
                     Spacer(minLength: 0).frame(maxHeight: column.trail)
                 }
                 .onboardingPane()
@@ -75,6 +65,20 @@ struct NameScreen: View {
             try? await Task.sleep(for: .milliseconds(380))
             focused = true
         }
+    }
+
+    private var continueButton: some View {
+        Button(action: onContinue) {
+            ZStack {
+                Text("Continue").opacity(saving ? 0 : 1)
+                if saving { ProgressView().tint(NoahTokens.Colors.background) }
+            }
+        }
+        .buttonStyle(OnboardingPrimaryButtonStyle())
+        .disabled(!name.canContinue && !saving)
+        .allowsHitTesting(!saving)
+        .accessibilityIdentifier("onboarding-name-continue")
+        .padding(.bottom, NoahTokens.Space.l)
     }
 }
 
@@ -125,6 +129,7 @@ struct NameHandleField: View {
     @Environment(\.locale) private var locale
 
     var body: some View {
+        // swiftlint:disable:next accessibility_trait_for_button - the tap only focuses the field; the TextField is the accessible control
         VStack(alignment: .leading, spacing: 12) {
             WrapLayout(spacing: 3, lineSpacing: 0) {
                 Text(verbatim: name.text.isEmpty ? L10n.text("name", locale: locale.identifier) : name.text)

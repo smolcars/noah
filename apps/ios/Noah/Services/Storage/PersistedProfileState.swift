@@ -5,6 +5,7 @@ struct PersistedPrivacyState: Codable, Equatable, Sendable {
     static let key = "privacy-storage"
     static let version = 0
 
+    // swiftlint:disable:next discouraged_optional_boolean - RN's persisted JSON omits unset flags
     var isHomeBalanceHidden: Bool?
 }
 

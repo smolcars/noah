@@ -96,7 +96,7 @@ actor BackupCoordinator {
         let waiter = Task { try await Self.value(of: inFlight) }
         let deadline = Task {
             do { try await Task.sleep(for: timeout); waiter.cancel() }
-            catch {}
+            catch { /* Canceled: the wait finished first. */ }
         }
         defer { deadline.cancel(); cancelScheduled() }
         do { _ = try await waiter.value }
@@ -276,8 +276,10 @@ actor BackupCoordinator {
 
     // MARK: State
 
+    // swiftlint:disable modifier_order - SwiftFormat's modifierOrder puts access control before nonisolated
     /// Applied in place, like the RN store's actions, so ordering holds.
     private nonisolated func update(_ change: (inout PersistedBackupState) -> Void) {
+        // swiftlint:enable modifier_order
         stateLock.withLock { _ in
             var state = dependencies.loadState()
             change(&state)

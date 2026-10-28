@@ -26,7 +26,8 @@ enum AppTelemetry {
         options.dist = info["CFBundleVersion"] as? String
         options.sendDefaultPii = false
         options.enableMetricKit = true
-        options.enableAppHangTracking = false
+        let legacy: LegacySentryOptions = options
+        legacy.enableAppHangTracking = false
         options.sampleRate = 1
         options.tracesSampleRate = nil
         options.enableLogs = false
@@ -41,7 +42,7 @@ enum AppTelemetry {
         options.maxAttachmentSize = 0
         options.beforeSend = scrub
         // The hint's list is authoritative, including crash/scope attachments.
-        options.beforeSendWithHint = { event, hint in
+        legacy.beforeSendWithHint = { event, hint in
             hint.attachments = []
             return scrub(event)
         }
@@ -131,6 +132,7 @@ enum AppTelemetry {
     ]
 
     private static func scalars(_ fields: [String: Any], keys: Set<String>) -> [String: Any] {
+        // swiftlint:disable:next legacy_objc_type - Sentry's ObjC context values box every number and Bool as NSNumber
         fields.filter { key, value in keys.contains(key) && (value is String || value is NSNumber) }
     }
 
@@ -155,20 +157,22 @@ enum AppTelemetry {
         guard EndpointLogPrivacy.requiresSerializedGuard else { return true }
         guard let data = try? JSONSerialization.data(withJSONObject: payload, options: [.sortedKeys, .withoutEscapingSlashes]) else { return false }
         // Inspect the wire form too: numeric fields and joins are not string leaves.
-        let json = String(decoding: data, as: UTF8.self)
+        guard let json = String(bytes: data, encoding: .utf8) else { return false }
         return EndpointLogPrivacy.redactRecord(json) == json
     }
 
     private static func stringLeaves(_ value: Any, depth: Int = 0) -> (keys: [String], values: [String])? {
         guard depth < 32 else { return nil }
         if let string = value as? String { return ([], [string]) }
+        // swiftlint:disable:next legacy_objc_type - JSON numbers and Bools arrive boxed as NSNumber
         if value is NSNumber || value is NSNull { return ([], []) }
         let children: [Any]
         var result: (keys: [String], values: [String]) = ([], [])
         if let array = value as? [Any] { children = array }
         else if let fields = value as? [String: Any] {
-            result.keys = fields.keys.sorted()
-            children = result.keys.map { fields[$0]! }
+            let sorted = fields.sorted { $0.key < $1.key }
+            result.keys = sorted.map(\.key)
+            children = sorted.map(\.value)
         } else { return nil }
         for child in children {
             guard let leaves = stringLeaves(child, depth: depth + 1) else { return nil }
@@ -178,3 +182,12 @@ enum AppTelemetry {
         return result
     }
 }
+
+/// Sentry 9 deprecates these setters without a replacement for what Noah needs: legacy hang tracking
+/// stays off (it defaults on) and the hint's attachments are cleared. v10 removes both, and this stops compiling.
+private protocol LegacySentryOptions: AnyObject {
+    var enableAppHangTracking: Bool { get set }
+    var beforeSendWithHint: ((Event, Hint) -> Event?)? { get set }
+}
+
+extension Options: LegacySentryOptions {}

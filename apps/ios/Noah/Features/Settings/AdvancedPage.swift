@@ -9,6 +9,7 @@ struct NotificationsPage: View {
     @Environment(\.locale) private var locale
     @Environment(\.openURL) private var openURL
     @Environment(\.scenePhase) private var scenePhase
+    // swiftlint:disable:next discouraged_optional_boolean - nil until the setting is read
     @State private var on: Bool?
     @State private var busy = false
     @State private var error: String?
@@ -91,27 +92,16 @@ struct AdvancedPage: View {
     var body: some View {
         SettingsScroll {
             SettingsGroup(label: "Network", first: true) {
-                row("Ark server", icon: "server.rack", value: URL(string: configuration.arkServer)?.host() ?? configuration.arkServer, page: .arkServer,
-                    id: "settings-ark-server")
-                row("Esplora", icon: "link", value: AppVariant.current == .regtest ? "Bitcoin Core"
-                    : esplora.endpoint == nil ? L10n.text("Noah default", locale: language) : L10n.text("Custom", locale: language),
-                    page: .esplora, last: true, id: "settings-esplora")
+                row(
+                    "Ark server",
+                    icon: "server.rack",
+                    page: .arkServer,
+                    id: "settings-ark-server",
+                    value: URL(string: configuration.arkServer)?.host() ?? configuration.arkServer)
+                row("Esplora", icon: "link", page: .esplora, id: "settings-esplora", value: AppVariant.current == .regtest ? "Bitcoin Core"
+                    : esplora.endpoint == nil ? L10n.text("Noah default", locale: language) : L10n.text("Custom", locale: language), last: true)
             }
-            SettingsGroup(label: "Diagnostics") {
-                row("Logs", icon: "doc.text", page: .logs, id: "settings-logs")
-                SettingsRow(icon: "arrow.clockwise", title: L10n.text("Reset registration", locale: language), hairline: summary.debug,
-                            id: "settings-reset-registration") {
-                    haptics.play(.light)
-                    sheet = .reset
-                }
-                .disabled(busy || app.isWalletSuspended)
-                if summary.debug {
-                    row("Debug", icon: "ladybug", page: .debug, id: "settings-debug")
-                    // Off hides Debug again; five taps on the version bring it back.
-                    SettingsToggleRow(icon: "hammer", title: L10n.text("Debug mode", locale: language),
-                                      isOn: Binding(get: { summary.debug }, set: setDebug), hairline: false, id: "settings-debug-mode")
-                }
-            }
+            diagnostics
             SettingsGroup(label: "Wallet") {
                 SettingsToggleRow(icon: "stop.circle", title: L10n.text("Suspend wallet", locale: language),
                                   sub: L10n.text("Pauses all wallet activity", locale: language),
@@ -152,7 +142,25 @@ struct AdvancedPage: View {
         }
     }
 
-    private func row(_ title: String, icon: String, value: String? = nil, page: SettingsPage, last: Bool = false, id: String) -> some View {
+    private var diagnostics: some View {
+        SettingsGroup(label: "Diagnostics") {
+            row("Logs", icon: "doc.text", page: .logs, id: "settings-logs")
+            SettingsRow(icon: "arrow.clockwise", title: L10n.text("Reset registration", locale: language), hairline: summary.debug,
+                        id: "settings-reset-registration") {
+                haptics.play(.light)
+                sheet = .reset
+            }
+            .disabled(busy || app.isWalletSuspended)
+            if summary.debug {
+                row("Debug", icon: "ladybug", page: .debug, id: "settings-debug")
+                // Off hides Debug again; five taps on the version bring it back.
+                SettingsToggleRow(icon: "hammer", title: L10n.text("Debug mode", locale: language),
+                                  isOn: Binding(get: { summary.debug }, set: setDebug), hairline: false, id: "settings-debug-mode")
+            }
+        }
+    }
+
+    private func row(_ title: String, icon: String, page: SettingsPage, id: String, value: String? = nil, last: Bool = false) -> some View {
         SettingsRow(icon: icon, title: L10n.text(title, locale: language), value: value, hairline: !last, id: id) {
             haptics.play(.light)
             settings.open(page)
@@ -175,7 +183,7 @@ struct AdvancedPage: View {
             haptics.play(.light)
             sheet = .suspend
         case .resume: run("Couldn't change wallet suspension. Please try again.") { try await app.resumeWallet() }
-        case .none: break
+        case .unchanged: break
         }
     }
 

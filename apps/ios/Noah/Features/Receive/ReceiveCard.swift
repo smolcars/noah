@@ -99,11 +99,15 @@ struct ReceiveArrival: Equatable, Identifiable {
     }
 
     /// Every haptic of the arrival (prototype `hap` calls), by key.
-    var haptics: [(key: String, at: Double, kind: OnboardingHaptics.Kind)] {
+    struct Cue {
+        let key: String, at: Double, kind: OnboardingHaptics.Kind
+        init(_ key: String, _ at: Double, _ kind: OnboardingHaptics.Kind) { self.key = key; self.at = at; self.kind = kind }
+    }
+    var haptics: [Cue] {
         switch rail {
-        case .ark: [("ripple", 0.76, .light), ("flip", flipAt, .success)]
-        case .lightning: [("lock", 0.85, .light), ("unlock", 2.07, .light), ("flip", flipAt, .success)]
-        case .onchain: [("flip", flipAt, .success)]
+        case .ark: [Cue("ripple", 0.76, .light), Cue("flip", flipAt, .success)]
+        case .lightning: [Cue("lock", 0.85, .light), Cue("unlock", 2.07, .light), Cue("flip", flipAt, .success)]
+        case .onchain: [Cue("flip", flipAt, .success)]
         }
     }
 }
@@ -130,7 +134,8 @@ struct ReceiveArrivalQueue: Equatable {
     /// Follows the on-chain arrivals (playing or waiting) in a new check; one that's gone
     /// ends, and the next starts. Returns whether the playing one just confirmed or ended, and
     /// the transactions followed now, replacements included.
-    mutating func follow(_ snapshot: ReceiveChainSnapshot, at date: Date = Date()) -> (confirmed: Bool, ended: Bool, txids: Set<String>) {
+    struct Followed { let confirmed: Bool; let ended: Bool; let txids: Set<String> }
+    mutating func follow(_ snapshot: ReceiveChainSnapshot, at date: Date = Date()) -> Followed {
         for index in waiting.indices.reversed() where waiting[index].follow(snapshot, at: date) == .gone {
             waiting.remove(at: index)
         }
@@ -145,7 +150,7 @@ struct ReceiveArrivalQueue: Equatable {
                 if !waiting.isEmpty { start(waiting.removeFirst(), at: date) }
             }
         }
-        return (confirmed, ended, Set(([current] + waiting).compactMap { $0?.txid }))
+        return Followed(confirmed: confirmed, ended: ended, txids: Set(([current] + waiting).compactMap { $0?.txid }))
     }
 
     mutating func clear() {
@@ -243,38 +248,11 @@ struct ReceiveCard: View {
     private var front: some View {
         VStack(spacing: 0) {
             if let payload {
-                StyledQRCode(content: payload, reveal: reveal)
-                    .id(payload)
-                    .frame(width: qrSide, height: qrSide)
-                    .accessibilityIdentifier("receive-qr")
-                Text(verbatim: title)
-                    .noahText(NoahTokens.Typography.button)
-                    .foregroundStyle(NoahTokens.Colors.qrInk)
-                    .lineLimit(1).truncationMode(.middle)
-                    .padding(.top, 12)
-                    .accessibilityIdentifier("receive-qr-title")
-                Text(LocalizedStringKey(caption))
-                    .noahText(HomeText.footnote)
-                    .foregroundStyle(Color(hex: 0x6B6B6B))
-                    .multilineTextAlignment(.center)
-                    .padding(.top, 2)
+                qr(payload)
             } else if !unavailable {
                 ProgressView().tint(NoahTokens.Colors.qrInk).frame(width: qrSide, height: qrSide)
             } else {
-                VStack(alignment: .leading, spacing: NoahTokens.Space.s) {
-                    Text("Lightning address unavailable").noahText(NoahTokens.Typography.button)
-                    Text("Finish setting up your Lightning address before sharing your QR.")
-                        .noahText(HomeText.footnote).foregroundStyle(Color(hex: 0x6B6B6B))
-                    Button("Open Profile", action: onProfile)
-                        .noahText(HomeText.strong)
-                        .foregroundStyle(NoahTokens.Colors.orangeText)
-                        .padding(.top, NoahTokens.Space.xs)
-                        .accessibilityIdentifier("receive-open-profile")
-                }
-                .foregroundStyle(NoahTokens.Colors.qrInk)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .fixedSize(horizontal: false, vertical: true)
-                .padding(.vertical, 8)
+                addressUnavailable
             }
             if let band {
                 HStack(alignment: .firstTextBaseline) {
@@ -292,6 +270,41 @@ struct ReceiveCard: View {
         }
         .padding(.horizontal, 22).padding(.top, 22).padding(.bottom, 18)
         .frame(maxWidth: .infinity)
+    }
+
+    @ViewBuilder private func qr(_ payload: String) -> some View {
+        StyledQRCode(content: payload, reveal: reveal)
+            .id(payload)
+            .frame(width: qrSide, height: qrSide)
+            .accessibilityIdentifier("receive-qr")
+        Text(verbatim: title)
+            .noahText(NoahTokens.Typography.button)
+            .foregroundStyle(NoahTokens.Colors.qrInk)
+            .lineLimit(1).truncationMode(.middle)
+            .padding(.top, 12)
+            .accessibilityIdentifier("receive-qr-title")
+        Text(LocalizedStringKey(caption))
+            .noahText(HomeText.footnote)
+            .foregroundStyle(Color(hex: 0x6B6B6B))
+            .multilineTextAlignment(.center)
+            .padding(.top, 2)
+    }
+
+    private var addressUnavailable: some View {
+        VStack(alignment: .leading, spacing: NoahTokens.Space.s) {
+            Text("Lightning address unavailable").noahText(NoahTokens.Typography.button)
+            Text("Finish setting up your Lightning address before sharing your QR.")
+                .noahText(HomeText.footnote).foregroundStyle(Color(hex: 0x6B6B6B))
+            Button("Open Profile", action: onProfile)
+                .noahText(HomeText.strong)
+                .foregroundStyle(NoahTokens.Colors.orangeText)
+                .padding(.top, NoahTokens.Space.xs)
+                .accessibilityIdentifier("receive-open-profile")
+        }
+        .foregroundStyle(NoahTokens.Colors.qrInk)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .fixedSize(horizontal: false, vertical: true)
+        .padding(.vertical, 8)
     }
 
     private func back(_ arrival: ReceiveArrival, t: Double) -> some View {
@@ -314,7 +327,7 @@ struct ReceiveCard: View {
                 .lineLimit(1).minimumScaleFactor(0.5)
                 .accessibilityIdentifier("receive-arrival-amount")
             HStack(spacing: 6) {
-                Image(systemName: line.glyph).font(.system(size: 14, weight: .medium))
+                Image(systemName: line.glyph).accessibilityHidden(true).font(.system(size: 14, weight: .medium))
                 Text(verbatim: line.text).noahText(NoahTokens.Typography.control)
             }
             .foregroundStyle(Color(hex: 0x6B6B6B))
@@ -373,27 +386,37 @@ private struct ArrivalOverlay: View {
     private func draw(_ canvas: MotionCanvas, w: Double) {
         let time = MotionTime(t: t, reduceMotion: reduceMotion)
         let cx = w / 2, cy = 22 + Double(qrSide) / 2, sy = -34.0
-        typealias M = MotionTime
+        typealias Time = MotionTime
         switch arrival.rail {
         case .ark:
             // Ark's mailbox drops a coin into the card, an orange ripple, then the flip.
-            canvas.layer(center: CGPoint(x: cx, y: sy), scale: M.mix(0.4, 1, time.p(0, .bouncy)),
-                         opacity: time.o(0, .bouncy) * (1 - time.o(0.63, .soft))) { $0.badge(server: true, cx, sy) }
+            canvas
+                .layer(center: CGPoint(x: cx, y: sy), opacity: time.o(0, .bouncy) * (1 - time.o(0.63, .soft)), scale: Time.mix(0.4, 1, time.p(0, .bouncy))) {
+                    $0.badge(
+                        server: true,
+                        cx,
+                        sy)
+                }
             let drop = time.p(0.38, .bouncy)
-            canvas.layer(center: CGPoint(x: cx, y: cy), offset: CGSize(width: 0, height: M.mix(sy - cy, 0, drop)),
-                         scale: M.mix(0.4, 1, drop), opacity: time.o(0.38, .bouncy) * (1 - time.o(arrival.flipAt, .snappy))) {
-                $0.payCoin(cx, cy, 26, fill: NoahTokens.Colors.qrInk, ink: .white)
-            }
+            canvas.layer(
+                center: CGPoint(x: cx, y: cy),
+                opacity: time.o(0.38, .bouncy) * (1 - time.o(arrival.flipAt, .snappy)),
+                offset: CGSize(width: 0, height: Time.mix(sy - cy, 0, drop)),
+                scale: Time.mix(0.4, 1, drop)) {
+                    $0.payCoin(cx, cy, 26, fill: NoahTokens.Colors.qrInk, ink: .white)
+                }
             if t >= 0.76 && !reduceMotion {
-                let ripple = M.spring(t - 0.76, .soft)
-                canvas.layer(center: CGPoint(x: cx, y: cy), scale: M.mix(1, 2.6, ripple), opacity: 1 - min(1, ripple)) {
+                let ripple = Time.spring(t - 0.76, .soft)
+                canvas.layer(center: CGPoint(x: cx, y: cy), opacity: 1 - min(1, ripple), scale: Time.mix(1, 2.6, ripple)) {
                     $0.stroke($0.circle(cx, cy, 28), $0.colors.orange, 2.5)
                 }
             }
         case .lightning:
             let serverFade = 1 - time.o(2.5, .soft)
-            canvas.layer(center: CGPoint(x: cx, y: sy), scale: M.mix(0.4, 1, time.p(0, .bouncy)),
-                         opacity: time.o(0, .bouncy) * serverFade) { $0.badge(server: true, cx, sy) }
+            canvas.layer(center: CGPoint(x: cx, y: sy), opacity: time.o(0, .bouncy) * serverFade, scale: Time.mix(0.4, 1, time.p(0, .bouncy))) { $0.badge(
+                server: true,
+                cx,
+                sy) }
             // "Incoming over Lightning": the bolt hits the server.
             if t >= 0.25 && t < 0.87 || (reduceMotion && t >= 0.25 && t < 0.85) {
                 var path = Path()
@@ -405,26 +428,29 @@ private struct ArrivalOverlay: View {
                     canvas.stroke(path, canvas.colors.orange, 3.2)
                 } else {
                     let k = min(1, (t - 0.25) / 0.62)
-                    let offset = M.mix(240, -240, k)
+                    let offset = Time.mix(240, -240, k)
                     canvas.stroke(path, canvas.colors.orange, 3.2, dash: [240, 240], phase: CGFloat(offset < 0 ? offset + 480 : offset))
                 }
             }
             // "Ark holds it for you": a locked coin drops into the card; your key opens it.
             let drop = time.p(0.85, .bouncy)
             let coinOpacity = time.o(0.85, .bouncy) * (1 - time.o(arrival.flipAt, .snappy))
-            canvas.layer(center: CGPoint(x: cx, y: cy), offset: CGSize(width: 0, height: M.mix(sy - cy, 0, drop)),
-                         scale: M.mix(0.4, 1, drop), opacity: coinOpacity) { canvas in
-                canvas.payCoin(cx, cy, 26, fill: NoahTokens.Colors.qrInk, ink: .white)
-                var lock = canvas
-                lock.context.opacity *= 1 - time.o(2.5, .snappy)
-                lock.shackle(cx, cy - 25, open: time.p(2.07, .bouncy), ink: NoahTokens.Colors.qrInk)
-                lock.padlockBody(cx, cy - 25, ink: NoahTokens.Colors.qrInk, paper: .white)
-            }
+            canvas.layer(
+                center: CGPoint(x: cx, y: cy),
+                opacity: coinOpacity,
+                offset: CGSize(width: 0, height: Time.mix(sy - cy, 0, drop)),
+                scale: Time.mix(0.4, 1, drop)) { canvas in
+                    canvas.payCoin(cx, cy, 26, fill: NoahTokens.Colors.qrInk, ink: .white)
+                    var lock = canvas
+                    lock.context.opacity *= 1 - time.o(2.5, .snappy)
+                    lock.shackle(cx, cy - 25, open: time.p(2.07, .bouncy), ink: NoahTokens.Colors.qrInk)
+                    lock.padlockBody(cx, cy - 25, ink: NoahTokens.Colors.qrInk, paper: .white)
+                }
             if t >= 1.65 && t < 2.07 {
                 let rise = time.p(1.65, .snappy)
                 var key = canvas
                 key.context.opacity *= time.o(1.65, .snappy)
-                key.key(cx, M.mix(cy + 170, cy - 30, rise))
+                key.key(cx, Time.mix(cy + 170, cy - 30, rise))
             }
         case .onchain:
             break
@@ -457,7 +483,7 @@ struct ReceiveBlockRow: View {
                 Self.draw(MotionCanvas(context: context, size: size, viewBox: CGRect(x: 0, y: 0, width: 300, height: 58),
                                        colors: .theme(colorScheme)),
                           arrival: arrival, tip: tip, time: MotionTime(t: t, reduceMotion: reduceMotion),
-                          nextLabel: L10n.text("next", locale: locale.identifier), locale: locale)
+                          copy: (next: L10n.text("next", locale: locale.identifier), locale: locale))
             }
         }
         .task(id: settleKey) {
@@ -471,7 +497,9 @@ struct ReceiveBlockRow: View {
         .accessibilityHidden(true)
     }
 
-    static func draw(_ canvas: MotionCanvas, arrival: ReceiveArrival, tip: UInt32?, time: MotionTime, nextLabel: String, locale: Locale) {
+    /// `copy`: the block row's "next" label and the locale its numbers use.
+    static func draw(_ canvas: MotionCanvas, arrival: ReceiveArrival, tip: UInt32?, time: MotionTime, copy: (next: String, locale: Locale)) {
+        let nextLabel = copy.next, locale = copy.locale
         let t = time.t
         let row = ChainBlockRow(x0: 72, y: 6, size: 30, tip: tip, confirmedHeight: arrival.confirmedHeight,
                                 heldAt: 0.7, confirmedAt: arrival.confirmedAt.map { $0.timeIntervalSince(arrival.start) },

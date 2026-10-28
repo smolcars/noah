@@ -136,10 +136,14 @@ struct RecurringFeeLiveTests {
         var dependencies = RecurringExecutor.Dependencies.live()
         dependencies.quote = { schedule in
             let result = try await RecurringRecipient.quote(schedule, session: session)
-            let decision = RecurringFeePolicy.evaluate(amount: result.0.amount, method: result.0.method, quoteFee: result.1.fee, schedule: result.2)
+            let decision = RecurringFeePolicy.evaluate(
+                amount: result.payment.amount,
+                method: result.payment.method,
+                quoteFee: result.quote.fee,
+                schedule: result.fees)
             let cap = try #require(decision.cap), worstCaseFee = try #require(decision.worstCaseFee)
             quoted.withLock { $0 = [
-                "quotedFeeSat": String(result.1.fee),
+                "quotedFeeSat": String(result.quote.fee),
                 "capSat": String(cap),
                 "worstCaseFeeSat": String(worstCaseFee),
                 "decision": decision.reason.rawValue,

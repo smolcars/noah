@@ -6,19 +6,24 @@ struct PersistedServerState: Codable, Equatable, Sendable {
     static let key = "server-storage"
     static let version = 0
 
+    // swiftlint:disable:next discouraged_optional_boolean - RN's persisted JSON omits unset flags
     var isRegisteredWithServer: Bool?
     var lightningAddress: String?
     var nostrPubkey: String?
+    // swiftlint:disable:next discouraged_optional_boolean - RN's persisted JSON omits unset flags
     var isBackupEnabled: Bool?
     var emailAddress: String?
+    // swiftlint:disable discouraged_optional_boolean - RN's persisted JSON omits unset flags
     var isEmailVerified: Bool?
     var isEmailPromptDismissed: Bool?
+    // swiftlint:enable discouraged_optional_boolean
     var mailboxAuthorizationExpiry: Double?
+    // swiftlint:disable:next discouraged_optional_boolean - RN's persisted JSON omits unset flags
     var isMailboxAuthorizationEnabled: Bool?
     var lastReportedDeviceFingerprint: String?
     var lastDeviceReportAt: Double?
 
-    init() {}
+    init() { /* Every field starts unset. */ }
 
     enum CodingKeys: String, CodingKey {
         case isRegisteredWithServer

@@ -23,8 +23,9 @@ enum MMKVIntegrity {
         guard size <= data.count - 4 else { return false }
         // The v3+ header and last-confirmed pair may legitimately lag current metadata.
         let digest = data.withUnsafeBytes { bytes in
-            crc32(0, bytes.bindMemory(to: Bytef.self).baseAddress!.advanced(by: 4), uInt(size))
+            bytes.bindMemory(to: Bytef.self).baseAddress.map { crc32(0, $0.advanced(by: 4), uInt(size)) }
         }
+        guard let digest else { return false }
         return digest == u32(meta, 0)
     }
 }

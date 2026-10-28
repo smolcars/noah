@@ -1,29 +1,5 @@
 import SwiftUI
 
-/// The screen Send shows for the model's state. The steps are today's `SendStage`s.
-enum SendScreen: Int, Comparable {
-    case amount, recipient, method, source, review, sending
-
-    @MainActor static func of(_ model: SendModel) -> Self {
-        if model.controller.locked { return .sending }
-        if model.showReview { return .review }
-        switch model.stage {
-        case .amount: return .amount
-        case .recipient: return .recipient
-        case .method: return .method
-        case .source: return .source
-        case .review: return .review
-        }
-    }
-
-    static func < (a: Self, b: Self) -> Bool { a.rawValue < b.rawValue }
-}
-
-extension SendModel {
-    /// Phones hide the tab bar on every step after Amount; it returns on Done.
-    var hidesTabBar: Bool { SendScreen.of(self) != .amount }
-}
-
 /// Send (docs/native-rewrite/design/send-receive.md): Amount → To → Method → Balance →
 /// Review → Sending, on today's `SendModel` and payment controller. Compact windows get
 /// one column; wide ones (the iPhone Duo open or half-open) split into two panes at the
@@ -49,7 +25,6 @@ struct SendView: View {
     /// The chain tip, read with each receipt check, for the block row.
     @State private var chainTip: UInt32?
     @FocusState private var focus: Field?
-    private enum Field { case recipient, note }
 
     let isActive: Bool
     let onLeave: () -> Void
@@ -197,12 +172,6 @@ struct SendView: View {
         model.error.map { model.destinationError?.message(locale: locale.identifier) ?? L10n.text($0, locale: locale.identifier) }
     }
 
-    private func error(_ text: String) -> some View {
-        Text(verbatim: text).noahText(HomeText.footnote).foregroundStyle(NoahTokens.Colors.failure)
-            .fixedSize(horizontal: false, vertical: true)
-            .accessibilityIdentifier("send-error")
-    }
-
     // MARK: Amount
 
     /// The most one balance can pay; Max and on-chain sources pick between them later.
@@ -252,55 +221,12 @@ struct SendView: View {
                     recipientLine.frame(maxWidth: .infinity).padding(.top, 6).accessibilityIdentifier("send-amount-recipient")
                 }
                 if wide { Spacer(minLength: 0) }
-                Group {
-                    if overBalance {
-                        Text(verbatim: L10n.text("Only {amount} available", format(available), locale: locale.identifier))
-                            .foregroundStyle(NoahTokens.Colors.failure)
-                    } else {
-                        Text(verbatim: L10n.text("{amount} available", format(available), locale: locale.identifier))
-                            .foregroundStyle(NoahTokens.Colors.muted)
-                    }
-                }
-                .noahText(NoahTokens.Typography.sub)
-                .frame(height: 20)
-                .padding(.top, wide || short ? 14 : 28)
-                .accessibilityIdentifier("send-available")
-                if let balance = app.summary?.balance,
-                   let message = balance.pendingRoundMessage(amount: format(balance.ark.pendingInRound)) {
-                    Text(LocalizedStringKey(message)).noahText(HomeText.footnote).foregroundStyle(NoahTokens.Colors.muted)
-                        .multilineTextAlignment(.center).padding(.top, 4)
-                }
+                balanceLines(short: short)
                 SendAmountDisplay(text: amountDisplay.text, empty: amountDisplay.empty, value: Double(model.sats), shake: shake)
                     .frame(height: 72)
                     .padding(.top, wide || short ? 14 : 30)
                     .accessibilityIdentifier("send-amount")
-                Button {
-                    haptics.play(.selection)
-                    model.toggleCurrency()
-                } label: {
-                    HStack(spacing: 8) {
-                        Text(verbatim: fiatLine).noahText(NoahTokens.Typography.body)
-                        Image(systemName: "arrow.up.arrow.down").font(.system(size: 14, weight: .medium))
-                    }
-                    .foregroundStyle(NoahTokens.Colors.muted)
-                    .frame(minHeight: NoahTokens.Size.hitTarget)
-                    .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .disabled(model.btcPrice == nil)
-                .accessibilityLabel(Text("Switch amount currency"))
-                .accessibilityValue(Text(verbatim: fiatLine))
-                .accessibilityIdentifier("send-currency-toggle")
-                .padding(.top, 2)
-                if canMax {
-                    Button("Max") {
-                        haptics.play(.light)
-                        model.maxSend()
-                    }
-                    .buttonStyle(SendChipStyle())
-                    .accessibilityIdentifier("send-max")
-                    .padding(.top, 4)
-                }
+                amountControls
                 if !model.parsed.isAmountEditable {
                     Text("Amount set by payment request").noahText(HomeText.footnote).foregroundStyle(NoahTokens.Colors.muted)
                         .padding(.top, 8)
@@ -334,6 +260,57 @@ struct SendView: View {
         }
     }
 
+    @ViewBuilder private func balanceLines(short: Bool) -> some View {
+        Group {
+            if overBalance {
+                Text(verbatim: L10n.text("Only {amount} available", format(available), locale: locale.identifier))
+                    .foregroundStyle(NoahTokens.Colors.failure)
+            } else {
+                Text(verbatim: L10n.text("{amount} available", format(available), locale: locale.identifier))
+                    .foregroundStyle(NoahTokens.Colors.muted)
+            }
+        }
+        .noahText(NoahTokens.Typography.sub)
+        .frame(height: 20)
+        .padding(.top, wide || short ? 14 : 28)
+        .accessibilityIdentifier("send-available")
+        if let balance = app.summary?.balance,
+           let message = balance.pendingRoundMessage(amount: format(balance.ark.pendingInRound)) {
+            Text(LocalizedStringKey(message)).noahText(HomeText.footnote).foregroundStyle(NoahTokens.Colors.muted)
+                .multilineTextAlignment(.center).padding(.top, 4)
+        }
+    }
+
+    @ViewBuilder private var amountControls: some View {
+        Button {
+            haptics.play(.selection)
+            model.toggleCurrency()
+        } label: {
+            HStack(spacing: 8) {
+                Text(verbatim: fiatLine).noahText(NoahTokens.Typography.body)
+                Image(systemName: "arrow.up.arrow.down").font(.system(size: 14, weight: .medium))
+            }
+            .foregroundStyle(NoahTokens.Colors.muted)
+            .frame(minHeight: NoahTokens.Size.hitTarget)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .disabled(model.btcPrice == nil)
+        .accessibilityLabel(Text("Switch amount currency"))
+        .accessibilityValue(Text(verbatim: fiatLine))
+        .accessibilityIdentifier("send-currency-toggle")
+        .padding(.top, 2)
+        if canMax {
+            Button("Max") {
+                haptics.play(.light)
+                model.maxSend()
+            }
+            .buttonStyle(SendChipStyle())
+            .accessibilityIdentifier("send-max")
+            .padding(.top, 4)
+        }
+    }
+
     private func keyPressed() {
         haptics.play(.selection)
         if overBalance {
@@ -343,23 +320,12 @@ struct SendView: View {
     }
 
     // MARK: To
+}
 
+/// Recipient, method, balance, review and sending screens.
+extension SendView {
     private var recipientLabel: SendRecipientLabel { .of(destination: model.destination, ownDomain: ownDomain) }
     private var parsedLive: SendDestination { SendDestination.parse(model.destination) }
-
-    private func typeName(_ type: String?, destination: String) -> String? {
-        switch type {
-        case "lnurl":
-            let domain = destination.split(separator: "@").last.map(String.init)?.lowercased()
-            return domain == ownDomain.lowercased() ? "Noah user" : "Lightning address"
-        case "onchain": return "Bitcoin address"
-        case "lightning": return "Lightning invoice"
-        case "bip321": return "Payment request"
-        case "ark": return "Ark address"
-        case "offer": return "Lightning offer"
-        default: return nil
-        }
-    }
 
     private var summaryAmount: String? {
         if model.isMax { return L10n.text("Maximum available", locale: locale.identifier) }
@@ -495,9 +461,10 @@ struct SendView: View {
             .filter { $0.destination.lowercased() != typed.lowercased() && !suggestions.contains($0.destination) }
         // An invoice already says what it is; its line says what it asks for (prototype `REC.inv`).
         let asks = parsed.destinationType == "lightning" ? parsed.amount.map {
+            // swiftlint:disable:next legacy_objc_type - Decimal converts to an integer only through NSDecimalNumber
             L10n.text("Asks for {amount}", format(NSDecimalNumber(decimal: $0).uint64Value), locale: locale.identifier)
         } : nil
-        let primary = parsed.error == nil ? asks ?? typeName(parsed.destinationType, destination: typed) : nil
+        let primary = parsed.error == nil ? asks ?? Self.typeName(parsed.destinationType, destination: typed, ownDomain: ownDomain) : nil
         VStack(spacing: 0) {
             if let primary {
                 resultRow(label: recipientLabel, type: primary, busy: model.busy || model.resolvingRecipient,
@@ -505,14 +472,14 @@ struct SendView: View {
             }
             ForEach(suggestions, id: \.self) { suggestion in
                 resultRow(label: .of(destination: suggestion, ownDomain: ownDomain),
-                          type: typeName("lnurl", destination: suggestion) ?? "Lightning address") {
+                          type: Self.typeName("lnurl", destination: suggestion, ownDomain: ownDomain) ?? "Lightning address") {
                     model.destination = suggestion
                     acceptRecipient()
                 }
             }
             ForEach(recents) { recent in
-                resultRow(label: recent.label, type: typeName(SendDestination.parse(recent.destination).destinationType,
-                                                              destination: recent.destination) ?? "") {
+                resultRow(label: recent.label, type: Self.typeName(SendDestination.parse(recent.destination).destinationType,
+                                                                   destination: recent.destination, ownDomain: ownDomain) ?? "") {
                     model.destination = recent.destination
                     acceptRecipient()
                 }
@@ -570,16 +537,6 @@ struct SendView: View {
     /// Keeps the amount you typed for the review's invoice note. Taken on every way to a
     /// recipient (Next, a scan, a paste or a tapped result), before one can set its own amount.
     private func captureTypedAmount() { typedAmount = Self.typedAmount(model, keeping: typedAmount) }
-
-    static func typedAmount(_ model: SendModel, keeping previous: UInt64?) -> UInt64? {
-        model.parsed.amount == nil ? model.sats : previous
-    }
-
-    /// Whether the review notes that the invoice sets a different amount from the one you typed.
-    static func showsInvoiceNote(typed: UInt64?, fixed: Decimal?) -> Bool {
-        guard let fixed, let typed, typed > 0 else { return false }
-        return Decimal(typed) != fixed
-    }
 
     private func loadSuggestions() async {
         model.suggestions = []
@@ -656,7 +613,7 @@ struct SendView: View {
             Task { await model.continueStage() }
         } label: {
             HStack(spacing: 14) {
-                Image(systemName: Self.glyph(rail)).font(.system(size: 18, weight: .medium))
+                Image(systemName: Self.glyph(rail)).accessibilityHidden(true).font(.system(size: 18, weight: .medium))
                     .frame(width: 40, height: 40)
                     .background(NoahTokens.Colors.background, in: Circle())
                 VStack(alignment: .leading, spacing: 0) {
@@ -680,10 +637,6 @@ struct SendView: View {
         .disabled(!enabled)
         .opacity(enabled ? 1 : 0.4)
         .accessibilityIdentifier("send-rail-\(rail.rawValue)")
-    }
-
-    static func glyph(_ rail: SendRail) -> String {
-        switch rail { case .ark: "sailboat"; case .lightning: "bolt"; case .onchain: "link" }
     }
 
     private func loadRailFees() async {
@@ -732,7 +685,7 @@ struct SendView: View {
             Task { await model.continueStage() }
         } label: {
             HStack(spacing: 14) {
-                Image(systemName: source == .offchain ? "sailboat" : "link").font(.system(size: 18, weight: .medium))
+                Image(systemName: source == .offchain ? "sailboat" : "link").accessibilityHidden(true).font(.system(size: 18, weight: .medium))
                     .frame(width: 40, height: 40)
                     .background(NoahTokens.Colors.background, in: Circle())
                 VStack(alignment: .leading, spacing: 0) {
@@ -770,7 +723,7 @@ struct SendView: View {
                 },
                 btcPrice: model.btcPrice, fiatCurrency: model.fiatCurrency, payment: payment, quote: quote,
                 controller: model.controller, cancel: cancelReview, done: finish, onLeave: onLeave,
-                unit: unit, recipient: .of(destination: model.destination, payment: payment, ownDomain: ownDomain),
+                unit: unit, recipient: .of(destination: model.destination, ownDomain: ownDomain, payment: payment),
                 invoiceNote: invoiceNote, wide: wide, sideInsets: (window.insets.leading, window.insets.trailing), clock: clock,
                 gate: holdGate, chainTip: chainTip)
         } else {
@@ -797,8 +750,8 @@ struct SendView: View {
                         done: finish, clock: clock, unit: unit,
                         recipient: (model.controller.attempt?.payment ?? model.payment).map { .of(
                             destination: model.destination,
-                            payment: $0,
-                            ownDomain: ownDomain) },
+                            ownDomain: ownDomain,
+                            payment: $0) },
                         wide: wide, sideInsets: (window.insets.leading, window.insets.trailing), onLeave: onLeave,
                         reviewed: model.payment, chainTip: chainTip)
     }
@@ -839,21 +792,5 @@ struct SendView: View {
             await app.refresh()
             await model.load()
         }
-    }
-}
-
-/// A small Liquid Glass chip ("Max").
-struct SendChipStyle: ButtonStyle {
-    func makeBody(configuration: Configuration) -> some View {
-        configuration.label
-            .noahText(HomeText.strong)
-            .foregroundStyle(NoahTokens.Colors.foreground)
-            .padding(.horizontal, 14)
-            .frame(minHeight: 32)
-            .contentShape(Capsule())
-            .glassCompat(in: Capsule(), interactive: true)
-            .frame(minHeight: NoahTokens.Size.hitTarget)
-            .scaleEffect(configuration.isPressed ? 0.95 : 1)
-            .animation(NoahTokens.Motion.tap, value: configuration.isPressed)
     }
 }

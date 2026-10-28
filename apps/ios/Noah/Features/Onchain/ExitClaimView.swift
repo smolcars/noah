@@ -61,33 +61,15 @@ struct ExitClaimView: View {
             SettingsSection(title: "To")
             option(L10n.text("Another wallet", locale: language), selected: !toPhone, id: "exit-claim-other") { choose(phone: false) }
                 .disabled(model.busy)
-            if !toPhone {
-                field.disabled(model.busy)
-                ExitWarning(
-                    text: L10n.text("Check the address. This can’t be undone.", locale: language),
-                    symbol: "exclamationmark.shield",
-                    muted: !(!address.isEmpty && !valid))
-                if !address.isEmpty && !valid {
-                    SettingsFine(text: L10n.text("Enter an on-chain Bitcoin address for this network.", locale: language), failure: true)
-                }
-            }
-            option(L10n.text("This phone’s on-chain wallet", locale: language), sub: L10n.text("Noah won’t move these back to Ark.", locale: language),
-                   selected: toPhone, id: "exit-claim-phone") { choose(phone: true) }
+            otherWallet
+            option(
+                L10n.text("This phone’s on-chain wallet", locale: language),
+                selected: toPhone,
+                id: "exit-claim-phone",
+                sub: L10n.text("Noah won’t move these back to Ark.", locale: language)) { choose(phone: true) }
                 .disabled(model.busy)
                 .padding(.top, toPhone ? 0 : 8)
-            VStack(spacing: 0) {
-                ExitDetailRow(label: L10n.text("Claim fee", locale: language),
-                              value: quote.map { $0.fee.map(money.about) ?? L10n.text("Unknown", locale: language) } ?? "—", numeric: true)
-                ExitDetailRow(label: L10n.text("You get", locale: language), value: receive.map(money.about) ?? "—", numeric: true, hairline: false)
-            }
-            .padding(.top, 18)
-            if quote?.feesUnknown == true {
-                ExitWarning(text: L10n.text(
-                    "Fee estimate unavailable. Fees and amount to receive are unknown. Continue without an estimate only if you accept this uncertainty.",
-                    locale: language))
-            } else if let quote, let fee = quote.fee, let warning = ExitRules.warning(amount: quote.amount, claimFee: fee, totalFee: fee, claimOnly: true) {
-                ExitWarning(text: L10n.text(warning, locale: language))
-            }
+            fees(receive: receive, money: money)
             SettingsFine(text: L10n.text("Every exit that’s ready goes in this one transaction. Earlier network fees aren’t taken again.", locale: language))
             if expired { SettingsFine(text: L10n.text("The estimate expired, so Noah fetched a new one. Check it and hold again.", locale: language)) }
             OnchainStatusSection(model: model).settingsReceipts().padding(.top, 18)
@@ -126,6 +108,35 @@ struct ExitClaimView: View {
             guard let destination, !ready.isEmpty, scenePhase == .active else { return }
             do { try await Task.sleep(for: .milliseconds(300)) } catch { return }
             await review(destination)
+        }
+    }
+
+    @ViewBuilder private var otherWallet: some View {
+        if !toPhone {
+            field.disabled(model.busy)
+            ExitWarning(
+                text: L10n.text("Check the address. This can’t be undone.", locale: language),
+                symbol: "exclamationmark.shield",
+                muted: !(!address.isEmpty && !valid))
+            if !address.isEmpty && !valid {
+                SettingsFine(text: L10n.text("Enter an on-chain Bitcoin address for this network.", locale: language), failure: true)
+            }
+        }
+    }
+
+    @ViewBuilder private func fees(receive: UInt64?, money: ExitMoney) -> some View {
+        VStack(spacing: 0) {
+            ExitDetailRow(label: L10n.text("Claim fee", locale: language),
+                          value: quote.map { $0.fee.map(money.about) ?? L10n.text("Unknown", locale: language) } ?? "—", numeric: true)
+            ExitDetailRow(label: L10n.text("You get", locale: language), value: receive.map(money.about) ?? "—", numeric: true, hairline: false)
+        }
+        .padding(.top, 18)
+        if quote?.feesUnknown == true {
+            ExitWarning(text: L10n.text(
+                "Fee estimate unavailable. Fees and amount to receive are unknown. Continue without an estimate only if you accept this uncertainty.",
+                locale: language))
+        } else if let quote, let fee = quote.fee, let warning = ExitRules.warning(amount: quote.amount, claimFee: fee, totalFee: fee, claimOnly: true) {
+            ExitWarning(text: L10n.text(warning, locale: language))
         }
     }
 
@@ -180,10 +191,10 @@ struct ExitClaimView: View {
         }
     }
 
-    private func option(_ title: String, sub: String? = nil, selected: Bool, id: String, action: @escaping () -> Void) -> some View {
+    private func option(_ title: String, selected: Bool, id: String, sub: String? = nil, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             SettingsRowLabel(title: title, sub: sub, hairline: false) {
-                Image(systemName: selected ? "largecircle.fill.circle" : "circle")
+                Image(systemName: selected ? "largecircle.fill.circle" : "circle").accessibilityHidden(true)
                     .font(.system(size: 22)).foregroundStyle(selected ? NoahTokens.Colors.foreground : NoahTokens.Colors.hairline)
             }
         }

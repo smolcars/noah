@@ -242,7 +242,7 @@ struct TransactionDetailView: View {
             HStack {
                 Text("Details").noahText(NoahTokens.Typography.label)
                 Spacer()
-                Image(systemName: "chevron.right").font(.system(size: 15, weight: .semibold)).foregroundStyle(NoahTokens.Colors.muted)
+                Image(systemName: "chevron.right").accessibilityHidden(true).font(.system(size: 15, weight: .semibold)).foregroundStyle(NoahTokens.Colors.muted)
                     .rotationEffect(.degrees(detailsOpen ? 90 : 0))
             }
             .frame(height: 48)
@@ -269,8 +269,8 @@ struct TransactionDetailView: View {
         if let offer = transaction.sentTo?.first(where: { $0.paymentMethod == "offer" })?.destination {
             small("Offer", offer, mono: true, copy: offer)
         }
-        destinations("Sent to", transaction.sentTo)
-        destinations("Received on", transaction.receivedOn)
+        destinations("Sent to", transaction.sentTo ?? [])
+        destinations("Received on", transaction.receivedOn ?? [])
         small("Payment ID", transaction.id, mono: true, copy: transaction.id)
         if let id = transaction.movementId { small("Movement ID", String(id), copy: String(id)) }
         if let kind = transaction.movementKindLabel { small("Movement type", L10n.text(kind, locale: language)) }
@@ -287,9 +287,9 @@ struct TransactionDetailView: View {
             if let hash = transaction.confirmationHash { small("Block hash", hash, mono: true, copy: hash) }
             if let hex = transaction.txHex { small("Raw transaction", hex, mono: true, copy: hex) }
         }
-        coins("Spent coins", transaction.inputVtxos)
-        coins("New coins", transaction.outputVtxos)
-        coins("Exited coins", transaction.exitedVtxos)
+        coins("Spent coins", transaction.inputVtxos ?? [])
+        coins("New coins", transaction.outputVtxos ?? [])
+        coins("Exited coins", transaction.exitedVtxos ?? [])
         if let metadata = transaction.metadataJson, !metadata.isEmpty, metadata != "{}" {
             section("Metadata")
             small("JSON", metadata, mono: true, copy: metadata)
@@ -297,16 +297,16 @@ struct TransactionDetailView: View {
     }
 
     /// Multi-destination payments keep "destination · amount".
-    @ViewBuilder private func destinations(_ label: String, _ values: [HistoryTransaction.Destination]?) -> some View {
-        if let values, !values.isEmpty {
+    @ViewBuilder private func destinations(_ label: String, _ values: [HistoryTransaction.Destination]) -> some View {
+        if !values.isEmpty {
             let text = values.count == 1 ? values[0].destination
                 : values.map { "\($0.destination) · \(money($0.amount_sat))" }.joined(separator: "\n")
             small(label, text, mono: true, copy: values.count == 1 ? values[0].destination : text, wraps: values.count > 1)
         }
     }
 
-    @ViewBuilder private func coins(_ title: String, _ ids: [String]?) -> some View {
-        if let ids, !ids.isEmpty {
+    @ViewBuilder private func coins(_ title: String, _ ids: [String]) -> some View {
+        if !ids.isEmpty {
             section(title)
             ForEach(Array(ids.enumerated()), id: \.offset) { index, id in
                 Button { SettingsRoute.shared.page = .vtxo(id) } label: {
@@ -533,40 +533,48 @@ struct DetailLine: View {
                 .foregroundStyle(NoahTokens.Colors.muted)
                 .fixedSize()
             Spacer(minLength: 0)
-            HStack(spacing: 8) {
-                if let glyph { Image(systemName: glyph).font(.system(size: 14, weight: .medium)).foregroundStyle(glyphColor ?? NoahTokens.Colors.foreground) }
-                valueText.foregroundStyle(failure ? NoahTokens.Colors.failure : NoahTokens.Colors.foreground)
-                if let onCopy {
-                    Button(action: onCopy) {
-                        Image(systemName: copied ? "checkmark" : "doc.on.doc")
-                            .font(.system(size: 15, weight: copied ? .semibold : .regular))
-                            .contentTransition(.symbolEffect(.replace))
-                            .frame(width: 30, height: 30)
-                    }
-                    .buttonStyle(.plain)
-                    .foregroundStyle(NoahTokens.Colors.muted)
-                    .padding(.trailing, -6)
-                    .accessibilityLabel(Text(L10n.text("Copy {label}", label)))
-                }
-                if let explorer {
-                    SwiftUI.Link(destination: explorer) {
-                        Image(systemName: "arrow.up.right.square").font(.system(size: 15)).frame(width: 30, height: 30)
-                    }
-                    .foregroundStyle(NoahTokens.Colors.muted)
-                    .padding(.trailing, -6)
-                    .accessibilityLabel(Text("View in explorer"))
-                }
-                if chevron {
-                    Image(systemName: "chevron.right").font(.system(size: 14, weight: .semibold)).foregroundStyle(NoahTokens.Colors.muted)
-                }
-            }
-            .layoutPriority(1)
+            trailing
         }
         .frame(minHeight: compact ? 44 : 48)
         .padding(.vertical, wraps ? 10 : 0)
         .contentShape(Rectangle())
         .overlay(alignment: .bottom) { if hairline { HomeHairline() } }
         .accessibilityElement(children: .combine)
+    }
+
+    private var trailing: some View {
+        HStack(spacing: 8) {
+            if let glyph {
+                Image(systemName: glyph).accessibilityHidden(true).font(.system(size: 14, weight: .medium))
+                    .foregroundStyle(glyphColor ?? NoahTokens.Colors.foreground)
+            }
+            valueText.foregroundStyle(failure ? NoahTokens.Colors.failure : NoahTokens.Colors.foreground)
+            if let onCopy {
+                Button(action: onCopy) {
+                    Image(systemName: copied ? "checkmark" : "doc.on.doc")
+                        .font(.system(size: 15, weight: copied ? .semibold : .regular))
+                        .contentTransition(.symbolEffect(.replace))
+                        .frame(width: 30, height: 30)
+                }
+                .buttonStyle(.plain)
+                .foregroundStyle(NoahTokens.Colors.muted)
+                .padding(.trailing, -6)
+                .accessibilityLabel(Text(L10n.text("Copy {label}", label)))
+            }
+            if let explorer {
+                SwiftUI.Link(destination: explorer) {
+                    Image(systemName: "arrow.up.right.square").font(.system(size: 15)).frame(width: 30, height: 30)
+                }
+                .foregroundStyle(NoahTokens.Colors.muted)
+                .padding(.trailing, -6)
+                .accessibilityLabel(Text("View in explorer"))
+            }
+            if chevron {
+                Image(systemName: "chevron.right").accessibilityHidden(true).font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(NoahTokens.Colors.muted)
+            }
+        }
+        .layoutPriority(1)
     }
 
     @ViewBuilder private var valueText: some View {

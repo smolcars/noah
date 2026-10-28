@@ -49,14 +49,20 @@ final class WalletLock {
         Task { await refresh() }
     }
 
+    private struct Probe {
+        let context: LAContext
+        let available: Bool
+        let noScreenLock: Bool
+        let biometryType: LABiometryType
+    }
     /// `LAContext()` waits on coreauthd, which stalls behind the Face ID permission alert, so never on the main thread.
-    @concurrent private nonisolated static func probe() async
-        -> sending (context: LAContext, available: Bool, noScreenLock: Bool, biometryType: LABiometryType) {
+    @concurrent private nonisolated static func probe() async -> sending Probe { // swiftlint:disable:this modifier_order - SwiftFormat's order
         let context = LAContext()
         var error: NSError?
         let available = context.canEvaluatePolicy(.deviceOwnerAuthentication, error: &error)
         _ = context.canEvaluatePolicy(.deviceOwnerAuthenticationWithBiometrics, error: nil) // Sets biometryType.
-        return (context, available, !available && RecoveryPhraseAuthentication.unavailable(error) == .noScreenLock, context.biometryType)
+        return Probe(context: context, available: available,
+                     noScreenLock: !available && RecoveryPhraseAuthentication.unavailable(error) == .noScreenLock, biometryType: context.biometryType)
     }
 
     func refresh() async {
@@ -155,7 +161,7 @@ struct WalletLockView: View {
                     Button { Task { await lock.unlock() } } label: {
                         HStack(spacing: 8) {
                             if lock.authenticating { ProgressView().tint(NoahTokens.Colors.background) }
-                            else { Image(systemName: lock.biometry.symbol) }
+                            else { Image(systemName: lock.biometry.symbol).accessibilityHidden(true) }
                             Text("Unlock")
                         }
                     }

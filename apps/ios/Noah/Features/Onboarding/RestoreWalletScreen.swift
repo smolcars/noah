@@ -59,35 +59,7 @@ struct RestoreWalletScreen: View {
                 .onboardingPane()
             VStack(spacing: 0) {
                 FitOrScroll {
-                    VStack(alignment: .leading, spacing: 0) {
-                        Spacer(minLength: 0).frame(maxHeight: column.lead)
-                        WordCountPicker(count: draft.input.words.count, select: selectCount)
-                            .disabled(locked)
-                            .padding(.top, column.firstTop(compact: 18))
-                            .onboardingAppear(2)
-                        grid
-                            .id(draft.generation)
-                            .secretShield()
-                            .disabled(locked)
-                            .padding(.top, 14)
-                            .keyframeAnimator(initialValue: CGFloat.zero, trigger: draft.shakes) { content, offset in
-                                content.offset(x: reduceMotion ? 0 : offset)
-                            } keyframes: { _ in
-                                LinearKeyframe(-11, duration: 0.084)
-                                LinearKeyframe(9, duration: 0.084)
-                                LinearKeyframe(-6, duration: 0.084)
-                                LinearKeyframe(3, duration: 0.084)
-                                LinearKeyframe(0, duration: 0.084)
-                            }
-                            .onboardingAppear(3)
-                        message.padding(.top, 14)
-                        // Wide windows centre the actions with the words; compact pins them to the bottom.
-                        if layout.wide && !keyboardUp && !locked {
-                            actions.padding(.top, NoahTokens.Space.screen).onboardingAppear(4)
-                        }
-                        Spacer(minLength: NoahTokens.Space.l).frame(maxHeight: layout.wide ? .infinity : nil)
-                    }
-                    .onboardingPane()
+                    words(column)
                 }
                 if keyboardUp {
                     suggestions.onboardingPane(NoahTokens.Space.s).padding(.vertical, NoahTokens.Space.s)
@@ -104,6 +76,38 @@ struct RestoreWalletScreen: View {
                 .padding(.leading, 12)
                 .padding(.top, 4)
         }
+    }
+
+    private func words(_ column: OnboardingColumn) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
+            Spacer(minLength: 0).frame(maxHeight: column.lead)
+            WordCountPicker(count: draft.input.words.count, select: selectCount)
+                .disabled(locked)
+                .padding(.top, column.firstTop(compact: 18))
+                .onboardingAppear(2)
+            grid
+                .id(draft.generation)
+                .secretShield()
+                .disabled(locked)
+                .padding(.top, 14)
+                .keyframeAnimator(initialValue: CGFloat.zero, trigger: draft.shakes) { [still = reduceMotion] content, offset in
+                    content.offset(x: still ? 0 : offset)
+                } keyframes: { _ in
+                    LinearKeyframe(-11, duration: 0.084)
+                    LinearKeyframe(9, duration: 0.084)
+                    LinearKeyframe(-6, duration: 0.084)
+                    LinearKeyframe(3, duration: 0.084)
+                    LinearKeyframe(0, duration: 0.084)
+                }
+                .onboardingAppear(3)
+            message.padding(.top, 14)
+            // Wide windows centre the actions with the words; compact pins them to the bottom.
+            if layout.wide && !keyboardUp && !locked {
+                actions.padding(.top, NoahTokens.Space.screen).onboardingAppear(4)
+            }
+            Spacer(minLength: NoahTokens.Space.l).frame(maxHeight: layout.wide ? .infinity : nil)
+        }
+        .onboardingPane()
     }
 
     private func selectCount(_ count: Int) {
@@ -275,7 +279,7 @@ struct RestorePasteControl: UIViewRepresentable {
     func makeCoordinator() -> Target { Target() }
 
     func makeUIView(context: Context) -> UIPasteControl {
-        var configuration = UIPasteControl.Configuration()
+        let configuration = UIPasteControl.Configuration()
         configuration.displayMode = .iconAndLabel
         configuration.cornerStyle = .capsule
         configuration.baseBackgroundColor = UIColor(NoahTokens.Colors.soft)
@@ -524,8 +528,8 @@ final class RecoveryWordTextField: UITextField {
     }
 
     /// ⌘C, ⌘X and any other direct call export nothing.
-    override func copy(_: Any?) {}
-    override func cut(_: Any?) {}
+    override func copy(_: Any?) { /* Blocked: never exports the phrase. */ }
+    override func cut(_: Any?) { /* Blocked: never exports the phrase. */ }
 
     override func validate(_ command: UICommand) {
         super.validate(command)

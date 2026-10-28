@@ -27,7 +27,7 @@ struct AutoBoardFunding {
         var handled: [String: Set<String>] = [:]
         var retryAfter: [String: Double] = [:]
         /// Decision 8: outputs of exit claims to this phone, per wallet. Optional so earlier ledgers stay readable.
-        var claims: [String: Set<String>]?
+        var claims: [String: Set<String>]? // swiftlint:disable:this discouraged_optional_collection - earlier ledgers lack the key
     }
     private func load() throws -> State {
         guard let raw = read() else { return .init() }
@@ -39,7 +39,8 @@ struct AutoBoardFunding {
         return try JSONDecoder().decode(State.self, from: data)
     }
     private func save(_ state: State) throws {
-        try write(String(decoding: JSONEncoder().encode(state), as: UTF8.self))
+        guard let text = try String(bytes: JSONEncoder().encode(state), encoding: .utf8) else { throw OnchainFailure.invalid }
+        try write(text)
     }
     static let retryBackoff: TimeInterval = 30
     /// A deadline beyond one backoff window means the clock moved back since saving; cap it durably once.
@@ -61,7 +62,7 @@ struct AutoBoardFunding {
     /// Decision 8: a claim to this phone's on-chain wallet isn't a deposit. Its outputs join the
     /// handled ledger, so auto-board never offers them, and the claims set, so a later deposit's board
     /// leaves their value on-chain. One durable write. On the main actor, with the ledger's other writers.
-    @MainActor static func markClaimed(_ outpoints: Set<String>, walletID: String, store: AutoBoardFunding = .init()) throws {
+    @MainActor static func markClaimed(_ outpoints: Set<String>, walletID: String, store: Self = .init()) throws {
         var saved = try store.load()
         let handled = saved.handled[walletID] ?? [], claims = saved.claims?[walletID] ?? []
         guard !outpoints.isSubset(of: handled) || !outpoints.isSubset(of: claims) else { return }
@@ -112,78 +113,98 @@ enum BitcoinTransaction {
     static func weight(hex: String) -> UInt64? { parse(hex: hex)?.weight }
 
     static func parse(hex: String) -> (txid: String, weight: UInt64)? {
-        guard hex.count % 2 == 0 else { return nil }
+        let bytes = bytes(hex: hex)
+        var reader = TransactionReader(bytes: bytes)
+        guard reader.skip(4) else { return nil }
+        let segwit = bytes.count > 6 && bytes[4] == 0 && bytes[5] != 0
+        if segwit { reader.at += 2 }
+        let bodyStart = reader.at
+        guard let inputs = reader.varint(), inputs > 0 else { return nil }
+        for _ in 0..<inputs {
+            guard reader.skip(36), let script = reader.varint(), reader.skip(script), reader.skip(4) else { return nil }
+        }
+        guard let outputs = reader.varint() else { return nil }
+        for _ in 0..<outputs {
+            guard reader.skip(8), let script = reader.varint(), reader.skip(script) else { return nil }
+        }
+        let bodyEnd = reader.at
+        if segwit, !reader.skipWitnesses(inputs) { return nil }
+        guard reader.skip(4), reader.at == bytes.count else { return nil }
+        let stripped = Array(bytes[0..<4]) + Array(bytes[bodyStart..<bodyEnd]) + Array(bytes[(bytes.count - 4)...])
+        let hash = SHA256.hash(data: Data(SHA256.hash(data: Data(stripped))))
+        return (hash.reversed().map { String(format: "%02x", $0) }.joined(), UInt64(stripped.count * 3 + bytes.count))
+    }
+
+    /// Empty when the hex isn't whole bytes, which no transaction is.
+    private static func bytes(hex: String) -> [UInt8] {
+        guard hex.count.isMultiple(of: 2) else { return [] }
         var bytes: [UInt8] = []
         bytes.reserveCapacity(hex.count / 2)
         var index = hex.startIndex
         while index < hex.endIndex {
             let next = hex.index(index, offsetBy: 2)
-            guard let byte = UInt8(hex[index..<next], radix: 16) else { return nil }
+            guard let byte = UInt8(hex[index..<next], radix: 16) else { return [] }
             bytes.append(byte)
             index = next
         }
-        var at = 0
-        func skip(_ count: Int) -> Bool {
-            guard count >= 0, at + count <= bytes.count else { return false }
-            at += count
-            return true
-        }
-        func varint() -> Int? {
-            guard at < bytes.count else { return nil }
-            let first = bytes[at]
-            at += 1
-            if first < 0xFD { return Int(first) }
-            let width = first == 0xFD ? 2 : first == 0xFE ? 4 : 8
-            guard at + width <= bytes.count else { return nil }
-            let value = bytes[at..<at + width].reversed().reduce(UInt64(0)) { $0 << 8 | UInt64($1) }
-            at += width
-            return value <= UInt64(bytes.count) ? Int(value) : nil
-        }
-        guard skip(4) else { return nil }
-        let segwit = bytes.count > 6 && bytes[4] == 0 && bytes[5] != 0
-        if segwit { at += 2 }
-        let bodyStart = at
-        guard let inputs = varint(), inputs > 0 else { return nil }
+        return bytes
+    }
+}
+
+/// Reads a serialized transaction front to back; every read fails rather than run past the end.
+private struct TransactionReader {
+    let bytes: [UInt8]
+    var at = 0
+
+    mutating func skip(_ count: Int) -> Bool {
+        guard count >= 0, at + count <= bytes.count else { return false }
+        at += count
+        return true
+    }
+
+    mutating func varint() -> Int? {
+        guard at < bytes.count else { return nil }
+        let first = bytes[at]
+        at += 1
+        if first < 0xFD { return Int(first) }
+        let width = first == 0xFD ? 2 : first == 0xFE ? 4 : 8
+        guard at + width <= bytes.count else { return nil }
+        let value = bytes[at..<at + width].reversed().reduce(UInt64(0)) { $0 << 8 | UInt64($1) }
+        at += width
+        return value <= UInt64(bytes.count) ? Int(value) : nil
+    }
+
+    /// Each input's witness stack: a count, then that many sized items.
+    mutating func skipWitnesses(_ inputs: Int) -> Bool {
         for _ in 0..<inputs {
-            guard skip(36), let script = varint(), skip(script), skip(4) else { return nil }
-        }
-        guard let outputs = varint() else { return nil }
-        for _ in 0..<outputs {
-            guard skip(8), let script = varint(), skip(script) else { return nil }
-        }
-        let bodyEnd = at
-        if segwit {
-            for _ in 0..<inputs {
-                guard let items = varint() else { return nil }
-                for _ in 0..<items {
-                    guard let size = varint(), skip(size) else { return nil }
-                }
+            guard let items = varint() else { return false }
+            for _ in 0..<items {
+                guard let size = varint(), skip(size) else { return false }
             }
         }
-        guard skip(4), at == bytes.count else { return nil }
-        let stripped = Array(bytes[0..<4]) + Array(bytes[bodyStart..<bodyEnd]) + Array(bytes[(bytes.count - 4)...])
-        let hash = SHA256.hash(data: Data(SHA256.hash(data: Data(stripped))))
-        return (hash.reversed().map { String(format: "%02x", $0) }.joined(), UInt64(stripped.count * 3 + bytes.count))
+        return true
     }
 }
 
 /// Async reads can outlive the scene; recheck admission before evaluating or claiming their result.
 @MainActor final class AutoBoardReview {
     private let store: AutoBoardFunding
-    private var claimed: (UUID, AutoBoardFunding.Snapshot, AutoBoardFunding.Snapshot)?
+    /// The quote a preparation is for, the deposits it claimed and the funding it was built from.
+    private struct Claim { var quoteID: UUID; var deposits: AutoBoardFunding.Snapshot; var funding: AutoBoardFunding.Snapshot }
+    private var claimed: Claim?
     private let now: () -> Date
     private(set) var retryAfter = Date.distantPast
     init(store: AutoBoardFunding = .init(), now: @escaping () -> Date = Date.init) {
         self.store = store; self.now = now
     }
     func fundingFor(_ quote: OnchainQuote) throws -> AutoBoardFunding.Snapshot {
-        guard let (id, _, funding) = claimed, id == quote.id else { throw OnchainFailure.changed }
-        return funding
+        guard let claimed, claimed.quoteID == quote.id else { throw OnchainFailure.changed }
+        return claimed.funding
     }
     /// Proof also retires the preparation under the session's authority before releasing its deposits.
     func failedConfirm(_ quote: OnchainQuote, changed: Bool,
                        proveUnsubmitted: () async throws -> Bool) async throws {
-        guard let (id, funding, _) = claimed, id == quote.id else { return }
+        guard let funding = claimed?.deposits, claimed?.quoteID == quote.id else { return }
         claimed = nil
         guard try await proveUnsubmitted() else { return }
         retryAfter = changed ? now() : now().addingTimeInterval(AutoBoardFunding.retryBackoff)
@@ -203,7 +224,7 @@ enum BitcoinTransaction {
                     await discard(prepared)
                     return nil
                 }
-                claimed = (prepared.id, newly, current)
+                claimed = Claim(quoteID: prepared.id, deposits: newly, funding: current)
                 present(prepared)
                 return prepared
             } catch { await discard(prepared); throw error }

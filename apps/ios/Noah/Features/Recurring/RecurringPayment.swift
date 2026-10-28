@@ -89,8 +89,8 @@ struct RecurringPayment: Codable, Equatable, Identifiable, Sendable {
             && ["ark", "lnurl", "offer"].contains(destinationType) && !destination.isEmpty
             && ["active", "paused", "needs_attention", "needs_approval", "completed"].contains(status)
             && wholeMillisecondTimes && interval.valid && startAt.isFinite && abs(startAt) < 8.64e15
-            && (endAt == nil || (endAt!.isFinite && endAt! >= startAt))
-            && (maxOccurrences == nil || maxOccurrences! >= 1) && nextOccurrenceIndex >= 0 && nextOccurrenceIndex <= 1_000_000
+            && endAt.map { $0.isFinite && $0 >= startAt } != false
+            && maxOccurrences.map { $0 >= 1 } != false && nextOccurrenceIndex >= 0 && nextOccurrenceIndex <= 1_000_000
     }
     func validateInput(now: Double) throws {
         guard !unsupportedStorage, wholeMillisecondTimes else { throw RecurringError.message(Self.unsupportedMessage) }
@@ -101,29 +101,35 @@ struct RecurringPayment: Codable, Equatable, Identifiable, Sendable {
               !destination.isEmpty else { throw RecurringError.message("Enter an Ark address, Lightning address or BOLT12 offer.") }
         guard interval.valid else { throw RecurringError.message("Custom intervals must be between 1 and 365 days.") }
         guard startAt.isFinite, startAt >= now - 300_000 else { throw RecurringError.message("The first payment can't be in the past.") }
-        guard endAt == nil || (endAt!.isFinite && endAt! >= startAt) else { throw RecurringError.message("The end date must be after the first payment.") }
-        guard maxOccurrences == nil || maxOccurrences! >= 1 else { throw RecurringError.message("Enter how many payments should be made.") }
+        guard endAt.map({ $0.isFinite && $0 >= startAt }) != false else { throw RecurringError.message("The end date must be after the first payment.") }
+        guard maxOccurrences.map({ $0 >= 1 }) != false else { throw RecurringError.message("Enter how many payments should be made.") }
     }
     func occurrence(_ index: Int, zone: TimeZone = .current) -> Double {
         var calendar = Calendar(identifier: .gregorian)
         calendar.timeZone = zone
         let start = Date(timeIntervalSince1970: startAt / 1000)
         var parts = calendar.dateComponents([.year, .month, .day, .hour, .minute, .second], from: start)
+        // The Gregorian calendar resolves every component it was asked for and every date built from them.
+        guard let year = parts.year, let month = parts.month, let day = parts.day else { preconditionFailure("gregorian date components") }
+        func date(_ components: DateComponents) -> Date {
+            guard let date = calendar.date(from: components) else { preconditionFailure("gregorian date") }
+            return date
+        }
         let milliseconds = startAt - floor(startAt / 1000) * 1000
         let steps = index * interval.every
         if interval.unit == "month" {
-            let totalMonths = parts.month! - 1 + steps
-            parts.year! += totalMonths / 12
+            let totalMonths = month - 1 + steps
+            parts.year = year + totalMonths / 12
             parts.month = totalMonths % 12 + 1
             var first = parts
             first.day = 1
-            let days = calendar.range(of: .day, in: .month, for: calendar.date(from: first)!)!.count
-            parts.day = min(parts.day!, days)
+            guard let days = calendar.range(of: .day, in: .month, for: date(first)) else { preconditionFailure("gregorian month length") }
+            parts.day = min(day, days.count)
         } else {
-            parts.day! += steps * (interval.unit == "week" ? 7 : 1)
+            parts.day = day + steps * (interval.unit == "week" ? 7 : 1)
         }
         // Calendar's compatible resolution matches JS Date: first fold, forward by the gap.
-        return (calendar.date(from: parts)!.timeIntervalSince1970 * 1000).rounded() + milliseconds
+        return (date(parts).timeIntervalSince1970 * 1000).rounded() + milliseconds
     }
     func next(_ index: Int, zone: TimeZone = .current) -> Double? {
         guard !unsupportedStorage else { return nil }
@@ -135,7 +141,13 @@ struct RecurringPayment: Codable, Equatable, Identifiable, Sendable {
         var kind: String
         var occurrenceIndex: Int?
         var scheduledFor: Double?
+        // swiftlint:disable:next discouraged_optional_collection - persisted in journals; only pay plans carry the key
         var skippedIndices: [Int]?
+        /// A pay plan's occurrence. Only pay plans are settled, so any other kind is a programming error.
+        var due: (index: Int, at: Double) {
+            guard let occurrenceIndex, let scheduledFor else { preconditionFailure("only a pay plan has an occurrence") }
+            return (occurrenceIndex, scheduledFor)
+        }
     }
     func plan(now: Double, zone: TimeZone = .current, ignoreBackoff: Bool = false) -> Plan {
         guard !unsupportedStorage, status == "active" else { return .init(kind: "idle") }
@@ -167,10 +179,10 @@ struct RecurringPayment: Codable, Equatable, Identifiable, Sendable {
             attemptedAt: now,
             status: "skipped",
             amountSat: amountSat) }
-            + [Run(occurrenceIndex: plan.occurrenceIndex!, scheduledFor: plan.scheduledFor!, attemptedAt: now, status: "success", amountSat: amountSat)]
+            + [Run(occurrenceIndex: plan.due.index, scheduledFor: plan.due.at, attemptedAt: now, status: "success", amountSat: amountSat)]
         runs = Array((additions.reversed() + runs).prefix(24))
         occurrencesPaid += 1; consecutiveFailures = 0; lastError = nil; issue = nil; retryNotBefore = nil; inFlight = nil; updatedAt = now
-        advance(plan.occurrenceIndex! + 1, zone: zone)
+        advance(plan.due.index + 1, zone: zone)
     }
     mutating func failure(_ plan: Plan, message: String, retryable: Bool, now: Double, issue: RecurringIssue? = nil) {
         inFlight = nil; consecutiveFailures += 1; lastError = message; self
@@ -178,8 +190,8 @@ struct RecurringPayment: Codable, Equatable, Identifiable, Sendable {
         if !retryable { status = "needs_attention" }
         retryNotBefore = retryable ? now + min(900_000 * pow(2, Double(max(0, min(consecutiveFailures, 16) - 1))), 21_600_000) : nil
         runs = Array(([Run(
-            occurrenceIndex: plan.occurrenceIndex!,
-            scheduledFor: plan.scheduledFor!,
+            occurrenceIndex: plan.due.index,
+            scheduledFor: plan.due.at,
             attemptedAt: now,
             status: "failed",
             amountSat: amountSat,

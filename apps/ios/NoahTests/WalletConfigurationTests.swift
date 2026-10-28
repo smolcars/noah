@@ -20,7 +20,7 @@ struct WalletConfigurationTests {
         #expect(RegtestHost.host(info: ["NoahRegtestHost": "192.168.6.67"]) == "192.168.6.67")
         // Unset build settings expand to "", which must keep the simulator defaults.
         #expect(RegtestHost.host(info: ["NoahRegtestHost": ""]) == "localhost")
-        #expect(RegtestHost.host(info: nil) == "localhost")
+        #expect(RegtestHost.host(info: [:]) == "localhost")
         #expect(ServerEndpoint.baseURL(for: .regtest, environment: [:], info: ["NoahRegtestServerURL": ""])
             == URL(string: "http://localhost:3000"))
         #expect(ServerEndpoint.baseURL(for: .regtest, environment: [:], info: ["NoahRegtestServerURL": "http://192.168.6.67:3000"])
