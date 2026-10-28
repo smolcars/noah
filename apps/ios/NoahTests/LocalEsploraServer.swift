@@ -28,7 +28,7 @@ final class LocalEsploraServer: @unchecked Sendable {
             connection.start(queue: queue)
             connection.receive(minimumIncompleteLength: 1, maximumLength: 8192) { [weak self] request, _, _, _ in
                 guard let self else { return }
-                let line = String(decoding: request ?? Data(), as: UTF8.self).components(separatedBy: "\r\n")[0]
+                let line = (String(bytes: request ?? Data(), encoding: .utf8) ?? "").components(separatedBy: "\r\n")[0]
                 lock.withLock { received.append(line) }
                 switch reply {
                 case .silent: break
@@ -36,7 +36,7 @@ final class LocalEsploraServer: @unchecked Sendable {
                     connection.send(content: Data(response.utf8), completion: .contentProcessed { _ in if close { connection.cancel() } })
                 case .notFound:
                     let genesis = "0f9188f13cb7b2c71f2a335e3a4fc328bf5beb436012afca590b1a11466e2206"
-                    let response = String(decoding: request ?? Data(), as: UTF8.self).contains("GET /block-height/0 ")
+                    let response = (String(bytes: request ?? Data(), encoding: .utf8) ?? "").contains("GET /block-height/0 ")
                         ? "HTTP/1.1 200 OK\r\nContent-Length: 64\r\nConnection: close\r\n\r\n\(genesis)"
                         : "HTTP/1.1 404 Not Found\r\nContent-Length: 0\r\nConnection: close\r\n\r\n"
                     connection.send(content: Data(response.utf8), completion: .contentProcessed { _ in connection.cancel() })

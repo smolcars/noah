@@ -60,7 +60,7 @@ struct FeedbackPayloadTests {
         #expect(payload.email == nil)
         #expect(payload.deviceInfo?.osName == "iOS")
         let data = try JSONEncoder().encode(payload)
-        let json = String(decoding: data, as: UTF8.self)
+        let json = try #require(String(bytes: data, encoding: .utf8))
         #expect(json.contains("device_info"))
         #expect(json.contains("app_version"))
         draft.subject += "a"
@@ -118,7 +118,7 @@ struct SettingsFeatureTests {
         #expect(profile.amountUnit == .sats)
         profile.preferredCurrency = "JPY"
         try storage.setPersistedState(profile, key: PersistedProfileState.key, version: 0)
-        let encoded = try #require(storage.string(forKey: PersistedProfileState.key)).data(using: .utf8)!
+        let encoded = try Data(#require(storage.string(forKey: PersistedProfileState.key)).utf8)
         let roundTrip = try JSONDecoder().decode(PersistedEnvelope<PersistedProfileState>.self, from: encoded)
         #expect(roundTrip.version == 0)
         #expect(roundTrip.state.displayName == "Alice")
@@ -175,10 +175,11 @@ struct SettingsFeatureTests {
         let storage = try SettingsStorage(rootPath: root.path, instanceID: UUID().uuidString)
         _ = try storage.updateServerState { $0.isBackupEnabled = false; $0.lightningAddress = "alice@example.com" }
         let transport = Transport()
+        let serverURL = try #require(URL(string: "http://localhost"))
         let server = ServerRegistration(variant: .regtest, settings: storage,
-                                        client: Client(serverURL: URL(string: "http://localhost")!, transport: transport))
+                                        client: Client(serverURL: serverURL, transport: transport))
         await transport.setFailure(true)
-        do { try await server.setBackupEnabled(true); Issue.record("Expected failed update") } catch {}
+        await #expect(throws: (any Error).self) { try await server.setBackupEnabled(true) }
         #expect(server.state.isBackupEnabled == false)
         await transport.setFailure(false)
         try await server.setBackupEnabled(true)
@@ -210,7 +211,7 @@ extension BackupCoordinatorTests {
         #expect(world.state.lastBackupId == nil)
         #expect(world.state.backupPending)
         try await coordinator.flush(.manual, requireEnabled: false)
-        #expect(world.calls.last! == nil, "same database must be uploaded again after deletion")
+        #expect(world.calls.last == .some(nil), "same database must be uploaded again after deletion")
         #expect(world.state.lastBackupStatus == .success)
         await coordinator.cancelScheduled()
     }

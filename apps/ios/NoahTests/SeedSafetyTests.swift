@@ -163,7 +163,8 @@ struct SeedSafetyTests {
         #expect(sqlite3_open(location.database.path, &db) == SQLITE_OK)
         #expect(sqlite3_exec(
             db,
-            "CREATE TABLE bark_properties (id INTEGER PRIMARY KEY, network TEXT, fingerprint TEXT); INSERT INTO bark_properties VALUES (1, 'regtest', '00000000');",
+            "CREATE TABLE bark_properties (id INTEGER PRIMARY KEY, network TEXT, fingerprint TEXT); INSERT INTO b"
+                + "ark_properties VALUES (1, 'regtest', '00000000');",
             nil,
             nil,
             nil) == SQLITE_OK)

@@ -19,7 +19,7 @@ struct SettingsShotTests {
 
     @Test(.timeLimit(.minutes(60))) func presentStates() async throws {
         let scene = try #require(UIApplication.shared.connectedScenes.first as? UIWindowScene)
-        let window = try #require(scene.windows.first { $0.isKeyWindow })
+        let window = try #require(scene.keyWindow)
         let original = window.rootViewController
         let folder = URL.documentsDirectory
         let request = folder.appending(path: "set-shot"), ready = folder.appending(path: "set-shot-ready")
@@ -43,7 +43,7 @@ struct SettingsShotTests {
             if !state.isEmpty && state != current {
                 host.rootView = AnyView(Color.clear)
                 try await Task.sleep(for: .milliseconds(150))
-                let (view, root) = try await fixture(state)
+                let (view, root) = try fixture(state)
                 roots.append(root)
                 host.rootView = view
                 try await Task.sleep(for: .milliseconds(1_400))
@@ -87,7 +87,7 @@ struct SettingsShotTests {
                                                 execute: { _ in throw OnchainFailure.unavailable }, attempt: { [] }, acknowledge: { _ in }))
     }
 
-    private func fixture(_ state: String) async throws -> (AnyView, URL) {
+    private func fixture(_ state: String) throws -> (AnyView, URL) {
         let root = FileManager.default.temporaryDirectory.appending(path: "set-shot-\(UUID())")
         let storage = try SettingsStorage(rootPath: root.appending(path: "mmkv").path)
         var server = PersistedServerState()
@@ -136,12 +136,12 @@ struct SettingsShotTests {
             phrase: .init(authenticate: { _ in state == "recovery-shown" ? .authenticated : .denied }, hasNoScreenLock: { false },
                           words: { Self.phrase }, generation: { 0 }),
             executor: recurring.executor,
-            backups: [("412", 7_200), ("409", 86_400), ("398", 3 * 86_400)].enumerated().map { index, item in
+            backups: [(412, 7_200), (409, 86_400), (398, 3 * 86_400)].enumerated().map { index, item in
                 .init(
                     backupId: "b\(index)",
                     createdAt: Date(timeIntervalSinceNow: -Double(item.1)).formatted(Date.ISO8601FormatStyle(includingFractionalSeconds: true)),
                     encryptedSha256: ActivityShotTests.hex("b\(index)"),
-                    encryptedSize: Int64(item.0)! * 1024,
+                    encryptedSize: Int64(item.0) * 1024,
                     formatVersion: 2)
             },
             vtxoLifetime: 4_320, boardingMinimum: 20_000,

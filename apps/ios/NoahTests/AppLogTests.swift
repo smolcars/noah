@@ -232,8 +232,8 @@ struct AppLogTests {
 
     @Test func normalizedWalletPhraseCannotReachLogs() throws {
         let phrase = Array(repeating: "abandon", count: 11).joined(separator: " ") + " about"
-        let fullwidth = String(String.UnicodeScalarView(phrase.unicodeScalars.map { scalar in
-            scalar.value >= 97 && scalar.value <= 122 ? UnicodeScalar(scalar.value + 0xFEE0)! : scalar
+        let fullwidth = try String(String.UnicodeScalarView(phrase.unicodeScalars.map { scalar in
+            try scalar.value >= 97 && scalar.value <= 122 ? #require(UnicodeScalar(scalar.value + 0xFEE0)) : scalar
         }))
         #expect(try StoredSeed.normalized(fullwidth) == phrase)
         #expect(LogFile.redact("failed to import: " + fullwidth) == "[redacted]")

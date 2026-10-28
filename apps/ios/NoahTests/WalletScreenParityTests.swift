@@ -3,9 +3,9 @@ import Foundation
 import Testing
 
 struct WalletScreenParityTests {
+    struct SelectionRow: Decodable { var id: String; var amount: UInt64 }
     struct Selection: Decodable {
-        struct Row: Decodable { var id: String; var amount: UInt64 }
-        var vtxos: [Row]
+        var vtxos: [SelectionRow]
         var ids: Set<String>
     }
     struct Selected: Decodable { var ids: [String]; var amount: UInt64 }

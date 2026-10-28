@@ -62,7 +62,8 @@ struct BarkLogTests {
         defer { try? FileManager.default.removeItem(at: directory) }
         let file = LogFile(directory: directory)
         BarkLog(file: file).log(level: .warn, target: "bark::onchain", message:
-            #"fee estimation failed: HttpResponse { status: 404, message: "No route: /unknown/fakeUnregisteredCredential; \"nested\"" }; caused by: upstream unavailable"#)
+            #"fee estimation failed: HttpResponse { status: 404, message: "No route: /unknown/fakeUnregisteredCred"#
+                + #"ential; \"nested\"" }; caused by: upstream unavailable"#)
         #expect(file.lines().first?.hasSuffix(
             "HttpResponse { status: 404 }") == true)
     }

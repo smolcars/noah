@@ -41,11 +41,11 @@ import Testing
         #expect(OnchainAmountInput.sats("99999999999999999999") == nil)
     }
 
-    @Test func largeOccurrenceLimitsKeepTheirValue() {
+    @Test func largeOccurrenceLimitsKeepTheirValue() throws {
         var schedule = RecurringScheduleTests.schedule(start: 1_000)
         schedule.maxOccurrences = 3_000_000_000
         #expect(schedule.maxOccurrences == 3_000_000_000)
-        let text = L10n.plural("After {n} payments", count: schedule.maxOccurrences!, locale: "en")
+        let text = try L10n.plural("After {n} payments", count: #require(schedule.maxOccurrences), locale: "en")
         #expect(text.hasPrefix("After ") && text.filter(\.isNumber) == "3000000000")
     }
 }

@@ -5,7 +5,9 @@ import Testing
 /// Home asks for a backup until the user confirms one. Only a restore counts
 /// as backed up; RN and earlier native builds never recorded an acknowledgement.
 struct RecoveryPhraseBackupTests {
-    static let rnWallet = #"{"state":{"isInitialized":true,"isWalletLoaded":true,"staticVtxoPubkey":"02ab","isBiometricsEnabled":false,"isDebugModeEnabled":false,"isWalletSuspended":false,"hasSeenBatteryOptimizationPrompt":true},"version":0}"#
+    static let rnWallet = #"{"state":{"isInitialized":true,"isWalletLoaded":true,"staticVtxoPubkey":"02ab","isBiometricsEnabled""#
+        + #":false,"isDebugModeEnabled":false,"isWalletSuspended":false,"hasSeenBatteryOptimizationPrompt":true}"#
+        + #","version":0}"#
 
     private func storage() throws -> (SettingsStorage, URL) {
         let root = FileManager.default.temporaryDirectory.appending(path: "phrase-backup-\(UUID())")

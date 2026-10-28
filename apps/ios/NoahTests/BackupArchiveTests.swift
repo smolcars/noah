@@ -47,7 +47,8 @@ struct BackupArchiveTests {
         let snapshot = try makeSnapshot()
         let staging = root.appending(path: "staging")
         try FileManager.default.createDirectory(at: staging, withIntermediateDirectories: false)
-        let rnManifest = #"{"formatVersion":2,"createdAt":"2026-10-19T19:15:37.123Z","snapshotSha256":"ab","network":"regtest","walletFingerprint":"ea8c6cee","serverPubkey":"02ff","mailboxPubkey":null,"barkSchemaVersion":42}"#
+        let rnManifest = #"{"formatVersion":2,"createdAt":"2026-10-19T19:15:37.123Z","snapshotSha256":"ab","network":"regtest","#
+            + #""walletFingerprint":"ea8c6cee","serverPubkey":"02ff","mailboxPubkey":null,"barkSchemaVersion":42}"#
         try Data(rnManifest.utf8).write(to: staging.appending(path: "manifest.json"))
         try FileManager.default.copyItem(at: snapshot, to: staging.appending(path: "db.sqlite"))
         let zip = root.appending(path: "rn.zip")
@@ -57,11 +58,12 @@ struct BackupArchiveTests {
 
         let opened = try BackupArchive.open(encrypted: encrypted, mnemonic: mnemonic, into: root.appending(path: "restore"))
         #expect(opened.manifest == manifest)
-        #expect(String(decoding: try BackupArchive.encode(manifest), as: UTF8.self) == rnManifest)
+        #expect(try #require(String(bytes: BackupArchive.encode(manifest), encoding: .utf8)) == rnManifest)
     }
 
     @Test func manifestParsingIsAsStrictAsReactNative() throws {
-        let valid = #"{"formatVersion":2,"createdAt":"x","snapshotSha256":"a","network":"regtest","walletFingerprint":"f","serverPubkey":null,"mailboxPubkey":null,"barkSchemaVersion":42}"#
+        let valid = #"{"formatVersion":2,"createdAt":"x","snapshotSha256":"a","network":"regtest","walletFingerprint":"f","#
+            + #""serverPubkey":null,"mailboxPubkey":null,"barkSchemaVersion":42}"#
         #expect(try BackupArchive.parseManifest(Data(valid.utf8)).serverPubkey == nil)
         for broken in [
             valid.replacingOccurrences(of: #""formatVersion":2"#, with: #""formatVersion":1"#),
@@ -235,19 +237,19 @@ struct BackupArchiveTests {
         let fileText: String?
     }
 
-    struct ArchiveExpected: Decodable {
-        struct Manifest: Decodable {
-            let formatVersion: Int
-            let createdAt: String
-            let snapshotSha256: String
-            let network: String
-            let walletFingerprint: String
-            let serverPubkey: String?
-            let mailboxPubkey: String?
-            let barkSchemaVersion: Int
-        }
+    struct ExpectedManifest: Decodable {
+        let formatVersion: Int
+        let createdAt: String
+        let snapshotSha256: String
+        let network: String
+        let walletFingerprint: String
+        let serverPubkey: String?
+        let mailboxPubkey: String?
+        let barkSchemaVersion: Int
+    }
 
-        let manifest: Manifest?
+    struct ArchiveExpected: Decodable {
+        let manifest: ExpectedManifest?
         let files: [String: String]
     }
 

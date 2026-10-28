@@ -8,8 +8,14 @@ import Testing
 /// Opt-in, owned simulator only. The host keeps phrases/encrypted files in memory.
 @Suite(.enabled(if: ProcessInfo.processInfo.environment["NOAH_FUNDED_BACKUP_URL"] != nil), .serialized)
 struct FundedCrossPlatformBackupTests {
-    private var base: URL { URL(string: ProcessInfo.processInfo.environment["NOAH_FUNDED_BACKUP_URL"]!)! }
+    private let base: URL
 
+    init() throws {
+        let base = try #require(ProcessInfo.processInfo.environment["NOAH_FUNDED_BACKUP_URL"])
+        self.base = try #require(URL(string: base))
+    }
+
+    // swiftlint:disable:next discouraged_optional_collection - no body means a GET
     private func request(_ path: String, _ body: [String: Any]? = nil) async throws -> Data {
         var request = URLRequest(url: base.appending(path: path))
         request.timeoutInterval = 180
@@ -39,7 +45,7 @@ struct FundedCrossPlatformBackupTests {
 
     @Test func fundedTransfer() async throws {
         try #require(AppVariant.current == .regtest)
-        let mode = ProcessInfo.processInfo.environment["NOAH_FUNDED_BACKUP_MODE"]!
+        let mode = try #require(ProcessInfo.processInfo.environment["NOAH_FUNDED_BACKUP_MODE"])
         let root = FileManager.default.temporaryDirectory.appending(path: "funded-backup-\(UUID())")
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: root) }
@@ -61,7 +67,7 @@ struct FundedCrossPlatformBackupTests {
                     while ContinuousClock.now < deadline {
                         try await session.claimLightningReceives()
                         try await session.sync()
-                        if try await session.summary()!.spendableSats > previous { break }
+                        if try #require(try await session.summary()).spendableSats > previous { break }
                         try await Task.sleep(for: .seconds(1))
                     }
                     let funded = try #require(try await session.summary())
@@ -93,7 +99,7 @@ struct FundedCrossPlatformBackupTests {
                 _ = try await request("check/android/before-sync", ["state": try await state(session)])
                 try await session.sync()
                 _ = try await request("check/android/after-sync", ["state": try await state(session)])
-                let destination = String(decoding: try await request("recipient"), as: UTF8.self)
+                let destination = try #require(String(bytes: await request("recipient"), encoding: .utf8))
                 let payment = SendPayment(destination: destination, method: "ark", amount: 1000)
                 let quote = try await session.quoteSend(payment)
                 let snapshot = try await session.prepareSend(payment, quote: quote)

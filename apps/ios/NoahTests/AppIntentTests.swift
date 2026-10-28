@@ -35,7 +35,7 @@ import Testing
                                       bolt11Invoice: { _, _ in Issue.record("Unexpected wallet access"); return .init(paymentRequest: "") },
                                       refreshBalance: { 0 })
         await NoahIntentWallet.$current.withValue(wallet) {
-            var intent = CreateNoahLightningInvoiceIntent(); intent.amountSats = amount
+            let intent = CreateNoahLightningInvoiceIntent(); intent.amountSats = amount
             await #expect(throws: (any Error).self) { _ = try await intent.perform() }
         }
     }
@@ -46,11 +46,11 @@ import Testing
             return .init(paymentRequest: "ln-invoice")
         }, refreshBalance: { 0 })
         try await NoahIntentWallet.$current.withValue(wallet) {
-            var intent = CreateNoahLightningInvoiceIntent(); intent.amountSats = 42; intent.invoiceDescription = "  memo\n"
+            let intent = CreateNoahLightningInvoiceIntent(); intent.amountSats = 42; intent.invoiceDescription = "  memo\n"
             let result = try await intent.perform()
             #expect(result.value == "ln-invoice")
             if #available(iOS 26.0, *) {
-                var snippet = CreateNoahLightningInvoiceWithSnippetIntent(); snippet.amountSats = 42; snippet.invoiceDescription = "memo"
+                let snippet = CreateNoahLightningInvoiceWithSnippetIntent(); snippet.amountSats = 42; snippet.invoiceDescription = "memo"
                 #expect(try await snippet.perform().value == "ln-invoice")
             }
             intent.invoiceDescription = String(repeating: "🪙", count: 320)

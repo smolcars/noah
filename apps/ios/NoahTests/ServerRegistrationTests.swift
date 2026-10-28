@@ -10,7 +10,7 @@ struct ServerRegistrationTests {
         var paths: [String] = []
         let failMailbox: Bool
         init(failMailbox: Bool) { self.failMailbox = failMailbox }
-        func send(_ request: HTTPRequest, body _: HTTPBody?, baseURL _: URL, operationID: String) async throws -> (HTTPResponse, HTTPBody?) {
+        func send(_ request: HTTPRequest, body _: HTTPBody?, baseURL _: URL, operationID: String) throws -> (HTTPResponse, HTTPBody?) {
             paths.append(request.path ?? "")
             if operationID == Operations.CheckAppVersion.id {
                 return (.init(status: .ok), HTTPBody(#"{"update_required":false,"minimum_required_version":"0.0.1"}"#))
@@ -19,7 +19,8 @@ struct ServerRegistrationTests {
                 return (
                     .init(status: .ok),
                     HTTPBody(
-                        #"{"display_name":"New","email":null,"is_email_verified":false,"lightning_address":"new@localhost.com","nostr_pubkey":null,"status":"OK","user_status":"active"}"#))
+                        #"{"display_name":"New","email":null,"is_email_verified":false,"lightning_address":"new@localhost.com""#
+                            + #","nostr_pubkey":null,"status":"OK","user_status":"active"}"#))
             }
             if failMailbox { throw URLError(.notConnectedToInternet) }
             return (.init(status: .ok), HTTPBody(#"{"success":true}"#))
@@ -33,8 +34,9 @@ struct ServerRegistrationTests {
         let settings = try SettingsStorage(rootPath: root.path)
         _ = try settings.updateServerState { $0.isRegisteredWithServer = true; $0.isMailboxAuthorizationEnabled = stop != "disabled" }
         let transport = ResetTransport(failMailbox: stop == "mailbox")
+        let serverURL = try #require(URL(string: "http://localhost"))
         let service = ServerRegistration(variant: .regtest, settings: settings,
-                                         client: Client(serverURL: URL(string: "http://localhost")!, transport: transport),
+                                         client: Client(serverURL: serverURL, transport: transport),
                                          registrationAddress: { "ark-test" },
                                          mailboxAuthorization: { .init(encoded: "encoded", expiry: $0, mailboxId: "mailbox") })
         var steps: [String] = []
@@ -128,7 +130,7 @@ struct ServerRegistrationTests {
         #expect(object.isEmpty)
         let before = service.state
         await transport.failNextLogin()
-        do { try await service.reportLastLogin(); Issue.record("Expected network failure") } catch {}
+        await #expect(throws: (any Error).self) { try await service.reportLastLogin() }
         #expect(service.state == before)
     }
 }

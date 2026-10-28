@@ -3,11 +3,11 @@ import Foundation
 import Testing
 
 @MainActor struct SettingsToolsFixtureTests {
+    struct Height: Decodable { let variant: String; let override: String?; let host: String; let expected: String }
+    struct Filename: Decodable { let milliseconds: Double; let expected: String }
+    struct Imports: Decodable { let ids: [String]; let pretty: String }
+    struct Logs: Decodable { let lines: [String]; let error: String }
     struct Table: Decodable {
-        struct Height: Decodable { let variant: String; let override: String?; let host: String; let expected: String }
-        struct Filename: Decodable { let milliseconds: Double; let expected: String }
-        struct Imports: Decodable { let ids: [String]; let pretty: String }
-        struct Logs: Decodable { let lines: [String]; let error: String }
         let blockHeight: [Height]; let filenames: [Filename]; let imports: Imports; let logs: Logs
     }
     @Test func sharedToolsParity() async throws {

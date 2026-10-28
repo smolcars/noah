@@ -41,6 +41,7 @@ struct BackupCoordinatorTests {
     }
 
     /// Fake `performBackup` and MMKV.
+    struct Boom: Error {}
     final class World: @unchecked Sendable {
         private let lock = NSLock()
         private var _state = PersistedBackupState()
@@ -59,8 +60,6 @@ struct BackupCoordinatorTests {
         func hold() { lock.withLock { holdNext = true } }
         func releaseHeld() { lock.withLock { held?.resume(); held = nil } }
         var isHolding: Bool { lock.withLock { held != nil } }
-
-        struct Boom: Error {}
 
         func dependencies(clock: ManualClock) -> BackupCoordinator.Dependencies {
             BackupCoordinator.Dependencies(
@@ -168,7 +167,7 @@ struct BackupCoordinatorTests {
         }
         let coordinator = BackupCoordinator(dependencies: dependencies)
         await ForegroundExecution.run(isActive: { true }) {
-            await #expect(throws: World.Boom.self) { try await coordinator.flush(.manual) }
+            await #expect(throws: Boom.self) { try await coordinator.flush(.manual) }
         }
         await eventually { await clock.pending == [BackupCoordinator.firstRetry] }
         await clock.fireNext()
@@ -222,7 +221,7 @@ struct BackupCoordinatorTests {
         let world = World(), clock = ManualClock()
         world.fail(times: 1)
         let coordinator = BackupCoordinator(dependencies: world.dependencies(clock: clock))
-        await #expect(throws: World.Boom.self) { try await coordinator.flush(.manual) }
+        await #expect(throws: Boom.self) { try await coordinator.flush(.manual) }
         #expect(world.state.lastBackupError == "An unknown error occurred while backing up.")
         var legacy = world.state
         legacy.lastBackupError = "ClientError"
@@ -459,7 +458,9 @@ struct BackupCoordinatorTests {
     }
 
     @Test func storeReadsAndWritesTheReactNativeShape() throws {
-        let rn = #"{"state":{"backupPending":true,"lastBackupAt":1784160000000,"lastBackupAttemptAt":null,"lastBackupStatus":"in_progress","lastBackupError":null,"lastBackupId":"b1","lastUploadedSnapshotSha256":"ab"},"version":0}"#
+        let rn = #"{"state":{"backupPending":true,"lastBackupAt":1784160000000,"lastBackupAttemptAt":null,"lastBackupSt"#
+            + #"atus":"in_progress","lastBackupError":null,"lastBackupId":"b1","lastUploadedSnapshotSha256":"ab"},"v"#
+            + #"ersion":0}"#
         let decoded = try JSONDecoder().decode(PersistedEnvelope<PersistedBackupState>.self, from: Data(rn.utf8)).state
         #expect(decoded.lastBackupStatus == .inProgress)
         #expect(decoded.lastBackupAt == 1_784_160_000_000)

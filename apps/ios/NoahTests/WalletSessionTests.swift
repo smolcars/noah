@@ -194,7 +194,7 @@ struct WalletSessionTests {
             let previous = EsploraSettings.Selection(variant: "signet")
             let session = offlineSession {
                 if EsploraOpening.selection == candidate {
-                    do { _ = try await URLSession.shared.data(from: URL(string: server.url)!) }
+                    do { _ = try await URLSession.shared.data(from: #require(URL(string: server.url))) }
                     catch { if !lateSuccess { throw error } }
                 }
             }
@@ -366,7 +366,7 @@ struct WalletSessionTests {
         await #expect(throws: CancellationError.self) { try await cancelled.value }
         let budget = RecurringSubmissionBudget()
         budget.revoke()
-        try await RecurringSubmissionBudget.$current.withValue(budget) {
+        await RecurringSubmissionBudget.$current.withValue(budget) {
             // Independent tasks inherit expiry, but not caller cancellation.
             await #expect(throws: CancellationError.self) {
                 try await Task { try await session.withOpenWallet { _ in true } }.value
@@ -416,12 +416,22 @@ struct WalletSessionTests {
                 ReceiveRequest(arkAddress: "unused-ark-address", onchainAddress: "unused-onchain-address"))
             let changes = try await session.stateChanges()
             let receiveReader = Task {
-                do { for try await _ in completions {} }
-                catch is CancellationError {}
+                do {
+                    for try await _ in completions {
+                        // Only waiting for the stream to end.
+                    }
+                } catch is CancellationError {
+                    // Closing cancels the wait.
+                }
             }
             let changeReader = Task {
-                do { for try await _ in changes {} }
-                catch is CancellationError {}
+                do {
+                    for try await _ in changes {
+                        // Only waiting for the stream to end.
+                    }
+                } catch is CancellationError {
+                    // Closing cancels the wait.
+                }
             }
             // Exercise pending SDK waits as well as the immediate-close registration gap.
             try await Task.sleep(for: .milliseconds(10))

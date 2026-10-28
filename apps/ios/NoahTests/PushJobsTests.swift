@@ -259,7 +259,7 @@ struct PushJobsTests {
 
     actor ReportTransport: ClientTransport {
         var operations: [String] = []
-        func send(_: HTTPRequest, body _: HTTPBody?, baseURL _: URL, operationID: String) async throws -> (HTTPResponse, HTTPBody?) {
+        func send(_: HTTPRequest, body _: HTTPBody?, baseURL _: URL, operationID: String) -> (HTTPResponse, HTTPBody?) {
             operations.append(operationID)
             return (.init(status: .ok), HTTPBody(#"{"success":true}"#))
         }
@@ -271,7 +271,8 @@ struct PushJobsTests {
         let fake = ServerAuthTests.Fake(nextToken: ServerAuthTests.token(expiresIn: 72 * 3600, now: now))
         fake.holdLogin = true
         let transport = ReportTransport()
-        let client = Client(serverURL: URL(string: "https://noah.invalid")!, transport: transport,
+        let serverURL = try #require(URL(string: "https://noah.invalid"))
+        let client = Client(serverURL: serverURL, transport: transport,
                             middlewares: [
                                 ServerFailureMiddleware(),
                                 BearerAuthMiddleware(tokens: AuthTokenProvider(dependencies: fake.dependencies(now: now))),

@@ -8,12 +8,14 @@ struct LaunchStateTests {
         let read: String
         let raw: String?
         var result: KeychainPassword.ReadResult {
-            switch read {
-            case "found": .found(raw!)
-            case "absent": .notFound
-            case "conflict": .unavailable(errSecDuplicateItem)
-            case "invalidEncoding": .unavailable(errSecDecode)
-            default: .unavailable(errSecInteractionNotAllowed)
+            get throws {
+                switch read {
+                case "found": .found(try #require(raw))
+                case "absent": .notFound
+                case "conflict": .unavailable(errSecDuplicateItem)
+                case "invalidEncoding": .unavailable(errSecDecode)
+                default: .unavailable(errSecInteractionNotAllowed)
+                }
             }
         }
     }
@@ -29,7 +31,7 @@ struct LaunchStateTests {
         let cases = try Fixtures.load(name, input: Input.self, expected: Expected.self)
         #expect(cases.count == count)
         for item in cases {
-            let sources = item.input.sources.map(\.result)
+            let sources = try item.input.sources.map { try $0.result }
             let result = LaunchState.inspect(sources: sources, walletDatabaseExists: item.input.walletDatabaseExists,
                                              fingerprintMatches: item.input.databaseFingerprint != "mismatch", multipleDatabases: item.input.multipleDatabases)
             #expect(result.state.rawValue == item.expected.outcome, "\(item.name)")

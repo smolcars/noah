@@ -30,7 +30,7 @@ struct SettingsNavigationTests {
         #expect(SettingsPath.select(.backup, in: [.settings], wide: false) == [.settings, .page(.backup)])
         #expect(SettingsPath.select(.backup, in: open, wide: true) == [.settings, .page(.backup)])
         #expect(SettingsPath.select(.vtxo("a"), in: open, wide: true) == open)
-        #expect(SettingsPath.base(open + [.page(.recurring)]) == [])
+        #expect(SettingsPath.base(open + [.page(.recurring)]).isEmpty)
         #expect(SettingsPath.base([.map, .settings]) == [.map])
     }
 }

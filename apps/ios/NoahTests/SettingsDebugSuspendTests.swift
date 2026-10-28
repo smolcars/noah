@@ -14,7 +14,7 @@ import Testing
         #expect(unlock.remaining == 1)
         let fifth = unlock.tap(at: start.addingTimeInterval(6))
         #expect(fifth)
-        #expect(unlock.count == 0)
+        #expect(unlock.count == 0) // swiftlint:disable:this empty_count - a tap counter, not a collection
 
         var paused = DebugUnlock()
         for tap in 0..<4 { _ = paused.tap(at: start.addingTimeInterval(Double(tap))) }

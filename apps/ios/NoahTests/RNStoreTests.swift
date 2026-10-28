@@ -10,8 +10,8 @@ struct RNStoreTests {
         let imported: Bool
         let version: Int?
         let stateRaw: String?
-        let consumed: [String: String]?
-        let preservedTokens: [String: String]?
+        let consumed: [String: String]? // swiftlint:disable:this discouraged_optional_collection - fixture field only some stores carry
+        let preservedTokens: [String: String]? // swiftlint:disable:this discouraged_optional_collection - fixture field only some stores carry
     }
 
     @Test func unifiedRNFixturesValidateMigrateAndPreserveOriginalBytes() throws {
@@ -51,7 +51,7 @@ struct RNStoreTests {
             let decoded: RawObject
             if let recurring, key == RecurringStore.key { _ = try recurring.load(); decoded = try RawObject(raw) }
             else { decoded = try RNStoreCodec.decode(raw, key: key) }
-            let state = try RawObject(decoded.fields["state"]!)
+            let state = try RawObject(#require(decoded.fields["state"]))
             let wanted = try RawObject(try #require(item.expected.stateRaw))
             for (field, token) in wanted.fields {
                 #expect(state.fields[field]?.trimmingCharacters(in: .whitespacesAndNewlines) == token, "\(item.name): \(field)")
@@ -67,7 +67,8 @@ struct RNStoreTests {
                 try recurring.setPending(false)
                 saved = try RawObject(try #require(storage?.string(forKey: key)))
             } else {
-                let incoming = "{\"state\":\(item.expected.stateRaw!),\"version\":\(item.expected.version!)}"
+                let stateRaw = try #require(item.expected.stateRaw), version = try #require(item.expected.version)
+                let incoming = "{\"state\":\(stateRaw),\"version\":\(version)}"
                 let merged = try RNStoreCodec.merging(incoming, into: raw, key: key)
                 if let storage {
                     try storage.setDurably(merged, forKey: key)
@@ -75,7 +76,7 @@ struct RNStoreTests {
                 }
                 saved = try RawObject(merged)
             }
-            let savedState = try RawObject(saved.fields["state"]!)
+            let savedState = try RawObject(#require(saved.fields["state"]))
             for (path, token) in item.expected.preservedTokens ?? [:] {
                 let parts = path.split(separator: ".")
                 let value = parts[0] == "root" ? saved.fields[String(parts[1])] : savedState.fields[String(parts[1])]
@@ -109,6 +110,6 @@ struct RNStoreTests {
         try storage.setPersistedState(state, key: PersistedTransactionState.key, version: 1)
         let saved = try RawObject(try #require(storage.string(forKey: PersistedTransactionState.key)))
         #expect(saved.fields["version"] == "1")
-        #expect(try RawObject(saved.fields["state"]!).fields["future"] == "123")
+        #expect(try RawObject(#require(saved.fields["state"])).fields["future"] == "123")
     }
 }

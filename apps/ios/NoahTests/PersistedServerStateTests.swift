@@ -4,7 +4,11 @@ import Testing
 
 @MainActor
 struct PersistedServerStateTests {
-    static let rnJSON = #"{"state":{"isRegisteredWithServer":true,"lightningAddress":"alice@localhost.com","nostrPubkey":null,"isBackupEnabled":true,"emailAddress":"alice@example.com","isEmailVerified":true,"isEmailPromptDismissed":false,"mailboxAuthorizationExpiry":1790000000,"isMailboxAuthorizationEnabled":false,"lastReportedDeviceFingerprint":"[null,null,null,null,null,null]","lastDeviceReportAt":1784160000000},"version":0}"#
+    static let rnJSON = #"{"state":{"isRegisteredWithServer":true,"lightningAddress":"alice@localhost.com","nostrPubkey":null,"#
+        + #""isBackupEnabled":true,"emailAddress":"alice@example.com","isEmailVerified":true,"isEmailPromptDismi"#
+        + #"ssed":false,"mailboxAuthorizationExpiry":1790000000,"isMailboxAuthorizationEnabled":false,"lastRepor"#
+        + #"tedDeviceFingerprint":"[null,null,null,null,null,null]","lastDeviceReportAt":1784160000000},"version"#
+        + #"":0}"#
 
     @Test func readsAndWritesRNEnvelopeWithoutLosingPreferences() throws {
         SettingsStorage.bootstrap()
@@ -15,8 +19,7 @@ struct PersistedServerStateTests {
         let before = try #require(settings.persistedState(PersistedServerState.self, key: PersistedServerState.key))
         try settings.setPersistedState(before, key: PersistedServerState.key, version: PersistedServerState.version)
         let encoded = try #require(settings.string(forKey: PersistedServerState.key))
-        #expect(try JSONSerialization.jsonObject(with: Data(encoded.utf8)) as? NSDictionary ==
-            JSONSerialization.jsonObject(with: Data(Self.rnJSON.utf8)) as? NSDictionary)
+        #expect(try Fixtures.foundationJSON(Data(encoded.utf8)) == Fixtures.foundationJSON(Data(Self.rnJSON.utf8)))
         let after = try settings.updateServerState { $0.isEmailPromptDismissed = true; $0.emailAddress = nil }
         #expect(after.isMailboxAuthorizationEnabled == false)
         #expect(after.mailboxAuthorizationExpiry == 1790000000)

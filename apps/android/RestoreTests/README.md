@@ -15,7 +15,7 @@ nix develop --command sh -c 'cd apps/android && ./gradlew --max-workers=2 :app:t
 
 The classes in `RestoreUITest.kt` (`RecoveryPhraseInputTest`, `RestoreIssueTest`,
 `RestoreCompletionTest`, `RestoreFlowTest`, `RestoreClipboardTest`) mirror iOS
-`apps/ios/NoahTests/RestoreUITests.swift`: normalization,
+`apps/ios/NoahTests/RecoveryPhraseInputTests.swift`: normalization,
 paste lengths, suggestions, dictionary/count/checksum validation, every issue reason,
 completion ordering, legacy and missing-ID outcomes, cleanup failures and failed
 state writes. `RestoreTransactionTest`, `WalletRestorerTest` and `SecureWindowTest`

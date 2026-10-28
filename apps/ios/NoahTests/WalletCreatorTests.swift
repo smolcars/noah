@@ -70,7 +70,9 @@ struct WalletCreatorTests {
         }
     }
 
+    // swiftlint:disable:next force_try - a static can't throw; bark's generator only fails without system randomness
     private static let first = try! generateMnemonic()
+    // swiftlint:disable:next force_try - as above
     private static let second = try! generateMnemonic()
     struct Boom: Error {}
 

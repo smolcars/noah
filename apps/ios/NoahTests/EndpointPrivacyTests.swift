@@ -169,7 +169,7 @@ struct EndpointPrivacyTests {
             let config = WalletConfiguration.base(for: variant)
             for endpoint in [ServerEndpoint.baseURL(for: variant).absoluteString, config.arkServer, config.esplora].compactMap(\.self) {
                 let url = try #require(URLComponents(string: endpoint))
-                let origin = url.scheme! + "://" + url.host! + (url.port.map { ":" + String($0) } ?? "")
+                let origin = try #require(url.scheme) + "://" + #require(url.host) + (url.port.map { ":" + String($0) } ?? "")
                 #expect(EndpointLogPrivacy.sanitize(endpoint, registered: ["https://fake-custom.example"]) == endpoint)
                 #expect(EndpointLogPrivacy.sanitize(endpoint, registered: [origin]) == "[custom-esplora]")
             }

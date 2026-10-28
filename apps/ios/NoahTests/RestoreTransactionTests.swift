@@ -58,7 +58,7 @@ struct RestoreTransactionTests {
     }
 
     private func read(_ directory: URL) -> String? {
-        (try? Data(contentsOf: directory.appending(path: "db.sqlite"))).map { String(decoding: $0, as: UTF8.self) }
+        (try? Data(contentsOf: directory.appending(path: "db.sqlite"))).flatMap { String(bytes: $0, encoding: .utf8) }
     }
 
     private func exists(_ url: URL) -> Bool { FileManager.default.fileExists(atPath: url.path) }
@@ -74,7 +74,7 @@ struct RestoreTransactionTests {
         return transaction
     }
 
-    private func expectSettled(_ transaction: RestoreTransaction) throws {
+    private func expectSettled(_ transaction: RestoreTransaction) {
         #expect(!transaction.isPending)
         #expect(!location.restorePending)
         for leftover in [transaction.previous, transaction.staged, transaction.work] {
@@ -100,7 +100,7 @@ struct RestoreTransactionTests {
         // An earlier failed reader must not permanently latch out committed restore recovery.
         #expect(!authority.allowed())
         #expect(try tx.recover(seed: FakeSeed(newSeed)) == .completed)
-        try expectSettled(tx)
+        expectSettled(tx)
         #expect(read(location.directory) == "new")
         #expect(tx.settingsPending)
         #expect(!authority.allowed())
@@ -133,7 +133,7 @@ struct RestoreTransactionTests {
         let journal = try transaction.readJournal()
         #expect(journal.phase == .installing)
         #expect(journal.hadPreviousData)
-        let raw = String(decoding: try Data(contentsOf: transaction.journalURL), as: UTF8.self)
+        let raw = try #require(String(bytes: Data(contentsOf: transaction.journalURL), encoding: .utf8))
         #expect(!raw.contains("abandon"))
     }
 
@@ -146,7 +146,7 @@ struct RestoreTransactionTests {
 
         #expect(try transaction.recover(seed: FakeSeed("old seed")) == .rolledBack)
         #expect(read(location.directory) == "old")
-        try expectSettled(transaction)
+        expectSettled(transaction)
     }
 
     @Test func crashBetweenTheTwoRenamesPutsTheOriginalBack() throws {
@@ -156,7 +156,7 @@ struct RestoreTransactionTests {
 
         #expect(try transaction.recover(seed: FakeSeed("old seed")) == .rolledBack)
         #expect(read(location.directory) == "old")
-        try expectSettled(transaction)
+        expectSettled(transaction)
     }
 
     @Test func crashAfterInstallBeforeCommitIsUndoneEvenIfTheSeedMatches() throws {
@@ -165,7 +165,7 @@ struct RestoreTransactionTests {
         // Restoring the seed already on the device: `installing` is still undone.
         #expect(try transaction.recover(seed: FakeSeed(newSeed)) == .rolledBack)
         #expect(read(location.directory) == "old")
-        try expectSettled(transaction)
+        expectSettled(transaction)
     }
 
     @Test func crashDuringUndoIsFinishedOnTheNextRun() throws {
@@ -175,7 +175,7 @@ struct RestoreTransactionTests {
         try FileManager.default.removeItem(at: location.directory)
         #expect(try transaction.recover(seed: FakeSeed("old seed")) == .rolledBack)
         #expect(read(location.directory) == "old")
-        try expectSettled(transaction)
+        expectSettled(transaction)
     }
 
     @Test func crashWhileDiscardingTheRestoredDatadirIsFinishedOnTheNextRun() throws {
@@ -188,7 +188,7 @@ struct RestoreTransactionTests {
 
         #expect(try transaction.recover(seed: FakeSeed("old seed")) == .rolledBack)
         #expect(read(location.directory) == "old")
-        try expectSettled(transaction)
+        expectSettled(transaction)
         #expect(!exists(transaction.discard))
     }
 
@@ -198,7 +198,7 @@ struct RestoreTransactionTests {
         try FileManager.default.moveItem(at: location.directory, to: transaction.discard)
         #expect(try transaction.recover(seed: FakeSeed(nil)) == .rolledBack)
         #expect(!exists(location.directory))
-        try expectSettled(transaction)
+        expectSettled(transaction)
     }
 
     @Test func committingWithTheRestoredSeedSavedFinishes() throws {
@@ -210,7 +210,7 @@ struct RestoreTransactionTests {
         #expect(try transaction.recover(seed: FakeSeed(newSeed)) == .completed)
         #expect(read(location.directory) == "new")
         #expect(!exists(location.directory.appending(path: RestoreTransaction.markerName)))
-        try expectSettled(transaction)
+        expectSettled(transaction)
     }
 
     @Test func committingWithoutTheSeedSavedIsUndone() throws {
@@ -220,7 +220,7 @@ struct RestoreTransactionTests {
 
         #expect(try transaction.recover(seed: FakeSeed("old seed")) == .rolledBack)
         #expect(read(location.directory) == "old")
-        try expectSettled(transaction)
+        expectSettled(transaction)
     }
 
     @Test func committingWithAnUnreadableKeychainWaits() throws {
@@ -237,7 +237,7 @@ struct RestoreTransactionTests {
 
         seed.makeUnavailable(false)
         #expect(try transaction.recover(seed: seed) == .completed)
-        try expectSettled(transaction)
+        expectSettled(transaction)
     }
 
     @Test func restoreOntoAnEmptyDeviceIsUndoneByRemovingIt() throws {
@@ -246,7 +246,7 @@ struct RestoreTransactionTests {
         #expect(try !transaction.readJournal().hadPreviousData)
         #expect(try transaction.recover(seed: FakeSeed(nil)) == .rolledBack)
         #expect(!exists(location.directory))
-        try expectSettled(transaction)
+        expectSettled(transaction)
     }
 
     @Test func sessionRefusesToOpenWhileARestoreIsPending() async throws {

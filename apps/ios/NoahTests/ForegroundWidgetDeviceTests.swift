@@ -15,7 +15,9 @@ import Testing
         do {
             try await session.createNew(mnemonic: generateMnemonic(), runDaemon: true, appVersion: "widget-test")
             let invoice = try await session.bolt11Invoice(amountSats: 20_000)
-            var request = URLRequest(url: URL(string: ProcessInfo.processInfo.environment["NOAH_WIDGET_FUNDING_URL"]!)!)
+            let funding = try #require(ProcessInfo.processInfo.environment["NOAH_WIDGET_FUNDING_URL"])
+            let fundingURL = try #require(URL(string: funding))
+            var request = URLRequest(url: fundingURL)
             request.httpMethod = "POST"; request.timeoutInterval = 120
             request.httpBody = try JSONSerialization.data(withJSONObject: ["invoice": invoice])
             let (_, response) = try await URLSession.shared.data(for: request)
@@ -23,7 +25,7 @@ import Testing
             let deadline = ContinuousClock.now + .seconds(120)
             while ContinuousClock.now < deadline {
                 try await session.claimLightningReceives(); try await session.sync()
-                if try await session.summary()!.spendableSats > 0 { break }
+                if try #require(try await session.summary()).spendableSats > 0 { break }
                 try await Task.sleep(for: .seconds(1))
             }
             var published = false

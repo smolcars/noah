@@ -17,7 +17,9 @@ struct MMKVRecoveryTests {
         }
         return root
     }
-    static func close(_: URL) {} // SettingsStorage holds no MMKV handle.
+    static func close(_: URL) {
+        // SettingsStorage holds no MMKV handle.
+    }
     static func clean(_ root: URL) { try? FileManager.default.removeItem(at: root.deletingLastPathComponent()) }
     static func corrupt(_ root: URL, mode: String) throws {
         let crc = root.appending(path: id + ".crc")
@@ -165,7 +167,7 @@ struct MMKVRecoveryTests {
             return results
         }
         var notices = 0
-        for store in stores { if try !store.takeUpgradeNotices().isEmpty { notices += 1 } }
+        notices += try stores.count(where: { try !$0.takeUpgradeNotices().isEmpty })
         #expect(notices == 1)
     }
 

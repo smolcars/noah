@@ -48,8 +48,8 @@ struct ServerNotificationDataTests {
             #expect(notificationType(decoded) == testCase.expected, "\(testCase.name)")
 
             let reencoded = try JSONEncoder().encode(decoded)
-            let original = try JSONSerialization.jsonObject(with: testCase.input) as? NSDictionary
-            let roundTripped = try JSONSerialization.jsonObject(with: reencoded) as? NSDictionary
+            let original = try Fixtures.foundationJSON(testCase.input)
+            let roundTripped = try Fixtures.foundationJSON(reencoded)
             #expect(original == roundTripped, "round trip: \(testCase.name)")
         }
     }

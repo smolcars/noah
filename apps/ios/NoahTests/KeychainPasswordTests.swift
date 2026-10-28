@@ -15,7 +15,7 @@ struct KeychainPasswordTests {
             kSecClass as String: kSecClassGenericPassword,
             kSecAttrService as String: item.service,
             kSecAttrAccount as String: "noah",
-            kSecAttrSynchronizable as String: kCFBooleanFalse!,
+            kSecAttrSynchronizable as String: false,
             kSecValueData as String: Data(value.utf8),
             kSecUseDataProtectionKeychain as String: true,
             kSecAttrAccessible as String: kSecAttrAccessibleAfterFirstUnlock,

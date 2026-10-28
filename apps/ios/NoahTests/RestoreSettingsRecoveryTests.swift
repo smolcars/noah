@@ -96,63 +96,33 @@ struct RestoreSettingsRecoveryTests {
         try await exercise(step: control[0], root: URL.documentsDirectory.appending(path: "restore-settings-process"), mode: control[1])
     }
 
+    /// One restore's files: the wallet, its settings, and the transaction moving between them.
+    private struct Paths {
+        let location: WalletDataLocation
+        let preferences: URL
+        let settingsRoot: URL
+        let file: URL
+        let tx: RestoreTransaction
+        init(root: URL) {
+            location = WalletDataLocation(variant: .regtest, documentsDirectory: root)
+            preferences = root.appending(path: "preferences")
+            settingsRoot = preferences.appending(path: "mmkv")
+            file = URL(fileURLWithPath: settingsRoot.path + ".native-settings.json")
+            tx = RestoreTransaction(location: location)
+        }
+    }
+    private static let phrase = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about"
+
     private func exercise(step: String, root: URL, mode: String = "all") async throws {
         let fm = FileManager.default
-        let location = WalletDataLocation(variant: .regtest, documentsDirectory: root)
-        let preferences = root.appending(path: "preferences")
-        let settingsRoot = preferences.appending(path: "mmkv")
-        let file = URL(fileURLWithPath: settingsRoot.path + ".native-settings.json")
-        let tx = RestoreTransaction(location: location)
-        let phrase = "abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon abandon about"
+        let paths = Paths(root: root)
+        let location = paths.location, preferences = paths.preferences, settingsRoot = paths.settingsRoot
+        let file = paths.file, tx = paths.tx, phrase = Self.phrase
         let committed = !["journal", "previousMoved", "installed", "committing"].contains(step)
         if mode != "recover" {
-            try fm.createDirectory(at: preferences, withIntermediateDirectories: true)
-            try SettingsStorage(rootPath: settingsRoot.path).beginOnboarding(recoveryPhraseBackedUp: true)
-            try fm.createDirectory(at: location.directory, withIntermediateDirectories: true)
-            try Data("old".utf8).write(to: location.database)
-            try tx.prepare()
-            try fm.createDirectory(at: tx.staged, withIntermediateDirectories: true)
-            try Data("committed".utf8).write(to: tx.staged.appending(path: "db.sqlite"))
-            try tx.begin(seed: phrase)
-            if step == "journal" || step == "previousMoved" {
-                try fm.moveItem(at: location.directory, to: tx.staged)
-                if step == "journal" { try fm.moveItem(at: tx.previous, to: location.directory) }
-            }
-            if !["journal", "previousMoved", "installed"].contains(step) { try tx.markCommitting() }
-            if ["markerRemoved", "previousRemoved"].contains(step) {
-                try fm.removeItem(at: location.directory.appending(path: RestoreTransaction.markerName))
-                if step == "previousRemoved" { try fm.removeItem(at: tx.previous) }
-            }
-            if step == "journalRemoved" || step == "flags" { try tx.finish() }
-            // A readable unfinished flag must also be overridden when its completion write fails.
-            if step != "flags" { try Data("damaged".utf8).write(to: file); #expect(chmod(file.path, 0) == 0) }
-            #expect(chmod(preferences.path, 0o500) == 0)
-            if ["markerOnly", "stateOnly", "corrupt"].contains(step) {
-                let authority = RecurringAutomationAuthority(directory: location.directory)
-                try authority.stop()
-                switch step {
-                case "markerOnly": try fm.removeItem(at: authority.file)
-                case "stateOnly": try fm.removeItem(at: authority.marker)
-                default: try Data("{".utf8).write(to: authority.file)
-                }
-            }
-            if step.hasPrefix("initializing") || step.hasPrefix("settling") {
-                let initializing = step.hasPrefix("initializing")
-                let boundary = try #require(Int(step.dropFirst(initializing ? 12 : 8)))
-                let count = RecurringExecutorTests.Locked(0)
-                let sync: @Sendable (URL) throws -> Void = { target in
-                    try RestoreTransaction.fullSync(target)
-                    guard count.withLock({ $0 += 1; return $0 }) == boundary else { return }
-                    if mode == "stage" {
-                        try Data(step.utf8).write(to: root.appending(path: "ready"))
-                        while true { Thread.sleep(forTimeInterval: 1) } // Host kills at the actual durable-write boundary.
-                    }
-                    throw CocoaError(.fileWriteUnknown)
-                }
-                if initializing { _ = try? RecurringAutomationAuthority(directory: location.directory, sync: sync).stop() }
-                else { try? tx.finish(sync: sync) }
-                #expect(count.withLock { $0 } == boundary)
-            }
+            try interrupt(at: step, paths)
+            try stopAutomation(at: step, paths)
+            try interruptDurableWrite(at: step, mode: mode, root: root, paths)
         }
         if mode == "stage" {
             try Data(step.utf8).write(to: root.appending(path: "ready"))
@@ -191,6 +161,70 @@ struct RestoreSettingsRecoveryTests {
             #expect(!RecurringAutomationAuthority(directory: location.directory).allowed())
             try reopened.requireHealthy()
             #expect(reopened.persistedState(PersistedWalletState.self, key: PersistedWalletState.key)?.isInitialized == true)
+        }
+    }
+
+    /// Leaves the restore at `step`, with settings that can't be written.
+    private func interrupt(at step: String, _ paths: Paths) throws {
+        let fm = FileManager.default
+        let location = paths.location, preferences = paths.preferences, settingsRoot = paths.settingsRoot
+        let file = paths.file, tx = paths.tx, phrase = Self.phrase
+        try fm.createDirectory(at: preferences, withIntermediateDirectories: true)
+        try SettingsStorage(rootPath: settingsRoot.path).beginOnboarding(recoveryPhraseBackedUp: true)
+        try fm.createDirectory(at: location.directory, withIntermediateDirectories: true)
+        try Data("old".utf8).write(to: location.database)
+        try tx.prepare()
+        try fm.createDirectory(at: tx.staged, withIntermediateDirectories: true)
+        try Data("committed".utf8).write(to: tx.staged.appending(path: "db.sqlite"))
+        try tx.begin(seed: phrase)
+        if step == "journal" || step == "previousMoved" {
+            try fm.moveItem(at: location.directory, to: tx.staged)
+            if step == "journal" { try fm.moveItem(at: tx.previous, to: location.directory) }
+        }
+        if !["journal", "previousMoved", "installed"].contains(step) { try tx.markCommitting() }
+        if ["markerRemoved", "previousRemoved"].contains(step) {
+            try fm.removeItem(at: location.directory.appending(path: RestoreTransaction.markerName))
+            if step == "previousRemoved" { try fm.removeItem(at: tx.previous) }
+        }
+        if step == "journalRemoved" || step == "flags" { try tx.finish() }
+        // A readable unfinished flag must also be overridden when its completion write fails.
+        if step != "flags" { try Data("damaged".utf8).write(to: file); #expect(chmod(file.path, 0) == 0) }
+        #expect(chmod(preferences.path, 0o500) == 0)
+    }
+
+    private func stopAutomation(at step: String, _ paths: Paths) throws {
+        let fm = FileManager.default
+        let location = paths.location
+        if ["markerOnly", "stateOnly", "corrupt"].contains(step) {
+            let authority = RecurringAutomationAuthority(directory: location.directory)
+            try authority.stop()
+            switch step {
+            case "markerOnly": try fm.removeItem(at: authority.file)
+            case "stateOnly": try fm.removeItem(at: authority.marker)
+            default: try Data("{".utf8).write(to: authority.file)
+            }
+        }
+    }
+
+    /// Fails, or with `mode` "stage" hangs, at a durable write while initializing or settling.
+    private func interruptDurableWrite(at step: String, mode: String, root: URL, _ paths: Paths) throws {
+        let location = paths.location, tx = paths.tx
+        if step.hasPrefix("initializing") || step.hasPrefix("settling") {
+            let initializing = step.hasPrefix("initializing")
+            let boundary = try #require(Int(step.dropFirst(initializing ? 12 : 8)))
+            let count = RecurringExecutorTests.Locked(0)
+            let sync: @Sendable (URL) throws -> Void = { target in
+                try RestoreTransaction.fullSync(target)
+                guard count.withLock({ $0 += 1; return $0 }) == boundary else { return }
+                if mode == "stage" {
+                    try Data(step.utf8).write(to: root.appending(path: "ready"))
+                    while true { Thread.sleep(forTimeInterval: 1) } // Host kills at the actual durable-write boundary.
+                }
+                throw CocoaError(.fileWriteUnknown)
+            }
+            if initializing { _ = try? RecurringAutomationAuthority(directory: location.directory, sync: sync).stop() }
+            else { try? tx.finish(sync: sync) }
+            #expect(count.withLock { $0 } == boundary)
         }
     }
 }

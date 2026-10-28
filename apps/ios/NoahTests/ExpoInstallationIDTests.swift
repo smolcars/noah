@@ -7,7 +7,11 @@ import Testing
 struct ExpoInstallationIDTests {
     /// Fake bundle ID so the real Expo item is never touched.
     private let bundleID = "com.noah.tests.expo.\(UUID().uuidString)"
-    private let defaults = UserDefaults(suiteName: "com.noah.tests.expo.\(UUID().uuidString)")!
+    private let defaults: UserDefaults
+
+    init() throws {
+        defaults = try #require(UserDefaults(suiteName: "com.noah.tests.expo.\(UUID().uuidString)"))
+    }
 
     private func deleteItem() {
         let key = Data(ExpoInstallationID.key.utf8)
@@ -61,7 +65,7 @@ struct ExpoInstallationIDTests {
             for _ in 0..<8 {
                 group.addTask {
                     try ExpoInstallationID.getOrCreate(
-                        bundleIdentifier: bundleID, defaults: UserDefaults(suiteName: suite)!)
+                        bundleIdentifier: bundleID, defaults: #require(UserDefaults(suiteName: suite)))
                 }
             }
             return try await group.reduce(into: Set<String>()) { $0.insert($1) }

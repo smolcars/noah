@@ -15,7 +15,9 @@ struct SettingsStorageTests {
         let storage = try SettingsStorage(rootPath: rootPath)
         // Exactly what zustand persist + createJSONStorage writes.
         storage.set(
-            #"{"state":{"isInitialized":true,"isWalletLoaded":true,"staticVtxoPubkey":null,"isBiometricsEnabled":true,"isDebugModeEnabled":false,"isWalletSuspended":false,"hasSeenBatteryOptimizationPrompt":true},"version":0}"#,
+            #"{"state":{"isInitialized":true,"isWalletLoaded":true,"staticVtxoPubkey":null,"isBiometricsEnabled":t"#
+                + #"rue,"isDebugModeEnabled":false,"isWalletSuspended":false,"hasSeenBatteryOptimizationPrompt":true},"v"#
+                + #"ersion":0}"#,
             forKey: PersistedWalletState.key)
 
         let state = try #require(storage.persistedState(PersistedWalletState.self, key: PersistedWalletState.key))
