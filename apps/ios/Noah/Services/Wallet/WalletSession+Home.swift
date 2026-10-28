@@ -34,8 +34,9 @@ extension WalletSession {
             var facts = WidgetDataWriter.Facts()
             let records = await Self.widgetRecords(handles, pending: readsTip)
             // The records hold for the balance the writer shows (the summary's, read before them) only if a reading after
-            // them agrees (`WidgetDataWriter.snapshot`). bark's balance waits on the chain tip, so the wait is capped.
-            let after = records?.pending == nil ? nil : await WidgetBalanceHistory.within(.seconds(2)) { try? await self.currentBalance() }
+            // them agrees (`WidgetDataWriter.snapshot`). bark's balance waits on the chain tip: the wait is capped, and a read
+            // that outlives it blocks new ones until it returns (`WidgetBalanceCheck`).
+            let after = records?.pending == nil ? nil : await self.widgetBalanceCheck.run(within: .seconds(2)) { try? await self.currentBalance() }
             if let records {
                 // Activity's rows, merged as History merges them, so the amount is Home's.
                 let rows = HistoryRules.merge(records.movements.filter(HistoryMapping.include).map { HistoryMapping.transaction($0, now: now) },

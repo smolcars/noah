@@ -625,16 +625,54 @@ struct WidgetBalanceHistoryTests {
     @Test func aSlowOrFailingAfterReadFallsBackWithoutBlocking() async throws {
         let shown = Self.balance(spendable: 130_000)
         let clock = ContinuousClock(), start = clock.now
-        let slow = await WidgetBalanceHistory.within(.milliseconds(100)) { () async -> WalletBalance? in
+        let slow = await WidgetBalanceCheck().run(within: .milliseconds(100)) {
             try? await Task.sleep(for: .seconds(1))
             return shown
         }
         #expect(slow == nil)
         #expect(clock.now - start < .milliseconds(800))
-        #expect(await WidgetBalanceHistory.within(.seconds(2)) { WalletBalance?.none } == nil)
-        #expect(await WidgetBalanceHistory.within(.seconds(2)) { shown } == shown)
+        #expect(await WidgetBalanceCheck().run(within: .seconds(2)) { nil } == nil)
+        #expect(await WidgetBalanceCheck().run(within: .seconds(2)) { shown } == shown)
         let earlier = Self.before + [130_000]
         #expect(try Self.written(shown, Records(movements: [Self.earlier]), after: nil, earlier: earlier) == earlier)
+    }
+
+    private actor Count {
+        private(set) var value = 0
+        func add() { value += 1 }
+    }
+
+    /// A read that outlives its wait blocks new ones until it returns: refreshes meanwhile start none (and keep the
+    /// earlier days), so stalled reads never pile up as counted work; once it returns, the next refresh reads again.
+    @Test func aStalledCheckLeavesOneReadUntilItReturns() async throws {
+        let check = WidgetBalanceCheck(), starts = Count(), shown = Self.balance(spendable: 130_000)
+        let (stall, release) = AsyncStream<Void>.makeStream()
+        let stalled: @Sendable () async -> WalletBalance? = {
+            await starts.add()
+            for await _ in stall { break }
+            return shown
+        }
+        #expect(await check.run(within: .milliseconds(50), stalled) == nil)
+        let clock = ContinuousClock(), start = clock.now
+        for _ in 0..<3 {
+            #expect(await check.run(within: .seconds(2), stalled) == nil)
+        }
+        #expect(clock.now - start < .seconds(1)) // Turned away at once, not after waiting.
+        #expect(await starts.value == 1)
+        #expect(await check.isReading)
+
+        release.yield()
+        var tries = 0
+        while await check.isReading, tries < 200 {
+            tries += 1
+            try await Task.sleep(for: .milliseconds(10))
+        }
+        #expect(!(await check.isReading))
+        #expect(await check.run(within: .seconds(2)) {
+            await starts.add()
+            return shown
+        } == shown)
+        #expect(await starts.value == 2)
     }
 
     /// A claimable receive settles between the summary and the records, or within the records (its movement read pending,

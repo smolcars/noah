@@ -114,6 +114,8 @@ actor WalletSession {
     let syncFlight = WalletSync()
     private var settlingCloses = 0
     private var runningCalls = 0
+    /// The widget's balance check after its records: at most one read unfinished.
+    let widgetBalanceCheck = WidgetBalanceCheck()
     private var sendReserved = false
     private var exclusiveSend = false
     @TaskLocal private static var sendWork = false

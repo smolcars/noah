@@ -1,6 +1,5 @@
 import BarkBoltFFI
 import Foundation
-import os
 
 /// The balance changes behind the widgets' wave (docs/native-rewrite/design/widgets.md, "The wave"), from the records
 /// Activity reads: bark's movements and the on-chain wallet's transactions. A change is anything the displayed total
@@ -72,29 +71,6 @@ enum WidgetBalanceHistory {
             && read.ark.pendingBoard == shown.ark.pendingBoard && read.ark.pendingOffboard == shown.ark.pendingOffboard
     }
 
-    /// `read`'s value, or nil once `limit` has passed: the wait stops there and a late value is dropped. The read itself
-    /// isn't stopped (native work can't be), so it must be counted work on its own (`WalletSession.currentBalance`).
-    static func within<Value: Sendable>(_ limit: Duration, _ read: @escaping @Sendable () async -> Value?) async -> Value? {
-        let waiting = OSAllocatedUnfairLock<CheckedContinuation<Value?, Never>?>(initialState: nil)
-        return await withCheckedContinuation { continuation in
-            waiting.withLock { $0 = continuation }
-            let finish: @Sendable (Value?) -> Void = { value in
-                waiting.withLock { held in
-                    defer { held = nil }
-                    return held
-                }?.resume(returning: value)
-            }
-            let timer = Task {
-                try? await Task.sleep(for: limit)
-                finish(nil)
-            }
-            Task {
-                finish(await read())
-                timer.cancel()
-            }
-        }
-    }
-
     /// A first estimate of when a transaction confirmed: ten minutes a block before the tip.
     static func estimate(_ transaction: WalletTransaction, tip: UInt32, now: Date) -> Date? {
         guard let height = transaction.confirmation?.height else { return nil }
@@ -113,4 +89,45 @@ enum WidgetBalanceHistory {
 
     /// `HistoryMapping.transaction`'s date.
     private static func date(_ movement: Movement, now: Date) -> Date { HistoryRules.parseDate(movement.createdAt) ?? now }
+}
+
+/// The widget's check of the balance after its records: one read, waited for at most a limit. The read can't be stopped
+/// (native work, counted by the session so close waits for it), so at most one is unfinished at a time: while one is,
+/// `run` starts none and gives nil, and the guard clears only when the read itself returns.
+actor WidgetBalanceCheck {
+    private var reading = false
+    private var waiting: CheckedContinuation<WalletBalance?, Never>?
+    private var runs = 0
+
+    /// Whether a read is still unfinished (it may have outlived its wait).
+    var isReading: Bool { reading }
+
+    func run(within limit: Duration, _ read: @escaping @Sendable () async -> WalletBalance?) async -> WalletBalance? {
+        guard !reading else { return nil }
+        reading = true
+        runs += 1
+        let run = runs
+        // Both run on this actor, so neither answers before the wait below is in place.
+        Task {
+            try? await Task.sleep(for: limit)
+            self.resume(nil, run: run)
+        }
+        Task {
+            let value = await read()
+            self.finished(value, run: run)
+        }
+        return await withCheckedContinuation { waiting = $0 }
+    }
+
+    private func finished(_ value: WalletBalance?, run: Int) {
+        reading = false
+        resume(value, run: run)
+    }
+
+    /// Answers the wait once: the first of the read and its limit; a later run's wait is never this run's.
+    private func resume(_ value: WalletBalance?, run: Int) {
+        guard run == runs, let waiting else { return }
+        self.waiting = nil
+        waiting.resume(returning: value)
+    }
 }
