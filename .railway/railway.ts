@@ -1,12 +1,13 @@
 import { defineRailway, image, postgres, preserve, project, redis, service, volume } from "railway/iac";
-import { environmentId, liveImages, projectId } from "./live-images.ts";
 
 export default defineRailway((ctx) => {
-  if (ctx.projectId !== projectId || ctx.environmentId !== environmentId || ctx.environment !== "signet") {
+  if (
+    ctx.projectId !== "8847a6a1-bf07-4321-a62b-9839e9954e46" ||
+    ctx.environmentId !== "37880684-30ae-4242-af12-ddba1ba620ad" ||
+    ctx.environment !== "signet"
+  ) {
     throw new Error("This configuration is only for the Noah signet migration project.");
   }
-
-  const images = liveImages();
 
   const region = "iad";
   const db = postgres("postgres", { region });
@@ -20,7 +21,10 @@ export default defineRailway((ctx) => {
 
   // The complete stopped Fly wallet volume has been restored and verified.
   const barkd = service("noah-barkd-signet", {
-    source: image(images.barkd, { autoUpdates: { type: "disabled" } }),
+    source: image(
+      "niteshbalusu/noah-barkd@sha256:e1d9dff674ff1c548d27a5c6f2c84e0a690921867ec2b49aacc6a82cb5b78e6d",
+      { autoUpdates: { type: "disabled" } },
+    ),
     replicas: { [region]: 1 },
     deploy: {
       requiredMountPath: "/data",
@@ -38,7 +42,7 @@ export default defineRailway((ctx) => {
 
   const api = service("api", {
     build: { builder: "DOCKERFILE", dockerfilePath: "Dockerfile" },
-    source: image(images.api, { autoUpdates: { type: "disabled" } }),
+    // Code is uploaded by `railway up`; leave the registry/GitHub source unset.
     healthcheck: "/health",
     healthcheckTimeout: 120,
     domains: [{ domain: "signet.noahwallet.io", port: 3000 }],
