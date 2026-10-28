@@ -63,7 +63,7 @@ import Testing
 
     @Test func theQuoteRefusesAnotherAmountForAFixedOffer() async throws {
         let thousand = request(1000), amountless = request(nil)
-        let fixed: @Sendable (String) async throws -> PaymentRequest = { _ in thousand }
+        let fixed: @Sendable (String) async -> PaymentRequest = { _ in thousand }
         try await SendOfferAmount.require(SendPayment(destination: offer, method: "offer", amount: 1000), parse: fixed)
         for amount: UInt64 in [999, 1001] {
             await #expect(throws: SendFailure.invalid) {

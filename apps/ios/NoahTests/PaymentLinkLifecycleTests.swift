@@ -11,8 +11,8 @@ struct PaymentLinkLifecycleTests {
     static let link = "lnurlp://example.com/.well-known/lnurlp/alice"
 
     /// A device's notification permission, answered, failed or left waiting when the test says.
+    private enum Answer { case status(PushPermissionModel.Status), failure }
     @MainActor final class LateStatus {
-        private enum Answer { case status(PushPermissionModel.Status), failure }
         private var result: Answer?
         private var waiting: [CheckedContinuation<Answer, Never>] = []
         func read() async throws -> PushPermissionModel.Status {
@@ -33,7 +33,13 @@ struct PaymentLinkLifecycleTests {
     }
 
     /// Onboarding finished, as the launch does: the phase becomes `.wallet`, then the permission is read.
-    private func walletApp(_ push: PushPermissionModel) async throws -> (AppModel, URL, Task<Void, Never>) {
+    private struct WalletApp {
+        let app: AppModel
+        let root: URL
+        let finishing: Task<Void, Never>
+    }
+
+    private func walletApp(_ push: PushPermissionModel) async throws -> WalletApp {
         let root = FileManager.default.temporaryDirectory.appending(path: "payment-link-\(UUID())")
         let app = AppModel(settings: try SettingsStorage(rootPath: root.path), readLaunchState: { .onboarding },
                            settleRestore: { .nothingPending }, pushPermission: push)
@@ -41,7 +47,7 @@ struct PaymentLinkLifecycleTests {
         // No wallet stands behind this model: its balance read stops instead of reopening one.
         let finishing = Task { await ForegroundExecution.$admission.withValue({ false }) { await app.finishOnboarding() } }
         try await SendPaymentTests.waitUntil { app.phase == .wallet }
-        return (app, root, finishing)
+        return WalletApp(app: app, root: root, finishing: finishing)
     }
 
     /// The scene's own notifications stay out of it: each test backgrounds its model on its own center.
@@ -51,7 +57,7 @@ struct PaymentLinkLifecycleTests {
 
     /// Notifications allowed at launch and App lock on.
     private func lockedDevice(_ late: LateStatus, _ center: NotificationCenter) async throws -> (AppModel, URL) {
-        let (app, root, finishing) = try await walletApp(device(late, center))
+        let launched = try await walletApp(device(late, center)), app = launched.app, root = launched.root, finishing = launched.finishing
         late.answer(.granted)
         await finishing.value
         app.walletLock.policy = BiometricLockPolicy(enabled: true)
@@ -110,7 +116,7 @@ struct PaymentLinkLifecycleTests {
 
     @Test func notificationsDeniedLateDropTheLinkBeforeSendStartsOnIt() async throws {
         let late = LateStatus()
-        let (app, root, finishing) = try await walletApp(device(late))
+        let launched = try await walletApp(device(late)), app = launched.app, root = launched.root, finishing = launched.finishing
         let window = try mount(rootView(app))
         defer { window.isHidden = true; window.rootViewController = nil; app.appBecameInactive(); try? FileManager.default.removeItem(at: root) }
         // The wallet's tabs are up but the permission read hasn't answered: hold, don't hand Send the link.
@@ -129,7 +135,7 @@ struct PaymentLinkLifecycleTests {
 
     @Test func notificationsAllowedLateApplyTheLinkOnce() async throws {
         let late = LateStatus()
-        let (app, root, finishing) = try await walletApp(device(late))
+        let launched = try await walletApp(device(late)), app = launched.app, root = launched.root, finishing = launched.finishing
         let model = send()
         let window = try mount(tabs(app, send: model))
         defer { window.isHidden = true; window.rootViewController = nil; app.appBecameInactive(); try? FileManager.default.removeItem(at: root) }
@@ -189,7 +195,7 @@ struct PaymentLinkLifecycleTests {
 
     @Test func failedPermissionReadsKeepALinkHeldUntilOneSucceeds() async throws {
         let late = LateStatus(), center = NotificationCenter()
-        let (app, root, finishing) = try await walletApp(device(late, center))
+        let launched = try await walletApp(device(late, center)), app = launched.app, root = launched.root, finishing = launched.finishing
         late.answer(.granted)
         await finishing.value
         let model = send()
@@ -237,7 +243,7 @@ struct PaymentLinkLifecycleTests {
 
     @Test func aLinkClosesSendsScannerAcrossPoseChangesAndShowsTheRequest() async throws {
         let push = PushPermissionModel(dependencies: .init(isPhysicalDevice: false, status: { .granted }, request: {}))
-        let (app, root, finishing) = try await walletApp(push)
+        let launched = try await walletApp(push), app = launched.app, root = launched.root, finishing = launched.finishing
         await finishing.value
         #expect(app.phase == .wallet && app.paymentLinkGate == .open)
         let model = send()
@@ -261,7 +267,7 @@ struct PaymentLinkLifecycleTests {
 
     @Test func theScannerAfterAPaymentStillGivesWayToALink() async throws {
         let push = PushPermissionModel(dependencies: .init(isPhysicalDevice: false, status: { .granted }, request: {}))
-        let (app, root, finishing) = try await walletApp(push)
+        let launched = try await walletApp(push), app = launched.app, root = launched.root, finishing = launched.finishing
         await finishing.value
         let backend = SendPaymentTests.Backend()
         let controller = SendPaymentTests().make(backend, SendPaymentTests.Storage())

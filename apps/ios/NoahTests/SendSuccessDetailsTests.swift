@@ -55,7 +55,7 @@ struct SendSuccessDetailsTests {
         let value = "12345678901234567890123456789012345"
         #expect(SendSuccessDetails.truncate(String(value.prefix(32))) == String(value.prefix(32)))
         #expect(SendSuccessDetails.truncate(value) == "12345678901234…6789012345")
-        #expect(SendSuccessDetails.truncate("") == "")
+        #expect(SendSuccessDetails.truncate("").isEmpty)
         let details = SendSuccessDetails(receipt: .init(amount: 1000, txid: value),
                                          payment: .init(destination: value, method: "onchain", amount: 1000),
                                          history: [], completedAt: date)

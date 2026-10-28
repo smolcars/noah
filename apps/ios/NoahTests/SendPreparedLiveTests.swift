@@ -32,7 +32,7 @@ struct SendPreparedLiveTests {
         let controller = SendPaymentController(dependencies: .live(session: session, variant: .regtest))
         var payment = SendPayment(destination: recipient, method: "onchain", amount: 5000, source: .onchain)
         let scene = try #require(UIApplication.shared.connectedScenes.first as? UIWindowScene)
-        let window = try #require(scene.windows.first { $0.isKeyWindow })
+        let window = try #require(scene.keyWindow)
         let canceledQuote = try await session.quoteSend(payment)
         var backedOut = false
         window.rootViewController = UIHostingController(rootView: SendConfirmation(

@@ -17,7 +17,9 @@ import UIKit
 @MainActor
 @Suite(.enabled(if: ProcessInfo.processInfo.environment["NOAH_SR_SHOTS"] == "1"))
 struct SendReceiveShotTests {
-    nonisolated static let invoice = "lnbcrt15u1p3xnhl2pp5jptserfk3zk4qy42tlucycrfwxhydvlemu9pqr93tuzlv9cc7g3sdqsvfhkcap3xyhx7un8cqzpgxqzjcsp5f8c52y2stc300gl6s4xswtjpc37hrnnr3c9wvtgjfuvqmpm35evq9qyyssqy4lgd8tj637qcjp05rdpxxykjenthxftej7a2zzmwrmrl70fyj9hvj0rewhzj7jfyuwkwcg9g2jpwtk3wkjtwnkdks84hsnu8xps5vsqjqjd37"
+    nonisolated static let invoice = "lnbcrt15u1p3xnhl2pp5jptserfk3zk4qy42tlucycrfwxhydvlemu9pqr93tuzlv9cc7g3sdqsvfhkcap3xyhx7un8cqzpgxqzj"
+        + "csp5f8c52y2stc300gl6s4xswtjpc37hrnnr3c9wvtgjfuvqmpm35evq9qyyssqy4lgd8tj637qcjp05rdpxxykjenthxftej7a2"
+        + "zzmwrmrl70fyj9hvj0rewhzj7jfyuwkwcg9g2jpwtk3wkjtwnkdks84hsnu8xps5vsqjqjd37"
     nonisolated static let bitcoin = "bcrt1qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqdku202"
     nonisolated static let ark = "tark1pwh9vsmezqqpjy9akejayl2vvcse6he97rn40g84xrlvrlnhayuuyefrp9nse2yspqqkm2rpd"
     nonisolated static let tip: UInt32 = 921_345
@@ -25,7 +27,7 @@ struct SendReceiveShotTests {
 
     @Test(.timeLimit(.minutes(60))) func presentStates() async throws {
         let scene = try #require(UIApplication.shared.connectedScenes.first as? UIWindowScene)
-        let window = try #require(scene.windows.first { $0.isKeyWindow })
+        let window = try #require(scene.keyWindow)
         let original = window.rootViewController
         let folder = URL.documentsDirectory
         let request = folder.appending(path: "sr-shot"), ready = folder.appending(path: "sr-shot-ready")
@@ -47,11 +49,11 @@ struct SendReceiveShotTests {
                 host.rootView = AnyView(Color.clear)
                 try await Task.sleep(for: .milliseconds(150))
                 let down = state.hasSuffix("-down")
-                let (view, root, after) = try await fixture(down ? String(state.dropLast("-down".count)) : state)
-                roots.append(root)
-                host.rootView = view
+                let shown = try await fixture(down ? String(state.dropLast("-down".count)) : state)
+                roots.append(shown.root)
+                host.rootView = shown.view
                 try await Task.sleep(for: .milliseconds(700))
-                await after()
+                await shown.after()
                 if down { Self.pageDown(host.view) }
                 try state.write(to: ready, atomically: true, encoding: .utf8)
                 current = state
@@ -109,7 +111,13 @@ struct SendReceiveShotTests {
         .init(network: .regtest, fingerprint: "fixture", balance: HomeRulesTests.balance(ark: ark, onchain: onchain), movementCount: 0)
     }
 
-    private func fixture(_ state: String) async throws -> (AnyView, URL, () async -> Void) {
+    private struct Shown {
+        let view: AnyView
+        let root: URL
+        let after: () async -> Void
+    }
+
+    private func fixture(_ state: String) async throws -> Shown {
         let root = FileManager.default.temporaryDirectory.appending(path: "sr-shot-\(UUID())")
         let settings = try SettingsStorage(rootPath: root.appending(path: "mmkv").path)
         var server = PersistedServerState()
@@ -149,9 +157,26 @@ struct SendReceiveShotTests {
                                arkAddress: Self.ark, callback: URL(string: "https://localhost.com/cb"), metadata: nil)
         }, quotePayment: { payment in SendQuote(amount: payment.amount, fee: 0, total: payment.amount) }, discardQuote: { _ in })
 
-        var fixture = SendReceiveFixture(summary: Self.summary(), tip: Self.tip, refunded: state == "refunded" ? true : nil,
+        let fixture = SendReceiveFixture(summary: Self.summary(), tip: Self.tip, refunded: state == "refunded" ? true : nil,
                                          history: [], fees: [.ark: 0, .lightning: 12, .onchain: 420])
-        let receive = receiveModel(state)
+        var staging = Staging(send: send, script: script, receive: receiveModel(state), fixture: fixture)
+        try await Self.stage(state, &staging)
+        let view = WalletTabs(history: history, home: home, send: send, receive: staging.receive, tab: staging.tab)
+            .environment(app)
+            .environment(app.walletLock)
+            .environment(\.homeFixture, HomeFixture(summary: Self.summary(), walletError: nil, needsRecoveryPhraseBackup: false))
+            .environment(\.sendReceiveFixture, staging.fixture)
+            .environment(\.locale, Locale(identifier: app.localeIdentifier))
+            .environment(\.scenePhase, .active)
+        return Shown(view: AnyView(view), root: root, after: staging.after)
+    }
+
+    /// A fixture state's models, and what the state changes beyond the defaults.
+    @MainActor private struct Staging {
+        let send: SendModel
+        let script: Script
+        let receive: ReceiveModel
+        var fixture: SendReceiveFixture
         var tab = WalletTabs.Tab.send
         var after: () async -> Void = {}
 
@@ -165,24 +190,38 @@ struct SendReceiveShotTests {
             send.showReview = true
         }
         func submit(after delay: Double = 0.4) -> () async -> Void {
-            {
+            let send = send
+            return {
                 try? await Task.sleep(for: .seconds(delay))
                 if let payment = send.payment, let quote = send.quote { send.controller.submit(payment, quote: quote) }
             }
         }
-        let arkPayment = SendPayment(destination: Self.ark, method: "ark", amount: 2_500,
-                                     repeatMetadata: try? SendPayment.metadata(
-                                         destination: "maya@localhost.com",
-                                         comment: "",
-                                         amount: "2500",
-                                         fiatCurrency: nil))
-        let lightningPayment = SendPayment(destination: Self.invoice, method: "lightning", amount: 1_500)
-        let swapPayment = SendPayment(destination: Self.bitcoin, method: "onchain", amount: 50_000, source: .offchain)
-        let walletPayment = SendPayment(destination: Self.bitcoin, method: "onchain", amount: 50_000, source: .onchain)
-        let hash = PaymentEncoding.invoice(Self.invoice)?.hash
-        let lightningReceipt = SendReceipt(amount: 1_500, paymentHash: hash, movementID: 7, fee: 3, proof: .actualMovement)
-        let swapReceipt = SendReceipt(amount: 50_000, txid: String(repeating: "ab", count: 32), status: .submitted, fee: 420, proof: .submitReturnedTxid)
+    }
 
+    static let arkPayment = SendPayment(destination: ark, method: "ark", amount: 2_500,
+                                        repeatMetadata: try? SendPayment.metadata(
+                                            destination: "maya@localhost.com",
+                                            comment: "",
+                                            amount: "2500",
+                                            fiatCurrency: nil))
+    static let lightningPayment = SendPayment(destination: invoice, method: "lightning", amount: 1_500)
+    static let swapPayment = SendPayment(destination: bitcoin, method: "onchain", amount: 50_000, source: .offchain)
+    static let walletPayment = SendPayment(destination: bitcoin, method: "onchain", amount: 50_000, source: .onchain)
+    static let lightningReceipt = SendReceipt(amount: 1_500, paymentHash: PaymentEncoding.invoice(invoice)?.hash, movementID: 7, fee: 3,
+                                              proof: .actualMovement)
+    static let swapReceipt = SendReceipt(amount: 50_000, txid: String(repeating: "ab", count: 32), status: .submitted, fee: 420,
+                                         proof: .submitReturnedTxid)
+
+    private static func stage(_ state: String, _ staging: inout Staging) async throws {
+        if stageEntry(state, &staging) { return }
+        if try await stageReview(state, &staging) { return }
+        if await stageOutcome(state, &staging) { return }
+        stageReceive(state, &staging)
+    }
+
+    /// Amount and recipient entry.
+    private static func stageEntry(_ state: String, _ staging: inout Staging) -> Bool {
+        let send = staging.send
         switch state {
         case "amount": break
         case "amount-typed": send.amount = "2500"
@@ -190,7 +229,7 @@ struct SendReceiveShotTests {
         case "amount-recipient":
             // 700 typed, then a pasted destination without an amount: the keypad keeps its turn, recipient shown.
             send.amount = "700"
-            after = { await send.importRecipient(Self.ark) }
+            staging.after = { await send.importRecipient(Self.ark) }
         case "to", "to-typing", "to-error", "to-nomatch":
             send.amount = "2500"
             send.progress.amountConfirmed = true
@@ -198,103 +237,121 @@ struct SendReceiveShotTests {
             send.destination = ["to-typing": "maya@localhost.com", "to-error": "bc1qxy2kgdygjrsqtzq2n0yrf2493p83kkfjhx0wlh",
                                 "to-nomatch": "zz"][state] ?? ""
         case "method":
-            after = { await send.importRecipient(Self.request) }
+            staging.after = { await send.importRecipient(Self.request) }
         case "source":
-            after = { send.maxSend() }
+            staging.after = { send.maxSend() }
+        default: return false
+        }
+        return true
+    }
+
+    /// Review, and the sends that start from it.
+    private static func stageReview(_ state: String, _ staging: inout Staging) async throws -> Bool {
+        switch state {
         case "review-ark", "sending-ark", "sent-ark":
-            review(arkPayment, SendQuote(amount: 2_500, fee: 0, total: 2_500), destination: "maya@localhost.com")
+            staging.review(arkPayment, SendQuote(amount: 2_500, fee: 0, total: 2_500), destination: "maya@localhost.com")
             if state != "review-ark" {
-                await script.configure(delay: state == "sent-ark" ? 0.8 : 1, result: state == "sent-ark"
+                await staging.script.configure(delay: state == "sent-ark" ? 0.8 : 1, result: state == "sent-ark"
                     ? .success(SendReceipt(amount: 2_500, fee: 0, proof: .submitReturnedArkSuccess)) : nil)
-                after = submit()
+                staging.after = staging.submit()
             }
         case "review-lightning", "sent-lightning", "slow-lightning", "pending-lightning", "refunded":
-            review(lightningPayment, SendQuote(amount: 1_500, fee: 12, total: 1_512), destination: Self.invoice)
-            fixture.history = [{
-                var row = HomeShotTests.row("movement-7", "Bolt11", 1_500, "outgoing", HomeShotTests.at(0, 9, 30), to: Self.invoice)
-                row.movementId = 7
-                row.preimage = "9f2c6b0e7d4a1c3e5f708192a3b4c5d6e7f8091a2b3c4d5e6f708192a3b4a41e"
-                return row
-            }()]
-            switch state {
-            case "sent-lightning":
-                await script.configure(delay: 1.6, result: .success(lightningReceipt))
-                after = submit()
-            case "slow-lightning":
-                await script.configure(delay: 1, result: nil)
-                after = submit()
-            case "pending-lightning":
-                await script.configure(delay: 3, result: .failure(URLError(.timedOut)), resolution: .inProgress(.init(amount: 1_500, fee: 12)))
-                after = submit()
-            case "refunded":
-                await script.configure(delay: 3, result: .failure(URLError(.timedOut)), resolution: .failed)
-                after = submit()
-            default: break
-            }
+            await stageLightning(state, &staging)
         case "review-onchain", "sent-wallet", "broadcast-pending":
             var quote = SendQuote(amount: 50_000, fee: 420, total: 50_420, feeRate: 2)
             quote.prepared = try JSONDecoder().decode(SendPreparedTransaction.self, from: Data(
                 #"{"id":"fixture","txid":"\#(String(repeating: "cd", count: 32))","vsize":141,"inputCount":1,"createdAt":\#(Date().timeIntervalSinceReferenceDate)}"#
                     .utf8))
-            review(walletPayment, quote, destination: Self.bitcoin)
+            staging.review(walletPayment, quote, destination: bitcoin)
             if state != "review-onchain" {
                 var receipt = SendReceipt(amount: 50_000, txid: String(repeating: "cd", count: 32), status: .submitted, fee: 420, proof: .preparedTxid)
                 if state == "broadcast-pending" { receipt.broadcastRetryPending = true }
-                await script.configure(delay: 0.6, result: .success(receipt), resolution: .paid(receipt))
-                after = submit()
+                await staging.script.configure(delay: 0.6, result: .success(receipt), resolution: .paid(receipt))
+                staging.after = staging.submit()
             }
         case "review-note":
             // A Lightning-address send with a note: Via, Arrives, Fee, Total and Note.
-            review(SendPayment(destination: "maya@localhost.com", method: "lightning", amount: 1_500, comment: "Coffee and a croissant, thanks!"),
-                   SendQuote(amount: 1_500, fee: 12, total: 1_512), destination: "maya@localhost.com")
+            staging.review(SendPayment(destination: "maya@localhost.com", method: "lightning", amount: 1_500, comment: "Coffee and a croissant, thanks!"),
+                           SendQuote(amount: 1_500, fee: 12, total: 1_512), destination: "maya@localhost.com")
         case "review-max":
             // An Ark-funded on-chain Max send: the longest labels (From, Estimated fee, Total (reviewed coins)).
-            review(SendPayment(destination: Self.bitcoin, method: "onchain", amount: 152_100, source: .offchain, max: true),
-                   SendQuote(amount: 152_100, fee: 642, total: 152_742, vtxoIDs: ["fixture:0"]), destination: Self.bitcoin)
-        case "sent-swap", "confirm-swap":
-            review(swapPayment, SendQuote(amount: 50_000, fee: 420, total: 50_420), destination: Self.bitcoin)
-            var confirmed = swapReceipt
-            confirmed.chainStatus = .confirmed(Self.tip + 1)
-            confirmed.status = .confirmed
-            await script.configure(delay: 1, result: .success(swapReceipt), resolution: state == "confirm-swap" ? .paid(confirmed) : .paid(swapReceipt))
-            if state == "confirm-swap" { fixture.tip = Self.tip + 1 }
-            after = submit()
-        case "failed":
-            review(arkPayment, SendQuote(amount: 2_500, fee: 0, total: 2_500), destination: "maya@localhost.com")
-            await script.configure(delay: 1, result: .failure(SendNotSubmitted(reason: .fundsChanged)))
-            after = submit()
-        case "uncertain":
-            review(arkPayment, SendQuote(amount: 2_500, fee: 0, total: 2_500), destination: "maya@localhost.com")
-            await script.configure(delay: 1, result: .failure(URLError(.timedOut)), resolution: .candidates([]))
-            after = submit()
-        case "already-paid":
-            review(lightningPayment, SendQuote(amount: 1_500, fee: 12, total: 1_512), destination: Self.invoice)
-            await script.configure(delay: 1, result: .failure(SendAlreadyPaid(receipt: lightningReceipt)))
-            after = submit()
-        case "unavailable": break
-        default:
-            tab = .receive
-            switch state {
-            case "receive-invoice": fixture.receiveFormat = .invoice
-            case "receive-ark": fixture.receiveFormat = .ark
-            case "receive-bitcoin": fixture.receiveFormat = .bitcoin
-            case "receive-formats": fixture.receiveSheet = "formats"
-            case "receive-amount-sheet", "receive-saving": fixture.receiveSheet = "amount"
-            case "arrive-onchain": fixture.chain = Self.chain()
-            default: break
-            }
-            if ["receive-amount", "receive-invoice", "arrive-lightning"].contains(state) {
-                after = { _ = await receive.save(amountSat: 1_500, description: "") }
-            }
+            staging.review(SendPayment(destination: bitcoin, method: "onchain", amount: 152_100, source: .offchain, max: true),
+                           SendQuote(amount: 152_100, fee: 642, total: 152_742, vtxoIDs: ["fixture:0"]), destination: bitcoin)
+        default: return false
         }
-        let view = WalletTabs(history: history, home: home, send: send, receive: receive, tab: tab)
-            .environment(app)
-            .environment(app.walletLock)
-            .environment(\.homeFixture, HomeFixture(summary: Self.summary(), walletError: nil, needsRecoveryPhraseBackup: false))
-            .environment(\.sendReceiveFixture, fixture)
-            .environment(\.locale, Locale(identifier: app.localeIdentifier))
-            .environment(\.scenePhase, .active)
-        return (AnyView(view), root, after)
+        return true
+    }
+
+    private static func stageLightning(_ state: String, _ staging: inout Staging) async {
+        staging.review(lightningPayment, SendQuote(amount: 1_500, fee: 12, total: 1_512), destination: invoice)
+        staging.fixture.history = [{
+            var row = HomeShotTests.row("movement-7", "Bolt11", 1_500, "outgoing", HomeShotTests.at(0, 9, 30), to: invoice)
+            row.movementId = 7
+            row.preimage = "9f2c6b0e7d4a1c3e5f708192a3b4c5d6e7f8091a2b3c4d5e6f708192a3b4a41e"
+            return row
+        }()]
+        switch state {
+        case "sent-lightning":
+            await staging.script.configure(delay: 1.6, result: .success(lightningReceipt))
+            staging.after = staging.submit()
+        case "slow-lightning":
+            await staging.script.configure(delay: 1, result: nil)
+            staging.after = staging.submit()
+        case "pending-lightning":
+            await staging.script.configure(delay: 3, result: .failure(URLError(.timedOut)), resolution: .inProgress(.init(amount: 1_500, fee: 12)))
+            staging.after = staging.submit()
+        case "refunded":
+            await staging.script.configure(delay: 3, result: .failure(URLError(.timedOut)), resolution: .failed)
+            staging.after = staging.submit()
+        default: break
+        }
+    }
+
+    /// Sends that end somewhere other than a plain success.
+    private static func stageOutcome(_ state: String, _ staging: inout Staging) async -> Bool {
+        switch state {
+        case "sent-swap", "confirm-swap":
+            staging.review(swapPayment, SendQuote(amount: 50_000, fee: 420, total: 50_420), destination: bitcoin)
+            var confirmed = swapReceipt
+            confirmed.chainStatus = .confirmed(tip + 1)
+            confirmed.status = .confirmed
+            await staging.script.configure(delay: 1, result: .success(swapReceipt),
+                                           resolution: state == "confirm-swap" ? .paid(confirmed) : .paid(swapReceipt))
+            if state == "confirm-swap" { staging.fixture.tip = tip + 1 }
+            staging.after = staging.submit()
+        case "failed":
+            staging.review(arkPayment, SendQuote(amount: 2_500, fee: 0, total: 2_500), destination: "maya@localhost.com")
+            await staging.script.configure(delay: 1, result: .failure(SendNotSubmitted(reason: .fundsChanged)))
+            staging.after = staging.submit()
+        case "uncertain":
+            staging.review(arkPayment, SendQuote(amount: 2_500, fee: 0, total: 2_500), destination: "maya@localhost.com")
+            await staging.script.configure(delay: 1, result: .failure(URLError(.timedOut)), resolution: .candidates([]))
+            staging.after = staging.submit()
+        case "already-paid":
+            staging.review(lightningPayment, SendQuote(amount: 1_500, fee: 12, total: 1_512), destination: invoice)
+            await staging.script.configure(delay: 1, result: .failure(SendAlreadyPaid(receipt: lightningReceipt)))
+            staging.after = staging.submit()
+        case "unavailable": break
+        default: return false
+        }
+        return true
+    }
+
+    private static func stageReceive(_ state: String, _ staging: inout Staging) {
+        staging.tab = .receive
+        switch state {
+        case "receive-invoice": staging.fixture.receiveFormat = .invoice
+        case "receive-ark": staging.fixture.receiveFormat = .ark
+        case "receive-bitcoin": staging.fixture.receiveFormat = .bitcoin
+        case "receive-formats": staging.fixture.receiveSheet = "formats"
+        case "receive-amount-sheet", "receive-saving": staging.fixture.receiveSheet = "amount"
+        case "arrive-onchain": staging.fixture.chain = chain()
+        default: break
+        }
+        if ["receive-amount", "receive-invoice", "arrive-lightning"].contains(state) {
+            let receive = staging.receive
+            staging.after = { _ = await receive.save(amountSat: 1_500, description: "") }
+        }
     }
 
     private func receiveModel(_ state: String) -> ReceiveModel {

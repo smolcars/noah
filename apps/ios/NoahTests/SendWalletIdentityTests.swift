@@ -130,11 +130,10 @@ import Testing
         default: break
         }
         let backend = Backend()
-        do {
+        await #expect(throws: SendExistingLightning.self, "Mismatched checkpoint advanced") {
             _ = try await SendLightningCheckpoint(original).advance(invoice: payment.destination, payment: payment, quote: bound,
                                                                     state: .inProgress(send: pending), check: { try await backend.check($0) })
-            Issue.record("Mismatched checkpoint advanced")
-        } catch is SendExistingLightning {}
+        }
         #expect(await backend.checks == 0)
         #expect(await backend.pays == 0)
     }

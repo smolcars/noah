@@ -30,13 +30,13 @@ import Testing
         var urls: [URL] = []
         init(_ invoice: String) { self.invoice = invoice }
         func fetch(_ request: URLRequest) throws -> (Data, URLResponse) {
-            let url = request.url!
+            let url = try #require(request.url)
             urls.append(url)
             let body: [String: Any] = urls.count == 1
                 ? ["tag": "payRequest", "callback": "https://pay.example.com/callback?token=keep", "minSendable": 1000,
                    "maxSendable": 10_000_000, "commentAllowed": 100, "metadata": "[]"]
                 : ["pr": invoice]
-            return (try JSONSerialization.data(withJSONObject: body), HTTPURLResponse(url: url, statusCode: 200, httpVersion: nil, headerFields: nil)!)
+            return try (JSONSerialization.data(withJSONObject: body), #require(HTTPURLResponse(url: url, statusCode: 200, httpVersion: nil, headerFields: nil)))
         }
     }
     @Test func resolvedInvoiceHitsCheckpointGuardBeforePay() async throws {
@@ -55,13 +55,12 @@ import Testing
                                     htlcVtxoIds: [], movementId: nil, invoice: resolved, amountSats: 2000,
                                     feeSats: 83, htlcVtxoCount: 1, hasFailedRevocation: false)
         let payer = SendLightningSafetyTests.Payer()
-        do {
+        await #expect(throws: SendExistingLightning.self, "Resolved LNURL must inspect inherited checkpoints") {
             _ = try await SendLightningSubmission.submit(
                 payment: .init(destination: resolved, method: "lightning", amount: 1000),
                 state: .inProgress(send: pending),
                 movements: []) { await payer.pay() }
-            Issue.record("Resolved LNURL must inspect inherited checkpoints")
-        } catch is SendExistingLightning {}
+        }
         #expect(await payer.calls == 0)
     }
     @Test func normalResolvedInvoicePaysOnceAndRejectsWrongAmountOrAmountless() async throws {

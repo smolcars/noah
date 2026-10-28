@@ -178,7 +178,7 @@ struct SendRoundThreeLiveTests {
         let quote = try await session.quoteSend(onchain)
         #expect(quote.approximate && quote.amount == 5000)
         let scene = try #require(UIApplication.shared.connectedScenes.first as? UIWindowScene)
-        let keyWindow = scene.windows.first { $0.isKeyWindow }
+        let keyWindow = scene.keyWindow
         let window = try #require(keyWindow)
         window.rootViewController = UIHostingController(rootView: SendConfirmation(
             payment: onchain, quote: quote, controller: controller, cancel: {}, done: {}, onLeave: {}))

@@ -4,30 +4,30 @@ import Foundation
 import Testing
 
 @MainActor struct PaymentParityTests {
+    struct ReceiptCase: Decodable {
+        let gross: UInt64, arkFee: UInt64, chainFee: UInt64
+        let actualChainFee: UInt64?
+        let expected: OnchainReceipt.BoardAmounts
+    }
     struct Table: Decodable {
         let copy: [String: String]
-        struct Receipt: Decodable {
-            let gross: UInt64, arkFee: UInt64, chainFee: UInt64
-            let actualChainFee: UInt64?
-            let expected: OnchainReceipt.BoardAmounts
-        }
-        let receipts: [Receipt]
+        let receipts: [ReceiptCase]
     }
     @Test func sharedCopyAndBoardReceiptTotals() throws {
         let table = try Fixtures.decode("payment-status-copy", as: Table.self)
-        let actual = ["notFound": ChainTransactionStatus.notFound.message,
-                      "inMempool": ChainTransactionStatus.inMempool.message,
-                      "confirmed": ChainTransactionStatus.confirmed(123).message,
-                      "lookupError": ChainTransactionStatus.errorText,
-                      "insufficientFunds": OnchainFailure.insufficientFunds.errorDescription!,
-                      "belowMinimum": OnchainFailure.belowMinimum.errorDescription!,
-                      "reservedInputs": OnchainFailure.reservedInputs.errorDescription!,
-                      "tooManyInputs": OnchainFailure.tooManyInputs.errorDescription!,
-                      "notSynced": OnchainFailure.notSynced.errorDescription!,
-                      "boardNotAttempted": OnchainFailure.boardNotAttempted.errorDescription!,
-                      "broadcastFailed": OnchainReceipt.broadcastFailedMessage,
-                      "broadcastPending": SendReceipt.broadcastPendingMessage,
-                      "submitted": SendReceipt.submittedMessage, "uncertain": SendReceipt.uncertainMessage]
+        let actual = try ["notFound": ChainTransactionStatus.notFound.message,
+                          "inMempool": ChainTransactionStatus.inMempool.message,
+                          "confirmed": ChainTransactionStatus.confirmed(123).message,
+                          "lookupError": ChainTransactionStatus.errorText,
+                          "insufficientFunds": #require(OnchainFailure.insufficientFunds.errorDescription),
+                          "belowMinimum": #require(OnchainFailure.belowMinimum.errorDescription),
+                          "reservedInputs": #require(OnchainFailure.reservedInputs.errorDescription),
+                          "tooManyInputs": #require(OnchainFailure.tooManyInputs.errorDescription),
+                          "notSynced": #require(OnchainFailure.notSynced.errorDescription),
+                          "boardNotAttempted": #require(OnchainFailure.boardNotAttempted.errorDescription),
+                          "broadcastFailed": OnchainReceipt.broadcastFailedMessage,
+                          "broadcastPending": SendReceipt.broadcastPendingMessage,
+                          "submitted": SendReceipt.submittedMessage, "uncertain": SendReceipt.uncertainMessage]
         #expect(actual == table.copy)
         for row in table.receipts {
             let quote = OnchainQuote(

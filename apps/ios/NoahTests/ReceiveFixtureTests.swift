@@ -45,12 +45,13 @@ struct ReceiveFixtureTests {
             let actual: String
             switch input.operation {
             case "fiatToSats":
-                actual = String(FiatCurrency.fiatToSats(Double(input.amount ?? "") ?? .nan, btcPrice: input.btcPrice!))
+                actual = try String(FiatCurrency.fiatToSats(Double(input.amount ?? "") ?? .nan, btcPrice: #require(input.btcPrice)))
             case "satsToFiat":
-                actual = FiatCurrency.display(sats: input.sats!, btcPrice: input.btcPrice!, currency: input.currency,
-                                              locale: Locale(identifier: input.locale))
+                actual = try FiatCurrency.display(sats: #require(input.sats), btcPrice: #require(input.btcPrice), currency: input.currency,
+                                                  locale: Locale(identifier: input.locale))
             default:
-                actual = FiatCurrency.format(Double(input.amount!)!, currency: input.currency, locale: Locale(identifier: input.locale))
+                let amount = try #require(input.amount)
+                actual = try FiatCurrency.format(#require(Double(amount)), currency: input.currency, locale: Locale(identifier: input.locale))
             }
             #expect(actual == fixture.expected, "\(fixture.name): \(actual)")
         }

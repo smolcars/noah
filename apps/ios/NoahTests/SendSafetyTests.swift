@@ -198,7 +198,7 @@ import Testing
             return
         }
         #expect(receipt.fee == 500)
-        #expect(receipt.fee! > quote.fee)
+        #expect(try #require(receipt.fee) > quote.fee)
         #expect(receipt.amount == 1000)
         #expect(try roundTrip(.init(payment: saved.payment, snapshot: saved.snapshot, receipt: receipt)).receipt?.fee == 500)
     }
@@ -318,7 +318,7 @@ import Testing
         let restarted = controller(storage) { try SendReconciliation.onchain($0, transactions: [confirmed]) }
         #expect(restarted.state == .uncertain)
         await restarted.checkStatus()
-        #expect(restarted.state == .succeeded(saved.receipt!))
+        #expect(try restarted.state == .succeeded(#require(saved.receipt)))
     }
 
     @Test func roundOneMissingHistoryFailureAndInvoiceReceiptReopenUncertain() throws {
@@ -398,8 +398,8 @@ import Testing
         storage.attempt = try roundTrip(saved)
         let subject = controller(storage) { try SendReconciliation.onchain($0, transactions: []) }
         await subject.checkStatus()
-        #expect(subject.state == .succeeded(saved.receipt!))
-        #expect(saved.receipt!.isSubmitted && !subject.canOverride)
+        #expect(try subject.state == .succeeded(#require(saved.receipt)))
+        #expect(try #require(saved.receipt).isSubmitted && !subject.canOverride)
     }
 
     @Test func submittedReceiptCannotBeDowngradedByFailure() async throws {
@@ -409,7 +409,7 @@ import Testing
         storage.attempt = try roundTrip(saved)
         let subject = controller(storage) { _ in .failed }
         await subject.checkStatus()
-        #expect(subject.state == .succeeded(saved.receipt!))
+        #expect(try subject.state == .succeeded(#require(saved.receipt)))
     }
 
     @Test func consensusOutputsSupportLegacyAndWitnessAndRejectTruncation() throws {
@@ -462,7 +462,7 @@ import Testing
             attempt(method, source: method == "onchain" ? .offchain : nil))
         let recovered = controller(storage) { SendReconciliation.ark($0, movements: []) }
         await recovered.checkStatus()
-        #expect(recovered.state == .uncertain && recovered.attempt?.candidates == [])
+        #expect(recovered.state == .uncertain && recovered.attempt?.candidates?.isEmpty == true)
         recovered.acknowledge()
         #expect(recovered.locked)
         recovered.startNewPaymentAfterHistoryCheck(confirmed: true)

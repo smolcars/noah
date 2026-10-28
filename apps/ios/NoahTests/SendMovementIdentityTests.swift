@@ -103,7 +103,7 @@ import Testing
         storage.attempt = saved
         let actual = try offboards.movement()
         let restarted = fixtures.controller(storage) { attempt in
-            .paid(SendReconciliation.offboardReceipt(attempt.receipt!, payment: attempt.payment, movements: [actual]))
+            try .paid(SendReconciliation.offboardReceipt(#require(attempt.receipt), payment: attempt.payment, movements: [actual]))
         }
         await restarted.checkStatus()
         #expect(restarted.attempt?.receipt?.amount == 850 && restarted.attempt?.receipt?.movementID == 2)

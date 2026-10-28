@@ -8,9 +8,9 @@ struct SendFixtureTests {
         let valid: Bool
         let destinationType: String?
         let amount: Decimal?
-        var isAmountEditable: Bool? = nil
+        var isAmountEditable: Bool? // swiftlint:disable:this discouraged_optional_boolean - absent from RN's invalid results
         let error: String?
-        let bip321: [String: String]?
+        let bip321: [String: String]? // swiftlint:disable:this discouraged_optional_collection - absent and empty differ in the RN results
     }
     @Test func destinationsMatchRN() throws {
         for fixture in try Fixtures.load("send-utils", input: ParseInput.self, expected: ParseExpected.self) {
@@ -27,15 +27,15 @@ struct SendFixtureTests {
         }
     }
     enum JSON: Codable {
-        case string(String), bool(Bool), object([String: JSON]), array([JSON]), number(Int), null
+        case string(String), bool(Bool), object([String: Self]), array([Self]), number(Int), null
         init(from decoder: Decoder) throws {
             let c = try decoder.singleValueContainer()
             if c.decodeNil() { self = .null }
             else if let x = try? c.decode(String.self) { self = .string(x) }
             else if let x = try? c.decode(Bool.self) { self = .bool(x) }
             else if let x = try? c.decode(Int.self) { self = .number(x) }
-            else if let x = try? c.decode([JSON].self) { self = .array(x) }
-            else { self = .object(try c.decode([String: JSON].self)) }
+            else if let x = try? c.decode([Self].self) { self = .array(x) }
+            else { self = .object(try c.decode([String: Self].self)) }
         }
         func encode(to encoder: Encoder) throws {
             var c = encoder.singleValueContainer()

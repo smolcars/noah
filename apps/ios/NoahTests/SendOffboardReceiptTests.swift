@@ -15,9 +15,9 @@ import Testing
         var movement = fixtures.movement("onchain", status: "pending", amount: amount)
         movement.subsystemKind = "offboard"
         movement.offchainFeeSats = 150
-        movement.metadataJson = String(decoding: try JSONEncoder().encode([
+        movement.metadataJson = try #require(String(bytes: JSONEncoder().encode([
             "offboard_txid": txid, "offboard_tx": try fixtures.transaction(amount: amount).txHex,
-        ]), as: UTF8.self)
+        ]), encoding: .utf8))
         return movement
     }
     @Test func reviewEstimatesOnlyRecipientAndFeeWithinExactReviewedTotal() throws {
@@ -52,14 +52,14 @@ import Testing
         storage.attempt = try fixtures.roundTrip(attempt())
         let actual = try movement()
         let pending = fixtures.controller(storage) { saved in
-            .paid(SendReconciliation.offboardReceipt(saved.receipt!, payment: saved.payment, movements: []))
+            try .paid(SendReconciliation.offboardReceipt(#require(saved.receipt), payment: saved.payment, movements: []))
         }
         await pending.checkStatus()
         #expect(pending.attempt?.receipt?.amountIsPending == true)
         #expect(pending.locked && !pending.canOverride)
         storage.attempt = try fixtures.roundTrip(#require(storage.attempt))
         let refreshed = fixtures.controller(storage) { saved in
-            .paid(SendReconciliation.offboardReceipt(saved.receipt!, payment: saved.payment, movements: [actual]))
+            try .paid(SendReconciliation.offboardReceipt(#require(saved.receipt), payment: saved.payment, movements: [actual]))
         }
         await refreshed.checkStatus()
         #expect(refreshed.attempt?.receipt?.amount == 850 && refreshed.attempt?.receipt?.fee == 150)
