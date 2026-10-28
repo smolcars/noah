@@ -32,6 +32,8 @@ class BarkLogTest {
         } finally { directory.deleteRecursively() }
     }
 
+    private fun messageEvent(input: String) = io.sentry.SentryEvent().apply { message = io.sentry.protocol.Message().apply { formatted = input } }
+
     @Test fun relativeAndEscapedProviderErrorsCannotLeakEndpointCredentials() {
         val token = "fakeOpaqueCredential59df"
         com.noahwallet.services.logging.EndpointLogPrivacy.register("https://relative-privacy.example/api/$token")
@@ -57,7 +59,7 @@ class BarkLogTest {
                 assertNotEquals(input, LogFile.redactForTelemetry(input))
                 BarkLog(file).log(LogLevel.WARN, "bark::onchain", input)
                 AppLog("wallet", file).e(input)
-                val event = io.sentry.SentryEvent().apply { message = io.sentry.protocol.Message().apply { formatted = input } }
+                val event = messageEvent(input)
                 val clean = requireNotNull(com.noahwallet.services.logging.AppTelemetry.scrub(event))
                 assertFalse(clean.message!!.formatted!!.contains(token))
                 event.release = input

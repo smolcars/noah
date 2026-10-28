@@ -23,10 +23,7 @@ class EndpointPrivacyTest {
                 val input = test.getValue("input").jsonPrimitive.content
                 val safe = LogFile.redact(input)
                 assertEquals(input, test.getValue("expected").jsonPrimitive.content, safe)
-                val event = SentryEvent().apply {
-                    message = Message().apply { formatted = input }
-                    exceptions = listOf(SentryException().apply { value = input; type = "FakeEndpointError" })
-                }
+                val event = endpointEvent(input)
                 val clean = requireNotNull(AppTelemetry.scrub(event))
                 assertEquals(safe, clean.message?.formatted)
                 assertEquals(safe, clean.exceptions!!.first().value)
@@ -59,10 +56,7 @@ class EndpointPrivacyTest {
                 val input = test.getValue("input").jsonPrimitive.content
                 val expected = test.getValue("expected").jsonPrimitive.content
                 assertEquals(input, expected, LogFile.redact(input))
-                val event = SentryEvent().apply {
-                    message = Message().apply { formatted = input }
-                    exceptions = listOf(SentryException().apply { value = input; type = "FakeEndpointError" })
-                }
+                val event = endpointEvent(input)
                 val clean = requireNotNull(AppTelemetry.scrub(event))
                 assertEquals(expected, clean.message?.formatted)
                 assertEquals(expected, clean.exceptions!!.first().value)
@@ -191,5 +185,11 @@ class EndpointPrivacyTest {
             assertEquals(expected, EndpointLogPrivacy.sanitize(input, registered, hosts = hosts))
             assertEquals("TransportError HTTP 503: $expected", EndpointLogPrivacy.sanitize("TransportError HTTP 503: $input", registered, hosts = hosts))
         }
+    }
+
+    /** An error event carrying [input] as its message and its exception's value. */
+    private fun endpointEvent(input: String) = SentryEvent().apply {
+        message = Message().apply { formatted = input }
+        exceptions = listOf(SentryException().apply { value = input; type = "FakeEndpointError" })
     }
 }

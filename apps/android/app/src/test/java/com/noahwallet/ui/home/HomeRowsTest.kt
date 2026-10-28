@@ -10,6 +10,7 @@ import java.util.Date
 /** Home rows read only what the record says: no invented names, monochrome signs, Noah users by domain. */
 class HomeRowsTest {
     private val now = Calendar.getInstance().apply { set(2026, Calendar.OCTOBER, 22, 15, 0, 0); set(Calendar.MILLISECOND, 0) }.time
+    @Suppress("LongParameterList") // Fixture builder: each parameter is a named, defaulted field of the model it builds.
     private fun row(type: String, direction: String, destination: String = "", status: String = "successful", kind: String? = null,
         effective: Long = 1, source: String = "ark", confirmed: Boolean? = null, dateLabel: String? = null) =
         HistoryTransaction("id", type, 2_100, HistoryRules.isoDate(now), direction, dateLabel = dateLabel, source = source,

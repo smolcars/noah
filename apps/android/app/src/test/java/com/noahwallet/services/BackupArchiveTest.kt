@@ -95,22 +95,24 @@ class BackupArchiveTest {
             BackupArchive.extract(byteArrayOf(1).inputStream(), File(root, "crc"), 10, 123)
         }.exceptionOrNull() as BackupArchive.Failure).reason)
     }
+    /** [original] with every zip header's CRC (or, without [crc], its sizes) forged. */
+    private fun forged(original: ByteArray, crc: Boolean): ByteArray {
+        val bytes = original.copyOf()
+        fun u32(at: Int): Long = (0..3).fold(0L) { value, i -> value or ((bytes[at + i].toLong() and 255) shl (8 * i)) }
+        fun write(at: Int, value: Int) { repeat(4) { bytes[at + it] = (value ushr (8 * it)).toByte() } }
+        for (offset in 0 until bytes.size - 46) {
+            when (u32(offset)) {
+                0x04034b50L -> if (crc) write(offset + 14, 123) else write(offset + 22, 16)
+                0x02014b50L -> if (crc) write(offset + 16, 123) else write(offset + 24, 16)
+                0x08074b50L -> if (crc) write(offset + 4, 123) else write(offset + 12, 16)
+            }
+        }
+        return bytes
+    }
     @Test fun forgedSizesAndCrcAreRejectedWhileInflatingArchive() = temp { root ->
         val manifestBytes = BackupArchive.encode(manifest)
         val original = zip("manifest.json" to manifestBytes, "db.sqlite" to ByteArray(256 * 1024))
-        fun patch(crc: Boolean): ByteArray {
-            val bytes = original.copyOf()
-            fun u32(at: Int): Long = (0..3).fold(0L) { value, i -> value or ((bytes[at + i].toLong() and 255) shl (8 * i)) }
-            fun write(at: Int, value: Int) { repeat(4) { bytes[at + it] = (value ushr (8 * it)).toByte() } }
-            for (offset in 0 until bytes.size - 46) {
-                when (u32(offset)) {
-                    0x04034b50L -> if (crc) write(offset + 14, 123) else write(offset + 22, 16)
-                    0x02014b50L -> if (crc) write(offset + 16, 123) else write(offset + 24, 16)
-                    0x08074b50L -> if (crc) write(offset + 4, 123) else write(offset + 12, 16)
-                }
-            }
-            return bytes
-        }
+        fun patch(crc: Boolean) = forged(original, crc)
         val corrupt = File(root, "corrupt").apply { writeBytes(BackupCrypto.encrypt(patch(true), phrase, BackupCrypto.Version.snapshot, testRounds)) }
         assertEquals(BackupArchive.Reason.checksumMismatch, failure { BackupArchive.open(corrupt, phrase, File(root, "bad"), testRounds) })
         assertFalse(File(root, "bad").exists())

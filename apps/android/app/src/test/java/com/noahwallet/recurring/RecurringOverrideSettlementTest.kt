@@ -83,6 +83,18 @@ class RecurringOverrideSettlementTest {
         }
     }
 
+    /** Whether this journal write is the one that records [boundary]. */
+    private fun reaches(boundary: String, raw: String): Boolean {
+        val e = RecurringStore.json.parseToJsonElement(raw).jsonObject["attempts"]!!.jsonObject.getValue("rent").jsonObject
+        return when (boundary) {
+            "terminal" -> e["terminal"] != null
+            "sendCleared", "consumed" -> e["consumed"]?.jsonPrimitive?.booleanOrNull == true
+            "policy", "historyApplied" -> e["historyApplied"]?.jsonPrimitive?.booleanOrNull == true
+            "released" -> e["released"]?.jsonPrimitive?.booleanOrNull == true
+            else -> false
+        }
+    }
+
     @Test fun deathDuringOverrideRecoversPaidHistoryExactlyOnce() = runBlocking {
         for (boundary in listOf("terminal", "sendCleared", "consumed", "policy", "historyApplied", "released", "resumed")) {
             val w = RecurringWorld(this)
@@ -91,15 +103,7 @@ class RecurringOverrideSettlementTest {
                 assertEquals(SendController.State.storageBlocked, w.controller.state)
                 var crashed = false
                 w.beforeJournalWrite = { raw ->
-                    val e = RecurringStore.json.parseToJsonElement(raw).jsonObject["attempts"]!!.jsonObject.getValue("rent").jsonObject
-                    val matches = when (boundary) {
-                        "terminal" -> e["terminal"] != null
-                        "sendCleared", "consumed" -> e["consumed"]?.jsonPrimitive?.booleanOrNull == true
-                        "policy", "historyApplied" -> e["historyApplied"]?.jsonPrimitive?.booleanOrNull == true
-                        "released" -> e["released"]?.jsonPrimitive?.booleanOrNull == true
-                        else -> false
-                    }
-                    if (matches && !crashed) {
+                    if (reaches(boundary, raw) && !crashed) {
                         crashed = true
                         // Before consumed: Send is already cleared. Before historyApplied: the policy row is durable.
                         if (boundary != "sendCleared" && boundary != "policy") w.journalRaw = raw

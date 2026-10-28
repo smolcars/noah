@@ -31,55 +31,12 @@ class RecurringJournalValidationTest(private val kind: String) {
             val plan = attempt.getValue("plan").jsonObject.toMutableMap()
             val indices = root.getValue("consumedIndices").jsonArray.single().jsonObject.toMutableMap()
             val watermark = root.getValue("consumed").jsonArray.single().jsonObject.toMutableMap()
-            fun changeBinding(record: MutableMap<String, JsonElement>, field: String, value: String) {
-                val owner = record.getValue("binding").jsonObject.toMutableMap()
-                if (field == "instance") owner[field] = JsonPrimitive(value)
-                else owner["wallet"] = JsonObject(owner.getValue("wallet").jsonObject + (field to JsonPrimitive(value)))
-                record["binding"] = JsonObject(owner)
-            }
-            when (kind) {
-                "negative" -> indices["indices"] = JsonArray(listOf(JsonPrimitive(-1)))
-                "duplicate" -> indices["indices"] = JsonArray(listOf(JsonPrimitive(1), JsonPrimitive(1)))
-                "unsorted" -> indices["indices"] = JsonArray(listOf(JsonPrimitive(2), JsonPrimitive(1)))
-                "empty" -> indices["indices"] = JsonArray(emptyList())
-                "wrongIndex" -> indices["indices"] = JsonArray(listOf(JsonPrimitive(2)))
-                "emptyScope" -> indices["scheduleID"] = JsonPrimitive(" ")
-                "wrongScope" -> indices["scheduleID"] = JsonPrimitive("other")
-                "emptyWallet" -> changeBinding(indices, "fingerprint", " ")
-                "wrongWallet" -> changeBinding(indices, "fingerprint", "other")
-                "wrongNetwork" -> changeBinding(indices, "network", "other")
-                "badInstance" -> changeBinding(indices, "instance", "broken")
-                "shortInstance" -> changeBinding(indices, "instance", "1-1-1-1-1")
-                "wrongInstance" -> changeBinding(indices, "instance", UUID.randomUUID().toString())
-                "badRevision" -> indices["policyRevision"] = JsonPrimitive("broken")
-                "wrongRevision" -> indices["policyRevision"] = JsonPrimitive(UUID.randomUUID().toString())
-                "nullRevision" -> indices["policyRevision"] = JsonNull
-                "attemptRevision" -> attempt["policyRevision"] = JsonPrimitive("broken")
-                "attemptID" -> attempt["scheduleID"] = JsonPrimitive("other")
-                "attemptKind" -> plan["kind"] = JsonPrimitive("idle")
-                "attemptIndex", "legacy", "v1" -> plan["occurrenceIndex"] = JsonPrimitive(-1)
-                "attemptDate" -> plan["scheduledFor"] = JsonNull
-                "markedAt" -> attempt.remove("markedAt")
-                "unresolvedConsumed" -> attempt["resolved"] = JsonPrimitive(false)
-                "watermarkBehind" -> watermark["through"] = JsonPrimitive(999)
-                "watermarkScope" -> watermark["scheduleID"] = JsonPrimitive("other")
-                "watermarkWallet" -> changeBinding(watermark, "fingerprint", "other")
-                "watermarkNetwork" -> changeBinding(watermark, "network", "other")
-                "watermarkInstance" -> changeBinding(watermark, "instance", UUID.randomUUID().toString())
-                "watermarkDate" -> watermark["through"] = JsonNull
-            }
+            corruptRecords(attempt, plan, indices, watermark)
             attempt["plan"] = JsonObject(plan)
             root["attempts"] = JsonObject(mapOf("rent" to JsonObject(attempt)))
             root["consumedIndices"] = JsonArray(listOf(JsonObject(indices)))
             root["consumed"] = JsonArray(listOf(JsonObject(watermark)))
-            when (kind) {
-                "missingIndices" -> root["consumedIndices"] = JsonArray(emptyList())
-                "missingWatermark" -> root["consumed"] = JsonArray(emptyList())
-                "missingField" -> root.remove("consumedIndices")
-                "stringVersion" -> root["version"] = JsonPrimitive("2")
-                "futureVersion" -> root["version"] = JsonPrimitive(4)
-                "v1", "v1Revision" -> root["version"] = JsonPrimitive(1)
-            }
+            corruptRoot(root)
             if (kind == "v1Revision") root["revisions"] = JsonArray(listOf(JsonObject(indices + ("throughIndex" to JsonPrimitive(-1)))))
             val malformed = (if (kind == "legacy") root.getValue("attempts") else JsonObject(root)).toString().toByteArray()
             file.writeBytes(malformed)
@@ -101,6 +58,63 @@ class RecurringJournalValidationTest(private val kind: String) {
             assertFalse(file.exists())
             assertEquals(1, writes); assertEquals(1, quarantines)
         } finally { directory.deleteRecursively() }
+    }
+
+    private fun changeBinding(record: MutableMap<String, JsonElement>, field: String, value: String) {
+        val owner = record.getValue("binding").jsonObject.toMutableMap()
+        if (field == "instance") owner[field] = JsonPrimitive(value)
+        else owner["wallet"] = JsonObject(owner.getValue("wallet").jsonObject + (field to JsonPrimitive(value)))
+        record["binding"] = JsonObject(owner)
+    }
+
+    /** Breaks one field of the journal's records the way [kind] names. */
+    private fun corruptRecords(
+        attempt: MutableMap<String, JsonElement>, plan: MutableMap<String, JsonElement>,
+        indices: MutableMap<String, JsonElement>, watermark: MutableMap<String, JsonElement>,
+    ) {
+        when (kind) {
+            "negative" -> indices["indices"] = JsonArray(listOf(JsonPrimitive(-1)))
+            "duplicate" -> indices["indices"] = JsonArray(listOf(JsonPrimitive(1), JsonPrimitive(1)))
+            "unsorted" -> indices["indices"] = JsonArray(listOf(JsonPrimitive(2), JsonPrimitive(1)))
+            "empty" -> indices["indices"] = JsonArray(emptyList())
+            "wrongIndex" -> indices["indices"] = JsonArray(listOf(JsonPrimitive(2)))
+            "emptyScope" -> indices["scheduleID"] = JsonPrimitive(" ")
+            "wrongScope" -> indices["scheduleID"] = JsonPrimitive("other")
+            "emptyWallet" -> changeBinding(indices, "fingerprint", " ")
+            "wrongWallet" -> changeBinding(indices, "fingerprint", "other")
+            "wrongNetwork" -> changeBinding(indices, "network", "other")
+            "badInstance" -> changeBinding(indices, "instance", "broken")
+            "shortInstance" -> changeBinding(indices, "instance", "1-1-1-1-1")
+            "wrongInstance" -> changeBinding(indices, "instance", UUID.randomUUID().toString())
+            "badRevision" -> indices["policyRevision"] = JsonPrimitive("broken")
+            "wrongRevision" -> indices["policyRevision"] = JsonPrimitive(UUID.randomUUID().toString())
+            "nullRevision" -> indices["policyRevision"] = JsonNull
+            "attemptRevision" -> attempt["policyRevision"] = JsonPrimitive("broken")
+            "attemptID" -> attempt["scheduleID"] = JsonPrimitive("other")
+            "attemptKind" -> plan["kind"] = JsonPrimitive("idle")
+            "attemptIndex", "legacy", "v1" -> plan["occurrenceIndex"] = JsonPrimitive(-1)
+            "attemptDate" -> plan["scheduledFor"] = JsonNull
+            "markedAt" -> attempt.remove("markedAt")
+            "unresolvedConsumed" -> attempt["resolved"] = JsonPrimitive(false)
+            "watermarkBehind" -> watermark["through"] = JsonPrimitive(999)
+            "watermarkScope" -> watermark["scheduleID"] = JsonPrimitive("other")
+            "watermarkWallet" -> changeBinding(watermark, "fingerprint", "other")
+            "watermarkNetwork" -> changeBinding(watermark, "network", "other")
+            "watermarkInstance" -> changeBinding(watermark, "instance", UUID.randomUUID().toString())
+            "watermarkDate" -> watermark["through"] = JsonNull
+        }
+    }
+
+    /** Breaks the journal's envelope the way [kind] names. */
+    private fun corruptRoot(root: MutableMap<String, JsonElement>) {
+        when (kind) {
+            "missingIndices" -> root["consumedIndices"] = JsonArray(emptyList())
+            "missingWatermark" -> root["consumed"] = JsonArray(emptyList())
+            "missingField" -> root.remove("consumedIndices")
+            "stringVersion" -> root["version"] = JsonPrimitive("2")
+            "futureVersion" -> root["version"] = JsonPrimitive(4)
+            "v1", "v1Revision" -> root["version"] = JsonPrimitive(1)
+        }
     }
     companion object {
         @JvmStatic

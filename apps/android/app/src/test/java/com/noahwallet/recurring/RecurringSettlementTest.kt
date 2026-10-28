@@ -47,8 +47,7 @@ class RecurringSettlementTest {
                 key = w.controller.attempt!!.recurringOccurrenceKey!!
                 val result = w.journal.load().getValue(schedule.id).terminal!!
                 originalMessage = result.message
-                assertEquals(if (change == "failed") RecurringJournal.Outcome.failed else if (change == "ambiguous")
-                    RecurringJournal.Outcome.uncertain else RecurringJournal.Outcome.succeeded, result.outcome)
+                assertEquals(outcome(change), result.outcome)
                 w.controller.acknowledge()
                 if (change == "ambiguous") assertTrue(w.controller.locked) else {
                     assertFalse(w.controller.locked)
@@ -56,47 +55,12 @@ class RecurringSettlementTest {
                     assertNull(w.controller.attempt)
                     assertNotNull(w.journal.load().getValue(schedule.id).terminal)
                 }
-                if (change in listOf("replacement", "sameKeyReplacement")) {
-                    wallet.payBlock = { throw SendNotSubmitted(SendFailure.Reason.recurringStopped) }
-                    w.controller.submit(arkPayment, FakeSendWallet.quote.copy(walletIdentity = wallet.owner),
-                        if (change == "sameKeyReplacement") key else "another-occurrence")!!.await()
-                    replacement = w.controller.attempt
-                } else if (change == "reload") {
-                    w.controller.reloadForWalletChange()
-                    replacement = w.controller.attempt
-                } else if (change == "foreignReload") {
-                    w.binding = w.binding.copy(instance = java.util.UUID.randomUUID().toString())
-                    w.sendJournal.attempt = null
-                    w.controller.reloadForWalletChange()
-                } else if (change == "blocked") w.journal.quarantineFile.writeText("Storage admission blocked by test")
+                replacement = interfere(change, w, wallet, key)
             } finally { release.complete(Unit) }
             withTimeout(5000) { run.await() }
-            if (change == "foreignReload") {
-                assertNull(w.controller.attempt)
-                assertFalse(w.journal.load().getValue(schedule.id).consumed)
-                assertEquals(0, w.schedule!!.occurrencesPaid)
-                assertEquals(1, wallet.calls)
-                return@runBlocking
-            }
-            if (change == "blocked") {
-                assertNull(w.controller.attempt)
-                assertNull(w.sendJournal.attempt)
-                assertTrue(w.journal.quarantineFile.delete())
-                assertFalse(w.journal.load().getValue(schedule.id).consumed)
-                w.executor.checkStatus(schedule.id)
-            }
-            val paid = change !in listOf("failed", "ambiguous")
-            assertEquals(if (change in listOf("replacement", "sameKeyReplacement")) 2 else 1, wallet.calls)
-            assertEquals(paid, w.journal.load().getValue(schedule.id).consumed)
-            assertEquals(if (paid) 1 else 0, w.schedule!!.occurrencesPaid)
-            if (change == "failed") assertEquals(originalMessage, w.schedule!!.lastError)
-            if (replacement != null) {
-                assertSame("Only the original generation may be acknowledged", replacement, w.controller.attempt)
-                assertTrue(w.controller.locked)
-            } else if (change != "ambiguous") {
-                assertNull(w.controller.attempt)
-                assertNull(w.sendJournal.attempt)
-            }
+            if (change == "foreignReload") return@runBlocking assertUnsettled(w, schedule.id)
+            if (change == "blocked") unblock(w, schedule.id)
+            assertSettled(change, w, schedule.id, originalMessage, replacement)
             val calls = wallet.calls
             val paidCount = w.schedule!!.occurrencesPaid
             w.executor.checkStatus(schedule.id)
@@ -105,6 +69,64 @@ class RecurringSettlementTest {
             assertEquals(calls, wallet.calls)
             if (change == "ambiguous") assertEquals("needs_attention", w.schedule!!.status)
         } finally { release.complete(Unit); w.policyDirectory.parentFile!!.deleteRecursively() }
+    }
+
+    /** A result kept from another wallet settles nothing. */
+    private fun assertUnsettled(w: RecurringWorld, id: String) {
+        assertNull(w.controller.attempt)
+        assertFalse(w.journal.load().getValue(id).consumed)
+        assertEquals(0, w.schedule!!.occurrencesPaid)
+        assertEquals(1, w.wallet.calls)
+    }
+
+    /** With storage blocked the receipt stays hidden and unconsumed until the block clears and the status is checked. */
+    private suspend fun unblock(w: RecurringWorld, id: String) {
+        assertNull(w.controller.attempt)
+        assertNull(w.sendJournal.attempt)
+        assertTrue(w.journal.quarantineFile.delete())
+        assertFalse(w.journal.load().getValue(id).consumed)
+        w.executor.checkStatus(id)
+    }
+
+    private fun outcome(change: String) = when (change) {
+        "failed" -> RecurringJournal.Outcome.failed
+        "ambiguous" -> RecurringJournal.Outcome.uncertain
+        else -> RecurringJournal.Outcome.succeeded
+    }
+
+    /** What [change] does while the submission is held after the wallet work; returns the attempt that replaced it, if any. */
+    private suspend fun interfere(change: String, w: RecurringWorld, wallet: FakeSendWallet, key: String): SendAttempt? {
+        var replacement: SendAttempt? = null
+        if (change in listOf("replacement", "sameKeyReplacement")) {
+            wallet.payBlock = { throw SendNotSubmitted(SendFailure.Reason.recurringStopped) }
+            w.controller.submit(arkPayment, FakeSendWallet.quote.copy(walletIdentity = wallet.owner),
+                if (change == "sameKeyReplacement") key else "another-occurrence")!!.await()
+            replacement = w.controller.attempt
+        } else if (change == "reload") {
+            w.controller.reloadForWalletChange()
+            replacement = w.controller.attempt
+        } else if (change == "foreignReload") {
+            w.binding = w.binding.copy(instance = java.util.UUID.randomUUID().toString())
+            w.sendJournal.attempt = null
+            w.controller.reloadForWalletChange()
+        } else if (change == "blocked") w.journal.quarantineFile.writeText("Storage admission blocked by test")
+        return replacement
+    }
+
+    private fun assertSettled(change: String, w: RecurringWorld, id: String, originalMessage: String?, replacement: SendAttempt?) {
+        val wallet = w.wallet
+        val paid = change !in listOf("failed", "ambiguous")
+        assertEquals(if (change in listOf("replacement", "sameKeyReplacement")) 2 else 1, wallet.calls)
+        assertEquals(paid, w.journal.load().getValue(id).consumed)
+        assertEquals(if (paid) 1 else 0, w.schedule!!.occurrencesPaid)
+        if (change == "failed") assertEquals(originalMessage, w.schedule!!.lastError)
+        if (replacement != null) {
+            assertSame("Only the original generation may be acknowledged", replacement, w.controller.attempt)
+            assertTrue(w.controller.locked)
+        } else if (change != "ambiguous") {
+            assertNull(w.controller.attempt)
+            assertNull(w.sendJournal.attempt)
+        }
     }
 
     @Test fun paidOccurrenceKeepsItsOutcomeWhenAnotherPaymentFailsDuringSettlement() = runBlocking {
@@ -151,34 +173,43 @@ class RecurringSettlementTest {
             var changed: RecurringPayment? = null
             w.beforeBinding = {
                 if (w.controller.state == SendController.State.succeeded && once.compareAndSet(false, true)) {
-                    when (action) {
-                        "pause" -> w.store.upsert(w.schedule!!.copy(status = "paused"))
-                        "cancel" -> w.store.remove(original.id)
-                        "edit" -> w.store.upsert(original.copy(amountSat = 2000, nativeRevision = java.util.UUID.randomUUID().toString()))
-                        "suspend" -> { w.generation = "stopped"; w.allowed = false }
-                        "replace" -> w.binding = owner.copy(wallet = SendIdentity("other", "regtest"))
-                        "restore" -> w.binding = owner.copy(instance = java.util.UUID.randomUUID().toString())
-                        "failureLatch" -> w.store.upsert(w.schedule!!.copy(status = "needs_attention", consecutiveFailures = 3,
-                            lastError = "Safety storage failed"))
-                    }
+                    change(action, w, original, owner)
                     changed = w.schedule
                 }
             }
             w.executor.execute()
-            when (action) {
-                "cancel" -> assertNull(w.schedule)
-                "edit", "replace", "restore" -> assertEquals(changed, w.schedule)
-                "pause" -> { assertEquals("paused", w.schedule!!.status); assertEquals(1, w.schedule!!.occurrencesPaid) }
-                "failureLatch" -> {
-                    assertEquals("needs_attention", w.schedule!!.status)
-                    assertEquals(3, w.schedule!!.consecutiveFailures)
-                    assertEquals("Safety storage failed", w.schedule!!.lastError)
-                }
-                "suspend" -> assertEquals(1, w.schedule!!.occurrencesPaid)
-            }
+            assertKept(action, w, changed)
             assertEquals(action !in listOf("replace", "restore"), w.journal.consumed(owner, original.id, 1000))
             w.executor.execute()
             assertEquals("$action must not replay the paid occurrence", 1, w.wallet.calls)
+        }
+    }
+
+    /** The policy or wallet change [action] names, made while a paid occurrence settles. */
+    private fun change(action: String, w: RecurringWorld, original: RecurringPayment, owner: RecurringStore.Binding) {
+        when (action) {
+            "pause" -> w.store.upsert(w.schedule!!.copy(status = "paused"))
+            "cancel" -> w.store.remove(original.id)
+            "edit" -> w.store.upsert(original.copy(amountSat = 2000, nativeRevision = java.util.UUID.randomUUID().toString()))
+            "suspend" -> { w.generation = "stopped"; w.allowed = false }
+            "replace" -> w.binding = owner.copy(wallet = SendIdentity("other", "regtest"))
+            "restore" -> w.binding = owner.copy(instance = java.util.UUID.randomUUID().toString())
+            "failureLatch" -> w.store.upsert(w.schedule!!.copy(status = "needs_attention", consecutiveFailures = 3,
+                lastError = "Safety storage failed"))
+        }
+    }
+
+    private fun assertKept(action: String, w: RecurringWorld, changed: RecurringPayment?) {
+        when (action) {
+            "cancel" -> assertNull(w.schedule)
+            "edit", "replace", "restore" -> assertEquals(changed, w.schedule)
+            "pause" -> { assertEquals("paused", w.schedule!!.status); assertEquals(1, w.schedule!!.occurrencesPaid) }
+            "failureLatch" -> {
+                assertEquals("needs_attention", w.schedule!!.status)
+                assertEquals(3, w.schedule!!.consecutiveFailures)
+                assertEquals("Safety storage failed", w.schedule!!.lastError)
+            }
+            "suspend" -> assertEquals(1, w.schedule!!.occurrencesPaid)
         }
     }
 

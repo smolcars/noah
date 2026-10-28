@@ -10,6 +10,7 @@ class ExitStagesTest {
     private fun tx(id: String, kind: String, child: String? = null, block: Long? = null, origin: String? = null) =
         ExitDetails.Transaction(id, ExitDetails.Status(kind, child, block?.let { ExitDetails.Block(it) }, origin))
     private fun processing(tip: Long, vararg txs: ExitDetails.Transaction) = ExitDetails(kind = "processing", tip_height = tip, transactions = txs.toList())
+    @Suppress("LongParameterList") // Fixture builder: each parameter is a named, defaulted field of the model it builds.
     private fun exit(state: String, details: ExitDetails, history: List<ExitDetails> = emptyList(), packages: List<ExitPackage> = emptyList(),
         fees: Map<String, Long> = emptyMap(), next: Long? = null, id: String = "v1") =
         ExitModel(id, 31_000, state, details, history.map { it.kind ?: "" }, history, packages, fees, next)

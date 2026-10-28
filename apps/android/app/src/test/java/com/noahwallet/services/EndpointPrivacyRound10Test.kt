@@ -25,10 +25,7 @@ class EndpointPrivacyRound10Test {
                 assertEquals(input, EndpointLogPrivacy.sanitize(input, emptySet()))
                 assertEquals(expected, LogFile.redact(input))
                 assertEquals(expected, EndpointLogPrivacy.redactRecord(input))
-                val event = SentryEvent().apply {
-                    message = Message().apply { formatted = input }
-                    exceptions = listOf(SentryException().apply { value = input; type = "FakeEndpointError" })
-                }
+                val event = endpointEvent(input)
                 val clean = requireNotNull(AppTelemetry.scrub(event))
                 assertEquals(expected, clean.message?.formatted)
                 assertEquals(expected, clean.exceptions!!.first().value)
@@ -70,5 +67,11 @@ class EndpointPrivacyRound10Test {
             assertTrue(medians[1] < medians[0] * 64 + 20_000_000)
             assertTrue(medians[1] < 2_000_000_000)
         }
+    }
+
+    /** An error event carrying [input] as its message and its exception's value. */
+    private fun endpointEvent(input: String) = SentryEvent().apply {
+        message = Message().apply { formatted = input }
+        exceptions = listOf(SentryException().apply { value = input; type = "FakeEndpointError" })
     }
 }

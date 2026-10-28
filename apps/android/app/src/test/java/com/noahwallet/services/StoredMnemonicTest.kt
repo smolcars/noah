@@ -82,6 +82,12 @@ class StoredMnemonicTest {
         }
     }
 
+    /** Whether a read of these two seed sources must refuse: one is unreadable or invalid, or they disagree. */
+    private fun blocked(current: SecretResult, old: SecretResult) = current is SecretResult.Unavailable || old is SecretResult.Unavailable ||
+        (current is SecretResult.Found && StoredMnemonic.normalize(current.value) == null) ||
+        (old is SecretResult.Found && StoredMnemonic.normalize(old.value) == null) ||
+        (current is SecretResult.Found && old is SecretResult.Found && current.value != old.value)
+
     @Test fun everySeedSourceMustAgreeAndInvalidSeedsAreNeverWritten() = runBlocking {
         for (current in listOf(SecretResult.NotFound, SecretResult.Found(vector(12)), SecretResult.Found(""),
             SecretResult.Unavailable(SecretFailure.invalidCiphertext))) {
@@ -107,11 +113,7 @@ class StoredMnemonicTest {
                 val storage = SeedStorage(native) { old }
                 val result = storage.read()
                 assertEquals("Read must never migrate before DB fingerprint validation", count, writes)
-                val blocked = current is SecretResult.Unavailable || old is SecretResult.Unavailable ||
-                    (current is SecretResult.Found && StoredMnemonic.normalize(current.value) == null) ||
-                    (old is SecretResult.Found && StoredMnemonic.normalize(old.value) == null) ||
-                    (current is SecretResult.Found && old is SecretResult.Found && current.value != old.value)
-                if (blocked) {
+                if (blocked(current, old)) {
                     assertTrue(result is SecretResult.Unavailable)
                     assertTrue(storage.save(vector(12)) is SecretResult.Unavailable)
                     assertEquals(count, writes)

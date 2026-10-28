@@ -254,24 +254,29 @@ class AppTelemetryTest {
             val expected = LogFile.redact(input)
             for (boundary in listOf("message", "exception", "context", "breadcrumb")) {
                 val event = event()
-                when (boundary) {
-                    "message" -> event.message = message(input)
-                    "exception" -> event.exceptions = listOf(SentryException().apply { type = "WalletError"; value = input })
-                    "context" -> event.contexts.put("nested", mapOf("text" to input))
-                    else -> event.breadcrumbs = listOf(Breadcrumb().apply { category = "diagnostics"; message = input })
-                }
+                plantText(event, boundary, input)
                 val clean = requireNotNull(AppTelemetry.scrub(event)) { "$boundary ${fixture.name}" }
-                val actual = when (boundary) {
-                    "message" -> clean.message?.formatted
-                    "exception" -> clean.exceptions?.first()?.value
-                    "context" -> clean.contexts["nested"] as? String
-                    else -> clean.breadcrumbs?.first()?.message
-                }
-                assertEquals("$boundary ${fixture.name}", if (boundary == "context") null else expected, actual)
+                assertEquals("$boundary ${fixture.name}", if (boundary == "context") null else expected, plantedText(clean, boundary))
             }
             assertEquals("final ${fixture.name}", input != expected,
                 AppTelemetry.scrub(event().apply { release = input }) == null)
         }
+    }
+
+    private fun plantText(event: SentryEvent, boundary: String, input: String) {
+        when (boundary) {
+            "message" -> event.message = message(input)
+            "exception" -> event.exceptions = listOf(SentryException().apply { type = "WalletError"; value = input })
+            "context" -> event.contexts.put("nested", mapOf("text" to input))
+            else -> event.breadcrumbs = listOf(Breadcrumb().apply { category = "diagnostics"; message = input })
+        }
+    }
+
+    private fun plantedText(clean: SentryEvent, boundary: String) = when (boundary) {
+        "message" -> clean.message?.formatted
+        "exception" -> clean.exceptions?.first()?.value
+        "context" -> clean.contexts["nested"] as? String
+        else -> clean.breadcrumbs?.first()?.message
     }
 
     @Test fun uncertainAndOversizedMessagesAreOmitted() {
@@ -334,21 +339,25 @@ class AppTelemetryTest {
         for (boundary in listOf("release", "context", "frame", "thread", "sdk", "mechanism", "category")) {
             val secret = "preimage=synthetic-sensitive-value"
             val event = event()
-            when (boundary) {
-                "release" -> event.release = secret
-                "context" -> event.contexts.setDevice(Device().apply { model = secret })
-                "frame" -> event.threads = listOf(SentryThread().apply {
-                    stacktrace = SentryStackTrace(listOf(SentryStackFrame().apply { function = secret }))
-                })
-                "thread" -> event.threads = listOf(SentryThread().apply { name = secret })
-                "sdk" -> event.sdk = SdkVersion(secret, "8.57.0")
-                "mechanism" -> event.exceptions = listOf(SentryException().apply {
-                    type = "WalletError"; mechanism = Mechanism().apply { type = secret }
-                })
-                else -> event.breadcrumbs = listOf(Breadcrumb().apply { category = secret })
-            }
+            plantMetadata(event, boundary, secret)
             if (boundary == "category") assertTrue(clean(event).breadcrumbs!!.isEmpty())
             else assertNull(boundary, AppTelemetry.scrub(event))
+        }
+    }
+
+    private fun plantMetadata(event: SentryEvent, boundary: String, secret: String) {
+        when (boundary) {
+            "release" -> event.release = secret
+            "context" -> event.contexts.setDevice(Device().apply { model = secret })
+            "frame" -> event.threads = listOf(SentryThread().apply {
+                stacktrace = SentryStackTrace(listOf(SentryStackFrame().apply { function = secret }))
+            })
+            "thread" -> event.threads = listOf(SentryThread().apply { name = secret })
+            "sdk" -> event.sdk = SdkVersion(secret, "8.57.0")
+            "mechanism" -> event.exceptions = listOf(SentryException().apply {
+                type = "WalletError"; mechanism = Mechanism().apply { type = secret }
+            })
+            else -> event.breadcrumbs = listOf(Breadcrumb().apply { category = secret })
         }
     }
 

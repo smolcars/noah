@@ -23,6 +23,7 @@ class SendLightningRetryTest {
     private val longAgo = System.currentTimeMillis() - 3_600_000
 
     /** The hash's one movement, as bark keeps it across attempts. */
+    @Suppress("LongParameterList") // Fixture builder: each parameter is a named, defaulted field of the model it builds.
     private fun reused(status: String, effective: Long, completedAt: Long?, fee: ULong = 0u,
         outputs: List<String> = listOf("change:0", "refund:0"), amount: Long = 1000) =
         movement(status = status, id = 5u, amount = amount).copy(effectiveBalanceSats = effective, offchainFeeSats = fee, outputVtxoIds = outputs,

@@ -52,21 +52,23 @@ class EndpointRecordPrivacyTest {
     }
 
     @Test fun numericHeaderAliasesUseCanonicalHostsWithoutFailingClosed() {
-        for (endpoints in listOf(listOf("https://12:21"), listOf("https://12:21", "https://8:443", "https://0x9:80"))) {
-            val urls = endpoints.map { EsploraEndpoint.normalize(it).toHttpUrl() }
-            val registered = urls.map { it.toString().removeSuffix("/") }.toSet()
-            val hosts = urls.map { it.host }.toSet()
-            assertEquals(if (urls.size == 1) setOf("0.0.0.12") else setOf("0.0.0.12", "0.0.0.8", "0.0.0.9"), hosts)
-            val matcher = EndpointLogPrivacy.SecretMatcher(hosts + urls.map { "${it.host}:${it.port}" })
-            for (hour in 0..23) {
-                val time = "%02d:21:42.292".format(java.util.Locale.US, hour)
-                for (body in listOf("[sdk] ordinary", "[sdk] email=person@example.com")) {
-                    val input = "2037-11-29 $time D $body"
-                    val plain = LogFile.redactPlain(input)
-                    if (body.contains("email=")) assertNotEquals(input, plain)
-                    val expected = if (hour == 12) plain.replace(time, "[custom-esplora]") else plain
-                    assertEquals("$endpoints: $input", listOf(expected), EndpointLogPrivacy.redactLogLines(input.lines(), registered, matcher, hosts))
-                }
+        for (endpoints in listOf(listOf("https://12:21"), listOf("https://12:21", "https://8:443", "https://0x9:80"))) checkAliases(endpoints)
+    }
+
+    private fun checkAliases(endpoints: List<String>) {
+        val urls = endpoints.map { EsploraEndpoint.normalize(it).toHttpUrl() }
+        val registered = urls.map { it.toString().removeSuffix("/") }.toSet()
+        val hosts = urls.map { it.host }.toSet()
+        assertEquals(if (urls.size == 1) setOf("0.0.0.12") else setOf("0.0.0.12", "0.0.0.8", "0.0.0.9"), hosts)
+        val matcher = EndpointLogPrivacy.SecretMatcher(hosts + urls.map { "${it.host}:${it.port}" })
+        for (hour in 0..23) {
+            val time = "%02d:21:42.292".format(java.util.Locale.US, hour)
+            for (body in listOf("[sdk] ordinary", "[sdk] email=person@example.com")) {
+                val input = "2037-11-29 $time D $body"
+                val plain = LogFile.redactPlain(input)
+                if (body.contains("email=")) assertNotEquals(input, plain)
+                val expected = if (hour == 12) plain.replace(time, "[custom-esplora]") else plain
+                assertEquals("$endpoints: $input", listOf(expected), EndpointLogPrivacy.redactLogLines(input.lines(), registered, matcher, hosts))
             }
         }
     }
@@ -154,26 +156,28 @@ class EndpointRecordPrivacyTest {
     }
 
     @Test fun formattingCannotRebuildTokensAtFileLogcatAndTelemetrySinks() {
-        for (kind in listOf("record", "bark")) for (test in cases(kind)) {
-            EndpointLogPrivacy.register(test.getValue("endpoint").jsonPrimitive.content)
-            val directory = Files.createTempDirectory("record-privacy").toFile()
-            val file = LogFile(directory, executor = Executor { it.run() })
-            val tag = test.getValue("tag").jsonPrimitive.content
-            val message = test.getValue("message").jsonPrimitive.content
-            val secret = test.getValue("secret").jsonPrimitive.content
-            try {
-                ShadowLog.clear()
-                if (kind == "bark") BarkLog(file).log(LogLevel.ERROR, tag, message) else AppLog(tag, file).e(message)
-                file.flush()
-                assertFalse(test.toString(), directory.resolve("noah.log").readText().contains(secret))
-                assertFalse(ShadowLog.getLogs().joinToString { it.msg }.contains(secret))
-                assertFalse(file.lines().joinToString("\n").contains(secret))
-                val formatted = "[$tag] $message"
-                val event = SentryEvent().apply { this.message = Message().apply { this.formatted = formatted } }
-                assertFalse(requireNotNull(AppTelemetry.scrub(event)).message!!.formatted!!.contains(secret))
-                assertFalse(requireNotNull(AppTelemetry.scrub(Breadcrumb().apply { this.message = formatted })).message!!.contains(secret))
-            } finally { directory.deleteRecursively() }
-        }
+        for (kind in listOf("record", "bark")) for (test in cases(kind)) checkSinks(kind, test)
+    }
+
+    private fun checkSinks(kind: String, test: JsonObject) {
+        EndpointLogPrivacy.register(test.getValue("endpoint").jsonPrimitive.content)
+        val directory = Files.createTempDirectory("record-privacy").toFile()
+        val file = LogFile(directory, executor = Executor { it.run() })
+        val tag = test.getValue("tag").jsonPrimitive.content
+        val message = test.getValue("message").jsonPrimitive.content
+        val secret = test.getValue("secret").jsonPrimitive.content
+        try {
+            ShadowLog.clear()
+            if (kind == "bark") BarkLog(file).log(LogLevel.ERROR, tag, message) else AppLog(tag, file).e(message)
+            file.flush()
+            assertFalse(test.toString(), directory.resolve("noah.log").readText().contains(secret))
+            assertFalse(ShadowLog.getLogs().joinToString { it.msg }.contains(secret))
+            assertFalse(file.lines().joinToString("\n").contains(secret))
+            val formatted = "[$tag] $message"
+            val event = SentryEvent().apply { this.message = Message().apply { this.formatted = formatted } }
+            assertFalse(requireNotNull(AppTelemetry.scrub(event)).message!!.formatted!!.contains(secret))
+            assertFalse(requireNotNull(AppTelemetry.scrub(Breadcrumb().apply { this.message = formatted })).message!!.contains(secret))
+        } finally { directory.deleteRecursively() }
     }
 
     @Test fun generatedOverflowRecordsPassTheFinalBoundary() {

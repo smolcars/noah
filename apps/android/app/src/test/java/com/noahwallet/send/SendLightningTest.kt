@@ -9,6 +9,7 @@ class SendLightningTest {
     private fun payment() = SendPayment(invoice(), "lightning", 1000)
     private fun pending(amount: Long = 1000, fee: Long = 83) =
         LightningSend(PaymentEncoding.invoice(invoice())!!.hash, emptyList(), 1u, invoice(), amount.toULong(), fee.toULong(), 1u, false)
+    @Suppress("LongParameterList") // Fixture builder: each parameter is a named, defaulted field of the model it builds.
     private suspend fun submit(state: LightningSendStatus, movements: List<Movement> = emptyList(), checkpoint: SendCheckpoint? = null,
         quote: SendQuote = FakeSendWallet.quote.copy(fee = 83, total = 1083), check: suspend (String) ->
         LightningSendStatus = { LightningSendStatus.Unknown }, pay: suspend () -> LightningSendStatus): LightningSendStatus =

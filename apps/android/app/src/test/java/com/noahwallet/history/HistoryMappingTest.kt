@@ -11,6 +11,7 @@ import org.junit.Test
 
 /** Activity's data changes (docs/native-rewrite/design/activity.md, Data), shared with Home's rows. */
 class HistoryMappingTest {
+    @Suppress("LongParameterList") // Fixture builder: each parameter is a named, defaulted field of the model it builds.
     private fun movement(subsystem: String, status: String = "successful", intended: Long = 0, effective: Long = intended, fee: Long = 0,
         sentTo: List<Pair<String, String>> = emptyList(), receivedOn: List<Pair<String, String>> = emptyList(),
         inputs: List<String> = emptyList(), outputs: List<String> = emptyList(), exited: List<String> = emptyList(),

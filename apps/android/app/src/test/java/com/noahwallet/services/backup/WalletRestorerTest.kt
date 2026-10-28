@@ -6,6 +6,8 @@ import com.noahwallet.services.testRounds
 import com.noahwallet.services.wallet.*
 import io.github.niteshbalusu11.bark.*
 import io.ktor.client.engine.mock.*
+import io.ktor.client.request.HttpRequestData
+import io.ktor.client.request.HttpResponseData
 import io.ktor.http.*
 import kotlinx.coroutines.*
 import org.junit.Assert.*
@@ -70,44 +72,48 @@ class WalletRestorerTest {
                 Files.createLink(target.toPath(), complete.toPath())
             }
             val legacyFile = File(root, "legacy")
-            if (legacy) {
-                val bytes = java.io.ByteArrayOutputStream()
-                java.util.zip.ZipOutputStream(bytes).use { zip ->
-                    zip.putNextEntry(java.util.zip.ZipEntry("backup_staging/noah-data-regtest/db.sqlite"))
-                    zip.write("new wallet".toByteArray()); zip.closeEntry()
-                }
-                legacyFile.writeBytes(java.util.Base64.getEncoder().encode(BackupCrypto.encrypt(bytes.toByteArray(), validSeed,
-                    BackupCrypto.Version.legacyDirectory, testRounds)))
-            }
+            if (legacy) writeLegacy(legacyFile)
             val info =
                 """{"backup_id":"b1","created_at":"x","encrypted_sha256":"${reportedHash ?: BackupArchive.sha256(encrypted)}",""" +
                     """"encrypted_size":${reportedSize ?: encrypted.length()},"format_version":2}"""
             return WalletRestorer("regtest", session, location, seed,
-                makeClient = { ServerClient.make("http://fake", engine = MockEngine { request ->
-                    val body = when (request.url.encodedPath) {
-                        "/v0/backup/v2/list" -> {
-                            if (listFails) return@MockEngine respond("{}", HttpStatusCode.InternalServerError)
-                            if (legacy) "[]" else if (newestCorrupt) "[${info.replace("b1", "bad")},$info]" else "[$info]"
-                        }
-                        "/v0/backup/v2/download" -> {
-                            val bodyText = (request.body as io.ktor.http.content.TextContent).text
-                            val url = if (bodyText.contains("bad")) "http://bad" else "http://download"
-                            """{"backup":$info,"download_url":"$url"}"""
-                        }
-                        "/v0/backup/download_url" -> """{"backup_size":${legacyFile.length()},"download_url":"http://legacy"}"""
-                        else -> error("Unexpected request")
-                    }
-                    respond(body, HttpStatusCode.OK, headersOf(HttpHeaders.ContentType, "application/json"))
-                }) }, transaction = transaction,
+                makeClient = { ServerClient.make("http://fake", engine = MockEngine { request -> serve(request, info, legacyFile) }) },
+                transaction = transaction,
                 validate = { _, _ -> if (validationFails) throw Boom() },
-                download = { url, destination, limit ->
-                    val file = if (url == "http://legacy") legacyFile else encrypted
-                    if (file.length() > limit || url == "http://bad") throw WalletRestorer.Failure(WalletRestorer.Reason.downloadMismatch)
-                    file.copyTo(destination)
-                }, beginOnboarding = {
+                download = { url, destination, limit -> download(if (url == "http://legacy") legacyFile else encrypted, url, destination, limit) },
+                beginOnboarding = {
                     if (markerFails) throw Boom()
                     initialized = false
                 }, rounds = testRounds)
+        }
+        private fun writeLegacy(legacyFile: File) {
+            val bytes = java.io.ByteArrayOutputStream()
+            java.util.zip.ZipOutputStream(bytes).use { zip ->
+                zip.putNextEntry(java.util.zip.ZipEntry("backup_staging/noah-data-regtest/db.sqlite"))
+                zip.write("new wallet".toByteArray()); zip.closeEntry()
+            }
+            legacyFile.writeBytes(java.util.Base64.getEncoder().encode(BackupCrypto.encrypt(bytes.toByteArray(), validSeed,
+                BackupCrypto.Version.legacyDirectory, testRounds)))
+        }
+        private fun MockRequestHandleScope.serve(request: HttpRequestData, info: String, legacyFile: File): HttpResponseData {
+            val body = when (request.url.encodedPath) {
+                "/v0/backup/v2/list" -> {
+                    if (listFails) return respond("{}", HttpStatusCode.InternalServerError)
+                    if (legacy) "[]" else if (newestCorrupt) "[${info.replace("b1", "bad")},$info]" else "[$info]"
+                }
+                "/v0/backup/v2/download" -> {
+                    val bodyText = (request.body as io.ktor.http.content.TextContent).text
+                    val url = if (bodyText.contains("bad")) "http://bad" else "http://download"
+                    """{"backup":$info,"download_url":"$url"}"""
+                }
+                "/v0/backup/download_url" -> """{"backup_size":${legacyFile.length()},"download_url":"http://legacy"}"""
+                else -> error("Unexpected request")
+            }
+            return respond(body, HttpStatusCode.OK, headersOf(HttpHeaders.ContentType, "application/json"))
+        }
+        private fun download(file: File, url: String, destination: File, limit: Long) {
+            if (file.length() > limit || url == "http://bad") throw WalletRestorer.Failure(WalletRestorer.Reason.downloadMismatch)
+            file.copyTo(destination)
         }
         fun previous() {
             assertEquals("old wallet", location.database.readText()); assertTrue("Previous seed differs", seed.value == "old seed")

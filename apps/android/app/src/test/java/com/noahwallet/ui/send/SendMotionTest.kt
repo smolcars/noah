@@ -103,6 +103,7 @@ class SendMotionTest {
     private fun lightning(state: SendController.State = SendController.State.failed, before: Set<UInt> = setOf(1u, 2u)) =
         SendAttempt(payment = SendPayment("lnbcrt1invoice", "lightning", 1_000), paymentHash = "hash", failed = state == SendController.State.failed,
             snapshot = SendSnapshot(before, invoicePaid = false))
+    @Suppress("LongParameterList") // Fixture builder: each parameter is a named, defaulted field of the model it builds.
     private fun movement(status: String = "failed", outputs: List<String> = listOf("refund:0"), exited: List<String> = emptyList(),
         hash: String? = "hash", subsystem: String = "bark.lightning_send", id: UInt = 7u) =
         Movement(id, status, subsystem, "send", "{}", -1_000, 0, 0u, emptyList(), emptyList(), listOf("htlc:0"), outputs, exited,

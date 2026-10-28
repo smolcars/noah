@@ -585,7 +585,8 @@ class RecurringExecutorTest {
         w.store.upsert(w.schedule!!.copy(status = "paused")); val second = async { w.executor.syncServer() }; yield(); release.complete(Unit)
         first.await(); second.await(); assertEquals(2, w.syncCalls); assertFalse(w.store.load().pending)
         w.sync = { error("offline") }; w.executor.syncServer(); assertTrue(w.store.load().pending)
-        val payload = Json.encodeToString(com.noahwallet.api.generated.models.SyncRecurringPaymentsPayload(RecurringExecutor.entries(listOf(w.schedule!!.copy(status = "active")))))
+        val entries = RecurringExecutor.entries(listOf(w.schedule!!.copy(status = "active")))
+        val payload = Json.encodeToString(com.noahwallet.api.generated.models.SyncRecurringPaymentsPayload(entries))
         assertFalse(payload.contains("recipient")); assertFalse(payload.contains("amount")); assertTrue(payload.contains("schedule_id"))
     }
 }

@@ -62,6 +62,7 @@ class HomeRulesTest {
         assertEquals(HomeRules.State.suspended, HomeRules.state(true, 5_000uL, false, null, true))
     }
 
+    @Suppress("LongParameterList") // Fixture builder: each parameter is a named, defaulted field of the model it builds.
     private fun vtxo(id: String, amount: Long, expiry: Long, expiring: Boolean = true, state: String = "Spendable", tip: Long = 1_000) =
         com.noahwallet.onchain.VtxoModel(id, amount, expiry, state, "", 0, 0, true, "", 0, "", "", expiring, tip)
 

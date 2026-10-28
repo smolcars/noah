@@ -405,10 +405,13 @@ class OnchainModelTest {
         m.review(OnchainAction.board, amount = 30_000); assertEquals(0, f.calls)
         m.confirm(); m.confirm(); m.load(); assertEquals(1, f.calls)
     }
-    @Test fun automaticPromptHonorsToggleAttemptReadinessAndBlocking() {
-        for (enabled in listOf(false, true)) for (attempted in listOf(false, true)) for (ready in listOf(false, true)) for (blocking in listOf(false, true)) {
+    private fun assertPrompt(enabled: Boolean, attempted: Boolean, ready: Boolean) {
+        for (blocking in listOf(false, true)) {
             assertEquals(enabled && attempted && ready && !blocking, AutoBoardRules.shouldPrompt(enabled, attempted, ready, 100_000, blocking))
         }
+    }
+    @Test fun automaticPromptHonorsToggleAttemptReadinessAndBlocking() {
+        for (enabled in listOf(false, true)) for (attempted in listOf(false, true)) for (ready in listOf(false, true)) assertPrompt(enabled, attempted, ready)
         assertFalse(AutoBoardRules.shouldPrompt(true, true, true, 19_999, false))
     }
     @Test fun fundingDecisionsMatchSharedFixture() {

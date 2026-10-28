@@ -1,5 +1,6 @@
 package com.noahwallet.services
 
+import com.noahwallet.fixtures.FixtureCase
 import com.noahwallet.fixtures.SharedFixtures
 import com.noahwallet.services.storage.*
 import kotlinx.serialization.json.*
@@ -10,52 +11,58 @@ class RNStoreMigrationTest {
     @Test fun unifiedRNFixturesValidateMigrateAndPreserveOriginalBytes() {
         val cases = SharedFixtures.load("rn-store-compatibility")
         assertEquals(196, cases.size)
-        for (case in cases) {
-            val input = case.input.jsonObject
-            val expected = case.expected.jsonObject
-            val key = input.getValue("key").jsonPrimitive.content
-            val raw = input.getValue("raw").jsonPrimitive.content
-            val imported = SettingsStorage.importValues(mapOf(key to raw))
-            assertEquals(case.name, expected.getValue("imported").jsonPrimitive.boolean, key != "recurring-payment-storage" && imported.values[key] == raw)
+        for (case in cases) check(case)
+    }
+
+    private fun check(case: FixtureCase) {
+        val input = case.input.jsonObject
+        val expected = case.expected.jsonObject
+        val key = input.getValue("key").jsonPrimitive.content
+        val raw = input.getValue("raw").jsonPrimitive.content
+        checkImport(case.name, key, raw, expected)
+        var stored = raw
+        val recurring = com.noahwallet.recurring.RecurringStore({ stored }, { stored = it })
+        if (!expected.getValue("available").jsonPrimitive.boolean) {
+            assertThrows(case.name, RNStoreCodec.Unreadable::class.java) { RNStoreCodec.decode(key, raw) }
+            assertThrows(case.name, RNStoreCodec.Unreadable::class.java) {
+                stored = RNStoreCodec.merge(key, stored, """{"state":{},"version":0}""")
+            }
             if (key == "recurring-payment-storage") {
-                assertTrue(case.name, imported.values[key] == null || imported.values[key] == SettingsStorage.emptyRecurring)
-            } else if (expected.getValue("available").jsonPrimitive.boolean) assertEquals(case.name, raw, imported.values[key])
-            else { assertNull(case.name, imported.values[key]); assertTrue(imported.settingsNoticePending) }
-            var stored = raw
-            val recurring = com.noahwallet.recurring.RecurringStore({ stored }, { stored = it })
-            if (!expected.getValue("available").jsonPrimitive.boolean) {
-                assertThrows(case.name, RNStoreCodec.Unreadable::class.java) { RNStoreCodec.decode(key, raw) }
-                assertThrows(case.name, RNStoreCodec.Unreadable::class.java) {
-                    stored = RNStoreCodec.merge(key, stored, """{"state":{},"version":0}""")
-                }
-                if (key == "recurring-payment-storage") {
-                    assertTrue(case.name, runCatching { recurring.load() }.isFailure)
-                    assertTrue(case.name, runCatching { recurring.setPending(false) }.isFailure)
-                }
-                assertEquals(case.name, raw, stored)
-                continue
+                assertTrue(case.name, runCatching { recurring.load() }.isFailure)
+                assertTrue(case.name, runCatching { recurring.setPending(false) }.isFailure)
             }
-            val decoded = RNStoreCodec.decode(key, raw)
-            if (key == "recurring-payment-storage") recurring.load()
-            val state = if (key == "transaction-storage") SettingsPreferences.transaction(raw) else decoded.getValue("state").jsonObject
-            val wanted = Json.parseToJsonElement(expected.getValue("stateRaw").jsonPrimitive.content).jsonObject
-            for ((field, value) in wanted) assertEquals("${case.name}: $field", value, state[field])
-            assertEquals("Reads must not migrate bytes: ${case.name}", raw, stored)
-            expected["consumed"]?.jsonObject?.let { consumed ->
-                assertEquals(consumed.getValue("preferredCurrency").jsonPrimitive.content, SettingsPreferences.preferredCurrency(raw))
-                assertEquals(consumed.getValue("bitcoinAmountUnit").jsonPrimitive.content, SettingsPreferences.amountUnit(raw).name)
-            }
-            if (key == "recurring-payment-storage") recurring.setPending(false)
-            else stored = RNStoreCodec.merge(key, stored, buildJsonObject {
-                put("state", wanted); put("version", expected.getValue("version"))
-            }.toString())
-            val saved = Json.parseToJsonElement(stored).jsonObject
-            expected["preservedTokens"]?.jsonObject?.forEach { (path, token) ->
-                val (scope, field) = path.split('.')
-                val value = if (scope == "root") saved[field] else saved.getValue("state").jsonObject[field]
-                assertEquals("${case.name}: $path", token.jsonPrimitive.content, value?.jsonPrimitive?.content)
-            }
+            assertEquals(case.name, raw, stored)
+            return
         }
+        val decoded = RNStoreCodec.decode(key, raw)
+        if (key == "recurring-payment-storage") recurring.load()
+        val state = if (key == "transaction-storage") SettingsPreferences.transaction(raw) else decoded.getValue("state").jsonObject
+        val wanted = Json.parseToJsonElement(expected.getValue("stateRaw").jsonPrimitive.content).jsonObject
+        for ((field, value) in wanted) assertEquals("${case.name}: $field", value, state[field])
+        assertEquals("Reads must not migrate bytes: ${case.name}", raw, stored)
+        expected["consumed"]?.jsonObject?.let { consumed ->
+            assertEquals(consumed.getValue("preferredCurrency").jsonPrimitive.content, SettingsPreferences.preferredCurrency(raw))
+            assertEquals(consumed.getValue("bitcoinAmountUnit").jsonPrimitive.content, SettingsPreferences.amountUnit(raw).name)
+        }
+        if (key == "recurring-payment-storage") recurring.setPending(false)
+        else stored = RNStoreCodec.merge(key, stored, buildJsonObject {
+            put("state", wanted); put("version", expected.getValue("version"))
+        }.toString())
+        val saved = Json.parseToJsonElement(stored).jsonObject
+        expected["preservedTokens"]?.jsonObject?.forEach { (path, token) ->
+            val (scope, field) = path.split('.')
+            val value = if (scope == "root") saved[field] else saved.getValue("state").jsonObject[field]
+            assertEquals("${case.name}: $path", token.jsonPrimitive.content, value?.jsonPrimitive?.content)
+        }
+    }
+
+    private fun checkImport(name: String, key: String, raw: String, expected: JsonObject) {
+        val imported = SettingsStorage.importValues(mapOf(key to raw))
+        assertEquals(name, expected.getValue("imported").jsonPrimitive.boolean, key != "recurring-payment-storage" && imported.values[key] == raw)
+        if (key == "recurring-payment-storage") {
+            assertTrue(name, imported.values[key] == null || imported.values[key] == SettingsStorage.emptyRecurring)
+        } else if (expected.getValue("available").jsonPrimitive.boolean) assertEquals(name, raw, imported.values[key])
+        else { assertNull(name, imported.values[key]); assertTrue(imported.settingsNoticePending) }
     }
 
     @Test fun unsupportedProfilePreferencesFallBackWithoutBlockingOrRepairingStoredValues() {
