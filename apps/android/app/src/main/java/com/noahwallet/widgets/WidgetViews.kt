@@ -3,16 +3,19 @@ package com.noahwallet.widgets
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
+import android.graphics.Bitmap
 import android.graphics.Typeface
 import android.net.Uri
 import android.text.SpannableString
 import android.text.Spanned
 import android.text.style.StyleSpan
+import android.util.SizeF
 import android.view.View
 import android.widget.RemoteViews
 import com.noahwallet.MainActivity
 import com.noahwallet.R
 import kotlin.math.roundToInt
+import kotlin.math.sqrt
 
 /** The four layouts chosen by size (widgets.md, Android), and No wallet. */
 internal enum class WidgetLayout(val resource: Int) {
@@ -60,7 +63,11 @@ internal object WidgetViews {
             val actionsTop = heightDp - 16f - 40f
             WidgetSea.Frame(widthDp - width, 34f, width, heightDp - 34f, maxOf(26f, actionsTop - 8f - 34f), 26f, 18f, fade = true)
         }
-        WidgetLayout.empty -> WidgetSea.Frame(0f, 0f, widthDp, heightDp, heightDp, 44f, 0f, centred = true)
+        WidgetLayout.empty -> {
+            // The boat mid-widget on calm water; the sea starts just above the line, so only water is drawn.
+            val line = (heightDp / 2 + (WidgetSea.HULL - .5f) * 44f + 1).roundToInt().toFloat()
+            WidgetSea.Frame(0f, line - 6f, widthDp, heightDp - line + 6f, heightDp - line + 6f, 44f, 0f, centred = true, calm = 6f)
+        }
         else -> null
     }
 
@@ -75,13 +82,57 @@ internal object WidgetViews {
         WidgetLayout.empty -> error("""No balance without a wallet""")
     }
 
+    /**
+     * The launcher refuses an update whose bitmaps exceed 1.5 × its display's pixels × 4 bytes (AppWidgetService), across
+     * every size in the map. From the smallest display (a Fold's outer one), with a fifth to spare.
+     */
+    @Suppress("DEPRECATION")
+    fun bitmapBudget(context: Context): Long {
+        val pixels = context.getSystemService(android.hardware.display.DisplayManager::class.java)?.displays.orEmpty()
+            .map { android.graphics.Point().also(it::getRealSize) }.filter { it.x > 0 && it.y > 0 }
+            .minOfOrNull { it.x.toLong() * it.y } ?: context.resources.displayMetrics.let { it.widthPixels.toLong() * it.heightPixels }
+        return budget(pixels)
+    }
+
+    fun budget(displayPixels: Long): Long = 6 * displayPixels * 4 / 5
+
+    /** One update's views by size, and every distinct bitmap they hold. */
+    class Built(val views: Map<SizeF, RemoteViews>, val bitmaps: List<Bitmap>)
+
+    /**
+     * Every size's views, as one update. Identical seas and balances share a bitmap, and the seas' resolution drops evenly
+     * (never below a fifth) until the whole map fits [budget].
+     */
+    @Suppress("LongParameterList") // every slot: its content, sizes and the bitmap budget
+    fun buildAll(context: Context, variant: String, content: WidgetContent?, sizes: List<SizeF>, density: Float, budget: Long): Built {
+        val layouts = sizes.associateWith { if (content == null) WidgetLayout.empty else WidgetLayout.of(it.width, it.height) }
+        val balances = if (content == null) emptyMap() else layouts.map { (size, layout) -> balanceBox(layout, size.width) }.distinct()
+            .associateWith { (width, height, sp) -> WidgetType.balance(context, content.balance, content.satsSuffix, sp, width, height, density) }
+        val frames = layouts.mapNotNull { (size, layout) -> frame(layout, content, size.width, size.height) }.distinct()
+        fun bytes(scale: Float) = frames.sumOf { WidgetSea.pixels(it, scale).let { (w, h) -> w.toLong() * h * 4 } }
+        val room = budget - balances.values.sumOf { it.allocationByteCount.toLong() }
+        val scale = if (bytes(density) <= room) density
+        else (density * sqrt(room.coerceAtLeast(0).toDouble() / bytes(density)) * .98).toFloat().coerceAtLeast(density / 5)
+        val seas = frames.associateWith { WidgetSea.draw(content?.wave, it, scale) }
+        val views = layouts.mapValues { (size, layout) ->
+            views(context, variant, content, layout, size, frame(layout, content, size.width, size.height)?.let(seas::getValue),
+                content?.let { balances.getValue(balanceBox(layout, size.width)) }, density)
+        }
+        return Built(views, seas.values.map { it.bitmap } + balances.values)
+    }
+
+    /** One size alone, at full resolution. */
     @Suppress("LongParameterList") // one slot: its content and flat geometry inputs
-    fun build(context: Context, variant: String, content: WidgetContent?, widthDp: Float, heightDp: Float, density: Float): RemoteViews {
-        val layout = if (content == null) WidgetLayout.empty else WidgetLayout.of(widthDp, heightDp)
+    fun build(context: Context, variant: String, content: WidgetContent?, widthDp: Float, heightDp: Float, density: Float): RemoteViews =
+        buildAll(context, variant, content, listOf(SizeF(widthDp, heightDp)), density, Long.MAX_VALUE).views.values.single()
+
+    @Suppress("LongParameterList") // one slot's views from the parts every size shares
+    private fun views(context: Context, variant: String, content: WidgetContent?, layout: WidgetLayout, size: SizeF,
+        drawn: WidgetSea.Drawn?, balance: Bitmap?, density: Float): RemoteViews {
         val views = RemoteViews(context.packageName, layout.resource)
         views.setOnClickPendingIntent(android.R.id.background, open(context, variant, Route.home))
-        frame(layout, content, widthDp, heightDp)?.let { frame ->
-            val drawn = WidgetSea.draw(content?.wave, frame, density)
+        val frame = frame(layout, content, size.width, size.height)
+        if (frame != null && drawn != null) {
             views.setImageViewBitmap(R.id.widget_sea, drawn.bitmap)
             views.setViewPadding(R.id.widget_sea_box, (frame.x * density).roundToInt(), (frame.y * density).roundToInt(), 0, 0)
             views.setViewPadding(R.id.widget_boat_box, (drawn.boatX * density).roundToInt(), (drawn.boatY * density).roundToInt(), 0, 0)
@@ -90,8 +141,7 @@ internal object WidgetViews {
         if (content == null) return views
         views.setContentDescription(android.R.id.background, content.description)
 
-        val (boxWidth, boxHeight, size) = balanceBox(layout, widthDp)
-        views.setImageViewBitmap(R.id.widget_balance, WidgetType.balance(context, content.balance, content.satsSuffix, size, boxWidth, boxHeight, density))
+        views.setImageViewBitmap(R.id.widget_balance, balance)
         views.setContentDescription(R.id.widget_balance, content.balance)
         val oneRow = layout == WidgetLayout.narrow || layout == WidgetLayout.wide
         // One row shows one line: the status, or else the fiat.

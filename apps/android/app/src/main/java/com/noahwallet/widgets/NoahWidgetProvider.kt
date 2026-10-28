@@ -86,9 +86,13 @@ open class NoahWidgetProvider : AppWidgetProvider() {
             val content = snapshot?.let { WidgetContent.of(context, it, variant) }
             val density = context.resources.displayMetrics.density
             val options = appWidgetManager.getAppWidgetOptions(appWidgetId)
-            fun views(size: SizeF) = WidgetViews.build(context, variant, content, size.width, size.height, density)
-            val views = if (Build.VERSION.SDK_INT >= 31) RemoteViews(sizes(options).associateWith(::views))
-            else orientations(options).let { (portrait, landscape) -> RemoteViews(views(landscape), views(portrait)) }
+            // Every size travels in one update, within the launcher's bitmap budget.
+            val budget = WidgetViews.bitmapBudget(context)
+            val views = if (Build.VERSION.SDK_INT >= 31) RemoteViews(WidgetViews.buildAll(context, variant, content, sizes(options), density, budget).views)
+            else orientations(options).let { (portrait, landscape) ->
+                val built = WidgetViews.buildAll(context, variant, content, listOf(landscape, portrait).distinct(), density, budget).views
+                RemoteViews(built.getValue(landscape), built.getValue(portrait))
+            }
             appWidgetManager.updateAppWidget(appWidgetId, views)
         } catch (e: Exception) {
             AppLog(context.applicationContext, "NoahWidget").e("Error updating widget: ${SafeErrorDescription.of(e)}")

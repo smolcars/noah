@@ -151,6 +151,45 @@ class NoahWidgetProviderTest {
         assertNull(WidgetViews.frame(WidgetLayout.wide, content, 372f, 84f))
     }
 
+    /**
+     * A Fold reports up to four slots and their bitmaps travel in one update, which the launcher refuses above 6 × its
+     * display's pixels: these slots needed 37.4 MB for No wallet against 24.4 MB (Sol review), leaving the old balance up.
+     */
+    @GraphicsMode(GraphicsMode.Mode.NATIVE)
+    @Test
+    fun foldSlotsStayInsideTheLaunchersBitmapBudget() {
+        language("en")
+        val sizes = listOf(android.util.SizeF(360f, 600f), android.util.SizeF(660f, 280f), android.util.SizeF(740f, 560f), android.util.SizeF(620f, 680f))
+        val launcher = 6L * 1840 * 2208
+        val fullSlots = sizes.sumOf { Math.round(it.width * 2.75f).toLong() * Math.round(it.height * 2.75f) * 4 }
+        assertTrue("the old full-slot seas didn't fit", fullSlots > launcher)
+        for (content in listOf(null, WidgetContent.of(context, month, "regtest", now), WidgetContent.of(context, month.copy(hidden = true), "regtest", now))) {
+            val built = WidgetViews.buildAll(context, "regtest", content, sizes, 2.75f, WidgetViews.budget(1840L * 2208))
+            val bytes = built.bitmaps.distinctBy { System.identityHashCode(it) }.sumOf { it.allocationByteCount.toLong() }
+            assertTrue("$bytes bytes", bytes <= WidgetViews.budget(1840L * 2208))
+            assertTrue(bytes < launcher)
+            assertEquals(sizes.toSet(), built.views.keys)
+        }
+        // Where it fits, full resolution: one slot draws at 2.75 px per dp.
+        val one = WidgetViews.buildAll(context, "regtest", null, sizes.take(1), 2.75f, WidgetViews.budget(1840L * 2208))
+        assertEquals(Math.round(360 * 2.75f), one.bitmaps.single().width)
+    }
+
+    @GraphicsMode(GraphicsMode.Mode.NATIVE)
+    @Test
+    fun slotsShareIdenticalBitmaps() {
+        language("en")
+        val content = WidgetContent.of(context, month, "regtest", now)
+        // Two 2×2 heights: two seas, one balance.
+        val built = WidgetViews.buildAll(context, "regtest", content, listOf(android.util.SizeF(180f, 180f), android.util.SizeF(180f, 220f)), 2f,
+            Long.MAX_VALUE)
+        assertEquals(3, built.bitmaps.distinctBy { System.identityHashCode(it) }.size)
+        // No wallet draws only the water below the line, not the empty sky.
+        val calm = WidgetViews.frame(WidgetLayout.empty, null, 180f, 180f)!!
+        assertTrue(calm.h < 90f)
+        assertEquals(calm.y + 6f - .82f * 44 - 1, WidgetSea.draw(null, calm, 1f).boatY, .01f)
+    }
+
     private fun apply(content: WidgetContent?, width: Float, height: Float): View =
         WidgetViews.build(context, "regtest", content, width, height, 1f).apply(context, FrameLayout(context))
     private fun View.text(id: Int) = findViewById<TextView>(id).text.toString()
