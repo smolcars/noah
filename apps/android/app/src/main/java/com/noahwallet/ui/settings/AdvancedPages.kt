@@ -17,6 +17,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -66,7 +68,7 @@ internal fun AdvancedPage(model: AppModel, nav: SettingsNav, live: SettingsLive,
     val debugOff = tr("Debug off")
     val resumedText = tr("Wallet resumed")
     SettingsFrame(tr("Advanced"), nav.back) {
-        SettingsGroup(tr("Network"), rows = listOf(
+        SettingsGroup(label = tr("Network"), rows = listOf(
             { d -> SettingsRow(tr("Ark server"), SettingsIcons.server, value = host(config.arkServer), divider = d,
                 modifier = Modifier.testTag("advanced-ark")) { nav.open(SettingsDestination.Ark) } },
             { d -> SettingsRow(tr("Esplora"), SettingsIcons.chain, value = when {
@@ -75,8 +77,9 @@ internal fun AdvancedPage(model: AppModel, nav: SettingsNav, live: SettingsLive,
                 else -> config.esplora?.let(::host)
             }, divider = d, modifier = Modifier.testTag("advanced-esplora")) { nav.open(SettingsDestination.Esplora) } },
         ))
-        SettingsGroup(tr("Diagnostics"), rows = listOfNotNull(
-            { d -> SettingsRow(tr("Logs"), SettingsIcons.doc, divider = d, modifier = Modifier.testTag("advanced-logs")) { nav.open(SettingsDestination.Logs) } },
+        SettingsGroup(label = tr("Diagnostics"), rows = listOfNotNull(
+            { d -> SettingsRow(tr("Logs"), SettingsIcons.doc, divider = d,
+                modifier = Modifier.testTag("advanced-logs")) { nav.open(SettingsDestination.Logs) } },
             { d -> SettingsRow(tr("Reset registration"), SettingsIcons.refresh, divider = d, enabled = !model.busy && !model.isWalletSuspended,
                 modifier = Modifier.testTag("advanced-reset")) { sheet = "reset" } },
             // Decision 7: once unlocked, debug can be turned off; five taps on the version turn it back on.
@@ -90,34 +93,48 @@ internal fun AdvancedPage(model: AppModel, nav: SettingsNav, live: SettingsLive,
                 nav.open(SettingsDestination.Debug)
             } }) else null,
         ))
-        SettingsGroup(tr("Wallet"), rows = listOf({ d ->
-            SettingsRow(tr("Suspend wallet"), SettingsIcons.stop, sub = tr("Pauses all wallet activity"), divider = d, modifier = Modifier.testTag("advanced-suspend"),
+        SettingsGroup(label = tr("Wallet"), rows = listOf({ d ->
+            SettingsRow(tr("Suspend wallet"), SettingsIcons.stop, sub = tr("Pauses all wallet activity"), divider = d,
+                modifier = Modifier.testTag("advanced-suspend"),
                 end = RowEnd.Toggle(model.isWalletSuspended, !model.busy) { suspend ->
                     if (suspend) sheet = "suspend"
-                    else model.action("Couldn't change wallet suspension. Please try again.") { model.resumeWallet(); haptics.success(); toasts.show(resumedText) }
+                    else model.action("Couldn't change wallet suspension. Please try again.") { model.resumeWallet(); haptics.success()
+                        toasts.show(resumedText) }
                 })
         }))
     }
     when (sheet) {
-        "reset" -> {
-            val registered = tr("Registered again")
-            SettingsSheet({ sheet = null }, tr("Reset registration?"), tr("Noah registers this wallet with the server again. Your wallet stays.")) { close ->
-                SheetActions(tr("Cancel"), tr("Reset"), onCancel = close, enabled = !model.busy && !model.isWalletSuspended, loading = model.busy,
-                    confirmTag = "advanced-reset-confirm", onConfirm = {
-                        model.action("Couldn't register again. Please retry.") { model.reRegisterWithServer(); haptics.success(); toasts.show(registered); close() }
-                    })
-            }
-        }
-        "suspend" -> {
-            val suspended = tr("Wallet suspended")
-            SettingsSheet({ sheet = null }, tr("Suspend wallet?"), tr("Noah closes the wallet and stops payments until you turn this off."),
-                modifier = Modifier.testTag("suspend-sheet")) { close ->
-                SheetActions(tr("Cancel"), tr("Suspend"), onCancel = close, danger = true, enabled = !model.busy, loading = model.busy,
-                    confirmTag = "advanced-suspend-confirm", onConfirm = {
-                        model.action("Couldn't change wallet suspension. Please try again.") { model.suspendWallet(); haptics.warning(); toasts.show(suspended); close() }
-                    })
-            }
-        }
+        "reset" -> ResetRegistrationSheet(model) { sheet = null }
+        "suspend" -> SuspendSheet(model) { sheet = null }
+    }
+}
+
+@Composable
+private fun ResetRegistrationSheet(model: AppModel, dismiss: () -> Unit) {
+    val haptics = rememberHaptics()
+    val toasts = LocalSettingsToasts.current
+    val registered = tr("Registered again")
+    SettingsSheet(dismiss, tr("Reset registration?"), tr("Noah registers this wallet with the server again. Your wallet stays.")) { close ->
+        SheetActions(tr("Cancel"), tr("Reset"), onCancel = close, enabled = !model.busy && !model.isWalletSuspended, loading = model.busy,
+            confirmTag = "advanced-reset-confirm", onConfirm = {
+                model.action("Couldn't register again. Please retry.") { model.reRegisterWithServer(); haptics.success(); toasts.show(registered)
+                    close() }
+            })
+    }
+}
+
+@Composable
+private fun SuspendSheet(model: AppModel, dismiss: () -> Unit) {
+    val haptics = rememberHaptics()
+    val toasts = LocalSettingsToasts.current
+    val suspended = tr("Wallet suspended")
+    SettingsSheet(dismiss, tr("Suspend wallet?"), tr("Noah closes the wallet and stops payments until you turn this off."),
+        modifier = Modifier.testTag("suspend-sheet")) { close ->
+        SheetActions(tr("Cancel"), tr("Suspend"), onCancel = close, danger = true, enabled = !model.busy, loading = model.busy,
+            confirmTag = "advanced-suspend-confirm", onConfirm = {
+                model.action("Couldn't change wallet suspension. Please try again.") { model.suspendWallet(); haptics.warning(); toasts.show(suspended)
+                    close() }
+            })
     }
 }
 
@@ -133,7 +150,13 @@ internal fun ArkServerPage(model: AppModel, nav: SettingsNav) {
     var info by remember { mutableStateOf<io.github.niteshbalusu11.bark.ArkInfo?>(null) }
     var loading by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
-    suspend fun load() { loading = true; try { info = withContext(Dispatchers.IO) { model.session.arkInfo() } } catch (e: CancellationException) { throw e } catch (_: Exception) { } finally { loading = false } }
+    suspend fun load() {
+        loading = true
+        try { info = withContext(Dispatchers.IO) { model.session.arkInfo() } }
+        catch (e: CancellationException) { throw e }
+        catch (_: Exception) { }
+        finally { loading = false }
+    }
     LaunchedEffect(Unit) { if (!model.isWalletSuspended) load() }
     val selection = EsploraSettings(model.settings).selection(BuildConfig.APP_VARIANT)
     val config = WalletConfiguration.effective(BuildConfig.APP_VARIANT, selection.endpoint)
@@ -141,7 +164,8 @@ internal fun ArkServerPage(model: AppModel, nav: SettingsNav) {
     fun sats(value: Long) = BitcoinAmount.format(value, model.amountUnit, locale)
     val network = when (BuildConfig.APP_VARIANT) { "mainnet" -> tr("Mainnet"); "signet" -> tr("Signet"); else -> tr("Regtest") }
     SettingsFrame(tr("Ark server"), nav.back, chip = {
-        Text(network, Modifier.tonal(RoundedCornerShape(50), palette.soft).padding(horizontal = 9.dp, vertical = 3.dp), style = HomeType.header, color = palette.foreground)
+        Text(network, Modifier.tonal(RoundedCornerShape(50), palette.soft).padding(horizontal = 9.dp, vertical = 3.dp), style = HomeType.header,
+            color = palette.foreground)
     }) {
         Column(Modifier.padding(top = 6.dp)) {
             DetailRow(tr("Address"), host(config.arkServer), copy = config.arkServer, toasts = toasts)
@@ -154,32 +178,46 @@ internal fun ArkServerPage(model: AppModel, nav: SettingsNav) {
         if (current == null) {
             FinePrint(if (loading) tr("Loading…") else tr("Ark server info is unavailable. Try refreshing."))
             if (!loading && !model.isWalletSuspended) SettingsLink(tr("Try again")) { scope.launch { load() } }
-        } else {
-            SectionLabel(tr("Moving to Ark"))
-            DetailRow(tr("Smallest move"), sats(current.minBoardAmountSats.toLong()), ValueKind.number, toasts = toasts)
-            DetailRow(tr("Largest VTXO"), current.maxVtxoAmountSats?.let { sats(it.toLong()) } ?: tr("No limit"), ValueKind.number, toasts = toasts)
-            DetailRow(tr("Confirmations"), trPlural("{n} blocks", current.requiredBoardConfirmations.toLong()), toasts = toasts, last = true)
-            SectionLabel(tr("Rounds and expiry"))
-            DetailRow(tr("Round every"), tr("{n} seconds", number.format(current.roundIntervalSecs.toLong())), toasts = toasts)
-            DetailRow(tr("Round nonces"), number.format(current.nbRoundNonces.toLong()), ValueKind.number, toasts = toasts)
-            DetailRow(tr("VTXO lifetime"), trPlural("{n} blocks", current.vtxoLifetime.toLong()), toasts = toasts)
-            DetailRow(tr("Exit delta"), trPlural("{n} blocks", current.vtxoExitDelta.toLong()), toasts = toasts)
-            DetailRow(tr("Lightning send delta"), trPlural("{n} blocks", current.htlcSendExpiryDelta.toLong()), toasts = toasts, last = true)
-            SectionLabel(tr("Lightning"))
-            DetailRow(tr("Receive anti-DoS"), if (current.lnReceiveAntiDosRequired) tr("Required") else tr("Not required"), toasts = toasts, last = true)
-        }
-        SectionLabel(tr("Endpoints"))
-        DetailRow(tr("Esplora"), if (selection.endpoint == null) tr("Noah default") else tr("Custom"), toasts = toasts) { nav.open(SettingsDestination.Esplora) }
-        config.esplora?.let { DetailRow(tr("Esplora API"), host(it), copy = it, toasts = toasts) }
-        config.bitcoind?.let { DetailRow(tr("Bitcoind RPC"), host(it), copy = it, toasts = toasts) }
-        val height = ArkInfoEndpoints.blockHeight(BuildConfig.APP_VARIANT, selection.endpoint)
-        DetailRow(tr("Block height API"), host(height), copy = height, toasts = toasts)
-        val explorer = "https://mempool.space" + if (BuildConfig.APP_VARIANT == "mainnet") "" else "/signet"
-        DetailRow(tr("Explorer"), host(explorer), copy = explorer, toasts = toasts)
-        val prices = com.noahwallet.services.server.ServerEndpoint.priceURLs(com.noahwallet.services.server.ServerEndpoint.baseURL(BuildConfig.APP_VARIANT, BuildConfig.REGTEST_SERVER_URL))
-        DetailRow(tr("Price API"), host(prices.first), copy = prices.first, toasts = toasts)
-        DetailRow(tr("Historical price API"), host(prices.second), copy = prices.second, toasts = toasts, last = true)
+        } else ArkLimits(current, ::sats, number)
+        ArkEndpoints(config, selection.endpoint, nav)
     }
+}
+
+/** The server's limits: moving to Ark, rounds and expiry, and Lightning. */
+@Composable
+private fun ArkLimits(current: io.github.niteshbalusu11.bark.ArkInfo, sats: (Long) -> String, number: java.text.NumberFormat) {
+    val toasts = LocalSettingsToasts.current
+    SectionLabel(tr("Moving to Ark"))
+    DetailRow(tr("Smallest move"), sats(current.minBoardAmountSats.toLong()), ValueKind.number, toasts = toasts)
+    DetailRow(tr("Largest VTXO"), current.maxVtxoAmountSats?.let { sats(it.toLong()) } ?: tr("No limit"), ValueKind.number, toasts = toasts)
+    DetailRow(tr("Confirmations"), trPlural("{n} blocks", current.requiredBoardConfirmations.toLong()), toasts = toasts, last = true)
+    SectionLabel(tr("Rounds and expiry"))
+    DetailRow(tr("Round every"), tr("{n} seconds", number.format(current.roundIntervalSecs.toLong())), toasts = toasts)
+    DetailRow(tr("Round nonces"), number.format(current.nbRoundNonces.toLong()), ValueKind.number, toasts = toasts)
+    DetailRow(tr("VTXO lifetime"), trPlural("{n} blocks", current.vtxoLifetime.toLong()), toasts = toasts)
+    DetailRow(tr("Exit delta"), trPlural("{n} blocks", current.vtxoExitDelta.toLong()), toasts = toasts)
+    DetailRow(tr("Lightning send delta"), trPlural("{n} blocks", current.htlcSendExpiryDelta.toLong()), toasts = toasts, last = true)
+    SectionLabel(tr("Lightning"))
+    DetailRow(tr("Receive anti-DoS"), if (current.lnReceiveAntiDosRequired) tr("Required") else tr("Not required"), toasts = toasts, last = true)
+}
+
+/** The wallet's endpoints and explorer APIs; Bitcoind RPC only on regtest. */
+@Composable
+private fun ArkEndpoints(config: WalletConfiguration, customEsplora: String?, nav: SettingsNav) {
+    val toasts = LocalSettingsToasts.current
+    SectionLabel(tr("Endpoints"))
+    DetailRow(tr("Esplora"), if (customEsplora == null) tr("Noah default") else tr("Custom"),
+        toasts = toasts) { nav.open(SettingsDestination.Esplora) }
+    config.esplora?.let { DetailRow(tr("Esplora API"), host(it), copy = it, toasts = toasts) }
+    config.bitcoind?.let { DetailRow(tr("Bitcoind RPC"), host(it), copy = it, toasts = toasts) }
+    val height = ArkInfoEndpoints.blockHeight(BuildConfig.APP_VARIANT, customEsplora)
+    DetailRow(tr("Block height API"), host(height), copy = height, toasts = toasts)
+    val explorer = "https://mempool.space" + if (BuildConfig.APP_VARIANT == "mainnet") "" else "/signet"
+    DetailRow(tr("Explorer"), host(explorer), copy = explorer, toasts = toasts)
+    val prices = com.noahwallet.services.server.ServerEndpoint.priceURLs(com.noahwallet.services.server.ServerEndpoint.baseURL(BuildConfig.APP_VARIANT,
+        BuildConfig.REGTEST_SERVER_URL))
+    DetailRow(tr("Price API"), host(prices.first), copy = prices.first, toasts = toasts)
+    DetailRow(tr("Historical price API"), host(prices.second), copy = prices.second, toasts = toasts, last = true)
 }
 
 /** Esplora (prototype `SCR.esplora`): where Noah reads the chain; test and save, reset, as today. Regtest uses Bitcoin Core. */
@@ -199,6 +237,7 @@ internal fun EsploraPage(model: AppModel, nav: SettingsNav) {
     fun apply(value: String?) {
         error = null
         model.action("Endpoint not changed") {
+            @Suppress("TooGenericExceptionCaught") // switch boundary: the failure's redacted message is the page's error
             try {
                 model.services.switchEsploraEndpoint(value) { reopened ->
                     withContext(Dispatchers.Main) {
@@ -221,22 +260,11 @@ internal fun EsploraPage(model: AppModel, nav: SettingsNav) {
         }
     }
     SettingsFrame(tr("Esplora"), nav.back, line = tr("Where Noah reads the Bitcoin chain."), foot = if (regtest) null else ({
-        FootPill(tr("Use default"), Modifier.testTag("esplora-reset"), outlined = true, weight = .75f,
-            enabled = editable && (selection.endpoint != null || selection.input != null)) { apply(null) }
-        FootPill(if (model.busy) tr("Testing") else tr("Test and save"), Modifier.testTag("esplora-save"), enabled = editable && input.isNotBlank(), loading = model.busy) { apply(input) }
+        EsploraActions(model.busy, editable, custom = selection.endpoint != null || selection.input != null, typed = input.isNotBlank(),
+            useDefault = { apply(null) }) { apply(input) }
     })) {
-        Column(Modifier.padding(top = 20.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text(if (regtest) tr("Bitcoin Core") else effective, style = SettingsType.current, color = palette.foreground, maxLines = 2)
-            Text(if (regtest) tr("Regtest wallets use Bitcoin Core.") else if (selection.endpoint == null) tr("Noah default") else tr("Custom server"),
-                style = HomeType.line, color = palette.muted)
-        }
-        if (!regtest) {
-            SettingsField(input, { input = it; error = null }, "https://mempool.space/api", Modifier.testTag("esplora-endpoint-input"), label = tr("Custom server"),
-                failed = error != null, enabled = editable, keyboard = KeyboardOptions(capitalization = KeyboardCapitalization.None, keyboardType = KeyboardType.Uri, autoCorrectEnabled = false))
-            error?.let { FinePrint(tr(it), failed = true) } ?: FinePrint(tr("Noah checks it’s on the right network before switching."))
-            selection.attention?.let { FinePrint(tr(it), failed = true) }
-            Warning(tr("A custom server can see your addresses. Use one you trust."), SettingsIcons.eye)
-        }
+        EsploraCurrent(regtest, effective, selection.endpoint == null)
+        if (!regtest) EsploraCustom(input, { input = it; error = null }, error, selection.attention, editable)
     }
 }
 
@@ -261,10 +289,10 @@ internal fun LogsPage(model: AppModel, nav: SettingsNav) {
             share {
                 val scratch = model.services.scratch
                 val folder = scratch.makeFolder("share")
-                try {
+                runCatching {
                     val file = java.io.File(folder, "noah.log").apply { writeText(LogFile.shared(context).lines().joinToString("\n")) }
                     SharedFile(file) { scratch.discard(folder) }
-                } catch (failure: Exception) { scratch.discard(folder); throw failure }
+                }.onFailure { scratch.discard(folder) }.getOrThrow()
             }
         }
     }) {
@@ -303,17 +331,9 @@ internal fun DebugPage(model: AppModel, nav: SettingsNav) {
     var result by remember { mutableStateOf<String?>(null) }
     var confirming by remember { mutableStateOf(false) }
     var confirmation by rememberSaveable { mutableStateOf("") }
-    val height = LocalConfiguration.current.screenHeightDp
     fun execute() { model.action("Action failed. Check your input and connection before trying again.") {
         result = null
-        try {
-            result = if (push) {
-                var token: String? = null
-                val outcome = com.noahwallet.services.push.PushRuntime(context, model.services).register { token = it }
-                token ?: outcome.name
-            } else model.session.debug(action, input)
-        } catch (cancelled: CancellationException) { throw cancelled }
-        catch (failure: Exception) { result = com.noahwallet.services.logging.SafeErrorDescription.of(failure) }
+        result = runDebug(model, context, action.takeIf { !push }, input)
     } }
     val destructive = !push && action.destructive
     SettingsFrame(tr("Debug"), nav.back, line = tr("For developers. Some actions change your wallet."), foot = {
@@ -324,36 +344,110 @@ internal fun DebugPage(model: AppModel, nav: SettingsNav) {
     }) {
         FieldLabel(tr("Action"))
         PickerRow(if (push) tr("Get Push Token") else tr(action.title), Modifier.testTag("debug-action"), enabled = !model.busy) { picking = true }
-        if (!push && action.needsInput) SettingsField(input, { input = it }, if (action == DebugAction.offboard) "bc1q…" else "…",
-            label = if (action == DebugAction.offboard) tr("Bitcoin address") else tr("VTXO hex or ID"), enabled = !model.busy,
-            keyboard = KeyboardOptions(capitalization = KeyboardCapitalization.None, autoCorrectEnabled = false))
-        result?.let { value ->
-            FieldLabel(tr("Result"))
-            SelectionContainer {
-                Text(value, Modifier.padding(top = 8.dp).fillMaxWidth().background(palette.soft, RoundedCornerShape(18.dp)).padding(horizontal = 16.dp, vertical = 14.dp)
-                    .testTag("debug-result"), style = SettingsType.result, color = palette.foreground)
-            }
-            val copied = tr("Copied")
-            SettingsLink(tr("Copy")) {
-                (context.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager).setPrimaryClip(android.content.ClipData.newPlainText("Result", value))
-                toasts.show(copied)
-            }
+        if (!push && action.needsInput) DebugInput(action, input, !model.busy) { input = it }
+        result?.let { DebugResult(it) }
+    }
+    if (picking) SettingsSheet({ picking = false }, tr("Action"), null) { close ->
+        DebugActions(action.takeIf { !push }, onAction = { action = it; push = false; input = ""; result = null; close() }) {
+            push = true; result = null; close()
         }
     }
-    if (picking) SettingsSheet({ picking = false }, tr("Action")) { close ->
-        Column(Modifier.padding(top = 6.dp).heightIn(max = (height * .56f).dp).verticalScroll(rememberScrollState())) {
-            DebugAction.entries.forEach { candidate ->
-                RadioRow(tr(candidate.title), selected = !push && action == candidate, danger = candidate.destructive) {
-                    action = candidate; push = false; input = ""; result = null; close()
-                }
-            }
-            RadioRow(tr("Get Push Token"), selected = push, divider = false) { push = true; result = null; close() }
-        }
+    if (confirming) DebugConfirm(action, confirmation, { confirmation = it }, { confirming = false }) { confirming = false; execute() }
+}
+
+/** Use default (while a custom server is set or typed), and Test and save for what's typed. */
+@Composable
+private fun RowScope.EsploraActions(busy: Boolean, editable: Boolean, custom: Boolean, typed: Boolean, useDefault: () -> Unit, save: () -> Unit) {
+    FootPill(tr("Use default"), Modifier.testTag("esplora-reset"), outlined = true, weight = .75f, enabled = editable && custom, onClick = useDefault)
+    FootPill(if (busy) tr("Testing") else tr("Test and save"), Modifier.testTag("esplora-save"), enabled = editable && typed, loading = busy,
+        onClick = save)
+}
+
+/** The server in use: Bitcoin Core on regtest, else Noah's default or your custom one. */
+@Composable
+private fun EsploraCurrent(regtest: Boolean, effective: String, default: Boolean) {
+    val palette = LocalPalette.current
+    Column(Modifier.padding(top = 20.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Text(if (regtest) tr("Bitcoin Core") else effective, style = SettingsType.current, color = palette.foreground, maxLines = 2)
+        Text(if (regtest) tr("Regtest wallets use Bitcoin Core.") else if (default) tr("Noah default") else tr("Custom server"),
+            style = HomeType.line, color = palette.muted)
     }
-    if (confirming) SettingsSheet({ confirming = false }, tr("{action}?", tr(action.title)), tr("This changes your wallet and can lose funds.")) { close ->
-        SettingsField(confirmation, { confirmation = it }, tr("Type delete to confirm"), Modifier.testTag("debug-confirm-input"),
+}
+
+/** Your custom server's field, its error (or how it's checked), anything the saved selection needs, and the warning. */
+@Composable
+private fun EsploraCustom(input: String, onInput: (String) -> Unit, error: String?, attention: String?, editable: Boolean) {
+    SettingsField(input, onInput, "https://mempool.space/api", Modifier.testTag("esplora-endpoint-input"),
+        label = tr("Custom server"),
+        failed = error != null, enabled = editable,
+        keyboard = KeyboardOptions(capitalization = KeyboardCapitalization.None, keyboardType = KeyboardType.Uri, autoCorrectEnabled = false))
+    error?.let { FinePrint(tr(it), failed = true) } ?: FinePrint(tr("Noah checks it’s on the right network before switching."))
+    attention?.let { FinePrint(tr(it), failed = true) }
+    Warning(tr("A custom server can see your addresses. Use one you trust."), icon = SettingsIcons.eye)
+}
+
+/** What the debug action returned, selectable and copyable. */
+@Composable
+private fun DebugResult(value: String) {
+    val palette = LocalPalette.current
+    val context = LocalContext.current
+    val toasts = LocalSettingsToasts.current
+    FieldLabel(tr("Result"))
+    SelectionContainer {
+        Text(value,
+            Modifier.padding(top = 8.dp).fillMaxWidth().background(palette.soft, RoundedCornerShape(18.dp)).padding(horizontal = 16.dp,
+                vertical = 14.dp)
+                .testTag("debug-result"), style = SettingsType.result, color = palette.foreground)
+    }
+    val copied = tr("Copied")
+    SettingsLink(tr("Copy")) {
+        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+        clipboard.setPrimaryClip(android.content.ClipData.newPlainText("Result", value))
+        toasts.show(copied)
+    }
+}
+
+/** The debug actions to pick from, then Get Push Token; [selected] is null while the push token is picked. */
+@Composable
+private fun DebugActions(selected: DebugAction?, onAction: (DebugAction) -> Unit, onPush: () -> Unit) {
+    val window = LocalWindowInfo.current.containerSize.height
+    val height = with(LocalDensity.current) { window.toDp() }
+    Column(Modifier.padding(top = 6.dp).heightIn(max = height * .56f).verticalScroll(rememberScrollState())) {
+        DebugAction.entries.forEach { candidate ->
+            RadioRow(tr(candidate.title), selected = selected == candidate, danger = candidate.destructive) { onAction(candidate) }
+        }
+        RadioRow(tr("Get Push Token"), selected = selected == null, divider = false, onClick = onPush)
+    }
+}
+
+/** Runs [action] (or registers for push and returns its token, for null); a failure returns its safe description. */
+private suspend fun runDebug(model: AppModel, context: Context, action: DebugAction?, input: String): String {
+    @Suppress("TooGenericExceptionCaught") // developer page: shows whatever the debug action threw
+    try {
+        return if (action == null) {
+            var token: String? = null
+            val outcome = com.noahwallet.services.push.PushRuntime(context, model.services).register { token = it }
+            token ?: outcome.name
+        } else model.session.debug(action, input)
+    } catch (cancelled: CancellationException) { throw cancelled }
+    catch (failure: Exception) { return com.noahwallet.services.logging.SafeErrorDescription.of(failure) }
+}
+
+@Composable
+private fun DebugInput(action: DebugAction, input: String, enabled: Boolean, onInput: (String) -> Unit) {
+    val offboard = action == DebugAction.offboard
+    SettingsField(input, onInput, if (offboard) "bc1q…" else "…",
+        label = if (offboard) tr("Bitcoin address") else tr("VTXO hex or ID"), enabled = enabled,
+        keyboard = KeyboardOptions(capitalization = KeyboardCapitalization.None, autoCorrectEnabled = false))
+}
+
+/** A destructive action asks for "delete" first. */
+@Composable
+private fun DebugConfirm(action: DebugAction, confirmation: String, onConfirmation: (String) -> Unit, dismiss: () -> Unit, confirm: () -> Unit) {
+    SettingsSheet(dismiss, tr("{action}?", tr(action.title)), tr("This changes your wallet and can lose funds.")) { close ->
+        SettingsField(confirmation, onConfirmation, tr("Type delete to confirm"), Modifier.testTag("debug-confirm-input"),
             keyboard = KeyboardOptions(capitalization = KeyboardCapitalization.None, autoCorrectEnabled = false))
         SheetActions(tr("Cancel"), tr("Confirm"), onCancel = close, danger = true, enabled = SettingsRules.deleteConfirmed(confirmation),
-            confirmTag = "debug-confirm", onConfirm = { confirming = false; execute() })
+            confirmTag = "debug-confirm", onConfirm = confirm)
     }
 }

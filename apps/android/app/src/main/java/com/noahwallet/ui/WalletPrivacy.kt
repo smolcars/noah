@@ -40,7 +40,8 @@ internal fun WalletAlertDialog(onDismissRequest: () -> Unit, confirmButton: @Com
     modifier: Modifier = Modifier, dismissButton: (@Composable () -> Unit)? = null,
     icon: (@Composable () -> Unit)? = null, title: (@Composable () -> Unit)? = null, text: (@Composable () -> Unit)? = null) {
     val privacy = LocalWalletPrivacy.current
-    AlertDialog(onDismissRequest = { if (!privacy.covered) onDismissRequest() }, modifier = modifier.semantics { testTagsAsResourceId = true }.windowInsetsPadding(WindowInsets.safeDrawing).avoidHinge(reserveWindow = true),
+    AlertDialog(onDismissRequest = { if (!privacy.covered) onDismissRequest() },
+        modifier = modifier.semantics { testTagsAsResourceId = true }.windowInsetsPadding(WindowInsets.safeDrawing).avoidHinge(reserveWindow = true),
         properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false),
         confirmButton = { WalletModalContent(cover = {
             privacy.unlock?.let { TextButton(it) { Text(tr("Unlock")) } }
@@ -48,7 +49,8 @@ internal fun WalletAlertDialog(onDismissRequest: () -> Unit, confirmButton: @Com
         dismissButton = dismissButton?.let { { WalletModalContent(cover = {}, content = it) } },
         icon = icon?.let { { WalletModalContent(cover = {}, content = it) } },
         title = title?.let { { WalletModalContent(cover = { Text(tr("Noah is locked")) }, content = it) } },
-        text = text?.let { { WalletModalContent(cover = { Text(tr("Unlock to see your wallet.")) }, content = { Box(Modifier.verticalScroll(rememberScrollState())) { it() } }) } })
+        text = text?.let { { WalletModalContent(cover = { Text(tr("Unlock to see your wallet.")) },
+            content = { Box(Modifier.verticalScroll(rememberScrollState())) { it() } }) } })
 }
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalComposeUiApi::class)
@@ -63,12 +65,13 @@ internal fun WalletModalBottomSheet(onDismissRequest: () -> Unit, modifier: Modi
     val hinges = LocalFoldingFeatures.current
     val density = androidx.compose.ui.platform.LocalDensity.current
     val windowHeight = androidx.window.layout.WindowMetricsCalculator.getOrCreate()
-        .computeCurrentWindowMetrics(androidx.compose.ui.platform.LocalContext.current as android.app.Activity).bounds.height()
+        .computeCurrentWindowMetrics(requireNotNull(androidx.activity.compose.LocalActivity.current)).bounds.height()
     val horizontalFold = if (capAboveHorizontalFold) hinges.filter { it.width > it.height }.maxOfOrNull { it.bottom } else null
     // Sheets anchor to the bottom window edge; keep their entire height below a horizontal fold.
     val sheetHeight = with(density) { (windowHeight - (horizontalFold ?: 0)).coerceAtLeast(1).toDp() }
     val verticalFolds = hinges.filter { it.height > it.width }
-    ModalBottomSheet(onDismissRequest = { if (!privacy.covered) onDismissRequest() }, modifier = modifier.semantics { testTagsAsResourceId = true }.heightIn(max = sheetHeight),
+    ModalBottomSheet(onDismissRequest = { if (!privacy.covered) onDismissRequest() },
+        modifier = modifier.semantics { testTagsAsResourceId = true }.heightIn(max = sheetHeight),
         sheetMaxWidth = sheetMaxWidth,
         sheetState = sheetState, sheetGesturesEnabled = !privacy.covered, dragHandle = dragHandle?.let { handle -> {
             Box(Modifier.fillMaxWidth().heightIn(max = sheetHeight).avoidHinge(verticalFolds),

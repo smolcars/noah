@@ -58,50 +58,14 @@ internal fun CreatingStep(model: AppModel, presentation: OnboardingPresentation)
 internal fun RestoringStep(model: AppModel, presentation: OnboardingPresentation) {
     val clock = presentation.scene
     val flow = model.restore
-    val palette = LocalPalette.current
-    val haptics = rememberHaptics()
     val issue = flow.issue
     val storedSeed = model.launchState == LaunchState.seedWithoutWalletData
-    BackHandler { if (issue != null && !storedSeed && flow.canLeave && !model.busy) { flow.clearIssue(); model.step = "restore" } }
-    val finding = flow.step != null && flow.step != WalletRestorer.Step.fetching
-    val phase = when {
-        flow.completed -> 2
-        finding -> 1
-        else -> 0
-    }
-    LaunchedEffect(Unit) {
-        // The prototype's light taps as each of your leaves lights up.
-        snapshotFlow { clock.mode }.first { it == SceneMode.restore }
-        for (leaf in foundLeafTimes) {
-            val wait = leaf - clock.time(System.nanoTime())
-            if (wait < 0f) continue
-            delay((wait * 1000).toLong())
-            haptics.light()
-        }
-    }
-    LaunchedEffect(flow.completed) {
-        if (!flow.completed) return@LaunchedEffect
-        if (presentation.restoreReadyAt == 0L) presentation.restoreReadyAt = System.nanoTime()
-        if (clock.readyAt == null) clock.readyAt = clock.time(presentation.restoreReadyAt)
-        if (presentation.felt.add("restored")) haptics.success()
-        // Hold "Ready" and the count before Home, measured from the moment restore finished.
-        val shown = (System.nanoTime() - presentation.restoreReadyAt) / 1_000_000
-        delay((1400 - shown).coerceAtLeast(0))
-        model.holdRestoreCompletion = false
-    }
-    LaunchedEffect(issue) {
-        // A failed restore found nothing: the scene greys out and stops claiming leaves.
-        clock.frozenAt = if (issue != null) clock.frozenAt ?: clock.time(System.nanoTime()) else null
-        if (issue != null) { model.holdRestoreCompletion = false; haptics.error(); if (storedSeed) model.step = "storedSeed" }
-    }
+    // Back from a failed phrase restore (a stored phrase goes back on its own).
+    val canGoBack = issue != null && !storedSeed
+    BackHandler { if (canGoBack && flow.canLeave && !model.busy) { flow.clearIssue(); model.step = "restore" } }
+    RestoreProgressEffects(model, presentation, storedSeed)
     SceneLayout(clock, SceneMode.restore, welcomeGhost = model.localeIdentifier, below = {
-        PhaseText(listOf(tr("Restoring your wallet"), tr("Finding your bitcoin"), tr("Ready"))[phase], Modifier.testTag("restore-progress"))
-        val total = model.summary?.balance?.totalSats?.toLong()
-        if (flow.completed && total != null && !model.hidden) CountUp(total, model, presentation)
-        issue?.takeUnless { storedSeed }?.let {
-            Text(tr(it.message), Modifier.fillMaxWidth().padding(top = NoahTokens.Space.m).semantics { liveRegion = LiveRegionMode.Assertive },
-                style = NoahTokens.Typography.sub, color = palette.failure, textAlign = TextAlign.Center)
-        }
+        RestoreProgress(model, presentation, issue?.takeUnless { storedSeed })
     }, bottom = {
         if (issue != null && !issue.requiresRestart && !storedSeed) PillButton(tr("Back"), Modifier.fillMaxWidth(), enabled = flow.canLeave && !model.busy) {
             flow.clearIssue(); model.step = "restore"
@@ -130,9 +94,66 @@ private fun CountUp(total: Long, model: AppModel, presentation: OnboardingPresen
     val palette = LocalPalette.current
     val elapsed = ((System.nanoTime() - presentation.restoreReadyAt) / 1_000_000).toFloat()
     val progress = remember { Animatable((elapsed / 900f).coerceIn(0f, 1f)) }
-    LaunchedEffect(total) { progress.animateTo(1f, tween((900 * (1 - progress.value)).toInt().coerceAtLeast(0), easing = androidx.compose.animation.core.FastOutSlowInEasing)) }
+    LaunchedEffect(total) { progress.animateTo(1f,
+        tween((900 * (1 - progress.value)).toInt().coerceAtLeast(0), easing = androidx.compose.animation.core.FastOutSlowInEasing)) }
     val shown = countUpSats(total, progress.value)
     Text(BitcoinAmount.format(shown, model.amountUnit, Locale.forLanguageTag(model.localeIdentifier)),
         Modifier.fillMaxWidth().padding(top = NoahTokens.Space.l).graphicsLayer { alpha = (progress.value * 3).coerceAtMost(1f) },
         style = NoahTokens.Typography.amount.copy(fontFeatureSettings = "tnum"), color = palette.foreground, textAlign = TextAlign.Center)
+}
+
+/**
+ * The restore's haptics and holds: light taps as each of your leaves lights up, success and a short hold on "Ready"
+ * before Home, and on failure an error, the scene frozen grey and (a stored phrase) the way back to its screen.
+ */
+@Composable
+private fun RestoreProgressEffects(model: AppModel, presentation: OnboardingPresentation, storedSeed: Boolean) {
+    val clock = presentation.scene
+    val flow = model.restore
+    val haptics = rememberHaptics()
+    val issue = flow.issue
+    LaunchedEffect(Unit) {
+        // The prototype's light taps as each of your leaves lights up.
+        snapshotFlow { clock.mode }.first { it == SceneMode.restore }
+        for (leaf in foundLeafTimes) {
+            val wait = leaf - clock.time(System.nanoTime())
+            if (wait < 0f) continue
+            delay((wait * 1000).toLong())
+            haptics.light()
+        }
+    }
+    LaunchedEffect(flow.completed) {
+        if (!flow.completed) return@LaunchedEffect
+        if (presentation.restoreReadyAt == 0L) presentation.restoreReadyAt = System.nanoTime()
+        if (clock.readyAt == null) clock.readyAt = clock.time(presentation.restoreReadyAt)
+        if (presentation.felt.add("restored")) haptics.success()
+        // Hold "Ready" and the count before Home, measured from the moment restore finished.
+        val shown = (System.nanoTime() - presentation.restoreReadyAt) / 1_000_000
+        delay((1400 - shown).coerceAtLeast(0))
+        model.holdRestoreCompletion = false
+    }
+    LaunchedEffect(issue) {
+        // A failed restore found nothing: the scene greys out and stops claiming leaves.
+        clock.frozenAt = if (issue != null) clock.frozenAt ?: clock.time(System.nanoTime()) else null
+        if (issue != null) { model.holdRestoreCompletion = false; haptics.error(); if (storedSeed) model.step = "storedSeed" }
+    }
+}
+
+/** Under the tree: the phase, the restored balance counting up once ready, and a phrase restore's [issue]. */
+@Composable
+private fun RestoreProgress(model: AppModel, presentation: OnboardingPresentation, issue: com.noahwallet.ui.RestoreIssue?) {
+    val flow = model.restore
+    val finding = flow.step != null && flow.step != WalletRestorer.Step.fetching
+    val phase = when {
+        flow.completed -> 2
+        finding -> 1
+        else -> 0
+    }
+    PhaseText(listOf(tr("Restoring your wallet"), tr("Finding your bitcoin"), tr("Ready"))[phase], Modifier.testTag("restore-progress"))
+    val total = model.summary?.balance?.totalSats?.toLong()
+    if (flow.completed && total != null && !model.hidden) CountUp(total, model, presentation)
+    issue?.let {
+        Text(tr(it.message), Modifier.fillMaxWidth().padding(top = NoahTokens.Space.m).semantics { liveRegion = LiveRegionMode.Assertive },
+            style = NoahTokens.Typography.sub, color = LocalPalette.current.failure, textAlign = TextAlign.Center)
+    }
 }

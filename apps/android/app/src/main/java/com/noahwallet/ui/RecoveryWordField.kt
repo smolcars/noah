@@ -1,3 +1,5 @@
+@file:Suppress("MatchingDeclarationName") // named for the RecoveryWordField composable; the EditText is its platform view
+
 package com.noahwallet.ui
 
 import android.content.Context
@@ -12,6 +14,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.viewinterop.AndroidView
+import androidx.core.view.size
 import androidx.core.widget.doAfterTextChanged
 
 /**
@@ -21,6 +24,8 @@ import androidx.core.widget.doAfterTextChanged
  * shortcuts, the IME or accessibility, and no dragging a selection out. Paste keeps working, including a
  * whole phrase. The screen adds FLAG_SECURE and clears the words on leaving.
  */
+// Built only in code with its index; never inflated from XML.
+@android.annotation.SuppressLint("ViewConstructor")
 internal class RecoveryWordEditText(context: Context, private val index: Int) : EditText(context) {
     init {
         // The visible number labels the cell; TalkBack gets "Word N" from an invisible hint.
@@ -34,10 +39,10 @@ internal class RecoveryWordEditText(context: Context, private val index: Int) : 
         // suggestions) without masking the word.
         inputType = InputType.TYPE_CLASS_TEXT or InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD or InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS
         typeface = android.graphics.Typeface.DEFAULT // The variation switches TextView to monospace; keep the app's face.
-        imeOptions = EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING or
+        imeOptions = NO_LEARNING or
             if (index == 11) EditorInfo.IME_ACTION_DONE else EditorInfo.IME_ACTION_NEXT
         if (android.os.Build.VERSION.SDK_INT >= 26) importantForAutofill = IMPORTANT_FOR_AUTOFILL_NO_EXCLUDE_DESCENDANTS
-        if (android.os.Build.VERSION.SDK_INT >= 29) importantForContentCapture = IMPORTANT_FOR_CONTENT_CAPTURE_NO_EXCLUDE_DESCENDANTS
+        if (android.os.Build.VERSION.SDK_INT >= 30) importantForContentCapture = IMPORTANT_FOR_CONTENT_CAPTURE_NO_EXCLUDE_DESCENDANTS
         // The redesign draws its own underline; the field itself is bare.
         background = null
         setPadding(0, 0, 0, 0)
@@ -57,6 +62,8 @@ internal class RecoveryWordEditText(context: Context, private val index: Int) : 
     private var mouseMove = false
     override fun hasSelection() = !mouseMove && super.hasSelection()
 
+    // Clicks still reach performClick through super.onTouchEvent.
+    @android.annotation.SuppressLint("ClickableViewAccessibility")
     override fun onTouchEvent(event: android.view.MotionEvent): Boolean {
         if (event.actionMasked == android.view.MotionEvent.ACTION_DOWN) downOffset = getOffsetForPosition(event.x, event.y)
         mouseMove = event.actionMasked == android.view.MotionEvent.ACTION_MOVE && event.isFromSource(android.view.InputDevice.SOURCE_MOUSE)
@@ -88,16 +95,19 @@ internal class RecoveryWordEditText(context: Context, private val index: Int) : 
         override fun onCreateActionMode(mode: android.view.ActionMode?, menu: android.view.Menu): Boolean { strip(menu); return true }
         override fun onPrepareActionMode(mode: android.view.ActionMode?, menu: android.view.Menu): Boolean { strip(menu); return true }
         override fun onActionItemClicked(mode: android.view.ActionMode?, item: android.view.MenuItem) = false
-        override fun onDestroyActionMode(mode: android.view.ActionMode?) {}
+        override fun onDestroyActionMode(mode: android.view.ActionMode?) = Unit
         fun strip(menu: android.view.Menu) {
             while (true) {
-                val item = (0 until menu.size()).map(menu::getItem).firstOrNull { it.itemId !in kept } ?: return
+                val item = (0 until menu.size).map(menu::getItem).firstOrNull { it.itemId !in kept } ?: return
                 menu.removeItem(item.itemId)
             }
         }
     }
 
     companion object {
+        // A compile-time flag: keyboards before API 26 ignore the bit.
+        @android.annotation.SuppressLint("InlinedApi")
+        internal const val NO_LEARNING = EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING
         private val exported = setOf(android.R.id.copy, android.R.id.cut, android.R.id.shareText)
         private val kept = setOf(android.R.id.paste, android.R.id.pasteAsPlainText, android.R.id.selectAll)
     }
@@ -118,7 +128,7 @@ internal fun RecoveryWordField(word: String, index: Int, onChange: (String) -> U
             }
         }
     }, update = { field ->
-        field.imeOptions = EditorInfo.IME_FLAG_NO_PERSONALIZED_LEARNING or
+        field.imeOptions = RecoveryWordEditText.NO_LEARNING or
             if (index == wordCount - 1) EditorInfo.IME_ACTION_DONE else EditorInfo.IME_ACTION_NEXT
         if (textColor != Color.Unspecified) field.setTextColor(textColor.toArgb())
         field.setTextSize(TypedValue.COMPLEX_UNIT_SP, textSize)

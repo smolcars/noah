@@ -32,6 +32,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.AwaitPointerEventScope
 import androidx.compose.ui.input.pointer.PointerEventPass
 import androidx.compose.ui.input.pointer.PointerId
+import androidx.compose.ui.input.pointer.PointerInputScope
 import androidx.compose.ui.input.pointer.isOutOfBounds
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.Layout
@@ -55,28 +56,37 @@ import com.noahwallet.ui.WalletAlertDialog
 import com.noahwallet.ui.design.NoahTokens
 import com.noahwallet.ui.home.HomeIcons
 import com.noahwallet.ui.home.tonal
+import com.noahwallet.ui.onboarding.Haptics
 import com.noahwallet.ui.onboarding.LocalPalette
 import com.noahwallet.ui.onboarding.LocalPose
 import com.noahwallet.ui.onboarding.LocalReduceMotion
 import com.noahwallet.ui.onboarding.rememberHaptics
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 /** Send and Receive type (prototype sizes): Roboto for words, Space Grotesk for amounts and keys. */
 internal object SendType {
     private val display = NoahTokens.Display
-    private val box = androidx.compose.ui.text.style.LineHeightStyle(androidx.compose.ui.text.style.LineHeightStyle.Alignment.Center, androidx.compose.ui.text.style.LineHeightStyle.Trim.None)
-    private val trim = androidx.compose.ui.text.style.LineHeightStyle(androidx.compose.ui.text.style.LineHeightStyle.Alignment.Center, androidx.compose.ui.text.style.LineHeightStyle.Trim.Both)
-    val amount = TextStyle(fontFamily = display, fontWeight = FontWeight.SemiBold, fontSize = 68.sp, lineHeight = 68.sp, letterSpacing = (-0.035).em, lineHeightStyle = trim)
+    private val box = androidx.compose.ui.text.style.LineHeightStyle(androidx.compose.ui.text.style.LineHeightStyle.Alignment.Center,
+        androidx.compose.ui.text.style.LineHeightStyle.Trim.None)
+    private val trim = androidx.compose.ui.text.style.LineHeightStyle(androidx.compose.ui.text.style.LineHeightStyle.Alignment.Center,
+        androidx.compose.ui.text.style.LineHeightStyle.Trim.Both)
+    val amount = TextStyle(fontFamily = display, fontWeight = FontWeight.SemiBold, fontSize = 68.sp, lineHeight = 68.sp, letterSpacing = (-0.035).em,
+        lineHeightStyle = trim)
     val sheetAmount = amount.copy(fontSize = 54.sp, lineHeight = 54.sp)
     val key = TextStyle(fontFamily = display, fontWeight = FontWeight.Medium, fontSize = 30.sp, lineHeight = 30.sp, lineHeightStyle = trim)
-    val summary = TextStyle(fontFamily = display, fontWeight = FontWeight.SemiBold, fontSize = 34.sp, lineHeight = 34.sp, letterSpacing = (-0.02).em, lineHeightStyle = trim)
-    val big = TextStyle(fontFamily = display, fontWeight = FontWeight.SemiBold, fontSize = 40.sp, lineHeight = 42.sp, letterSpacing = (-0.025).em, lineHeightStyle = box)
+    val summary = TextStyle(fontFamily = display, fontWeight = FontWeight.SemiBold, fontSize = 34.sp, lineHeight = 34.sp, letterSpacing = (-0.02).em,
+        lineHeightStyle = trim)
+    val big = TextStyle(fontFamily = display, fontWeight = FontWeight.SemiBold, fontSize = 40.sp, lineHeight = 42.sp, letterSpacing = (-0.025).em,
+        lineHeightStyle = box)
     val title = TextStyle(fontWeight = FontWeight.SemiBold, fontSize = 17.sp, lineHeight = 22.sp, lineHeightStyle = box)
     val body = TextStyle(fontWeight = FontWeight.Normal, fontSize = 17.sp, lineHeight = 22.sp, lineHeightStyle = box)
     val strong = TextStyle(fontWeight = FontWeight.SemiBold, fontSize = 17.sp, lineHeight = 22.sp, lineHeightStyle = box)
     val value = TextStyle(fontWeight = FontWeight.Medium, fontSize = 17.sp, lineHeight = 22.sp, lineHeightStyle = box)
-    val number = TextStyle(fontFamily = display, fontWeight = FontWeight.Medium, fontSize = 17.sp, lineHeight = 22.sp, fontFeatureSettings = "tnum", lineHeightStyle = box)
+    val number = TextStyle(fontFamily = display, fontWeight = FontWeight.Medium, fontSize = 17.sp, lineHeight = 22.sp, fontFeatureSettings = "tnum",
+        lineHeightStyle = box)
     val line = TextStyle(fontWeight = FontWeight.Normal, fontSize = 15.sp, lineHeight = 20.sp, lineHeightStyle = box)
     val phase = TextStyle(fontWeight = FontWeight.Medium, fontSize = 15.sp, lineHeight = 20.sp, lineHeightStyle = box)
     val small = TextStyle(fontWeight = FontWeight.Normal, fontSize = 13.sp, lineHeight = 18.sp, lineHeightStyle = box)
@@ -105,7 +115,8 @@ internal object SendIcons {
 
 /** A small tonal chip (Max, Paste, Add a note). */
 @Composable
-internal fun SendChip(title: String, modifier: Modifier = Modifier, container: Color? = null, enabled: Boolean = true, height: Dp = 32.dp, onClick: () -> Unit) {
+internal fun SendChip(title: String, modifier: Modifier = Modifier, container: Color? = null, enabled: Boolean = true, height: Dp = 32.dp,
+    onClick: () -> Unit) {
     val palette = LocalPalette.current
     Box(modifier.height(height).tonal(RoundedCornerShape(height / 2), container ?: palette.soft)
         .clickable(enabled = enabled, role = Role.Button, onClick = onClick).padding(horizontal = 14.dp)
@@ -119,7 +130,7 @@ internal fun SendChip(title: String, modifier: Modifier = Modifier, container: C
  * shake when it's more than you can send.
  */
 @Composable
-internal fun AmountFigure(text: String, empty: Boolean, shake: Float, style: TextStyle = SendType.amount, modifier: Modifier = Modifier) {
+internal fun AmountFigure(text: String, empty: Boolean, shake: Float, modifier: Modifier = Modifier, style: TextStyle = SendType.amount) {
     val palette = LocalPalette.current
     val reduceMotion = LocalReduceMotion.current
     var previous by remember { mutableStateOf(text) }
@@ -177,7 +188,8 @@ private fun Key(key: String?, enabled: Boolean, modifier: Modifier, onClick: () 
     Box(modifier.clip(RoundedCornerShape(30.dp)).background(if (pressed && enabled) palette.soft else Color.Transparent)
         .clickable(interaction, indication = null, enabled = enabled, role = Role.Button, onClickLabel = label) {
             haptics.selection()
-            if (!reduceMotion) scope.launch { grow.snapTo(1f); grow.animateTo(1.28f, tween(70, easing = LinearOutSlowInEasing)); grow.animateTo(1f, tween(150, easing = FastOutSlowInEasing)) }
+            if (!reduceMotion) scope.launch { grow.snapTo(1f); grow.animateTo(1.28f, tween(70, easing = LinearOutSlowInEasing))
+                grow.animateTo(1f, tween(150, easing = FastOutSlowInEasing)) }
             onClick()
         }.testTag("send-key-${key ?: "⌫"}").semantics { contentDescription = label }, contentAlignment = Alignment.Center) {
         Box(Modifier.graphicsLayer { scaleX = grow.value; scaleY = grow.value }) {
@@ -212,7 +224,11 @@ internal fun ToField(value: String, onValue: (String) -> Unit, enabled: Boolean,
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri, imeAction = ImeAction.Go, autoCorrectEnabled = false),
             keyboardActions = androidx.compose.foundation.text.KeyboardActions(onGo = { onDone() }),
             decorationBox = { inner ->
-                Box { if (value.isEmpty()) Text(tr("Name, address or invoice"), style = SendType.body, color = palette.muted, maxLines = 1, overflow = TextOverflow.Ellipsis); inner() }
+                Box {
+                    if (value.isEmpty()) Text(tr("Name, address or invoice"), style = SendType.body, color = palette.muted, maxLines = 1,
+                        overflow = TextOverflow.Ellipsis)
+                    inner()
+                }
             })
         SendChip(tr("Paste"), Modifier.testTag("send-paste"), container = palette.background, enabled = enabled, onClick = onPaste)
     }
@@ -220,7 +236,8 @@ internal fun ToField(value: String, onValue: (String) -> Unit, enabled: Boolean,
 
 /** A result or recent row (64 dp): avatar, name and its type. */
 @Composable
-internal fun WhoRow(who: SendWho, subtitle: String, divider: Boolean, enabled: Boolean = true, busy: Boolean = false, modifier: Modifier = Modifier, onClick: () -> Unit) {
+internal fun WhoRow(who: SendWho, subtitle: String, divider: Boolean, modifier: Modifier = Modifier, enabled: Boolean = true, busy: Boolean = false,
+    onClick: () -> Unit) {
     val palette = LocalPalette.current
     Row(modifier.fillMaxWidth().height(64.dp).clickable(enabled = enabled, role = Role.Button, onClick = onClick).semantics(mergeDescendants = true) { }
         .drawBehind { if (divider) drawRect(palette.hairline, Offset(58.dp.toPx(), size.height - 1.dp.toPx()), Size(size.width - 58.dp.toPx(), 1.dp.toPx())) },
@@ -236,7 +253,8 @@ internal fun WhoRow(who: SendWho, subtitle: String, divider: Boolean, enabled: B
 
 /** A rail card on Method (or a balance card on Balance): glyph, name, one line and an optional "Best" badge. */
 @Composable
-internal fun RailCard(icon: Int?, name: String, line: String, best: Boolean, enabled: Boolean, selected: Boolean = false, modifier: Modifier = Modifier, onClick: () -> Unit) {
+internal fun RailCard(icon: Int?, name: String, line: String, best: Boolean, enabled: Boolean, modifier: Modifier = Modifier, selected: Boolean = false,
+    onClick: () -> Unit) {
     val palette = LocalPalette.current
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
@@ -254,7 +272,8 @@ internal fun RailCard(icon: Int?, name: String, line: String, best: Boolean, ena
             Text(name, style = SendType.strong, color = palette.foreground)
             Text(line, style = SendType.small, color = palette.muted)
         }
-        if (best) Text(tr("Best"), Modifier.background(palette.orangeTint, CircleShape).padding(horizontal = 8.dp, vertical = 3.dp), style = SendType.tag, color = palette.orangeText)
+        if (best) Text(tr("Best"), Modifier.background(palette.orangeTint, CircleShape).padding(horizontal = 8.dp, vertical = 3.dp), style = SendType.tag,
+            color = palette.orangeText)
     }
 }
 
@@ -263,7 +282,8 @@ internal fun RailCard(icon: Int?, name: String, line: String, best: Boolean, ena
  * one line puts its label above its value and both wrap rather than ellipsize (Review's rows, as on iOS).
  */
 @Composable
-internal fun ValueRow(label: String, value: String, number: Boolean = false, icon: Int? = null, divider: Boolean = true, copy: (() -> Unit)? = null, wraps: Boolean = false, modifier: Modifier = Modifier) {
+internal fun ValueRow(label: String, value: String, modifier: Modifier = Modifier, number: Boolean = false, icon: Int? = null, divider: Boolean = true,
+    copy: (() -> Unit)? = null, wraps: Boolean = false) {
     val palette = LocalPalette.current
     val row = modifier.fillMaxWidth().heightIn(min = 48.dp)
         .drawBehind { if (divider) drawRect(palette.hairline, Offset(0f, size.height - 1.dp.toPx()), Size(size.width, 1.dp.toPx())) }
@@ -271,7 +291,8 @@ internal fun ValueRow(label: String, value: String, number: Boolean = false, ico
     val copyButton = @Composable {
         val copyLabel = tr("Copy")
         if (copy != null) Box(Modifier.padding(start = 8.dp).size(36.dp).tonal(CircleShape, palette.soft)
-            .clickable(role = Role.Button, onClickLabel = copyLabel, onClick = copy).semantics { contentDescription = copyLabel }, contentAlignment = Alignment.Center) {
+            .clickable(role = Role.Button, onClickLabel = copyLabel, onClick = copy).semantics { contentDescription = copyLabel },
+            contentAlignment = Alignment.Center) {
             Icon(painterResource(SendIcons.copy), null, Modifier.size(18.dp), tint = palette.foreground)
         }
     }
@@ -360,69 +381,93 @@ internal fun HoldToConfirm(hold: String, busyLabel: String, action: String, conf
     val currentConfirm by rememberUpdatedState(onConfirm)
     val currentEnabled by rememberUpdatedState(enabled)
     val label = if (sending) busyLabel else hold
+    val gesture = HoldGesture(scope, progress, press, haptics, reduceMotion)
     // [wrap]: a long label takes a second line and the pill grows (exit pages at large text), rather than shrinking.
     Box(modifier.fillMaxWidth().then(if (wrap) Modifier.heightIn(min = 58.dp) else Modifier.height(58.dp))
         .graphicsLayer { scaleX = press.value; scaleY = press.value; alpha = if (enabled || sending) 1f else .4f }
-        .drawWithContent {
-            drawContent()
-            val p = progress.value
-            if (p > 0f) {
-                val inset = 2.dp.toPx()
-                val path = pill(-inset, -inset, size.width + inset, size.height + inset)
-                val length = PathMeasure().apply { setPath(path, false) }.length
-                drawPath(StageArt.segment(path, 0f, length * p), palette.orange, style = Stroke(3.dp.toPx(), cap = StrokeCap.Round))
-            }
-        }
+        .holdStroke(progress, palette.orange)
         .background(palette.foreground, RoundedCornerShape(29.dp))
         .testTag(tag)
         // A pose change moves the pill under the finger, so it restarts the gesture: hold again in the new pose.
-        .pointerInput(LocalPose.current) {
-            awaitEachGesture {
-                val finger = awaitFirstDown(requireUnconsumed = false).id
-                if (!currentEnabled) return@awaitEachGesture
-                var fired = false
-                val hold = scope.launch {
-                    launch { if (!reduceMotion) press.animateTo(.97f, NoahTokens.Motion.tap()) }
-                    val ticks = launch {
-                        delay(200); haptics.selection(); delay(200); haptics.light(); delay(200); haptics.medium()
-                    }
-                    // Every hold is a full 0.8 s, even one that starts while the last one rewinds. The stroke follows
-                    // frame time rather than an animation, so it still traces when animations are removed.
-                    progress.snapTo(0f)
-                    val stroke = launch {
-                        val start = withFrameMillis { it }
-                        while (true) progress.snapTo(((withFrameMillis { it } - start) / HoldMillis.toFloat()).coerceAtMost(1f))
-                    }
-                    // Sending waits on the unscaled clock: "Remove animations" finishes animations at once but can't shorten this.
-                    delay(HoldMillis)
-                    stroke.cancel(); ticks.cancel()
-                    progress.snapTo(1f)
-                    if (currentEnabled) { fired = true; haptics.heavy(); currentConfirm() }
-                }
-                try { holdUntilReleased(finger) } finally {
-                    if (!fired && hold.isActive) {
-                        hold.cancel()
-                        scope.launch { launch { press.animateTo(1f, NoahTokens.Motion.snappy()) }; progress.animateTo(0f, tween(260, easing = LinearOutSlowInEasing)) }
-                    } else scope.launch { press.animateTo(1f, NoahTokens.Motion.snappy()) }
-                }
-            }
-        }
-        .semantics(mergeDescendants = true) {
-            role = Role.Button
-            contentDescription = label
-            if (!enabled) disabled()
-            onClick(label = action) { if (currentEnabled) confirming = true; currentEnabled }
-            customActions = listOf(CustomAccessibilityAction(action) { if (currentEnabled) confirming = true; currentEnabled })
-        }, contentAlignment = Alignment.Center) {
-        if (wrap) WrappingLabel(label, SendType.pill.copy(color = palette.background, textAlign = TextAlign.Center), Modifier.padding(horizontal = 16.dp, vertical = 6.dp))
+        .pointerInput(LocalPose.current) { with(gesture) { detect({ currentEnabled }, { currentConfirm() }) } }
+        .holdSemantics(label, action, enabled) { currentEnabled.also { if (it) confirming = true } }, contentAlignment = Alignment.Center) {
+        if (wrap) WrappingLabel(label, SendType.pill.copy(color = palette.background, textAlign = TextAlign.Center),
+            Modifier.padding(horizontal = 16.dp, vertical = 6.dp))
         else androidx.compose.foundation.text.BasicText(label, Modifier.padding(horizontal = 16.dp), style = SendType.pill.copy(color = palette.background),
             maxLines = 1, autoSize = androidx.compose.foundation.text.TextAutoSize.StepBased(minFontSize = 11.sp, maxFontSize = SendType.pill.fontSize))
     }
     LaunchedEffect(sending) { if (!sending && progress.value >= 1f) progress.snapTo(0f) }
-    if (confirming) WalletAlertDialog(onDismissRequest = { confirming = false },
+    if (confirming) HoldAlternative(action, confirm, tag, { confirming = false }) { if (currentEnabled) { haptics.heavy(); currentConfirm() } }
+}
+
+/** The hold's accessibility alternative: [action] asked as a question, confirmed with [confirm]. */
+@Composable
+private fun HoldAlternative(action: String, confirm: String, tag: String, dismiss: () -> Unit, onConfirm: () -> Unit) {
+    WalletAlertDialog(onDismissRequest = dismiss,
         title = { Text(action) },
-        confirmButton = { TextButton({ confirming = false; if (currentEnabled) { haptics.heavy(); currentConfirm() } }, Modifier.testTag("$tag-confirm")) { Text(confirm) } },
-        dismissButton = { TextButton({ confirming = false }) { Text(tr("Cancel")) } })
+        confirmButton = { TextButton({ dismiss(); onConfirm() }, Modifier.testTag("$tag-confirm")) { Text(confirm) } },
+        dismissButton = { TextButton(dismiss) { Text(tr("Cancel")) } })
+}
+
+/** TalkBack can't hold: [action] (a tap or the custom action) asks to confirm instead, through [ask]. */
+private fun Modifier.holdSemantics(label: String, action: String, enabled: Boolean, ask: () -> Boolean) = semantics(mergeDescendants = true) {
+    role = Role.Button
+    contentDescription = label
+    if (!enabled) disabled()
+    onClick(label = action) { ask() }
+    customActions = listOf(CustomAccessibilityAction(action) { ask() })
+}
+
+/** The hold's stroke: the orange line tracing the pill's outline as [progress] runs 0 → 1. */
+private fun Modifier.holdStroke(progress: Animatable<Float, AnimationVector1D>, color: Color) = drawWithContent {
+    drawContent()
+    val p = progress.value
+    if (p > 0f) {
+        val inset = 2.dp.toPx()
+        val path = pill(-inset, -inset, size.width + inset, size.height + inset)
+        val length = PathMeasure().apply { setPath(path, false) }.length
+        drawPath(StageArt.segment(path, 0f, length * p), color, style = Stroke(3.dp.toPx(), cap = StrokeCap.Round))
+    }
+}
+
+/** Hold to confirm: the press, the 0.8 s stroke and the haptics along it; [detect] confirms once a full hold completes. */
+private class HoldGesture(
+    private val scope: CoroutineScope, private val progress: Animatable<Float, AnimationVector1D>,
+    private val press: Animatable<Float, AnimationVector1D>, private val haptics: Haptics, private val reduceMotion: Boolean,
+) {
+    suspend fun PointerInputScope.detect(enabled: () -> Boolean, confirm: () -> Unit) = awaitEachGesture {
+        val finger = awaitFirstDown(requireUnconsumed = false).id
+        if (!enabled()) return@awaitEachGesture
+        var fired = false
+        val hold = scope.launch {
+            launch { if (!reduceMotion) press.animateTo(.97f, NoahTokens.Motion.tap()) }
+            val ticks = launch {
+                delay(200); haptics.selection(); delay(200); haptics.light(); delay(200); haptics.medium()
+            }
+            // Every hold is a full 0.8 s, even one that starts while the last one rewinds. The stroke follows
+            // frame time rather than an animation, so it still traces when animations are removed.
+            progress.snapTo(0f)
+            val stroke = launch {
+                val start = withFrameMillis { it }
+                while (true) progress.snapTo(((withFrameMillis { it } - start) / HoldMillis.toFloat()).coerceAtMost(1f))
+            }
+            // Sending waits on the unscaled clock: "Remove animations" finishes animations at once but can't shorten this.
+            delay(HoldMillis)
+            stroke.cancel(); ticks.cancel()
+            progress.snapTo(1f)
+            if (enabled()) { fired = true; haptics.heavy(); confirm() }
+        }
+        try { holdUntilReleased(finger) } finally { release(!fired && hold.isActive, hold) }
+    }
+
+    /** The finger lifted: an unfinished hold rewinds its stroke; either way the pill springs back. */
+    private fun release(unfinished: Boolean, hold: Job) {
+        if (unfinished) {
+            hold.cancel()
+            scope.launch { launch { press.animateTo(1f, NoahTokens.Motion.snappy()) }
+                progress.animateTo(0f, tween(260, easing = LinearOutSlowInEasing)) }
+        } else scope.launch { press.animateTo(1f, NoahTokens.Motion.snappy()) }
+    }
 }
 
 /**
@@ -472,7 +517,8 @@ internal fun SwapTitle(text: String, style: TextStyle, modifier: Modifier = Modi
     Text(shown, modifier.graphicsLayer {
         alpha = (1 - out.value) * rise.value.coerceIn(0f, 1f)
         if (!reduceMotion) translationY = 6 * (1 - rise.value) * density
-    }.then(if (Build.VERSION.SDK_INT >= 31 && out.value > .01f && !reduceMotion) Modifier.blur((4 * out.value).dp, BlurredEdgeTreatment.Unbounded) else Modifier)
+    }.then(if (Build.VERSION.SDK_INT >= 31 && out.value > .01f && !reduceMotion) Modifier.blur((4 * out.value).dp,
+        BlurredEdgeTreatment.Unbounded) else Modifier)
         .semantics { heading(); liveRegion = LiveRegionMode.Polite }, style = style, color = palette.foreground)
 }
 
@@ -508,16 +554,25 @@ internal fun SendPill(title: String, modifier: Modifier = Modifier, enabled: Boo
     // Red only while it can act (prototype `.pill.bad:disabled`): a disabled destructive pill looks like any other.
     val red = danger && enabled
     val ink = if (outlined) palette.foreground else if (red) Color.White else palette.background
-    Box(modifier.then(if (wrap) Modifier.heightIn(min = height) else Modifier.height(height)).graphicsLayer { scaleX = scale; scaleY = scale; alpha = if (enabled || loading) 1f else .28f }
-        .then(if (outlined) Modifier.border(1.5.dp, palette.hairline, shape).clip(shape) else Modifier.tonal(shape, if (red) palette.failure else palette.foreground))
+    Box(modifier.then(if (wrap) Modifier.heightIn(min = height) else Modifier.height(height)).graphicsLayer { scaleX = scale; scaleY = scale
+        alpha = if (enabled || loading) 1f else .28f }
+        .then(if (outlined) Modifier.border(1.5.dp, palette.hairline, shape).clip(shape) else Modifier.tonal(shape,
+            if (red) palette.failure else palette.foreground))
         .clickable(interaction, indication = androidx.compose.material3.ripple(), enabled = enabled && !loading, role = Role.Button, onClick = onClick)
         .padding(horizontal = 14.dp, vertical = if (wrap) 6.dp else 0.dp), contentAlignment = Alignment.Center) {
-        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            if (loading) androidx.compose.material3.CircularProgressIndicator(Modifier.size(18.dp), color = ink, strokeWidth = 2.dp)
-            else icon?.let { Icon(painterResource(it), null, Modifier.size(20.dp), tint = ink) }
-            if (wrap) WrappingLabel(title, style.copy(color = ink, textAlign = TextAlign.Center))
-            else androidx.compose.foundation.text.BasicText(title, style = style.copy(color = ink, textAlign = TextAlign.Center),
-                maxLines = 1, autoSize = androidx.compose.foundation.text.TextAutoSize.StepBased(minFontSize = 11.sp, maxFontSize = style.fontSize))
-        }
+        PillLabel(title, style.copy(color = ink, textAlign = TextAlign.Center), loading, icon, wrap)
+    }
+}
+
+/** The pill's spinner or icon, then its title: on one line that shrinks to fit, or wrapping with [wrap]. */
+@Composable
+private fun PillLabel(title: String, style: TextStyle, loading: Boolean, icon: Int?, wrap: Boolean) {
+    val ink = style.color
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        if (loading) androidx.compose.material3.CircularProgressIndicator(Modifier.size(18.dp), color = ink, strokeWidth = 2.dp)
+        else icon?.let { Icon(painterResource(it), null, Modifier.size(20.dp), tint = ink) }
+        if (wrap) WrappingLabel(title, style)
+        else androidx.compose.foundation.text.BasicText(title, style = style,
+            maxLines = 1, autoSize = androidx.compose.foundation.text.TextAutoSize.StepBased(minFontSize = 11.sp, maxFontSize = style.fontSize))
     }
 }

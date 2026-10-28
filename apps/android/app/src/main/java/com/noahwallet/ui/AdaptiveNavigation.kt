@@ -36,11 +36,10 @@ internal fun AdaptiveNavigation(selectedTab: Destination, select: (Destination) 
     val haptics = com.noahwallet.ui.onboarding.rememberHaptics()
     val hinges = LocalFoldingFeatures.current
     val chrome = LocalWindowChrome.current
-    fun label(destination: Destination) = @Composable {
-        Text(tr(destination.title), style = TextStyle(fontSize = 12.sp, lineHeight = 16.sp,
-            fontWeight = if (selectedTab == destination) FontWeight.SemiBold else FontWeight.Medium))
+    fun choose(destination: Destination) {
+        if (destination != selectedTab) haptics.selection()
+        select(destination)
     }
-    fun choose(destination: Destination) { if (destination != selectedTab) haptics.selection(); select(destination) }
     BoxWithConstraints(Modifier.fillMaxSize()) {
         val tabletop = fullWindow && hinges.any { it.width > it.height }
         val rail = AdaptiveLayout.useRail(maxWidth.value, maxHeight.value) && !tabletop
@@ -53,31 +52,48 @@ internal fun AdaptiveNavigation(selectedTab: Destination, select: (Destination) 
             onDispose { chrome.bottom = null }
         }
         Row(Modifier.fillMaxSize()) {
-            if (rail) NavigationRail(Modifier.fillMaxHeight().verticalScroll(rememberScrollState()),
-                containerColor = palette.soft, contentColor = palette.foreground, windowInsets = WindowInsets(0, 0, 0, 0)) {
-                Destination.entries.forEach { destination ->
-                    NavigationRailItem(selected = selectedTab == destination, onClick = { choose(destination) },
-                        icon = { Icon(painterResource(destination.icon), null) }, label = label(destination),
-                        colors = NavigationRailItemDefaults.colors(selectedIconColor = palette.foreground,
-                            selectedTextColor = palette.foreground, unselectedIconColor = palette.foreground,
-                            unselectedTextColor = palette.foreground, indicatorColor = palette.hairline))
-                }
-            }
+            if (rail) TabRail(selectedTab, ::choose)
             Scaffold(Modifier.weight(1f), topBar = topBar,
-                contentWindowInsets = WindowInsets(0, 0, 0, 0), bottomBar = {
-                    if (bar) NavigationBar(containerColor = palette.soft, contentColor = palette.foreground, tonalElevation = 0.dp,
-                        windowInsets = WindowInsets(0, 0, 0, 0)) {
-                        Destination.entries.forEach { destination ->
-                            NavigationBarItem(selected = selectedTab == destination, onClick = { choose(destination) },
-                                icon = { Icon(painterResource(destination.icon), null) }, label = label(destination),
-                                colors = NavigationBarItemDefaults.colors(selectedIconColor = palette.foreground,
-                                    selectedTextColor = palette.foreground,
-                                    unselectedIconColor = palette.foreground,
-                                    unselectedTextColor = palette.foreground,
-                                    indicatorColor = palette.hairline))
-                        }
-                    }
-                }, content = content)
+                contentWindowInsets = WindowInsets(0, 0, 0, 0), bottomBar = { if (bar) TabBar(selectedTab, ::choose) }, content = content)
+        }
+    }
+}
+
+@Composable
+private fun TabLabel(destination: Destination, selected: Boolean) {
+    Text(tr(destination.title), style = TextStyle(fontSize = 12.sp, lineHeight = 16.sp,
+        fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Medium))
+}
+
+/** The tabs as a rail, beside the content on wide windows. */
+@Composable
+private fun TabRail(selectedTab: Destination, choose: (Destination) -> Unit) {
+    val palette = com.noahwallet.ui.onboarding.noahPalette()
+    NavigationRail(Modifier.fillMaxHeight().verticalScroll(rememberScrollState()),
+        containerColor = palette.soft, contentColor = palette.foreground, windowInsets = WindowInsets(0, 0, 0, 0)) {
+        Destination.entries.forEach { destination ->
+            NavigationRailItem(selected = selectedTab == destination, onClick = { choose(destination) },
+                icon = { Icon(painterResource(destination.icon), null) }, label = { TabLabel(destination, selectedTab == destination) },
+                colors = NavigationRailItemDefaults.colors(selectedIconColor = palette.foreground,
+                    selectedTextColor = palette.foreground, unselectedIconColor = palette.foreground,
+                    unselectedTextColor = palette.foreground, indicatorColor = palette.hairline))
+        }
+    }
+}
+
+/** The tabs as a bar along the bottom. */
+@Composable
+private fun TabBar(selectedTab: Destination, choose: (Destination) -> Unit) {
+    val palette = com.noahwallet.ui.onboarding.noahPalette()
+    NavigationBar(containerColor = palette.soft, contentColor = palette.foreground, tonalElevation = 0.dp, windowInsets = WindowInsets(0, 0, 0, 0)) {
+        Destination.entries.forEach { destination ->
+            NavigationBarItem(selected = selectedTab == destination, onClick = { choose(destination) },
+                icon = { Icon(painterResource(destination.icon), null) }, label = { TabLabel(destination, selectedTab == destination) },
+                colors = NavigationBarItemDefaults.colors(selectedIconColor = palette.foreground,
+                    selectedTextColor = palette.foreground,
+                    unselectedIconColor = palette.foreground,
+                    unselectedTextColor = palette.foreground,
+                    indicatorColor = palette.hairline))
         }
     }
 }

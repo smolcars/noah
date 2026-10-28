@@ -1,3 +1,5 @@
+@file:Suppress("MatchingDeclarationName") // named for Home's banner composables; HomeSignals is their state
+
 package com.noahwallet.ui.home
 
 import android.content.ClipData
@@ -26,7 +28,7 @@ import io.github.niteshbalusu11.bark.PendingRoundStatus
 import kotlinx.coroutines.*
 
 /** Today's Home inputs: app version, backup status, pending rounds, background work and the renew check. */
-internal class HomeSignals(
+internal data class HomeSignals(
     val version: AppVersionInfo?, val backup: PersistedBackupState, val background: String?,
     val rounds: List<PendingRoundStatus>, val now: Long, val retrying: Boolean,
     val retry: () -> Unit,
@@ -40,7 +42,6 @@ internal fun rememberHomeSignals(app: AppModel, refresh: Int, memory: HomeMemory
     val backup by app.services.backupCoordinator.statusChanges.collectAsState()
     val version by app.server.versionChanges.collectAsState()
     val walletRevision by app.session.walletChanges.collectAsState()
-    val context = LocalContext.current
     LaunchedEffect(app.server) { withContext(Dispatchers.IO) { app.server.checkVersionOnce() } }
     var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
     var retrying by remember { mutableStateOf(false) }
@@ -77,17 +78,7 @@ internal fun rememberHomeSignals(app: AppModel, refresh: Int, memory: HomeMemory
             awaitCancellation()
         }
     }
-    // Today's one-time upgrade notices, taken once per process and kept until dismissed.
-    LaunchedEffect(lifecycle, app.isWalletSuspended) {
-        if (app.isWalletSuspended) return@LaunchedEffect
-        lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
-            if (!memory.noticesTaken) {
-                memory.notices = withContext(Dispatchers.IO) { com.noahwallet.services.storage.SettingsStorage(context).takeUpgradeNotices() }
-                memory.noticesTaken = true
-            }
-            awaitCancellation()
-        }
-    }
+    UpgradeNotices(app, memory)
     return HomeSignals(version, backup, background.message, rounds, now, retrying) {
         scope.launch {
             retrying = true
@@ -99,11 +90,30 @@ internal fun rememberHomeSignals(app: AppModel, refresh: Int, memory: HomeMemory
     }
 }
 
+/** Today's one-time upgrade notices, taken once per process and kept until dismissed. */
+@Composable
+private fun UpgradeNotices(app: AppModel, memory: HomeMemory) {
+    val context = LocalContext.current
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    LaunchedEffect(lifecycle, app.isWalletSuspended) {
+        if (app.isWalletSuspended) return@LaunchedEffect
+        lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+            if (!memory.noticesTaken) {
+                memory.notices = withContext(Dispatchers.IO) { com.noahwallet.services.storage.SettingsStorage(context).takeUpgradeNotices() }
+                memory.noticesTaken = true
+            }
+            awaitCancellation()
+        }
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun PendingRoundsSheet(rounds: List<PendingRoundStatus>, close: () -> Unit) {
-    com.noahwallet.ui.onboarding.OnboardingSheet(onDismissRequest = close, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true), padded = false) {
-        androidx.compose.foundation.layout.Column(Modifier.fillMaxSize().readableWidth().verticalScroll(androidx.compose.foundation.rememberScrollState()).padding(20.dp),
+    com.noahwallet.ui.onboarding.OnboardingSheet(onDismissRequest = close, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
+        padded = false) {
+        val scroll = androidx.compose.foundation.rememberScrollState()
+        androidx.compose.foundation.layout.Column(Modifier.fillMaxSize().readableWidth().verticalScroll(scroll).padding(20.dp),
             verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(12.dp)) {
             TextButton(close) { Text(tr("Close")) }
             Text(tr("Pending Rounds"), style = MaterialTheme.typography.headlineMedium)

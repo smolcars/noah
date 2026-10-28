@@ -1,5 +1,6 @@
 package com.noahwallet.btcmap
 
+import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.*
 import java.text.SimpleDateFormat
@@ -62,8 +63,8 @@ object BtcMapDistance {
 @Serializable
 data class BtcMapPlace(
     val id: Long, val lat: Double, val lon: Double, val icon: String, val name: String,
-    val updated_at: String, val comments: Long? = null, val boosted_until: String? = null,
-    val verified_at: String? = null,
+    @SerialName("updated_at") val updatedAt: String, val comments: Long? = null, @SerialName("boosted_until") val boostedUntil: String? = null,
+    @SerialName("verified_at") val verifiedAt: String? = null,
 ) {
     val center: List<Double> get() = listOf(lon, lat)
     val category: PlaceCategory get() = PlaceCategory.classify(icon)

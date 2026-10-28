@@ -66,6 +66,7 @@ class AppModel(application: Application, val settings: SettingsStorage = Setting
             if (location.hasAnyData) throw WalletSession.OpenError(WalletSession.OpenFailure.walletDatabaseExists)
             check(!open && !isWalletSuspended)
             val typed = restoringTypedPhrase
+            @Suppress("TooGenericExceptionCaught") // clears the journal of a restore that didn't commit, then rethrows
             try {
                 services.restorer().restore(phrase, beforeInstall = { restoreCompletionJournal.write(it.copy(typedPhrase = typed)) },
                     progress = progress).copy(typedPhrase = typed)
@@ -107,6 +108,7 @@ class AppModel(application: Application, val settings: SettingsStorage = Setting
         if (!canRestoreWallet) return
         busy = true
         viewModelScope.launch {
+            @Suppress("TooGenericExceptionCaught") // restore boundary: every failure becomes the restore screen's issue
             try {
                 withContext(Dispatchers.IO) {
                     services.lifecycle.withWalletMutation {
@@ -151,13 +153,16 @@ class AppModel(application: Application, val settings: SettingsStorage = Setting
     var homeMemory = com.noahwallet.ui.home.HomeMemory(); private set
 
     fun preference(key: String, value: String) {
-        settings.set(com.noahwallet.services.storage.SettingsPreferences.update(settings.string("profile-storage"), mapOf(key to JsonPrimitive(value))), "profile-storage")
+        settings.set(com.noahwallet.services.storage.SettingsPreferences.update(settings.string("profile-storage"), mapOf(key to JsonPrimitive(value))),
+            "profile-storage")
         if (key == "bitcoinAmountUnit") amountUnit = if (value == "sats") BitcoinAmountUnit.sats else BitcoinAmountUnit.bip177
         if (key == "preferredCurrency") preferredCurrency = SettingsPreferences.preferredCurrency(settings.string("profile-storage"))
     }
 
     fun refreshLocale() { localeIdentifier = com.noahwallet.services.storage.LegacyLocale.resolved(getApplication()) }
 
+    // KTX edit(commit = true) drops commit()'s result, which is checked here.
+    @android.annotation.SuppressLint("UseKtx")
     fun setLanguage(code: String) {
         check(getApplication<Application>().getSharedPreferences("gt_store", android.content.Context.MODE_PRIVATE).edit()
             .putString(com.noahwallet.services.storage.LegacyLocale.key, code).commit())
@@ -173,6 +178,7 @@ class AppModel(application: Application, val settings: SettingsStorage = Setting
 
     suspend fun resumeWallet() {
         services.lifecycle.resume { retryRestoreSettings() }
+        @Suppress("TooGenericExceptionCaught") // suspends again after a failed open, then rethrows
         try { withContext(Dispatchers.IO) { services.openWalletInForeground() } }
         catch (failure: Exception) { services.lifecycle.suspend(); throw failure }
         open = true; isWalletSuspended = false
@@ -194,6 +200,7 @@ class AppModel(application: Application, val settings: SettingsStorage = Setting
     }
 
     suspend fun deleteWallet() {
+        @Suppress("TooGenericExceptionCaught") // restores the open/suspended state a failed delete left, then rethrows
         try { services.lifecycle.delete() }
         catch (failure: Exception) {
             isWalletSuspended = settings.persistedState<PersistedWalletState>(PersistedWalletState.key)?.isWalletSuspended == true
@@ -228,53 +235,20 @@ class AppModel(application: Application, val settings: SettingsStorage = Setting
         runCatching { Json.parseToJsonElement(it).jsonObject["state"]?.jsonObject }.getOrNull()
     } ?: JsonObject(emptyMap())
 
+    /** Launch runs once at a time, and never over a restore, an open wallet or a suspended onboarded one. */
+    private val launchBlocked get() =
+        starting || busy || customServerUnresponsive || !restore.canLeave || open || (isWalletSuspended && onboarded)
+
     fun start() {
-        if (starting || busy || customServerUnresponsive || !restore.canLeave || open || (isWalletSuspended && onboarded)) return
+        if (launchBlocked) return
         starting = true
         viewModelScope.launch {
             var recovering = true
+            @Suppress("TooGenericExceptionCaught") // launch boundary: any open failure becomes the launch screen's state
             try {
                 withContext(Dispatchers.IO) {
                     com.noahwallet.services.background.PeriodicExecution.awaitIdle()
-                    services.lifecycle.withWalletMutation {
-                        val recovered = services.recoverRestore(walletMutationHeld = true)
-                        if (recovered == com.noahwallet.services.backup.RestoreTransaction.Recovery.waitingForSecret) {
-                            launchState = LaunchState.secureStorageUnavailable
-                            return@withWalletMutation
-                        }
-                        RestoreTransaction(restoreLocation).completeSettings(settings)
-                        restoreCompletion {}.replay(recovered, restoreLocation.databaseExists)
-                        if (recovered == RestoreTransaction.Recovery.completed) services.tokens.clear()
-                        recovering = false
-                        isWalletSuspended = settings.persistedState<PersistedWalletState>(PersistedWalletState.key)?.isWalletSuspended == true
-                        recoveryPhraseBackedUp = RecoveryPhraseBackup.isBackedUp(settings)
-                        // A stored phrase without wallet data opens onboarding at its own recovery step, set first so Welcome never flashes.
-                        launchState = withContext(Dispatchers.IO) { LaunchState.current(getApplication()) }
-                            .also { if (it == LaunchState.seedWithoutWalletData) step = "storedSeed" }
-                        if (launchState == LaunchState.existingWallet) {
-                            onboarded = services.isOnboarded()
-                            if (isWalletSuspended) return@withWalletMutation
-                            withContext(Dispatchers.IO) {
-                                val wait = EsploraOpenWait(); customOpenWait = wait
-                                services.openWalletInForeground(walletMutationHeld = true, customWait = wait, lateCompletion = { success ->
-                                    withContext(Dispatchers.Main) {
-                                        customServerUnresponsive = false; switchingToDefaultServer = false; customOpenWait = null
-                                        if (success) {
-                                            open = true; onboarded = services.isOnboarded()
-                                            if (!onboarded) step = OnboardingNavigation.resumeStep
-                                            refresh(); services.startServerServices()
-                                        } else { error = "Couldn't open your wallet. Please try again." }
-                                    }
-                                })
-                                customOpenWait = null
-                            }
-                            open = true
-                            onboarded = services.isOnboarded()
-                            if (!onboarded) step = OnboardingNavigation.resumeStep
-                            refresh(walletMutationHeld = true)
-                            services.startServerServices()
-                        }
-                    }
+                    services.lifecycle.withWalletMutation { recoverAndOpen { recovering = false } }
                 }
             } catch (_: EsploraOpenWait.Timeout) {
                 customServerUnresponsive = customOpenWait != null
@@ -283,11 +257,64 @@ class AppModel(application: Application, val settings: SettingsStorage = Setting
                 customOpenWait = null
                 if (recovering) launchState = LaunchState.restoreIncomplete
                 else if (launchState == LaunchState.existingWallet) launchState = LaunchState.openFailure(failure)
-                error = if (failure is WalletLifecycle.TemporaryFiles || failure is WalletLifecycle.BackupBusy || failure is WalletLifecycle.WaitingForSecureStorage) failure.message else if (recovering) "Couldn't finish wallet recovery. Your wallet files have been kept. Please try again."
-                else "Couldn't open your wallet. Please try again."
+                error = lifecycleMessage(failure)
+                    ?: if (recovering) "Couldn't finish wallet recovery. Your wallet files have been kept. Please try again."
+                    else "Couldn't open your wallet. Please try again."
             }
             finally { withContext(Dispatchers.IO) { refreshRecoveryFiles() }; starting = false }
         }
+    }
+
+    /** Launch under the wallet mutation: finish an interrupted restore, read the launch state, then open the wallet. */
+    private suspend fun recoverAndOpen(recovered: () -> Unit) {
+        val recovery = services.recoverRestore(walletMutationHeld = true)
+        if (recovery == com.noahwallet.services.backup.RestoreTransaction.Recovery.waitingForSecret) {
+            launchState = LaunchState.secureStorageUnavailable
+            return
+        }
+        RestoreTransaction(restoreLocation).completeSettings(settings)
+        restoreCompletion {}.replay(recovery, restoreLocation.databaseExists)
+        if (recovery == RestoreTransaction.Recovery.completed) services.tokens.clear()
+        recovered()
+        isWalletSuspended = persistedSuspended()
+        recoveryPhraseBackedUp = RecoveryPhraseBackup.isBackedUp(settings)
+        // A stored phrase without wallet data opens onboarding at its own recovery step, set first so Welcome never flashes.
+        launchState = withContext(Dispatchers.IO) { LaunchState.current(getApplication()) }
+            .also { if (it == LaunchState.seedWithoutWalletData) step = "storedSeed" }
+        if (launchState == LaunchState.existingWallet) openExistingWallet()
+    }
+
+    /** Launch's open of the wallet on disk, under the wallet mutation [start] holds; suspended wallets stay closed. */
+    private suspend fun openExistingWallet() {
+        onboarded = services.isOnboarded()
+        if (isWalletSuspended) return
+        withContext(Dispatchers.IO) {
+            val wait = EsploraOpenWait(); customOpenWait = wait
+            services.openWalletInForeground(walletMutationHeld = true, customWait = wait, lateCompletion = ::lateOpen)
+            customOpenWait = null
+        }
+        open = true
+        onboarded = services.isOnboarded()
+        if (!onboarded) step = OnboardingNavigation.resumeStep
+        refresh(walletMutationHeld = true)
+        services.startServerServices()
+    }
+
+    /** A custom server's open that outlived its wait and has now finished, one way or the other. */
+    private suspend fun lateOpen(success: Boolean) = withContext(Dispatchers.Main) {
+        customServerUnresponsive = false; switchingToDefaultServer = false; customOpenWait = null
+        if (success) {
+            open = true; onboarded = services.isOnboarded()
+            if (!onboarded) step = OnboardingNavigation.resumeStep
+            refresh(); services.startServerServices()
+        } else { error = "Couldn't open your wallet. Please try again." }
+    }
+
+    /** The message of a lifecycle failure that explains itself to the user; null for every other failure. */
+    private fun lifecycleMessage(failure: Exception, restoreSettings: Boolean = false): String? = when (failure) {
+        is WalletLifecycle.TemporaryFiles, is WalletLifecycle.BackupBusy, is WalletLifecycle.WaitingForSecureStorage -> failure.message
+        is WalletLifecycle.RestoreSettingsUnavailable -> failure.message.takeIf { restoreSettings }
+        else -> null
     }
 
     fun useDefaultEsploraServer() {
@@ -304,11 +331,12 @@ class AppModel(application: Application, val settings: SettingsStorage = Setting
         if (busy) return
         busy = true; error = null; inline?.invoke(null)
         viewModelScope.launch {
+            @Suppress("TooGenericExceptionCaught") // action boundary: every failure is shown as the action's message
             try { block() }
             catch (cancelled: CancellationException) { throw cancelled }
             catch (failure: Exception) {
-                val message = if (failure is WalletLifecycle.TemporaryFiles || failure is WalletLifecycle.BackupBusy || failure is WalletLifecycle.WaitingForSecureStorage || failure is WalletLifecycle.RestoreSettingsUnavailable) failure.message
-                else if (useServerMessage) com.noahwallet.services.server.ServerFailure.message(failure, fallback) else fallback
+                val message = lifecycleMessage(failure, restoreSettings = true)
+                    ?: if (useServerMessage) com.noahwallet.services.server.ServerFailure.message(failure, fallback) else fallback
                 if (inline != null) inline(message) else error = message
             }
             finally { busy = false }
@@ -354,13 +382,19 @@ class AppModel(application: Application, val settings: SettingsStorage = Setting
         restoreCompletion {}.replay(RestoreTransaction.Recovery.nothingPending, restoreLocation.databaseExists)
     }
 
+    private suspend fun retryRestoreSettings(walletMutationHeld: Boolean) {
+        if (walletMutationHeld) retryRestoreSettings() else services.lifecycle.withWalletMutation { retryRestoreSettings() }
+    }
+
     private val summaryRefresh = java.util.concurrent.atomic.AtomicLong()
+    /** A newer refresh, a suspension, a restore or a deletion has overtaken refresh [generation]. */
+    private fun summaryStale(generation: Long) = summaryRefresh.get() != generation || isWalletSuspended || restoreLocation.restorePending ||
+        restoreLocation.deletionMarker.exists() || persistedSuspended()
+    private fun persistedSuspended() = settings.persistedState<PersistedWalletState>(PersistedWalletState.key)?.isWalletSuspended == true
 
     suspend fun refresh(sync: Boolean = false, walletMutationHeld: Boolean = false): Unit = withContext(Dispatchers.IO) {
-        if (open && (RestoreTransaction(restoreLocation).settingsPending || restoreCompletionJournal.pending)) {
-            if (walletMutationHeld) retryRestoreSettings() else services.lifecycle.withWalletMutation { retryRestoreSettings() }
-        }
-        if (isWalletSuspended || settings.persistedState<PersistedWalletState>(PersistedWalletState.key)?.isWalletSuspended == true) return@withContext
+        if (open && (RestoreTransaction(restoreLocation).settingsPending || restoreCompletionJournal.pending)) retryRestoreSettings(walletMutationHeld)
+        if (isWalletSuspended || persistedSuspended()) return@withContext
         val generation = summaryRefresh.incrementAndGet()
         val caller = currentCoroutineContext()
         val admission = com.noahwallet.recurring.RecurringRuntime.shared(getApplication()).syncForegroundAdmission
@@ -368,9 +402,7 @@ class AppModel(application: Application, val settings: SettingsStorage = Setting
         fun checkStage() {
             caller.checkWalletAdmission()
             admission.checkActive(activation)
-            if (summaryRefresh.get() != generation || isWalletSuspended || restoreLocation.restorePending ||
-                restoreLocation.deletionMarker.exists() ||
-                settings.persistedState<PersistedWalletState>(PersistedWalletState.key)?.isWalletSuspended == true) throw CancellationException()
+            if (summaryStale(generation)) throw CancellationException()
         }
         try {
             checkStage()
@@ -380,7 +412,7 @@ class AppModel(application: Application, val settings: SettingsStorage = Setting
             }
             summaryRevision++
             error = null
-        } catch (cancelled: CancellationException) { caller.ensureActive() }
+        } catch (_: CancellationException) { caller.ensureActive() }
         catch (_: Exception) { error = "Couldn't load your balance. Pull down to try again." }
     }
 

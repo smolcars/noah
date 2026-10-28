@@ -76,7 +76,8 @@ class HomeScroll internal constructor(val compact: ScrollState, val leading: Scr
     internal fun compactAnchor(state: HomeRules.State, items: ActivityItems, recent: List<String>): Anchor {
         val y = compact.value
         if (state == HomeRules.State.fresh) return into(compactCard, y) ?: Anchor.Above(y)
-        if (state != HomeRules.State.everyday || recent.isEmpty() || recentTop < 0 || rowHeight <= 0 || y <= recentTop) return Anchor.Above(y)
+        if (state != HomeRules.State.everyday || recent.isEmpty()) return Anchor.Above(y)
+        if (recentTop < 0 || rowHeight <= 0 || y <= recentTop) return Anchor.Above(y)
         val k = ((y - recentTop) / rowHeight).coerceAtMost(recent.lastIndex)
         return row(recent[k], y - recentTop - k * rowHeight, items)
     }
@@ -121,7 +122,8 @@ class HomeScroll internal constructor(val compact: ScrollState, val leading: Scr
                 val k = recent.indexOf(id)
                 // Past Recent's rows, the nearest the column comes is its end.
                 if (k < 0) { compact.scrollTo(Int.MAX_VALUE); return }
-                placed { (recentTop to rowHeight).takeIf { it.first >= 0 && it.second > 0 } }?.let { (top, height) -> compact.scrollTo(top + k * height + offset) }
+                placed { (recentTop to rowHeight).takeIf { it.first >= 0 && it.second > 0 } }?.let { (top,
+                    height) -> compact.scrollTo(top + k * height + offset) }
             }
             is Anchor.Card -> placed { compactCard }?.let { (top, height) -> compact.scrollTo(top + (at.fraction * height).roundToInt()) }
         }

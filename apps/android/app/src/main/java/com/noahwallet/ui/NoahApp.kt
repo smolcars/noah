@@ -16,6 +16,7 @@ import androidx.compose.ui.Modifier
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
+import androidx.navigation3.runtime.NavBackStack
 import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.runtime.rememberNavBackStack
@@ -52,37 +53,96 @@ fun NoahApp(model: AppModel, links: PaymentLinks? = null) {
     val backStack = rememberNavBackStack(Destination.Home)
     // Settings' own pages: on Home's stack, Settings is one entry over Home.
     val settingsStack = rememberNavBackStack(SettingsDestination.Settings)
-    val settingsEntry = remember { SettingsEntry() }
-    var selectedTab by rememberSaveable { mutableStateOf(Destination.Home) }
+    val tab = rememberSaveable { mutableStateOf(Destination.Home) }
+    val nav = remember(backStack, settingsStack, tab) { AppNavigator(model, backStack, settingsStack, tab, SettingsEntry()) }
+    val selectedTab = tab.value
     val tabState = rememberSaveableStateHolder()
-    fun showHome() { backStack.clear(); backStack.add(Destination.Home); selectedTab = Destination.Home }
-    fun showSend() { backStack.clear(); backStack.add(Destination.Home); selectedTab = Destination.Send }
+    BackHandler(enabled = selectedTab != Destination.Home) { nav.goBack() }
+    if (links != null) LinkDelivery(model, links, nav)
+    LaunchedEffect(model.recurringNotification) {
+        if (model.recurringNotification) { nav.openSettings(SettingsDestination.Recurring); model.recurringNotification = false }
+    }
+    WalletForeground(model)
+    if (selectedTab == Destination.Home && backStack.last() == Destination.Home) {
+        com.noahwallet.onchain.AutoBoardPrompt(model) { model.autoBoardSuccessBanner = it to System.currentTimeMillis() }
+    }
+    // Home, Settings, Send, Receive and Activity split the whole window at a fold themselves; every other screen (the
+    // map among them) keeps one pane.
+    var sendBarHidden by remember { mutableStateOf(false) }
+    var activityBarHidden by remember { mutableStateOf(false) }
+    val settingsVisible = backStack.last() == SettingsDestination.Settings && selectedTab == Destination.Home
+    val homeOwnsWindow = ownsWindow(model, nav, settingsVisible)
+    WindowBackground(homeOwnsWindow)
+    androidx.compose.foundation.layout.Box(Modifier.fillMaxSize().avoidHinge(if (homeOwnsWindow) emptyList() else LocalFoldingFeatures.current)) {
+        // Settings isn't a tab: phones hide the bar under it; the rail stays.
+        val barHidden = (selectedTab == Destination.Send && sendBarHidden) || (selectedTab == Destination.History && activityBarHidden)
+        AdaptiveNavigation(selectedTab, { tab.value = it }, fullWindow = homeOwnsWindow, showBar = !barHidden && !settingsVisible) { padding ->
+            tabState.SaveableStateProvider(selectedTab) {
+                SharedTransitionLayout {
+                    CompositionLocalProvider(LocalAppShared provides this, LocalSettingsEntry provides nav.settingsEntry) {
+                        NavDisplay(
+                            backStack = mainTabEntries(selectedTab, backStack),
+                            modifier = Modifier.padding(padding),
+                            onBack = { nav.goBack() },
+                            entryProvider = entryProvider {
+                                entry<QRDestination> { destination -> QRHub(model, nav, destination.scan) }
+                                entry<MapDestination> { com.noahwallet.btcmap.BtcMapScreen { nav.goBack() } }
+                                entry<SettingsDestination>(metadata = settingsZoom()) {
+                                    CompositionLocalProvider(LocalEntryScope provides LocalNavAnimatedContentScope.current) {
+                                        SettingsHost(model, settingsStack, close = { nav.goBack() }, myCode = { backStack.add(QRDestination(false)) },
+                                            map = { backStack.add(MapDestination) })
+                                    }
+                                }
+                                entry<Destination> { destination ->
+                                    TabScreen(model, nav, destination, sendBar = { sendBarHidden = it }) { activityBarHidden = it }
+                                }
+                            },
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+/** Where the app's tabs and stacks go: Home's stack, Settings beneath a page, Send with a scanned code. */
+@Stable
+private class AppNavigator(private val model: AppModel, val backStack: NavBackStack<NavKey>, val settingsStack: NavBackStack<NavKey>,
+    private val tab: MutableState<Destination>, val settingsEntry: SettingsEntry) {
+    val selectedTab get() = tab.value
+    fun select(destination: Destination) { tab.value = destination }
+    fun showHome() { backStack.clear(); backStack.add(Destination.Home); tab.value = Destination.Home }
+    fun showSend() { backStack.clear(); backStack.add(Destination.Home); tab.value = Destination.Send }
     /** A scanned code, a QR hub paste or an OS link: Send applies it on To once no payment holds it. */
     fun scanned(value: String) { model.scannedDestination = value; showSend() }
     fun goBack() {
-        if (!model.busy) {
-            if (selectedTab != Destination.Home) selectedTab = Destination.Home
-            else if (backStack.size > 1) backStack.removeAt(backStack.lastIndex)
-        }
+        if (model.busy) return
+        if (tab.value != Destination.Home) tab.value = Destination.Home
+        else if (backStack.size > 1) backStack.removeAt(backStack.lastIndex)
     }
     /** Opens [page] with Settings beneath it (settings.md, Deep links); [fromGear] zooms out of Home's gear. */
     fun openSettings(page: NavKey, fromGear: Boolean = false) {
         settingsEntry.fromGear = fromGear
-        selectedTab = Destination.Home
+        tab.value = Destination.Home
         SettingsRoutes.open(backStack, settingsStack, page)
     }
-    BackHandler(enabled = selectedTab != Destination.Home) { goBack() }
-    if (links != null) {
-        val context = androidx.compose.ui.platform.LocalContext.current
-        val send = remember(context) { com.noahwallet.send.SendRuntime.shared(context).controller }
-        LaunchedEffect(links.pending, send.loading) { links.deliver(send, model.openReviews, ::scanned) }
-        if (links.blocked) WalletAlertDialog(onDismissRequest = { links.blocked = false },
-            title = { Text(tr("Payment in progress")) }, text = { Text(tr(PaymentLinks.blockedMessage)) },
-            confirmButton = { androidx.compose.material3.TextButton({ links.blocked = false }) { Text(tr("OK")) } })
-    }
-    LaunchedEffect(model.recurringNotification) {
-        if (model.recurringNotification) { openSettings(SettingsDestination.Recurring); model.recurringNotification = false }
-    }
+    fun repeat(payment: com.noahwallet.history.RepeatPayment) { model.repeatPayment = payment; showSend() }
+}
+
+/** OS payment links go to Send once no payment holds it; a held one says so. */
+@Composable
+private fun LinkDelivery(model: AppModel, links: PaymentLinks, nav: AppNavigator) {
+    val context = androidx.compose.ui.platform.LocalContext.current
+    val send = remember(context) { com.noahwallet.send.SendRuntime.shared(context).controller }
+    LaunchedEffect(links.pending, send.loading) { links.deliver(send, model.openReviews, nav::scanned) }
+    if (links.blocked) WalletAlertDialog(onDismissRequest = { links.blocked = false },
+        title = { Text(tr("Payment in progress")) }, text = { Text(tr(PaymentLinks.blockedMessage)) },
+        confirmButton = { androidx.compose.material3.TextButton({ links.blocked = false }) { Text(tr("OK")) } })
+}
+
+/** While the wallet is open and the app started: refresh it, keep backups due, and follow its history. */
+@Composable
+private fun WalletForeground(model: AppModel) {
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     val sessionRevision by model.session.walletChanges.collectAsState()
     val walletAvailable = model.open && !model.isWalletSuspended && model.session.isOpen
@@ -93,81 +153,57 @@ fun NoahApp(model: AppModel, links: PaymentLinks? = null) {
             model.history.observe(model.preferredCurrency)
         }
     }
-    if (selectedTab == Destination.Home && backStack.last() == Destination.Home) com.noahwallet.onchain.AutoBoardPrompt(model) { model.autoBoardSuccessBanner = it to System.currentTimeMillis() }
-    val repeat: (com.noahwallet.history.RepeatPayment) -> Unit = {
-        model.repeatPayment = it
-        showSend()
-    }
-    // A payment's VTXO, exit and recurring links, from Activity and Home alike.
-    val openPage: (NavKey) -> Unit = { openSettings(it) }
-    // Home, Settings, Send, Receive and Activity split the whole window at a fold themselves; every other screen (the
-    // map among them) keeps one pane.
-    var sendBarHidden by remember { mutableStateOf(false) }
-    var activityBarHidden by remember { mutableStateOf(false) }
-    val homeVisible = backStack.last() == Destination.Home && (selectedTab == Destination.Home || model.isWalletSuspended)
-    val settingsVisible = backStack.last() == SettingsDestination.Settings && selectedTab == Destination.Home
-    val homeOwnsWindow = homeVisible || settingsVisible ||
-        !model.isWalletSuspended && selectedTab in listOf(Destination.Send, Destination.Receive, Destination.History)
+}
+
+/** Home, Settings and the Send, Receive and Activity tabs draw the whole window; others keep one pane. */
+private fun ownsWindow(model: AppModel, nav: AppNavigator, settingsVisible: Boolean): Boolean {
+    val tab = nav.selectedTab
+    val homeVisible = nav.backStack.last() == Destination.Home && (tab == Destination.Home || model.isWalletSuspended)
+    return homeVisible || settingsVisible ||
+        (!model.isWalletSuspended && tab in listOf(Destination.Send, Destination.Receive, Destination.History))
+}
+
+/** The window's background follows Home's palette while Home owns the window. */
+@Composable
+private fun WindowBackground(homeOwnsWindow: Boolean) {
     val chrome = LocalWindowChrome.current
     val palette = com.noahwallet.ui.onboarding.noahPalette()
     DisposableEffect(homeOwnsWindow, palette) {
         chrome.background = if (homeOwnsWindow) palette.background else null
         onDispose { chrome.background = null }
     }
-    androidx.compose.foundation.layout.Box(Modifier.fillMaxSize().avoidHinge(if (homeOwnsWindow) emptyList() else LocalFoldingFeatures.current)) {
-        // Settings isn't a tab: phones hide the bar under it; the rail stays.
-        AdaptiveNavigation(selectedTab, { selectedTab = it }, fullWindow = homeOwnsWindow, showBar = !(selectedTab == Destination.Send && sendBarHidden) &&
-            !(selectedTab == Destination.History && activityBarHidden) && !settingsVisible,
-        ) { padding ->
-            tabState.SaveableStateProvider(selectedTab) {
-                SharedTransitionLayout {
-                    CompositionLocalProvider(LocalAppShared provides this, LocalSettingsEntry provides settingsEntry) {
-                        NavDisplay(
-                            backStack = mainTabEntries(selectedTab, backStack),
-                            modifier = Modifier.padding(padding),
-                            onBack = { goBack() },
-                            entryProvider = entryProvider {
-                                entry<QRDestination> { destination ->
-                                    QRHubScreen(model.server.state.lightningAddress,
-                                        com.noahwallet.services.storage.SettingsPreferences.state(model.settings.string("profile-storage"))["displayName"]?.let { (it as? kotlinx.serialization.json.JsonPrimitive)?.contentOrNull } ?: "",
-                                        onBack = { backStack.removeAt(backStack.lastIndex) },
-                                        onProfile = { openSettings(SettingsDestination.Profile) },
-                                        onScan = ::scanned, startScanning = destination.scan)
-                                }
-                                entry<MapDestination> { com.noahwallet.btcmap.BtcMapScreen { goBack() } }
-                                entry<SettingsDestination>(metadata = settingsZoom()) {
-                                    CompositionLocalProvider(LocalEntryScope provides LocalNavAnimatedContentScope.current) {
-                                        SettingsHost(model, settingsStack, close = { goBack() }, myCode = { backStack.add(QRDestination(false)) },
-                                            map = { backStack.add(MapDestination) })
-                                    }
-                                }
-                                entry<Destination> { destination ->
-                                    if (destination == Destination.Home || model.isWalletSuspended) CompositionLocalProvider(LocalEntryScope provides LocalNavAnimatedContentScope.current) {
-                                        HomeScreen(model, onViewAll = {
-                                            selectedTab = Destination.History
-                                        }, onRepeatPayment = repeat, onSettings = openPage, onScan = { backStack.add(QRDestination(true)) },
-                                            onBackup = { openSettings(SettingsDestination.Seed) },
-                                            onProfile = { openSettings(SettingsDestination.Profile) },
-                                            onRenew = { ids -> model.renewVtxos = ids; openSettings(SettingsDestination.Vtxos) }) {
-                                            openSettings(SettingsDestination.Settings, fromGear = true)
-                                        }
-                                    }
-                                    else if (destination == Destination.History) ActivityScreen(model, repeat, onReceive = { selectedTab = Destination.Receive },
-                                        onSettings = openPage, barHidden = { activityBarHidden = it })
-                                    else if (destination == Destination.Receive) ReceiveScreen(model, onProfile = {
-                                        openSettings(SettingsDestination.Profile)
-                                    }) {
-                                        showHome()
-                                    } else SendScreen(model, tabBar = { sendBarHidden = it }) {
-                                        showHome()
-                                    }
-                                }
-                            },
-                        )
-                    }
-                }
+}
+
+/** The QR hub: your code (with your name) and the scanner. */
+@Composable
+private fun QRHub(model: AppModel, nav: AppNavigator, scan: Boolean) {
+    val profile = com.noahwallet.services.storage.SettingsPreferences.state(model.settings.string("profile-storage"))
+    val name = profile["displayName"]?.let { (it as? kotlinx.serialization.json.JsonPrimitive)?.contentOrNull } ?: ""
+    QRHubScreen(model.server.state.lightningAddress, name,
+        onBack = { nav.backStack.removeAt(nav.backStack.lastIndex) },
+        onProfile = { nav.openSettings(SettingsDestination.Profile) },
+        onScan = nav::scanned, startScanning = scan)
+}
+
+/** A tab's screen; a suspended wallet shows Home in every tab. */
+@Composable
+private fun TabScreen(model: AppModel, nav: AppNavigator, destination: Destination, sendBar: (Boolean) -> Unit, activityBar: (Boolean) -> Unit) {
+    // A payment's VTXO, exit and recurring links, from Activity and Home alike.
+    val openPage: (NavKey) -> Unit = { nav.openSettings(it) }
+    when {
+        destination == Destination.Home || model.isWalletSuspended -> CompositionLocalProvider(LocalEntryScope provides LocalNavAnimatedContentScope.current) {
+            HomeScreen(model, onViewAll = { nav.select(Destination.History) }, onRepeatPayment = nav::repeat, onSettings = openPage,
+                onScan = { nav.backStack.add(QRDestination(true)) },
+                onBackup = { nav.openSettings(SettingsDestination.Seed) },
+                onProfile = { nav.openSettings(SettingsDestination.Profile) },
+                onRenew = { ids -> model.renewVtxos = ids; nav.openSettings(SettingsDestination.Vtxos) }) {
+                nav.openSettings(SettingsDestination.Settings, fromGear = true)
             }
         }
+        destination == Destination.History -> ActivityScreen(model, nav::repeat, onReceive = { nav.select(Destination.Receive) },
+            onSettings = openPage, barHidden = activityBar)
+        destination == Destination.Receive -> ReceiveScreen(model, onProfile = { nav.openSettings(SettingsDestination.Profile) })
+        else -> SendScreen(model, tabBar = sendBar) { nav.showHome() }
     }
 }
 

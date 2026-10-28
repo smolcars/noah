@@ -1,5 +1,6 @@
 package com.noahwallet.ui.onboarding
 
+import android.annotation.SuppressLint
 import android.provider.Settings
 import androidx.compose.animation.core.Animatable
 import androidx.compose.animation.core.animateFloatAsState
@@ -141,6 +142,7 @@ internal val LocalPose = staticCompositionLocalOf<OnboardingPose> { OnboardingPo
 
 /** Black pill (white in dark). Orange never fills a button. */
 @Composable
+@SuppressLint("ComposableLambdaParameterNaming", "ComposableLambdaParameterPosition") // icon is an optional slot; the trailing lambda stays onClick
 internal fun PillButton(title: String, modifier: Modifier = Modifier, enabled: Boolean = true, loading: Boolean = false,
     outlined: Boolean = false, icon: (@Composable () -> Unit)? = null, onClick: () -> Unit) {
     val palette = LocalPalette.current
@@ -178,7 +180,7 @@ internal fun TextAction(title: String, modifier: Modifier = Modifier, muted: Boo
 }
 
 @Composable
-internal fun Headline(title: String, subtitle: String? = null, large: Boolean = false, centered: Boolean = false, modifier: Modifier = Modifier) {
+internal fun Headline(title: String, subtitle: String?, modifier: Modifier = Modifier, large: Boolean = false, centered: Boolean = false) {
     val palette = LocalPalette.current
     val align = if (centered) TextAlign.Center else TextAlign.Start
     Column(modifier, horizontalAlignment = if (centered) Alignment.CenterHorizontally else Alignment.Start) {
@@ -190,7 +192,7 @@ internal fun Headline(title: String, subtitle: String? = null, large: Boolean = 
 
 /** A field underline that fills orange from the leading edge while focused. */
 @Composable
-internal fun Underline(focused: Boolean, failed: Boolean = false, modifier: Modifier = Modifier, thickness: Dp = 1.5.dp) {
+internal fun Underline(focused: Boolean, modifier: Modifier = Modifier, failed: Boolean = false, thickness: Dp = 1.5.dp) {
     val palette = LocalPalette.current
     val progress by animateFloatAsState(if (focused) 1f else 0f, NoahTokens.Motion.soft(), label = "underline")
     Box(modifier.fillMaxWidth().height(thickness).background(if (failed) palette.failure else palette.hairline)) {

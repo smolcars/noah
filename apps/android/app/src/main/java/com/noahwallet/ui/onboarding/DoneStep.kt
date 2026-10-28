@@ -93,7 +93,8 @@ private fun DoneRing(t: Long) {
         scale(bounce) {
             drawArc(palette.orange, -90f, 360f * ring, false, Offset(2f * unit, 2f * unit), Size(92f * unit, 92f * unit),
                 style = Stroke(2.5f * unit, cap = StrokeCap.Round))
-            if (check > 0f) drawPath(trimmed(Path().apply { moveTo(31f * unit, 49f * unit); lineTo(42f * unit, 60f * unit); lineTo(65f * unit, 36f * unit) }, check),
+            if (check > 0f) drawPath(trimmed(Path().apply { moveTo(31f * unit, 49f * unit); lineTo(42f * unit, 60f * unit); lineTo(65f * unit, 36f * unit) },
+                check),
                 palette.foreground, style = Stroke(3.2f * unit, cap = StrokeCap.Round, join = StrokeJoin.Round))
         }
     }

@@ -113,15 +113,7 @@ object ActivityRules {
             home.refunded -> "Refunded · back in your wallet" to Tone.failed
             home.failed -> (if (home.unchanged) "Failed · nothing left your wallet" else "Failed") to Tone.failed
             home.canceled -> (if (home.unchanged) "Canceled · nothing left your wallet" else "Canceled") to Tone.muted
-            home.pending -> when {
-                record.movementKind == "exit" -> "Exiting"
-                record.movementKind in listOf("offboard", "send-onchain") ->
-                    if (HistoryMetadata.parse(record.metadataJson ?: "").offboardTxid == null) "Sending · waiting for an Ark round" else "Sending · waiting for confirmations"
-                record.isInternalTransfer -> "Moving to Ark"
-                home.incoming -> "Arriving"
-                rail(record) == Rail.lightning || rail(record) == Rail.offer -> "Sending · still finding a route"
-                else -> "Sending"
-            } to Tone.pending
+            home.pending -> pendingStatus(record, home) to Tone.pending
             record.receiptStatus == "Recorded" -> "Recorded" to Tone.plain
             record.isRenewal -> renewed to Tone.plain
             record.isInternalTransfer -> "Moved to Ark" to Tone.plain
@@ -129,6 +121,16 @@ object ActivityRules {
             home.incoming -> "Received" to Tone.plain
             else -> "Sent" to Tone.plain
         }
+    }
+    private fun pendingStatus(record: HistoryTransaction, home: HomeRow): String = when {
+        record.movementKind == "exit" -> "Exiting"
+        record.movementKind in listOf("offboard", "send-onchain") ->
+            if (HistoryMetadata.parse(record.metadataJson ?: "").offboardTxid == null) "Sending · waiting for an Ark round"
+            else "Sending · waiting for confirmations"
+        record.isInternalTransfer -> "Moving to Ark"
+        home.incoming -> "Arriving"
+        rail(record) == Rail.lightning || rail(record) == Rail.offer -> "Sending · still finding a route"
+        else -> "Sending"
     }
     /** Failed, refunded and canceled amounts are struck through and have no value at the time. */
     fun struck(home: HomeRow) = home.failed || home.canceled
@@ -139,7 +141,8 @@ object ActivityRules {
      */
     fun recipient(record: HistoryTransaction): String? {
         // An exit pays your own on-chain address.
-        if (record.direction != "outgoing" || record.isRenewal || record.isInternalTransfer || record.movementKind == "exit") return null
+        if (record.direction != "outgoing" || record.isRenewal) return null
+        if (record.isInternalTransfer || record.movementKind == "exit") return null
         // Noah pays a Lightning address with the invoice it fetched, so bark records the invoice; the address is in
         // the repeat metadata Noah wrote.
         record.repeatPayment?.destination?.takeIf { it.isNotEmpty() }?.let { return it }
@@ -169,13 +172,14 @@ object ActivityRules {
      */
     fun arkFee(record: HistoryTransaction): Long? {
         if (record.source != "ark") return null
-        if (record.subsystemName == "bark.lightning_send" && record.movementStatus == "successful") {
-            if (record.invoice?.let { !SendReconciliation.fixesAmount(it) } == true) return null
-            val sent = runCatching { record.sentTo.orEmpty().fold(0L) { sum, d -> Math.addExact(sum, d.amount_sat.also { require(it >= 0) }) } }
-                .getOrNull()?.takeIf { it > 0 } ?: return null
-            return SendReconciliation.lightningFee(record.effectiveBalanceSat ?: return null, sent)
-        }
+        if (record.subsystemName == "bark.lightning_send" && record.movementStatus == "successful") return lightningSendFee(record)
         return record.offchainFeeSat
+    }
+    private fun lightningSendFee(record: HistoryTransaction): Long? {
+        if (record.invoice?.let { !SendReconciliation.fixesAmount(it) } == true) return null
+        val sent = runCatching { record.sentTo.orEmpty().fold(0L) { sum, d -> Math.addExact(sum, d.amountSat.also { require(it >= 0) }) } }
+            .getOrNull()?.takeIf { it > 0 } ?: return null
+        return SendReconciliation.lightningFee(record.effectiveBalanceSat ?: return null, sent)
     }
     /** On-chain fees count for payments out and boards only. */
     fun networkFee(record: HistoryTransaction) = record.onchainFeeSat?.takeIf {
@@ -186,9 +190,13 @@ object ActivityRules {
     fun fees(record: HistoryTransaction, home: HomeRow): List<FeeLine> {
         val rail = rail(record)
         if (struck(home)) return listOf(FeeLine("Fee", FeeValue.None))
-        if (home.pending && !home.incoming && (rail == Rail.lightning || rail == Rail.offer))
+        val lightning = rail == Rail.lightning || rail == Rail.offer
+        if (home.pending && !home.incoming && lightning)
             return listOf(FeeLine("Fee", record.offchainFeeSat?.takeIf { it > 0 }?.let(FeeValue::UpTo) ?: FeeValue.Free))
         if (record.isRenewal) return listOf(FeeLine("Fee", FeeValue.Sats(record.amount)))
+        return settledFees(record, rail)
+    }
+    private fun settledFees(record: HistoryTransaction, rail: Rail): List<FeeLine> {
         val ark = arkFee(record)
         val paid = ark?.takeIf { it > 0 }
         val network = networkFee(record)

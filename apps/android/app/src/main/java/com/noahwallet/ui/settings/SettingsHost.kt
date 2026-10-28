@@ -52,7 +52,7 @@ import kotlinx.coroutines.withContext
  * How a page moves: push a page, leave this one, open My code, or close Settings for Home; [hold] is [save]'s. [replace]
  * shows a page with only its parents beneath, as a deep link does (a started exit leaves its review for its progress).
  */
-internal class SettingsNav(val back: (() -> Unit)?, val open: (NavKey) -> Unit, val pop: () -> Unit, val myCode: () -> Unit, val home: () -> Unit,
+internal data class SettingsNav(val back: (() -> Unit)?, val open: (NavKey) -> Unit, val pop: () -> Unit, val myCode: () -> Unit, val home: () -> Unit,
     val hold: (Boolean) -> Unit = {}, val replace: (NavKey) -> Unit = {}, val map: () -> Unit = {})
 
 /**
@@ -87,7 +87,9 @@ internal class SettingsLive {
 @Composable
 internal fun rememberSettingsLive(model: AppModel): SettingsLive {
     val context = LocalContext.current
-    val live = remember { SettingsLive().apply { debug = model.settings.persistedState<PersistedWalletState>(PersistedWalletState.key)?.isDebugModeEnabled == true } }
+    val live = remember {
+        SettingsLive().apply { debug = model.settings.persistedState<PersistedWalletState>(PersistedWalletState.key)?.isDebugModeEnabled == true }
+    }
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     val revision by model.session.walletChanges.collectAsState()
     LaunchedEffect(lifecycle) {
@@ -142,7 +144,8 @@ private fun pageTransition(forward: Boolean, reduceMotion: Boolean, split: Boole
     val spring = spring<androidx.compose.ui.unit.IntOffset>(.85f, 438.6491f / 1.21f)
     val fade = spring<Float>(.85f, 438.6491f / 1.21f)
     val shift = with(density) { 30.dp.roundToPx() }
-    if (split) return (fadeIn(tween(220, delayMillis = 60)) + slideInVertically(spring) { with(density) { (if (forward) 10 else -6).dp.roundToPx() } }) togetherWith fadeOut(tween(140))
+    if (split) return (fadeIn(tween(220,
+        delayMillis = 60)) + slideInVertically(spring) { with(density) { (if (forward) 10 else -6).dp.roundToPx() } }) togetherWith fadeOut(tween(140))
     return (fadeIn(fade) + slideInHorizontally(spring) { if (forward) shift else -shift }) togetherWith
         (fadeOut(fade) + slideOutHorizontally(spring) { if (forward) -shift else shift })
 }
@@ -155,10 +158,104 @@ private fun pageTransition(forward: Boolean, reduceMotion: Boolean, split: Boole
 @Composable
 internal fun SettingsHost(model: AppModel, stack: NavBackStack<NavKey>, close: () -> Unit, myCode: () -> Unit,
     preview: SettingsPreview? = null, hold: NavigationHold = remember { NavigationHold() }, map: () -> Unit = {}) {
-    val initialSheet = preview?.sheet
+    val reduceMotion = com.noahwallet.ui.onboarding.rememberReduceMotion()
+    val currentClose by rememberUpdatedState(close)
+    val navigator = remember(stack, hold) { SettingsStack(stack, hold) { currentClose() } }
+    GearRevealBox(reduceMotion) {
+        OnboardingFrame(null, splitAtWindowCentre = true) {
+            val pose = LocalPose.current
+            val holder = rememberSaveableStateHolder()
+            // The list's own state (its sheet, its scroll), outside NavDisplay's, so a fold that recreates the activity keeps it.
+            val list = rememberSaveableStateHolder()
+            val toasts = remember { HomeToasts() }
+            val live = rememberSettingsLive(model)
+            val wide = pose !is OnboardingPose.Compact
+            // One list, moved with its state between the leading pane (split) and the first page (compact). A live pose
+            // change (tabletop needn't recreate the activity) animates the first page out: that copy reads the current pose
+            // and leaves the list alone, so its saved state has one owner.
+            val listState = rememberSettingsListState(preview?.sheet)
+            val root = remember { movableContentOf { nav: SettingsNav, selected: NavKey? ->
+                list.SaveableStateProvider(SettingsDestination.Settings) { SettingsRoot(model, live, nav, selected, listState) }
+            } }
+            val pages: List<NavKey> = if (wide) stack.drop(1).ifEmpty { listOf(SettingsDestination.Profile) } else stack.toList()
+            // The emergency exit takes the whole window: its picture leads and its details trail, split at the hinge (exit.md).
+            val exit = wide && SettingsRoutes.exit(pages.lastOrNull())
+            // A pose change (compact <-> split) swaps NavDisplay's pages without navigating, so that swap doesn't animate:
+            // NavDisplay drops a scene AnimatedContent still draws if the pose changes again mid-animation. Navigating
+            // animates again.
+            val density = androidx.compose.ui.platform.LocalDensity.current
+            var drawnWide by remember { mutableStateOf(wide) }
+            if (drawnWide != wide) SideEffect { drawnWide = wide; navigator.poseSwap = true }
+            val leave = { if (navigator.idle()) navigator.close() }
+            val code = { if (navigator.idle()) myCode() }
+            val btcMap = { if (navigator.idle()) map() }
+            CompositionLocalProvider(LocalSettingsToasts provides toasts) {
+                Box(Modifier.fillMaxSize()) {
+                    val listNav = SettingsNav(leave, { navigator.open(it, true, wide) }, leave, code, leave, hold::set, map = btcMap)
+                    if (wide && !exit) ListPane(pose) { root(listNav, pages.firstOrNull()) }
+                    PagePane(pose, exit) {
+                        NavDisplay(pages, onBack = { if (navigator.idle()) navigator.pop() },
+                            entryDecorators = listOf(rememberSaveableStateHolderNavEntryDecorator(holder)),
+                            transitionSpec = { navigator.transition(true, reduceMotion, wide, density) },
+                            popTransitionSpec = { navigator.transition(false, reduceMotion, wide, density) },
+                            predictivePopTransitionSpec = { pageTransition(false, reduceMotion, wide, density) },
+                            entryProvider = { key ->
+                                NavEntry(key) {
+                                    val nav = navigator.pageNav(key, pages, wide, listNav)
+                                    SettingsPage(model, key, nav, live, preview, root)
+                                }
+                            })
+                    }
+                }
+                SettingsBackHandlers(exit && pages.size == 1, hold, navigator::pop)
+            }
+        }
+    }
+}
+
+/**
+ * Settings' back stack. While a save that navigates runs (SettingsNav.save), you can't move away from its page: Back,
+ * the bar's back, list picks and links wait. Its completion leaves only its own page, so it can't dismiss another one.
+ */
+@Stable
+private class SettingsStack(private val stack: NavBackStack<NavKey>, private val hold: NavigationHold, val close: () -> Unit) {
+    /** A pose change, not navigation, swapped the pages: that swap doesn't animate. */
+    var poseSwap by mutableStateOf(false)
+
+    fun idle() = !hold.held
+    fun transition(forward: Boolean, reduceMotion: Boolean, wide: Boolean, density: Density) =
+        if (poseSwap) EnterTransition.None togetherWith ExitTransition.None else pageTransition(forward, reduceMotion, wide, density)
+    fun pop() { poseSwap = false; if (stack.size > 1) stack.removeAt(stack.lastIndex) else close() }
+    fun open(page: NavKey, fromList: Boolean, wide: Boolean) {
+        if (!idle()) return
+        poseSwap = false
+        // In a split window the list replaces the page beside it; inside a page, pages stack.
+        if (fromList && wide) while (stack.size > 1) stack.removeAt(stack.lastIndex)
+        if (stack.lastOrNull() != page) stack.add(page)
+    }
+    fun replace(page: NavKey) {
+        poseSwap = false
+        val chain = SettingsRoutes.chain(page)
+        while (stack.size > 1) stack.removeAt(stack.lastIndex)
+        stack.addAll(chain.drop(1))
+    }
+    /**
+     * A page's navigation, with [list]'s links to My code, Home and the map: the first page of a split window has no
+     * back (the list is beside it), except the exit.
+     */
+    fun pageNav(key: NavKey, pages: List<NavKey>, wide: Boolean, list: SettingsNav): SettingsNav {
+        val index = pages.indexOf(key)
+        val back = if (wide && index <= 0 && !SettingsRoutes.exit(key)) null else ({ if (idle()) pop() })
+        return SettingsNav(back, { open(it, false, wide) }, { if (SettingsRoutes.top(stack, key)) pop() }, list.myCode, list.home, hold::set,
+            { if (SettingsRoutes.top(stack, key)) replace(it) }, list.map)
+    }
+}
+
+/** Settings opening out of Home's gear (a fade when opened another way, none under Reduce Motion's fade). */
+@Composable
+private fun GearRevealBox(reduceMotion: Boolean, content: @Composable () -> Unit) {
     val entryScope = LocalEntryScope.current
     val entry = LocalSettingsEntry.current
-    val reduceMotion = com.noahwallet.ui.onboarding.rememberReduceMotion()
     var origin by remember { mutableStateOf(Offset.Zero) }
     val reveal = entryScope?.transition?.animateFloat({
         if (reduceMotion) tween(180) else spring(.85f, 438.6491f / 1.44f)
@@ -169,101 +266,54 @@ internal fun SettingsHost(model: AppModel, stack: NavBackStack<NavKey>, close: (
         if (p >= 1f) return@graphicsLayer
         if (!zoom) { alpha = p; return@graphicsLayer }
         clip = true
-        shape = GearReveal(entry?.gear?.translate(-origin), p, 20.dp.toPx())
-    }) {
-        OnboardingFrame(null, splitAtWindowCentre = true) {
-            val pose = LocalPose.current
-            val holder = rememberSaveableStateHolder()
-            // The list's own state (its sheet, its scroll), outside NavDisplay's, so a fold that recreates the activity keeps it.
-            val list = rememberSaveableStateHolder()
-            val toasts = remember { HomeToasts() }
-            val live = rememberSettingsLive(model)
-            val wide = pose !is OnboardingPose.Compact
-            val currentlyWide by rememberUpdatedState(wide)
-            // One list, moved with its state between the leading pane (split) and the first page (compact). A live pose
-            // change (tabletop needn't recreate the activity) animates the first page out: that copy reads the current pose
-            // and leaves the list alone, so its saved state has one owner.
-            val root = remember { movableContentOf { nav: SettingsNav, selected: NavKey? ->
-                list.SaveableStateProvider(SettingsDestination.Settings) { SettingsRoot(model, live, nav, selected, initialSheet = initialSheet) }
-            } }
-            val pages: List<NavKey> = if (wide) stack.drop(1).ifEmpty { listOf(SettingsDestination.Profile) } else stack.toList()
-            // The emergency exit takes the whole window: its picture leads and its details trail, split at the hinge (exit.md).
-            val exit = wide && SettingsRoutes.exit(pages.lastOrNull())
-            // A pose change (compact <-> split) swaps NavDisplay's pages without navigating, so that swap doesn't animate:
-            // NavDisplay drops a scene AnimatedContent still draws if the pose changes again mid-animation. Navigating
-            // animates again.
-            val density = androidx.compose.ui.platform.LocalDensity.current
-            var poseSwap by remember { mutableStateOf(false) }
-            var drawnWide by remember { mutableStateOf(wide) }
-            if (drawnWide != wide) SideEffect { drawnWide = wide; poseSwap = true }
-            fun transition(forward: Boolean) = if (poseSwap) EnterTransition.None togetherWith ExitTransition.None else pageTransition(forward, reduceMotion, wide, density)
-            fun pop() { poseSwap = false; if (stack.size > 1) stack.removeAt(stack.lastIndex) else close() }
-            // While a save that navigates runs (SettingsNav.save), you can't move away from its page: Back, the bar's back,
-            // list picks and links wait. Its completion leaves only its own page, so it can't dismiss another one.
-            val idle = { !hold.held }
-            fun open(page: NavKey, fromList: Boolean) {
-                if (!idle()) return
-                poseSwap = false
-                // In a split window the list replaces the page beside it; inside a page, pages stack.
-                if (fromList && wide) while (stack.size > 1) stack.removeAt(stack.lastIndex)
-                if (stack.lastOrNull() != page) stack.add(page)
-            }
-            fun replace(page: NavKey) {
-                poseSwap = false
-                val chain = SettingsRoutes.chain(page)
-                while (stack.size > 1) stack.removeAt(stack.lastIndex)
-                stack.addAll(chain.drop(1))
-            }
-            val leave = { if (idle()) close() }
-            val code = { if (idle()) myCode() }
-            val btcMap = { if (idle()) map() }
-            CompositionLocalProvider(LocalSettingsToasts provides toasts) {
-                Box(Modifier.fillMaxSize()) {
-                    if (wide && !exit) Box(when (pose) {
-                        is OnboardingPose.Wide -> Modifier.width(pose.start).fillMaxHeight()
-                        is OnboardingPose.Tabletop -> Modifier.height(pose.top).fillMaxWidth()
-                        else -> Modifier
-                    }.testTag("settings-list-pane")) {
-                        CompositionLocalProvider(LocalSettingsPane provides SettingsPane.leading) {
-                            root(SettingsNav(leave, { open(it, true) }, leave, code, leave, hold::set, map = btcMap), pages.firstOrNull())
-                        }
-                    }
-                    Box(when {
-                        exit -> Modifier.fillMaxSize()
-                        pose is OnboardingPose.Wide -> Modifier.padding(start = pose.end).fillMaxSize()
-                        pose is OnboardingPose.Tabletop -> Modifier.padding(top = pose.bottom).fillMaxSize()
-                        else -> Modifier.fillMaxSize()
-                    }.testTag("settings-page-pane")) {
-                        CompositionLocalProvider(LocalSettingsPane provides if (wide && !exit) SettingsPane.trailing else SettingsPane.compact) {
-                            NavDisplay(pages, onBack = { if (idle()) pop() },
-                                entryDecorators = listOf(rememberSaveableStateHolderNavEntryDecorator(holder)),
-                                transitionSpec = { transition(true) },
-                                popTransitionSpec = { transition(false) },
-                                predictivePopTransitionSpec = { pageTransition(false, reduceMotion, wide, density) },
-                                entryProvider = { key ->
-                                    NavEntry(key) {
-                                        val index = pages.indexOf(key)
-                                        val back = if (wide && index <= 0 && !SettingsRoutes.exit(key)) null else ({ if (idle()) pop() })
-                                        val nav = SettingsNav(back, { open(it, false) }, { if (SettingsRoutes.top(stack, key)) pop() }, code, leave, hold::set,
-                                            { if (SettingsRoutes.top(stack, key)) replace(it) }, btcMap)
-                                        @Composable fun Page() = SettingsPageContent(model, key, nav, live, preview)
-                                        if (key != SettingsDestination.Settings) Page() else if (!currentlyWide) root(nav, null)
-                                    }
-                                })
-                        }
-                    }
-                }
-                // The exit's warning alone fills a wide window, beside no list: Back returns to the list rather than leaving Settings.
-                androidx.navigationevent.compose.NavigationBackHandler(
-                    androidx.navigationevent.compose.rememberNavigationEventState(androidx.navigationevent.NavigationEventInfo.None),
-                    isBackEnabled = exit && pages.size == 1 && !hold.held, onBackCompleted = { pop() })
-                // With one page NavDisplay passes Back on to Home (which would close Settings): that waits for such a save too.
-                androidx.navigationevent.compose.NavigationBackHandler(
-                    androidx.navigationevent.compose.rememberNavigationEventState(androidx.navigationevent.NavigationEventInfo.None),
-                    isBackEnabled = hold.held, onBackCompleted = {})
-            }
-        }
+        shape = GearReveal(entry.gear?.translate(-origin), p, 20.dp.toPx())
+    }) { content() }
+}
+
+/** The list's pane beside the page: leading when split, above the fold in tabletop. */
+@Composable
+private fun ListPane(pose: OnboardingPose, content: @Composable () -> Unit) {
+    Box(when (pose) {
+        is OnboardingPose.Wide -> Modifier.width(pose.start).fillMaxHeight()
+        is OnboardingPose.Tabletop -> Modifier.height(pose.top).fillMaxWidth()
+        OnboardingPose.Compact -> Modifier
+    }.testTag("settings-list-pane")) {
+        CompositionLocalProvider(LocalSettingsPane provides SettingsPane.leading, content = content)
     }
+}
+
+/** The page's pane: trailing when split, below the fold in tabletop, the whole window in compact and for the exit. */
+@Composable
+private fun PagePane(pose: OnboardingPose, exit: Boolean, content: @Composable () -> Unit) {
+    val wide = pose !is OnboardingPose.Compact
+    Box(when {
+        exit -> Modifier.fillMaxSize()
+        pose is OnboardingPose.Wide -> Modifier.padding(start = pose.end).fillMaxSize()
+        pose is OnboardingPose.Tabletop -> Modifier.padding(top = pose.bottom).fillMaxSize()
+        else -> Modifier.fillMaxSize()
+    }.testTag("settings-page-pane")) {
+        CompositionLocalProvider(LocalSettingsPane provides if (wide && !exit) SettingsPane.trailing else SettingsPane.compact, content = content)
+    }
+}
+
+/** A page of the stack; the list's own entry (compact only) is the movable [root]. */
+@Composable
+private fun SettingsPage(model: AppModel, key: NavKey, nav: SettingsNav, live: SettingsLive, preview: SettingsPreview?,
+    root: @Composable (SettingsNav, NavKey?) -> Unit) {
+    val currentlyWide by rememberUpdatedState(LocalPose.current !is OnboardingPose.Compact)
+    if (key != SettingsDestination.Settings) SettingsPageContent(model, key, nav, live, preview) else if (!currentlyWide) root(nav, null)
+}
+
+@Composable
+private fun SettingsBackHandlers(exitAlone: Boolean, hold: NavigationHold, pop: () -> Unit) {
+    // The exit's warning alone fills a wide window, beside no list: Back returns to the list rather than leaving Settings.
+    androidx.navigationevent.compose.NavigationBackHandler(
+        androidx.navigationevent.compose.rememberNavigationEventState(androidx.navigationevent.NavigationEventInfo.None),
+        isBackEnabled = exitAlone && !hold.held, onBackCompleted = pop)
+    // With one page NavDisplay passes Back on to Home (which would close Settings): that waits for such a save too.
+    androidx.navigationevent.compose.NavigationBackHandler(
+        androidx.navigationevent.compose.rememberNavigationEventState(androidx.navigationevent.NavigationEventInfo.None),
+        isBackEnabled = hold.held, onBackCompleted = {})
 }
 
 /** Home's gear growing into the window (prototype `zoom_`): a rounded rectangle from the gear's bounds to the whole window. */
@@ -285,13 +335,12 @@ internal data class SettingsPreview(val sheet: String? = null, val phrase: List<
 /** Each page. */
 @Composable
 internal fun SettingsPageContent(model: AppModel, key: NavKey, nav: SettingsNav, live: SettingsLive, preview: SettingsPreview?) {
-    val initialSheet = preview?.sheet
     when (key) {
         SettingsDestination.Profile -> ProfilePage(model, nav)
         SettingsDestination.Lightning -> LightningAddressPage(model, nav)
         SettingsDestination.Email -> EmailPage(model, nav)
         SettingsDestination.Seed -> RecoveryPhrasePage(model, nav, preview?.phrase)
-        SettingsDestination.Backup -> BackupPage(model, nav, live, initialSheet)
+        SettingsDestination.Backup -> BackupPage(model, nav, live, preview?.sheet)
         SettingsDestination.Vtxos -> com.noahwallet.onchain.VtxosPage(model, nav)
         is VtxoPage -> com.noahwallet.onchain.VtxoDetailPage(model, nav, key.id)
         SettingsDestination.Board -> com.noahwallet.onchain.OnchainPage(model, nav)
@@ -306,7 +355,7 @@ internal fun SettingsPageContent(model: AppModel, key: NavKey, nav: SettingsNav,
         ExitsPage -> com.noahwallet.onchain.ExitListPage(model, nav)
         SettingsDestination.Notifications -> NotificationsPage(model, nav, live, preview?.unifiedPush ?: PlatformAccess.unifiedPush(LocalContext.current))
         SettingsDestination.UnifiedPush -> UnifiedPushPage(nav)
-        SettingsDestination.Advanced -> AdvancedPage(model, nav, live, initialSheet)
+        SettingsDestination.Advanced -> AdvancedPage(model, nav, live, preview?.sheet)
         SettingsDestination.Ark -> ArkServerPage(model, nav)
         SettingsDestination.Esplora -> EsploraPage(model, nav)
         SettingsDestination.Logs -> LogsPage(model, nav)

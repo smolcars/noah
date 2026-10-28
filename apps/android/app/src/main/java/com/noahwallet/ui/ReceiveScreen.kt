@@ -1,6 +1,5 @@
 package com.noahwallet.ui
 
-import android.graphics.Bitmap
 import android.os.SystemClock
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
@@ -25,6 +24,7 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.onClick
 import androidx.compose.ui.semantics.role
 import androidx.compose.ui.unit.dp
+import androidx.core.graphics.createBitmap
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
@@ -62,85 +62,180 @@ private val arrivalSaver = Saver<ReceiveArrival?, String>(
  * records while the screen is visible.
  */
 @Composable
-fun ReceiveScreen(app: AppModel, onProfile: () -> Unit = {}, onDone: () -> Unit) {
-    val locale = java.util.Locale.forLanguageTag(app.localeIdentifier)
-    var request by rememberSaveable(stateSaver = requestSaver) { mutableStateOf<ReceiveRequest?>(null) }
-    var format by rememberSaveable { mutableStateOf(ReceiveFormat.lightningAddress) }
+fun ReceiveScreen(app: AppModel, onProfile: () -> Unit = {}) {
+    val requestState = rememberSaveable(stateSaver = requestSaver) { mutableStateOf<ReceiveRequest?>(null) }
+    val formatState = rememberSaveable { mutableStateOf(ReceiveFormat.lightningAddress) }
     val arrivalState = rememberSaveable(stateSaver = arrivalSaver) { mutableStateOf<ReceiveArrival?>(null) }
-    var arrival by arrivalState
+    val state = remember(requestState, formatState, arrivalState) { ReceiveScreenState(requestState, formatState, arrivalState) }
+    val request by state.request
+    val arrival by state.arrival
     // The on-chain arrival whose confirmation the block row follows, after its presentation has ended.
     val chainState = rememberSaveable(stateSaver = arrivalSaver) { mutableStateOf<ReceiveArrival?>(null) }
-    val chain by chainState
     // What Receive has taken from the wallet's records, and this screen's own Ark addresses and invoices.
     val records = rememberSaveable(stateSaver = recordsSaver) { mutableStateOf<ReceiveRecords?>(null) }
     var ownArk by rememberSaveable { mutableStateOf(emptyList<String>()) }
     var ownHashes by rememberSaveable { mutableStateOf(emptyList<String>()) }
-    var error by remember { mutableStateOf<String?>(null) }
-    var errorTitle by remember { mutableStateOf<String?>(null) }
-    var invoiceError by remember { mutableStateOf<String?>(null) }
-    var retry by remember { mutableIntStateOf(0) }
-    var saving by remember { mutableStateOf(false) }
-    var price by remember { mutableStateOf<Double?>(null) }
-    var tip by remember { mutableStateOf<Long?>(null) }
     val currency = app.preferredCurrency.takeIf { it in FiatCurrency.supported } ?: "USD"
     val scope = rememberCoroutineScope()
-    val lifecycle = LocalLifecycleOwner.current.lifecycle
     val reduceMotion = com.noahwallet.ui.onboarding.rememberReduceMotion()
-    LaunchedEffect(retry, request == null) {
-        // Keep the displayed request across activity recreation; history catches any payment during the gap.
-        if (request != null || error != null) return@LaunchedEffect
-        try { request = app.session.receiveRequest() }
-        catch (cancelled: CancellationException) { throw cancelled }
-        catch (_: Exception) { error = "Could not generate a receive request. Please try again." }
-    }
+    // Keep the displayed request across activity recreation; history catches any payment during the gap.
+    LaunchedEffect(state.retry.intValue, request == null) { state.loadRequest(app) }
     LaunchedEffect(request?.arkAddress, request?.paymentHash) {
         request?.let { current ->
             if (current.arkAddress !in ownArk) ownArk = ownArk + current.arkAddress
             current.paymentHash?.let { if (it !in ownHashes) ownHashes = ownHashes + it }
         }
     }
-    LaunchedEffect(currency) {
-        runCatching { V0PricesClient(app.services.client).fiatPrices(JsonObject(emptyMap())).value().rates[currency] }
-            .getOrNull()?.takeIf { it.isFinite() && it > 0 }?.let { price = it }
-    }
+    val price = rememberPrice(app, currency)
     val sessionRevision by app.session.walletChanges.collectAsState()
     LaunchedEffect(request, sessionRevision) {
         val current = request?.takeIf { app.session.isOpen } ?: return@LaunchedEffect
-        while (isActive) {
+        state.listen(app, current)
+    }
+    // Once the card has flipped back the arrival is done. Ark and Lightning get a fresh request (the invoice is paid
+    // and addresses aren't reused); an on-chain arrival keeps it, and its block row carries on through the chain state.
+    LaunchedEffect(arrival) { state.finishArrival(reduceMotion) }
+    // On-chain arrivals and payments to your Lightning address, from the wallet's records, one at a time.
+    ReceiveRecordsWatcher(app.history.transactions, app.history.isLoading, request, ownArk.toSet(), ownHashes.toSet(), records, state.arrival,
+        chainState) { scope.launch { app.refresh() } }
+    val ui = receiveUi(app, state, chainState.value, rememberChainTip(app), price, currency)
+    com.noahwallet.ui.onboarding.OnboardingFrame(null, splitAtWindowCentre = true) {
+        ReceiveContent(ui, state.actions(app, scope, onProfile))
+    }
+}
+
+/** What the screen shows: the request, its format and arrival, the chain's block row, and whether it's listening. */
+@Composable
+private fun receiveUi(app: AppModel, state: ReceiveScreenState, chain: ReceiveArrival?, tip: Long?, price: Double?, currency: String): ReceiveUi {
+    val rows = app.history.transactions
+    val request = state.request.value
+    val format = state.format.value
+    val error = state.error.value
+    val confirmedAt = chain?.txid?.let { txid -> rows.firstOrNull { it.txid == txid && it.source == "onchain-wallet" } }
+        ?.takeIf { it.hasConfirmation == true }?.confirmationHeight?.toLong()
+    val address = app.server.state.lightningAddress?.takeIf { it.isNotEmpty() }
+    return ReceiveUi(request, address, format, app.amountUnit, java.util.Locale.forLanguageTag(app.localeIdentifier), price, currency, error = error,
+        errorTitle = state.errorTitle.value, saving = state.saving.value, invoiceError = state.invoiceError.value,
+        arrival = state.arrival.value, chain = chain, tip = tip?.let { current -> confirmedAt?.let { maxOf(current, it) } ?: current },
+        confirmedAt = confirmedAt,
+        listening = app.session.isOpen && !app.isWalletSuspended && error == null &&
+            ((format == ReceiveFormat.lightningAddress && address != null) || request != null))
+}
+
+/**
+ * Receive's request, its format and arrival (saved with the screen), the request's errors and the invoice save in
+ * progress (not saved), as the screen's effects and actions change them.
+ */
+private class ReceiveScreenState(
+    val request: MutableState<ReceiveRequest?>, val format: MutableState<ReceiveFormat>, val arrival: MutableState<ReceiveArrival?>,
+) {
+    val error = mutableStateOf<String?>(null)
+    val errorTitle = mutableStateOf<String?>(null)
+    val invoiceError = mutableStateOf<String?>(null)
+    val saving = mutableStateOf(false)
+    val retry = mutableIntStateOf(0)
+
+    fun actions(app: AppModel, scope: CoroutineScope, onProfile: () -> Unit) = ReceiveActions(
+        select = { format.value = it },
+        saveAmount = { sats, note ->
+            val current = request.value
+            if (!saving.value && current != null) {
+                saving.value = true; invoiceError.value = null
+                scope.launch {
+                    try { invoiceError.value = saveInvoice(app, current, sats, note) } finally { saving.value = false }
+                }
+            }
+        },
+        // Clearing the amount returns to your Lightning address, whichever format was showing.
+        removeAmount = {
+            request.value?.let { request.value = ReceiveRequest(it.arkAddress, it.onchainAddress) }
+            format.value = ReceiveFormat.lightningAddress
+        },
+        retry = { error.value = null; errorTitle.value = null; retry.intValue++ },
+        profile = onProfile,
+    )
+
+    /** Today's request, unless one is showing or the last attempt failed (Retry clears that). */
+    suspend fun loadRequest(app: AppModel) {
+        if (request.value != null || error.value != null) return
+        try { request.value = app.session.receiveRequest() }
+        catch (cancelled: CancellationException) { throw cancelled }
+        catch (_: Exception) { error.value = "Could not generate a receive request. Please try again." }
+    }
+
+    /** Waits for [current] to be paid, or for its Lightning receive to fail, checking each second. */
+    suspend fun listen(app: AppModel, current: ReceiveRequest) {
+        while (currentCoroutineContext().isActive) {
             try {
                 when (val event = app.session.receiveCompletion(current)) {
-                    is ReceiveCompletion.Received -> {
-                        if (ReceiveArrivals.takesCard(arrival)) arrival = ReceiveArrival(when (event.rail) {
-                            ReceiveCompletion.Rail.ark -> ReceiveArrival.Rail.ark; ReceiveCompletion.Rail.lightning -> ReceiveArrival.Rail.lightning
-                        }, event.sats, SystemClock.elapsedRealtime())
-                        app.refresh(); return@LaunchedEffect
-                    }
-                    is ReceiveCompletion.LightningFailed -> {
-                        request = null; format = ReceiveFormats.afterAmount(format, false)
-                        errorTitle = if (event.canceled) "Lightning Receive Canceled" else "Lightning Receive Failed"
-                        error = "The Lightning payment could not be received. Generate a new payment request and try again."
-                        return@LaunchedEffect
-                    }
+                    is ReceiveCompletion.Received -> { received(event); app.refresh(); return }
+                    is ReceiveCompletion.LightningFailed -> { lightningFailed(event); return }
                     null -> Unit
                 }
             } catch (cancelled: CancellationException) { throw cancelled }
-            catch (_: WalletSession.SessionError) { error = "Your wallet isn't ready. Please try again."; request = null; return@LaunchedEffect }
+            catch (_: WalletSession.SessionError) { error.value = "Your wallet isn't ready. Please try again."; request.value = null; return }
             catch (_: Exception) { /* Reconcile history when the notification stream reconnects. */ }
             delay(1000)
         }
     }
-    // Once the card has flipped back the arrival is done. Ark and Lightning get a fresh request (the invoice is paid
-    // and addresses aren't reused); an on-chain arrival keeps it, and its block row carries on through [chain].
-    LaunchedEffect(arrival) {
-        val current = arrival ?: return@LaunchedEffect
-        delay((ReceiveTimeline.end(current.rail, reduceMotion) - (SystemClock.elapsedRealtime() - current.startedAt)).coerceAtLeast(0))
-        arrival = null
-        if (current.rail != ReceiveArrival.Rail.onchain) { format = ReceiveFormats.afterAmount(format, false); request = null }
+
+    private fun received(event: ReceiveCompletion.Received) {
+        if (!ReceiveArrivals.takesCard(arrival.value)) return
+        val rail = when (event.rail) {
+            ReceiveCompletion.Rail.ark -> ReceiveArrival.Rail.ark
+            ReceiveCompletion.Rail.lightning -> ReceiveArrival.Rail.lightning
+        }
+        arrival.value = ReceiveArrival(rail, event.sats, SystemClock.elapsedRealtime())
     }
-    // On-chain arrivals and payments to your Lightning address, from the wallet's records, one at a time.
-    val rows = app.history.transactions
-    ReceiveRecordsWatcher(rows, app.history.isLoading, request, ownArk.toSet(), ownHashes.toSet(), records, arrivalState, chainState) { scope.launch { app.refresh() } }
-    // While visible: re-check the wallet and the chain tip every 30 s (no faster), for on-chain arrivals and the block row.
+
+    private fun lightningFailed(event: ReceiveCompletion.LightningFailed) {
+        request.value = null; format.value = ReceiveFormats.afterAmount(format.value, false)
+        errorTitle.value = if (event.canceled) "Lightning Receive Canceled" else "Lightning Receive Failed"
+        error.value = "The Lightning payment could not be received. Generate a new payment request and try again."
+    }
+
+    /** Clears the arrival once its presentation ends; Ark and Lightning then need a fresh request. */
+    suspend fun finishArrival(reduceMotion: Boolean) {
+        val current = arrival.value ?: return
+        delay((ReceiveTimeline.end(current.rail, reduceMotion) - (SystemClock.elapsedRealtime() - current.startedAt)).coerceAtLeast(0))
+        arrival.value = null
+        if (current.rail != ReceiveArrival.Rail.onchain) { format.value = ReceiveFormats.afterAmount(format.value, false); request.value = null }
+    }
+
+    /** Today's invoice creation for [sats] and [note] on [current]; the error to show, or null once it's created. */
+    private suspend fun saveInvoice(app: AppModel, current: ReceiveRequest, sats: Long, note: String): String? {
+        try {
+            val next = app.session.receiveInvoice(current, sats, note)
+            // A payment may complete while the invoice is being generated.
+            if (request.value == current && ReceiveArrivals.takesCard(arrival.value)) {
+                request.value = next; format.value = ReceiveFormats.afterAmount(format.value, true)
+            }
+            return null
+        } catch (cancelled: CancellationException) { throw cancelled }
+        catch (_: Exception) {
+            val message = "Could not generate a Lightning invoice. Please try again."
+            app.error = message
+            return message
+        }
+    }
+}
+
+/** Today's price in [currency], when there is one. */
+@Composable
+private fun rememberPrice(app: AppModel, currency: String): Double? {
+    var price by remember { mutableStateOf<Double?>(null) }
+    LaunchedEffect(currency) {
+        runCatching { V0PricesClient(app.services.client).fiatPrices(JsonObject(emptyMap())).value().rates[currency] }
+            .getOrNull()?.takeIf { it.isFinite() && it > 0 }?.let { price = it }
+    }
+    return price
+}
+
+/** While visible: re-check the wallet and the chain tip every 30 s (no faster), for on-chain arrivals and the block row. */
+@Composable
+private fun rememberChainTip(app: AppModel): Long? {
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    var tip by remember { mutableStateOf<Long?>(null) }
     LaunchedEffect(lifecycle, app.isWalletSuspended) {
         if (app.isWalletSuspended) return@LaunchedEffect
         lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
@@ -151,37 +246,7 @@ fun ReceiveScreen(app: AppModel, onProfile: () -> Unit = {}, onDone: () -> Unit)
             }
         }
     }
-    val confirmedAt = chain?.txid?.let { txid -> rows.firstOrNull { it.txid == txid && it.source == "onchain-wallet" } }
-        ?.takeIf { it.hasConfirmation == true }?.confirmationHeight?.toLong()
-    val address = app.server.state.lightningAddress?.takeIf { it.isNotEmpty() }
-    val ui = ReceiveUi(request, address, format, app.amountUnit, locale, price, currency, error = error, errorTitle = errorTitle, saving = saving, invoiceError = invoiceError,
-        arrival = arrival, chain = chain, tip = tip?.let { current -> confirmedAt?.let { maxOf(current, it) } ?: current }, confirmedAt = confirmedAt,
-        listening = app.session.isOpen && !app.isWalletSuspended && error == null && (format == ReceiveFormat.lightningAddress && address != null || request != null))
-    val actions = ReceiveActions(
-        select = { format = it },
-        saveAmount = { sats, note ->
-            val current = request
-            if (!saving && current != null) {
-                saving = true; invoiceError = null
-                scope.launch {
-                    try {
-                        val next = app.session.receiveInvoice(current, sats, note)
-                        // A payment may complete while the invoice is being generated.
-                        if (request == current && ReceiveArrivals.takesCard(arrival)) { request = next; format = ReceiveFormats.afterAmount(format, true) }
-                    } catch (cancelled: CancellationException) { throw cancelled }
-                    catch (_: Exception) { invoiceError = "Could not generate a Lightning invoice. Please try again."; app.error = invoiceError }
-                    finally { saving = false }
-                }
-            }
-        },
-        // Clearing the amount returns to your Lightning address, whichever format was showing.
-        removeAmount = { request?.let { request = ReceiveRequest(it.arkAddress, it.onchainAddress) }; format = ReceiveFormat.lightningAddress },
-        retry = { error = null; errorTitle = null; retry++ },
-        profile = onProfile,
-    )
-    com.noahwallet.ui.onboarding.OnboardingFrame(null, splitAtWindowCentre = true) {
-        ReceiveContent(ui, actions)
-    }
+    return tip
 }
 
 @Composable
@@ -192,7 +257,7 @@ internal fun ReceiveQR(uri: String, actionLabel: String = "Show payment details"
         runCatching {
             val matrix = QRCodeWriter().encode(uri, BarcodeFormat.QR_CODE, qrPixels, qrPixels,
                 mapOf(EncodeHintType.ERROR_CORRECTION to ErrorCorrectionLevel.H, EncodeHintType.MARGIN to 4))
-            Bitmap.createBitmap(matrix.width, matrix.height, Bitmap.Config.ARGB_8888).apply {
+            createBitmap(matrix.width, matrix.height).apply {
                 val pixels = IntArray(matrix.width * matrix.height) { index ->
                     if (matrix[index % matrix.width, index / matrix.width]) android.graphics.Color.BLACK else android.graphics.Color.WHITE
                 }
@@ -200,11 +265,13 @@ internal fun ReceiveQR(uri: String, actionLabel: String = "Show payment details"
             }.asImageBitmap()
         }.getOrNull()
     }
-    Box(Modifier.testTag("receive-qr-button").sizeIn(maxWidth = maximumSide).aspectRatio(1f).onSizeChanged { qrPixels = it.width.coerceAtLeast(1) }.clip(RoundedCornerShape(28.dp)).background(Color.White).clickable(role = androidx.compose.ui.semantics.Role.Button, onClickLabel = localizedActionLabel, onClick = onClick).clearAndSetSemantics {
-        contentDescription = localizedActionLabel
-        role = Role.Button
-        this.onClick(label = localizedActionLabel) { onClick(); true }
-    }, contentAlignment = Alignment.Center) {
+    Box(Modifier.testTag("receive-qr-button").sizeIn(maxWidth = maximumSide).aspectRatio(1f).onSizeChanged { qrPixels = it.width.coerceAtLeast(1) }
+        .clip(RoundedCornerShape(28.dp)).background(Color.White)
+        .clickable(role = androidx.compose.ui.semantics.Role.Button, onClickLabel = localizedActionLabel, onClick = onClick).clearAndSetSemantics {
+            contentDescription = localizedActionLabel
+            role = Role.Button
+            this.onClick(label = localizedActionLabel) { onClick(); true }
+        }, contentAlignment = Alignment.Center) {
         if (bitmap != null) {
             Image(bitmap, null, Modifier.fillMaxSize(), filterQuality = androidx.compose.ui.graphics.FilterQuality.None)
             Image(painterResource(R.drawable.receive_logo), null, Modifier.size(44.dp).background(Color.White).padding(4.dp))

@@ -28,15 +28,18 @@ data class RepeatPayment(
             if (version.isString || version.doubleOrNull != 1.0) return null
             val destination = obj.string("destination")?.let(::normalizeLightningAddress) ?: return null
             val mode = obj.string("amount_mode")?.takeIf { it in listOf("fiat", "sats") } ?: return null
-            val input = obj.string("amount_value") ?: return null
-            val text = input.trim()
-            val radix = when (text.take(2).lowercase(Locale.ROOT)) { "0x" -> 16; "0b" -> 2; "0o" -> 8; else -> null }
-            val number = if (radix != null) text.drop(2).toULongOrNull(radix)?.toDouble() else text.toDoubleOrNull()
-            if (number == null || !number.isFinite() || number <= 0) return null
+            val input = obj.string("amount_value")?.takeIf { positiveAmount(it) } ?: return null
             val currency = obj.string("fiat_currency")
             if (mode == "fiat" && currency !in FiatCurrency.supported) return null
             return RepeatPayment(destination, obj.string("comment") ?: "", mode.uppercase(Locale.ROOT), input,
                 fiatCurrency = currency.takeIf { mode == "fiat" })
+        }
+        /** A finite amount above zero, as RN's Number() read it: decimal, or 0x, 0b and 0o integers. */
+        private fun positiveAmount(input: String): Boolean {
+            val text = input.trim()
+            val radix = when (text.take(2).lowercase(Locale.ROOT)) { "0x" -> 16; "0b" -> 2; "0o" -> 8; else -> null }
+            val number = if (radix != null) text.drop(2).toULongOrNull(radix)?.toDouble() else text.toDoubleOrNull()
+            return number != null && number.isFinite() && number > 0
         }
         fun resolve(metadata: RepeatPayment?, destination: String?, paymentMethod: String?, amountSat: Long): RepeatPayment? {
             if (amountSat <= 0) return null

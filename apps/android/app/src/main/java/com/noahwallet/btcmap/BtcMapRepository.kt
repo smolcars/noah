@@ -19,6 +19,7 @@ import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
 /** Owns public map data only; the cache filename and format match RN/iOS. */
+@Suppress("LongParameterList") // files, network, clock and retry delay are injected so the repository's tests can replace each
 class BtcMapRepository(
     private val cache: File,
     private val bundled: () -> String,
@@ -100,7 +101,9 @@ class BtcMapRepository(
     companion object {
         private val client = OkHttpClient.Builder().callTimeout(30, TimeUnit.SECONDS).build()
         const val placeFields = "id,lat,lon,icon,name,comments,boosted_until,verified_at,updated_at"
-        const val detailFields = "$placeFields,address,opening_hours,created_at,osm_id,osm_url,phone,website,twitter,facebook,instagram,telegram,email,required_app_url,description,image,payment_provider,osm:amenity,osm:shop,osm:tourism,osm:cuisine,osm:payment:lightning,osm:payment:lightning_contactless,osm:payment:onchain"
+        const val detailFields = "$placeFields,address,opening_hours,created_at,osm_id,osm_url,phone,website,twitter,facebook,instagram,telegram," +
+            "email,required_app_url,description,image,payment_provider,osm:amenity,osm:shop,osm:tourism,osm:cuisine,osm:payment:lightning," +
+            "osm:payment:lightning_contactless,osm:payment:onchain"
         private fun url(path: String) = "https://api.btcmap.org/v4/$path".toHttpUrl()
         fun syncURL(since: String) = url("places").newBuilder().addQueryParameter("fields", "$placeFields,deleted_at")
             .addQueryParameter("updated_since", since).addQueryParameter("include_deleted", "true").build()

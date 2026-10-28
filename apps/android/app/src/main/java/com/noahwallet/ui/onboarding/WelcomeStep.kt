@@ -42,7 +42,8 @@ internal fun WelcomeStep(model: AppModel, presentation: OnboardingPresentation) 
         PillButton(tr("Create wallet"), Modifier.fillMaxWidth().entrance(6, play).testTag("onboarding-create")) {
             haptics.light(); presentation.betaError = null; presentation.betaOpen = true
         }
-        TextAction(tr("I already have a wallet"), Modifier.fillMaxWidth().heightIn(min = 52.dp).entrance(7, play).testTag("onboarding-restore")) { model.step = "restore" }
+        TextAction(tr("I already have a wallet"),
+            Modifier.fillMaxWidth().heightIn(min = 52.dp).entrance(7, play).testTag("onboarding-restore")) { model.step = "restore" }
     })
     if (presentation.languageOpen) LanguageSheet(model, presentation)
     if (presentation.betaOpen) BetaSheet(model, presentation)

@@ -1,11 +1,10 @@
 package com.noahwallet.ui.home
 
-import android.app.Activity
+import androidx.activity.compose.LocalActivity
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.snapshotFlow
-import androidx.compose.ui.platform.LocalContext
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -82,7 +81,7 @@ class FirstPaymentWatch {
 internal fun FirstPaymentVisits(watch: FirstPaymentWatch, active: Boolean, revision: () -> Long, refresh: suspend () -> Unit,
     settled: suspend () -> Pair<HomeRules.State, List<HistoryTransaction>>) {
     val lifecycle = LocalLifecycleOwner.current.lifecycle
-    val activity = LocalContext.current as? Activity
+    val activity = LocalActivity.current
     DisposableEffect(lifecycle) {
         val observer = LifecycleEventObserver { _, event ->
             if (event == Lifecycle.Event.ON_STOP && activity?.isChangingConfigurations != true) watch.hidden()

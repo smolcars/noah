@@ -8,6 +8,7 @@ import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.isActive
 
 /** Completion revisions also catch jobs which begin and end between round polls. */
+@Suppress("LongParameterList") // its flows, query, clock and sink are injected so HomeRoundObserverTest can drive each
 internal suspend fun <T> observeHomeRounds(
     activity: StateFlow<WalletBackgroundActivity.Status>,
     walletChanges: Flow<*>,

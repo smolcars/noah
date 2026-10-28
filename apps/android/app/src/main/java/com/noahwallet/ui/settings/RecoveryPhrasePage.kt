@@ -82,7 +82,6 @@ internal fun RecoveryPhrasePage(model: AppModel, nav: SettingsNav, fixture: List
     val context = LocalContext.current
     val activity = context as? Activity
     val haptics = rememberHaptics()
-    val toasts = LocalSettingsToasts.current
     val holder = androidx.lifecycle.viewmodel.compose.viewModel<RevealedPhrase>()
     val clipboard = remember { context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager }
     val label = rememberSaveable { "noah-recovery-${java.util.UUID.randomUUID()}" }
@@ -91,7 +90,45 @@ internal fun RecoveryPhrasePage(model: AppModel, nav: SettingsNav, fixture: List
             if (Build.VERSION.SDK_INT >= 28) clipboard.clearPrimaryClip() else clipboard.setPrimaryClip(ClipData.newPlainText("", ""))
         }
     } }
-    if (fixture == null && activity != null) DisposableEffect(activity) {
+    PhraseShield(model, holder, activity.takeIf { fixture == null }, clear)
+    val lifecycle = LocalLifecycleOwner.current.lifecycle
+    val scope = rememberCoroutineScope()
+    val reveal = remember(holder, activity, lifecycle) { PhraseReveal(model, holder, activity, lifecycle, haptics) }
+    var prompted by rememberSaveable { mutableStateOf(false) }
+    val words = fixture ?: holder.words
+    // Opening the page asks once, as today; after that, Show asks.
+    LaunchedEffect(Unit) {
+        if (fixture != null || prompted || holder.words.isNotEmpty()) return@LaunchedEffect
+        prompted = true; delay(420)
+        // The page is resumed once its push settles.
+        lifecycle.currentStateFlow.first { it.isAtLeast(Lifecycle.State.RESUMED) }
+        reveal.reveal()
+    }
+    SettingsFrame(tr("Recovery phrase"), nav.back,
+        line = if (words.isEmpty()) tr("The words that restore your wallet.") else tr("{n} words that restore your wallet.", words.size),
+        foot = if (words.isEmpty()) null else ({ PhraseActions(model, nav, words, holder) { clipboard.setPrimaryClip(PhraseClip.clip(label, it)) } })) {
+        PhraseGrid(words, holder.shownAt, authenticating = model.walletLock.authenticating) { scope.launch { reveal.reveal() } }
+        model.walletLock.error?.let { FinePrint(tr(it), failed = true) }
+        Warning(tr("Never share them. Anyone with these words can take your bitcoin."))
+    }
+    reveal.warning?.let { started ->
+        SettingsSheet({ reveal.warning = null }, tr("No screen lock"),
+            tr("Anyone with this phone could see your phrase. Set a screen lock in Settings to protect it.")) { close ->
+            SheetActions(tr("Cancel"), tr("Show anyway"), onCancel = close, onConfirm = {
+                reveal.warning = null
+                scope.launch { reveal.showAnyway(started) }
+            }, confirmTag = "recovery-show-anyway")
+        }
+    }
+}
+
+/**
+ * Keeps the phrase off screenshots and other windows while the page shows (none for a fixture: no [activity]), and
+ * forgets the words and our clip when the page goes, the lock generation moves on, or the copied clip's time is up.
+ */
+@Composable
+private fun PhraseShield(model: AppModel, holder: RevealedPhrase, activity: Activity?, clear: Runnable) {
+    if (activity != null) DisposableEffect(activity) {
         val release = model.walletLock.showSecret(activity.window)
         onDispose {
             // A fold or rotation hands the count to the recreated page, so its new window is never unshielded.
@@ -108,65 +145,62 @@ internal fun RecoveryPhrasePage(model: AppModel, nav: SettingsNav, fixture: List
         if (holder.expireClip(deadline)) clear.run()
     }
     val lifecycle = LocalLifecycleOwner.current.lifecycle
+    val current = androidx.activity.compose.LocalActivity.current
     DisposableEffect(lifecycle) {
         val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_STOP && activity?.isChangingConfigurations != true) holder.clear()
+            if (event == Lifecycle.Event.ON_STOP && current?.isChangingConfigurations != true) holder.clear()
         }
         lifecycle.addObserver(observer)
         onDispose { lifecycle.removeObserver(observer) }
     }
-    val scope = rememberCoroutineScope()
-    var warning by remember { mutableStateOf<Int?>(null) }
-    var prompted by rememberSaveable { mutableStateOf(false) }
-    val words = fixture ?: holder.words
+}
+
+/**
+ * Showing the phrase: after the device's authentication, or after "Show anyway" on a phone with no screen lock
+ * ([warning] holds the lock generation that asked). Words load only while that generation is current and the page is resumed.
+ */
+@Stable
+private class PhraseReveal(private val model: AppModel, private val holder: RevealedPhrase, private val activity: Activity?,
+    private val lifecycle: Lifecycle, private val haptics: com.noahwallet.ui.onboarding.Haptics) {
+    var warning by mutableStateOf<Int?>(null)
+    private val resumed get() = lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)
+
     suspend fun reveal() {
         val fragment = activity as? androidx.fragment.app.FragmentActivity ?: return
         val started = model.walletLock.generation
         if (WalletLock.hasNoScreenLock(fragment)) {
-            if (lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) warning = started
+            if (resumed) warning = started
         } else if (model.walletLock.authenticate(fragment, "View your seed phrase")) {
             val loaded = model.mnemonic()
-            if (started == model.walletLock.generation && lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) { holder.show(loaded, started); haptics.success() }
+            if (started == model.walletLock.generation && resumed) { holder.show(loaded, started)
+                haptics.success() }
         }
     }
-    // Opening the page asks once, as today; after that, Show asks.
-    LaunchedEffect(Unit) {
-        if (fixture != null || prompted || holder.words.isNotEmpty()) return@LaunchedEffect
-        prompted = true; delay(420)
-        // The page is resumed once its push settles.
-        lifecycle.currentStateFlow.first { it.isAtLeast(Lifecycle.State.RESUMED) }
-        reveal()
+
+    suspend fun showAnyway(started: Int) {
+        val fragment = activity as? androidx.fragment.app.FragmentActivity ?: return
+        if (started != model.walletLock.generation || !resumed) return
+        if (WalletLock.hasNoScreenLock(fragment)) {
+            val loaded = model.mnemonic()
+            if (started == model.walletLock.generation && resumed) holder.show(loaded, started)
+        } else reveal()
     }
+}
+
+/** Copy (the clip clears in two minutes) and "I wrote it down". [copy] puts the words on the clipboard under our label. */
+@Composable
+private fun RowScope.PhraseActions(model: AppModel, nav: SettingsNav, words: List<String>, holder: RevealedPhrase, copy: (String) -> Unit) {
+    val haptics = rememberHaptics()
+    val toasts = LocalSettingsToasts.current
     val copied = tr("Copied · clears in 2 minutes")
     val backedUp = tr("Backed up")
-    SettingsFrame(tr("Recovery phrase"), nav.back, line = if (words.isEmpty()) tr("The words that restore your wallet.") else tr("{n} words that restore your wallet.", words.size), foot = if (words.isEmpty()) null else ({
-        FootPill(tr("Copy"), Modifier.testTag("recovery-copy"), outlined = true, icon = SettingsIcons.copy) {
-            clipboard.setPrimaryClip(PhraseClip.clip(label, words.joinToString(" ")))
-            holder.clipDeadline = SystemClock.elapsedRealtime() + PhraseClip.clearAfterMillis
-            haptics.success(); toasts.show(copied)
-        }
-        if (!model.recoveryPhraseBackedUp) FootPill(tr("I wrote it down"), Modifier.testTag("recovery-saved"), enabled = !model.busy) {
-            nav.save(model, "Couldn't save your preference.") { model.confirmRecoveryPhraseBackup(); haptics.success(); toasts.show(backedUp); nav.pop() }
-        }
-    })) {
-        PhraseGrid(words, holder.shownAt, authenticating = model.walletLock.authenticating) { scope.launch { reveal() } }
-        model.walletLock.error?.let { FinePrint(tr(it), failed = true) }
-        Warning(tr("Never share them. Anyone with these words can take your bitcoin."))
+    FootPill(tr("Copy"), Modifier.testTag("recovery-copy"), outlined = true, icon = SettingsIcons.copy) {
+        copy(words.joinToString(" "))
+        holder.clipDeadline = SystemClock.elapsedRealtime() + PhraseClip.clearAfterMillis
+        haptics.success(); toasts.show(copied)
     }
-    warning?.let { started ->
-        SettingsSheet({ warning = null }, tr("No screen lock"), tr("Anyone with this phone could see your phrase. Set a screen lock in Settings to protect it.")) { close ->
-            SheetActions(tr("Cancel"), tr("Show anyway"), onCancel = close, onConfirm = {
-                warning = null
-                scope.launch {
-                    val fragment = activity as? androidx.fragment.app.FragmentActivity ?: return@launch
-                    if (started != model.walletLock.generation || !lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) return@launch
-                    if (WalletLock.hasNoScreenLock(fragment)) {
-                        val loaded = model.mnemonic()
-                        if (started == model.walletLock.generation && lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)) holder.show(loaded, started)
-                    } else reveal()
-                }
-            }, confirmTag = "recovery-show-anyway")
-        }
+    if (!model.recoveryPhraseBackedUp) FootPill(tr("I wrote it down"), Modifier.testTag("recovery-saved"), enabled = !model.busy) {
+        nav.save(model, "Couldn't save your preference.") { model.confirmRecoveryPhraseBackup(); haptics.success(); toasts.show(backedUp); nav.pop() }
     }
 }
 
@@ -192,8 +226,10 @@ private fun PhraseGrid(words: List<String>, shownAt: Long, authenticating: Boole
                             val progress = remember(word, index) { Animatable(if (fresh && !reduceMotion) 0f else 1f) }
                             LaunchedEffect(word, index) { if (progress.value < 1f) { delay(index * 35L); progress.animateTo(1f, NoahTokens.Motion.soft()) } }
                             val blur = 8f * (1 - progress.value)
-                            Text(word, Modifier.testTag("recovery-word-${index + 1}").graphicsLayer { alpha = progress.value; translationY = 4 * (1 - progress.value) * density }
-                                .then(if (Build.VERSION.SDK_INT >= 31 && blur > .05f) Modifier.blur(blur.dp, BlurredEdgeTreatment.Unbounded) else Modifier),
+                            Text(word,
+                                Modifier.testTag("recovery-word-${index + 1}").graphicsLayer { alpha = progress.value
+                                    translationY = 4 * (1 - progress.value) * density }
+                                    .then(if (Build.VERSION.SDK_INT >= 31 && blur > .05f) Modifier.blur(blur.dp, BlurredEdgeTreatment.Unbounded) else Modifier),
                                 style = SettingsType.word, color = palette.foreground, maxLines = 1)
                         }
                     }
@@ -216,7 +252,8 @@ internal fun LockCover(error: String?, authenticating: Boolean, unlock: () -> Un
     Column(Modifier.fillMaxSize().padding(horizontal = 24.dp)) {
         Column(Modifier.weight(1f).fillMaxWidth(), horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.Center) {
             Box(Modifier.size(64.dp).background(palette.soft, androidx.compose.foundation.shape.CircleShape), contentAlignment = Alignment.Center) {
-                androidx.compose.material3.Icon(androidx.compose.ui.res.painterResource(SettingsIcons.lock), null, Modifier.size(28.dp), tint = palette.foreground)
+                androidx.compose.material3.Icon(androidx.compose.ui.res.painterResource(SettingsIcons.lock), null, Modifier.size(28.dp),
+                    tint = palette.foreground)
             }
             Text(tr("Noah is locked"), Modifier.padding(top = 24.dp), style = SettingsType.hero, color = palette.foreground)
             Text(tr("Unlock to see your wallet."), Modifier.padding(top = 6.dp), style = com.noahwallet.ui.home.HomeType.line, color = palette.muted)

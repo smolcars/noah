@@ -9,6 +9,8 @@ internal object OnboardingNavigation {
 
     fun visit(history: List<String>, step: String): List<String> = if (history.lastOrNull() == step) history else history + step
 
-    fun back(history: List<String>, busy: Boolean, canLeave: Boolean): List<String> =
-        if (busy || !canLeave || history.lastOrNull() in boundaries || history.size <= 1) history else history.dropLast(1)
+    fun back(history: List<String>, busy: Boolean, canLeave: Boolean): List<String> {
+        if (busy || !canLeave) return history
+        return if (history.lastOrNull() in boundaries || history.size <= 1) history else history.dropLast(1)
+    }
 }

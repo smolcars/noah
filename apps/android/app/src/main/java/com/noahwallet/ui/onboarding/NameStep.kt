@@ -33,6 +33,7 @@ import com.noahwallet.api.generated.client.WellKnownLnurlpClient
 import com.noahwallet.localization.tr
 import com.noahwallet.services.server.LightningIdentity
 import com.noahwallet.services.server.Nostr
+import com.noahwallet.services.server.ServerFailure
 import com.noahwallet.ui.AppModel
 import com.noahwallet.ui.design.NoahTokens
 import kotlinx.coroutines.CancellationException
@@ -63,19 +64,7 @@ internal fun NameStep(model: AppModel, presentation: OnboardingPresentation) {
     val name = presentation.name
     val availability = presentation.availability
     LaunchedEffect(Unit) { if (play) { delay(380); runCatching { focus.requestFocus() } } }
-    LaunchedEffect(name) {
-        val typing = NameAvailability.typing(name)
-        if (typing != NameAvailability.checking) { presentation.availability = typing; return@LaunchedEffect }
-        // Recreation re-runs this effect; keep an answer already given for the same name.
-        if (presentation.checkedName == name && availability != NameAvailability.checking) return@LaunchedEffect
-        presentation.availability = NameAvailability.checking
-        delay(500)
-        val own = model.server.state.lightningAddress?.substringBefore('@')
-        val answer = NameAvailability.answered(name, lookup(model, name), own)
-        presentation.checkedName = name
-        presentation.availability = answer
-        if (answer == NameAvailability.taken) haptics.warning() else if (answer == NameAvailability.available) haptics.selection()
-    }
+    LaunchedEffect(name) { checkName(model, presentation, name, haptics) }
     fun finish(saved: String?) { presentation.savedAddress = saved; focusManager.clearFocus(); model.step = "email" }
     fun save() {
         if (!presentation.availability.canContinue || model.busy) return
@@ -87,7 +76,7 @@ internal fun NameStep(model: AppModel, presentation: OnboardingPresentation) {
         try { LightningIdentity.payload(chosen, npub) } catch (failure: IllegalArgumentException) { model.error = failure.message; return }
         model.action("Failed to update Lightning address. Please try again.", useServerMessage = true) {
             try { model.server.saveIdentity(chosen, npub) }
-            catch (failure: Exception) {
+            catch (failure: ServerFailure) {
                 if (!NameRules.takenByServer(failure)) throw failure
                 presentation.checkedName = chosen; presentation.availability = NameAvailability.taken; haptics.warning()
                 return@action
@@ -98,19 +87,15 @@ internal fun NameStep(model: AppModel, presentation: OnboardingPresentation) {
     FormLayout(trailingTop = {
         TextAction(tr("Skip"), Modifier.testTag("onboarding-name-skip"), muted = true, enabled = !model.busy) { haptics.light(); finish(null) }
     }, headline = { large ->
-        Headline(tr("Pick a name"), tr("This is how people pay you."), large, modifier = Modifier.entrance(0, play))
+        Headline(tr("Pick a name"), tr("This is how people pay you."), large = large, modifier = Modifier.entrance(0, play))
     }, form = {
         NameField(name, { presentation.name = it }, domain, !model.busy, focus, tr("Pick a name"), { save() },
             Modifier.padding(top = formGap(NoahTokens.Space.xxxl)).entrance(2, play).testTag("lightning-username-input"))
         AvailabilityRow(availability, Modifier.padding(top = 14.dp).entrance(3, play))
-        if (availability == NameAvailability.taken) FlowRow(Modifier.padding(top = 14.dp),
-            horizontalArrangement = Arrangement.spacedBy(NoahTokens.Space.s), verticalArrangement = Arrangement.spacedBy(NoahTokens.Space.s)) {
-            NameRules.suggestions(name).forEachIndexed { index, suggestion ->
-                Chip(suggestion, Modifier.entrance(index, true, rise = 8f)) { haptics.selection(); presentation.name = suggestion }
-            }
-        }
+        if (availability == NameAvailability.taken) NameSuggestions(name) { presentation.name = it }
     }, actions = {
-        PillButton(tr("Continue"), Modifier.fillMaxWidth().testTag("onboarding-name-continue"), enabled = availability.canContinue, loading = model.busy) { save() }
+        PillButton(tr("Continue"), Modifier.fillMaxWidth().testTag("onboarding-name-continue"), enabled = availability.canContinue,
+            loading = model.busy) { save() }
     })
 }
 
@@ -193,5 +178,33 @@ internal fun Chip(text: String, modifier: Modifier = Modifier, bold: Boolean = f
         border = androidx.compose.foundation.BorderStroke(1.dp, palette.hairline),
         contentPadding = PaddingValues(horizontal = 14.dp), colors = ButtonDefaults.outlinedButtonColors(contentColor = palette.foreground)) {
         Text(text, style = NoahTokens.Typography.sub.copy(fontWeight = if (bold) FontWeight.SemiBold else FontWeight.Medium, fontSize = 15.sp))
+    }
+}
+
+/** Whether [name] is free: at once while typing, else asked after a half-second pause (an answer survives recreation). */
+private suspend fun checkName(model: AppModel, presentation: OnboardingPresentation, name: String, haptics: Haptics) {
+    val typing = NameAvailability.typing(name)
+    if (typing != NameAvailability.checking) { presentation.availability = typing; return }
+    // Recreation re-runs this effect; keep an answer already given for the same name.
+    if (presentation.checkedName == name && presentation.availability != NameAvailability.checking) return
+    presentation.availability = NameAvailability.checking
+    delay(500)
+    val own = model.server.state.lightningAddress?.substringBefore('@')
+    val answer = NameAvailability.answered(name, lookup(model, name), own)
+    presentation.checkedName = name
+    presentation.availability = answer
+    if (answer == NameAvailability.taken) haptics.warning() else if (answer == NameAvailability.available) haptics.selection()
+}
+
+/** Free names like [taken], each a tap to [pick]. */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun NameSuggestions(taken: String, pick: (String) -> Unit) {
+    val haptics = rememberHaptics()
+    FlowRow(Modifier.padding(top = 14.dp),
+        horizontalArrangement = Arrangement.spacedBy(NoahTokens.Space.s), verticalArrangement = Arrangement.spacedBy(NoahTokens.Space.s)) {
+        NameRules.suggestions(taken).forEachIndexed { index, suggestion ->
+            Chip(suggestion, Modifier.entrance(index, true, rise = 8f)) { haptics.selection(); pick(suggestion) }
+        }
     }
 }

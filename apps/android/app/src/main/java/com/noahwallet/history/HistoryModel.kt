@@ -9,11 +9,22 @@ import com.noahwallet.services.server.value
 import com.noahwallet.services.wallet.WalletConfiguration
 import com.noahwallet.services.wallet.WalletSession
 import io.ktor.client.HttpClient
-import kotlinx.coroutines.*
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.*
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.yield
 import kotlinx.serialization.json.*
 import okhttp3.OkHttpClient
 import okhttp3.Request
@@ -31,6 +42,7 @@ class HistoryModel(private val dependencies: Dependencies) {
         val recurring: suspend () -> List<HistoryMapping.RecurringLink> = { emptyList() },
     ) {
         companion object {
+            @Suppress("LongParameterList") // the app's wiring: each of the history's sources and hooks, from AppModel
             fun live(session: WalletSession, client: HttpClient, variant: String,
                 suspended: () -> Boolean, warn: (String) -> Unit,
                 esploraEndpoint: () -> String? = { WalletConfiguration.base(variant).esplora },
@@ -48,13 +60,14 @@ class HistoryModel(private val dependencies: Dependencies) {
                                 val call = explorer.newCall(request)
                                 continuation.invokeOnCancellation { call.cancel() }
                                 call.enqueue(object : okhttp3.Callback {
-                                    override fun onFailure(call: okhttp3.Call, failure: java.io.IOException) {
-                                        continuation.resumeWith(Result.failure(failure))
+                                    override fun onFailure(call: okhttp3.Call, e: java.io.IOException) {
+                                        continuation.resumeWith(Result.failure(e))
                                     }
                                     override fun onResponse(call: okhttp3.Call, response: okhttp3.Response) {
                                         continuation.resumeWith(runCatching {
                                             response.use {
-                                                val status = if (it.isSuccessful) Json.parseToJsonElement(it.body.string()).jsonObject["status"] as? JsonObject else null
+                                                val body = if (it.isSuccessful) Json.parseToJsonElement(it.body.string()).jsonObject else null
+                                                val status = body?.get("status") as? JsonObject
                                                 if ((status?.get("confirmed") as? JsonPrimitive)?.booleanOrNull == true)
                                                     (status["block_time"] as? JsonPrimitive)?.longOrNull?.let { time -> Date(time * 1000) } else null
                                             }
@@ -139,22 +152,43 @@ class HistoryModel(private val dependencies: Dependencies) {
                 enrichmentLock.withLock { enrich(latest, currency, request) }
             }
         } catch (cancelled: CancellationException) { throw cancelled }
-        catch (failure: Exception) {
+        catch (_: AppServices.WalletSuspended) { unavailable(request, "Your wallet is suspended. Resume it to view transactions.") }
+        catch (_: WalletSession.SessionError) { unavailable(request, "Your wallet isn't ready. Please try again.") }
+        catch (_: Exception) {
             if (request != generation) return
-            if (failure is WalletSession.SessionError || failure is AppServices.WalletSuspended) {
-                transactions = emptyList()
-                error = if (failure is AppServices.WalletSuspended) "Your wallet is suspended. Resume it to view transactions."
-                else "Your wallet isn't ready. Please try again."
-            } else {
-                error = "Couldn't load transactions. Please try again."
-                dependencies.warn("History read failed")
-            }
+            error = "Couldn't load transactions. Please try again."
+            dependencies.warn("History read failed")
         } finally { if (request == generation) { isRefreshing = false; isLoading = false } }
     }
 
+    /** No wallet to read: the list empties and says why, unless a newer request took over. */
+    private fun unavailable(request: Long, message: String) {
+        if (request != generation) return
+        transactions = emptyList(); error = message
+    }
+
     private suspend fun enrich(rows: List<HistoryTransaction>, currency: String, request: Long) {
+        val work = Enrichment(rows, currency, request)
+        for (index in work.latest.indices) {
+            currentCoroutineContext().ensureActive()
+            if (request != generation) return
+            val dated = work.dated(index, work.latest[index]) ?: return
+            val row = work.priced(dated) ?: return
+            currentCoroutineContext().ensureActive()
+            if (request != generation) return
+            work.store(index, row)
+            // Cached quotes never suspend: bound merge/sort work and let wallet events run.
+            if ((index + 1) % 32 == 0 || index == work.latest.lastIndex) work.publish()
+        }
+    }
+
+    /** One enrichment pass over [request]'s rows: block times for confirmed on-chain rows, then each row's price. */
+    private inner class Enrichment(rows: List<HistoryTransaction>, private val currency: String, private val request: Long) {
         val latest = rows.toMutableList()
-        var dirty = false
+        private var dirty = false
+
+        fun store(index: Int, row: HistoryTransaction) { latest[index] = row; dirty = true }
+
         suspend fun publish() {
             currentCoroutineContext().ensureActive()
             if (request != generation || !dirty) return
@@ -162,41 +196,32 @@ class HistoryModel(private val dependencies: Dependencies) {
             dirty = false
             yield()
         }
-        for (index in latest.indices) {
+
+        /** A confirmed on-chain [row] with its block's time; null once a newer request has taken over. */
+        suspend fun dated(index: Int, row: HistoryTransaction): HistoryTransaction? {
+            val txid = row.txid
+            if (row.source != "onchain-wallet" || row.hasConfirmation != true || txid == null) return row
+            val time = blockTimes[txid] ?: run { publish(); optional { dependencies.blockTime(txid) } }
             currentCoroutineContext().ensureActive()
-            if (request != generation) return
-            var row = latest[index]
-            if (row.source == "onchain-wallet" && row.hasConfirmation == true && row.txid != null) {
-                val txid = row.txid
-                val time = blockTimes[txid] ?: run { publish(); optional { dependencies.blockTime(txid) } }
-                currentCoroutineContext().ensureActive()
-                if (request != generation) return
-                if (time != null) {
-                    blockTimes[txid] = time
-                    row = row.copy(date = HistoryRules.isoDate(time), dateLabel = null, sortTimestamp = time.time.toDouble())
-                    latest[index] = row
-                    dirty = true
-                }
-            }
+            if (request != generation) return null
+            if (time == null) return row
+            blockTimes[txid] = time
+            return row.copy(date = HistoryRules.isoDate(time), dateLabel = null, sortTimestamp = time.time.toDouble()).also { store(index, it) }
+        }
+
+        /** [row] with its price on its day (cached), else today's; null once a newer request has taken over. */
+        suspend fun priced(row: HistoryTransaction): HistoryTransaction? {
             val date = row.timestamp
-            if (date != null && date.time > 0) {
-                val key = "$currency:${row.date.take(10)}"
-                // Publish completed rows before a cache miss can stall the single worker.
-                val price = prices[key] ?: run { publish(); optional { dependencies.price(date.time / 1000, currency) }.validRate() }
-                currentCoroutineContext().ensureActive()
-                if (request != generation) return
-                if (price != null) {
-                    prices[key] = price
-                    if (prices.size > 200) prices.remove(prices.keys.first())
-                    row = row.copy(btcPrice = price)
-                } else { publish(); row = row.copy(btcPrice = optional { dependencies.currentPrice(currency) }.validRate()) }
-            }
+            if (date == null || date.time <= 0) return row
+            val key = "$currency:${row.date.take(10)}"
+            // Publish completed rows before a cache miss can stall the single worker.
+            val price = prices[key] ?: run { publish(); optional { dependencies.price(date.time / 1000, currency) }.validRate() }
             currentCoroutineContext().ensureActive()
-            if (request != generation) return
-            latest[index] = row
-            dirty = true
-            // Cached quotes never suspend: bound merge/sort work and let wallet events run.
-            if ((index + 1) % 32 == 0 || index == latest.lastIndex) publish()
+            if (request != generation) return null
+            if (price == null) { publish(); return row.copy(btcPrice = optional { dependencies.currentPrice(currency) }.validRate()) }
+            prices[key] = price
+            if (prices.size > 200) prices.remove(prices.keys.first())
+            return row.copy(btcPrice = price)
         }
     }
 }

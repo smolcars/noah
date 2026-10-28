@@ -112,6 +112,8 @@ android {
         require(abis.isNotEmpty() && abis.all { it in setOf("arm64-v8a", "x86_64") }) { "noahAbis must be arm64-v8a and/or x86_64" }
         ndk { abiFilters += abis }
     }
+    // Settings switches the app's language at runtime, so a Play bundle must ship every language.
+    bundle { language { enableSplit = false } }
 
     flavorDimensions += "version"
     productFlavors {

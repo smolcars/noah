@@ -53,8 +53,10 @@ internal fun ExportSheet(ui: ActivityUi, state: ActivityState, actions: Activity
                 HistoryFilter.Onchain -> trPlural("{n} on-chain payments as a CSV file.", count)
             }
             Text(sentence, Modifier.padding(top = 6.dp).testTag("activity-export-count"), style = HomeType.line, color = palette.muted)
-            Row(Modifier.padding(top = 20.dp).fillMaxWidth().tonal(RoundedCornerShape(20.dp), if (palette === NoahTokens.Dark) androidx.compose.ui.graphics.Color(0xFF2A2A2C) else palette.soft)
-                .padding(horizontal = 16.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+            Row(Modifier.padding(top = 20.dp).fillMaxWidth().tonal(RoundedCornerShape(20.dp),
+                if (palette === NoahTokens.Dark) androidx.compose.ui.graphics.Color(0xFF2A2A2C) else palette.soft)
+                .padding(horizontal = 16.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(14.dp)) {
                 Icon(painterResource(R.drawable.ic_activity_doc), null, Modifier.size(26.dp), tint = palette.foreground)
                 Column {
                     Text("noah_transactions.csv", style = ActivityType.fileName, color = palette.foreground)
@@ -63,8 +65,10 @@ internal fun ExportSheet(ui: ActivityUi, state: ActivityState, actions: Activity
             }
             error?.let { Text(tr(it), Modifier.padding(top = 12.dp).testTag("activity-export-error"), style = HomeType.line, color = palette.failure) }
             Row(Modifier.padding(top = 22.dp).fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                Pill(tr("Cancel"), Modifier.weight(1f), height = 52.dp, outlined = true, style = ActivityType.pill, enabled = !working) { haptics.light(); onDismiss() }
-                Pill(tr(if (working) "Exporting…" else "Export"), Modifier.weight(1f).testTag("activity-export-confirm"), height = 52.dp, style = ActivityType.pill,
+                Pill(tr("Cancel"), Modifier.weight(1f), height = 52.dp, outlined = true, style = ActivityType.pill, enabled = !working) { haptics.light()
+                    onDismiss() }
+                Pill(tr(if (working) "Exporting…" else "Export"), Modifier.weight(1f).testTag("activity-export-confirm"), height = 52.dp,
+                    style = ActivityType.pill,
                     enabled = rows.isNotEmpty() && !working) {
                     working = true; error = null
                     scope.launch {

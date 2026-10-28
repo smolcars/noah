@@ -2,10 +2,10 @@ package com.noahwallet.ui
 
 import android.content.ClipData
 import android.content.Intent
-import android.net.Uri
 import androidx.compose.runtime.*
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.FileProvider
+import androidx.core.net.toUri
 import com.noahwallet.BuildConfig
 import com.noahwallet.formatting.FiatCurrency
 import com.noahwallet.history.HistoryCSV
@@ -96,7 +96,7 @@ internal fun paymentDetail(app: AppModel, state: ActivityState, price: Double?, 
             context.startActivity(Intent.createChooser(Intent(Intent.ACTION_SEND).setType("text/plain").putExtra(Intent.EXTRA_TEXT, text), null))
         },
         explorer = { url ->
-            try { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))); true }
+            try { context.startActivity(Intent(Intent.ACTION_VIEW, url.toUri())); true }
             catch (_: android.content.ActivityNotFoundException) { false }
         },
         recurring = { id -> onSettings(com.noahwallet.ui.settings.SchedulePage(id)) },
@@ -129,8 +129,8 @@ internal class ChainReads {
  * changes): the wallet's tip and, for an Ark-funded send, its transaction's block. No polling.
  */
 private suspend fun readChain(app: AppModel, record: HistoryTransaction, tip: (Long) -> Unit, confirmed: (String, Long) -> Unit) {
-    val pending = record.source == "onchain-wallet" && record.hasConfirmation != true || record.movementStatus == "pending" &&
-        record.movementKind in listOf("send-onchain", "offboard")
+    val pending = (record.source == "onchain-wallet" && record.hasConfirmation != true) || (record.movementStatus == "pending" &&
+        record.movementKind in listOf("send-onchain", "offboard"))
     if (!pending) return
     try {
         tip(app.session.chainTip())

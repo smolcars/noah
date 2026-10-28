@@ -68,10 +68,11 @@ fun BatteryOptimizationScreen(model: AppModel, onBack: (() -> Unit)? = null, onC
     }
     BackHandler { if (!proceeding) onBack?.invoke() }
     com.noahwallet.ui.onboarding.FormLayout(trailingTop = {
-        com.noahwallet.ui.onboarding.TextAction(tr("Skip"), androidx.compose.ui.Modifier.testTag("battery-skip"), muted = true, enabled = !proceeding) { proceed() }
+        com.noahwallet.ui.onboarding.TextAction(tr("Skip"), androidx.compose.ui.Modifier.testTag("battery-skip"), muted = true,
+            enabled = !proceeding) { proceed() }
     }, headline = { large ->
         com.noahwallet.ui.onboarding.Headline(tr("Let Noah run in the background"),
-            tr("Otherwise Android may pause Noah, and payments could stop arriving."), large)
+            tr("Otherwise Android may pause Noah, and payments could stop arriving."), large = large)
     }, form = {}, actions = {
         com.noahwallet.ui.onboarding.PillButton(tr("Open battery settings"), androidx.compose.ui.Modifier.fillMaxWidth()) {
             failed = !PlatformAccess.openBattery(context)
@@ -142,7 +143,8 @@ class UnifiedPushSetup internal constructor(private val context: android.content
                             com.noahwallet.api.generated.client.V0RegisterPushTokenClient(services.client)
                                 .registerPushToken(com.noahwallet.api.generated.models.RegisterPushToken(received)).value() }
                     } catch (cancelled: CancellationException) { throw cancelled }
-                    catch (_: Exception) { withContext(Dispatchers.IO) { com.noahwallet.services.logging.AppLog(context, "push").w("""UnifiedPush server registration failed; queued for retry""") } }
+                    catch (_: Exception) { withContext(Dispatchers.IO) { com.noahwallet.services.logging.AppLog(context,
+                        "push").w("""UnifiedPush server registration failed; queued for retry""") } }
                     withContext(Dispatchers.IO) { PushWork.register(context) }
                 } else failed = true
             } catch (cancelled: CancellationException) { throw cancelled }
@@ -181,7 +183,7 @@ fun UnifiedPushScreen(fromOnboarding: Boolean, onContinue: () -> Unit) {
         if (loading) Text(tr("Loading distributors…"))
         else if (distributors.isEmpty()) Text(tr("No distributors detected. Install ntfy or another UnifiedPush distributor."))
         distributors.forEach { distributor ->
-            NoahButton(distributor.name, !registering && !loading, secondary = selected != distributor.id) { setup.select(distributor.id) }
+            NoahButton(distributor.name, enabled = !registering && !loading, secondary = selected != distributor.id) { setup.select(distributor.id) }
             Text(tr(distributor.id), style = MaterialTheme.typography.bodySmall)
         }
         Text(tr("Current Endpoint:"), style = MaterialTheme.typography.titleMedium)
@@ -190,10 +192,18 @@ fun UnifiedPushScreen(fromOnboarding: Boolean, onContinue: () -> Unit) {
             (context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(ClipData.newPlainText("UnifiedPush endpoint", endpoint))
         }
         if (setup.failed) Text(tr("Couldn't register with UnifiedPush. Please try again."), color = MaterialTheme.colorScheme.error)
-        if (endpoint != null && !registering) NoahButton(if (fromOnboarding) "Continue" else "Done", onClick = onContinue)
-        else NoahButton(if (registering) "Registering..." else if (fromOnboarding) "Register" else "Register with UnifiedPush", !registering && !loading && setup.registration != null) {
-            setup.register()
-        }
+        RegisterAction(setup, fromOnboarding, onContinue)
         Text(tr("Install a distributor app like \"ntfy\" from F-Droid to enable push notifications."))
+    }
+}
+
+/** Register (again) with the picked distributor; once registered, Continue or Done. */
+@Composable
+private fun RegisterAction(setup: UnifiedPushSetup, fromOnboarding: Boolean, onContinue: () -> Unit) {
+    val registering = setup.registering
+    if (setup.endpoint != null && !registering) NoahButton(if (fromOnboarding) "Continue" else "Done", onClick = onContinue)
+    else NoahButton(if (registering) "Registering..." else if (fromOnboarding) "Register" else "Register with UnifiedPush",
+        enabled = !registering && !setup.loading && setup.registration != null) {
+        setup.register()
     }
 }

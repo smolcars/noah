@@ -23,7 +23,8 @@ internal class SpringCurve(response: Float, private val damping: Float) {
         while (t < 3f) {
             var ok = true
             var s = t
-            while (s < t + .25f) { if (abs(1 - value(s)) > .002f) { ok = false; break }; s += .01f }
+            while (s < t + .25f) { if (abs(1 - value(s)) > .002f) { ok = false; break }
+                s += .01f }
             if (ok) break
             t += .01f
         }

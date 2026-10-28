@@ -119,4 +119,4 @@ internal fun countUpSats(total: Long, progress: Float): Long =
 
 /** A wrong or expired code gets the shake; connectivity and server failures keep today's alert. */
 internal fun wrongCode(failure: Exception) = failure is ServerFailure && failure.kind == ServerFailure.Kind.request &&
-    (failure.status == null || failure.status in 400..499 && failure.status != 429)
+    (failure.status == null || (failure.status in 400..499 && failure.status != 429))

@@ -1,7 +1,7 @@
 package com.noahwallet.ui
 
-import android.app.Activity
 import android.os.SystemClock
+import androidx.activity.compose.LocalActivity
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -40,12 +40,79 @@ fun HomeScreen(model: AppModel, onViewAll: () -> Unit,
     val appShapes = MaterialTheme.shapes
     val detail = rememberActivityState()
     var showRounds by rememberSaveable { mutableStateOf(false) }
-    var price by remember { mutableStateOf<Double?>(null) }
     var refreshRevision by remember { mutableIntStateOf(0) }
     var dismissed by remember { mutableStateOf(model.server.state.isEmailPromptDismissed == true) }
     var refreshing by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val currency = model.preferredCurrency.takeIf { it in com.noahwallet.formatting.FiatCurrency.supported } ?: "USD"
+    val price = rememberHomePrice(model, currency)
+    val memory = model.homeMemory
+    FirstPaymentBaseline(model)
+    // Each visit refreshes the balance.
+    LaunchedEffect(Unit) { model.refresh() }
+    val toasts = remember { HomeToasts() }
+    val uri = LocalUriHandler.current
+    val signals = rememberHomeSignals(model, refreshRevision, memory)
+    val (detailUi, detailActions) = paymentDetail(model, detail, price, onRepeatPayment, onSettings)
+    RefreshOnAccounting(model)
+    val newRows = rememberNewRows(model)
+    val starting = rememberFirstPaymentStart(model)
+    HomeToastEffects(model, toasts, signals)
+    val ui = homeUi(model, signals, price, currency, newRows, emailPrompt = !dismissed, fresh = starting)
+    val actions = HomeActions(
+        scan = onScan, settings = settings, suspended = { onSettings(SettingsDestination.Advanced) },
+        toggleHidden = model::toggleBalance, seeAll = onViewAll, openRow = { detail.open(it) }, profile = onProfile,
+        nudge = { nudge ->
+            when (nudge) {
+                is HomeRules.Nudge.Notice -> Unit
+                is HomeRules.Nudge.Renewal -> onRenew(nudge.renew.ids)
+                is HomeRules.Nudge.BackupFailed -> signals.retry()
+                HomeRules.Nudge.BackUp -> onBackup()
+                HomeRules.Nudge.Email -> onSettings(SettingsDestination.Email)
+                HomeRules.Nudge.Update -> uri.openUri(HomeRules.updateURL(BuildConfig.APP_VARIANT))
+            }
+        },
+        dismiss = { nudge ->
+            when (nudge) {
+                is HomeRules.Nudge.Notice -> memory.notices = memory.notices - nudge.message
+                HomeRules.Nudge.Email -> { model.server.dismissEmailPrompt(); dismissed = true }
+                else -> Unit
+            }
+        },
+        rounds = { showRounds = true },
+        refresh = {
+            scope.launch { refreshing = true
+                try { model.refresh(true); model.history.refresh(model.preferredCurrency); refreshRevision++ } finally { refreshing = false } }
+        },
+    )
+    com.noahwallet.ui.onboarding.OnboardingFrame(null, splitAtWindowCentre = true) {
+        HomeContent(ui, actions, memory, toasts, refreshing)
+        HomePaymentSheet(detailUi, detail, detailActions)
+        // Today's Pending Rounds sheet, in today's look, kept inside the trailing pane.
+        if (showRounds && signals.active.isNotEmpty()) MaterialTheme(appColors, appShapes, appTypography) {
+            PendingRoundsSheet(signals.active) { showRounds = false }
+        }
+    }
+}
+
+/**
+ * The first payment's baseline, once per foreground visit: after a refresh that landed since the visit began
+ * (retried if it fails), read the wallet as it is. Before Home's own refresh, so it sees where it started.
+ */
+@Composable
+private fun FirstPaymentBaseline(model: AppModel) {
+    com.noahwallet.ui.home.FirstPaymentVisits(model.homeMemory.firstPaymentWatch, active = !model.isWalletSuspended, revision = { model.summaryRevision },
+        refresh = { model.refresh() }, settled = {
+            snapshotFlow { model.history.isLoading }.first { !it }
+            val history = model.history.transactions
+            HomeRules.state(model.isWalletSuspended, model.summary?.balance?.totalSats, false, model.history.error, history.isNotEmpty()) to history
+        })
+}
+
+/** Today's price in [currency] while Home is started, every five minutes; none while suspended. */
+@Composable
+private fun rememberHomePrice(model: AppModel, currency: String): Double? {
+    var price by remember { mutableStateOf<Double?>(null) }
     val lifecycle = androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle
     LaunchedEffect(currency, model.isWalletSuspended, lifecycle) {
         price = null
@@ -60,59 +127,58 @@ fun HomeScreen(model: AppModel, onViewAll: () -> Unit,
             }
         }
     }
-    val memory = model.homeMemory
-    // The first payment's baseline, once per foreground visit: after a refresh that landed since the visit began
-    // (retried if it fails), read the wallet as it is. Before Home's own refresh below, so it sees where it started.
-    com.noahwallet.ui.home.FirstPaymentVisits(memory.firstPaymentWatch, active = !model.isWalletSuspended, revision = { model.summaryRevision },
-        refresh = { model.refresh() }, settled = {
-            snapshotFlow { model.history.isLoading }.first { !it }
-            val history = model.history.transactions
-            HomeRules.state(model.isWalletSuspended, model.summary?.balance?.totalSats, false, model.history.error, history.isNotEmpty()) to history
-        })
-    // Each visit refreshes the balance.
-    LaunchedEffect(Unit) { model.refresh() }
-    val toasts = remember { HomeToasts() }
-    val haptics = com.noahwallet.ui.onboarding.rememberHaptics()
-    val uri = LocalUriHandler.current
-    val signals = rememberHomeSignals(model, refreshRevision, memory)
-    val locale = Locale.forLanguageTag(model.localeIdentifier)
-    val balance = model.summary?.balance
-    val rows = model.history.transactions
-    val address = model.server.state.lightningAddress?.takeIf { it.isNotEmpty() }
-    val state = HomeRules.state(model.isWalletSuspended, balance?.totalSats, model.history.isLoading, model.history.error, rows.isNotEmpty())
-    val backupBanner = HomeRules.backup(signals.backup, signals.now, locale)
-    val boarding = model.autoBoardSuccessBanner
-    val boardingBanner = boarding?.let { (amount, created) -> HomeRules.boarding(amount, created, signals.now, locale) }
-    val emailVerified = model.server.state.isEmailVerified == true
-    val (detailUi, detailActions) = paymentDetail(model, detail, price, onRepeatPayment, onSettings)
+    return price
+}
 
-    // "New" marks incoming rows that arrived since Home was last shown; in memory only.
+/**
+ * A history change that moves money (a new row, a confirmation, a status or delta change, from bark's state
+ * stream) means the balance moved too; re-read it so both agree. Enrichment doesn't count. Home appearing
+ * already refreshes, so only a change while it's shown does this.
+ */
+@Composable
+private fun RefreshOnAccounting(model: AppModel) {
+    val rows = model.history.transactions
     val historyLoaded = !model.history.isLoading
-    val ids = rows.map { it.id }
-    val currentIds by rememberUpdatedState(ids)
-    // A history change that moves money (a new row, a confirmation, a status or delta change, from bark's state
-    // stream) means the balance moved too; re-read it so both agree. Enrichment doesn't count. Home appearing
-    // already refreshes, so only a change while it's shown does this.
     val accounting = remember(rows) { HomeRules.accounting(rows) }
     var refreshedAccounting by remember { mutableStateOf(accounting) }
     LaunchedEffect(accounting) { if (accounting != refreshedAccounting) { refreshedAccounting = accounting; if (historyLoaded) model.refresh() } }
+}
+
+/** "New" marks incoming rows that arrived since Home was last shown; in memory only. */
+@Composable
+private fun rememberNewRows(model: AppModel): Set<String> {
+    val memory = model.homeMemory
+    val rows = model.history.transactions
+    val historyLoaded = !model.history.isLoading
+    val ids = rows.map { it.id }
+    val currentIds by rememberUpdatedState(ids)
+    val lifecycle = androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle
     SideEffect { if (memory.seenRows == null && historyLoaded) memory.seenRows = ids.toSet() }
     val seen = memory.seenRows
-    val newRows = if (seen == null) emptySet() else rows.filter { com.noahwallet.ui.home.HomeRow.received(it) && it.id !in seen }.map { it.id }.toSet()
-    val activity = LocalContext.current as? Activity
+    val newRows = if (seen == null) emptySet() else rows.filter { HomeRow.received(it) && it.id !in seen }.map { it.id }.toSet()
+    val activity = LocalActivity.current
     DisposableEffect(lifecycle) {
         fun hidden() { memory.seenRows = currentIds.toSet() }
         val observer = LifecycleEventObserver { _, event -> if (event == Lifecycle.Event.ON_STOP && activity?.isChangingConfigurations != true) hidden() }
         lifecycle.addObserver(observer)
         onDispose { lifecycle.removeObserver(observer); if (activity?.isChangingConfigurations != true) hidden() }
     }
+    return newRows
+}
 
-    // The first payment: incoming funds that appear after this visit's baseline on a Fresh wallet, with Home on screen.
+/**
+ * The first payment: incoming funds that appear after this visit's baseline on a Fresh wallet, with Home on screen.
+ * True until the effect starts the sequence, so Home keeps showing Fresh rather than flashing Everyday for a frame.
+ */
+@Composable
+private fun rememberFirstPaymentStart(model: AppModel): Boolean {
+    val memory = model.homeMemory
+    val haptics = com.noahwallet.ui.onboarding.rememberHaptics()
+    val lifecycle = androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle
     val lifecycleState by lifecycle.currentStateFlow.collectAsState()
     val resumed = lifecycleState.isAtLeast(Lifecycle.State.RESUMED)
-    val arrival = memory.firstPaymentWatch.arrival(rows, balance?.totalSats)
-    // Until the effect below starts the sequence, keep showing Fresh rather than flashing Everyday for a frame.
-    val starting = arrival != null && resumed && memory.firstPayment == null
+    val arrival = memory.firstPaymentWatch.arrival(model.history.transactions, model.summary?.balance?.totalSats)
+    val address = model.server.state.lightningAddress?.takeIf { it.isNotEmpty() }
     LaunchedEffect(arrival, resumed) {
         if (arrival == null || !resumed || memory.firstPayment != null) return@LaunchedEffect
         memory.firstPaymentWatch.played()
@@ -120,7 +186,16 @@ fun HomeScreen(model: AppModel, onViewAll: () -> Unit,
             arrival.row?.let { HomeRow.of(it, address?.substringAfter('@')).counterparty })
         haptics.success()
     }
-    // Toasts appear only after real success; "Backup completed" and boarding keep today's 5-second expiry.
+    return arrival != null && resumed && memory.firstPayment == null
+}
+
+/** Toasts appear only after real success; "Backup completed" and boarding keep today's 5-second expiry. */
+@Composable
+private fun HomeToastEffects(model: AppModel, toasts: HomeToasts, signals: HomeSignals) {
+    val memory = model.homeMemory
+    val haptics = com.noahwallet.ui.onboarding.rememberHaptics()
+    val locale = Locale.forLanguageTag(model.localeIdentifier)
+    val emailVerified = model.server.state.isEmailVerified == true
     val backedUp = tr("Backed up")
     val emailAdded = tr("Email added")
     LaunchedEffect(model.recoveryPhraseBackedUp) {
@@ -132,11 +207,13 @@ fun HomeScreen(model: AppModel, onViewAll: () -> Unit,
         memory.emailSeen = emailVerified
     }
     // A completed backup is the top bar's check, not a toast.
-    val completion = boardingBanner?.title
+    val boarding = model.autoBoardSuccessBanner
+    val completion = boarding?.let { (amount, created) -> HomeRules.boarding(amount, created, signals.now, locale) }?.title
     val completionAt = boarding?.second
     // Boarding names its amount in Home's format, so a hidden balance stays hidden.
-    val completionText = completion?.let { boarding?.let { (amount, _) ->
-        tr("{amount} available in Ark", if (model.hidden) "••••" else com.noahwallet.formatting.BitcoinAmount.format(amount, model.amountUnit, locale)) } }
+    val completionText = boarding?.takeIf { completion != null }?.let { (amount, _) ->
+        tr("{amount} available in Ark", if (model.hidden) "••••" else com.noahwallet.formatting.BitcoinAmount.format(amount, model.amountUnit, locale))
+    }
     LaunchedEffect(completionText, completionAt) {
         val key = "$completion:$completionAt"
         if (completionText == null || completionAt == null) return@LaunchedEffect
@@ -144,55 +221,37 @@ fun HomeScreen(model: AppModel, onViewAll: () -> Unit,
         if (memory.toastSeen == key) toasts.retext(key, completionText)
         else {
             memory.toastSeen = key
-            toasts.show(completionText, (HomeRules.successMillis - (System.currentTimeMillis() - completionAt)).coerceIn(1_000, HomeRules.successMillis), tag = key)
+            toasts.show(completionText, (HomeRules.successMillis - (System.currentTimeMillis() - completionAt)).coerceIn(1_000, HomeRules.successMillis),
+                tag = key)
         }
     }
+}
 
-    val ui = HomeUi(
-        state = if (starting) HomeRules.State.fresh else state, address = address, variant = BuildConfig.APP_VARIANT, balance = balance, unit = model.amountUnit,
+/** Home's state for [HomeContent]; [fresh] holds the Fresh state while the first payment starts. */
+@Composable
+private fun homeUi(model: AppModel, signals: HomeSignals, price: Double?, currency: String, newRows: Set<String>, emailPrompt: Boolean,
+    fresh: Boolean): HomeUi {
+    val locale = Locale.forLanguageTag(model.localeIdentifier)
+    val balance = model.summary?.balance
+    val rows = model.history.transactions
+    val memory = model.homeMemory
+    val state = HomeRules.state(model.isWalletSuspended, balance?.totalSats, model.history.isLoading, model.history.error, rows.isNotEmpty())
+    val backupBanner = HomeRules.backup(signals.backup, signals.now, locale)
+    val suspended = model.isWalletSuspended
+    return HomeUi(
+        state = if (fresh) HomeRules.State.fresh else state, address = model.server.state.lightningAddress?.takeIf { it.isNotEmpty() },
+        variant = BuildConfig.APP_VARIANT, balance = balance,
+        unit = model.amountUnit,
         locale = locale, hidden = model.hidden,
         fiat = HomeRules.fiat(balance?.totalSats?.toLong(), price, currency, locale, model.hidden),
         status = HomeRules.status(model.error, balance, rows, signals.active.size),
         nudge = HomeRules.nudge(memory.notices, memory.renew, backupBanner, model.recoveryPhraseBackedUp,
-            emailPrompt = !dismissed && !emailVerified, updateRequired = signals.version?.updateRequired == true),
+            emailPrompt = emailPrompt && model.server.state.isEmailVerified != true, updateRequired = signals.version?.updateRequired == true),
         rows = rows, historyError = model.history.error, newRows = newRows, retrying = signals.retrying, now = Date(),
         roundsActive = signals.active.isNotEmpty(),
-        activity = HomeRules.activity(backupBanner, signals.background).takeIf { !model.isWalletSuspended },
-        backedUpAt = HomeRules.backedUpAt(backupBanner, signals.backup).takeIf { !model.isWalletSuspended },
+        activity = HomeRules.activity(backupBanner, signals.background).takeIf { !suspended },
+        backedUpAt = HomeRules.backedUpAt(backupBanner, signals.backup).takeIf { !suspended },
     )
-    val actions = HomeActions(
-        scan = onScan, settings = settings, suspended = { onSettings(SettingsDestination.Advanced) },
-        toggleHidden = model::toggleBalance, seeAll = onViewAll, openRow = { detail.open(it) }, profile = onProfile,
-        nudge = { nudge ->
-            when (nudge) {
-                is HomeRules.Nudge.Notice -> {}
-                is HomeRules.Nudge.Renewal -> onRenew(nudge.renew.ids)
-                is HomeRules.Nudge.BackupFailed -> signals.retry()
-                HomeRules.Nudge.BackUp -> onBackup()
-                HomeRules.Nudge.Email -> onSettings(SettingsDestination.Email)
-                HomeRules.Nudge.Update -> uri.openUri(HomeRules.updateURL(BuildConfig.APP_VARIANT))
-            }
-        },
-        dismiss = { nudge ->
-            when (nudge) {
-                is HomeRules.Nudge.Notice -> memory.notices = memory.notices - nudge.message
-                HomeRules.Nudge.Email -> { model.server.dismissEmailPrompt(); dismissed = true }
-                else -> {}
-            }
-        },
-        rounds = { showRounds = true },
-        refresh = {
-            scope.launch { refreshing = true; try { model.refresh(true); model.history.refresh(model.preferredCurrency); refreshRevision++ } finally { refreshing = false } }
-        },
-    )
-    com.noahwallet.ui.onboarding.OnboardingFrame(null, splitAtWindowCentre = true) {
-        HomeContent(ui, actions, memory, toasts, refreshing)
-        HomePaymentSheet(detailUi, detail, detailActions)
-        // Today's Pending Rounds sheet, in today's look, kept inside the trailing pane.
-        if (showRounds && signals.active.isNotEmpty()) MaterialTheme(appColors, appShapes, appTypography) {
-            PendingRoundsSheet(signals.active) { showRounds = false }
-        }
-    }
 }
 
 /** A row's payment: Activity's detail in a sheet, kept inside the trailing pane on wide windows and the fold. */

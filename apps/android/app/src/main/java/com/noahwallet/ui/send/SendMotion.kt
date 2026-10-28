@@ -108,11 +108,10 @@ internal object SendTimeline {
         val result = mutableListOf<Started>()
         var shift = 0L
         for (step in steps(motion.route, ending)) {
-            val reached = reachedAt(step.needs) ?: break
             val nominal = if (reduceMotion) (step.at * reducedPace).toLong() else step.at
-            val start = maxOf(nominal + shift, reached)
+            val start = reachedAt(step.needs)?.let { maxOf(nominal + shift, it) }
+            if (start == null || start > elapsed) break
             shift = start - nominal
-            if (start > elapsed) break
             result += Started(step.phase, start)
         }
         return result
@@ -196,10 +195,12 @@ internal object SendProgressRules {
      * attempts' coins, so nothing there can be tied to this one (async-payments.md, "Reused hashes").
      */
     fun refund(state: SendController.State, attempt: SendAttempt?, movements: List<Movement>): SendRefund {
-        if (state != SendController.State.failed || attempt == null || attempt.receipt != null || attempt.payment.method !in lightningMethods) return SendRefund.none
+        if (state != SendController.State.failed || attempt == null) return SendRefund.none
+        if (attempt.receipt != null || attempt.payment.method !in lightningMethods) return SendRefund.none
         val hash = attempt.paymentHash ?: return SendRefund.none
         val sends = movements.filter { movement ->
-            movement.subsystemName == "bark.lightning_send" && movement.subsystemKind == "send" && (movement.paymentHash ?: paymentHash(movement.metadataJson)) == hash
+            movement.subsystemName == "bark.lightning_send" && movement.subsystemKind == "send" &&
+                (movement.paymentHash ?: paymentHash(movement.metadataJson)) == hash
         }
         if (sends.any { it.id in attempt.snapshot.movementIDs }) return SendRefund.untied
         return if (sends.any { it.status == "failed" && it.outputVtxoIds.isNotEmpty() && it.exitedVtxoIds.isEmpty() }) SendRefund.recorded else SendRefund.none

@@ -43,26 +43,19 @@ internal fun NotificationsPage(model: AppModel, nav: SettingsNav, live: Settings
     SettingsFrame(tr("Notifications"), nav.back, foot = if (known && !on) ({
         FootPill(tr("Open Settings"), Modifier.testTag("notifications-open-settings")) { PlatformAccess.openNotificationSettings(context) }
     }) else null) {
-        if (known) {
-            if (on) StatusHeader({ StatusMark(MarkKind.idle, SettingsIcons.bell, palette.foreground, ring = palette.orange) }, tr("On"),
-                tr("Noah can receive and renew while closed."))
-            else StatusHeader({ StatusMark(MarkKind.failed, SettingsIcons.bellOff, palette.failure) }, tr("Off"),
-                tr("Noah can’t receive payments or renew your bitcoin."), failed = true)
-        }
+        if (known) NotificationsStatus(on)
         SettingsGroup(rows = listOfNotNull(
             { d -> SettingsRow(tr("Claim payments in the background"), SettingsIcons.bolt, sub = tr("Lets Noah wake up for Lightning"), divider = d,
-                modifier = Modifier.testTag("notifications-mailbox"), end = RowEnd.Toggle(server.isMailboxAuthorizationEnabled != false, !model.busy && !model.isWalletSuspended) {
+                modifier = Modifier.testTag("notifications-mailbox"),
+                end = RowEnd.Toggle(server.isMailboxAuthorizationEnabled != false, !model.busy && !model.isWalletSuspended) {
                     model.action("Couldn't update mailbox notifications.") { model.server.setMailboxEnabled(it); server = model.server.state }
                 }) },
-            { d -> SettingsRow(tr("Battery"), SettingsIcons.battery, value = if (battery == SettingsRules.Battery.unrestricted) tr("Unrestricted") else tr("Optimized"),
+            { d -> SettingsRow(tr("Battery"), SettingsIcons.battery,
+                value = if (battery == SettingsRules.Battery.unrestricted) tr("Unrestricted") else tr("Optimized"),
                 divider = d, modifier = Modifier.testTag("notifications-battery")) { if (!PlatformAccess.openBattery(context)) toasts.show(noBattery) } },
-            if (distributor != null) ({ d ->
-                val name = distributor.distributors.firstOrNull { it.id == distributor.selected }?.name
-                SettingsRow(tr("UnifiedPush"), SettingsIcons.push, value = if (distributor.endpoint != null) name ?: tr("Registered") else tr("Not set up"),
-                    dot = if (distributor.endpoint == null && !distributor.loading) RowDot.failure else null, divider = d,
-                    modifier = Modifier.testTag("notifications-unifiedpush")) { nav.open(SettingsDestination.UnifiedPush) }
-            }) else null,
-            { d -> SettingsRow(tr("System settings"), SettingsIcons.gear, end = RowEnd.External, divider = d) { PlatformAccess.openNotificationSettings(context) } },
+            if (distributor != null) ({ d -> UnifiedPushRow(distributor, d) { nav.open(SettingsDestination.UnifiedPush) } }) else null,
+            { d -> SettingsRow(tr("System settings"), SettingsIcons.gear, end = RowEnd.External,
+                divider = d) { PlatformAccess.openNotificationSettings(context) } },
         ))
         if (known && !on) FinePrint(tr("Turn them on in Settings. Noah checks again when you come back."))
     }
@@ -94,8 +87,8 @@ internal fun UnifiedPushPage(nav: SettingsNav) {
             Text(tr("Install ntfy from F-Droid, then come back."), style = HomeType.line, color = palette.muted, textAlign = TextAlign.Center)
             return@SettingsFrame
         }
-        SettingsGroup(tr("Deliver with"), rows = setup.distributors.map { distributor -> { d ->
-            RadioRow(distributor.name, distributor.id, setup.selected == distributor.id, divider = d,
+        SettingsGroup(label = tr("Deliver with"), rows = setup.distributors.map { distributor -> { d ->
+            RadioRow(distributor.name, setup.selected == distributor.id, detail = distributor.id, divider = d,
                 modifier = Modifier.testTag("unifiedpush-${distributor.id}")) { haptics.selection(); setup.select(distributor.id) }
         } })
         Column(Modifier.padding(top = 22.dp)) {
@@ -105,4 +98,24 @@ internal fun UnifiedPushPage(nav: SettingsNav) {
         }
         if (setup.failed) FinePrint(tr("Couldn't register with UnifiedPush. Please try again."), failed = true)
     }
+}
+
+@Composable
+private fun NotificationsStatus(on: Boolean) {
+    val palette = LocalPalette.current
+    if (on) StatusHeader(tr("On"), tr("Noah can receive and renew while closed.")) {
+        StatusMark(MarkKind.idle, SettingsIcons.bell, palette.foreground, ring = palette.orange)
+    }
+    else StatusHeader(tr("Off"), tr("Noah can’t receive payments or renew your bitcoin."), failed = true) {
+        StatusMark(MarkKind.failed, SettingsIcons.bellOff, palette.failure)
+    }
+}
+
+/** UnifiedPush's distributor once registered, or that it isn't set up. */
+@Composable
+private fun UnifiedPushRow(distributor: com.noahwallet.ui.launch.UnifiedPushSetup, divider: Boolean, open: () -> Unit) {
+    val name = distributor.distributors.firstOrNull { it.id == distributor.selected }?.name
+    SettingsRow(tr("UnifiedPush"), SettingsIcons.push, value = if (distributor.endpoint != null) name ?: tr("Registered") else tr("Not set up"),
+        dot = if (distributor.endpoint == null && !distributor.loading) RowDot.failure else null, divider = divider,
+        modifier = Modifier.testTag("notifications-unifiedpush"), onClick = open)
 }

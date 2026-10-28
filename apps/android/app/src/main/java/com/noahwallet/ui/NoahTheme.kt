@@ -47,7 +47,7 @@ fun NoahTheme(content: @Composable () -> Unit) {
 }
 
 @Composable
-fun NoahButton(title: String, enabled: Boolean = true, secondary: Boolean = false, modifier: Modifier = Modifier, onClick: () -> Unit) {
+fun NoahButton(title: String, modifier: Modifier = Modifier, enabled: Boolean = true, secondary: Boolean = false, onClick: () -> Unit) {
     if (secondary) OutlinedButton(onClick, modifier.fillMaxWidth().heightIn(min = 52.dp), enabled = enabled) { Text(tr(title)) }
     else Button(onClick, modifier.fillMaxWidth().heightIn(min = 52.dp), enabled = enabled) { Text(tr(title)) }
 }

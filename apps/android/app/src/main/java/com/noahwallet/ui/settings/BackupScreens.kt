@@ -6,6 +6,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.core.Animatable
+import androidx.compose.animation.core.AnimationVector1D
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.expandVertically
@@ -41,6 +42,7 @@ import com.noahwallet.api.generated.models.*
 import com.noahwallet.localization.tr
 import com.noahwallet.services.backup.BackupCoordinator
 import com.noahwallet.services.server.value
+import com.noahwallet.services.storage.PersistedBackupState
 import com.noahwallet.ui.AppModel
 import com.noahwallet.ui.activity.ActivityType
 import com.noahwallet.ui.design.NoahTokens
@@ -94,15 +96,16 @@ internal fun rememberFileShare(model: AppModel, title: String, mime: String, onS
                     finally { staged.discard() }
                 }
             }
-            try {
+            runCatching {
                 val uri = FileProvider.getUriForFile(context, "${context.packageName}.files", file, displayName)
                 val send = Intent(Intent.ACTION_SEND).setType(mime).putExtra(Intent.EXTRA_STREAM, uri)
                     .apply { clipData = ClipData.newRawUri(file.name, uri); addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION) }
-                androidx.work.WorkManager.getInstance(context).enqueue(androidx.work.OneTimeWorkRequestBuilder<com.noahwallet.services.sharing.SettingsShareCleanup>()
-                    .setInitialDelay(com.noahwallet.services.sharing.SettingsShareFiles.retentionMillis,
-                        java.util.concurrent.TimeUnit.MILLISECONDS).build())
+                val cleanup = androidx.work.OneTimeWorkRequestBuilder<com.noahwallet.services.sharing.SettingsShareCleanup>()
+                    .setInitialDelay(com.noahwallet.services.sharing.SettingsShareFiles.retentionMillis, java.util.concurrent.TimeUnit.MILLISECONDS)
+                    .build()
+                androidx.work.WorkManager.getInstance(context).enqueue(cleanup)
                 launcher.launch(Intent.createChooser(send, title, shareCompletion))
-            } catch (failure: Exception) { model.settingsShares.discard(file); throw failure }
+            }.onFailure { model.settingsShares.discard(file) }.getOrThrow()
         }
     }
 }
@@ -123,43 +126,23 @@ internal fun backupTime(at: Double?, locale: Locale): String? =
  */
 @Composable
 internal fun BackupPage(model: AppModel, nav: SettingsNav, live: SettingsLive, initialSheet: String? = null) {
-    val palette = LocalPalette.current
     val haptics = rememberHaptics()
     val toasts = LocalSettingsToasts.current
-    val reduceMotion = LocalReduceMotion.current
     val locale = Locale.forLanguageTag(model.localeIdentifier)
     var enabled by remember { mutableStateOf(model.server.state.isBackupEnabled == true) }
     val backups = remember { BackupList() }
-    var open by rememberSaveable { mutableStateOf(false) }
     var deleting by remember { mutableStateOf<BackupObjectInfo?>(null) }
     var exporting by rememberSaveable { mutableStateOf(initialSheet == "export") }
     suspend fun list() = backups.load { V0BackupV2ListClient(model.services.client).listBackupObjects().value() }
     LaunchedEffect(Unit) { list() }
     val state = live.backup
     val kind = SettingsRules.backup(enabled, state.lastBackupStatus)
-    val last = backupTime(state.lastBackupAt, locale)
-    val check = remember { Animatable(1f) }
-    var previous by remember { mutableStateOf(kind) }
-    LaunchedEffect(kind) {
-        if (previous == SettingsRules.Backup.running && kind == SettingsRules.Backup.on && !reduceMotion) { check.snapTo(0f); check.animateTo(1f, NoahTokens.Motion.soft()) }
-        previous = kind
-    }
+    val check = rememberBackupCheck(kind)
     val backedUp = tr("Backed up")
     val exported = tr("Exported")
     val share = rememberFileShare(model, tr("Export file"), "application/octet-stream") { toasts.show(exported) }
     SettingsFrame(tr("Backup"), nav.back) {
-        val never = state.lastBackupAt == null
-        when (kind) {
-            SettingsRules.Backup.running -> StatusHeader({ StatusMark(MarkKind.running) }, tr("Backing up…"), tr("Encrypting and uploading"))
-            SettingsRules.Backup.failed -> StatusHeader({ StatusMark(MarkKind.failed) }, tr("Backup failed"),
-                last?.let { tr("Last good backup {date}", it) } ?: tr("Not backed up yet"), failed = true)
-            SettingsRules.Backup.off -> StatusHeader({ StatusMark(MarkKind.idle, SettingsIcons.cloud) },
-                if (never) tr("Not backed up yet") else tr("Automatic backups off"),
-                if (never) tr("Turn it on or back up now") else tr("Last backup {date}", last!!))
-            SettingsRules.Backup.on -> if (never) StatusHeader({ StatusMark(MarkKind.idle, SettingsIcons.cloud) }, tr("Not backed up yet"),
-                if (state.backupPending) tr("Backup pending") else tr("Backs up when your wallet changes"))
-            else StatusHeader({ StatusMark(MarkKind.ok, check = check.value) }, tr("Backed up"), if (state.backupPending) tr("Backup pending") else last)
-        }
+        BackupStatus(kind, state, backupTime(state.lastBackupAt, locale), check.value)
         SettingsGroup(rows = listOf(
             { d -> SettingsRow(if (kind == SettingsRules.Backup.failed) tr("Try again") else tr("Back up now"), SettingsIcons.refresh, bold = true,
                 end = RowEnd.None, enabled = kind != SettingsRules.Backup.running && !model.busy && !model.isWalletSuspended, divider = d,
@@ -177,64 +160,128 @@ internal fun BackupPage(model: AppModel, nav: SettingsNav, live: SettingsLive, i
                         model.server.setBackupEnabled(value); enabled = value; model.services.reconcileBackupTriggers(foreground = true)
                     }
                 }) },
-            { d -> Column {
-                SettingsRow(tr("Backups"), SettingsIcons.doc, value = backups.items?.size?.toString(), end = RowEnd.Expand(open), divider = d || open,
-                    modifier = Modifier.testTag("backup-list")) { open = !open; haptics.selection() }
-                AnimatedVisibility(open, enter = if (reduceMotion) fadeIn(tween(180)) else expandVertically(spring(1f, 157.9137f)) + fadeIn(spring(1f, 157.9137f)),
-                    exit = if (reduceMotion) fadeOut(tween(180)) else shrinkVertically(spring(1f, 157.9137f)) + fadeOut(spring(1f, 157.9137f))) {
-                    Column(Modifier.padding(start = 48.dp)) {
-                        val records = backups.items
-                        when {
-                            backups.failed && records == null -> Text(tr("Couldn't list backups."), Modifier.padding(vertical = 14.dp), style = HomeType.line, color = palette.failure)
-                            records == null -> Text(tr("Loading…"), Modifier.padding(vertical = 14.dp), style = HomeType.line, color = palette.muted)
-                            records.isEmpty() -> Text(tr("No backups found"), Modifier.padding(vertical = 14.dp), style = HomeType.line, color = palette.muted)
-                            else -> records.forEachIndexed { index, backup ->
-                                BackupLine(backupDate(backup.createdAt, locale), "${backup.encryptedSize / 1024} KB", divider = true, enabled = !model.busy) { deleting = backup }
-                            }
-                        }
-                        if (backups.failed && records != null) Text(tr("Couldn't list backups."), Modifier.padding(vertical = 10.dp), style = HomeType.small, color = palette.failure)
-                    }
-                }
-            } },
+            { d -> BackupsRow(model, backups, d) { deleting = it } },
             { d -> SettingsRow(tr("Export file"), SettingsIcons.push, divider = d, enabled = !model.isWalletSuspended,
                 modifier = Modifier.testTag("backup-export")) { exporting = true } },
         ))
-        FinePrint(tr("Encrypted with your recovery phrase before it leaves this phone. To restore, enter your recovery phrase when you set up Noah on a phone."))
+        FinePrint(tr(
+            "Encrypted with your recovery phrase before it leaves this phone. To restore, enter your recovery phrase when you set up Noah on a phone.",
+        ))
     }
-    deleting?.let { backup ->
-        val removed = tr("Backup deleted")
-        SettingsSheet({ if (!model.busy) deleting = null }, tr("Delete this backup?"),
-            tr("{date} · {size}. Your other backups stay.", backupDate(backup.createdAt, locale), "${backup.encryptedSize / 1024} KB")) { close ->
-            SheetActions(tr("Cancel"), tr("Delete"), onCancel = close, danger = true, enabled = !model.busy, loading = model.busy, onConfirm = {
-                model.action("Couldn't delete backup.") {
-                    V0BackupV2DeleteClient(model.services.client).deleteBackupObject(DeleteBackupObjectPayload(backup.backupId)).value()
-                    model.services.backupCoordinator.forgetUploadedBackup(backup.backupId)
-                    haptics.success(); toasts.show(removed); close(); list()
+    deleting?.let { backup -> DeleteBackupSheet(model, backup, { deleting = null }) { list() } }
+    if (exporting) ExportSheet(model, share) { exporting = false }
+}
+
+/** The check draws itself when a running backup finishes. */
+@Composable
+private fun rememberBackupCheck(kind: SettingsRules.Backup): Animatable<Float, AnimationVector1D> {
+    val reduceMotion = LocalReduceMotion.current
+    val check = remember { Animatable(1f) }
+    var previous by remember { mutableStateOf(kind) }
+    LaunchedEffect(kind) {
+        if (previous == SettingsRules.Backup.running && kind == SettingsRules.Backup.on && !reduceMotion) { check.snapTo(0f)
+            check.animateTo(1f, NoahTokens.Motion.soft()) }
+        previous = kind
+    }
+    return check
+}
+
+/** The page's header: backing up, failed, off, waiting for the first backup or backed up. */
+@Composable
+private fun BackupStatus(kind: SettingsRules.Backup, state: PersistedBackupState, last: String?, check: Float) {
+    val never = state.lastBackupAt == null
+    when (kind) {
+        SettingsRules.Backup.running -> StatusHeader(tr("Backing up…"), tr("Encrypting and uploading")) { StatusMark(MarkKind.running) }
+        SettingsRules.Backup.failed -> StatusHeader(tr("Backup failed"),
+            last?.let { tr("Last good backup {date}", it) } ?: tr("Not backed up yet"), failed = true) { StatusMark(MarkKind.failed) }
+        SettingsRules.Backup.off -> StatusHeader(
+            if (never) tr("Not backed up yet") else tr("Automatic backups off"),
+            if (never) tr("Turn it on or back up now") else tr("Last backup {date}", last!!)) { StatusMark(MarkKind.idle, SettingsIcons.cloud) }
+        SettingsRules.Backup.on -> if (never) StatusHeader(tr("Not backed up yet"),
+            if (state.backupPending) tr("Backup pending") else tr("Backs up when your wallet changes")) { StatusMark(MarkKind.idle, SettingsIcons.cloud) }
+        else StatusHeader(tr("Backed up"), if (state.backupPending) tr("Backup pending") else last) { StatusMark(MarkKind.ok, check = check) }
+    }
+}
+
+/** "Backups", expanding to the server's list; [delete] asks about one. */
+@Composable
+private fun BackupsRow(model: AppModel, backups: BackupList, divider: Boolean, delete: (BackupObjectInfo) -> Unit) {
+    val haptics = rememberHaptics()
+    val reduceMotion = LocalReduceMotion.current
+    var open by rememberSaveable { mutableStateOf(false) }
+    Column {
+        SettingsRow(tr("Backups"), SettingsIcons.doc, value = backups.items?.size?.toString(), end = RowEnd.Expand(open), divider = divider || open,
+            modifier = Modifier.testTag("backup-list")) { open = !open; haptics.selection() }
+        AnimatedVisibility(open,
+            enter = if (reduceMotion) fadeIn(tween(180)) else expandVertically(spring(1f, 157.9137f)) + fadeIn(spring(1f, 157.9137f)),
+            exit = if (reduceMotion) fadeOut(tween(180)) else shrinkVertically(spring(1f, 157.9137f)) + fadeOut(spring(1f, 157.9137f))) {
+            BackupRecords(model, backups, delete)
+        }
+    }
+}
+
+@Composable
+private fun BackupRecords(model: AppModel, backups: BackupList, delete: (BackupObjectInfo) -> Unit) {
+    val palette = LocalPalette.current
+    val locale = Locale.forLanguageTag(model.localeIdentifier)
+    Column(Modifier.padding(start = 48.dp)) {
+        val records = backups.items
+        when {
+            backups.failed && records == null -> Text(tr("Couldn't list backups."), Modifier.padding(vertical = 14.dp), style = HomeType.line,
+                color = palette.failure)
+            records == null -> Text(tr("Loading…"), Modifier.padding(vertical = 14.dp), style = HomeType.line, color = palette.muted)
+            records.isEmpty() -> Text(tr("No backups found"), Modifier.padding(vertical = 14.dp), style = HomeType.line, color = palette.muted)
+            else -> records.forEach { backup ->
+                BackupLine(backupDate(backup.createdAt, locale), "${backup.encryptedSize / 1024} KB", divider = true,
+                    enabled = !model.busy) { delete(backup) }
+            }
+        }
+        if (backups.failed && records != null) Text(tr("Couldn't list backups."), Modifier.padding(vertical = 10.dp), style = HomeType.small,
+            color = palette.failure)
+    }
+}
+
+@Composable
+private fun DeleteBackupSheet(model: AppModel, backup: BackupObjectInfo, dismiss: () -> Unit, reload: suspend () -> Unit) {
+    val haptics = rememberHaptics()
+    val toasts = LocalSettingsToasts.current
+    val locale = Locale.forLanguageTag(model.localeIdentifier)
+    val removed = tr("Backup deleted")
+    SettingsSheet({ if (!model.busy) dismiss() }, tr("Delete this backup?"),
+        tr("{date} · {size}. Your other backups stay.", backupDate(backup.createdAt, locale), "${backup.encryptedSize / 1024} KB")) { close ->
+        SheetActions(tr("Cancel"), tr("Delete"), onCancel = close, danger = true, enabled = !model.busy, loading = model.busy, onConfirm = {
+            model.action("Couldn't delete backup.") {
+                V0BackupV2DeleteClient(model.services.client).deleteBackupObject(DeleteBackupObjectPayload(backup.backupId)).value()
+                model.services.backupCoordinator.forgetUploadedBackup(backup.backupId)
+                haptics.success(); toasts.show(removed); close(); reload()
+            }
+        })
+    }
+}
+
+@Composable
+private fun ExportSheet(model: AppModel, share: (suspend () -> SharedFile) -> Unit, dismiss: () -> Unit) {
+    val palette = LocalPalette.current
+    val filename = rememberSaveable { ExportFilename.database() }
+    SettingsSheet(dismiss, tr("Export wallet file"),
+        tr("An encrypted copy of this wallet. Restoring it needs your recovery phrase.")) { close ->
+        Row(Modifier.padding(top = 20.dp).fillMaxWidth().tonal(RoundedCornerShape(20.dp), palette.soft).padding(horizontal = 16.dp, vertical = 14.dp),
+            verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+            Icon(painterResource(SettingsIcons.doc), null, Modifier.size(26.dp), tint = palette.foreground)
+            Column {
+                Text(filename, style = ActivityType.fileName.copy(fontSize = 13.5.sp), color = palette.foreground)
+                Text(tr("Wallet database, encrypted"), style = HomeType.small, color = palette.muted)
+            }
+        }
+        SheetActions(tr("Cancel"), tr("Export"), onCancel = close, enabled = !model.busy && !model.isWalletSuspended, loading = model.busy,
+            confirmTag = "backup-export-confirm", onConfirm = {
+                close()
+                share {
+                    // Only the encrypted archive is retained; the service's staging folder is discarded immediately.
+                    val export = model.services.backupService.exportEncryptedBackup(filename)
+                    SharedFile(export.archive.file) { export.discard() }
                 }
             })
-        }
-    }
-    if (exporting) {
-        val filename = rememberSaveable { ExportFilename.database() }
-        SettingsSheet({ exporting = false }, tr("Export wallet file"), tr("An encrypted copy of this wallet. Restoring it needs your recovery phrase.")) { close ->
-            Row(Modifier.padding(top = 20.dp).fillMaxWidth().tonal(RoundedCornerShape(20.dp), palette.soft).padding(horizontal = 16.dp, vertical = 14.dp),
-                verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                Icon(painterResource(SettingsIcons.doc), null, Modifier.size(26.dp), tint = palette.foreground)
-                Column {
-                    Text(filename, style = ActivityType.fileName.copy(fontSize = 13.5.sp), color = palette.foreground)
-                    Text(tr("Wallet database, encrypted"), style = HomeType.small, color = palette.muted)
-                }
-            }
-            SheetActions(tr("Cancel"), tr("Export"), onCancel = close, enabled = !model.busy && !model.isWalletSuspended, loading = model.busy,
-                confirmTag = "backup-export-confirm", onConfirm = {
-                    close()
-                    share {
-                        // Only the encrypted archive is retained; the service's staging folder is discarded immediately.
-                        val export = model.services.backupService.exportEncryptedBackup(filename)
-                        SharedFile(export.archive.file) { export.discard() }
-                    }
-                })
-        }
     }
 }
 

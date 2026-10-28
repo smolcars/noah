@@ -1,3 +1,5 @@
+@file:Suppress("LongParameterList") // fixture builders: every field is a named, defaulted argument
+
 package com.noahwallet.ui.home
 
 import androidx.compose.foundation.layout.*
@@ -84,12 +86,12 @@ object HomeFixtures {
 
 /**
  * Home as the app hosts it: inside the safe-drawing insets, the monochrome navigation (bar or rail) with
- * Home owning the whole window, and [HomeContent] in the onboarding frame that resolves the pose. [sheets] are
+ * Home owning the whole window, and [HomeContent] in the onboarding frame that resolves the pose. [content] is
  * Home's own sheets, in the same frame.
  */
 @Composable
 fun HomePreviewHost(ui: HomeUi, memory: HomeMemory = remember { HomeMemory() }, toasts: HomeToasts = remember { HomeToasts() },
-    actions: HomeActions = HomeActions(), sheets: @Composable () -> Unit = {}) {
+    actions: HomeActions = HomeActions(), content: @Composable () -> Unit = {}) {
     val chrome = remember { WindowChrome() }
     val insets = WindowInsets.safeDrawing
     CompositionLocalProvider(LocalWindowChrome provides chrome) {
@@ -104,7 +106,7 @@ fun HomePreviewHost(ui: HomeUi, memory: HomeMemory = remember { HomeMemory() }, 
                     Box(Modifier.padding(padding)) {
                         com.noahwallet.ui.onboarding.OnboardingFrame(null, splitAtWindowCentre = true) {
                             HomeContent(ui, actions, memory, toasts, refreshing = false)
-                            sheets()
+                            content()
                         }
                     }
                 }

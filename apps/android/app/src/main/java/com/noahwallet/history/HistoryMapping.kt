@@ -33,11 +33,7 @@ object HistoryMapping {
     }
     fun transaction(m: Movement, now: Date = Date()): HistoryTransaction {
         val subsystem = subsystemID(m); val kind = kinds[subsystem]
-        val outgoing = when (kind) {
-            "offboard", "send-onchain", "exit" -> true
-            "onboard", "arkoor-receive", "lightning-receive" -> false
-            else -> subsystem in listOf("bark.arkoor:send", "bark.lightning_send:send") || m.effectiveBalanceSats < 0
-        }
+        val outgoing = outgoing(m, subsystem, kind)
         val destinations = if (outgoing) m.sentToAddresses else m.receivedOnAddresses
         val routed = sum(destinations)
         val amount = if (kind in listOf("onboard", "offboard")) boardAmount(m) else if (routed > 0) routed else abs(m.effectiveBalanceSats)
@@ -45,27 +41,37 @@ object HistoryMapping {
         val first = destinations.firstOrNull()?.paymentMethod
         val repeat = if (outgoing && m.sentToAddresses.size == 1)
             RepeatPayment.resolve(metadata.repeatPayment, first?.value, first?.methodType, amount) else null
-        val type = when {
-            metadata.repeatPayment != null || first?.methodType == "lightning-address" -> "Lnurl"
-            kind == "lightning-receive" -> "Bolt11"
-            destinations.any { it.paymentMethod.methodType == "bitcoin" } -> "Onchain"
-            kind == "arkoor-receive" || kind == "refresh" || subsystem == "bark.arkoor:send" -> "Arkoor"
-            subsystem == "bark.lightning_send:send" -> "Bolt11"
-            kind in listOf("onboard", "offboard", "send-onchain", "exit") -> "Onchain"
-            outgoing && destinations.isNotEmpty() -> "Arkoor"
-            else -> "Onchain"
-        }
+        val type = type(metadata.repeatPayment != null || first?.methodType == "lightning-address", destinations, subsystem, kind, outgoing)
         val date = HistoryRules.parseDate(m.createdAt) ?: now
         return HistoryTransaction("movement-${m.id}", type, amount, HistoryRules.isoDate(date), if (outgoing) "outgoing" else "incoming",
             sortTimestamp = date.time.toDouble(), source = "ark", txid = transactionID(m, metadata, outgoing),
             destination = repeat?.destination ?: first?.value ?: "", movementId = m.id, movementStatus = m.status, movementKind = kind,
-            subsystemName = subsystem?.let { m.subsystemName.lowercase(Locale.ROOT) }, subsystemKind = subsystem?.let { m.subsystemKind.lowercase(Locale.ROOT) },
+            subsystemName = subsystem?.let { m.subsystemName.lowercase(Locale.ROOT) },
+            subsystemKind = subsystem?.let { m.subsystemKind.lowercase(Locale.ROOT) },
             metadataJson = m.metadataJson, intendedBalanceSat = m.intendedBalanceSats, effectiveBalanceSat = m.effectiveBalanceSats,
             offchainFeeSat = m.offchainFeeSats.toLong(), onchainFeeSat = metadata.onchainFeeSat, chainAnchor = metadata.chainAnchor,
             sentTo = m.sentToAddresses.map(::destination), receivedOn = m.receivedOnAddresses.map(::destination),
             inputVtxos = m.inputVtxoIds, outputVtxos = m.outputVtxoIds, exitedVtxos = m.exitedVtxoIds, repeatPayment = repeat,
             preimage = metadata.paymentPreimage?.takeIf { m.status == "successful" && it.isNotEmpty() })
     }
+    private fun outgoing(m: Movement, subsystem: String?, kind: String?) = when (kind) {
+        "offboard", "send-onchain", "exit" -> true
+        "onboard", "arkoor-receive", "lightning-receive" -> false
+        else -> subsystem in listOf("bark.arkoor:send", "bark.lightning_send:send") || m.effectiveBalanceSats < 0
+    }
+
+    /** The row's payment type, as RN named it; [lightningAddress] when Noah paid a Lightning address. */
+    private fun type(lightningAddress: Boolean, destinations: List<MovementDestination>, subsystem: String?, kind: String?, outgoing: Boolean) = when {
+        lightningAddress -> "Lnurl"
+        kind == "lightning-receive" -> "Bolt11"
+        destinations.any { it.paymentMethod.methodType == "bitcoin" } -> "Onchain"
+        kind == "arkoor-receive" || kind == "refresh" || subsystem == "bark.arkoor:send" -> "Arkoor"
+        subsystem == "bark.lightning_send:send" -> "Bolt11"
+        kind in listOf("onboard", "offboard", "send-onchain", "exit") -> "Onchain"
+        outgoing && destinations.isNotEmpty() -> "Arkoor"
+        else -> "Onchain"
+    }
+
     /** A recurring payment the journal recorded as paid, by the movement or payment hash its receipt names. */
     data class RecurringLink(val recurring: HistoryTransaction.Recurring, val movementId: UInt?, val paymentHash: String?)
 
@@ -73,7 +79,7 @@ object HistoryMapping {
     fun joinRecurring(rows: List<HistoryTransaction>, links: List<RecurringLink>): List<HistoryTransaction> =
         if (links.isEmpty()) rows else rows.map { row ->
             val link = links.firstOrNull { link -> row.direction == "outgoing" &&
-                (link.movementId != null && link.movementId == row.movementId || link.paymentHash != null && link.paymentHash == row.paymentHash) }
+                ((link.movementId != null && link.movementId == row.movementId) || (link.paymentHash != null && link.paymentHash == row.paymentHash)) }
             if (link == null) row else row.copy(recurring = link.recurring)
         }
     /**
@@ -82,7 +88,8 @@ object HistoryMapping {
      */
     fun exitFees(exits: List<ExitTransactionStatus>): Map<String, String> = exits.flatMap { exit ->
         val past = (exit.history.orEmpty() + exit.state).filterIsInstance<ExitState.Processing>().flatMap { it.transactions }.mapNotNull { tx ->
-            when (val status = tx.status) { is ExitTxStatus.AwaitingConfirmation -> status.childTxid; is ExitTxStatus.Confirmed -> status.childTxid; else -> null }
+            when (val status = tx.status) { is ExitTxStatus.AwaitingConfirmation -> status.childTxid; is ExitTxStatus.Confirmed -> status.childTxid
+                else -> null }
         }
         (exit.transactions.mapNotNull { it.childTxid } + past).map { it to exit.vtxoId }
     }.toMap()

@@ -61,7 +61,8 @@ internal object ReceiveArrivals {
     fun onchain(rows: List<HistoryTransaction>, known: Set<String>, address: String?, amount: (String, String) -> Long?): Pair<HistoryTransaction, Long>? {
         val fresh = rows.filter { it.source == "onchain-wallet" && it.direction == "incoming" && (it.balanceChangeSat ?: 0) > 0 && it.txid != null &&
             it.hasConfirmation != true && it.id !in known }
-        val paying = address?.let { target -> fresh.firstNotNullOfOrNull { row -> row.txHex?.let { amount(target, it) }?.takeIf { it > 0 }?.let { row to it } } }
+        val paying = address?.let { target -> fresh.firstNotNullOfOrNull { row -> row.txHex?.let { amount(target,
+            it) }?.takeIf { it > 0 }?.let { row to it } } }
         return paying ?: fresh.firstOrNull()?.let { it to (it.balanceChangeSat ?: it.amount) }
     }
 
@@ -70,12 +71,14 @@ internal object ReceiveArrivals {
      * then a payment to your Lightning address. Replacements of deposits already shown are taken first, as seen
      * with no arrival (null). Null when nothing is waiting.
      */
+    @Suppress("LongParameterList") // a pure rule over the wallet's records, which ReceiveFormatsTest drives argument by argument
     fun next(rows: List<HistoryTransaction>, records: ReceiveRecords, address: String?, ownArk: Set<String>, ownHashes: Set<String>,
         amount: (String, String) -> Long?, spends: (String) -> List<String>?, now: Long): Pair<ReceiveRecords, ReceiveArrival?>? {
         val seen = replaced(rows, records, spends)
         onchain(rows, seen.known, address, amount)?.let { (row, sats) ->
             val inputs = row.txHex?.let(spends).orEmpty()
-            return seen.copy(known = seen.known + row.id, spent = seen.spent + inputs) to ReceiveArrival(ReceiveArrival.Rail.onchain, sats, now, row.txid, inputs)
+            return seen.copy(known = seen.known + row.id, spent = seen.spent + inputs) to ReceiveArrival(ReceiveArrival.Rail.onchain, sats, now, row.txid,
+                inputs)
         }
         viaAddress(rows, seen.settled, ownArk, ownHashes)?.let { row ->
             val rail = if (row.movementKind == "lightning-receive") ReceiveArrival.Rail.lightning else ReceiveArrival.Rail.ark
@@ -105,7 +108,8 @@ internal object ReceiveArrivals {
      * its row comes back too, to be marked seen, since it's the same deposit, not a new arrival. Without that evidence
      * nothing is assumed: the wait just ends, and any new deposit is an arrival of its own.
      */
-    fun followed(tracked: ReceiveArrival, rows: List<HistoryTransaction>, known: Set<String>, spends: (String) -> List<String>?): Pair<ReceiveArrival?, HistoryTransaction?> {
+    fun followed(tracked: ReceiveArrival, rows: List<HistoryTransaction>, known: Set<String>, spends: (String) -> List<String>?): Pair<ReceiveArrival?,
+        HistoryTransaction?> {
         if (rows.any { it.source == "onchain-wallet" && it.txid == tracked.txid }) return tracked to null
         if (tracked.inputs.isEmpty()) return null to null
         val replacement = rows.firstOrNull { row ->
