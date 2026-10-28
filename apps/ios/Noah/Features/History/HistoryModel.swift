@@ -44,6 +44,7 @@ final class HistoryModel {
                     let (data, response) = try await URLSession.shared.data(for: request)
                     guard (response as? HTTPURLResponse)?.statusCode == 200 else { return nil }
                     struct Transaction: Decodable {
+                        // swiftlint:disable:next discouraged_optional_boolean - Esplora's JSON omits it
                         struct Status: Decodable { var confirmed: Bool?; var block_time: Double? }
                         var status: Status?
                     }
@@ -105,8 +106,8 @@ final class HistoryModel {
     /// One read of the chain tip and, when there's a txid, its status (Send's block row data).
     func chainState(txid: String?) async -> (tip: UInt32?, status: ChainTransactionStatus?) {
         let tip = try? await dependencies.chainTip()
-        guard let txid else { return (tip ?? nil, nil) }
-        return (tip ?? nil, (try? await dependencies.chainStatus(txid)) ?? nil)
+        guard let txid else { return (tip, nil) }
+        return (tip, try? await dependencies.chainStatus(txid))
     }
     private let log = AppLog("history")
 
@@ -230,7 +231,7 @@ final class HistoryModel {
             guard !Task.isCancelled, self.generation == generation else { return }
             dirty = true
             // Cached quotes never suspend: bound merge/sort work and let wallet events run.
-            if (index + 1) % 32 == 0 || index == latest.indices.last { await publish() }
+            if (index + 1).isMultiple(of: 32) || index == latest.indices.last { await publish() }
         }
     }
 }

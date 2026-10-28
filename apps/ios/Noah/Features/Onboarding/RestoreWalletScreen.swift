@@ -70,8 +70,8 @@ struct RestoreWalletScreen: View {
                             .secretShield()
                             .disabled(locked)
                             .padding(.top, 14)
-                            .keyframeAnimator(initialValue: CGFloat.zero, trigger: draft.shakes) { content, offset in
-                                content.offset(x: reduceMotion ? 0 : offset)
+                            .keyframeAnimator(initialValue: CGFloat.zero, trigger: draft.shakes) { [still = reduceMotion] content, offset in
+                                content.offset(x: still ? 0 : offset)
                             } keyframes: { _ in
                                 LinearKeyframe(-11, duration: 0.084)
                                 LinearKeyframe(9, duration: 0.084)
@@ -275,7 +275,7 @@ struct RestorePasteControl: UIViewRepresentable {
     func makeCoordinator() -> Target { Target() }
 
     func makeUIView(context: Context) -> UIPasteControl {
-        var configuration = UIPasteControl.Configuration()
+        let configuration = UIPasteControl.Configuration()
         configuration.displayMode = .iconAndLabel
         configuration.cornerStyle = .capsule
         configuration.baseBackgroundColor = UIColor(NoahTokens.Colors.soft)
@@ -524,8 +524,8 @@ final class RecoveryWordTextField: UITextField {
     }
 
     /// ⌘C, ⌘X and any other direct call export nothing.
-    override func copy(_: Any?) {}
-    override func cut(_: Any?) {}
+    override func copy(_: Any?) { /* Blocked: never exports the phrase. */ }
+    override func cut(_: Any?) { /* Blocked: never exports the phrase. */ }
 
     override func validate(_ command: UICommand) {
         super.validate(command)

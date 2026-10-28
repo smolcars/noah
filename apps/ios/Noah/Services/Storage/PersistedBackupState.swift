@@ -23,7 +23,7 @@ struct PersistedBackupState: Codable, Equatable, Sendable {
     var lastBackupId: String?
     var lastUploadedSnapshotSha256: String?
 
-    init() {}
+    init() { /* Every field starts unset. */ }
 
     enum CodingKeys: String, CodingKey {
         case backupPending, lastBackupAt, lastBackupAttemptAt, lastBackupStatus, lastBackupError

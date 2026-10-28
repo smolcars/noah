@@ -64,7 +64,7 @@ struct QRHubView: View {
                     } else {
                         NoahCard {
                             VStack(spacing: 12) {
-                                Image(systemName: "qrcode.viewfinder").font(.largeTitle)
+                                Image(systemName: "qrcode.viewfinder").accessibilityHidden(true).font(.largeTitle)
                                 Text("Scan to pay").font(NoahFont.title)
                                 Text("Scan a Bitcoin, Lightning, or Ark QR code and send from Noah.")
                                     .font(NoahFont.footnote).multilineTextAlignment(.center)

@@ -139,7 +139,7 @@ private struct FeedbackImagePicker: UIViewControllerRepresentable {
         picker.delegate = context.coordinator
         return picker
     }
-    func updateUIViewController(_: UIImagePickerController, context _: Context) {}
+    func updateUIViewController(_: UIImagePickerController, context _: Context) { /* Configured once in make. */ }
 
     final class Coordinator: NSObject, UIImagePickerControllerDelegate, UINavigationControllerDelegate {
         let parent: FeedbackImagePicker

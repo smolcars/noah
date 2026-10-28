@@ -32,7 +32,7 @@ enum FiatCurrency {
         formatter.minimumFractionDigits = decimals(currency)
         formatter.maximumFractionDigits = decimals(currency)
         formatter.roundingMode = .halfUp
-        return formatter.string(from: NSNumber(value: amount)) ?? ""
+        return formatter.string(for: amount) ?? ""
     }
 
     static func display(sats: Int64, btcPrice: Double, currency: String, locale: Locale = .current) -> String {

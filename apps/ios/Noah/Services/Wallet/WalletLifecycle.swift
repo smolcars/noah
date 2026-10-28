@@ -18,6 +18,7 @@ struct WalletLifecycle: Sendable {
             case .backupBusy: "Noah is still finishing a backup. Try again in a moment."
             case .temporaryFiles: "Noah couldn't remove temporary wallet files. Restart Noah and try again."
             case .restorePending: "Restart Noah to settle the pending restore before deleting."
+            // swiftlint:disable:next line_length - one literal: translations.mjs reads copy as a single string
             case .restoreSettingsUnavailable: "Restored wallet settings can't be saved yet. Try Resume again when storage is available. Recurring payments remain stopped."
             }
         }

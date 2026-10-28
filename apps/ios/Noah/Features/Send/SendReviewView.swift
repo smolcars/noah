@@ -19,7 +19,7 @@ struct SendConfirmation: View {
     /// "The invoice sets the amount to ₿X", when you had typed a different amount.
     var invoiceNote: String?
     /// Nil measures its own window (a host without Send around it).
-    var wide: Bool?
+    var wide: Bool? // swiftlint:disable:this discouraged_optional_boolean - nil measures its own window
     var sideInsets: (leading: CGFloat, trailing: CGFloat) = (0, 0)
     var clock: SendMotionClock?
     var gate: SendHoldGate?
@@ -158,8 +158,9 @@ struct SendConfirmation: View {
         case .ark: L10n.text("Instantly", locale: locale)
         case .lightning: L10n.text("In seconds", locale: locale)
         case .onchainWallet: L10n.text("In about 20 minutes", locale: locale)
-        case .onchainSwap: required <= 1 ? L10n.text("After one confirmation", locale: locale)
-            : L10n.text("After {count} confirmations", Int(required), locale: locale)
+        case .onchainSwap:
+            if required <= 1 { L10n.text("After one confirmation", locale: locale) }
+            else { L10n.text("After {count} confirmations", Int(required), locale: locale) }
         }
     }
 }

@@ -495,6 +495,7 @@ struct SendView: View {
             .filter { $0.destination.lowercased() != typed.lowercased() && !suggestions.contains($0.destination) }
         // An invoice already says what it is; its line says what it asks for (prototype `REC.inv`).
         let asks = parsed.destinationType == "lightning" ? parsed.amount.map {
+            // swiftlint:disable:next legacy_objc_type - Decimal converts to an integer only through NSDecimalNumber
             L10n.text("Asks for {amount}", format(NSDecimalNumber(decimal: $0).uint64Value), locale: locale.identifier)
         } : nil
         let primary = parsed.error == nil ? asks ?? typeName(parsed.destinationType, destination: typed) : nil
@@ -656,7 +657,7 @@ struct SendView: View {
             Task { await model.continueStage() }
         } label: {
             HStack(spacing: 14) {
-                Image(systemName: Self.glyph(rail)).font(.system(size: 18, weight: .medium))
+                Image(systemName: Self.glyph(rail)).accessibilityHidden(true).font(.system(size: 18, weight: .medium))
                     .frame(width: 40, height: 40)
                     .background(NoahTokens.Colors.background, in: Circle())
                 VStack(alignment: .leading, spacing: 0) {
@@ -732,7 +733,7 @@ struct SendView: View {
             Task { await model.continueStage() }
         } label: {
             HStack(spacing: 14) {
-                Image(systemName: source == .offchain ? "sailboat" : "link").font(.system(size: 18, weight: .medium))
+                Image(systemName: source == .offchain ? "sailboat" : "link").accessibilityHidden(true).font(.system(size: 18, weight: .medium))
                     .frame(width: 40, height: 40)
                     .background(NoahTokens.Colors.background, in: Circle())
                 VStack(alignment: .leading, spacing: 0) {

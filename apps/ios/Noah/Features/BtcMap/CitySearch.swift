@@ -48,6 +48,7 @@ enum CitySearch {
         }
     }
 
+    // swiftlint:disable:next discouraged_optional_collection - nil: no location to bias by
     static func search(_ cities: [CitySearchEntry], query: String, limit: Int = 3, bias: [Double]? = nil) -> [CitySearchEntry] {
         let query = normalize(query)
         guard query.count >= 2, limit > 0 else { return [] }

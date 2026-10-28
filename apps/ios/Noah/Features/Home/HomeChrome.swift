@@ -62,7 +62,7 @@ struct HomeTopBar: View {
                         if let name, let initial = name.first {
                             Text(verbatim: String(initial).lowercased()).noahText(HomeText.chipInitial)
                         } else {
-                            Image(systemName: "person").font(.system(size: 14, weight: .semibold))
+                            Image(systemName: "person").accessibilityHidden(true).font(.system(size: 14, weight: .semibold))
                         }
                     }
                     .frame(width: 30, height: 30)

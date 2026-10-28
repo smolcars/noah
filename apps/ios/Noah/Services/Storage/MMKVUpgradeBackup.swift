@@ -55,8 +55,8 @@ struct MMKVUpgradeBackup {
     /// Called after local wallet deletion. The native store remains the import marker.
     func deleteSnapshot() throws {
         let fm = FileManager.default
-        for url in [directory, URL(fileURLWithPath: directory.path + ".pending")] {
-            if fm.fileExists(atPath: url.path) { try fm.removeItem(at: url) }
+        for url in [directory, URL(fileURLWithPath: directory.path + ".pending")] where fm.fileExists(atPath: url.path) {
+            try fm.removeItem(at: url)
         }
         try RestoreTransaction.fullSync(directory.deletingLastPathComponent())
     }

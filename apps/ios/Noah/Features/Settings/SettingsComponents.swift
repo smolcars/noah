@@ -117,7 +117,7 @@ struct SettingsWarning: View {
 
     var body: some View {
         HStack(alignment: .top, spacing: 10) {
-            Image(systemName: systemImage).font(.system(size: 17, weight: .medium))
+            Image(systemName: systemImage).accessibilityHidden(true).font(.system(size: 17, weight: .medium))
             Text(verbatim: text).noahText(NoahTokens.Typography.sub).fixedSize(horizontal: false, vertical: true)
         }
         .foregroundStyle(failure ? NoahTokens.Colors.failure : NoahTokens.Colors.muted)
@@ -172,15 +172,15 @@ struct SettingsIcon: View {
 /// A title and its live value ("On", "Not saved", "12"), with a chevron, a switch or an
 /// external-link mark. A small orange dot marks rows that need you; red only for failures.
 struct SettingsRow: View {
-    enum Dot { case none, attention, failure }
-    enum Trailing { case chevron, external, none }
+    enum Dot { case hidden, attention, failure }
+    enum Trailing { case chevron, external, empty }
 
     var icon: String?
     let title: String
     var sub: String?
     var value: String?
     var numeric = false
-    var dot = Dot.none
+    var dot = Dot.hidden
     var failure = false
     var danger = false
     var bold = false
@@ -196,7 +196,7 @@ struct SettingsRow: View {
         Button(action: action) {
             SettingsRowLabel(icon: icon, title: title, sub: sub, danger: danger, bold: bold, hairline: hairline, selected: selected) {
                 HStack(spacing: 7) {
-                    if dot != .none {
+                    if dot != .hidden {
                         Circle().fill(dot == .failure ? NoahTokens.Colors.failure : NoahTokens.Colors.orange).frame(width: 8, height: 8)
                     }
                     if let value {
@@ -207,11 +207,12 @@ struct SettingsRow: View {
                 }
                 switch trailing {
                 case .chevron:
-                    Image(systemName: "chevron.right").font(.system(size: 14, weight: .semibold)).foregroundStyle(NoahTokens.Colors.muted)
+                    Image(systemName: "chevron.right").accessibilityHidden(true).font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(NoahTokens.Colors.muted)
                         .rotationEffect(.degrees(expanded ? 90 : 0))
                 case .external:
-                    Image(systemName: "arrow.up.right.square").font(.system(size: 16)).foregroundStyle(NoahTokens.Colors.muted)
-                case .none:
+                    Image(systemName: "arrow.up.right.square").accessibilityHidden(true).font(.system(size: 16)).foregroundStyle(NoahTokens.Colors.muted)
+                case .empty:
                     EmptyView()
                 }
             }

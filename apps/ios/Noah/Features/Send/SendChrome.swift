@@ -212,7 +212,7 @@ private struct KeypadKey: View {
         } label: {
             Group {
                 if key == "⌫" {
-                    Image(systemName: "delete.left").font(.system(size: 24, weight: .regular))
+                    Image(systemName: "delete.left").accessibilityHidden(true).font(.system(size: 24, weight: .regular))
                 } else {
                     Text(verbatim: key).noahText(SendText.key)
                 }

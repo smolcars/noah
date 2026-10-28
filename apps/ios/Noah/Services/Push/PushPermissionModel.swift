@@ -45,10 +45,11 @@ final class PushPermissionModel {
     @ObservationIgnored private var backgrounds = 0
     private let dependencies: Dependencies
     private var generation = 0
+    @ObservationIgnored private var backgroundObserver: (any NSObjectProtocol)?
 
     init(dependencies: Dependencies = .live, center: NotificationCenter = .default) {
         self.dependencies = dependencies
-        _ = center.addObserver(forName: UIApplication.didEnterBackgroundNotification, object: nil, queue: .main) { [weak self] _ in
+        backgroundObserver = center.addObserver(forName: UIApplication.didEnterBackgroundNotification, object: nil, queue: .main) { [weak self] _ in
             MainActor.assumeIsolated {
                 self?.backgrounds += 1
                 self?.answeredSinceBackground = false

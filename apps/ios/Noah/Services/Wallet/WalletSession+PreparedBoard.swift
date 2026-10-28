@@ -96,9 +96,10 @@ extension WalletSession {
                      claims: @Sendable () async throws -> AutoBoardFunding.Claims = { .init() },
                      funding: AutoBoardFunding.Snapshot? = nil,
                      readFunding: @Sendable () async throws -> AutoBoardFunding.Snapshot? = { nil }) async throws -> String {
-        guard let id = quote.prepared?.id, var held = boardPreparations[id],
+        guard let prepared = quote.prepared, var held = boardPreparations[prepared.id],
               !held.claimed, !held.discardRequested, held.quote == quote, quote.walletID == walletID,
               quote.isCurrent else { throw OnchainFailure.changed }
+        let id = prepared.id
         if quote.automatic {
             do {
                 // Unselected reserve coins are not reserved. Fixed costs require at least the
@@ -110,7 +111,7 @@ extension WalletSession {
                 // Exit claims to this phone stay on-chain (Decision 8): rechecked against the board as signed.
                 let claimed = try await claims()
                 guard balance >= quote.confirmed, quote.isCurrent, !quote.spends(claimed.outpoints),
-                      quote.amount + quote.chainFee! + BoardingRules.reserve + claimed.held <= balance,
+                      let chainFee = quote.chainFee, quote.amount + chainFee + BoardingRules.reserve + claimed.held <= balance,
                       let current = boardPreparations[id], !current.claimed, !current.discardRequested,
                       current.quote == quote else { throw OnchainFailure.changed }
                 held = current
@@ -125,7 +126,7 @@ extension WalletSession {
         do {
             let submit = held.submit
             let message = try await journal.perform(quote) {
-                try await journal.recordTransaction(quote.prepared!.txid, for: quote.id)
+                try await journal.recordTransaction(prepared.txid, for: quote.id)
                 let result: BoardResult
                 // FFI 0.7.0 throws only before Bark records the board (after that it returns an outcome): a
                 // confirmed-only parent reorged out is typed (unavailable inputs), an unreachable chain source isn't.

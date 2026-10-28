@@ -12,6 +12,7 @@ struct PersistedRecoveryPhraseBackup: Codable, Equatable, Sendable {
     static let key = "native-recovery-phrase-backup-v1"
     static let version = 0
 
+    // swiftlint:disable:next discouraged_optional_boolean - RN's persisted JSON omits unset flags
     var isBackedUp: Bool?
 
     var needsBackup: Bool { isBackedUp != true }

@@ -19,6 +19,7 @@ struct BackupSettingsView: View {
     @Environment(\.locale) private var locale
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var state = PersistedBackupState()
+    // swiftlint:disable:next discouraged_optional_collection - nil until the list loads
     @State private var backups: [Components.Schemas.BackupObjectInfo]?
     /// The last list read failed; shown instead of a spinner that never ends.
     @State private var listFailed = false
@@ -42,7 +43,7 @@ struct BackupSettingsView: View {
                 .animation(NoahTokens.Motion.travel(reduceMotion, NoahTokens.Motion.soft), value: status.mark)
             SettingsGroup {
                 SettingsRow(icon: "arrow.clockwise", title: L10n.text(status.mark == .failed ? "Try again" : "Back up now", locale: language),
-                            bold: true, trailing: .none, id: "backup-now", action: backUp)
+                            bold: true, trailing: .empty, id: "backup-now", action: backUp)
                     .disabled(busy || status.mark == .running)
                 SettingsToggleRow(icon: "icloud", title: L10n.text("Automatic backups", locale: language),
                                   isOn: Binding(get: { enabled }, set: setEnabled), id: "backup-automatic")
@@ -181,7 +182,7 @@ struct BackupSettingsView: View {
         SettingsSheetBody(title: L10n.text("Export wallet file", locale: language),
                           line: L10n.text("An encrypted copy of this wallet. Restoring it needs your recovery phrase.", locale: language)) {
             HStack(spacing: 14) {
-                Image(systemName: "doc.text").font(.system(size: 24))
+                Image(systemName: "doc.text").accessibilityHidden(true).font(.system(size: 24))
                 VStack(alignment: .leading, spacing: 2) {
                     Text(verbatim: ExportFilename.database()).font(.system(size: 13.5, weight: .medium, design: .monospaced))
                         .fixedSize(horizontal: false, vertical: true)

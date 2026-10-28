@@ -5,6 +5,7 @@ struct SendDestination: Equatable, Sendable {
     var amount: Decimal?
     var isAmountEditable = true
     var error: SendDestinationError?
+    // swiftlint:disable:next discouraged_optional_collection - nil: not a BIP-321 request
     var bip321: [String: String]?
 
     static func cleaned(_ value: String) -> String {
@@ -134,6 +135,8 @@ struct SendDestination: Equatable, Sendable {
         actual == expected || (type == "ark" && actual == "testnet" && expected != "mainnet")
             || (type == "onchain" && actual == "testnet" && expected == "signet")
     }
+    /// The BIP-321 request key holding each method's destination.
+    static let requestKeys = ["ark": "arkAddress", "lightning": "lightningInvoice", "offer": "offer", "onchain": "onchainAddress"]
     static func parse(_ value: String, network: String = AppVariant.current.rawValue) -> Self {
         if value.lowercased().hasPrefix("bitcoin:") { return uri(value, network: network) }
         let value = cleaned(value)
@@ -160,7 +163,7 @@ struct SendDestination: Equatable, Sendable {
         // Raw LNURL-pay links are supported by the FFI, in addition to RN's LUD-16 input.
         if let decoded = PaymentEncoding.bech32(value), decoded.prefix == "lnurl", !decoded.isM,
            let bytes = PaymentEncoding.bytes(decoded.words),
-           let url = urlText(String(decoding: bytes, as: UTF8.self)).flatMap(URLComponents.init(string:)), allowsLnurl(url) {
+           let url = String(bytes: bytes, encoding: .utf8).flatMap(urlText).flatMap(URLComponents.init(string:)), allowsLnurl(url) {
             // LNURL-auth logs in rather than pays: refuse it here instead of at the fetch. The query is read decoded, as the
             // LNURL client reads it, so encoding or case can't hide `tag=login`.
             let login = url.queryItems?.contains {
@@ -200,7 +203,7 @@ struct SendDestination: Equatable, Sendable {
         func add(_ raw: String, type: String) {
             let parsed = parse(raw, network: network)
             if parsed.destinationType == type {
-                methods[["ark": "arkAddress", "lightning": "lightningInvoice", "offer": "offer", "onchain": "onchainAddress"][type]!] = raw
+                if let key = requestKeys[type] { methods[key] = raw }
             } else if case .networkMismatch(let expected, let actual) = parsed.error {
                 errors.append(.networkMismatch(expected: expected, actual: actual)); invalid = true
             } else if type == "offer" {
@@ -230,7 +233,7 @@ struct SendDestination: Equatable, Sendable {
                 case "lightning": add(decoded, type: "lightning")
                 case "lno": add(decoded, type: "offer")
                 case "bc", "tb", "tbs", "bcrt":
-                    let expected = ["bc": "mainnet", "tb": "testnet", "tbs": "signet", "bcrt": "regtest"][lower]!
+                    let expected = switch lower { case "bc": "mainnet"; case "tb": "testnet"; case "tbs": "signet"; default: "regtest" }
                     if let actual = PaymentEncoding.bitcoinNetwork(decoded), matches(actual, expected, type: "onchain") { add(decoded, type: "onchain") }
                     else { errors.append(.addressNetworkMismatch(lower)); invalid = true }
                 case "label", "message", "pop": break

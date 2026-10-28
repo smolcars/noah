@@ -20,7 +20,7 @@ struct FileShareSheet: UIViewControllerRepresentable {
         }
         return controller
     }
-    func updateUIViewController(_: UIActivityViewController, context _: Context) {}
+    func updateUIViewController(_: UIActivityViewController, context _: Context) { /* Configured once in make. */ }
 }
 
 /// Advanced → Logs: today's redacted log, refreshed by pulling, shared as a file.

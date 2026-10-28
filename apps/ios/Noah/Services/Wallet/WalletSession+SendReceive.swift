@@ -116,8 +116,9 @@ struct ReceiveChainSnapshot: Equatable, Sendable {
     var tip: UInt32
     var incoming: [Transaction]
     /// On the first check, the transactions the wallet knew before syncing.
-    var before: Set<String>?
+    var before: Set<String>? // swiftlint:disable:this discouraged_optional_collection - nil until the first look
 
+    // swiftlint:disable discouraged_optional_collection - nil until the first look
     /// One check of Receive's watch: the new unconfirmed incoming transactions to announce
     /// (those paying the request's address first, then any other), and what's known after.
     /// The first check (`known` nil) knows what the wallet had before its sync, so anything
@@ -128,6 +129,7 @@ struct ReceiveChainSnapshot: Equatable, Sendable {
     /// their replacements) replaces one of them (RBF) and is never a new arrival. The `spent`
     /// returned adds its inputs and the arrivals', so a replacement of a replacement isn't either.
     func look(known: Set<String>?, announced: Set<String>, spent: Set<SendTransaction.Input> = [])
+        // swiftlint:enable discouraged_optional_collection
         -> (arrivals: [Transaction], known: Set<String>, spent: Set<SendTransaction.Input>) {
         let unseenHere = Set(incoming.filter { $0.toAddress > 0 && $0.confirmedHeight == nil }.map(\.txid))
         let first = (before ?? Set(incoming.map(\.txid))).subtracting(unseenHere)

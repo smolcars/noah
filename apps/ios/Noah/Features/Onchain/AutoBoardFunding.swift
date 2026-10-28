@@ -27,7 +27,7 @@ struct AutoBoardFunding {
         var handled: [String: Set<String>] = [:]
         var retryAfter: [String: Double] = [:]
         /// Decision 8: outputs of exit claims to this phone, per wallet. Optional so earlier ledgers stay readable.
-        var claims: [String: Set<String>]?
+        var claims: [String: Set<String>]? // swiftlint:disable:this discouraged_optional_collection - earlier ledgers lack the key
     }
     private func load() throws -> State {
         guard let raw = read() else { return .init() }
@@ -39,7 +39,8 @@ struct AutoBoardFunding {
         return try JSONDecoder().decode(State.self, from: data)
     }
     private func save(_ state: State) throws {
-        try write(String(decoding: JSONEncoder().encode(state), as: UTF8.self))
+        guard let text = try String(bytes: JSONEncoder().encode(state), encoding: .utf8) else { throw OnchainFailure.invalid }
+        try write(text)
     }
     static let retryBackoff: TimeInterval = 30
     /// A deadline beyond one backoff window means the clock moved back since saving; cap it durably once.
@@ -112,7 +113,7 @@ enum BitcoinTransaction {
     static func weight(hex: String) -> UInt64? { parse(hex: hex)?.weight }
 
     static func parse(hex: String) -> (txid: String, weight: UInt64)? {
-        guard hex.count % 2 == 0 else { return nil }
+        guard hex.count.isMultiple(of: 2) else { return nil }
         var bytes: [UInt8] = []
         bytes.reserveCapacity(hex.count / 2)
         var index = hex.startIndex
@@ -170,20 +171,22 @@ enum BitcoinTransaction {
 /// Async reads can outlive the scene; recheck admission before evaluating or claiming their result.
 @MainActor final class AutoBoardReview {
     private let store: AutoBoardFunding
-    private var claimed: (UUID, AutoBoardFunding.Snapshot, AutoBoardFunding.Snapshot)?
+    /// The quote a preparation is for, the deposits it claimed and the funding it was built from.
+    private struct Claim { var quoteID: UUID; var deposits: AutoBoardFunding.Snapshot; var funding: AutoBoardFunding.Snapshot }
+    private var claimed: Claim?
     private let now: () -> Date
     private(set) var retryAfter = Date.distantPast
     init(store: AutoBoardFunding = .init(), now: @escaping () -> Date = Date.init) {
         self.store = store; self.now = now
     }
     func fundingFor(_ quote: OnchainQuote) throws -> AutoBoardFunding.Snapshot {
-        guard let (id, _, funding) = claimed, id == quote.id else { throw OnchainFailure.changed }
-        return funding
+        guard let claimed, claimed.quoteID == quote.id else { throw OnchainFailure.changed }
+        return claimed.funding
     }
     /// Proof also retires the preparation under the session's authority before releasing its deposits.
     func failedConfirm(_ quote: OnchainQuote, changed: Bool,
                        proveUnsubmitted: () async throws -> Bool) async throws {
-        guard let (id, funding, _) = claimed, id == quote.id else { return }
+        guard let funding = claimed?.deposits, claimed?.quoteID == quote.id else { return }
         claimed = nil
         guard try await proveUnsubmitted() else { return }
         retryAfter = changed ? now() : now().addingTimeInterval(AutoBoardFunding.retryBackoff)
@@ -203,7 +206,7 @@ enum BitcoinTransaction {
                     await discard(prepared)
                     return nil
                 }
-                claimed = (prepared.id, newly, current)
+                claimed = Claim(quoteID: prepared.id, deposits: newly, funding: current)
                 present(prepared)
                 return prepared
             } catch { await discard(prepared); throw error }

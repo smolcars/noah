@@ -182,8 +182,8 @@ struct RestoreSettingsRecoveryTests {
             #expect(throws: (any Error).self) {
                 _ = try HeadlessWalletGate.mnemonic(location: location, settings: settings, readSeed: { .found(phrase) })
             }
-            if step != "flags" { #expect(try settings.takeUpgradeNotices() == [SettingsStorage.settingsNotice]) }
-            #expect(try settings.takeUpgradeNotices().isEmpty)
+            if step != "flags" { #expect(settings.takeUpgradeNotices() == [SettingsStorage.settingsNotice]) }
+            #expect(settings.takeUpgradeNotices().isEmpty)
             #expect(chmod(preferences.path, 0o700) == 0); #expect(chmod(file.path, 0o600) == 0)
             let reopened = try SettingsStorage(rootPath: settingsRoot.path)
             tx.completeSettings(reopened)

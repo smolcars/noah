@@ -84,7 +84,7 @@ actor WalletSession {
     /// created or replaced. Only its holder may open the wallet
     /// (`verify`, `createNew`) until `release`.
     struct Reservation: Sendable, Equatable {
-        fileprivate let id: UUID
+        fileprivate let id: UUID // swiftlint:disable:this strict_fileprivate - WalletSession, which encloses it, compares it
     }
 
     /// The one session per app process. bark-bolt-ffi locks the datadir, so a

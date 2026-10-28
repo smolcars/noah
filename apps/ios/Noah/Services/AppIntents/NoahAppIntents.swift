@@ -1,4 +1,4 @@
-import AppIntents
+import AppIntents // swiftlint:disable:this file_name - mirrors client/ios/SharedAppIntents/NoahAppIntents.swift
 import Foundation
 import SwiftUI
 import UIKit
@@ -115,14 +115,14 @@ struct NoahArkAddressSnippetIntent: SnippetIntent {
   @Parameter(title: "Address")
   var address: String
 
-  init() {}
+  init() { /* AppIntent requires an empty init. */ }
 
   init(address: String) {
     self.address = address
   }
 
-  func perform() async throws -> some IntentResult & ShowsSnippetView {
-    return .result(view: NoahArkAddressSnippetView(address: address))
+  func perform() async throws -> some IntentResult & ShowsSnippetView { // swiftlint:disable:this async_without_await unneeded_throws_rethrows - RN copy
+    return .result(view: NoahArkAddressSnippetView(address: address)) // swiftlint:disable:this implicit_return - RN copy
   }
 }
 
@@ -137,14 +137,14 @@ struct CopyNoahArkAddressIntent: AppIntent {
   @Parameter(title: "Address")
   var address: String
 
-  init() {}
+  init() { /* AppIntent requires an empty init. */ }
 
   init(address: String) {
     self.address = address
   }
 
   @MainActor
-  func perform() async throws -> some IntentResult & ProvidesDialog {
+  func perform() async throws -> some IntentResult & ProvidesDialog { // swiftlint:disable:this async_without_await - AppIntent.perform, as in the RN copy
     let pasteboard = UIPasteboard.general
     pasteboard.setItems([
       [UTType.utf8PlainText.identifier: address]
@@ -245,7 +245,7 @@ struct CreateNoahLightningInvoiceIntent: AppIntent {
   }
 }
 
-@available(iOS 26.0, *)
+@available(iOS 26.0, *) // swiftlint:disable:next type_name - the RN copy's persisted intent identifier
 struct CreateNoahLightningInvoiceWithSnippetIntent: AppIntent {
   static let title: LocalizedStringResource = "Create Lightning Invoice"
   static let description = IntentDescription(
@@ -301,15 +301,15 @@ struct NoahLightningInvoiceSnippetIntent: SnippetIntent {
   @Parameter(title: "Amount in Sats")
   var amountSats: Int
 
-  init() {}
+  init() { /* AppIntent requires an empty init. */ }
 
   init(invoice: String, amountSats: Int) {
     self.invoice = invoice
     self.amountSats = amountSats
   }
 
-  func perform() async throws -> some IntentResult & ShowsSnippetView {
-    return .result(
+  func perform() async throws -> some IntentResult & ShowsSnippetView { // swiftlint:disable:this async_without_await unneeded_throws_rethrows - RN copy
+    return .result( // swiftlint:disable:this implicit_return - RN copy
       view: NoahLightningInvoiceSnippetView(
         invoice: invoice,
         amountSats: amountSats
@@ -329,14 +329,14 @@ struct CopyNoahLightningInvoiceIntent: AppIntent {
   @Parameter(title: "Invoice")
   var invoice: String
 
-  init() {}
+  init() { /* AppIntent requires an empty init. */ }
 
   init(invoice: String) {
     self.invoice = invoice
   }
 
   @MainActor
-  func perform() async throws -> some IntentResult & ProvidesDialog {
+  func perform() async throws -> some IntentResult & ProvidesDialog { // swiftlint:disable:this async_without_await - AppIntent.perform, as in the RN copy
     let pasteboard = UIPasteboard.general
     pasteboard.setItems([
       [UTType.utf8PlainText.identifier: invoice]

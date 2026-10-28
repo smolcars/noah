@@ -24,7 +24,7 @@ struct ExitProgress: Equatable, Sendable {
         case waiting, claimable, claiming, claimed, canceled, alreadySpent, swept
     }
 
-    enum Picture: Equatable, Sendable { case lift, path, lock, unlocked, claim, claimed, canceled, none }
+    enum Picture: Equatable, Sendable { case lift, path, lock, unlocked, claim, claimed, canceled, blank }
 
     var phase: Phase
     /// Exit transactions on the path; 0 until bark lists them.
@@ -60,7 +60,7 @@ struct ExitProgress: Equatable, Sendable {
         case .claiming: .claim
         case .claimed: .claimed
         case .canceled: .canceled
-        case .alreadySpent, .swept: .none
+        case .alreadySpent, .swept: .blank
         }
     }
 
@@ -277,7 +277,7 @@ struct ExitWalletStore<Value: Codable & Sendable>: Sendable {
     func save(_ value: Value, walletID: String) throws {
         var all = all()
         all[walletID] = value
-        try write(String(decoding: JSONEncoder().encode(all), as: UTF8.self))
+        try write(String(json: JSONEncoder().encode(all)))
     }
 }
 
@@ -356,11 +356,11 @@ enum ExitClaimSplit {
         let total = amounts.values.reduce(0, +)
         guard total > 0 else { return amounts.mapValues { _ in 0 } }
         var parts = amounts.mapValues { UInt64((UInt128($0) * UInt128(fee)) / UInt128(total)) }
-        let order = amounts.keys.sorted {
-            let a = (UInt128(amounts[$0]!) * UInt128(fee)) % UInt128(total), b = (UInt128(amounts[$1]!) * UInt128(fee)) % UInt128(total)
-            return a == b ? $0 < $1 : a > b
-        }
-        for id in order.prefix(Int(fee - parts.values.reduce(0, +))) { parts[id]! += 1 }
+        let order = amounts.sorted {
+            let a = (UInt128($0.value) * UInt128(fee)) % UInt128(total), b = (UInt128($1.value) * UInt128(fee)) % UInt128(total)
+            return a == b ? $0.key < $1.key : a > b
+        }.map(\.key)
+        for id in order.prefix(Int(fee - parts.values.reduce(0, +))) { parts[id, default: 0] += 1 }
         return parts
     }
 }

@@ -102,7 +102,9 @@ struct RestoreTransaction: Sendable {
     /// `previous/` and `staged/` into its place. If this throws, call `undo`.
     func begin(seed mnemonic: String) throws {
         var salt = Data(count: 32)
-        let status = salt.withUnsafeMutableBytes { SecRandomCopyBytes(kSecRandomDefault, 32, $0.baseAddress!) }
+        let status = salt.withUnsafeMutableBytes { bytes in
+            bytes.baseAddress.map { SecRandomCopyBytes(kSecRandomDefault, 32, $0) } ?? errSecAllocate
+        }
         guard status == errSecSuccess else { throw Failure.randomUnavailable }
         let journal = Journal(
             id: UUID(), phase: .installing, hadPreviousData: exists(datadir),

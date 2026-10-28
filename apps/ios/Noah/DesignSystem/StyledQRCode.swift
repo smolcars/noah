@@ -232,6 +232,7 @@ private struct QRLogoTile: View {
                 .offset(x: tile.minX, y: tile.minY)
             Image("QRLogo")
                 .resizable()
+                .accessibilityHidden(true)
                 .scaledToFill()
                 .frame(width: logo.width, height: logo.height)
                 .clipShape(RoundedRectangle(cornerRadius: logo.width * 0.23, style: .circular))

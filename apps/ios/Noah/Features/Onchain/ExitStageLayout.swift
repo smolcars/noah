@@ -131,8 +131,10 @@ struct ExitStageGeometry: Equatable {
     /// The highest another exit's coin goes: room above for its 6 pt radius and its amount beside it.
     var otherTop: Double { 6 + 6 * scale }
 
+    // swiftlint:disable discouraged_optional_collection - nil: the caption doesn't fit
     /// The caption under the lowest stubs, left of the trunk: its lines, or nil when it doesn't fit.
     func caption(_ words: String, _ ys: [Double], width measure: (String) -> Double) -> [String]? {
+        // swiftlint:enable discouraged_optional_collection
         guard count > 1, let lowest = ys[safe: 1] else { return nil }
         let right = trunk - roundSide / 2 - 9, maxWidth = right - 14, lineHeight = 12.5 * scale
         var lines: [String] = [], current = ""
@@ -225,6 +227,7 @@ struct ExitStageArrangement {
 
     var stubs: [Stub] = []
     var siblings: [Sibling] = []
+    // swiftlint:disable:next discouraged_optional_collection - nil: the caption doesn't fit
     var caption: [String]?
     /// The caption's first line.
     var captionY = 0.0
@@ -289,7 +292,7 @@ enum ExitStageLabels {
     /// height. Confirmed blocks that don't fit fold into one range ("Blocks 921,346–921,349") where it
     /// fits; `fit` wraps that range like the rest.
     static func place(_ items: [ExitStageLabel], lineHeight: Double, scale: Double, bounds: ClosedRange<Double> = -.infinity ... .infinity,
-                      fit: (ExitStageLabel) -> ExitStageLabel = { $0 }, range: (UInt32, UInt32) -> String) -> [ExitStageLabel] {
+                      fit: (ExitStageLabel) -> ExitStageLabel = \.self, range: (UInt32, UInt32) -> String) -> [ExitStageLabel] {
         let order = items.indices.sorted { items[$0].priority != items[$1].priority ? items[$0].priority > items[$1].priority : $0 < $1 }
         var placed: [ExitStageLabel] = [], skipped: [ExitStageLabel] = []
         func clash(_ top: Double, _ bottom: Double, trailing: Bool, margin: Double) -> Bool {
@@ -399,6 +402,7 @@ struct ExitPulse: Equatable, Identifiable {
 enum ExitStageText {
     static func font(_ size: Double, strong: Bool) -> Font { .system(size: size, weight: strong ? .semibold : .medium) }
 
+    // swiftlint:disable legacy_objc_type - NSCache keeps object keys and values
     static func width(_ text: String, size: Double, strong: Bool = false) -> Double {
         let key = "\(strong ? 1 : 0)|\(size)|\(text)" as NSString
         if let known = widths.object(forKey: key) { return known.doubleValue }
@@ -408,8 +412,11 @@ enum ExitStageText {
         return width
     }
 
+    // swiftlint:disable modifier_order - SwiftFormat's modifierOrder puts access control before nonisolated
     /// Measured widths: a moving picture lays its labels out every frame. NSCache is thread-safe.
-    nonisolated(unsafe) private static let widths = NSCache<NSString, NSNumber>()
+    private nonisolated(unsafe) static let widths = NSCache<NSString, NSNumber>()
+    // swiftlint:enable modifier_order
+    // swiftlint:enable legacy_objc_type
 }
 
 extension Double {

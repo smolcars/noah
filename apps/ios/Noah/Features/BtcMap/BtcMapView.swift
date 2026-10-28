@@ -234,10 +234,10 @@ struct BtcMapView: View {
                 .padding(.horizontal, 12).padding(.vertical, 8).glassCompat(in: Capsule())
             }
             HStack(spacing: 6) {
-                Link(#"© OpenStreetMap"#, destination: URL(string: "https://www.openstreetmap.org/copyright")!)
-                Link(#"© OpenMapTiles"#, destination: URL(string: "https://openmaptiles.org")!)
-                Link(#"BTC Map"#, destination: URL(string: "https://btcmap.org")!)
-                Link(#"GeoNames"#, destination: URL(string: "https://www.geonames.org")!)
+                Link(#"© OpenStreetMap"#, destination: URL(literal: "https://www.openstreetmap.org/copyright"))
+                Link(#"© OpenMapTiles"#, destination: URL(literal: "https://openmaptiles.org"))
+                Link(#"BTC Map"#, destination: URL(literal: "https://btcmap.org"))
+                Link(#"GeoNames"#, destination: URL(literal: "https://www.geonames.org"))
             }
             .font(.caption2).foregroundStyle(NoahColor.foreground)
             .padding(8).background(NoahColor.background, in: RoundedRectangle(cornerRadius: 8))

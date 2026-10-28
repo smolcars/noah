@@ -435,8 +435,10 @@ struct ReceiveView: View {
     /// its confirmation, or to the replacement that took its place.
     private func watchChain() async {
         guard let address = chainKey else { return }
-        let read: (String, Bool) async throws -> ReceiveChainSnapshot = fixture?.chain.map { chain in { address, _ in try await chain(address) } }
-            ?? { try await WalletSession.shared.receiveChainSnapshot(address: $0, baseline: $1) }
+        let read: (String, Bool) async throws -> ReceiveChainSnapshot
+        if let chain = fixture?.chain { read = { address, _ in try await chain(address) } }
+        else { read = { try await WalletSession.shared.receiveChainSnapshot(address: $0, baseline: $1) } }
+        // swiftlint:disable:next discouraged_optional_collection - nil until the first chain read
         var known: Set<String>?
         while !Task.isCancelled {
             if let snapshot = try? await read(address, known == nil), !Task.isCancelled {

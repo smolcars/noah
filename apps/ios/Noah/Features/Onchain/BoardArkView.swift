@@ -168,6 +168,7 @@ private struct MoveToArkSheet: View {
                 }
                 .padding(.top, 8)
                 SettingsFine(text: L10n.text(
+                    // swiftlint:disable:next line_length - one literal: translations.mjs reads copy as a single string
                     "Move onchain bitcoin into Ark using this exact signed funding transaction. The boarding amount includes the Ark fee; the onchain fee is paid in addition. Funds become spendable after the board completes. This review expires after two minutes.",
                     locale: language)
                     + (quote.boardAll == true ? " " + L10n.text(

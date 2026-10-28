@@ -81,8 +81,8 @@ struct ExitListView: View {
             Menu {
                 Picker(selection: $filter) {
                     Text(verbatim: L10n.text("All", locale: language)).tag(nil as String?)
-                    ForEach(ExitTimeline.labels.keys.sorted(), id: \.self) {
-                        Text(verbatim: L10n.text(ExitTimeline.labels[$0]!, locale: language)).tag(Optional($0))
+                    ForEach(ExitTimeline.labels.sorted { $0.key < $1.key }, id: \.key) { entry in
+                        Text(verbatim: L10n.text(entry.value, locale: language)).tag(Optional(entry.key))
                     }
                 } label: { Text(verbatim: L10n.text("Status", locale: language)) }
             } label: { ActivityCircleIcon(systemName: filter == nil ? "line.3.horizontal.decrease" : "line.3.horizontal.decrease.circle.fill") }
@@ -160,7 +160,7 @@ struct ExitListRow: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .opacity(progress.live ? 1 : 0.55)
-                Image(systemName: "chevron.right").font(.system(size: 14, weight: .semibold)).foregroundStyle(NoahTokens.Colors.muted)
+                Image(systemName: "chevron.right").accessibilityHidden(true).font(.system(size: 14, weight: .semibold)).foregroundStyle(NoahTokens.Colors.muted)
             }
             .padding(.leading, gutter)
             .padding(.vertical, 9)
@@ -217,7 +217,7 @@ struct ExitGutterCoin: Equatable {
     var canceled = false
     var alarm = false
 
-    init() {}
+    init() { /* All parts start hidden. */ }
 
     init(_ progress: ExitProgress, tip: UInt32, delta: UInt32) {
         let last = progress.total > 0 && progress.step == progress.total
@@ -447,17 +447,19 @@ struct ExitGutterTree: View {
 
     /// The least step between two transactions in a gutter: an 8 pt square beside one with a needs-funds ring
     /// (6 pt radius), and the clearance.
-    static let minimumStep = 12.0
+    nonisolated static let minimumStep = 12.0
 
     /// How many steps a route draws before its coin in a gutter `gutter` wide: each at least `minimumStep` apart, the
     /// last clear of the coin's 14 pt ring.
     nonisolated static func capacity(gutter: Double) -> Int { max(3, Int(((gutter + 14 - 30) - 36) / minimumStep)) }
 
+    // swiftlint:disable discouraged_optional_collection - nil: no plan fits the capacity
     /// One fold for a whole group, by place along the paths, so a place is drawn alike on every row and what rows share
     /// stays drawn once: each row's current transaction gets a place of its own, then the next unsent ones, the latest
     /// blocks and the rest while they fit; runs of places left over become one step each. nil when the rows' current
     /// transactions are too far apart to fit.
     nonisolated static func plan(_ routes: [Route], capacity: Int) -> [ClosedRange<Int>]? {
+        // swiftlint:enable discouraged_optional_collection
         let lengths = routes.map { $0.txids.count - 1 }, places = lengths.max() ?? 0
         guard places > capacity else { return (0..<places).map { $0...$0 } }
         func runs(_ shown: Set<Int>) -> [ClosedRange<Int>] {

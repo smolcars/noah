@@ -194,7 +194,7 @@ struct WalletTabs: View {
         .environment(history)
         .environment(tracker)
         .environment(settingsSummary)
-        .environment(\.scanPayment, scanned)
+        .environment(\.scanPayment, ScanPaymentAction(handle: scanned))
         // Activity's links and a recurring payment notification: Home opens the page with Settings beneath.
         .onChange(of: settingsRoute.page != nil, initial: true) { _, pending in if pending { selection = .home } }
         .task(id: app.summary == nil ? nil : "\(app.preferredCurrency):\(app.walletSessionRevision)") {
@@ -284,12 +284,15 @@ private struct LaunchMessageView: View {
         case .seedWithoutWalletData:
             "Use the recovery phrase stored on this device to restore your backup."
         case .walletDataWithoutSeed:
+            // swiftlint:disable:next line_length - one literal: translations.mjs reads copy as a single string
             "Wallet data exists on this device, but its recovery phrase is missing. Noah won't replace these files. Keep your recovery phrase and contact support for help recovering this wallet."
         case .secureStorageUnavailable:
             "Noah can't read its secure storage yet. Unlock your device to continue."
         case .invalidSeed:
+            // swiftlint:disable:next line_length - one literal: translations.mjs reads copy as a single string
             "Support code: SEED_INVALID. The stored recovery phrase could not be validated. Keep this app installed and contact Noah support at github.com/smolcars/noah. Never send anyone your recovery phrase, private keys, or a wallet database."
         case .seedConflict:
+            // swiftlint:disable:next line_length - one literal: translations.mjs reads copy as a single string
             "Support code: WALLET_CONFLICT. Noah found wallet records that cannot be safely matched. Keep this app installed and contact Noah support at github.com/smolcars/noah. Never send anyone your recovery phrase, private keys, or a wallet database."
         case .existingWallet, .onboarding:
             ""
@@ -331,7 +334,7 @@ private struct WideTabBar: View {
                         withAnimation(NoahTokens.Motion.travel(reduceMotion)) { selection = tab }
                     } label: {
                         VStack(spacing: 2) {
-                            Image(systemName: tab.symbol).font(.system(size: 19, weight: .medium)).frame(height: 24)
+                            Image(systemName: tab.symbol).accessibilityHidden(true).font(.system(size: 19, weight: .medium)).frame(height: 24)
                             Text(tab.title).noahText(HomeText.tab).lineLimit(1)
                         }
                         .foregroundStyle(NoahTokens.Colors.foreground)

@@ -247,7 +247,7 @@ struct ExitPathRail: View {
         canvas.stroke(canvas.circle(cx, y, 13), colors.hairline, 2)
         let ticks = ExitStagePainter.ticks(delta)
         for tick in 0..<ticks.count {
-            let angle = -Double.pi / 2 + Double(tick) * 2 * .pi / Double(ticks.count), r1 = ticks.hours && tick % 6 == 0 ? 19.5 : 17.5
+            let angle = -Double.pi / 2 + Double(tick) * 2 * .pi / Double(ticks.count), r1 = ticks.hours && tick.isMultiple(of: 6) ? 19.5 : 17.5
             canvas.stroke(canvas.line(CGPoint(x: cx + cos(angle) * 16, y: y + sin(angle) * 16), CGPoint(x: cx + cos(angle) * r1, y: y + sin(angle) * r1)),
                           colors.muted.opacity(0.5), 1)
         }
@@ -313,8 +313,8 @@ struct ExitWarning: View {
 /// Your VTXO: a coin with the orange ring. Live exits turn a dashed ring around it; a red "!"
 /// needs you, a check is done.
 struct ExitCoin: View {
-    enum Mark { case none, live, failure, done }
-    var mark = Mark.none
+    enum Mark { case plain, live, failure, done }
+    var mark = Mark.plain
     var size: CGFloat = 40
     @State private var turning = false
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -342,7 +342,7 @@ struct ExitCoin: View {
                         .overlay { Circle().stroke(NoahTokens.Colors.background, lineWidth: 2) }
                         .offset(x: 3, y: 3)
                 case .done:
-                    Image(systemName: "checkmark").font(.system(size: 9, weight: .bold)).foregroundStyle(NoahTokens.Colors.background)
+                    Image(systemName: "checkmark").accessibilityHidden(true).font(.system(size: 9, weight: .bold)).foregroundStyle(NoahTokens.Colors.background)
                         .frame(width: 17, height: 17).background(NoahTokens.Colors.foreground, in: Circle())
                         .overlay { Circle().stroke(NoahTokens.Colors.background, lineWidth: 2) }
                         .offset(x: 3, y: 3)
@@ -360,7 +360,7 @@ struct ExitVtxoRow: View {
     /// bark won't exit it: shown like one that can't exit, with bark's reason.
     var refusal: ExitRefusal?
     /// nil: the All list, no checkbox.
-    let selected: Bool?
+    let selected: Bool? // swiftlint:disable:this discouraged_optional_boolean - nil: the row isn't in a selection
     var hairline = true
     let toggle: () -> Void
     @Environment(AppModel.self) private var app
@@ -375,12 +375,13 @@ struct ExitVtxoRow: View {
             HStack(spacing: 14) {
                 if let selected {
                     if selectable {
-                        Image(systemName: selected ? "checkmark.circle.fill" : "circle")
+                        Image(systemName: selected ? "checkmark.circle.fill" : "circle").accessibilityHidden(true)
                             .font(.system(size: 24))
                             .foregroundStyle(selected ? NoahTokens.Colors.foreground : NoahTokens.Colors.hairline)
                             .frame(width: 34)
                     } else {
-                        Image(systemName: "minus.circle").font(.system(size: 24)).foregroundStyle(NoahTokens.Colors.hairline).frame(width: 34)
+                        Image(systemName: "minus.circle").accessibilityHidden(true).font(.system(size: 24)).foregroundStyle(NoahTokens.Colors.hairline)
+                            .frame(width: 34)
                     }
                 } else {
                     ExitCoin(size: 32).frame(width: 34)

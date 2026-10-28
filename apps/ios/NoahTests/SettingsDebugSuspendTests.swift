@@ -45,8 +45,8 @@ import Testing
     @Test func suspendingAsksFirstAndResumingDoesNot() {
         #expect(SuspendSwitch.action(suspended: false, requested: true) == .confirm)
         #expect(SuspendSwitch.action(suspended: true, requested: false) == .resume)
-        #expect(SuspendSwitch.action(suspended: true, requested: true) == .none)
-        #expect(SuspendSwitch.action(suspended: false, requested: false) == .none)
+        #expect(SuspendSwitch.action(suspended: true, requested: true) == .unchanged)
+        #expect(SuspendSwitch.action(suspended: false, requested: false) == .unchanged)
     }
 
     @Test func hideAmountsIsHomesPersistedFlag() throws {

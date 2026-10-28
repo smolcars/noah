@@ -228,6 +228,7 @@ import Observation
             }
         }
         if let fixed = parsed.amount {
+            // swiftlint:disable:next legacy_objc_type - Decimal converts to an integer only through NSDecimalNumber
             let number = NSDecimalNumber(decimal: fixed)
             guard fixed <= 2_100_000_000_000_000, fixed == Decimal(number.uint64Value) else {
                 error = "The invoice must request whole satoshis."
@@ -314,12 +315,8 @@ import Observation
             if let request = parsed.bip321 {
                 guard let selected = SendFlow.method(rail: rail, request: request) else { throw SendFailure.invalid }
                 method = selected
-                target = request[
-                    [
-                        "ark": "arkAddress", "lightning": "lightningInvoice", "offer": "offer",
-                        "onchain": "onchainAddress",
-                    ][selected]!
-                ]!
+                guard let key = SendDestination.requestKeys[selected], let value = request[key] else { throw SendFailure.invalid }
+                target = value
             }
             if method == "lnurl" {
                 guard let route = matchingRoute else { throw SendFailure.invalid }

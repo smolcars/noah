@@ -3,13 +3,16 @@ import Foundation
 /// Register before entering Rust: endpoint paths can be opaque credentials.
 enum EndpointLogPrivacy {
     private static let lock = NSLock()
+    // swiftlint:disable:next modifier_order - SwiftFormat's modifierOrder puts access control before nonisolated
     private nonisolated(unsafe) static var unavailable = false
     static func failClosed() { lock.withLock { unavailable = true } }
     static var requiresSerializedGuard: Bool { lock.withLock { unavailable || !origins.isEmpty } }
+    // swiftlint:disable modifier_order - SwiftFormat's modifierOrder puts access control before nonisolated
     private nonisolated(unsafe) static var origins = Set<String>()
     private nonisolated(unsafe) static var tokens = Set<String>()
     private nonisolated(unsafe) static var matcher: SecretMatcher?
     private nonisolated(unsafe) static var hosts = Set<String>()
+    // swiftlint:enable modifier_order
     // swiftlint:disable:next force_try - NSRegularExpression from a constant pattern
     private static let urls = try! NSRegularExpression(pattern: #"(?i)(?<![a-z0-9+.-])[0-9+.-]*+[a-z][a-z0-9+.-]*+://[^\s<>"']*"#)
     // Admit only the SDK error type/status, never provider-controlled response text.

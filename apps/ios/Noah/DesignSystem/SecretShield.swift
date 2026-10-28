@@ -124,7 +124,7 @@ struct CaptureStateReader: UIViewRepresentable {
         return view
     }
 
-    func updateUIView(_: CaptureView, context _: Context) {}
+    func updateUIView(_: CaptureView, context _: Context) { /* The view only reports its scene. */ }
 
     final class CaptureView: UIView {
         var onScene: ((SceneCapture) -> Void)?

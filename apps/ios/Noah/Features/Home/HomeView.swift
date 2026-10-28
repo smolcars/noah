@@ -710,7 +710,7 @@ struct HomeView: View {
             suspended: model.isWalletSuspended, emailVerified: model.server.state.isEmailVerified,
             takeNotices: {
                 guard scenePhase == .active, isActive, upgradeNotices.isEmpty else { return }
-                upgradeNotices = (try? SettingsStorage.shared.takeUpgradeNotices()) ?? []
+                upgradeNotices = SettingsStorage.shared.takeUpgradeNotices()
             },
             update: { input in
                 withAnimation(NoahTokens.Motion.travel(reduceMotion)) {
@@ -813,6 +813,7 @@ private struct HomeMoments: ViewModifier {
     let toastID: UUID?
     let wallet: String?
     let suspended: Bool
+    // swiftlint:disable:next discouraged_optional_boolean - tri-state: unknown, no, yes / nil tracks rows by offset
     let emailVerified: Bool?
     let takeNotices: () -> Void
     let update: (HomeView.TrackerInput) -> Void
@@ -822,6 +823,7 @@ private struct HomeMoments: ViewModifier {
     let invalidateReview: () -> Void
     let suspendedChanged: (Bool) -> Void
     let recordsArrived: () -> Void
+    // swiftlint:disable:next discouraged_optional_boolean - tri-state: unknown, no, yes / nil tracks rows by offset
     let emailVerifiedChanged: (Bool?) -> Void
     @Environment(\.scenePhase) private var scenePhase
 
@@ -891,7 +893,7 @@ private struct HomeScrollKeeper: ViewModifier {
     let memory: HomeScrollMemory
     /// Track rows by their String IDs (transaction IDs), in this display order, instead of
     /// the offset; the content needs `scrollTargetLayout()`.
-    var rows: [String]?
+    var rows: [String]? // swiftlint:disable:this discouraged_optional_collection - tri-state: unknown, no, yes / nil tracks rows by offset
     var onOffset: (CGFloat) -> Void = { _ in }
     @State private var position = ScrollPosition(edge: .top)
     @State private var offset: CGFloat = 0

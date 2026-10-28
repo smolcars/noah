@@ -19,7 +19,8 @@ final class NameAvailability {
 
     nonisolated static let maxLength = 24
     nonisolated static let minLength = 3
-    nonisolated private static let allowed = Set("abcdefghijklmnopqrstuvwxyz0123456789_.-")
+    // swiftlint:disable:next modifier_order - SwiftFormat's modifierOrder puts access control before nonisolated
+    private nonisolated static let allowed = Set("abcdefghijklmnopqrstuvwxyz0123456789_.-")
 
     /// How typed names are cleaned up and how short they may be.
     struct Rules: Sendable {
@@ -112,8 +113,10 @@ final class NameAvailability {
 }
 
 extension NameAvailability {
+    // swiftlint:disable modifier_order - SwiftFormat's modifierOrder puts access control before nonisolated
     /// GET `<server>/.well-known/lnurlp/<name>`: 200 means someone has it.
-    nonisolated private static let session = URLSession(configuration: .ephemeral)
+    private nonisolated static let session = URLSession(configuration: .ephemeral)
+    // swiftlint:enable modifier_order
 
     static func liveLookup(variant: AppVariant) -> @Sendable (String) async throws -> Bool {
         let base = ServerEndpoint.baseURL(for: variant)

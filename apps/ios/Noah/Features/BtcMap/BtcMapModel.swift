@@ -17,6 +17,7 @@ final class BtcMapModel {
     private(set) var revision = 0
     private(set) var cameraRevision = 0
     private(set) var viewport: BtcMapViewport
+    // swiftlint:disable:next discouraged_optional_collection - nil until a location fix
     private(set) var userLocation: [Double]?
     private(set) var isLoading = true
     private(set) var isSyncing = false
@@ -147,8 +148,8 @@ final class BtcMapModel {
         guard canPersist || userInteraction, viewport.isValid else { return }
         canPersist = true
         self.viewport = viewport
-        if let data = try? JSONEncoder().encode(viewport) {
-            settings.set(String(decoding: data, as: UTF8.self), forKey: BtcMapViewport.storageKey)
+        if let data = try? JSONEncoder().encode(viewport), let text = try? String(json: data) {
+            settings.set(text, forKey: BtcMapViewport.storageKey)
         }
     }
 

@@ -57,7 +57,7 @@ struct BackupArchiveTests {
 
         let opened = try BackupArchive.open(encrypted: encrypted, mnemonic: mnemonic, into: root.appending(path: "restore"))
         #expect(opened.manifest == manifest)
-        #expect(String(decoding: try BackupArchive.encode(manifest), as: UTF8.self) == rnManifest)
+        #expect(String(decoding: BackupArchive.encode(manifest), as: UTF8.self) == rnManifest)
     }
 
     @Test func manifestParsingIsAsStrictAsReactNative() throws {
@@ -171,7 +171,7 @@ struct BackupArchiveTests {
 
     @Test(.fastBackupKeys) func openRejectsACorruptedSnapshot() throws {
         defer { try? FileManager.default.removeItem(at: root) }
-        let manifestJSON = try BackupArchive.encode(manifest)
+        let manifestJSON = BackupArchive.encode(manifest)
         let corrupted = patch(try zip([("manifest.json", manifestJSON), ("db.sqlite", Data("wallet".utf8))]), crc: 0x0BAD_F00D)
         let encrypted = root.appending(path: "corrupt.noahbackup")
         try BackupCrypto.encrypt(corrupted, mnemonic: mnemonic, version: .snapshot).write(to: encrypted)

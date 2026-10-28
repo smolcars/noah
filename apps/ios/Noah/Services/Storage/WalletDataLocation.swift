@@ -35,7 +35,9 @@ struct WalletDataLocation: Sendable {
         if case .unavailable(let status) = seed { throw KeychainPassword.WriteError(status: status) }
         if !FileManager.default.fileExists(atPath: deletionMarker.path) { try removeDiscardedDeletionData() }
         var salt = Data(count: 32)
-        let status = salt.withUnsafeMutableBytes { SecRandomCopyBytes(kSecRandomDefault, 32, $0.baseAddress!) }
+        let status = salt.withUnsafeMutableBytes { bytes in
+            bytes.baseAddress.map { SecRandomCopyBytes(kSecRandomDefault, 32, $0) } ?? errSecAllocate
+        }
         guard status == errSecSuccess else { throw RestoreTransaction.Failure.randomUnavailable }
         let tag: Data?
         if case .found(let mnemonic) = seed { tag = RestoreTransaction.tag(mnemonic, salt: salt) }

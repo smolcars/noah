@@ -20,6 +20,7 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
 
     func application(
         _: UIApplication,
+        // swiftlint:disable:next discouraged_optional_collection - UIApplicationDelegate's signature
         didFinishLaunchingWithOptions _: [UIApplication.LaunchOptionsKey: Any]? = nil) -> Bool {
         do { try EsploraSettings().restoreLogPrivacy() }
         catch { EndpointLogPrivacy.failClosed() }
@@ -84,6 +85,7 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         await MainActor.run { SettingsRoute.shared.page = .recurring }
     }
 
+    // swiftlint:disable:next async_without_await - UNUserNotificationCenterDelegate's async requirement; a sync one is never called
     nonisolated func userNotificationCenter(_: UNUserNotificationCenter, willPresent _: UNNotification) async -> UNNotificationPresentationOptions {
         [.banner, .list, .sound, .badge]
     }

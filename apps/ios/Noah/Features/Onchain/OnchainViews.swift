@@ -23,56 +23,8 @@ struct OnchainStatusSection: View {
             Section(
                 attempt.overrideAudit != nil ? "Overridden attempt"
                     : attempt.receipt == nil ? "Check operation status" : "Submitted") {
-                Text(LocalizedStringKey(attempt.quote.action.title)).font(NoahFont.headline)
-                OnchainAmountRow(title: "Reviewed amount", sats: attempt.quote.amount)
-                Text(attempt.quote.createdAt, style: .date).font(NoahFont.footnote)
-                Text(LocalizedStringKey(attempt.receipt?.message ?? OnchainFailure.uncertain.errorDescription!)).textSelection(.enabled)
-                if attempt.receipt?.broadcastRetryPending == true {
-                    Text("Boarding submitted, but delivery is unconfirmed. Noah will keep retrying the broadcast. Do not board again.")
-                }
-                if let audit = attempt.overrideAudit {
-                    LabeledContent("Repeat protection overridden") {
-                        Text(audit.overriddenAt, format: .dateTime)
-                    }
-                    DisclosureGroup("Override confirmation") {
-                        Text(LocalizedStringKey(audit.statusMessage))
-                        Text(LocalizedStringKey(audit.title))
-                        Text(LocalizedStringKey(audit.warning))
-                        Text(LocalizedStringKey(audit.confirmation))
-                    }
-                }
-                if let fee = attempt.receipt?.arkFee { OnchainAmountRow(title: "Ark fee", sats: fee) }
-                if let fee = attempt.receipt?.onchainFee {
-                    OnchainAmountRow(title: "Actual onchain fee", sats: fee)
-                }
-                if attempt.quote.action == .board, let receipt = attempt.receipt {
-                    let amounts = receipt.boardAmounts(quote: attempt.quote)
-                    OnchainAmountRow(title: "Ark receives", sats: amounts.arkReceives)
-                    OnchainAmountRow(title: "Total leaving onchain wallet", sats: amounts.totalLeaving)
-                }
-                if let status = attempt.receipt?.chainStatus { Text(LocalizedStringKey(status.message)) }
-                if let error = attempt.chainStatusError { Text(LocalizedStringKey(error)).foregroundStyle(NoahColor.destructive) }
-                // An uncertain board still has its exact journaled funding txid (Android parity).
-                if let txid = attempt.receipt?.txid ?? attempt.txid {
-                    ExitTransactionRow(title: "Transaction ID", txid: txid)
-                    Button("Copy transaction ID") { UIPasteboard.general.string = txid }
-                    if attempt.receipt != nil {
-                        Button("Refresh network status") { Task { await model.checkStatus(attempt.id) } }.disabled(model.busy)
-                    }
-                }
-                if attempt.receipt?.broadcastRetryPending == true {
-                    Button("Check status") { Task { await model.checkStatus(attempt.id) } }.disabled(model.busy)
-                } else if attempt.receipt != nil {
-                    Button("Done") { Task { await model.acknowledge(attempt.id) } }.disabled(model.busy)
-                } else {
-                    Text("Noah checks again automatically as your wallet syncs.")
-                    Button("Check status") { Task { await model.checkStatus(attempt.id) } }.disabled(model.busy)
-                    // An uncertain board may be partly recorded: only Check status can release it.
-                    if attempt.overrideAudit == nil, attempt.uncertainBoard != true {
-                        Button("Override repeat protection…", role: .destructive) { discardID = attempt.id }
-                            .disabled(model.busy)
-                    }
-                }
+                details(attempt)
+                actions(attempt)
             }
             .alert(OnchainOperationJournal.OverrideAudit.titleText, isPresented: Binding(
                 get: { discardID == attempt.id }, set: { if !$0 { discardID = nil } })) {
@@ -95,6 +47,62 @@ struct OnchainStatusSection: View {
         if let error = model.error { Section { Text(LocalizedStringKey(error)).foregroundStyle(NoahColor.destructive) } }
         if let message = model.message { Section { Text(LocalizedStringKey(message)) } }
     }
+
+    @ViewBuilder private func details(_ attempt: OnchainOperationJournal.Attempt) -> some View {
+        Text(LocalizedStringKey(attempt.quote.action.title)).font(NoahFont.headline)
+        OnchainAmountRow(title: "Reviewed amount", sats: attempt.quote.amount)
+        Text(attempt.quote.createdAt, style: .date).font(NoahFont.footnote)
+        Text(LocalizedStringKey(attempt.receipt?.message ?? OnchainFailure.uncertain.message)).textSelection(.enabled)
+        if attempt.receipt?.broadcastRetryPending == true {
+            Text("Boarding submitted, but delivery is unconfirmed. Noah will keep retrying the broadcast. Do not board again.")
+        }
+        if let audit = attempt.overrideAudit {
+            LabeledContent("Repeat protection overridden") {
+                Text(audit.overriddenAt, format: .dateTime)
+            }
+            DisclosureGroup("Override confirmation") {
+                Text(LocalizedStringKey(audit.statusMessage))
+                Text(LocalizedStringKey(audit.title))
+                Text(LocalizedStringKey(audit.warning))
+                Text(LocalizedStringKey(audit.confirmation))
+            }
+        }
+        if let fee = attempt.receipt?.arkFee { OnchainAmountRow(title: "Ark fee", sats: fee) }
+        if let fee = attempt.receipt?.onchainFee {
+            OnchainAmountRow(title: "Actual onchain fee", sats: fee)
+        }
+        if attempt.quote.action == .board, let receipt = attempt.receipt {
+            let amounts = receipt.boardAmounts(quote: attempt.quote)
+            OnchainAmountRow(title: "Ark receives", sats: amounts.arkReceives)
+            OnchainAmountRow(title: "Total leaving onchain wallet", sats: amounts.totalLeaving)
+        }
+        if let status = attempt.receipt?.chainStatus { Text(LocalizedStringKey(status.message)) }
+        if let error = attempt.chainStatusError { Text(LocalizedStringKey(error)).foregroundStyle(NoahColor.destructive) }
+    }
+
+    @ViewBuilder private func actions(_ attempt: OnchainOperationJournal.Attempt) -> some View {
+        // An uncertain board still has its exact journaled funding txid (Android parity).
+        if let txid = attempt.receipt?.txid ?? attempt.txid {
+            ExitTransactionRow(title: "Transaction ID", txid: txid)
+            Button("Copy transaction ID") { UIPasteboard.general.string = txid }
+            if attempt.receipt != nil {
+                Button("Refresh network status") { Task { await model.checkStatus(attempt.id) } }.disabled(model.busy)
+            }
+        }
+        if attempt.receipt?.broadcastRetryPending == true {
+            Button("Check status") { Task { await model.checkStatus(attempt.id) } }.disabled(model.busy)
+        } else if attempt.receipt != nil {
+            Button("Done") { Task { await model.acknowledge(attempt.id) } }.disabled(model.busy)
+        } else {
+            Text("Noah checks again automatically as your wallet syncs.")
+            Button("Check status") { Task { await model.checkStatus(attempt.id) } }.disabled(model.busy)
+            // An uncertain board may be partly recorded: only Check status can release it.
+            if attempt.overrideAudit == nil, attempt.uncertainBoard != true {
+                Button("Override repeat protection…", role: .destructive) { discardID = attempt.id }
+                    .disabled(model.busy)
+            }
+        }
+    }
 }
 
 struct OnchainReviewSheet: View {
@@ -106,73 +114,8 @@ struct OnchainReviewSheet: View {
     var body: some View {
         NavigationStack {
             List {
-                Section {
-                    OnchainAmountRow(
-                        title: quote.action == .board ? "Amount boarded" : "Amount selected",
-                        sats: quote.amount)
-                    if !quote.ids.isEmpty { LabeledContent("VTXOs selected", value: "\(quote.ids.count)") }
-                    if quote.action != .cancel, let fee = quote.fee, let chainFee = quote.chainFee {
-                        OnchainAmountRow(
-                            title: quote.action == .board
-                                ? "Ark fee"
-                                : quote.action == .refresh ? "Refresh fee" : "Estimated claim fee", sats: fee)
-                        if quote.action == .board || quote.action == .startExit || quote.action == .progress {
-                            OnchainAmountRow(
-                                title: quote.action == .board
-                                    ? "Onchain fee" : "Estimated broadcast fees", sats: chainFee)
-                        }
-                        OnchainAmountRow(
-                            title: quote.action == .board ? "Ark receives" : "Amount after fee",
-                            sats: quote.net)
-                    }
-                    if let prepared = quote.prepared {
-                        OnchainAmountRow(title: "Total leaving onchain wallet", sats: quote.amount + quote.chainFee!)
-                        LabeledContent("Signed transaction size", value: "\(prepared.vsize) vB")
-                        LabeledContent("Funding inputs", value: "\(prepared.inputCount)")
-                    }
-                    if let destination = quote.destination {
-                        LabeledContent("Destination") { Text(destination).textSelection(.enabled) }
-                    }
-                    if let warning = quote.externalDestinationWarning {
-                        Text(LocalizedStringKey(warning)).foregroundStyle(NoahColor.destructive)
-                    }
-                    if quote.automatic {
-                        OnchainAmountRow(
-                            title: "Onchain reserve left",
-                            sats: quote.confirmed - quote.amount - quote.chainFee!)
-                    }
-                }
-                Section {
-                    if quote.feesUnknown {
-                        Text(
-                            "Fee estimate unavailable. Fees and amount to receive are unknown. Continue without an estimate only if you accept this uncertainty.")
-                            .foregroundStyle(NoahColor.destructive)
-                        if quote.action == .startExit {
-                            Text("Broadcast funding status is unknown; confirmed onchain funds are required.")
-                        }
-                    }
-                    Text(LocalizedStringKey(explanation))
-                    if quote.action == .startExit || quote.action == .progress || quote.action == .claim {
-                        if let fee = quote.fee, quote.chainFee != nil, let warning = ExitRules.warning(
-                            amount: quote.amount, claimFee: fee, totalFee: quote.totalFee,
-                            claimOnly: quote.action == .claim) {
-                            Text(LocalizedStringKey(warning)).foregroundStyle(NoahColor.destructive)
-                        }
-                        if !quote.feesUnknown && !quote.fundable {
-                            Text(
-                                "Additional confirmed onchain funds required. You are starting tracking anyway; fund the wallet before progressing.")
-                        }
-                    }
-                    Button(
-                        role: quote.action == .startExit || quote.action == .progress || quote.action == .claim
-                            ? .destructive : nil) {
-                        confirm()
-                    } label: {
-                        Text(LocalizedStringKey(quote.feesUnknown ? (quote.action == .claim ? "Broadcast without estimate" : "Start Selected Exit") : quote
-                                .action.title))
-                    }
-                    .accessibilityIdentifier("onchain-confirm")
-                }
+                summary
+                confirmation
             }
             .settingsStyle(LocalizedStringKey(quote.feesUnknown ? "Continue without estimate?" : quote.action.title))
             .toolbar {
@@ -186,6 +129,82 @@ struct OnchainReviewSheet: View {
         }
         .presentationDetents([.large])
     }
+    private var summary: some View {
+        Section {
+            OnchainAmountRow(
+                title: quote.action == .board ? "Amount boarded" : "Amount selected",
+                sats: quote.amount)
+            if !quote.ids.isEmpty { LabeledContent("VTXOs selected", value: "\(quote.ids.count)") }
+            if quote.action != .cancel, let fee = quote.fee, let chainFee = quote.chainFee { feeRows(fee: fee, chainFee: chainFee) }
+            if let prepared = quote.prepared, let chainFee = quote.chainFee {
+                OnchainAmountRow(title: "Total leaving onchain wallet", sats: quote.amount + chainFee)
+                LabeledContent("Signed transaction size", value: "\(prepared.vsize) vB")
+                LabeledContent("Funding inputs", value: "\(prepared.inputCount)")
+            }
+            if let destination = quote.destination {
+                LabeledContent("Destination") { Text(destination).textSelection(.enabled) }
+            }
+            if let warning = quote.externalDestinationWarning {
+                Text(LocalizedStringKey(warning)).foregroundStyle(NoahColor.destructive)
+            }
+            if quote.automatic, let chainFee = quote.chainFee {
+                OnchainAmountRow(
+                    title: "Onchain reserve left",
+                    sats: quote.confirmed - quote.amount - chainFee)
+            }
+        }
+    }
+
+    @ViewBuilder private func feeRows(fee: UInt64, chainFee: UInt64) -> some View {
+        OnchainAmountRow(
+            title: quote.action == .board
+                ? "Ark fee"
+                : quote.action == .refresh ? "Refresh fee" : "Estimated claim fee", sats: fee)
+        if quote.action == .board || quote.action == .startExit || quote.action == .progress {
+            OnchainAmountRow(
+                title: quote.action == .board
+                    ? "Onchain fee" : "Estimated broadcast fees", sats: chainFee)
+        }
+        OnchainAmountRow(
+            title: quote.action == .board ? "Ark receives" : "Amount after fee",
+            sats: quote.net)
+    }
+
+    private var confirmation: some View {
+        Section {
+            if quote.feesUnknown {
+                Text(
+                    "Fee estimate unavailable. Fees and amount to receive are unknown. Continue without an estimate only if you accept this uncertainty.")
+                    .foregroundStyle(NoahColor.destructive)
+                if quote.action == .startExit {
+                    Text("Broadcast funding status is unknown; confirmed onchain funds are required.")
+                }
+            }
+            Text(LocalizedStringKey(explanation))
+            if quote.action == .startExit || quote.action == .progress || quote.action == .claim {
+                if let fee = quote.fee, quote.chainFee != nil, let warning = ExitRules.warning(
+                    amount: quote.amount, claimFee: fee, totalFee: quote.totalFee,
+                    claimOnly: quote.action == .claim) {
+                    Text(LocalizedStringKey(warning)).foregroundStyle(NoahColor.destructive)
+                }
+                if !quote.feesUnknown && !quote.fundable {
+                    Text(
+                        "Additional confirmed onchain funds required. You are starting tracking anyway; fund the wallet before progressing.")
+                }
+            }
+            Button(
+                role: quote.action == .startExit || quote.action == .progress || quote.action == .claim
+                    ? .destructive : nil) {
+                confirm()
+            } label: {
+                Text(LocalizedStringKey(quote.feesUnknown ? (quote.action == .claim ? "Broadcast without estimate" : "Start Selected Exit") : quote
+                        .action.title))
+            }
+            .accessibilityIdentifier("onchain-confirm")
+        }
+    }
+
+    // swiftlint:disable line_length - copy literals stay whole: translations.mjs reads each as a single string
     private var explanation: String {
         switch quote.action {
         case .board:
@@ -205,6 +224,7 @@ struct OnchainReviewSheet: View {
             "Cancel this exit before its final transaction is broadcast. The VTXO remains spendable. The wallet will recheck whether cancellation is still possible."
         }
     }
+    // swiftlint:enable line_length
 }
 
 /// Shared review presentation also invalidates quotes on backgrounding or navigation.

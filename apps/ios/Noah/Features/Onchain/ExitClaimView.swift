@@ -183,7 +183,7 @@ struct ExitClaimView: View {
     private func option(_ title: String, sub: String? = nil, selected: Bool, id: String, action: @escaping () -> Void) -> some View {
         Button(action: action) {
             SettingsRowLabel(title: title, sub: sub, hairline: false) {
-                Image(systemName: selected ? "largecircle.fill.circle" : "circle")
+                Image(systemName: selected ? "largecircle.fill.circle" : "circle").accessibilityHidden(true)
                     .font(.system(size: 22)).foregroundStyle(selected ? NoahTokens.Colors.foreground : NoahTokens.Colors.hairline)
             }
         }

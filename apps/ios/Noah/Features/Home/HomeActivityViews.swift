@@ -140,7 +140,7 @@ struct HomeAvatar: View {
     }
 
     private func icon(_ name: String, _ points: CGFloat) -> some View {
-        Image(systemName: name).font(.system(size: points * (size > 42 ? 27.0 / 20 : 1), weight: .medium))
+        Image(systemName: name).accessibilityHidden(true).font(.system(size: points * (size > 42 ? 27.0 / 20 : 1), weight: .medium))
     }
 }
 
@@ -268,9 +268,11 @@ struct HomeActivityList: View {
         case .today: L10n.text("Today", locale: locale.identifier)
         case .yesterday: L10n.text("Yesterday", locale: locale.identifier)
         case .date(let date):
-            Calendar.current.isDate(date, equalTo: Date(), toGranularity: .year)
-                ? date.formatted(.dateTime.month(.abbreviated).day().locale(locale))
-                : date.formatted(.dateTime.year().month(.abbreviated).day().locale(locale))
+            if Calendar.current.isDate(date, equalTo: Date(), toGranularity: .year) {
+                date.formatted(.dateTime.month(.abbreviated).day().locale(locale))
+            } else {
+                date.formatted(.dateTime.year().month(.abbreviated).day().locale(locale))
+            }
         }
     }
 }

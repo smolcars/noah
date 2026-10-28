@@ -32,10 +32,10 @@ struct SettingsFailureTests {
         #expect(wallet?.isInitialized != false) // Seed + DB still selects Home.
         #expect(wallet?.isBiometricsEnabled != true && wallet?.isWalletSuspended != true)
         #expect(settings.persistedState(PersistedPrivacyState.self, key: PersistedPrivacyState.key)?.isHomeBalanceHidden != true)
-        #expect(try settings.takeUpgradeNotices() == [SettingsStorage.settingsNotice])
-        #expect(try settings.takeUpgradeNotices().isEmpty)
+        #expect(settings.takeUpgradeNotices() == [SettingsStorage.settingsNotice])
+        #expect(settings.takeUpgradeNotices().isEmpty)
         let stale = try SettingsStorage(rootPath: root.path)
-        #expect(try stale.takeUpgradeNotices().isEmpty)
+        #expect(stale.takeUpgradeNotices().isEmpty)
         // The headless gate must reject defaults before reading the seed, even with an existing DB.
         #expect(throws: (any Error).self) {
             _ = try HeadlessWalletGate.mnemonic(location: location, settings: settings, readSeed: {
@@ -56,7 +56,7 @@ struct SettingsFailureTests {
         #expect(settings.string(forKey: "key") == "saved")
         let reopened = try SettingsStorage(rootPath: root.path)
         #expect(reopened.string(forKey: "key") == "saved")
-        #expect(try reopened.takeUpgradeNotices().isEmpty)
+        #expect(reopened.takeUpgradeNotices().isEmpty)
     }
 
     @MainActor @Test func recurringSubmissionStopsWhenSettingsCannotPersist() async throws {

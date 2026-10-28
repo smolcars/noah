@@ -201,6 +201,7 @@ extension WalletSession {
         let rate = SendFlow.sdkFeeRate(satsPerKwu: try await handles.onchain.feeRates().regularSatPerKwu)
         let walletID = handles.wallet.fingerprint()
         let minimum = try await handles.wallet.arkInfo()?.minBoardAmountSats ?? 0
+        // swiftlint:disable:next discouraged_optional_collection - nil excludes nothing, unlike a reviewed empty set
         @Sendable func prepare(_ amount: UInt64, excluding: Set<String>?) async throws -> OnchainQuote {
             let board = try await handles.wallet.prepareBoard(
                 amount: amount == 0 ? .drainAll : .amount(amountSats: amount),
@@ -219,7 +220,9 @@ extension WalletSession {
         return try await Self.reserveBoardReview(minimum: minimum, feeRate: rate, claims: claims,
                                                  discard: { quote in
                                                      await self.discardBoard(quote)
-                                                     guard await self.boardPreparations[quote.prepared!.id] == nil else { throw OnchainFailure.uncertain }
+                                                     guard let id = quote.prepared?.id, await self.boardPreparations[id] == nil else {
+                                                         throw OnchainFailure.uncertain
+                                                     }
                                                  }, prepare: prepare)
     }
 
@@ -251,7 +254,7 @@ extension WalletSession {
             do {
                 try Task.checkCancellation()
                 guard !quote.spends(claims.outpoints),
-                      quote.amount + quote.chainFee! + BoardingRules.reserve + claims.held <= quote.confirmed,
+                      let chainFee = quote.chainFee, quote.amount + chainFee + BoardingRules.reserve + claims.held <= quote.confirmed,
                       quote.net >= BoardingRules.threshold(minimum) else {
                     try await discard(quote)
                     return nil
@@ -355,6 +358,7 @@ extension WalletSession {
             // The new run is recorded before bark starts, or bark isn't asked (nothing sent yet).
             do { try await access.began(quote.ids) } catch { throw OnchainFailure.constructionFailed }
             try await access.start(quote.ids)
+            // swiftlint:disable:next line_length - one literal: translations.mjs reads copy as a single string
             return "Exit started. Noah progresses it on its own, including in the background when the system lets it, paying broadcast and fee-bump fees from your onchain balance."
         }
     }
@@ -396,8 +400,10 @@ extension WalletSession {
                                          estimate: !quote.hasUnknownFeeConsent, access: access)
         } catch let failure as ExitEstimateUnavailable { throw try failure.preserving(quote) }
         guard quote.matches(fresh), ExitRules.current(elapsed: quote.elapsed()) else { throw OnchainFailure.changed }
+        // A claim quote always names where it pays; refuse before journaling one that doesn't.
+        guard let destination = quote.destination else { throw OnchainFailure.invalid }
         return try await journal.perform(quote) {
-            let claim = try await access.drain(quote.ids, quote.destination!)
+            let claim = try await access.drain(quote.ids, destination)
             guard quote.hasUnknownFeeConsent || claim.feeSats == quote.fee else { throw OnchainFailure.claimFeeChanged }
             let tx = try access.transaction(claim.psbtBase64)
             // A claim to this phone is recorded before it's sent, or not sent (nothing broadcast yet).
@@ -618,7 +624,7 @@ extension WalletSession {
     /// Skipped once the job's budget is gone. Never throws: a failure's reason, safe to log, goes to `failed`.
     nonisolated func progressPendingExits(failed: @Sendable (String) -> Void) async {
         do { _ = try await withOpenWallet { try await self.progressPendingExits(access: Self.exitProgressAccess($0)) } }
-        catch is CancellationError {}
+        catch is CancellationError { /* The budget ended: not a failure. */ }
         catch { failed(SafeErrorDescription.of(error)) }
     }
 
@@ -718,7 +724,7 @@ extension WalletSession {
     }
 
     /// Cached wallet evidence plus read-only chain status; never BDK sync or rebroadcast.
-    // An absent txid or inconclusive check must remain unresolved.
+    /// An absent txid or inconclusive check must remain unresolved.
     func checkOnchainAttempt(_ id: UUID, journal: OnchainOperationJournal = .shared) async throws -> Bool {
         try await withOpenWallet { handles in
             try await Self.checkOnchainAttempt(id, journal: journal, reads: .init(
@@ -777,7 +783,7 @@ extension WalletSession {
         if let txid = attempt.txid ?? attempt.receipt?.txid {
             do { chain = try await reads.transactionStatus(txid) }
             catch {
-                try await journal.recordStatusError(for: id)
+                await journal.recordStatusError(for: id)
                 return resolved || attempt.receipt != nil
             }
             if let status = chain {

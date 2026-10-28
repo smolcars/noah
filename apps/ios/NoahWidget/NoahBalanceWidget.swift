@@ -29,12 +29,14 @@ class BalanceProvider: TimelineProvider {
             expiryThreshold: 288)
     }
 
+    // swiftlint:disable:next unneeded_escaping - TimelineProvider's requirement
     func getSnapshot(in _: Context, completion: @escaping (BalanceEntry) -> Void) {
         let entry = loadBalanceEntry()
         completion(entry)
     }
 
     func getTimeline(
+        // swiftlint:disable:next unneeded_escaping - TimelineProvider's requirement
         in _: Context, completion: @escaping (Timeline<BalanceEntry>) -> Void) {
         let entry = loadBalanceEntry()
 
@@ -103,13 +105,9 @@ struct NoahBalanceWidgetView: View {
         // Also includes expired VTXOs (negative blocks).
         let criticalThreshold = threshold * 0.2
 
-        if blocks <= criticalThreshold {
-            return ("exclamationmark.triangle.fill", .red)
-        } else if blocks <= threshold {
-            return ("bell.fill", .orange)
-        } else {
-            return ("checkmark.circle.fill", .green)
-        }
+        if blocks <= criticalThreshold { return ("exclamationmark.triangle.fill", .red) }
+        if blocks <= threshold { return ("bell.fill", .orange) }
+        return ("checkmark.circle.fill", .green)
     }
 
     private var shouldShowExpiry: Bool {
@@ -165,7 +163,7 @@ struct NoahBalanceWidgetView: View {
                 if shouldShowExpiry {
                     HStack(spacing: 3) {
                         let expiryStatus = getExpiryStatus()
-                        Image(systemName: expiryStatus.icon)
+                        Image(systemName: expiryStatus.icon).accessibilityHidden(true)
                             .font(.system(size: 10))
                             .foregroundColor(expiryStatus.color)
                         Text(L10n.plural("{n} blocks", count: Int(entry.closestExpiryBlocks), locale: language))
@@ -247,7 +245,7 @@ struct NoahBalanceWidgetView: View {
                 if shouldShowExpiry {
                     HStack(spacing: 4) {
                         let expiryStatus = getExpiryStatus()
-                        Image(systemName: expiryStatus.icon)
+                        Image(systemName: expiryStatus.icon).accessibilityHidden(true)
                             .font(.system(size: 12))
                             .foregroundColor(expiryStatus.color)
                         Text(L10n.plural("VTXO expires: {n} blocks", count: Int(entry.closestExpiryBlocks), locale: language))
@@ -285,7 +283,7 @@ struct NoahBalanceWidgetView: View {
     }
 
     private func formatSats(_ value: Double) -> String {
-        Self.numberFormatter.string(from: NSNumber(value: value)) ?? "0"
+        Self.numberFormatter.string(for: value) ?? "0"
     }
 
     private func formatSatsCompact(_ value: Double) -> String {
@@ -293,18 +291,19 @@ struct NoahBalanceWidgetView: View {
             // 1M+ sats - show as "1.5M" format
             let millions = value / 1_000_000
             return String(format: "%.1fM", millions)
-        } else if value >= 100_000 {
+        }
+        if value >= 100_000 {
             // 100K+ sats - show as "123K" format
             let thousands = value / 1_000
             return String(format: "%.0fK", thousands)
-        } else if value >= 10_000 {
+        }
+        if value >= 10_000 {
             // 10K+ sats - show as "12.3K" format
             let thousands = value / 1_000
             return String(format: "%.1fK", thousands)
-        } else {
-            // Less than 10K - show full number
-            return formatSats(value)
         }
+        // Less than 10K - show full number
+        return formatSats(value)
     }
 
     private func badgeBackground(color: Color) -> Color {

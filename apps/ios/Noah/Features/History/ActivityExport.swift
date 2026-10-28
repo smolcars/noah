@@ -14,7 +14,7 @@ struct ActivityExportSheet: View {
     @State private var anchor: CGRect?
     @State private var haptics = OnboardingHaptics()
 
-    static let fileName = "noah_transactions.csv"
+    nonisolated static let fileName = "noah_transactions.csv"
 
     private var count: Int { transactions.filter(HistoryCSV.exports).count }
 
@@ -25,7 +25,7 @@ struct ActivityExportSheet: View {
             Text(verbatim: filter.exportSentence(count: count, locale: locale.identifier))
                 .noahText(NoahTokens.Typography.sub).foregroundStyle(NoahTokens.Colors.muted)
             HStack(spacing: 14) {
-                Image(systemName: "doc.text").font(.system(size: 24, weight: .regular)).frame(width: 26)
+                Image(systemName: "doc.text").accessibilityHidden(true).font(.system(size: 24, weight: .regular)).frame(width: 26)
                 VStack(alignment: .leading, spacing: 0) {
                     Text(verbatim: Self.fileName).font(.system(size: 15, weight: .medium, design: .monospaced))
                     Text("Dates, amounts, fees, prices, IDs and destinations").noahText(HomeText.footnote)

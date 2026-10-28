@@ -100,6 +100,7 @@ struct OnchainQuote: Identifiable, Codable, Equatable, Sendable {
     var walletID: String
     var ids: [String]
     var destination: String?
+    // swiftlint:disable:next discouraged_optional_boolean - nil: not checked yet; persisted in journals
     var destinationIsMine: Bool?
     var amount: UInt64
     var fee: UInt64?
@@ -111,6 +112,7 @@ struct OnchainQuote: Identifiable, Codable, Equatable, Sendable {
     var reviewedAt: ContinuousClock.Instant?
     var automatic = false
     // Optional so journals written before MAX used boardAll remain readable.
+    // swiftlint:disable:next discouraged_optional_boolean - see above
     var boardAll: Bool?
     var unknownFeeConsent: UUID?
     var prepared: SendPreparedTransaction?
@@ -130,12 +132,17 @@ struct OnchainQuote: Identifiable, Codable, Equatable, Sendable {
     }
     var feesUnknown: Bool { fee == nil && chainFee == nil && (action == .startExit || action == .claim) }
     var hasUnknownFeeConsent: Bool { feesUnknown && unknownFeeConsent == id }
-    var net: UInt64 { ExitRules.received(amount: amount, claimFee: fee!) }
+    var net: UInt64 { ExitRules.received(amount: amount, claimFee: estimated(fee)) }
     /// The prepared transaction spends one of these outpoints ("txid:vout").
     func spends(_ outpoints: Set<String>) -> Bool {
         prepared?.inputs?.contains { outpoints.contains("\($0.txid):\($0.vout)") } == true
     }
-    var totalFee: UInt64 { fee! + chainFee! }
+    var totalFee: UInt64 { estimated(fee) + estimated(chainFee) }
+    /// A fee the caller already checked was estimated (`feesUnknown` quotes have neither).
+    func estimated(_ fee: UInt64?) -> UInt64 {
+        guard let fee else { preconditionFailure("Quote fee read before checking it was estimated") }
+        return fee
+    }
     var fundable: Bool { chainFee.map { confirmed >= $0 } ?? false }
     var inputs: ExitReviewInputs {
         .init(
@@ -155,7 +162,8 @@ enum OnchainFailure: LocalizedError {
     case unavailable, changed, invalid, uncertain, busy, cancellationRefused, claimFeeChanged, constructionFailed
     case insufficientFunds
     case belowMinimum, tooManyInputs, reservedInputs, notSynced, boardNotAttempted
-    var errorDescription: String? {
+    var errorDescription: String? { message }
+    var message: String {
         switch self {
         case .insufficientFunds: "There are not enough confirmed onchain funds for this amount and its fees. Reduce the amount or wait for confirmation."
         case .belowMinimum: "The amount Ark receives is below its minimum. Increase the boarding amount."
@@ -185,6 +193,7 @@ struct OnchainReceipt: Codable, Equatable, Sendable, ExpressibleByStringLiteral 
     var txid: String?
     var onchainFee: UInt64?
     var arkFee: UInt64?
+    // swiftlint:disable:next discouraged_optional_boolean - receipts omit it unless a broadcast retry is pending
     var broadcastRetryPending: Bool?
     var chainStatus: ChainTransactionStatus?
     init(message: String, txid: String? = nil, onchainFee: UInt64? = nil) {
@@ -197,7 +206,7 @@ struct OnchainReceipt: Codable, Equatable, Sendable, ExpressibleByStringLiteral 
         let totalLeaving: UInt64
     }
     func boardAmounts(quote: OnchainQuote) -> BoardAmounts {
-        .init(arkReceives: quote.net, totalLeaving: quote.amount + (onchainFee ?? quote.chainFee!))
+        .init(arkReceives: quote.net, totalLeaving: quote.amount + (onchainFee ?? quote.estimated(quote.chainFee)))
     }
     /// Move exit forward's receipt when bark progressed every exit without an error.
     static let progressedMessage = "Exits progressed. Transactions may have been broadcast or fee-bumped."
@@ -272,7 +281,8 @@ struct ExitRefusal: LocalizedError, Equatable, Sendable {
     /// Non-standard, dust included: bark exits it once it's renewed into a standard VTXO.
     var renewFirst: Bool { code == .exitNonStandardVtxo || code == .exitDustLimit }
 
-    var errorDescription: String? {
+    var errorDescription: String? { message }
+    var message: String {
         switch code {
         case .exitVtxoAlreadySpent: "Already spent"
         case .exitVtxoSwept: "Swept"
@@ -281,7 +291,7 @@ struct ExitRefusal: LocalizedError, Equatable, Sendable {
     }
 
     /// Its row on Choose VTXOs: the label, and the line under it for one to renew first.
-    var label: String { renewFirst ? "Renew first" : errorDescription! }
+    var label: String { renewFirst ? "Renew first" : message }
     var detail: String? { renewFirst ? "Renew this VTXO in Settings → VTXOs before exiting it." : nil }
 
     /// The exit screens' words for FFI 0.7.0's typed exit errors; nil for any other error.

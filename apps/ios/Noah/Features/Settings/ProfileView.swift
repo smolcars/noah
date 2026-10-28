@@ -419,7 +419,7 @@ struct EmailPage: View {
                 Text(verbatim: current).noahText(SettingsText.current).lineLimit(1).truncationMode(.middle)
                 HStack(spacing: 6) {
                     if server.isEmailVerified == true {
-                        Image(systemName: "checkmark.circle.fill").foregroundStyle(NoahTokens.Colors.orange)
+                        Image(systemName: "checkmark.circle.fill").accessibilityHidden(true).foregroundStyle(NoahTokens.Colors.orange)
                         Text(L10n.text("Verified", locale: language))
                     } else {
                         Circle().fill(NoahTokens.Colors.orange).frame(width: 8, height: 8)

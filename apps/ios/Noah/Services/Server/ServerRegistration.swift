@@ -31,7 +31,7 @@ final class ServerRegistration {
     }
 
     func ensureRegistered(completeServices: (@MainActor () async throws -> Void)? = nil) async throws {
-        if let registration { return try await registration.value }
+        if let registration { try await registration.value; return }
         let attempt = Task {
             if !checkedVersion {
                 do {

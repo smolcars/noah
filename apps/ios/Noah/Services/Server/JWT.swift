@@ -13,8 +13,8 @@ enum JWT {
     static let clockSkew: TimeInterval = 60
 
     static func expiry(of token: String) throws(Failure) -> Date {
-        guard let exp = try payload(of: token)["exp"] as? NSNumber, exp.doubleValue.isFinite else { throw .missingExpiry }
-        return Date(timeIntervalSince1970: exp.doubleValue)
+        guard let exp = try payload(of: token)["exp"] as? Double, exp.isFinite else { throw .missingExpiry }
+        return Date(timeIntervalSince1970: exp)
     }
 
     /// `sub`: the login public key the server issued the token to.

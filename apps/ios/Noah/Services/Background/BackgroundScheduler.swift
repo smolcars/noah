@@ -4,7 +4,10 @@ import UIKit
 @MainActor final class BackgroundScheduler {
     enum Kind: String, CaseIterable, Sendable {
         case refresh, maintenance
-        var identifier: String { Bundle.main.bundleIdentifier! + "." + rawValue }
+        var identifier: String {
+            guard let bundle = Bundle.main.bundleIdentifier else { preconditionFailure("The app bundle has an identifier") }
+            return bundle + "." + rawValue
+        }
         var interval: TimeInterval { self == .refresh ? 60 * 60 : 6 * 60 * 60 }
     }
 
@@ -104,7 +107,7 @@ extension BackgroundScheduler.Dependencies {
                              try BackgroundExecution.checkActive()
                              let expiry = try? await services.session.closestExpiryBlocks()
                              try BackgroundExecution.checkActive()
-                             WidgetDataWriter.write(balance: summary.balance, closestExpiryBlocks: expiry ?? nil, variant: services.variant)
+                             WidgetDataWriter.write(balance: summary.balance, closestExpiryBlocks: expiry, variant: services.variant)
                          },
                          progressExits: {
                              await services.session.progressPendingExits { AppLog("backgroundTasks").w("Background exit progress failed: \($0)") }

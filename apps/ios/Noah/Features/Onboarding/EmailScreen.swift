@@ -229,8 +229,8 @@ struct CodeBoxes: View {
         }
         .frame(height: NoahTokens.Size.otpBox)
         .onGeometryChange(for: CGFloat.self) { $0.size.width } action: { rowWidth = $0 }
-        .keyframeAnimator(initialValue: CGFloat.zero, trigger: email.failures) { content, offset in
-            content.offset(x: reduceMotion ? 0 : offset)
+        .keyframeAnimator(initialValue: CGFloat.zero, trigger: email.failures) { [still = reduceMotion] content, offset in
+            content.offset(x: still ? 0 : offset)
         } keyframes: { _ in
             LinearKeyframe(-10, duration: 0.1)
             LinearKeyframe(9, duration: 0.1)
@@ -343,7 +343,7 @@ struct EmailHints: View {
         GlassGroup(spacing: NoahTokens.Space.s) {
             WrapLayout(spacing: NoahTokens.Space.s, lineSpacing: 0) {
                 switch email.hint {
-                case .none:
+                case .hidden:
                     EmptyView()
                 case .didYouMean(let fixed):
                     Text("Did you mean")
@@ -352,7 +352,7 @@ struct EmailHints: View {
                     chip(fixed, label: fixed)
                 case .complete(let addresses):
                     ForEach(addresses, id: \.self) { address in
-                        chip(address, label: String(address[address.firstIndex(of: "@")!...]))
+                        chip(address, label: address.firstIndex(of: "@").map { String(address[$0...]) } ?? address)
                     }
                 }
             }

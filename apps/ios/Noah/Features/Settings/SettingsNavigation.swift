@@ -100,7 +100,7 @@ struct SettingsFixture {
     /// A root sheet open on arrival (Delete wallet).
     var sheet: SettingsRootSheet?
     /// Emergency exit's Choose opens in Choose with these VTXOs selected.
-    var exitSelection: [String]?
+    var exitSelection: [String]? // swiftlint:disable:this discouraged_optional_collection - nil opens Choose with nothing preselected
     /// Emergency exit's Claim opens to this phone ("phone") or with this address typed.
     var exitClaimTo: String?
 }
@@ -115,7 +115,14 @@ extension EnvironmentValues {
     /// Wide windows: how much of the page is the leading pane, which pane sheets keep clear of.
     @Entry var settingsSheetLeading: CGFloat = 0
     /// A payment request scanned outside Home (the QR hub opened from Receive's Profile) goes to Send.
-    @Entry var scanPayment: (String) -> Void = { _ in }
+    @Entry var scanPayment = ScanPaymentAction { _ in }
+}
+
+/// Send's handler for a scanned payment request. A type, not a bare closure, so `@Entry` doesn't
+/// invalidate every reader on each update.
+struct ScanPaymentAction {
+    let handle: (String) -> Void
+    func callAsFunction(_ request: String) { handle(request) }
 }
 
 /// One Settings screen in Home's stack. Phones show the list (root) or one page. Wide windows show
@@ -162,7 +169,7 @@ struct SettingsHost: View {
         .navigationBarBackButtonHidden(settings.wide)
         .environment(\.settings, settings)
         .navigationDestination(item: $standalonePage) { Self(page: $0) }
-        .navigationDestination(isPresented: $standaloneMyCode) { QRHubView(isActive: true, mode: .myCode, onScan: scanPayment) }
+        .navigationDestination(isPresented: $standaloneMyCode) { QRHubView(isActive: true, mode: .myCode, onScan: scanPayment.callAsFunction) }
         .task { if page == nil, let open = fixture?.sheet { sheet = open } }
         .foregroundStyle(NoahTokens.Colors.foreground)
         .tint(NoahTokens.Colors.foreground)

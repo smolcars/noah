@@ -21,6 +21,7 @@ final class SettingsSummary {
     }
 
     private(set) var overview: OnchainOverview?
+    // swiftlint:disable:next discouraged_optional_boolean - nil until the permission is read
     private(set) var notificationsOn: Bool?
     private(set) var backup = PersistedBackupState()
     private(set) var displayName = ""
@@ -110,7 +111,7 @@ struct SettingsList: View {
                 bitcoin
                 display
                 SettingsGroup(label: "App") {
-                    row("Notifications", icon: "bell", value: notificationsValue, dot: summary.notificationsOn == false ? .failure : .none,
+                    row("Notifications", icon: "bell", value: notificationsValue, dot: summary.notificationsOn == false ? .failure : .hidden,
                         failure: summary.notificationsOn == false, page: .notifications, id: "settings-notifications")
                     row("Advanced", icon: "slider.horizontal.3", value: app.isWalletSuspended ? L10n.text("Suspended", locale: language) : nil,
                         failure: app.isWalletSuspended, page: .advanced, last: true, id: "settings-advanced")
@@ -206,9 +207,9 @@ struct SettingsList: View {
         SettingsGroup(label: "Security") {
             let backup = BackupStatus(summary.backup, enabled: app.server.state.isBackupEnabled == true)
             row("Backup", icon: "icloud.and.arrow.up", value: L10n.text(backup.rowValue(enabled: app.server.state.isBackupEnabled == true), locale: language),
-                dot: backup.mark == .failed ? .failure : .none, failure: backup.mark == .failed, page: .backup, id: "settings-backup")
+                dot: backup.mark == .failed ? .failure : .hidden, failure: backup.mark == .failed, page: .backup, id: "settings-backup")
             row("Recovery phrase", icon: "key", value: app.needsRecoveryPhraseBackup ? L10n.text("Not saved", locale: language) : nil,
-                dot: app.needsRecoveryPhraseBackup ? .attention : .none, page: .recovery,
+                dot: app.needsRecoveryPhraseBackup ? .attention : .hidden, page: .recovery,
                 last: !(lock.available || lock.policy.enabled), id: "settings-recovery")
             if lock.available || lock.policy.enabled {
                 SettingsToggleRow(icon: lock.biometry.symbol, title: L10n.text(lock.biometry.title, locale: language),
@@ -226,7 +227,7 @@ struct SettingsList: View {
                 "VTXOs",
                 icon: "cylinder.split.1x2",
                 value: summary.overview == nil ? nil : due ? L10n.text("Renew", locale: language) : vtxos.count.formatted(.number.locale(locale)),
-                dot: due ? .attention : .none,
+                dot: due ? .attention : .hidden,
                 page: .vtxos,
                 id: "settings-vtxos")
             row(
@@ -240,7 +241,7 @@ struct SettingsList: View {
             let active = executor.schedules.count(where: { $0.status == "active" })
             row("Recurring payments", icon: "arrow.triangle.2.circlepath",
                 value: approvals > 0 ? L10n.text("Approve", locale: language) : active > 0 ? L10n.text("{n} active", active, locale: language) : nil,
-                dot: approvals > 0 ? .attention : .none, page: .recurring, id: "settings-recurring-payments")
+                dot: approvals > 0 ? .attention : .hidden, page: .recurring, id: "settings-recurring-payments")
             row("Emergency exit", icon: "rectangle.portrait.and.arrow.right",
                 value: ExitRules.settingsValue(summary.overview?.exits ?? []).map { L10n.text($0, locale: language) }, page: .exit,
                 id: "settings-emergencyExit")
@@ -295,7 +296,7 @@ struct SettingsList: View {
 
     // MARK: Actions
 
-    private func row(_ title: String, icon: String, value: String? = nil, numeric: Bool = false, dot: SettingsRow.Dot = .none,
+    private func row(_ title: String, icon: String, value: String? = nil, numeric: Bool = false, dot: SettingsRow.Dot = .hidden,
                      failure: Bool = false, page: SettingsPage, last: Bool = false, id: String) -> some View {
         SettingsRow(icon: icon, title: L10n.text(title, locale: language), value: value, numeric: numeric, dot: dot, failure: failure,
                     selected: selected == page, hairline: !last, id: id) {

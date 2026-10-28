@@ -119,13 +119,13 @@ struct OnboardingEmailEntryTests {
     }
 
     @Test func completesDomains() {
-        #expect(EmailEntry.hint(for: "maya") == .none)
-        #expect(EmailEntry.hint(for: "@gm") == .none)
+        #expect(EmailEntry.hint(for: "maya") == .hidden)
+        #expect(EmailEntry.hint(for: "@gm") == .hidden)
         #expect(EmailEntry.hint(for: "maya@") == .complete(["maya@gmail.com", "maya@icloud.com", "maya@outlook.com"]))
         #expect(EmailEntry.hint(for: "maya@g") == .complete(["maya@gmail.com"]))
         #expect(EmailEntry.hint(for: "maya@hot") == .complete(["maya@hotmail.com"]))
-        #expect(EmailEntry.hint(for: "maya@gmail.com") == .none)
-        #expect(EmailEntry.hint(for: "maya@unknown.org") == .none)
+        #expect(EmailEntry.hint(for: "maya@gmail.com") == .hidden)
+        #expect(EmailEntry.hint(for: "maya@unknown.org") == .hidden)
     }
 
     @Test func suggestsTypoFixes() {

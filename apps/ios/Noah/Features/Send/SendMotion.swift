@@ -63,6 +63,7 @@ enum SendMotion {
     /// What the controller's state means for the motion. `refund` is nil while the
     /// refund evidence for a failed Lightning send is still being read.
     static func outcome(state: SendPaymentController.State, attempt: SendPaymentController.Attempt?,
+                        // swiftlint:disable:next discouraged_optional_boolean - nil: the refund is not known yet
                         checking: Bool, refund: Bool?) -> Outcome {
         let lightning = attempt.map { Rail($0.payment) == .lightning } ?? false
         switch state {

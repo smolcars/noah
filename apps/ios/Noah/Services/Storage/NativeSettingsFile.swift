@@ -66,7 +66,7 @@ struct NativeSettingsFile {
     func save(_ state: State) throws -> Stamp? {
         let encoder = JSONEncoder()
         encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
-        let payload = String(decoding: try encoder.encode(state), as: UTF8.self)
+        let payload = try String(json: encoder.encode(state))
         let data = try encoder.encode(Envelope(version: 1, payload: payload, sha256: Self.digest(payload)))
         let pending = file.appendingPathExtension("pending")
         try data.write(to: pending)

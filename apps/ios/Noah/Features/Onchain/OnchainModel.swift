@@ -101,6 +101,7 @@ final class OnchainModel {
     private let detailID: String?
     private(set) var exit: ExitModel?
     private(set) var claimDestination = ""
+    // swiftlint:disable:next discouraged_optional_boolean - nil until the address is checked
     private(set) var claimDestinationIsMine: Bool?
     private(set) var claimDestinationError: String?
     func editClaimDestination(_ value: String) {
@@ -182,7 +183,7 @@ final class OnchainModel {
     @ObservationIgnored private var reloadPending = false
 
     /// Reloads as soon as `changes` reports one, rather than at the page's next minute. `canLoad` is the page's guard.
-    func observeChanges(canLoad: @escaping () -> Bool) async {
+    func observeChanges(canLoad: () -> Bool) async {
         for await _ in await dependencies.changes() where canLoad() { await load() }
     }
 
@@ -461,7 +462,7 @@ final class SharedOverview {
     /// Counts submissions: a read that began before the latest one is dropped.
     @ObservationIgnored private(set) var epoch = 0
 
-    nonisolated init() {}
+    nonisolated init() { /* No overview until the first read. */ }
 
     func read(_ overview: OnchainOverview, since: Int) { if since == epoch { self.overview = overview } }
     func changed() {

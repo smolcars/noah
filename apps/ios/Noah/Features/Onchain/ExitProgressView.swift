@@ -40,7 +40,7 @@ struct ExitVtxoDetailView: View {
                         ExitHeadline(amount: money(text.amount))
                         ExitStatusLine(text: text.status, kind: text.statusKind)
                     }
-                    if progress.picture != .none {
+                    if progress.picture != .blank {
                         // 300 pt; 236 on the iPhone SE.
                         ExitStageView(scene: text.scene, wide: settings.wide, accessibilityText: text.pictureLabel)
                             .frame(height: settings.wide ? max(280, paneHeight - 110) : window.size.height > 0 && window.size.height < 700 ? 236 : 300)
@@ -208,6 +208,7 @@ struct ExitVtxoDetailView: View {
     private func checkSheet(_ money: ExitMoney) -> some View {
         SettingsSheetBody(title: L10n.text("Move your exit forward?", locale: language),
                           line: L10n.text(
+                              // swiftlint:disable:next line_length - one literal: translations.mjs reads copy as a single string
                               "Sends the next step of your exit, or raises the fee on a step that’s stuck. Fees come from your on-chain bitcoin. Noah also does this on its own, including in the background when the system lets it.",
                               locale: language)) {
             if let quote = model.quote, quote.action == .progress, let chainFee = quote.chainFee {
@@ -548,7 +549,7 @@ struct ExitStatusLine: View {
         let settled = [.lock, .unlocked, .claim, .claimed].contains(progress.picture)
         let levels: [ExitStageScene.Level] = progress.total == 0 ? Array(repeating: settled ? .mined(nil) : .unsent, count: 4) : (0..<progress.total)
             .map { index in
-                if index < progress.confirmed { return .mined(progress.heights[safe: index] ?? nil) }
+                if index < progress.confirmed { return .mined(progress.heights[safe: index].flatMap(\.self)) }
                 guard index == progress.confirmed else { return .unsent }
                 switch progress.phase {
                 case .sending: return .ready

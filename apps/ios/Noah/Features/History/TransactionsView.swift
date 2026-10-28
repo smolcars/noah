@@ -743,7 +743,7 @@ struct ActivityFilterChip: View {
         Button(action: onClear) {
             HStack(spacing: 4) {
                 Text(LocalizedStringKey(filter.title)).noahText(ActivityText.chip)
-                Image(systemName: "xmark").font(.system(size: 11, weight: .semibold)).foregroundStyle(NoahTokens.Colors.muted)
+                Image(systemName: "xmark").accessibilityHidden(true).font(.system(size: 11, weight: .semibold)).foregroundStyle(NoahTokens.Colors.muted)
             }
             .foregroundStyle(NoahTokens.Colors.foreground)
             .padding(.leading, 12).padding(.trailing, 9)
@@ -763,6 +763,7 @@ struct ActivityCircleIcon: View {
     let systemName: String
 
     var body: some View {
+        // swiftlint:disable:next accessibility_label_for_image - the button it labels names it; otherwise the symbol's own label reads
         Image(systemName: systemName)
             .font(.system(size: 19, weight: .medium))
             .foregroundStyle(NoahTokens.Colors.foreground)
@@ -782,7 +783,7 @@ private struct ActivitySearchField: View {
     var body: some View {
         HStack(spacing: 8) {
             HStack(spacing: 8) {
-                Image(systemName: "magnifyingglass").font(.system(size: 16, weight: .medium)).foregroundStyle(NoahTokens.Colors.muted)
+                Image(systemName: "magnifyingglass").accessibilityHidden(true).font(.system(size: 16, weight: .medium)).foregroundStyle(NoahTokens.Colors.muted)
                 TextField("Search", text: $query)
                     .noahText(NoahTokens.Typography.body)
                     .focused($focused)
@@ -816,7 +817,7 @@ private struct ActivitySearchField: View {
 struct ActivitySelectPrompt: View {
     var body: some View {
         VStack(spacing: 14) {
-            Image(systemName: "list.bullet").font(.system(size: 22, weight: .medium))
+            Image(systemName: "list.bullet").accessibilityHidden(true).font(.system(size: 22, weight: .medium))
                 .frame(width: 56, height: 56)
                 .background(NoahTokens.Colors.soft, in: Circle())
             Text("Select a payment").noahText(NoahTokens.Typography.control)

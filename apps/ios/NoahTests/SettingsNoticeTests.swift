@@ -16,13 +16,13 @@ struct SettingsNoticeTests {
                 "profile-storage": profileLost ? "broken" : #"{"state":{"preferredCurrency":"EUR"},"version":0}"#,
             ])
             try settings.nativeFile.save(state)
-            let messages = try settings.takeUpgradeNotices()
+            let messages = settings.takeUpgradeNotices()
             #expect(messages.isEmpty == !(walletLost || privacyLost || profileLost))
             if let message = messages.first {
                 #expect(message.contains("biometric lock is off") == walletLost)
                 #expect(message.contains("balances are visible") == privacyLost)
             }
-            #expect(try settings.takeUpgradeNotices().isEmpty)
+            #expect(settings.takeUpgradeNotices().isEmpty)
             #expect(try SettingsStorage(rootPath: directory.appending(path: "mmkv").path).takeUpgradeNotices().isEmpty)
         }
     }

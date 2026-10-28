@@ -35,7 +35,8 @@ struct DebugView: View {
                     Text(LocalizedStringKey(action.rawValue)).noahText(NoahTokens.Typography.body)
                         .foregroundStyle(destructive ? NoahTokens.Colors.failure : NoahTokens.Colors.foreground)
                     Spacer()
-                    Image(systemName: "chevron.right").font(.system(size: 14, weight: .semibold)).foregroundStyle(NoahTokens.Colors.muted)
+                    Image(systemName: "chevron.right").accessibilityHidden(true).font(.system(size: 14, weight: .semibold))
+                        .foregroundStyle(NoahTokens.Colors.muted)
                 }
                 .padding(.horizontal, 16)
                 .frame(minHeight: 54)

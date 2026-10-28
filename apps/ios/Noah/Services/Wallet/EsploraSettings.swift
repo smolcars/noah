@@ -16,6 +16,7 @@ struct EsploraSettings: Sendable {
     struct Record: Codable, Equatable, Sendable {
         var active: Selection
         var pending: Selection?
+        // swiftlint:disable:next discouraged_optional_collection - settings written before log endpoints lack it
         var logEndpoints: [String]?
     }
     let read: @Sendable (String) -> String?
@@ -37,7 +38,7 @@ struct EsploraSettings: Sendable {
     func save(_ record: Record) throws {
         var protected = record
         protected.logEndpoints = endpoints(try self.record()).union(endpoints(record)).sorted()
-        try write(Self.key, String(decoding: JSONEncoder().encode(protected), as: UTF8.self))
+        try write(Self.key, String(json: JSONEncoder().encode(protected)))
         endpoints(protected).forEach(EndpointLogPrivacy.register)
     }
     func restoreLogPrivacy() throws {
@@ -61,7 +62,7 @@ struct EsploraSettings: Sendable {
         let old = try JSONDecoder().decode(Record.self, from: Data(raw.utf8))
         let history = Set((old.logEndpoints ?? []) + [old.active.endpoint, old.pending?.endpoint].compactMap(\.self))
         let record = Record(active: Selection(variant: old.active.variant), logEndpoints: history.sorted())
-        retained[key] = String(decoding: try JSONEncoder().encode(record), as: UTF8.self)
+        retained[key] = try String(json: JSONEncoder().encode(record))
         return retained
     }
     var importedInput: String? {
@@ -94,7 +95,10 @@ struct EsploraSettings: Sendable {
     }
     /// Write ahead before closing any handles. A failed write leaves the live wallet alone.
     func prepare(_ candidate: Selection) throws -> Record {
-        let record = Record(active: selection(for: AppVariant(rawValue: candidate.variant)!), pending: candidate)
+        guard let variant = AppVariant(rawValue: candidate.variant) else {
+            throw EsploraEndpoint.Failure(message: "Endpoint not changed. The wallet is using the previous endpoint.")
+        }
+        let record = Record(active: selection(for: variant), pending: candidate)
         try save(record)
         return record
     }

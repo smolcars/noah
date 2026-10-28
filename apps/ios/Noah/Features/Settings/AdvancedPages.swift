@@ -9,6 +9,7 @@ struct NotificationsPage: View {
     @Environment(\.locale) private var locale
     @Environment(\.openURL) private var openURL
     @Environment(\.scenePhase) private var scenePhase
+    // swiftlint:disable:next discouraged_optional_boolean - nil until the setting is read
     @State private var on: Bool?
     @State private var busy = false
     @State private var error: String?
@@ -175,7 +176,7 @@ struct AdvancedPage: View {
             haptics.play(.light)
             sheet = .suspend
         case .resume: run("Couldn't change wallet suspension. Please try again.") { try await app.resumeWallet() }
-        case .none: break
+        case .unchanged: break
         }
     }
 

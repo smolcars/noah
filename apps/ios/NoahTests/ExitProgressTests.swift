@@ -124,7 +124,7 @@ struct ExitProgressTests {
         for (state, phase) in [("Canceled", ExitProgress.Phase.canceled), ("VtxoAlreadySpent", .alreadySpent), ("VtxoSwept", .swept)] {
             let progress = ExitProgress(Self.exit(state, .init(kind: state, tip_height: 100)), tip: 100)
             #expect(progress.phase == phase && !progress.live)
-            #expect(progress.picture == (state == "Canceled" ? .canceled : .none))
+            #expect(progress.picture == (state == "Canceled" ? .canceled : .blank))
         }
     }
 

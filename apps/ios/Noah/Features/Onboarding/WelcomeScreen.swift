@@ -111,7 +111,7 @@ struct LanguageSheet: View {
                     HStack {
                         Text(verbatim: Self.name(code)).noahText(NoahTokens.Typography.body)
                         Spacer()
-                        Image(systemName: "checkmark")
+                        Image(systemName: "checkmark").accessibilityHidden(true)
                             .font(.body.weight(.semibold))
                             .foregroundStyle(NoahTokens.Colors.orange)
                             .opacity(code == selected ? 1 : 0)

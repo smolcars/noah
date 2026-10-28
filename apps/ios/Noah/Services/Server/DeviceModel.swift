@@ -8,7 +8,7 @@ enum DeviceModel {
         var info = utsname()
         uname(&info)
         let identifier = withUnsafeBytes(of: &info.machine) { bytes in
-            String(decoding: bytes.prefix(while: { $0 != 0 }), as: UTF8.self)
+            String(bytes: bytes.prefix(while: { $0 != 0 }), encoding: .utf8) ?? ""
         }
         return name(for: identifier)
     }

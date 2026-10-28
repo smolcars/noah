@@ -4,6 +4,7 @@ struct BtcMapDetailView: View {
     @Environment(\.locale) private var locale
 
     let place: BtcMapPlace
+    // swiftlint:disable:next discouraged_optional_collection - nil without a location fix
     let location: [Double]?
     let repository: BtcMapRepository
     var onClose: () -> Void
@@ -99,9 +100,9 @@ struct BtcMapDetailView: View {
 
     @ViewBuilder private var actions: some View {
         Button("Directions", systemImage: "arrow.triangle.turn.up.right.diamond") {
-            var url = URLComponents(string: "https://maps.apple.com/")!
-            url.queryItems = [URLQueryItem(name: "daddr", value: "\(place.lat),\(place.lon)"), URLQueryItem(name: "q", value: place.name)]
-            if let url = url.url { openURL(url) { if !$0 { linkFailed = true } } }
+            var url = URL(literal: "https://maps.apple.com/")
+            url.append(queryItems: [URLQueryItem(name: "daddr", value: "\(place.lat),\(place.lon)"), URLQueryItem(name: "q", value: place.name)])
+            openURL(url) { if !$0 { linkFailed = true } }
         }
         if let website = fields["website"] { Button("Website", systemImage: "globe") { open(website) } }
         if let phone = fields["phone"] {

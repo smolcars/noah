@@ -137,7 +137,7 @@ struct ExitStageScene: Equatable {
         if stacked > 0 {
             let heights = levels[0..<stacked].compactMap { if case .mined(let height) = $0 { height } else { nil } }
             scene.folds.append(.init(kind: .stack, index: 0, count: stacked,
-                                     heights: heights.count == stacked ? heights.min()!...heights.max()! : nil))
+                                     heights: heights.count == stacked ? heights.min().flatMap { low in heights.max().map { low...$0 } } : nil))
             scene.levels.append(levels[stacked - 1])
             drawn += Array(repeating: 0, count: stacked)
         }
@@ -204,7 +204,7 @@ struct ExitStageStill: Equatable {
             claimMined = scene.picture == .claimed ? 1 : 0
         case .canceled:
             ark = 1; cancel = 1; wallet = 0
-        case .none:
+        case .blank:
             grown = 0; wallet = 0
         case .path:
             break
@@ -441,7 +441,7 @@ struct ExitStagePainter {
         }
         if !scene.claiming {
             items.append(round)
-            let minedCount = scene.levels.prefix { $0.isMined }.count
+            let minedCount = scene.levels.prefix(while: \.isMined).count
             var firstUnsent: Int?
             for j in 1...n {
                 let y = Y(j), shared = scene.shared[safe: j - 1] == true ? " " + tr("· shared") : ""
@@ -507,8 +507,8 @@ struct ExitStagePainter {
 
     /// `server`: the Ark line and its server show, so labels keep clear of its badge too.
     private func place(_ items: [ExitStageLabel], server: Bool) -> [ExitStageLabel] {
-        let fit = { (label: ExitStageLabel) in self.fit(label, server: server) }
-        return ExitStageLabels.place(items.map(fit), lineHeight: geometry.lineHeight, scale: geometry.scale, bounds: geometry.labelBounds, fit: fit) {
+        let fitted = { (label: ExitStageLabel) in fit(label, server: server) }
+        return ExitStageLabels.place(items.map(fitted), lineHeight: geometry.lineHeight, scale: geometry.scale, bounds: geometry.labelBounds, fit: fitted) {
             tr("Blocks {from}–{to}", height($0), height($1))
         }
     }
@@ -577,7 +577,7 @@ struct ExitStagePainter {
         let before = geometry.with(count: a.levels.count).levels(x.mined, lock: x.lock)
         guard f.travel < 1 else { return (to, before) }
         let ys = to.indices.map { level -> Double in
-            guard level > 0, let origin = f.origin[safe: level - 1] ?? nil, let from = before[safe: origin + 1] else { return to[level] }
+            guard level > 0, let origin = f.origin[safe: level - 1].flatMap(\.self), let from = before[safe: origin + 1] else { return to[level] }
             return from + (to[level] - from) * f.travel
         }
         return (ys, before)
@@ -593,7 +593,7 @@ struct ExitStagePainter {
     func arrange(_ s: ExitStageScene, ys: [Double], lock: Double, labels: [ExitStageLabel]) -> ExitStageArrangement {
         let g = geometry, n = s.levels.count, L = g.scale
         var result = ExitStageArrangement()
-        guard s.picture != .none || s.explain else { return result }
+        guard s.picture != .blank || s.explain else { return result }
         func Y(_ level: Int) -> Double { ys[safe: level] ?? g.coinY }
         func text(_ string: String, x: Double, y: Double, size: Double, strong: Bool = false, trailing: Bool = false) -> CGRect {
             let width = ExitStageText.width(string, size: size, strong: strong), height = size * 1.25
@@ -695,7 +695,7 @@ struct ExitStagePainter {
     /// What moves while the still stands: the waiting transaction, coin or claim, its pill, the dial's
     /// tip and a needs-funds ring. Overlays draw them; the Canvas draws them itself only while it moves.
     func pulses(_ scene: ExitStageScene) -> [ExitPulse] {
-        guard !scene.explain, scene.picture != .none else { return [] }
+        guard !scene.explain, scene.picture != .blank else { return [] }
         let g = geometry, still = ExitStageStill(scene), ys = g.levels(still.mined, lock: still.lock), n = scene.levels.count
         var pulses: [ExitPulse] = []
         if !scene.claiming && scene.picture != .canceled {
@@ -755,7 +755,7 @@ struct ExitStagePainter {
     // swiftlint:disable:next function_body_length cyclomatic_complexity
     private func paint(_ context: GraphicsContext, _ f: ExitStageFrame, _ a: ExitStageScene, _ s: ExitStageScene,
                        now: Double, inline: Bool, animating: Bool) {
-        guard s.picture != .none || s.explain else { return }
+        guard s.picture != .blank || s.explain else { return }
         let g = geometry, n = s.levels.count, c = colors, L = g.scale
         let canvas = MotionCanvas(context: context, size: CGSize(width: g.width, height: g.height),
                                   viewBox: CGRect(x: 0, y: 0, width: g.width, height: g.height), colors: c)
@@ -1093,7 +1093,7 @@ struct ExitStagePainter {
         c.context.opacity *= alpha
         c.stroke(c.circle(cx, cy, R), colors.hairline, 2.2)
         for tick in 0..<ticks.count {
-            let angle = start + Double(tick) * 2 * .pi / Double(ticks.count), r0 = R + 3.5, r1 = R + (ticks.hours && tick % 6 == 0 ? 8 : 5.5)
+            let angle = start + Double(tick) * 2 * .pi / Double(ticks.count), r0 = R + 3.5, r1 = R + (ticks.hours && tick.isMultiple(of: 6) ? 8 : 5.5)
             c.stroke(c.line(CGPoint(x: cx + cos(angle) * r0, y: cy + sin(angle) * r0), CGPoint(x: cx + cos(angle) * r1, y: cy + sin(angle) * r1)),
                      colors.muted.opacity(Double(tick) / Double(ticks.count) < done ? 0.75 : 0.35), 1)
         }
@@ -1138,7 +1138,7 @@ struct ExitStagePainter {
 
     /// Your on-chain wallet: fees leave it. At the claim it's the destination: this phone, or another wallet.
     private func destination(_ canvas: MotionCanvas, _ f: ExitStageFrame, _ s: ExitStageScene) {
-        let g = geometry, colors = colors, L = g.scale, claiming = s.claiming, alarm = s.levels.contains(.needsFunds)
+        let g = geometry, colors = colors, claiming = s.claiming, alarm = s.levels.contains(.needsFunds)
         let alpha = claiming ? 1 : f.wallet
         guard alpha > 0.01 else { return }
         let center = CGPoint(x: g.walletX, y: g.walletY), grow = 1 + 0.12 * f.destPop.clamped(0, 1.2)
@@ -1230,7 +1230,7 @@ struct ExitStagePainter {
             case (_, .pending(let theirs, let bumped)):
                 if bumped, case .pending(_, false)? = old { fly(index + 1, u: 1, radius: 3.4, hollow: false, alpha: f.oldFee * f.tree) }
                 fly(index + 1, u: f.fly, radius: bumped ? 4.8 : 3.4, hollow: theirs, alpha: f.wallet * (1 - f.mined[index]))
-            case (.pending(let theirs, let bumped)?, .mined):
+            case (.pending(let theirs, let bumped), .mined):
                 fly(index + 1, u: 1, radius: bumped ? 4.8 : 3.4, hollow: theirs, alpha: 1 - f.mined[index])
             default: break
             }

@@ -11,7 +11,7 @@ enum EmailEntry {
     ]
 
     enum Hint: Equatable {
-        case none
+        case hidden
         /// "Did you mean maya@gmail.com"
         case didYouMean(String)
         /// Domain completions, as full addresses.
@@ -29,12 +29,12 @@ enum EmailEntry {
     }
 
     static func hint(for email: String) -> Hint {
-        guard let at = email.firstIndex(of: "@"), at > email.startIndex else { return .none }
+        guard let at = email.firstIndex(of: "@"), at > email.startIndex else { return .hidden }
         let user = email[..<at], domain = String(email[email.index(after: at)...])
         if let fixed = typos[domain] { return .didYouMean("\(user)@\(fixed)") }
-        if isValid(email) { return .none }
+        if isValid(email) { return .hidden }
         let completions = domains.filter { $0.hasPrefix(domain) && $0 != domain }.prefix(3).map { "\(user)@\($0)" }
-        return completions.isEmpty ? .none : .complete(Array(completions))
+        return completions.isEmpty ? .hidden : .complete(Array(completions))
     }
 
     private static func domain(of email: String) -> String? {

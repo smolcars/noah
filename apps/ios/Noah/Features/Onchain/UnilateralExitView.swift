@@ -437,6 +437,7 @@ struct ExitReviewView: View {
                     ExitWarning(text: L10n.text(warning, locale: language))
                 }
                 SettingsFine(text: L10n.text(
+                    // swiftlint:disable:next line_length - one literal: translations.mjs reads copy as a single string
                     "Noah then sends and fee-bumps the exit’s transactions on its own, including in the background when the system lets it, paying from your on-chain bitcoin. Fees are estimates. Only the claim fee comes out of the amount. You can cancel until the last transaction is sent.",
                     locale: language))
             } else if model.busy {

@@ -49,9 +49,8 @@ enum ExitRules {
     static func cancelable(state: String, finalTransactionKind: String?) -> Bool {
         if state == "Start" { return true }
         guard state == "Processing" else { return false }
-        return finalTransactionKind == nil
-            || ["verify-inputs", "awaiting-input-confirmation", "awaiting-cpfp-broadcast"].contains(
-                finalTransactionKind!)
+        guard let finalTransactionKind else { return true }
+        return ["verify-inputs", "awaiting-input-confirmation", "awaiting-cpfp-broadcast"].contains(finalTransactionKind)
     }
 }
 
@@ -73,6 +72,7 @@ struct ExitDetails: Codable, Equatable, Sendable {
     }
     var kind: String?
     var tip_height: UInt32?
+    // swiftlint:disable:next discouraged_optional_collection - bark's exit status JSON omits it
     var transactions: [Transaction]?
     var confirmed_block: Block?
     var claimable_height: UInt32?
@@ -126,8 +126,8 @@ enum ExitTimeline {
         var details: [ExitDetails?] = historyDetails.map(\.self)
         if details.count < states.count {
             details.append(current)
-        } else if details.count == states.count {
-            details[details.count - 1] = current ?? details.last!
+        } else if details.count == states.count, let last = details.last {
+            details[details.count - 1] = current ?? last
         }
         var items: [ExitTimelineItem] = []
         for (index, state) in states.enumerated() {

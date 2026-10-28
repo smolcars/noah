@@ -35,6 +35,7 @@ struct RestoreIssue: Equatable {
                     requiresRestart: true)
             case .seedStateUnknown:
                 return Self(
+                    // swiftlint:disable:next line_length - one literal: translations.mjs reads copy as a single string
                     message: "Noah couldn't confirm that your recovery phrase was saved. Do not retry. Unlock your device, then close and restart Noah to recover safely.",
                     requiresRestart: true)
             }

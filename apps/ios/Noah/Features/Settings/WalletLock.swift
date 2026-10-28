@@ -49,8 +49,10 @@ final class WalletLock {
         Task { await refresh() }
     }
 
+    // swiftlint:disable modifier_order - SwiftFormat's modifierOrder puts access control before nonisolated
     /// `LAContext()` waits on coreauthd, which stalls behind the Face ID permission alert, so never on the main thread.
-    @concurrent nonisolated private static func probe() async
+    @concurrent private nonisolated static func probe() async
+        // swiftlint:enable modifier_order
         -> sending (context: LAContext, available: Bool, noScreenLock: Bool, biometryType: LABiometryType) {
         let context = LAContext()
         var error: NSError?
@@ -155,7 +157,7 @@ struct WalletLockView: View {
                     Button { Task { await lock.unlock() } } label: {
                         HStack(spacing: 8) {
                             if lock.authenticating { ProgressView().tint(NoahTokens.Colors.background) }
-                            else { Image(systemName: lock.biometry.symbol) }
+                            else { Image(systemName: lock.biometry.symbol).accessibilityHidden(true) }
                             Text("Unlock")
                         }
                     }

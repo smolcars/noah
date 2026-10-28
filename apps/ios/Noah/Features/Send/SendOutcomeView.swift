@@ -16,7 +16,7 @@ struct SendOutcomeView: View {
     var unit: BitcoinAmountUnit = .bip177
     var recipient: SendRecipientLabel?
     /// Nil measures its own window (a host without Send around it).
-    var wide: Bool?
+    var wide: Bool? // swiftlint:disable:this discouraged_optional_boolean - nil measures its own window
     var sideInsets: (leading: CGFloat, trailing: CGFloat) = (0, 0)
     /// Done while Lightning is still paying, or Close on an unresolved result: leave, keeping
     /// the attempt and the send lock. Required, so no host can leave it doing nothing.

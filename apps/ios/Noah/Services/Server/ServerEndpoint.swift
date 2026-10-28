@@ -8,16 +8,16 @@ enum ServerEndpoint {
 
     static func baseURL(
         for variant: AppVariant, environment: [String: String] = ProcessInfo.processInfo.environment,
-        info: [String: Any]? = Bundle.main.infoDictionary) -> URL {
+        info: [String: Any] = Bundle.main.infoDictionary ?? [:]) -> URL {
         switch variant {
-        case .mainnet: return URL(string: "https://noahwallet.io")!
-        case .signet: return URL(string: "https://signet.noahwallet.io")!
+        case .mainnet: return URL(literal: "https://noahwallet.io")
+        case .signet: return URL(literal: "https://signet.noahwallet.io")
         case .regtest:
             // Like EXPO_PUBLIC_REGTEST_SERVER_URL: point regtest at another local server.
             if let override = environment["NOAH_REGTEST_SERVER_URL"], let url = URL(string: override) {
                 return url
             }
-            return RegtestHost.serverURL(info: info) ?? URL(string: "http://localhost:3000")!
+            return RegtestHost.serverURL(info: info) ?? URL(literal: "http://localhost:3000")
         }
     }
 }
@@ -29,20 +29,20 @@ enum ServerEndpoint {
 /// `NOAH_REGTEST_ARK_URL` / `NOAH_REGTEST_BITCOIND_URL` replace the host's default
 /// :3535 / :18443 endpoints, e.g. for a second stack on other ports. Only regtest reads them.
 enum RegtestHost {
-    static func host(info: [String: Any]? = Bundle.main.infoDictionary) -> String {
-        nonEmpty(info?["NoahRegtestHost"]) ?? "localhost"
+    static func host(info: [String: Any] = Bundle.main.infoDictionary ?? [:]) -> String {
+        nonEmpty(info["NoahRegtestHost"]) ?? "localhost"
     }
 
-    static func serverURL(info: [String: Any]? = Bundle.main.infoDictionary) -> URL? {
-        nonEmpty(info?["NoahRegtestServerURL"]).flatMap(URL.init(string:))
+    static func serverURL(info: [String: Any] = Bundle.main.infoDictionary ?? [:]) -> URL? {
+        nonEmpty(info["NoahRegtestServerURL"]).flatMap(URL.init(string:))
     }
 
-    static func arkURL(info: [String: Any]? = Bundle.main.infoDictionary) -> String? {
-        nonEmpty(info?["NoahRegtestArkURL"])
+    static func arkURL(info: [String: Any] = Bundle.main.infoDictionary ?? [:]) -> String? {
+        nonEmpty(info["NoahRegtestArkURL"])
     }
 
-    static func bitcoindURL(info: [String: Any]? = Bundle.main.infoDictionary) -> String? {
-        nonEmpty(info?["NoahRegtestBitcoindURL"])
+    static func bitcoindURL(info: [String: Any] = Bundle.main.infoDictionary ?? [:]) -> String? {
+        nonEmpty(info["NoahRegtestBitcoindURL"])
     }
 
     private static func nonEmpty(_ value: Any?) -> String? {

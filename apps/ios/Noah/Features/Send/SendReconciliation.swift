@@ -283,7 +283,7 @@ enum SendTransaction {
         return amount
     }
     static func parse(hex: String) throws -> (inputs: [Input], outputs: [(amount: UInt64, script: [UInt8])]) {
-        guard hex.count % 2 == 0 else { throw SendFailure.unresolved }
+        guard hex.count.isMultiple(of: 2) else { throw SendFailure.unresolved }
         var bytes: [UInt8] = []
         var index = hex.startIndex
         while index < hex.endIndex {

@@ -14,9 +14,9 @@ final class StoryPlayback {
 
 /// Help → About Noah: the wordmark and version, the story of Noah's Ark, and the links.
 struct NoahStoryView: View {
-    static let telegram = URL(string: "https://t.me/blixtwallet/605026")!
-    static let github = URL(string: "https://github.com/smolcars/noah")!
-    static let privacy = URL(string: "https://github.com/smolcars/noah/blob/master/PRIVACY.md")!
+    static let telegram = URL(literal: "https://t.me/blixtwallet/605026")
+    static let github = URL(literal: "https://github.com/smolcars/noah")
+    static let privacy = URL(literal: "https://github.com/smolcars/noah/blob/master/PRIVACY.md")
 
     @Environment(SettingsSummary.self) private var summary: SettingsSummary?
     @Environment(\.settings) private var settings
@@ -69,7 +69,7 @@ struct NoahStoryView: View {
                     playing = player?.isPlaying == true
                     try await Task.sleep(for: .milliseconds(500))
                 }
-            } catch is CancellationError {} catch { self.error = "Couldn't play the story. Please try again." }
+            } catch is CancellationError { /* Leaving the page stops the story. */ } catch { self.error = "Couldn't play the story. Please try again." }
         }
     }
 

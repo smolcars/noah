@@ -286,7 +286,7 @@ struct RecurringSchedulePage: View {
                 }
             }
             if checkable {
-                SettingsRow(title: L10n.text("Check status", locale: language), trailing: .none) {
+                SettingsRow(title: L10n.text("Check status", locale: language), trailing: .empty) {
                     haptics.play(.light)
                     Task { await executor.checkStatus(schedule.id) }
                 }
@@ -301,7 +301,7 @@ struct RecurringSchedulePage: View {
             }
             if schedule.status == "needs_approval" && editable { toggleRow(schedule) }
             SettingsRow(title: L10n.text(schedule.status == "completed" ? "Remove payment" : "Cancel payment", locale: language), danger: true,
-                        trailing: .none, hairline: false, id: "recurring-cancel-\(schedule.id)") {
+                        trailing: .empty, hairline: false, id: "recurring-cancel-\(schedule.id)") {
                 haptics.play(.light)
                 sheet = .cancel
             }
@@ -374,7 +374,7 @@ struct RecurringSchedulePage: View {
     }
 
     private func toggleRow(_ schedule: RecurringPayment) -> some View {
-        SettingsRow(title: L10n.text(toggleTitle(schedule), locale: language), trailing: .none, id: "recurring-toggle-\(schedule.id)") {
+        SettingsRow(title: L10n.text(toggleTitle(schedule), locale: language), trailing: .empty, id: "recurring-toggle-\(schedule.id)") {
             toggle(schedule)
         }
     }

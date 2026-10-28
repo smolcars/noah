@@ -59,6 +59,7 @@ extension WalletSession {
                               prepared: SendPreparedTransaction(prepared))
         } else {
             let estimate: FeeEstimate
+            // swiftlint:disable:next discouraged_optional_collection - mirrors the quote's optional fields
             var vtxoIDs: [String]?
             switch payment.method {
             case "ark": estimate = try await handles.wallet.estimateArkoorPaymentFee(amountSats: payment.amount)
@@ -98,6 +99,7 @@ extension WalletSession {
             let resolved = invoice ?? (payment.method == "lightning" ? payment.destination : "")
             guard quote.walletIdentity == (try await Self.sendIdentity(handles)) else { throw SendFailure.unresolved }
             var checkpoint = quote.checkpoint
+            // swiftlint:disable:next discouraged_optional_boolean - mirrors the quote's optional fields
             var invoicePaid: Bool?
             if let hash = PaymentEncoding.invoice(resolved)?.hash {
                 checkpoint = SendLightningCheckpoint.prepared(reviewed: quote,
@@ -108,7 +110,8 @@ extension WalletSession {
                 guard quote.prepared != nil else { throw SendFailure.feeChanged }
                 try await self.claimSendReview(payment, quote: quote)
                 return SendSnapshot(movementIDs: [], walletIdentity: quote.walletIdentity)
-            } else if checkpoint == nil {
+            }
+            if checkpoint == nil {
                 var resolvedPayment = payment
                 if let invoice { resolvedPayment.destination = invoice; resolvedPayment.method = "lightning" }
                 var fresh = try await self.quote(resolvedPayment, handles: handles)
@@ -121,6 +124,7 @@ extension WalletSession {
         }
     }
     func submitSend(_ payment: SendPayment, quote: SendQuote, snapshot: SendSnapshot,
+                    // swiftlint:disable:next unneeded_escaping - checkSubmission captures it in an escaping closure
                     beforeSubmit: @escaping @Sendable () throws -> Void = {}) async throws -> SendReceipt {
         do { try SendMaxValidation.available(payment) }
         catch let error as SendFailure { throw SendNotSubmitted(reason: error) }
@@ -187,7 +191,9 @@ extension WalletSession {
                         do { try SendMaxValidation.offchain(currentIDs: current, reviewedIDs: quote.vtxoIDs) }
                         catch let error as SendFailure { throw SendNotSubmitted(reason: error) }
                         try await checkSubmission()
-                        let result = try await handles.wallet.offboardVtxos(vtxoIds: quote.vtxoIDs!, bitcoinAddress: payment.destination)
+                        // offchain() above rejects a review without VTXO IDs.
+                        guard let vtxoIDs = quote.vtxoIDs else { throw SendNotSubmitted(reason: .fundsChanged) }
+                        let result = try await handles.wallet.offboardVtxos(vtxoIds: vtxoIDs, bitcoinAddress: payment.destination)
                         receipt.txid = result.txid
                         receipt.movementID = result.movementId
                     } else {
@@ -343,6 +349,7 @@ enum SendMaxValidation {
     static func available(_ payment: SendPayment) throws {
         guard !payment.max || (payment.method == "onchain" && payment.source != nil) else { throw SendFailure.invalid }
     }
+    // swiftlint:disable:next discouraged_optional_collection - mirrors the quote's optional fields
     static func offchain(currentIDs: [String], reviewedIDs: [String]?) throws {
         guard let reviewedIDs, !reviewedIDs.isEmpty, Set(currentIDs) == Set(reviewedIDs) else {
             throw SendFailure.fundsChanged

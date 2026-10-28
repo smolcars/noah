@@ -112,7 +112,7 @@ struct VtxosView: View {
             .accessibilityIdentifier("vtxos-renew-due")
         } else if let soonest = vtxos.filter(\.refreshable).map({ Int64($0.expiry) - Int64($0.tip) }).min() {
             HStack(spacing: 8) {
-                Image(systemName: "clock").font(.system(size: 15))
+                Image(systemName: "clock").accessibilityHidden(true).font(.system(size: 15))
                 Text(verbatim: L10n.text("Next expiry in {time} · renews automatically", VtxoList.timeLeft(soonest, locale: language), locale: language))
             }
             .noahText(NoahTokens.Typography.sub).foregroundStyle(NoahTokens.Colors.muted)
@@ -144,7 +144,7 @@ struct VtxosView: View {
 
     private var empty: some View {
         VStack(spacing: 6) {
-            Image(systemName: "bitcoinsign").font(.system(size: 22, weight: .medium))
+            Image(systemName: "bitcoinsign").accessibilityHidden(true).font(.system(size: 22, weight: .medium))
                 .frame(width: 56, height: 56).background(NoahTokens.Colors.soft, in: Circle())
             Text(L10n.text("No VTXOs yet", locale: language)).noahText(ActivityText.emptyTitle).padding(.top, 20)
             Text(L10n.text("Bitcoin you receive shows up here as VTXOs.", locale: language))
@@ -273,7 +273,7 @@ struct VtxoRow: View {
         Button(action: action) {
             HStack(spacing: 14) {
                 if selecting {
-                    Image(systemName: selected ? "checkmark.circle.fill" : "circle")
+                    Image(systemName: selected ? "checkmark.circle.fill" : "circle").accessibilityHidden(true)
                         .font(.system(size: 24))
                         .foregroundStyle(vtxo.refreshable ? NoahTokens.Colors.foreground : NoahTokens.Colors.hairline)
                         .frame(width: 42, height: 42)

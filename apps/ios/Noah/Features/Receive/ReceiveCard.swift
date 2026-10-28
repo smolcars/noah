@@ -314,7 +314,7 @@ struct ReceiveCard: View {
                 .lineLimit(1).minimumScaleFactor(0.5)
                 .accessibilityIdentifier("receive-arrival-amount")
             HStack(spacing: 6) {
-                Image(systemName: line.glyph).font(.system(size: 14, weight: .medium))
+                Image(systemName: line.glyph).accessibilityHidden(true).font(.system(size: 14, weight: .medium))
                 Text(verbatim: line.text).noahText(NoahTokens.Typography.control)
             }
             .foregroundStyle(Color(hex: 0x6B6B6B))
@@ -373,26 +373,26 @@ private struct ArrivalOverlay: View {
     private func draw(_ canvas: MotionCanvas, w: Double) {
         let time = MotionTime(t: t, reduceMotion: reduceMotion)
         let cx = w / 2, cy = 22 + Double(qrSide) / 2, sy = -34.0
-        typealias M = MotionTime
+        typealias Time = MotionTime
         switch arrival.rail {
         case .ark:
             // Ark's mailbox drops a coin into the card, an orange ripple, then the flip.
-            canvas.layer(center: CGPoint(x: cx, y: sy), scale: M.mix(0.4, 1, time.p(0, .bouncy)),
+            canvas.layer(center: CGPoint(x: cx, y: sy), scale: Time.mix(0.4, 1, time.p(0, .bouncy)),
                          opacity: time.o(0, .bouncy) * (1 - time.o(0.63, .soft))) { $0.badge(server: true, cx, sy) }
             let drop = time.p(0.38, .bouncy)
-            canvas.layer(center: CGPoint(x: cx, y: cy), offset: CGSize(width: 0, height: M.mix(sy - cy, 0, drop)),
-                         scale: M.mix(0.4, 1, drop), opacity: time.o(0.38, .bouncy) * (1 - time.o(arrival.flipAt, .snappy))) {
+            canvas.layer(center: CGPoint(x: cx, y: cy), offset: CGSize(width: 0, height: Time.mix(sy - cy, 0, drop)),
+                         scale: Time.mix(0.4, 1, drop), opacity: time.o(0.38, .bouncy) * (1 - time.o(arrival.flipAt, .snappy))) {
                 $0.payCoin(cx, cy, 26, fill: NoahTokens.Colors.qrInk, ink: .white)
             }
             if t >= 0.76 && !reduceMotion {
-                let ripple = M.spring(t - 0.76, .soft)
-                canvas.layer(center: CGPoint(x: cx, y: cy), scale: M.mix(1, 2.6, ripple), opacity: 1 - min(1, ripple)) {
+                let ripple = Time.spring(t - 0.76, .soft)
+                canvas.layer(center: CGPoint(x: cx, y: cy), scale: Time.mix(1, 2.6, ripple), opacity: 1 - min(1, ripple)) {
                     $0.stroke($0.circle(cx, cy, 28), $0.colors.orange, 2.5)
                 }
             }
         case .lightning:
             let serverFade = 1 - time.o(2.5, .soft)
-            canvas.layer(center: CGPoint(x: cx, y: sy), scale: M.mix(0.4, 1, time.p(0, .bouncy)),
+            canvas.layer(center: CGPoint(x: cx, y: sy), scale: Time.mix(0.4, 1, time.p(0, .bouncy)),
                          opacity: time.o(0, .bouncy) * serverFade) { $0.badge(server: true, cx, sy) }
             // "Incoming over Lightning": the bolt hits the server.
             if t >= 0.25 && t < 0.87 || (reduceMotion && t >= 0.25 && t < 0.85) {
@@ -405,15 +405,15 @@ private struct ArrivalOverlay: View {
                     canvas.stroke(path, canvas.colors.orange, 3.2)
                 } else {
                     let k = min(1, (t - 0.25) / 0.62)
-                    let offset = M.mix(240, -240, k)
+                    let offset = Time.mix(240, -240, k)
                     canvas.stroke(path, canvas.colors.orange, 3.2, dash: [240, 240], phase: CGFloat(offset < 0 ? offset + 480 : offset))
                 }
             }
             // "Ark holds it for you": a locked coin drops into the card; your key opens it.
             let drop = time.p(0.85, .bouncy)
             let coinOpacity = time.o(0.85, .bouncy) * (1 - time.o(arrival.flipAt, .snappy))
-            canvas.layer(center: CGPoint(x: cx, y: cy), offset: CGSize(width: 0, height: M.mix(sy - cy, 0, drop)),
-                         scale: M.mix(0.4, 1, drop), opacity: coinOpacity) { canvas in
+            canvas.layer(center: CGPoint(x: cx, y: cy), offset: CGSize(width: 0, height: Time.mix(sy - cy, 0, drop)),
+                         scale: Time.mix(0.4, 1, drop), opacity: coinOpacity) { canvas in
                 canvas.payCoin(cx, cy, 26, fill: NoahTokens.Colors.qrInk, ink: .white)
                 var lock = canvas
                 lock.context.opacity *= 1 - time.o(2.5, .snappy)
@@ -424,7 +424,7 @@ private struct ArrivalOverlay: View {
                 let rise = time.p(1.65, .snappy)
                 var key = canvas
                 key.context.opacity *= time.o(1.65, .snappy)
-                key.key(cx, M.mix(cy + 170, cy - 30, rise))
+                key.key(cx, Time.mix(cy + 170, cy - 30, rise))
             }
         case .onchain:
             break

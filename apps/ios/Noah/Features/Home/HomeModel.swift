@@ -123,6 +123,7 @@ final class HomeModel {
     private var backgroundRevision: UInt64?
     private(set) var nextRoundCheck: Date?
     private(set) var bannerNow = Date()
+    // swiftlint:disable:next discouraged_optional_collection - nil until the seen set loads
     private var seenAutoBoards: Set<UUID>?
 
     init(dependencies: Dependencies = .live) { self.dependencies = dependencies }
