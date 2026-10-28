@@ -192,6 +192,21 @@ import Observation
     }
     /// `keepingKeypad`: a recipient without its own amount leaves the amount unconfirmed, even
     /// one confirmed by an earlier Next, so Amount comes next with whatever is typed.
+    /// An offer that fixes its amount behaves like an invoice with one. False: stop here, superseded or unresolved.
+    private func applyOfferAmount() async -> Bool {
+        let revision = recipientRevision
+        do {
+            let fixed = try await offerAmount(SendDestination.cleaned(destination))
+            guard revision == recipientRevision else { return false }
+            if let fixed { parsed.amount = Decimal(fixed); parsed.isAmountEditable = false }
+            return true
+        } catch {
+            guard revision == recipientRevision else { return false }
+            self.error = "Unable to resolve this recipient. Please check the address."
+            return false
+        }
+    }
+
     func acceptRecipient(keepingKeypad: Bool = false) async {
         guard !busy, !controller.locked else { return }
         busy = true
@@ -214,19 +229,7 @@ import Observation
             error = "MAX requires an on-chain address without a fixed amount."
             return
         }
-        if type == "offer" {
-            let revision = recipientRevision
-            do {
-                let fixed = try await offerAmount(SendDestination.cleaned(destination))
-                guard revision == recipientRevision else { return }
-                // An offer that fixes its amount behaves like an invoice with one.
-                if let fixed { parsed.amount = Decimal(fixed); parsed.isAmountEditable = false }
-            } catch {
-                guard revision == recipientRevision else { return }
-                self.error = "Unable to resolve this recipient. Please check the address."
-                return
-            }
-        }
+        if type == "offer", await !applyOfferAmount() { return }
         if let fixed = parsed.amount {
             // swiftlint:disable:next legacy_objc_type - Decimal converts to an integer only through NSDecimalNumber
             let number = NSDecimalNumber(decimal: fixed)

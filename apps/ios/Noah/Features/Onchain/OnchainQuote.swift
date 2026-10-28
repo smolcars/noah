@@ -140,7 +140,7 @@ struct OnchainQuote: Identifiable, Codable, Equatable, Sendable {
     var totalFee: UInt64 { estimated(fee) + estimated(chainFee) }
     /// A fee the caller already checked was estimated (`feesUnknown` quotes have neither).
     func estimated(_ fee: UInt64?) -> UInt64 {
-        guard let fee else { preconditionFailure("Quote fee read before checking it was estimated") }
+        guard let fee else { preconditionFailure("quote fee read before checking it was estimated") }
         return fee
     }
     var fundable: Bool { chainFee.map { confirmed >= $0 } ?? false }

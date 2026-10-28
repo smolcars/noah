@@ -5,7 +5,7 @@ import UIKit
     enum Kind: String, CaseIterable, Sendable {
         case refresh, maintenance
         var identifier: String {
-            guard let bundle = Bundle.main.bundleIdentifier else { preconditionFailure("The app bundle has an identifier") }
+            guard let bundle = Bundle.main.bundleIdentifier else { preconditionFailure("the app bundle has an identifier") }
             return bundle + "." + rawValue
         }
         var interval: TimeInterval { self == .refresh ? 60 * 60 : 6 * 60 * 60 }

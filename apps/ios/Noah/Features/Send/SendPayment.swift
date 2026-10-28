@@ -377,24 +377,26 @@ struct SendLightningProgress: Codable, Equatable, Sendable {
             } else { receipt = try await dependencies.pay(payment, quote, snapshot) }
             guard generation == self.generation else { return }
             finish(.paid(receipt))
-        } catch let error as SendExistingLightning {
+        } catch {
             guard generation == self.generation else { return }
+            await submitFailed(error)
+        }
+    }
+    /// A submission that threw: what its error proves, or a status check when it proves nothing.
+    private func submitFailed(_ error: any Error) async {
+        if let error = error as? SendExistingLightning {
             finish(.inProgress(error.progress))
-        } catch let error as SendAlreadyPaid {
-            guard generation == self.generation else { return }
+        } else if let error = error as? SendAlreadyPaid {
             finish(.alreadyPaid(error.receipt))
-        } catch SendFailure.lightningInProgress {
-            guard generation == self.generation else { return }
+        } else if case SendFailure.lightningInProgress? = error as? SendFailure {
             attempt?.failureMessage = SendFailure.lightningInProgress.errorDescription
             message = SendFailure.lightningInProgress.errorDescription
             finish(.uncertain)
-        } catch let error as SendNotSubmitted {
-            guard generation == self.generation else { return }
+        } else if let error = error as? SendNotSubmitted {
             attempt?.failureMessage = error.reason.errorDescription
             message = error.reason.errorDescription
             finish(.failed)
-        } catch {
-            guard generation == self.generation else { return }
+        } else {
             state = .uncertain
             checking = true
             await reconcileCurrentAttempt()

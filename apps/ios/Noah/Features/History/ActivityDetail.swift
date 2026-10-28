@@ -35,61 +35,13 @@ struct ActivityDetail: Equatable {
     let showsDate: Bool
 
     init(_ transaction: HistoryTransaction, ownDomain: String) {
-        let row = HomeActivityRow(transaction, ownDomain: ownDomain)
-        let outgoing = transaction.direction == "outgoing"
-        let lightning = ["Bolt11", "Lnurl"].contains(transaction.type)
-        let methods = (outgoing ? transaction.sentTo : transaction.receivedOn) ?? []
-        let walletRow = transaction.source == "onchain-wallet"
-        let onchain = row.avatar == .chain || walletRow
+        let facts = Facts(transaction, ownDomain: ownDomain)
+        let row = facts.row, outgoing = facts.outgoing, lightning = facts.lightning, walletRow = facts.walletRow
         unsuccessful = row.status.isUnsuccessful
         renewedCoins = transaction.isRenewal ? (transaction.inputVtxos?.count ?? 0) : nil
-
-        switch row.status {
-        case .refunded: status = "Refunded · back in your wallet"; tone = .failure
-        case .failed(let none): status = none ? "Failed · nothing left your wallet" : "Failed"; tone = .failure
-        case .canceled(let none): status = none ? "Canceled · nothing left your wallet" : "Canceled"; tone = .muted
-        case .exiting: status = "Exiting"; tone = .pending
-        case .inRound: status = "Sending · waiting for an Ark round"; tone = .pending
-        case .sending, .confirming:
-            tone = .pending
-            if !outgoing { status = "Arriving" }
-            else if lightning { status = "Sending · still finding a route" }
-            else if onchain { status = "Sending · waiting for confirmations" }
-            else { status = "Sending" }
-        case .done:
-            tone = .plain
-            // An unknown status stays "Recorded": only a completed renewal reads "Renewed {n} coins".
-            if transaction.receiptStatus == "Recorded" { status = "Recorded" }
-            else if transaction.isRenewal { status = (renewedCoins ?? 0) > 0 ? "Renewed {n} coins" : "Renewed" }
-            else if transaction.isInternalTransfer { status = "Moved to Ark" }
-            else if transaction.movementKind == "exit" { status = "Exited" }
-            else { status = outgoing ? "Sent" : "Received" }
-        }
-
-        // What the record shows it moved over comes first: a Lightning address paid over Ark keeps the legacy
-        // "Lnurl" type (the filter still groups it by type), but bark recorded it as an Ark send.
-        let recorded = Set(methods.compactMap(\.paymentMethod))
-        let offer = recorded.contains("offer")
-        if transaction.isRenewal { rail = .arkRound }
-        else if onchain || recorded.contains("bitcoin") { rail = .onchain }
-        else if ["bark.lightning_send", "bark.lightning_receive"].contains(transaction.subsystemName) { rail = offer ? .lightningOffer : .lightning }
-        else if transaction.subsystemName == "bark.arkoor" || recorded.contains("ark") { rail = .ark }
-        else if lightning { rail = offer ? .lightningOffer : .lightning }
-        else if transaction.type == "Onchain" { rail = .onchain }
-        else { rail = .ark }
-
-        // Only an address names the recipient; incoming records hold our own receiving method.
-        let named = outgoing ? (transaction.repeatPayment?.destination ?? transaction.destination) : nil
-        if let named, let address = RepeatPayment.normalizeLightningAddress(named) {
-            to = address
-            toIsAddress = false
-        } else if let named, !named.isEmpty, methods.contains(where: { ["bitcoin", "ark"].contains($0.paymentMethod) }) {
-            to = named
-            toIsAddress = true
-        } else {
-            to = nil
-            toIsAddress = false
-        }
+        (status, tone) = Self.status(facts, renewedCoins: renewedCoins)
+        rail = Self.rail(facts)
+        (to, toIsAddress) = Self.recipient(facts)
 
         let settledLightningSend = outgoing && lightning && transaction.subsystemName == "bark.lightning_send"
             && transaction.movementStatus == "successful"
@@ -124,6 +76,78 @@ struct ActivityDetail: Equatable {
         let comment = transaction.repeatPayment?.comment ?? ""
         note = !comment.isEmpty ? comment : row.title == transaction.paymentDescription ? nil : transaction.paymentDescription
         showsDate = transaction.dateLabel == nil || transaction.hasConfirmation != true
+    }
+
+    /// What every line of the detail reads from the record.
+    private struct Facts {
+        let transaction: HistoryTransaction
+        let row: HomeActivityRow
+        let outgoing: Bool
+        let lightning: Bool
+        let methods: [HistoryTransaction.Destination]
+        let walletRow: Bool
+        let onchain: Bool
+
+        init(_ transaction: HistoryTransaction, ownDomain: String) {
+            self.transaction = transaction
+            row = HomeActivityRow(transaction, ownDomain: ownDomain)
+            outgoing = transaction.direction == "outgoing"
+            lightning = ["Bolt11", "Lnurl"].contains(transaction.type)
+            methods = (outgoing ? transaction.sentTo : transaction.receivedOn) ?? []
+            walletRow = transaction.source == "onchain-wallet"
+            onchain = row.avatar == .chain || walletRow
+        }
+    }
+
+    private static func status(_ facts: Facts, renewedCoins: Int?) -> (String, Tone) {
+        let transaction = facts.transaction, outgoing = facts.outgoing, lightning = facts.lightning, onchain = facts.onchain
+        let line: String, tone: Tone
+        switch facts.row.status {
+        case .refunded: line = "Refunded · back in your wallet"; tone = .failure
+        case .failed(let none): line = none ? "Failed · nothing left your wallet" : "Failed"; tone = .failure
+        case .canceled(let none): line = none ? "Canceled · nothing left your wallet" : "Canceled"; tone = .muted
+        case .exiting: line = "Exiting"; tone = .pending
+        case .inRound: line = "Sending · waiting for an Ark round"; tone = .pending
+        case .sending, .confirming:
+            tone = .pending
+            if !outgoing { line = "Arriving" }
+            else if lightning { line = "Sending · still finding a route" }
+            else if onchain { line = "Sending · waiting for confirmations" }
+            else { line = "Sending" }
+        case .done:
+            tone = .plain
+            // An unknown status stays "Recorded": only a completed renewal reads "Renewed {n} coins".
+            if transaction.receiptStatus == "Recorded" { line = "Recorded" }
+            else if transaction.isRenewal { line = (renewedCoins ?? 0) > 0 ? "Renewed {n} coins" : "Renewed" }
+            else if transaction.isInternalTransfer { line = "Moved to Ark" }
+            else if transaction.movementKind == "exit" { line = "Exited" }
+            else { line = outgoing ? "Sent" : "Received" }
+        }
+        return (line, tone)
+    }
+
+    /// What the record shows it moved over comes first: a Lightning address paid over Ark keeps the legacy
+    /// "Lnurl" type (the filter still groups it by type), but bark recorded it as an Ark send.
+    private static func rail(_ facts: Facts) -> Rail {
+        let transaction = facts.transaction, lightning = facts.lightning
+        let recorded = Set(facts.methods.compactMap(\.paymentMethod))
+        let offer = recorded.contains("offer")
+        if transaction.isRenewal { return .arkRound }
+        if facts.onchain || recorded.contains("bitcoin") { return .onchain }
+        if ["bark.lightning_send", "bark.lightning_receive"].contains(transaction.subsystemName) { return offer ? .lightningOffer : .lightning }
+        if transaction.subsystemName == "bark.arkoor" || recorded.contains("ark") { return .ark }
+        if lightning { return offer ? .lightningOffer : .lightning }
+        if transaction.type == "Onchain" { return .onchain }
+        return .ark
+    }
+
+    private static func recipient(_ facts: Facts) -> (String?, Bool) {
+        let transaction = facts.transaction, methods = facts.methods
+        // Only an address names the recipient; incoming records hold our own receiving method.
+        let named = facts.outgoing ? (transaction.repeatPayment?.destination ?? transaction.destination) : nil
+        if let named, let address = RepeatPayment.normalizeLightningAddress(named) { return (address, false) }
+        if let named, !named.isEmpty, methods.contains(where: { ["bitcoin", "ark"].contains($0.paymentMethod) }) { return (named, true) }
+        return (nil, false)
     }
 
     /// What a settled Lightning send's balance change took beyond what it sent (`SendReconciliation.lightningFee`):

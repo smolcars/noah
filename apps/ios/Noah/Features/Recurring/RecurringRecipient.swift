@@ -192,7 +192,7 @@ enum RecurringFeePolicy {
         var autoPay: Bool { reason == .withinCap }
         /// `evaluate` sets both for every Lightning decision; only Ark's, which never exceed a cap, have neither.
         private var limits: (worstCaseFee: UInt64, cap: UInt64) {
-            guard let worstCaseFee, let cap else { preconditionFailure("A Lightning fee decision has its cap") }
+            guard let worstCaseFee, let cap else { preconditionFailure("a Lightning fee decision has its cap") }
             return (worstCaseFee, cap)
         }
         func approvalIssue(quoteFee: UInt64) -> RecurringIssue? {

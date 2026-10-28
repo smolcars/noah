@@ -238,7 +238,7 @@ struct RecurringPaymentEditorView: View {
     static func endDateTimestamp(_ date: Date, zone: TimeZone = .current) -> Double {
         var calendar = Calendar(identifier: .gregorian); calendar.timeZone = zone
         // RN parses the chosen end date with "23:59", seconds and milliseconds both zero.
-        guard let end = calendar.date(bySettingHour: 23, minute: 59, second: 0, of: date) else { preconditionFailure("Every Gregorian day has 23:59") }
+        guard let end = calendar.date(bySettingHour: 23, minute: 59, second: 0, of: date) else { preconditionFailure("every Gregorian day has 23:59") }
         return end.timeIntervalSince1970 * 1000
     }
     private func save() {

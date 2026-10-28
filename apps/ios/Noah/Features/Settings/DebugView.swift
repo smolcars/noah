@@ -142,24 +142,26 @@ struct DebugView: View {
                     }
                     return
                 }
-                result = try await WalletSession.shared.withOpenWallet { handles in
-                    switch action {
-                    case .ark: return try DebugJSON.ark(try await handles.wallet.arkInfo())
-                    // Shown only here for support; the xpub must never reach logs or Sentry.
-                    case .debugInfo: return try DebugJSON.debugInfo(try await handles.wallet.debugInfo())
-                    case .refresh: try await handles.wallet.refreshServer(); return "Server refreshed"
-                    case .maintenance: try await handles.wallet.maintenance(); return "Maintenance completed"
-                    case .maintenanceRefresh: return try await handles.wallet.maintenanceRefresh() ?? "Maintenance refresh completed"
-                    case .delegated: try await handles.wallet.maintenanceDelegated(); return "Delegated maintenance completed"
-                    case .offboard: return String(describing: try await handles.wallet.offboardAll(bitcoinAddress: input))
-                    case .decode: return try DebugJSON.decoded(try decodeVtxo(hexOrBase64: input))
-                    case .importVtxo: return try DebugJSON.imported(try await handles.wallet.importVtxos(encodedVtxos: [input]))
-                    case .drop: try await handles.wallet.dangerousDropVtxo(id: input); return "VTXO removed"
-                    case .unlock: try await handles.wallet.unlockVtxos(vtxoIds: [input], expectedHolder: nil); return "VTXO unlocked"
-                    case .push: return ""
-                    }
-                }
+                result = try await WalletSession.shared.withOpenWallet { handles in try await Self.run(action, input: input, handles: handles) }
             } catch { result = SafeErrorDescription.of(error) }
+        }
+    }
+
+    private static func run(_ action: Action, input: String, handles: WalletSession.Handles) async throws -> String {
+        switch action {
+        case .ark: return try DebugJSON.ark(try await handles.wallet.arkInfo())
+        // Shown only here for support; the xpub must never reach logs or Sentry.
+        case .debugInfo: return try DebugJSON.debugInfo(try await handles.wallet.debugInfo())
+        case .refresh: try await handles.wallet.refreshServer(); return "Server refreshed"
+        case .maintenance: try await handles.wallet.maintenance(); return "Maintenance completed"
+        case .maintenanceRefresh: return try await handles.wallet.maintenanceRefresh() ?? "Maintenance refresh completed"
+        case .delegated: try await handles.wallet.maintenanceDelegated(); return "Delegated maintenance completed"
+        case .offboard: return String(describing: try await handles.wallet.offboardAll(bitcoinAddress: input))
+        case .decode: return try DebugJSON.decoded(try decodeVtxo(hexOrBase64: input))
+        case .importVtxo: return try DebugJSON.imported(try await handles.wallet.importVtxos(encodedVtxos: [input]))
+        case .drop: try await handles.wallet.dangerousDropVtxo(id: input); return "VTXO removed"
+        case .unlock: try await handles.wallet.unlockVtxos(vtxoIds: [input], expectedHolder: nil); return "VTXO unlocked"
+        case .push: return ""
         }
     }
 }

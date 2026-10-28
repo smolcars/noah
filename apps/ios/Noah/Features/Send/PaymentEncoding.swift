@@ -108,26 +108,31 @@ enum PaymentEncoding {
             amount = value * (factors[unit] ?? 100000000)
         }
         let payload = Array(decoded.words.dropLast(104))
-        var index = 7, hash: String?, descriptionHash: String?, description: String?, expiry: UInt64 = 3600
-        while index + 3 <= payload.count {
-            let tag = payload[index], count = Int(payload[index + 1]) * 32 + Int(payload[index + 2]); index += 3
-            guard index + count <= payload.count else { return nil }
-            let data = Array(payload[index..<(index + count)]); index += count
-            if tag == 1, let raw = bytes(data), raw.count == 32 { hash = raw.map { String(format: "%02x", $0) }.joined() }
-            if tag == 23, let raw = bytes(data), raw.count == 32 { descriptionHash = raw.map { String(format: "%02x", $0) }.joined() }
-            if tag == 13, let raw = bytes(data) { description = String(bytes: raw, encoding: .utf8) }
-            if tag == 6 { guard data.count <= 12 else { return nil }; expiry = data.reduce(0) { $0 * 32 + UInt64($1) } }
-        }
-        guard hash != nil, index == payload.count else { return nil }
+        guard let fields = taggedFields(payload), fields.hash != nil else { return nil }
         let timestamp = payload.prefix(7).reduce(UInt64(0)) { $0 * 32 + UInt64($1) }
         let network = switch networkPrefix { case "lnbc": "mainnet"; case "lntb": "testnet"; case "lntbs": "signet"; default: "regtest" }
         return Invoice(
             network: network,
             sats: amount,
-            hash: hash,
-            expires: Date(timeIntervalSince1970: Double(timestamp) + Double(expiry)),
-            descriptionHash: descriptionHash,
-            description: description)
+            hash: fields.hash,
+            expires: Date(timeIntervalSince1970: Double(timestamp) + Double(fields.expiry)),
+            descriptionHash: fields.descriptionHash,
+            description: fields.description)
+    }
+    private struct TaggedFields { var hash: String?; var descriptionHash: String?; var description: String?; var expiry: UInt64 = 3600 }
+    /// BOLT11's tagged fields after the 7-word timestamp; nil when one runs past the payload or an expiry is too long.
+    private static func taggedFields(_ payload: [UInt8]) -> TaggedFields? {
+        var index = 7, fields = TaggedFields()
+        while index + 3 <= payload.count {
+            let tag = payload[index], count = Int(payload[index + 1]) * 32 + Int(payload[index + 2]); index += 3
+            guard index + count <= payload.count else { return nil }
+            let data = Array(payload[index..<(index + count)]); index += count
+            if tag == 1, let raw = bytes(data), raw.count == 32 { fields.hash = raw.map { String(format: "%02x", $0) }.joined() }
+            if tag == 23, let raw = bytes(data), raw.count == 32 { fields.descriptionHash = raw.map { String(format: "%02x", $0) }.joined() }
+            if tag == 13, let raw = bytes(data) { fields.description = String(bytes: raw, encoding: .utf8) }
+            if tag == 6 { guard data.count <= 12 else { return nil }; fields.expiry = data.reduce(0) { $0 * 32 + UInt64($1) } }
+        }
+        return index == payload.count ? fields : nil
     }
     /// A BOLT12 offer's `offer_description` (TLV 10). Offers are bech32 without a checksum.
     static func offerDescription(_ offer: String) -> String? {

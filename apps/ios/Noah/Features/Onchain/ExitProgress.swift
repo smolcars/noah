@@ -105,28 +105,34 @@ struct ExitProgress: Equatable, Sendable {
         case "VtxoSwept": phase = .swept
         default:
             phase = .publishing
-            guard exit.state == "Processing", let current = path.first(where: { $0.status.block == nil }) else {
-                if exit.state == "Processing", !path.isEmpty { phase = .onchain }
-                return
-            }
-            let index = confirmed
-            switch current.status.kind {
-            case "awaiting-cpfp-broadcast":
-                step = index + 1
-                phase = needsFunds ? .needsFunds : .sending
-            case "awaiting-confirmation":
-                step = index + 1
-                phase = current.status.origin == "wallet" || current.status.origin == nil ? .mempool : .shared
-                // Blocks since Noah first saw it in the mempool (bark keeps a state's height until it changes).
-                if let since = seen[exit.episode(current)], tip > since { stuck = tip - since }
-                // Its child when bark first recorded it in the mempool this episode: a different one now
-                // means a re-bump. Children from before an eviction or reorg don't count.
-                let child = exit.records[exit.runStart(current)].transactions?.first { $0.txid == current.txid }?.status.child_txid
-                bumped = child != nil && current.status.child_txid != nil && child != current.status.child_txid
-            default:
-                // Waiting for its parent's block: the root's parent is the round, already on-chain.
-                if index > 0 { phase = .confirmed }
-            }
+            readProcessing(exit, tip: tip, needsFunds: needsFunds, seen: seen)
+        }
+    }
+
+    /// Processing: the transaction being sent, waiting in the mempool, or stuck behind its parent.
+    private mutating func readProcessing(_ exit: ExitModel, tip: UInt32, needsFunds: Bool, seen: [String: UInt32]) {
+        let path = exit.path
+        guard exit.state == "Processing", let current = path.first(where: { $0.status.block == nil }) else {
+            if exit.state == "Processing", !path.isEmpty { phase = .onchain }
+            return
+        }
+        let index = confirmed
+        switch current.status.kind {
+        case "awaiting-cpfp-broadcast":
+            step = index + 1
+            phase = needsFunds ? .needsFunds : .sending
+        case "awaiting-confirmation":
+            step = index + 1
+            phase = current.status.origin == "wallet" || current.status.origin == nil ? .mempool : .shared
+            // Blocks since Noah first saw it in the mempool (bark keeps a state's height until it changes).
+            if let since = seen[exit.episode(current)], tip > since { stuck = tip - since }
+            // Its child when bark first recorded it in the mempool this episode: a different one now
+            // means a re-bump. Children from before an eviction or reorg don't count.
+            let child = exit.records[exit.runStart(current)].transactions?.first { $0.txid == current.txid }?.status.child_txid
+            bumped = child != nil && current.status.child_txid != nil && child != current.status.child_txid
+        default:
+            // Waiting for its parent's block: the root's parent is the round, already on-chain.
+            if index > 0 { phase = .confirmed }
         }
     }
 }

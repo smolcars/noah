@@ -44,33 +44,10 @@ struct ExitStagePainter {
             let minedCount = scene.levels.prefix(while: \.isMined).count
             var firstUnsent: Int?
             for j in 1...n {
-                let y = Y(j), shared = scene.shared[safe: j - 1] == true ? " " + tr("· shared") : ""
-                switch scene.levels[j - 1] {
-                case .mined(let block):
-                    guard !(j == n && scene.locked), let block else { continue }
-                    if let stack = scene.fold(at: j - 1) {
-                        // A stack of the oldest blocks: their range, ahead of the round's caption (which then takes one line).
-                        guard let heights = stack.heights else { continue }
-                        items.append(.init(y: y, lines: [.init(text: tr("Blocks {from}–{to}", height(heights.lowerBound), height(heights.upperBound)) + shared,
-                                                               tone: .ink)], priority: j == minedCount ? 2.2 : 2.1, block: heights.upperBound,
-                                           first: heights.lowerBound))
-                        continue
-                    }
-                    items.append(.init(y: y, lines: [.init(text: tr("Block {height}", height(block)) + shared, tone: .ink)],
-                                       priority: j == minedCount ? 2.2 : 1, block: block))
-                case .needsFunds:
-                    var lines = [ExitStageLabel.Line(text: tr("Needs a fee"), tone: .failureStrong)]
-                    if let need = scene.need { lines.append(.init(text: tr("add {amount} on-chain", need), tone: .failure)) }
-                    items.append(.init(y: y, lines: lines, priority: 4, pill: .failure))
-                case .pending(let theirs, let bumped):
-                    var sub = theirs ? tr("sent by someone else") : scene.fee.map { tr("fee {amount}", $0) + shared }
-                    if scene.stuck > 0 { sub = L10n.plural("{n} blocks without it", count: Int(scene.stuck), locale: language) }
-                    if bumped { sub = tr("a block came without it") }
-                    if scene.stale, let checked = scene.checked { sub = tr("last checked at {height}", height(checked)) }
-                    items.append(.init(y: y, lines: [.init(text: tr("Next block"), tone: .strong)] + (sub.map { [.init(text: $0)] } ?? []),
-                                       priority: 4, pill: scene.stale ? .grey : .orange))
-                case .unsent, .ready:
+                if [.unsent, .ready].contains(scene.levels[j - 1]) {
                     if firstUnsent == nil { firstUnsent = j }
+                } else if let label = levelLabel(scene, index: j, y: Y(j), minedCount: minedCount) {
+                    items.append(label)
                 }
             }
             if let first = firstUnsent, first != n, scene.picture != .lift {
@@ -83,26 +60,68 @@ struct ExitStagePainter {
                 more.fallbacks = ((first + 1)..<n).map { var label = more; label.y = Y($0); return label }
                 items.append(more)
             }
-            if scene.locked, let unlock = scene.unlock {
-                let left = unlock > scene.tip ? unlock - scene.tip : 0
-                items.append(.init(y: g.coinY, lines: scene.picture == .unlocked
-                        ? [.init(text: tr("Unlocked"), tone: .strong), .init(text: tr("since block {height}", height(unlock)))]
-                        : [.init(text: L10n.plural("Locked · {n} blocks", count: Int(left), locale: language), tone: .strong),
-                           .init(text: tr("opens at {height}", height(unlock)))], priority: 3.5))
-            } else if [.unsent, .ready].contains(scene.levels[n - 1]) {
-                items.append(.init(
-                    y: g.coinY,
-                    lines: [.init(text: scene.picture == .canceled ? tr("Back in Ark") : tr("Your VTXO"), tone: .strong)],
-                    priority: 3.5))
-            }
+            if let coin = coinLabel(scene) { items.append(coin) }
         } else {
-            let node = g.claimNode
-            let lines: [ExitStageLabel.Line] = scene.picture == .claimed
-                ? [.init(text: scene.claimHeight.map { tr("Block {height}", height($0)) } ?? tr("In a block"), tone: .strong), .init(text: tr("claim"))]
-                : [.init(text: tr("Next block"), tone: .strong)] + (scene.claimFee.map { [.init(text: tr("claim fee {amount}", $0))] } ?? [])
-            items.append(.init(y: node.y, lines: lines, priority: 4, pill: scene.picture == .claimed ? nil : .orange, trailing: node.x - 16))
+            items.append(claimLabel(scene))
         }
         return place(items, server: [.lift, .canceled].contains(scene.picture))
+    }
+
+    /// One transaction's label, for every level but an unsent one.
+    private func levelLabel(_ scene: ExitStageScene, index j: Int, y: Double, minedCount: Int) -> ExitStageLabel? {
+        let n = scene.levels.count, shared = scene.shared[safe: j - 1] == true ? " " + tr("· shared") : ""
+        switch scene.levels[j - 1] {
+        case .mined(let block):
+            guard !(j == n && scene.locked), let block else { return nil }
+            if let stack = scene.fold(at: j - 1) {
+                // A stack of the oldest blocks: their range, ahead of the round's caption (which then takes one line).
+                guard let heights = stack.heights else { return nil }
+                return .init(y: y, lines: [.init(text: tr("Blocks {from}–{to}", height(heights.lowerBound), height(heights.upperBound)) + shared,
+                                                 tone: .ink)], priority: j == minedCount ? 2.2 : 2.1, block: heights.upperBound,
+                             first: heights.lowerBound)
+            }
+            return .init(y: y, lines: [.init(text: tr("Block {height}", height(block)) + shared, tone: .ink)],
+                         priority: j == minedCount ? 2.2 : 1, block: block)
+        case .needsFunds:
+            var lines = [ExitStageLabel.Line(text: tr("Needs a fee"), tone: .failureStrong)]
+            if let need = scene.need { lines.append(.init(text: tr("add {amount} on-chain", need), tone: .failure)) }
+            return .init(y: y, lines: lines, priority: 4, pill: .failure)
+        case .pending(let theirs, let bumped):
+            var sub = theirs ? tr("sent by someone else") : scene.fee.map { tr("fee {amount}", $0) + shared }
+            if scene.stuck > 0 { sub = L10n.plural("{n} blocks without it", count: Int(scene.stuck), locale: language) }
+            if bumped { sub = tr("a block came without it") }
+            if scene.stale, let checked = scene.checked { sub = tr("last checked at {height}", height(checked)) }
+            return .init(y: y, lines: [.init(text: tr("Next block"), tone: .strong)] + (sub.map { [.init(text: $0)] } ?? []),
+                         priority: 4, pill: scene.stale ? .grey : .orange)
+        case .unsent, .ready:
+            return nil
+        }
+    }
+
+    /// The coin's label: locked until its block, or your VTXO waiting at the top.
+    private func coinLabel(_ scene: ExitStageScene) -> ExitStageLabel? {
+        let g = geometry, n = scene.levels.count
+        if scene.locked, let unlock = scene.unlock {
+            let left = unlock > scene.tip ? unlock - scene.tip : 0
+            return .init(y: g.coinY, lines: scene.picture == .unlocked
+                ? [.init(text: tr("Unlocked"), tone: .strong), .init(text: tr("since block {height}", height(unlock)))]
+                : [.init(text: L10n.plural("Locked · {n} blocks", count: Int(left), locale: language), tone: .strong),
+                   .init(text: tr("opens at {height}", height(unlock)))], priority: 3.5)
+        }
+        guard [.unsent, .ready].contains(scene.levels[n - 1]) else { return nil }
+        return .init(
+            y: g.coinY,
+            lines: [.init(text: scene.picture == .canceled ? tr("Back in Ark") : tr("Your VTXO"), tone: .strong)],
+            priority: 3.5)
+    }
+
+    private func claimLabel(_ scene: ExitStageScene) -> ExitStageLabel {
+        let g = geometry
+        let node = g.claimNode
+        let lines: [ExitStageLabel.Line] = scene.picture == .claimed
+            ? [.init(text: scene.claimHeight.map { tr("Block {height}", height($0)) } ?? tr("In a block"), tone: .strong), .init(text: tr("claim"))]
+            : [.init(text: tr("Next block"), tone: .strong)] + (scene.claimFee.map { [.init(text: tr("claim fee {amount}", $0))] } ?? [])
+        return .init(y: node.y, lines: lines, priority: 4, pill: scene.picture == .claimed ? nil : .orange, trailing: node.x - 16)
     }
 
     /// `server`: the Ark line and its server show, so labels keep clear of its badge too.
@@ -195,44 +214,7 @@ struct ExitStagePainter {
         var result = ExitStageArrangement()
         guard s.picture != .blank || s.explain else { return result }
         func Y(_ level: Int) -> Double { ys[safe: level] ?? g.coinY }
-        func text(_ string: String, x: Double, y: Double, size: Double, strong: Bool = false, trailing: Bool = false) -> CGRect {
-            let width = ExitStageText.width(string, size: size, strong: strong), height = size * 1.25
-            return CGRect(x: trailing ? x - width : x, y: y - height / 2, width: width, height: height)
-        }
-        var shapes: [ExitStageShape] = [.box(
-            .round,
-            "round",
-            CGRect(x: g.trunk - g.roundSide / 2, y: g.ground - g.roundSide, width: g.roundSide, height: g.roundSide))]
-        for level in 1..<max(1, n) {
-            shapes.append(.box(.node, "node\(level)", CGRect(x: g.trunk - g.side / 2, y: Y(level) - g.side / 2, width: g.side, height: g.side)))
-        }
-        // Your coin with its dashed ring or, while locked, the timelock's dial; while claiming, the coin alone.
-        shapes.append(.circle(.coin, "coin", CGPoint(x: g.trunk, y: g.coinY - (s.picture == .lift ? 5 : 0)), s.claiming ? g.coinRadius : g.coinReserve(lock)))
-        if s.claiming {
-            shapes.append(.box(.claimNode, "claim", CGRect(x: g.claimNode.x - 6.5, y: g.claimNode.y - 6.5, width: 13, height: 13)))
-        }
-        if s.claiming || ExitStageStill(s).wallet > 0.5 {
-            let center = CGPoint(x: g.walletX, y: g.walletY)
-            shapes.append(.circle(.badge, "badge", center, s.picture == .claimed ? 24 : 15))
-            if s.picture == .claimed { shapes.append(.circle(.badge, "badge", CGPoint(x: center.x + 15, y: center.y - 15), 9)) }
-            if s.levels.contains(.needsFunds) { shapes.append(.circle(.badge, "badge", CGPoint(x: center.x + 12, y: center.y - 12), 6.5)) }
-            for line in destinationLines(s, landed: s.picture == .claimed) {
-                shapes.append(.box(.text, "badge", text(line.text, x: g.width - 12, y: line.y, size: line.size, strong: line.strong, trailing: true)))
-            }
-        }
-        shapes.append(.box(.text, "bitcoin", text(tr("Bitcoin"), x: 14, y: g.ground + 12 * L, size: 10.5 * L)))
-        if s.explain || [.lift, .canceled].contains(s.picture) {
-            shapes.append(.box(.text, "ark", text(tr("Ark"), x: 14, y: g.coinY - 10, size: 11 * L)))
-            shapes.append(.circle(.server, "server", CGPoint(x: g.width - 30, y: g.coinY), 14))
-        }
-        for (index, label) in labels.enumerated() {
-            shapes.append(.box(.label, "label\(index)", frame(label)))
-            if let brace = label.brace { shapes.append(.box(
-                .brace,
-                "label\(index)",
-                CGRect(x: g.trunk + 27, y: brace.lowerBound, width: 5, height: brace.upperBound - brace.lowerBound))) }
-        }
-        result.shapes = shapes
+        result.shapes = fixedShapes(s, ys: ys, lock: lock, labels: labels)
         func clear(_ shape: ExitStageShape) -> Bool {
             CGRect(x: 0, y: 0, width: g.width, height: g.height).contains(shape.frame)
                 && !result.shapes.contains { $0.group != shape.group && $0.overlaps(shape, margin: ExitStageGeometry.clearance) }
@@ -267,12 +249,69 @@ struct ExitStagePainter {
             let sibling = result.siblings[index]
             guard let size = Self.fitted(sibling.other.amount, 9.5 * L, room: sibling.coin.x - 14) else { continue }
             let shape = ExitStageShape.box(.amount, "sibling\(sibling.other.level).\(sibling.index)",
-                                           text(sibling.other.amount, x: sibling.coin.x - 10, y: sibling.coin.y, size: size, trailing: true))
+                                           textFrame(sibling.other.amount, at: CGPoint(x: sibling.coin.x - 10, y: sibling.coin.y), size: size, trailing: true))
             guard clear(shape) else { continue }
             result.siblings[index].amount = size
             result.shapes.append(shape)
         }
         // The caption, under the lowest stubs.
+        if let caption = caption(ys), clear(caption.shape) {
+            result.caption = caption.lines
+            result.captionY = caption.y
+            result.shapes.append(caption.shape)
+        }
+        return result
+    }
+
+    /// What every still draws: the round, its nodes, your coin, the wallet badge and its lines, the texts and labels.
+    private func fixedShapes(_ s: ExitStageScene, ys: [Double], lock: Double, labels: [ExitStageLabel]) -> [ExitStageShape] {
+        let g = geometry, n = s.levels.count, L = g.scale
+        func Y(_ level: Int) -> Double { ys[safe: level] ?? g.coinY }
+        var shapes: [ExitStageShape] = [.box(
+            .round,
+            "round",
+            CGRect(x: g.trunk - g.roundSide / 2, y: g.ground - g.roundSide, width: g.roundSide, height: g.roundSide))]
+        for level in 1..<max(1, n) {
+            shapes.append(.box(.node, "node\(level)", CGRect(x: g.trunk - g.side / 2, y: Y(level) - g.side / 2, width: g.side, height: g.side)))
+        }
+        // Your coin with its dashed ring or, while locked, the timelock's dial; while claiming, the coin alone.
+        shapes.append(.circle(.coin, "coin", CGPoint(x: g.trunk, y: g.coinY - (s.picture == .lift ? 5 : 0)), s.claiming ? g.coinRadius : g.coinReserve(lock)))
+        if s.claiming {
+            shapes.append(.box(.claimNode, "claim", CGRect(x: g.claimNode.x - 6.5, y: g.claimNode.y - 6.5, width: 13, height: 13)))
+        }
+        if s.claiming || ExitStageStill(s).wallet > 0.5 {
+            let center = CGPoint(x: g.walletX, y: g.walletY)
+            shapes.append(.circle(.badge, "badge", center, s.picture == .claimed ? 24 : 15))
+            if s.picture == .claimed { shapes.append(.circle(.badge, "badge", CGPoint(x: center.x + 15, y: center.y - 15), 9)) }
+            if s.levels.contains(.needsFunds) { shapes.append(.circle(.badge, "badge", CGPoint(x: center.x + 12, y: center.y - 12), 6.5)) }
+            for line in destinationLines(s, landed: s.picture == .claimed) {
+                shapes.append(.box(
+                    .text,
+                    "badge",
+                    textFrame(line.text, at: CGPoint(x: g.width - 12, y: line.y), size: line.size, strong: line.strong, trailing: true)))
+            }
+        }
+        shapes.append(.box(.text, "bitcoin", textFrame(tr("Bitcoin"), at: CGPoint(x: 14, y: g.ground + 12 * L), size: 10.5 * L)))
+        if s.explain || [.lift, .canceled].contains(s.picture) {
+            shapes.append(.box(.text, "ark", textFrame(tr("Ark"), at: CGPoint(x: 14, y: g.coinY - 10), size: 11 * L)))
+            shapes.append(.circle(.server, "server", CGPoint(x: g.width - 30, y: g.coinY), 14))
+        }
+        for (index, label) in labels.enumerated() {
+            shapes.append(.box(.label, "label\(index)", frame(label)))
+            if let brace = label.brace { shapes.append(.box(
+                .brace,
+                "label\(index)",
+                CGRect(x: g.trunk + 27, y: brace.lowerBound, width: 5, height: brace.upperBound - brace.lowerBound))) }
+        }
+        return shapes
+    }
+
+    private struct CaptionPlacement { let lines: [String]; let y: Double; let shape: ExitStageShape }
+
+    /// The caption's lines and frame between the round and the first transaction, when it fits at all.
+    private func caption(_ ys: [Double]) -> CaptionPlacement? {
+        let g = geometry, L = g.scale
+        func Y(_ level: Int) -> Double { ys[safe: level] ?? g.coinY }
         if let lines = g.caption(tr("Other people’s coins in this round"), ys, width: { ExitStageText.width($0, size: 10 * L) }) {
             let lineHeight = 12.5 * L, top = Y(1) + 9, room = (g.ground - g.roundSide - 5) - top
             let y0 = top + (room - Double(lines.count) * lineHeight) / 2 + lineHeight / 2, right = g.trunk - g.roundSide / 2 - 9
@@ -281,13 +320,14 @@ struct ExitStagePainter {
                 .caption,
                 "caption",
                 CGRect(x: right - width, y: y0 - lineHeight / 2, width: width, height: Double(lines.count) * lineHeight))
-            if clear(shape) {
-                result.caption = lines
-                result.captionY = y0
-                result.shapes.append(shape)
-            }
+            return CaptionPlacement(lines: lines, y: y0, shape: shape)
         }
-        return result
+        return nil
+    }
+
+    private func textFrame(_ string: String, at point: CGPoint, size: Double, strong: Bool = false, trailing: Bool = false) -> CGRect {
+        let width = ExitStageText.width(string, size: size, strong: strong), height = size * 1.25
+        return CGRect(x: trailing ? point.x - width : point.x, y: point.y - height / 2, width: width, height: height)
     }
 
     // MARK: Pulses

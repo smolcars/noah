@@ -113,58 +113,76 @@ enum BitcoinTransaction {
     static func weight(hex: String) -> UInt64? { parse(hex: hex)?.weight }
 
     static func parse(hex: String) -> (txid: String, weight: UInt64)? {
-        guard hex.count.isMultiple(of: 2) else { return nil }
+        let bytes = bytes(hex: hex)
+        var reader = TransactionReader(bytes: bytes)
+        guard reader.skip(4) else { return nil }
+        let segwit = bytes.count > 6 && bytes[4] == 0 && bytes[5] != 0
+        if segwit { reader.at += 2 }
+        let bodyStart = reader.at
+        guard let inputs = reader.varint(), inputs > 0 else { return nil }
+        for _ in 0..<inputs {
+            guard reader.skip(36), let script = reader.varint(), reader.skip(script), reader.skip(4) else { return nil }
+        }
+        guard let outputs = reader.varint() else { return nil }
+        for _ in 0..<outputs {
+            guard reader.skip(8), let script = reader.varint(), reader.skip(script) else { return nil }
+        }
+        let bodyEnd = reader.at
+        if segwit, !reader.skipWitnesses(inputs) { return nil }
+        guard reader.skip(4), reader.at == bytes.count else { return nil }
+        let stripped = Array(bytes[0..<4]) + Array(bytes[bodyStart..<bodyEnd]) + Array(bytes[(bytes.count - 4)...])
+        let hash = SHA256.hash(data: Data(SHA256.hash(data: Data(stripped))))
+        return (hash.reversed().map { String(format: "%02x", $0) }.joined(), UInt64(stripped.count * 3 + bytes.count))
+    }
+
+    /// Empty when the hex isn't whole bytes, which no transaction is.
+    private static func bytes(hex: String) -> [UInt8] {
+        guard hex.count.isMultiple(of: 2) else { return [] }
         var bytes: [UInt8] = []
         bytes.reserveCapacity(hex.count / 2)
         var index = hex.startIndex
         while index < hex.endIndex {
             let next = hex.index(index, offsetBy: 2)
-            guard let byte = UInt8(hex[index..<next], radix: 16) else { return nil }
+            guard let byte = UInt8(hex[index..<next], radix: 16) else { return [] }
             bytes.append(byte)
             index = next
         }
-        var at = 0
-        func skip(_ count: Int) -> Bool {
-            guard count >= 0, at + count <= bytes.count else { return false }
-            at += count
-            return true
-        }
-        func varint() -> Int? {
-            guard at < bytes.count else { return nil }
-            let first = bytes[at]
-            at += 1
-            if first < 0xFD { return Int(first) }
-            let width = first == 0xFD ? 2 : first == 0xFE ? 4 : 8
-            guard at + width <= bytes.count else { return nil }
-            let value = bytes[at..<at + width].reversed().reduce(UInt64(0)) { $0 << 8 | UInt64($1) }
-            at += width
-            return value <= UInt64(bytes.count) ? Int(value) : nil
-        }
-        guard skip(4) else { return nil }
-        let segwit = bytes.count > 6 && bytes[4] == 0 && bytes[5] != 0
-        if segwit { at += 2 }
-        let bodyStart = at
-        guard let inputs = varint(), inputs > 0 else { return nil }
+        return bytes
+    }
+}
+
+/// Reads a serialized transaction front to back; every read fails rather than run past the end.
+private struct TransactionReader {
+    let bytes: [UInt8]
+    var at = 0
+
+    mutating func skip(_ count: Int) -> Bool {
+        guard count >= 0, at + count <= bytes.count else { return false }
+        at += count
+        return true
+    }
+
+    mutating func varint() -> Int? {
+        guard at < bytes.count else { return nil }
+        let first = bytes[at]
+        at += 1
+        if first < 0xFD { return Int(first) }
+        let width = first == 0xFD ? 2 : first == 0xFE ? 4 : 8
+        guard at + width <= bytes.count else { return nil }
+        let value = bytes[at..<at + width].reversed().reduce(UInt64(0)) { $0 << 8 | UInt64($1) }
+        at += width
+        return value <= UInt64(bytes.count) ? Int(value) : nil
+    }
+
+    /// Each input's witness stack: a count, then that many sized items.
+    mutating func skipWitnesses(_ inputs: Int) -> Bool {
         for _ in 0..<inputs {
-            guard skip(36), let script = varint(), skip(script), skip(4) else { return nil }
-        }
-        guard let outputs = varint() else { return nil }
-        for _ in 0..<outputs {
-            guard skip(8), let script = varint(), skip(script) else { return nil }
-        }
-        let bodyEnd = at
-        if segwit {
-            for _ in 0..<inputs {
-                guard let items = varint() else { return nil }
-                for _ in 0..<items {
-                    guard let size = varint(), skip(size) else { return nil }
-                }
+            guard let items = varint() else { return false }
+            for _ in 0..<items {
+                guard let size = varint(), skip(size) else { return false }
             }
         }
-        guard skip(4), at == bytes.count else { return nil }
-        let stripped = Array(bytes[0..<4]) + Array(bytes[bodyStart..<bodyEnd]) + Array(bytes[(bytes.count - 4)...])
-        let hash = SHA256.hash(data: Data(SHA256.hash(data: Data(stripped))))
-        return (hash.reversed().map { String(format: "%02x", $0) }.joined(), UInt64(stripped.count * 3 + bytes.count))
+        return true
     }
 }
 

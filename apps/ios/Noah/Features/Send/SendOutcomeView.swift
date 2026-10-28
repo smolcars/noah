@@ -243,6 +243,17 @@ struct SendOutcomeView: View {
         case .sign: return L10n.text("Signing with Ark", locale: language)
         case .deliver: return L10n.text("Delivering", locale: language)
         case .delivered: return L10n.text("Delivered", locale: language)
+        case .swap: return L10n.text("Swapping with Ark", locale: language)
+        case .waiting:
+            return tip.map { L10n.text("Waiting for block {height}", ($0 + 1).formatted(.number.locale(locale)), locale: language) } ?? ""
+        case .confirmed: return confirmedText(language)
+        default: return lightningPhaseText(phase, language: language)
+        }
+    }
+
+    /// Lightning's lock, pay and refund steps.
+    private func lightningPhaseText(_ phase: SendMotion.Phase, language: String) -> String {
+        switch phase {
         case .lock: return L10n.text("Locking {amount}", format(sendingAmount), locale: language)
         case .hold: return L10n.text("Ark holds it while Lightning pays", locale: language)
         case .paying: return L10n.text("Paying over Lightning", locale: language)
@@ -252,16 +263,16 @@ struct SendOutcomeView: View {
         case .fizzle: return L10n.text("That payment didn’t go through", locale: language)
         case .signBack: return L10n.text("Ark signs it back to you", locale: language)
         case .refunded: return L10n.text("Back in your wallet", locale: language)
-        case .swap: return L10n.text("Swapping with Ark", locale: language)
-        case .waiting:
-            return tip.map { L10n.text("Waiting for block {height}", ($0 + 1).formatted(.number.locale(locale)), locale: language) } ?? ""
-        case .confirmed:
-            guard let height = motion.confirmedHeight else { return "" }
-            let line = L10n.text("Confirmed in block {height}", height.formatted(.number.locale(locale)), locale: language)
-            guard requiredConfirmations > 1 else { return line }
-            let count = min(SendMotion.confirmations(height: height, tip: tip), requiredConfirmations)
-            return line + " · " + L10n.text("{n} of {total}", count, requiredConfirmations, locale: language)
+        default: return ""
         }
+    }
+
+    private func confirmedText(_ language: String) -> String {
+        guard let height = motion.confirmedHeight else { return "" }
+        let line = L10n.text("Confirmed in block {height}", height.formatted(.number.locale(locale)), locale: language)
+        guard requiredConfirmations > 1 else { return line }
+        let count = min(SendMotion.confirmations(height: height, tip: tip), requiredConfirmations)
+        return line + " · " + L10n.text("{n} of {total}", count, requiredConfirmations, locale: language)
     }
 
     // MARK: Trailing: the result

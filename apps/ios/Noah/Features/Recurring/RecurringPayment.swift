@@ -110,9 +110,9 @@ struct RecurringPayment: Codable, Equatable, Identifiable, Sendable {
         let start = Date(timeIntervalSince1970: startAt / 1000)
         var parts = calendar.dateComponents([.year, .month, .day, .hour, .minute, .second], from: start)
         // The Gregorian calendar resolves every component it was asked for and every date built from them.
-        guard let year = parts.year, let month = parts.month, let day = parts.day else { preconditionFailure("Gregorian date components") }
+        guard let year = parts.year, let month = parts.month, let day = parts.day else { preconditionFailure("gregorian date components") }
         func date(_ components: DateComponents) -> Date {
-            guard let date = calendar.date(from: components) else { preconditionFailure("Gregorian date") }
+            guard let date = calendar.date(from: components) else { preconditionFailure("gregorian date") }
             return date
         }
         let milliseconds = startAt - floor(startAt / 1000) * 1000
@@ -123,7 +123,7 @@ struct RecurringPayment: Codable, Equatable, Identifiable, Sendable {
             parts.month = totalMonths % 12 + 1
             var first = parts
             first.day = 1
-            guard let days = calendar.range(of: .day, in: .month, for: date(first)) else { preconditionFailure("Gregorian month length") }
+            guard let days = calendar.range(of: .day, in: .month, for: date(first)) else { preconditionFailure("gregorian month length") }
             parts.day = min(day, days.count)
         } else {
             parts.day = day + steps * (interval.unit == "week" ? 7 : 1)
@@ -145,7 +145,7 @@ struct RecurringPayment: Codable, Equatable, Identifiable, Sendable {
         var skippedIndices: [Int]?
         /// A pay plan's occurrence. Only pay plans are settled, so any other kind is a programming error.
         var due: (index: Int, at: Double) {
-            guard let occurrenceIndex, let scheduledFor else { preconditionFailure("Only a pay plan has an occurrence") }
+            guard let occurrenceIndex, let scheduledFor else { preconditionFailure("only a pay plan has an occurrence") }
             return (occurrenceIndex, scheduledFor)
         }
     }

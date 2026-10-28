@@ -173,6 +173,13 @@ final class HistoryModel {
         }
     }
 
+    /// The cached block time, or a fetch after publishing what's ready (a miss can stall the single worker).
+    private func blockTime(_ txid: String, publishFirst publish: () async -> Void) async -> Date? {
+        if let cached = blockTimes[txid] { return cached }
+        await publish()
+        return try? await dependencies.blockTime(txid)
+    }
+
     private func enrich(_ rows: [HistoryTransaction], currency: String, generation: UUID) async {
         var latest = rows
         var dirty = false
@@ -194,9 +201,7 @@ final class HistoryModel {
             if Task.isCancelled || self.generation != generation { return }
             if latest[index].source == "onchain-wallet", latest[index].hasConfirmation == true,
                let txid = latest[index].txid {
-                let time: Date?
-                if let cached = blockTimes[txid] { time = cached }
-                else { await publish(); time = try? await dependencies.blockTime(txid) }
+                let time = await blockTime(txid, publishFirst: publish)
                 guard !Task.isCancelled, self.generation == generation else { return }
                 if let time {
                     blockTimes[txid] = time

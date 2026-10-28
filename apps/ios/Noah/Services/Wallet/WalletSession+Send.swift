@@ -14,6 +14,39 @@ extension WalletSession {
         }
     }
     private func quote(_ payment: SendPayment, handles: Handles) async throws -> SendQuote {
+        try await Self.validate(payment, handles: handles)
+        if payment.method == "lightning", let hash = PaymentEncoding.invoice(payment.destination)?.hash,
+           case .inProgress(let send) = try await handles.wallet.lightningSendState(paymentHash: hash) {
+            // Funds may already be held by the checkpoint. Review the bound, not fresh spendability.
+            let (total, overflow) = payment.amount.addingReportingOverflow(send.feeSats)
+            guard !overflow else { throw SendFailure.invalid }
+            return SendQuote(amount: payment.amount, fee: send.feeSats, total: total,
+                             walletIdentity: try await Self.sendIdentity(handles), checkpoint: .init(send))
+        }
+        let available =
+            payment.method == "onchain" && payment.source == .onchain
+                ? try await handles.onchain.balance().confirmedSats : try await handles.wallet.balance().spendableSats
+        var quote: SendQuote
+        if payment.method == "onchain", payment.source == .onchain {
+            quote = try await Self.preparedSendQuote(payment, handles: handles)
+        } else {
+            quote = try await Self.offchainQuote(payment, handles: handles)
+        }
+        do {
+            guard quote.amount > 0, quote.total <= available else { throw SendFailure.insufficient }
+            quote.walletIdentity = try await Self.sendIdentity(handles)
+        } catch {
+            if quote.prepared != nil {
+                retainSendReview(payment, quote: quote, onchain: handles.onchain)
+                await discardSend(quote)
+            }
+            throw error
+        }
+        return quote
+    }
+
+    /// What a quote needs of the payment before anything is estimated.
+    private static func validate(_ payment: SendPayment, handles: Handles) async throws {
         try SendMaxValidation.available(payment)
         guard payment.amount > 0 || payment.max else { throw SendFailure.invalid }
         guard payment.amount <= 2_100_000_000_000_000 else { throw SendFailure.invalid }
@@ -37,60 +70,42 @@ extension WalletSession {
                 throw SendFailure.ownAddress
             }
         }
-        if payment.method == "lightning", let hash = PaymentEncoding.invoice(payment.destination)?.hash,
-           case .inProgress(let send) = try await handles.wallet.lightningSendState(paymentHash: hash) {
-            // Funds may already be held by the checkpoint. Review the bound, not fresh spendability.
-            let (total, overflow) = payment.amount.addingReportingOverflow(send.feeSats)
-            guard !overflow else { throw SendFailure.invalid }
-            return SendQuote(amount: payment.amount, fee: send.feeSats, total: total,
-                             walletIdentity: try await Self.sendIdentity(handles), checkpoint: .init(send))
-        }
-        let available =
-            payment.method == "onchain" && payment.source == .onchain
-                ? try await handles.onchain.balance().confirmedSats : try await handles.wallet.balance().spendableSats
-        var quote: SendQuote
-        if payment.method == "onchain", payment.source == .onchain {
-            let rate = SendFlow.sdkFeeRate(satsPerKwu: try await handles.onchain.feeRates().regularSatPerKwu)
-            let prepared = try await handles.onchain.prepareSend(
-                address: payment.destination, amount: payment.max ? .drainAll : .amount(amountSats: payment.amount),
-                feeRateSatPerVb: rate, confirmedOnly: true)
-            quote = SendQuote(amount: prepared.amountSats, fee: prepared.feeSats,
-                              total: prepared.amountSats + prepared.feeSats, feeRate: rate,
-                              prepared: SendPreparedTransaction(prepared))
-        } else {
-            let estimate: FeeEstimate
-            // swiftlint:disable:next discouraged_optional_collection - mirrors the quote's optional fields
-            var vtxoIDs: [String]?
-            switch payment.method {
-            case "ark": estimate = try await handles.wallet.estimateArkoorPaymentFee(amountSats: payment.amount)
-            case "lightning", "offer", "lnurl":
-                estimate = try await handles.wallet.estimateLightningSendFee(amountSats: payment.amount)
-            case "onchain":
-                guard payment.source == .offchain else { throw SendFailure.invalid }
-                if payment.max {
-                    let ids = try await handles.wallet.spendableVtxos().map(\.id).sorted()
-                    guard !ids.isEmpty else { throw SendFailure.insufficient }
-                    vtxoIDs = ids
-                    estimate = try await handles.wallet.estimateOffboardFee(address: payment.destination, vtxoIds: ids)
-                } else {
-                    estimate = try await handles.wallet.estimateSendOnchainFee(
-                        address: payment.destination, amountSats: payment.amount)
-                }
-            default: throw SendFailure.invalid
+    }
+
+    /// On-chain from the on-chain wallet: a prepared, signed transaction.
+    private static func preparedSendQuote(_ payment: SendPayment, handles: Handles) async throws -> SendQuote {
+        let rate = SendFlow.sdkFeeRate(satsPerKwu: try await handles.onchain.feeRates().regularSatPerKwu)
+        let prepared = try await handles.onchain.prepareSend(
+            address: payment.destination, amount: payment.max ? .drainAll : .amount(amountSats: payment.amount),
+            feeRateSatPerVb: rate, confirmedOnly: true)
+        return SendQuote(amount: prepared.amountSats, fee: prepared.feeSats,
+                         total: prepared.amountSats + prepared.feeSats, feeRate: rate,
+                         prepared: SendPreparedTransaction(prepared))
+    }
+
+    /// Ark, Lightning and offboards: the SDK's fee estimate for the method.
+    private static func offchainQuote(_ payment: SendPayment, handles: Handles) async throws -> SendQuote {
+        let estimate: FeeEstimate
+        // swiftlint:disable:next discouraged_optional_collection - mirrors the quote's optional fields
+        var vtxoIDs: [String]?
+        switch payment.method {
+        case "ark": estimate = try await handles.wallet.estimateArkoorPaymentFee(amountSats: payment.amount)
+        case "lightning", "offer", "lnurl":
+            estimate = try await handles.wallet.estimateLightningSendFee(amountSats: payment.amount)
+        case "onchain":
+            guard payment.source == .offchain else { throw SendFailure.invalid }
+            if payment.max {
+                let ids = try await handles.wallet.spendableVtxos().map(\.id).sorted()
+                guard !ids.isEmpty else { throw SendFailure.insufficient }
+                vtxoIDs = ids
+                estimate = try await handles.wallet.estimateOffboardFee(address: payment.destination, vtxoIds: ids)
+            } else {
+                estimate = try await handles.wallet.estimateSendOnchainFee(
+                    address: payment.destination, amountSats: payment.amount)
             }
-            quote = SendQuote(amount: estimate.netAmountSats, fee: estimate.feeSats, total: estimate.grossAmountSats, vtxoIDs: vtxoIDs)
+        default: throw SendFailure.invalid
         }
-        do {
-            guard quote.amount > 0, quote.total <= available else { throw SendFailure.insufficient }
-            quote.walletIdentity = try await Self.sendIdentity(handles)
-        } catch {
-            if quote.prepared != nil {
-                retainSendReview(payment, quote: quote, onchain: handles.onchain)
-                await discardSend(quote)
-            }
-            throw error
-        }
-        return quote
+        return SendQuote(amount: estimate.netAmountSats, fee: estimate.feeSats, total: estimate.grossAmountSats, vtxoIDs: vtxoIDs)
     }
     func prepareSend(_ payment: SendPayment, quote: SendQuote) async throws -> SendSnapshot {
         let invoice = quote.resolvedInvoice

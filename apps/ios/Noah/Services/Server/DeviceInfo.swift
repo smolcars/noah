@@ -21,7 +21,7 @@ enum DeviceInfo {
         encoder.outputFormatting = .withoutEscapingSlashes
         // Arrays of optional strings always encode, including null entries.
         guard let data = try? encoder.encode(values), let json = String(bytes: data, encoding: .utf8) else {
-            preconditionFailure("Optional strings always encode as UTF-8 JSON")
+            preconditionFailure("optional strings always encode as UTF-8 JSON")
         }
         return json
     }
