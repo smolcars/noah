@@ -340,14 +340,14 @@ struct WidgetBalanceHistoryTests {
         var settled = 0
         for fixture in cases {
             let movement = try #require(fixture.input.movement).sdk
-            let changes = WidgetBalanceHistory.changes(movements: [movement], chain: [], chainDates: [:], now: Self.now)
+            let changes = WidgetBalanceHistory.changes(movements: [movement], chain: [], chainDates: [:], pending: .init(), now: Self.now)
             if movement.status == "successful" && movement.effectiveBalanceSats != 0 {
                 settled += 1
                 let row = HistoryMapping.transaction(movement, now: Self.now)
                 #expect(changes == [.init(at: try #require(row.timestamp), delta: movement.effectiveBalanceSats)], "\(fixture.name)")
             } else {
                 // Failed and canceled aren't changes, nor pending ones that still hold their sats (no fixture names an offboard's
-                // transaction; incoming ones wait for the balance, `pendingMovementsCountOnceTheBalanceDoes`).
+                // transaction; receives and boards count by their own state, `aReceiveCountsByItsOwnState`).
                 #expect(changes.isEmpty, "\(fixture.name)")
             }
         }
@@ -364,7 +364,7 @@ struct WidgetBalanceHistoryTests {
             #expect(estimate == chain.confirmation.map { Self.now.addingTimeInterval(-Double(48 - $0.height) * 600) }, "\(fixture.name)")
             // Dated by the store, confirmed or not: the on-chain total counts both.
             let at = Self.now.addingTimeInterval(-86_400)
-            let changes = WidgetBalanceHistory.changes(movements: [], chain: [chain], chainDates: [chain.txid: at], now: Self.now)
+            let changes = WidgetBalanceHistory.changes(movements: [], chain: [chain], chainDates: [chain.txid: at], pending: .init(), now: Self.now)
             if chain.balanceChangeSats != 0 {
                 #expect(changes == [.init(at: at, delta: chain.balanceChangeSats)], "\(fixture.name)")
             } else {
@@ -374,30 +374,28 @@ struct WidgetBalanceHistoryTests {
     }
 
     /// A board's two halves count on its date: the funding transaction as the on-chain total counts it, the board once
-    /// the balance does.
-    @Test func boardsCountBothHalvesOnTheirDate() throws {
-        func board(_ status: String) -> Movement {
-            Movement(id: 7, status: status, subsystemName: "bark.board", subsystemKind: "board",
-                     metadataJson: #"{"chain_anchor":"funding-txid:0"}"#, intendedBalanceSats: 50_000, effectiveBalanceSats: 50_000,
-                     offchainFeeSats: 0, sentToAddresses: [], receivedOnAddresses: [], inputVtxoIds: [], outputVtxoIds: [], exitedVtxoIds: [],
-                     createdAt: "2026-10-01T12:00:00.000Z", updatedAt: "2026-10-01T12:00:00.000Z", completedAt: nil,
-                     paymentHash: nil, lightningInvoice: nil, lightningOffer: nil)
+    /// bark reports its VTXO in `pendingBoard` (`pendingBoardVtxos`).
+    @Test func boardsCountBothHalvesOnTheirDate() {
+        let created = Self.now.addingTimeInterval(-86_400)
+        let board = { (status: String) in
+            Self.movement("bark.board", "board", metadata: #"{"chain_anchor":"funding-txid:0"}"#, effective: 50_000, created: created,
+                          status: status, outputs: ["board-vtxo"])
         }
         let funding = WalletTransaction(txid: "funding-txid", txHex: "", onchainFeeSats: 500, balanceChangeSats: -50_500,
                                         confirmation: .init(height: 10, hash: "block"), isCpfp: false)
-        let created = try #require(HistoryRules.parseDate("2026-10-01T12:00:00.000Z"))
         let elsewhere: [String: Date] = ["funding-txid": Self.now] // Never used for a transaction a movement names.
-        #expect(WidgetBalanceHistory.changes(movements: [board("successful")], chain: [funding], chainDates: elsewhere, now: Self.now)
-            == [.init(at: created, delta: 50_000), .init(at: created, delta: -50_500)])
+        func changes(_ status: String, _ transaction: WalletTransaction, boards: Set<String> = []) -> [WidgetWave.Change] {
+            WidgetBalanceHistory.changes(movements: [board(status)], chain: [transaction], chainDates: elsewhere,
+                                         pending: .init(boardVtxos: boards), now: Self.now)
+        }
+        #expect(changes("successful", funding) == [.init(at: created, delta: 50_000), .init(at: created, delta: -50_500)])
         var unconfirmed = funding
         unconfirmed.confirmation = nil
         for transaction in [funding, unconfirmed] {
-            #expect(WidgetBalanceHistory.changes(movements: [board("pending")], chain: [transaction], chainDates: elsewhere, now: Self.now)
-                == [.init(at: created, delta: -50_500)])
+            #expect(changes("pending", transaction) == [.init(at: created, delta: -50_500)]) // Its VTXO isn't counted yet.
+            #expect(changes("pending", transaction, boards: ["board-vtxo"]) == [.init(at: created, delta: 50_000), .init(at: created, delta: -50_500)])
+            #expect(changes("pending", transaction, boards: ["another-board"]) == [.init(at: created, delta: -50_500)])
         }
-        let incoming = WidgetBalanceHistory.incoming(movements: [board("pending")], now: Self.now)
-        #expect(WidgetBalanceHistory.counted(incoming, in: Self.balance(boarding: 50_000)) == [.init(at: created, delta: 50_000)])
-        #expect(WidgetBalanceHistory.counted(incoming, in: Self.balance(boarding: 0)).isEmpty) // Still broadcasting.
     }
 
     private static var utc: Calendar {
@@ -407,11 +405,11 @@ struct WidgetBalanceHistoryTests {
     }
 
     private static func movement(_ name: String, _ kind: String, metadata: String, effective: Int64, created: Date,
-                                 status: String = "successful") -> Movement {
+                                 status: String = "successful", id: UInt32 = 9, outputs: [String] = []) -> Movement {
         let at = HistoryRules.isoDate(created)
-        return Movement(id: 9, status: status, subsystemName: name, subsystemKind: kind, metadataJson: metadata,
+        return Movement(id: id, status: status, subsystemName: name, subsystemKind: kind, metadataJson: metadata,
                         intendedBalanceSats: effective, effectiveBalanceSats: effective, offchainFeeSats: 0, sentToAddresses: [],
-                        receivedOnAddresses: [], inputVtxoIds: [], outputVtxoIds: [], exitedVtxoIds: [], createdAt: at, updatedAt: at,
+                        receivedOnAddresses: [], inputVtxoIds: [], outputVtxoIds: outputs, exitedVtxoIds: [], createdAt: at, updatedAt: at,
                         completedAt: nil, paymentHash: nil, lightningInvoice: nil, lightningOffer: nil)
     }
 
@@ -428,7 +426,7 @@ struct WidgetBalanceHistoryTests {
             let renewal = Self.movement("bark.round", "refresh", metadata: #"{"funding_txid":"round-txid"}"#, effective: 0,
                                         created: created, status: "pending")
             for movements in [[offboard], [renewal, offboard], [offboard, renewal]] {
-                let changes = WidgetBalanceHistory.changes(movements: movements, chain: [credit], chainDates: recently, now: Self.now)
+                let changes = WidgetBalanceHistory.changes(movements: movements, chain: [credit], chainDates: recently, pending: .init(), now: Self.now)
                 #expect(changes == [.init(at: created, delta: -50_300), .init(at: created, delta: 50_000)], "\(days) days")
                 let values = WidgetWave.dailyBalances(current: 100_000, changes: changes, now: Self.now, calendar: Self.utc)
                 #expect(WidgetWave.change(values) == (days > 30 ? 0 : -300), "\(days) days")
@@ -449,7 +447,7 @@ struct WidgetBalanceHistoryTests {
             let now = Self.now.addingTimeInterval(day * 86_400)
             let estimate = try #require(WidgetBalanceHistory.estimate(receive, tip: tip, now: now))
             let confirmed = dates.dates([receive.txid: estimate], keeping: [receive.txid])
-            let changes = WidgetBalanceHistory.changes(movements: [], chain: [receive], chainDates: confirmed, now: now)
+            let changes = WidgetBalanceHistory.changes(movements: [], chain: [receive], chainDates: confirmed, pending: .init(), now: now)
             seen += changes.map(\.at)
         }
         #expect(seen == Array(repeating: Self.now.addingTimeInterval(-3_600), count: 4))
@@ -464,18 +462,20 @@ struct WidgetBalanceHistoryTests {
     }
 
     private static func balance(spendable: UInt64 = 0, sending: UInt64 = 0, claimable: UInt64 = 0, boarding: UInt64 = 0,
-                                confirmed: UInt64 = 0, unconfirmed: UInt64 = 0) -> WalletBalance {
+                                offboarding: UInt64 = 0, confirmed: UInt64 = 0, unconfirmed: UInt64 = 0) -> WalletBalance {
         WalletBalance(ark: .init(spendable: spendable, needsRefresh: 0, pendingLightningSend: sending, claimableLightningReceive: claimable,
-                                 pendingInRound: 0, pendingExit: 0, pendingBoard: boarding, pendingArkoorSend: 0, pendingOffboard: 0),
+                                 pendingInRound: 0, pendingExit: 0, pendingBoard: boarding, pendingArkoorSend: 0, pendingOffboard: offboarding),
                       onchain: .init(confirmed: confirmed, pending: unconfirmed, total: confirmed + unconfirmed))
     }
 
-    /// The writer's 31 days for `balance` and the records, as `widgetFacts` reads them.
+    /// The writer's 31 days for `balance` and the records, as `widgetFacts` reads them; each case checks that today is the
+    /// balance and so yesterday is the balance less today's changes.
     private static func days(_ balance: WalletBalance, _ movements: [Movement] = [], chain: [WalletTransaction] = [],
-                             chainDates: [String: Date] = [:], now: Date = now) throws -> [Int64] {
+                             chainDates: [String: Date] = [:], pending: WidgetBalanceHistory.Pending = .init(),
+                             now: Date = now) throws -> [Int64] {
         let facts = WidgetDataWriter.Facts(changes: WidgetBalanceHistory.changes(movements: movements, chain: chain, chainDates: chainDates,
-                                                                                 now: now),
-                                           incoming: WidgetBalanceHistory.incoming(movements: movements, now: now))
+                                                                                 pending: pending, now: now),
+                                           offboards: WidgetBalanceHistory.offboards(movements: movements, now: now))
         let snapshot = WidgetDataWriter.snapshot(balance: balance, facts: facts, previous: nil,
                                                  display: .init(hidden: false, unit: .bip177, currency: "USD"), quote: nil,
                                                  variant: .regtest, now: now, calendar: utc)
@@ -511,57 +511,88 @@ struct WidgetBalanceHistoryTests {
     }
 
     /// A Lightning send in flight still holds its sats in the balance (`pendingLightningSend`), so it isn't a change until
-    /// it settles; an on-chain send from Ark is one once its transaction is out.
+    /// it settles.
     @Test func aPendingLightningSendIsNoChangeUntilItSettles() throws {
-        let created = Self.now.addingTimeInterval(-600)
-        let send = { (status: String) in Self.movement("bark.lightning_send", "send", metadata: "{}", effective: -20_010, created: created, status: status) }
+        let send = { (status: String) in
+            Self.movement("bark.lightning_send", "send", metadata: "{}", effective: -20_010, created: Self.now.addingTimeInterval(-600), status: status)
+        }
         #expect(try Self.days(Self.balance(spendable: 79_990, sending: 20_010), [Self.earlier, send("pending")]) == Self.before + [100_000])
         #expect(try Self.days(Self.balance(spendable: 79_990), [Self.earlier, send("successful")]) == Self.before + [79_990])
+    }
 
-        let onchain = { (metadata: String) in
-            Self.movement("bark.offboard", "send_onchain", metadata: metadata, effective: -30_300, created: created, status: "pending")
+    /// An offboard is a change only as far as `pendingOffboard` lets its sats go: not while its transaction is named but
+    /// not out (a failed broadcast), nor while it holds change being split off; then once it's out, and nothing moves when
+    /// it settles. Two at once share the bucket.
+    @Test func anOffboardCountsOnceTheBalanceLetsItsSatsGo() throws {
+        let offboard = { (status: String, created: Date) in
+            Self.movement("bark.offboard", "send_onchain", metadata: #"{"offboard_txid":"out"}"#, effective: -30_300, created: created,
+                          status: status)
         }
-        // Its sats held while it's prepared (`pendingOffboard`), then gone once it names its broadcast transaction.
-        let held = WalletBalance(ark: .init(spendable: 69_700, needsRefresh: 0, pendingLightningSend: 0, claimableLightningReceive: 0,
-                                            pendingInRound: 0, pendingExit: 0, pendingBoard: 0, pendingArkoorSend: 0, pendingOffboard: 30_300),
-                                 onchain: .init(confirmed: 0, pending: 0, total: 0))
-        #expect(try Self.days(held, [Self.earlier, onchain("{}")]) == Self.before + [100_000])
-        #expect(try Self.days(Self.balance(spendable: 69_700), [Self.earlier, onchain(#"{"offboard_txid":"out"}"#)]) == Self.before + [69_700])
+        let first = offboard("pending", Self.now.addingTimeInterval(-1_200))
+        #expect(try Self.days(Self.balance(offboarding: 100_000), [Self.earlier, first]) == Self.before + [100_000]) // Splitting change.
+        // Named, held, broadcast failing (`ReadyForBroadcast`), and again on the retry.
+        for _ in 0..<2 {
+            #expect(try Self.days(Self.balance(spendable: 69_700, offboarding: 30_300), [Self.earlier, first]) == Self.before + [100_000])
+        }
+        #expect(try Self.days(Self.balance(spendable: 69_700), [Self.earlier, first]) == Self.before + [69_700]) // Out.
+        #expect(try Self.days(Self.balance(spendable: 69_700), [Self.earlier, offboard("successful", Self.now.addingTimeInterval(-1_200))])
+            == Self.before + [69_700])
+
+        var second = offboard("pending", Self.now.addingTimeInterval(-600))
+        second.effectiveBalanceSats = -10_000
+        #expect(try Self.days(Self.balance(spendable: 59_700, offboarding: 10_000), [Self.earlier, first, second]) == Self.before + [69_700])
+        #expect(try Self.days(Self.balance(spendable: 59_700), [Self.earlier, first, second]) == Self.before + [59_700])
     }
 
     /// A board: nothing while its funding transaction isn't out; then the funding transaction and the board (once
-    /// `pendingBoard` counts it) are today's change, net of the fee, and nothing moves when it confirms and completes.
+    /// `pendingBoardVtxos` reports its VTXO) are today's change, net of the fee, and nothing moves when it confirms and
+    /// completes.
     @Test func aPendingBoardCountsBothHalvesFromItsDate() throws {
         let deposit = WalletTransaction(txid: "deposit-txid", txHex: "", onchainFeeSats: nil, balanceChangeSats: 50_500,
                                         confirmation: .init(height: 900, hash: "d"), isCpfp: false)
         let dated: [String: Date] = [deposit.txid: Self.now.addingTimeInterval(-10 * 86_400)]
-        let created = Self.now.addingTimeInterval(-600)
         let board = { (status: String) in
-            Self.movement("bark.board", "board", metadata: #"{"chain_anchor":"funding-txid:0"}"#, effective: 50_000, created: created, status: status)
+            Self.movement("bark.board", "board", metadata: #"{"chain_anchor":"funding-txid:0"}"#, effective: 50_000,
+                          created: Self.now.addingTimeInterval(-600), status: status, outputs: ["board-vtxo"])
         }
         var funding = WalletTransaction(txid: "funding-txid", txHex: "", onchainFeeSats: 500, balanceChangeSats: -50_500,
                                         confirmation: nil, isCpfp: false)
         let earlier = Array(repeating: Int64(0), count: 20) + Array(repeating: 50_500, count: 10)
+        let confirming = WidgetBalanceHistory.Pending(boardVtxos: ["board-vtxo"])
         #expect(try Self.days(Self.balance(confirmed: 50_500), [board("pending")], chain: [deposit], chainDates: dated) == earlier + [50_500])
-        #expect(try Self.days(Self.balance(boarding: 50_000), [board("pending")], chain: [deposit, funding], chainDates: dated)
+        #expect(try Self.days(Self.balance(boarding: 50_000), [board("pending")], chain: [deposit, funding], chainDates: dated, pending: confirming)
             == earlier + [50_000])
         funding.confirmation = .init(height: 1_000, hash: "f")
-        #expect(try Self.days(Self.balance(boarding: 50_000), [board("pending")], chain: [deposit, funding], chainDates: dated)
+        #expect(try Self.days(Self.balance(boarding: 50_000), [board("pending")], chain: [deposit, funding], chainDates: dated, pending: confirming)
             == earlier + [50_000])
         #expect(try Self.days(Self.balance(spendable: 50_000), [board("successful")], chain: [deposit, funding], chainDates: dated)
             == earlier + [50_000])
     }
 
-    /// A Lightning receive counts once the balance does (`claimableLightningReceive`), and if it then fails it's no
-    /// change at all: the earlier days never move.
-    @Test func aPendingReceiveThatFailsLeavesNoChange() throws {
-        let created = Self.now.addingTimeInterval(-600)
-        let receive = { (status: String, effective: Int64) in
-            Self.movement("bark.lightning_receive", "receive", metadata: "{}", effective: effective, created: created, status: status)
+    /// Lightning receives count by their own state (`pendingLightningReceives`: "preimage-revealed"), whatever order they
+    /// progress in; one cancelled or failed is no change at all, and the earlier days never move.
+    @Test func aReceiveCountsByItsOwnState() throws {
+        let older = { (status: String, effective: Int64) in
+            Self.movement("bark.lightning_receive", "receive", metadata: "{}", effective: effective, created: Self.now.addingTimeInterval(-1_200),
+                          status: status, id: 1)
         }
-        #expect(try Self.days(Self.balance(spendable: 100_000), [Self.earlier, receive("pending", 30_000)]) == Self.before + [100_000])
-        #expect(try Self.days(Self.balance(spendable: 100_000, claimable: 30_000), [Self.earlier, receive("pending", 30_000)])
+        let newer = { (status: String, effective: Int64) in
+            Self.movement("bark.lightning_receive", "receive", metadata: "{}", effective: effective, created: Self.now.addingTimeInterval(-600),
+                          status: status, id: 2)
+        }
+        let both = [Self.earlier, older("pending", 10_000), newer("pending", 20_000)]
+        #expect(try Self.days(Self.balance(spendable: 100_000), both) == Self.before + [100_000]) // Both HTLCs ready, none claimable.
+        // The newer one's preimage is out first.
+        #expect(try Self.days(Self.balance(spendable: 100_000, claimable: 20_000), both, pending: .init(claimableReceives: [2]))
+            == Self.before + [120_000])
+        #expect(try Self.days(Self.balance(spendable: 100_000, claimable: 30_000), both, pending: .init(claimableReceives: [1, 2]))
             == Self.before + [130_000])
-        #expect(try Self.days(Self.balance(spendable: 100_000), [Self.earlier, receive("failed", 0)]) == Self.before + [100_000])
+        // The older one is cancelled instead.
+        #expect(try Self.days(Self.balance(spendable: 100_000, claimable: 20_000), [Self.earlier, older("canceled", 0), newer("pending", 20_000)],
+                              pending: .init(claimableReceives: [2])) == Self.before + [120_000])
+        #expect(try Self.days(Self.balance(spendable: 120_000), [Self.earlier, older("canceled", 0), newer("successful", 20_000)])
+            == Self.before + [120_000])
+        // A claimable one that then fails.
+        #expect(try Self.days(Self.balance(spendable: 100_000), [Self.earlier, older("canceled", 0), newer("failed", 0)]) == Self.before + [100_000])
     }
 }

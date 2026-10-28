@@ -45,12 +45,13 @@ extension WalletSession {
                 AppLog("widget").w(#"Chain tip unavailable; the widget keeps its wave and Renew line"#)
                 return facts
             }
-            if let (movements, chain) = records {
+            if let (movements, chain) = records, let pending = await Self.widgetPending(handles.wallet) {
                 let estimates = chain.reduce(into: [String: Date]()) { $0[$1.txid] = WidgetBalanceHistory.estimate($1, tip: tip, now: now) }
                 let chainDates = dates.dates(estimates, keeping: Set(chain.map(\.txid)),
                                              unconfirmed: Set(chain.filter { $0.confirmation == nil }.map(\.txid)), now: now)
-                facts.changes = WidgetBalanceHistory.changes(movements: movements, chain: chain, chainDates: chainDates, now: now)
-                facts.incoming = WidgetBalanceHistory.incoming(movements: movements, now: now)
+                facts.changes = WidgetBalanceHistory.changes(movements: movements, chain: chain, chainDates: chainDates, pending: pending,
+                                                             now: now)
+                facts.offboards = WidgetBalanceHistory.offboards(movements: movements, now: now)
             }
             if let expiring = try? await handles.wallet.getExpiringVtxos(
                 thresholdBlocks: UInt32(WalletConfiguration.base(for: .current).vtxoRefreshExpiryThreshold)) {
@@ -58,5 +59,15 @@ extension WalletSession {
             } else { AppLog("widget").w(#"Expiring VTXOs unavailable; the widget keeps its Renew line"#) }
             return facts
         }
+    }
+
+    /// Which pending receives and boards the total counts; nil when unread, and the widget keeps its wave.
+    private static func widgetPending(_ wallet: Wallet) async -> WidgetBalanceHistory.Pending? {
+        guard let receives = try? await wallet.pendingLightningReceives(), let boards = try? await wallet.pendingBoardVtxos() else {
+            AppLog("widget").w(#"Pending payments unavailable; the widget keeps its wave"#)
+            return nil
+        }
+        return .init(claimableReceives: Set(receives.filter { $0.state == "preimage-revealed" }.compactMap(\.movementId)),
+                     boardVtxos: Set(boards.map(\.id)))
     }
 }

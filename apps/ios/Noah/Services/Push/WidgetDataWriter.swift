@@ -19,8 +19,8 @@ enum WidgetDataWriter {
         /// The balance changes for the wave. Nil when not read: the earlier days stay as written and
         /// today takes the new balance.
         var changes: [WidgetWave.Change]? // swiftlint:disable:this discouraged_optional_collection - nil: not read, unlike no changes
-        /// Pending incoming movements, changes once the balance written counts them (`WidgetBalanceHistory.counted`).
-        var incoming: [WidgetBalanceHistory.Incoming] = []
+        /// Pending offboards, a change as far as the balance written no longer holds them (`WidgetBalanceHistory.offboarded`).
+        var offboards: [WidgetWave.Change] = []
         var renewal = Renewal.unknown
         /// Incoming unconfirmed on-chain (`HomeStatusLine.incomingOnchain`); nil when not read.
         var incomingOnchain: UInt64?
@@ -93,8 +93,8 @@ enum WidgetDataWriter {
         let current = Int64(clamping: balance.totalSats)
         var daily: [Int64]? // swiftlint:disable:this discouraged_optional_collection - nil: unknown (calm water)
         if let changes = facts.changes {
-            daily = WidgetWave.dailyBalances(current: current, changes: changes + WidgetBalanceHistory.counted(facts.incoming, in: balance),
-                                             now: now, calendar: calendar)
+            let offboarded = WidgetBalanceHistory.offboarded(facts.offboards, held: balance.ark.pendingOffboard)
+            daily = WidgetWave.dailyBalances(current: current, changes: changes + offboarded, now: now, calendar: calendar)
         } else if let previous, let written = previous.dailyBalances, written.count == WidgetWave.days + 1 {
             daily = Array(WidgetWave.shifted(written, writtenAt: previous.writtenAt, now: now, calendar: calendar).dropLast()) + [current]
         }
