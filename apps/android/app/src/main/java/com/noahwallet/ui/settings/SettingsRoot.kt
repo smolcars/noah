@@ -27,6 +27,8 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalWindowInfo
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.*
@@ -332,11 +334,11 @@ private fun UnitSheet(model: AppModel, dismiss: () -> Unit) {
 @Composable
 private fun CurrencySheet(model: AppModel, dismiss: () -> Unit) {
     val locale = Locale.forLanguageTag(model.localeIdentifier)
-    val height = LocalConfiguration.current.screenHeightDp
+    val height = with(LocalDensity.current) { LocalWindowInfo.current.containerSize.height.toDp() }
     SettingsSheet(dismiss, tr("Currency"), tr("For prices next to your bitcoin.")) { close ->
         val choose = rememberChoice(model, close)
         val codes = FiatCurrency.supported.toList()
-        Column(Modifier.padding(top = 10.dp).heightIn(max = (height * .56f).dp).verticalScroll(rememberScrollState())) {
+        Column(Modifier.padding(top = 10.dp).heightIn(max = height * .56f).verticalScroll(rememberScrollState())) {
             codes.forEachIndexed { index, code ->
                 val currency = java.util.Currency.getInstance(code)
                 RadioRow(currency.getDisplayName(locale), "$code · ${currency.getSymbol(locale)}", model.preferredCurrency == code,
