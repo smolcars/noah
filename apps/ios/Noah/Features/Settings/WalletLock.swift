@@ -56,7 +56,7 @@ final class WalletLock {
         let biometryType: LABiometryType
     }
     /// `LAContext()` waits on coreauthd, which stalls behind the Face ID permission alert, so never on the main thread.
-    @concurrent private nonisolated static func probe() async -> sending Probe { // swiftlint:disable:this modifier_order - SwiftFormat's order
+    @concurrent private nonisolated static func probe() async -> sending Probe {
         let context = LAContext()
         var error: NSError?
         let available = context.canEvaluatePolicy(.deviceOwnerAuthentication, error: &error)

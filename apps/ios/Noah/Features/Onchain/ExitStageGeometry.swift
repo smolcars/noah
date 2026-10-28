@@ -412,10 +412,8 @@ enum ExitStageText {
         return width
     }
 
-    // swiftlint:disable modifier_order - SwiftFormat's modifierOrder puts access control before nonisolated
     /// Measured widths: a moving picture lays its labels out every frame. NSCache is thread-safe.
     private nonisolated(unsafe) static let widths = NSCache<NSString, NSNumber>()
-    // swiftlint:enable modifier_order
     // swiftlint:enable legacy_objc_type
 }
 

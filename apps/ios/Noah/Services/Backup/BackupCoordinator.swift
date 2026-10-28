@@ -276,10 +276,8 @@ actor BackupCoordinator {
 
     // MARK: State
 
-    // swiftlint:disable modifier_order - SwiftFormat's modifierOrder puts access control before nonisolated
     /// Applied in place, like the RN store's actions, so ordering holds.
     private nonisolated func update(_ change: (inout PersistedBackupState) -> Void) {
-        // swiftlint:enable modifier_order
         stateLock.withLock { _ in
             var state = dependencies.loadState()
             change(&state)

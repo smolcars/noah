@@ -47,9 +47,11 @@ disabled_rules:
   - explicit_acl
   - explicit_top_level_acl
   - explicit_enum_raw_value
-  # Conflicts with extension_access_modifier, and with SwiftFormat's inline pattern lets.
-  - no_extension_access_modifier
+  # Conflicts with SwiftFormat: its modifierOrder puts access control before nonisolated, and it inlines pattern lets.
+  - modifier_order
   - pattern_matching_keywords
+  # Conflicts with extension_access_modifier.
+  - no_extension_access_modifier
   # Layout constants in SwiftUI are clearer inline.
   - no_magic_numbers
   # Not used here: Swift Testing replaces XCTest/Nimble.
