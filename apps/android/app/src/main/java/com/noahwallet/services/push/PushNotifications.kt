@@ -8,9 +8,9 @@ import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.graphics.Color
 import android.os.Build
 import androidx.core.app.NotificationCompat
+import androidx.core.graphics.toColorInt
 import androidx.work.ForegroundInfo
 import com.noahwallet.MainActivity
 import com.noahwallet.R
@@ -29,20 +29,23 @@ object PushNotifications {
         if (Build.VERSION.SDK_INT < 26) return
         val manager = context.getSystemService(NotificationManager::class.java)
         if (manager.getNotificationChannel(NotificationChannels.DEFAULT) == null) {
-            manager.createNotificationChannel(NotificationChannel(NotificationChannels.DEFAULT, L10n.text(context, "Default"), NotificationManager.IMPORTANCE_MAX).apply {
+            manager.createNotificationChannel(NotificationChannel(NotificationChannels.DEFAULT, L10n.text(context, "Default"),
+                NotificationManager.IMPORTANCE_MAX).apply {
                 vibrationPattern = longArrayOf(0, 250, 250, 250)
-                lightColor = Color.parseColor("#FF231F7C")
+                lightColor = "#FF231F7C".toColorInt()
             })
         }
         if (manager.getNotificationChannel(NotificationChannels.UNIFIED_PUSH) == null) {
-            manager.createNotificationChannel(NotificationChannel(NotificationChannels.UNIFIED_PUSH, L10n.text(context, "Noah notifications"), NotificationManager.IMPORTANCE_HIGH))
+            manager.createNotificationChannel(NotificationChannel(NotificationChannels.UNIFIED_PUSH, L10n.text(context, "Noah notifications"),
+                NotificationManager.IMPORTANCE_HIGH))
         }
     }
 
     fun received(context: Context, sats: Long, usd: String?, paymentHash: String) {
         ensureChannels(context)
         if (!permissionGranted(context)) return
-        val unit = com.noahwallet.services.storage.SettingsPreferences.amountUnit(com.noahwallet.services.storage.SettingsStorage(context).string("profile-storage"))
+        val profile = com.noahwallet.services.storage.SettingsStorage(context).string("profile-storage")
+        val unit = com.noahwallet.services.storage.SettingsPreferences.amountUnit(profile)
         val copy = NotificationCopy.received(context, sats, usd, unit)
         val intent = PendingIntent.getActivity(context, 0, Intent(context, MainActivity::class.java),
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)

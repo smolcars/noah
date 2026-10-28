@@ -91,6 +91,8 @@ class PushRuntime(private val context: Context, private val services: AppService
             expoToken = {
                 val messaging = FirebaseMessaging.getInstance()
                 messaging.isAutoInitEnabled = true
+                // FCM 26 deprecates getToken() for register()/onRegistered; migrating token delivery is separate work.
+                @Suppress("DEPRECATION")
                 val token = suspendCancellableCoroutine { continuation ->
                     messaging.token.addOnSuccessListener { continuation.resume(it) }
                         .addOnFailureListener { continuation.resumeWithException(it) }

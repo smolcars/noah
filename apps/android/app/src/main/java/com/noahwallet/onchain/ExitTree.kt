@@ -122,13 +122,46 @@ internal data class ExitScene(
          * [others]: the wallet's other exits, for the shared transactions and their coins; [confirmed]: the on-chain balance
          * the next fee comes from; [destination]: a claim's address when it went to another wallet.
          */
+        @Suppress("LongParameterList") // exit-tree layout: flat geometry inputs
         fun of(exit: ExitModel, stage: ExitStage, tip: Long, others: List<ExitModel> = emptyList(), confirmed: Long? = null,
             claimFee: Long? = null, destination: String? = null): ExitScene {
             val n = stage.total.coerceAtLeast(1)
             val txs = exit.path
-            val done = stage.phase in setOf(ExitStage.Phase.onchain, ExitStage.Phase.wait, ExitStage.Phase.claimable, ExitStage.Phase.claiming, ExitStage.Phase.claimed)
             val needsFunds = stage.attention == ExitStage.Attention.needsFunds
-            val marks = List(n) { i ->
+            val marks = marks(txs, stage, n)
+            val heights = heights(txs, marks, stage)
+            val theirs = List(n) { i -> (txs.getOrNull(i)?.status?.origin ?: exit.packages.getOrNull(i)?.childOrigin).let { it != null && it != "wallet" } }
+            val paid = List(n) { i -> txs.getOrNull(i)?.status?.child_txid != null || exit.packages.getOrNull(i)?.childTxid != null }
+            val live = others.filter { it.id != exit.id && it.state !in ExitTimeline.terminal }
+            val shared = sharedLevels(exit, live, n)
+            val nodes = List(n) { i -> exit.packages.getOrNull(i)?.outputs?.takeIf { it > 0 }?.let { it > 2 } ?: (i < n - 1) }
+            val coins = branchCoins(exit, live, n)
+            val current = stage.current.takeIf { it < n && marks[it] == Mark.waiting }
+            return ExitScene(n, stage.phase, marks, heights, theirs, paid, shared, nodes, stage.attention,
+                fee = current?.let { stage.fee }, rate = stage.rate, waited = stage.waited,
+                stale = stage.stale && current != null, checkedAt = exit.details.tip_height, tip = tip,
+                lockedFrom = stage.lockedFrom, claimableHeight = stage.claimableHeight, unlockedAt = stage.unlockedAt,
+                claimedBlock = stage.claimedBlock, claimFee = claimFee, destination = destination, others = coins,
+                need = if (needsFunds) exit.nextPackageFee?.let { fee -> confirmed?.let { (fee - it).coerceAtLeast(0) } } else null)
+        }
+
+        /** Each level's block height: its own, or the lock's start (else the last block) for one mined without one. */
+        private fun heights(txs: List<ExitDetails.Transaction>, marks: List<Mark>, stage: ExitStage) = List(marks.size) { i ->
+            txs.getOrNull(i)?.status?.block?.height ?: if (marks[i] == Mark.mined) stage.lockedFrom ?: stage.lastBlock else null
+        }
+
+        /** Whether each level is a transaction another live exit shares. */
+        private fun sharedLevels(exit: ExitModel, live: List<ExitModel>, n: Int): List<Boolean> {
+            val sharedIds = live.flatMap { other -> other.packages.map { it.txid } }.toSet()
+            return List(n) { i -> exit.packages.getOrNull(i)?.txid?.let { it in sharedIds } ?: false }
+        }
+
+        /** Each of the [n] levels' mark, root first. */
+        private fun marks(txs: List<ExitDetails.Transaction>, stage: ExitStage, n: Int): List<Mark> {
+            val done = stage.phase in setOf(ExitStage.Phase.onchain, ExitStage.Phase.wait, ExitStage.Phase.claimable, ExitStage.Phase.claiming,
+                ExitStage.Phase.claimed)
+            val needsFunds = stage.attention == ExitStage.Attention.needsFunds
+            return List(n) { i ->
                 val status = txs.getOrNull(i)?.status
                 when {
                     stage.phase == ExitStage.Phase.lift -> Mark.unsent
@@ -139,26 +172,13 @@ internal data class ExitScene(
                     else -> Mark.unsent
                 }
             }
-            val heights = List(n) { i -> txs.getOrNull(i)?.status?.block?.height ?: if (marks[i] == Mark.mined) stage.lockedFrom ?: stage.lastBlock else null }
-            val theirs = List(n) { i -> (txs.getOrNull(i)?.status?.origin ?: exit.packages.getOrNull(i)?.childOrigin).let { it != null && it != "wallet" } }
-            val paid = List(n) { i -> txs.getOrNull(i)?.status?.child_txid != null || exit.packages.getOrNull(i)?.childTxid != null }
-            val live = others.filter { it.id != exit.id && it.state !in ExitTimeline.terminal }
-            val sharedIds = live.flatMap { other -> other.packages.map { it.txid } }.toSet()
-            val shared = List(n) { i -> exit.packages.getOrNull(i)?.txid?.let { it in sharedIds } ?: false }
-            val nodes = List(n) { i -> exit.packages.getOrNull(i)?.outputs?.takeIf { it > 0 }?.let { it > 2 } ?: (i < n - 1) }
-            // Where another exit's branch leaves yours: after the transactions you share, root first.
-            val coins = live.mapNotNull { other ->
-                val k = exit.packages.zip(other.packages).takeWhile { (a, b) -> a.txid == b.txid }.size
-                if (k in 1 until n) Other(k, other.amount) else null
-            }.take(3)
-            val current = stage.current.takeIf { it < n && marks[it] == Mark.waiting }
-            return ExitScene(n, stage.phase, marks, heights, theirs, paid, shared, nodes, stage.attention,
-                fee = current?.let { stage.fee }, rate = stage.rate, waited = stage.waited,
-                stale = stage.stale && current != null, checkedAt = exit.details.tip_height, tip = tip,
-                lockedFrom = stage.lockedFrom, claimableHeight = stage.claimableHeight, unlockedAt = stage.unlockedAt,
-                claimedBlock = stage.claimedBlock, claimFee = claimFee, destination = destination, others = coins,
-                need = if (needsFunds) exit.nextPackageFee?.let { fee -> confirmed?.let { (fee - it).coerceAtLeast(0) } } else null)
         }
+
+        /** Where another exit's branch leaves yours: after the transactions you share, root first. */
+        private fun branchCoins(exit: ExitModel, live: List<ExitModel>, n: Int) = live.mapNotNull { other ->
+            val k = exit.packages.zip(other.packages).takeWhile { (a, b) -> a.txid == b.txid }.size
+            if (k in 1 until n) Other(k, other.amount) else null
+        }.take(3)
     }
 }
 
@@ -178,12 +198,7 @@ internal object ExitFold {
      */
     fun spans(kinds: List<Kind>, cap: Int): List<IntRange> {
         if (kinds.size <= cap) return kinds.indices.map { it..it }
-        class Run(val range: IntRange, val old: Boolean) { var own = range.count() }
-        val runs = mutableListOf<Run>(); var start = 0
-        for (i in 0..kinds.size) if (i == kinds.size || kinds[i] == Kind.current) {
-            if (i > start) runs += Run(start until i, (start until i).all { kinds[it] == Kind.mined })
-            start = i + 1
-        }
+        val runs = runs(kinds)
         val required = kinds.count { it == Kind.current }
         fun total() = required + runs.sumOf { it.own + if (it.own < it.range.count()) 1 else 0 }
         fun shrink(old: Boolean, floor: Int) {
@@ -191,16 +206,34 @@ internal object ExitFold {
         }
         shrink(false, 2); shrink(true, 1); shrink(false, 1); shrink(true, 0); shrink(false, 0)
         for (run in runs) if (run.range.count() - run.own == 1) run.own = run.range.count()
-        return buildList {
-            var i = 0
-            while (i < kinds.size) {
-                val run = runs.firstOrNull { i in it.range }
-                if (run == null) { add(i..i); i++; continue }
-                val r = run.range; val folded = r.count() - run.own
-                if (run.old) { if (folded > 0) add(r.first until r.first + folded); for (k in r.first + folded..r.last) add(k..k) }
-                else { for (k in r.first until r.first + run.own) add(k..k); if (folded > 0) add(r.first + run.own..r.last) }
-                i = r.last + 1
+        return places(kinds.size, runs)
+    }
+
+    /** A run between the transactions being sent: [old] when all of it is in blocks; [own] how many keep their own place. */
+    private class Run(val range: IntRange, val old: Boolean) { var own = range.count() }
+
+    private fun runs(kinds: List<Kind>): MutableList<Run> {
+        val runs = mutableListOf<Run>(); var start = 0
+        for (i in 0..kinds.size) if (i == kinds.size || kinds[i] == Kind.current) {
+            if (i > start) runs += Run(start until i, (start until i).all { kinds[it] == Kind.mined })
+            start = i + 1
+        }
+        return runs
+    }
+
+    /** The places, in order: each one being sent alone, each run's own ones alone and its fold in one. */
+    private fun places(size: Int, runs: List<Run>) = buildList {
+        var i = 0
+        while (i < size) {
+            val run = runs.firstOrNull { i in it.range }
+            if (run == null) { add(i..i); i++; continue }
+            val r = run.range; val folded = r.count() - run.own
+            if (run.old) {
+                if (folded > 0) add(r.first until r.first + folded)
+                for (k in r.first + folded..r.last) add(k..k)
             }
+            else { for (k in r.first until r.first + run.own) add(k..k); if (folded > 0) add(r.first + run.own..r.last) }
+            i = r.last + 1
         }
     }
 }
@@ -233,6 +266,7 @@ internal class TreeGeometry(val width: Float, val height: Float, val n: Int, val
      * your coin with its [reserve]) and the clearance, so every link shows and nothing touches. The level with its fee child
      * docked ([docked]) keeps the dot's room below it; the one short of funds ([ringed]) its red ring's, both sides.
      */
+    @Suppress("LongParameterList") // exit-tree layout: flat geometry inputs
     fun minimumGap(level: Int, side: Float, reserve: Float, count: Int = n, docked: Int = -1, ringed: Int = -1): Float {
         val below = when { level - 1 == 0 -> block / 2; level - 1 == ringed -> ring(side); else -> side / 2 }
         val above = when { level == count -> reserve; level == ringed -> ring(side); level == docked -> max(side / 2, feeDrop); else -> side / 2 }
@@ -293,7 +327,8 @@ internal class TreeGeometry(val width: Float, val height: Float, val n: Int, val
     fun other(levels: FloatArray, level: Int, index: Int): Pair<Float, Float> {
         val y = levels.getOrElse(level) { roundY }; val gap = (y - levels.getOrElse(level + 1) { coinY }).coerceAtLeast(12f)
         val first = y - gap * .95f
-        return trunk - (1.15f + 1.05f * index) * spread to maxOf(otherTop, if (index == 0) first else min(y - gap * (1.5f + .55f * (index - 1)), first - 14 * index))
+        return trunk - (1.15f + 1.05f * index) * spread to maxOf(otherTop,
+            if (index == 0) first else min(y - gap * (1.5f + .55f * (index - 1)), first - 14 * index))
     }
     /** The highest another exit's coin goes: room above its 6 dp radius. */
     val otherTop get() = 6 + 6 * scale
@@ -393,35 +428,50 @@ internal object TreeLabels {
      * older one placed alone, into one range ([range]) wherever it fits, the latest too if need be, so every mined block is
      * in a label and no range leaves one out.
      */
-    fun place(items: List<Item>, lineHeight: Float, scale: Float, top: Float, bottom: Float, fit: (Item) -> Item, range: (Long, Long) -> String): List<Item> {
-        val placed = mutableListOf<Item>(); val skipped = mutableListOf<Item>()
+    @Suppress("LongParameterList") // exit-tree layout: flat geometry inputs
+    fun place(items: List<Item>, lineHeight: Float, scale: Float, top: Float, bottom: Float, fit: (Item) -> Item, range: (Long, Long) -> String): List<Item> =
+        Placement(lineHeight, scale, top, bottom, fit, range).place(items)
+
+    /** [place]'s working state: what's placed so far, and the room and measures it places in. */
+    @Suppress("LongParameterList") // exit-tree layout: flat geometry inputs
+    private class Placement(val lineHeight: Float, val scale: Float, val top: Float, val bottom: Float, val fit: (Item) -> Item,
+        val range: (Long, Long) -> String) {
+        val placed = mutableListOf<Item>()
+
         fun clash(item: Item, margin: Float) = placed.any { it.right == item.right && !(item.bottom + margin < it.top || item.top - margin > it.bottom) }
+
         fun span(item: Item): Item {
             val height = height(item, lineHeight, scale)
             val y = item.y.coerceAtMost(bottom - height + lineHeight / 2).coerceAtLeast(top + lineHeight / 2)
             return item.copy(y = y, top = y - lineHeight / 2, bottom = y - lineHeight / 2 + height)
         }
-        for (item in items.withIndex().sortedWith(compareBy({ -it.value.priority }, { it.index })).map { span(fit(it.value)) }) {
-            if (!clash(item, 3f)) { placed += item; continue }
-            val fallback = item.fallbacks.map { span(fit(it)) }.firstOrNull { !clash(it, 3f) }
-            if (fallback != null) placed += fallback else if (item.blocks != null) skipped += item
+
+        fun place(items: List<Item>): List<Item> {
+            val skipped = mutableListOf<Item>()
+            for (item in items.withIndex().sortedWith(compareBy({ -it.value.priority }, { it.index })).map { span(fit(it.value)) }) {
+                if (!clash(item, 3f)) { placed += item; continue }
+                val fallback = item.fallbacks.map { span(fit(it)) }.firstOrNull { !clash(it, 3f) }
+                if (fallback != null) placed += fallback else if (item.blocks != null) skipped += item
+            }
+            if (skipped.size == 1 && !clash(skipped[0], 1f)) placed += skipped.removeAt(0)
+            if (skipped.isEmpty()) return placed
+            // The older blocks fold together, those placed alone too; the latest keeps its own label while the range fits.
+            val alone = placed.filter { it.blocks != null && it.priority < 2 }
+            val latest = placed.filter { it.blocks != null && it.priority >= 2 }
+            placed.removeAll(alone)
+            val range = fold(skipped + alone) ?: run { placed.removeAll(latest); fold(skipped + alone + latest) }
+            if (range != null) placed += range else placed += latest
+            return placed
         }
-        if (skipped.size == 1 && !clash(skipped[0], 1f)) placed += skipped.removeAt(0)
-        if (skipped.isEmpty()) return placed
-        // The older blocks fold together, those placed alone too; the latest keeps its own label while the range fits.
+
         fun fold(folded: List<Item>): Item? {
             val from = folded.minOf { it.blocks!!.first }; val to = folded.maxOf { it.blocks!!.last }
             val middle = folded.map { it.y }.average().toFloat()
-            val ys = listOf(middle) + (folded.map { it.y } + generateSequence(top) { it + 2 }.takeWhile { it <= bottom }).sortedBy { kotlin.math.abs(it - middle) }
+            val ys = listOf(middle) +
+                (folded.map { it.y } + generateSequence(top) { it + 2 }.takeWhile { it <= bottom }).sortedBy { kotlin.math.abs(it - middle) }
             val spots = ys.map { y -> span(fit(Item(y, listOf(Line(range(from, to), Tone.strong)), 0f, blocks = from..to, key = "range"))) }
             return spots.firstOrNull { !clash(it, 3f) } ?: spots.firstOrNull { !clash(it, 1f) }
         }
-        val alone = placed.filter { it.blocks != null && it.priority < 2 }
-        val latest = placed.filter { it.blocks != null && it.priority >= 2 }
-        placed.removeAll(alone)
-        val range = fold(skipped + alone) ?: run { placed.removeAll(latest); fold(skipped + alone + latest) }
-        if (range != null) placed += range else placed += latest
-        return placed
     }
 }
 
@@ -443,7 +493,8 @@ internal object ExitGutter {
     /** Each of [exit]'s transactions, root first, as the gutter draws it. */
     fun path(exit: ExitModel, stage: ExitStage): List<Pair<String, St>> {
         val txs = exit.path
-        val done = stage.phase in setOf(ExitStage.Phase.onchain, ExitStage.Phase.wait, ExitStage.Phase.claimable, ExitStage.Phase.claiming, ExitStage.Phase.claimed)
+        val done = stage.phase in setOf(ExitStage.Phase.onchain, ExitStage.Phase.wait, ExitStage.Phase.claimable, ExitStage.Phase.claiming,
+            ExitStage.Phase.claimed)
         val ids = exit.packages.map { it.txid }.ifEmpty { txs.map { it.txid } }
         return ids.mapIndexed { i, id ->
             val kind = txs.getOrNull(i)?.status?.kind
@@ -487,35 +538,45 @@ internal object ExitGutter {
      * of rows and no two branches' transactions land on each other; otherwise as they came. [ids]: a row's transactions.
      */
     fun <T> tree(rows: List<T>, ids: (T) -> List<String>, depth: Int = 0): List<T> =
-        if (rows.size < 2) rows else rows.groupBy { ids(it).getOrNull(depth) }.flatMap { (id, group) -> if (id != null && group.size > 1) tree(group, ids, depth + 1) else group }
+        if (rows.size < 2) rows else rows.groupBy { ids(it).getOrNull(depth) }.flatMap { (id, group) -> if (id != null && group.size > 1) tree(group, ids,
+            depth + 1) else group }
 
     /** The gutter for a shared group: the round's block at [x0], each transaction [step] further, every coin at [coinX]. */
     const val sharedWidth = 112f
     const val coinWidth = 44f
     /** The least distance between two transactions' centres: their 8 dp squares and 3 dp of link between. */
     const val minStep = 11f
-    fun shared(paths: List<List<Pair<String, St>>>, ys: List<Float>, x0: Float = 2f, coinX: Float = 90f, step: Float = 12f): Layout {
+    fun shared(paths: List<List<Pair<String, St>>>, ys: List<Float>, x0: Float = 2f, coinX: Float = 90f, step: Float = 12f): Layout =
+        SharedGutter(paths, ys, x0, coinX).layout(step)
+
+    /** [shared]'s working state: each exit's transactions, their furthest states, and the columns each path folds into. */
+    private class SharedGutter(val paths: List<List<Pair<String, St>>>, val ys: List<Float>, val x0: Float, val coinX: Float) {
         val states = states(paths)
         val ids = paths.map { path -> path.dropLast(1).map { it.first } }
         val depth = ids.maxOfOrNull { it.size } ?: 0
         // Each exit's transaction being sent: its first not in a block (shared ones in their furthest state).
         val sending = ids.map { row -> row.indexOfFirst { states.getValue(it) != St.mined } }
-        fun kinds(group: List<Int>, from: Int, to: Int) = (from until to).map { i -> when {
-            group.any { sending[it] == i } -> ExitFold.Kind.current
-            group.all { states.getValue(ids[it][i]) == St.mined } -> ExitFold.Kind.mined
-            else -> ExitFold.Kind.unsent
-        } }
         // A long path steps closer, down to the least step, so its last transaction stays clear of the coins; longer still,
         // it folds as the picture's does. What exits share is one trunk, folded alike for all of them, then each branch where
         // they part folds in the room the trunk leaves it, the trunk leaving its branches the least they need: so every path
         // keeps the least step, each exit's transaction being sent on its own.
         val room = coinX - 14 - 6 - x0; val fit = (room / minStep).toInt()
         val columns = List(paths.size) { mutableListOf<IntRange>() }
-        fun parting(group: List<Int>, from: Int) = generateSequence(from) { it + 1 }.first { i -> group.any { ids[it].size <= i } || group.map { ids[it][i] }.distinct().size > 1 }
+        var alone = false
+
+        fun kinds(group: List<Int>, from: Int, to: Int) = (from until to).map { i -> when {
+            group.any { sending[it] == i } -> ExitFold.Kind.current
+            group.all { states.getValue(ids[it][i]) == St.mined } -> ExitFold.Kind.mined
+            else -> ExitFold.Kind.unsent
+        } }
+        fun parting(group: List<Int>,
+            from: Int) = generateSequence(from) { it + 1 }.first { i -> group.any { ids[it].size <= i } || group.map { ids[it][i] }.distinct().size > 1 }
         fun branches(group: List<Int>, at: Int) = group.filter { ids[it].size > at }.groupBy { ids[it][at] }.values
         fun least(group: List<Int>, from: Int): Int {
             val p = parting(group, from); val trunk = kinds(group, from, p)
-            val own = trunk.count { it == ExitFold.Kind.current } + trunk.indices.count { i -> trunk[i] != ExitFold.Kind.current && trunk.getOrNull(i - 1).let { it == null || it == ExitFold.Kind.current } }
+            val own = trunk.count { it == ExitFold.Kind.current } + trunk.indices.count { i ->
+                trunk[i] != ExitFold.Kind.current && trunk.getOrNull(i - 1).let { it == null || it == ExitFold.Kind.current }
+            }
             return own + (branches(group, p).maxOfOrNull { least(it, p) } ?: 0)
         }
         fun fold(group: List<Int>, from: Int, budget: Int) {
@@ -525,32 +586,39 @@ internal object ExitGutter {
             for (r in group) columns[r] += trunk
             for (part in parts) fold(part, p, budget - trunk.size)
         }
-        fold(paths.indices.toList(), 0, fit)
-        // A path that parts too often for that: each exit's folds alone.
-        val alone = columns.any { it.size > fit }
-        if (alone) for (r in paths.indices) { columns[r].clear(); columns[r] += ExitFold.spans(kinds(listOf(r), 0, ids[r].size), fit) }
-        val d = (columns.maxOfOrNull { it.size } ?: 0).let { if (it == 0) step else min(step, room / it) }
-        // Each drawn transaction once (a folded one by its last), at the height of the rows it leads to.
         fun key(r: Int, span: IntRange) = ids[r][span.last].let { if (alone) "$it@$r" else it }
-        val rows = mutableMapOf<String, MutableList<Float>>()
-        for (r in paths.indices) for (span in columns[r]) rows.getOrPut(key(r, span)) { mutableListOf() } += ys[r]
-        val root = x0 to ys.average().toFloat()
-        val nodes = linkedMapOf<String, Node>(); val links = linkedMapOf<String, Link>()
-        paths.forEachIndexed { r, path ->
-            var from = root; var previous = "root"
-            columns[r].forEachIndexed { c, span ->
-                val key = key(r, span); val id = ids[r][span.last]; val folded = span.count() > 1
-                val st = if (!folded) states.getValue(id) else if (span.all { states.getValue(ids[r][it]) == St.mined }) St.mined else St.unsent
-                val at = x0 + (c + 1) * d + 6 to rows.getValue(key).average().toFloat()
-                nodes.putIfAbsent(key, Node(id, at.first, at.second, st, false, folded))
-                links.putIfAbsent("$previous>$key", Link(from.first + 4 to from.second, at.first - 4 to at.second, st == St.mined))
-                from = at; previous = key
-            }
-            val (id, st) = path.last(); val at = coinX to ys[r]; val key = "$id@$r"
-            nodes.putIfAbsent(key, Node(id, at.first, at.second, st, true))
-            links.putIfAbsent("$previous>$key", Link(from.first + 4 to from.second, at.first - 11 to at.second, st == St.mined))
+
+        fun layout(step: Float): Layout {
+            fold(paths.indices.toList(), 0, fit)
+            // A path that parts too often for that: each exit's folds alone.
+            alone = columns.any { it.size > fit }
+            if (alone) for (r in paths.indices) { columns[r].clear(); columns[r] += ExitFold.spans(kinds(listOf(r), 0, ids[r].size), fit) }
+            val d = (columns.maxOfOrNull { it.size } ?: 0).let { if (it == 0) step else min(step, room / it) }
+            // Each drawn transaction once (a folded one by its last), at the height of the rows it leads to.
+            val rows = mutableMapOf<String, MutableList<Float>>()
+            for (r in paths.indices) for (span in columns[r]) rows.getOrPut(key(r, span)) { mutableListOf() } += ys[r]
+            return draw(d, rows)
         }
-        return Layout(root, nodes.values.toList(), links.values.toList())
+
+        private fun draw(d: Float, rows: Map<String, List<Float>>): Layout {
+            val root = x0 to ys.average().toFloat()
+            val nodes = linkedMapOf<String, Node>(); val links = linkedMapOf<String, Link>()
+            paths.forEachIndexed { r, path ->
+                var from = root; var previous = "root"
+                columns[r].forEachIndexed { c, span ->
+                    val key = key(r, span); val id = ids[r][span.last]; val folded = span.count() > 1
+                    val st = if (!folded) states.getValue(id) else if (span.all { states.getValue(ids[r][it]) == St.mined }) St.mined else St.unsent
+                    val at = x0 + (c + 1) * d + 6 to rows.getValue(key).average().toFloat()
+                    nodes.putIfAbsent(key, Node(id, at.first, at.second, st, false, folded))
+                    links.putIfAbsent("$previous>$key", Link(from.first + 4 to from.second, at.first - 4 to at.second, st == St.mined))
+                    from = at; previous = key
+                }
+                val (id, st) = path.last(); val at = coinX to ys[r]; val key = "$id@$r"
+                nodes.putIfAbsent(key, Node(id, at.first, at.second, st, true))
+                links.putIfAbsent("$previous>$key", Link(from.first + 4 to from.second, at.first - 11 to at.second, st == St.mined))
+            }
+            return Layout(root, nodes.values.toList(), links.values.toList())
+        }
     }
 }
 
@@ -572,6 +640,7 @@ internal object ExitRail {
     const val moreSize = 8f
 
     /** [label] writes "+N"; [measure] how wide it is at [moreSize]. */
+    @Suppress("LongParameterList") // exit-tree layout: flat geometry inputs
     fun stops(path: Int, start: Float, room: Float, end: Float, label: (Int) -> String, measure: (String) -> Float): List<Stop> {
         if (path <= 1) return listOf(Stop(start + 4, coin = true))
         fun stops(cap: Int, far: Boolean = false): List<Stop> {
@@ -684,7 +753,8 @@ internal class TreeMotion(val from: ExitScene?, val to: ExitScene) {
         val ends = mutableListOf(0f)
         fun end(start: Float, length: Float) { if (!start.isNaN()) ends += start + length }
         end(lift, HouseSpring.snappy.seconds); end(grow, growSeconds + .9f)
-        for (i in 0 until n) { end(mine[i], maxOf(HouseSpring.bouncy.seconds, HouseSpring.snappy.seconds / 1.6f, .8f)); end(send[i], HouseSpring.snappy.seconds) }
+        for (i in 0 until n) { end(mine[i], maxOf(HouseSpring.bouncy.seconds, HouseSpring.snappy.seconds / 1.6f, .8f)); end(send[i],
+            HouseSpring.snappy.seconds) }
         end(fee, HouseSpring.soft.seconds); end(bump, .15f + HouseSpring.soft.seconds); end(flash, .5f)
         end(lock, maxOf(HouseSpring.soft.seconds, HouseSpring.bouncy.seconds)); end(dial, HouseSpring.snappy.seconds); end(open, HouseSpring.bouncy.seconds)
         end(claim, HouseSpring.calm.seconds); end(claimSend, HouseSpring.snappy.seconds); end(claimMine, 1.35f + HouseSpring.soft.seconds)
@@ -701,7 +771,8 @@ internal class TreeMotion(val from: ExitScene?, val to: ExitScene) {
     fun grow(j: Int, t: Float) = if (grow.isNaN()) flag(!to.lifting) else ((t - grow - (j - 1) * growStep) / growStep).coerceIn(0f, 1f)
     /** A node's pop as the growing branch reaches it; before the branch grows (Start) only its ghost shows. */
     fun pop(j: Int, t: Float) = if (grow.isNaN()) flag(!to.lifting) else HouseSpring.bouncy(t - grow - (j * growStep - .05f))
-    fun ghost(t: Float) = when { to.lifting -> .5f; from?.lifting == true && !grow.isNaN() -> .5f * (1 - ((t - grow) / growSeconds).coerceIn(0f, 1f)); else -> 0f }
+    fun ghost(t: Float) = when { to.lifting -> .5f; from?.lifting == true && !grow.isNaN() -> .5f * (1 - ((t - grow) / growSeconds).coerceIn(0f,
+        1f)); else -> 0f }
     fun lift(t: Float) = when {
         to.lifting -> if (lift.isNaN()) 1f else HouseSpring.snappy(t - lift)
         from?.lifting == true && !grow.isNaN() -> 1 - ((t - grow - growSeconds) / .8f).coerceIn(0f, 1f)
@@ -716,7 +787,8 @@ internal class TreeMotion(val from: ExitScene?, val to: ExitScene) {
     }
     fun cancel(t: Float) = between(flag(was.canceled), flag(to.canceled), cancel, HouseSpring.soft, t)
     private fun sent(mark: ExitScene.Mark?) = flag(mark == ExitScene.Mark.waiting || mark == ExitScene.Mark.mined)
-    fun send(i: Int, t: Float) = if (to.canceled && !was.canceled) sent(wasMark(i)) * (1 - cancel(t)) else between(sent(wasMark(i)), sent(to.marks[i]), send[i], HouseSpring.snappy, t)
+    fun send(i: Int, t: Float) = if (to.canceled && !was.canceled) sent(wasMark(i)) * (1 - cancel(t)) else between(sent(wasMark(i)), sent(to.marks[i]), send[i],
+        HouseSpring.snappy, t)
     fun mine(i: Int, t: Float) = between(flag(wasMark(i) == ExitScene.Mark.mined), flag(to.mined(i)), mine[i], HouseSpring.snappy, t)
     fun stamp(i: Int, t: Float) = if (mine[i].isNaN()) 1f else HouseSpring.bouncy(t - mine[i])
     fun ripple(i: Int, t: Float) = if (mine[i].isNaN()) 0f else ((t - mine[i]) / .8f).coerceIn(0f, 1f)
@@ -748,9 +820,9 @@ internal class TreeMotion(val from: ExitScene?, val to: ExitScene) {
      */
     fun ys(geo: TreeGeometry, before: FloatArray?, t: Float): FloatArray {
         val ys = geo.levels(lock(t) * (1 - stem(t)), to.docked, to.ringed) { mine(it, t) }
-        if (restructured && before != null) slide(t).let { u ->
-            for (j in 1 until n) was(j - 1).takeIf { it >= 0 && it + 1 < before.size }?.let { ys[j] = lerp(before[it + 1], ys[j], u) }
-        }
+        if (!restructured || before == null) return ys
+        val u = slide(t)
+        for (j in 1 until n) was(j - 1).takeIf { it >= 0 && it + 1 < before.size }?.let { ys[j] = lerp(before[it + 1], ys[j], u) }
         return ys
     }
     /**

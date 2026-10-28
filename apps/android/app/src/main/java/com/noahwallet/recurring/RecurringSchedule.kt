@@ -84,7 +84,11 @@ import java.util.TimeZone
         if (status != "active") return Plan("idle")
         inFlight?.let { return Plan(if (now - it.startedAt > 600_000) "stale_in_flight" else "idle") }
         val first = next(nextOccurrenceIndex, zone) ?: return Plan("complete")
-        if (first > now || !ignoreBackoff && (retryNotBefore ?: 0) > now) return Plan("idle")
+        if (first > now || (!ignoreBackoff && (retryNotBefore ?: 0) > now)) return Plan("idle")
+        return duePlan(now, zone)
+    }
+    /** The latest due occurrence, skipping at most 5,000 missed ones. */
+    private fun duePlan(now: Long, zone: TimeZone): Plan {
         var latest = nextOccurrenceIndex
         for (ignored in 0 until 5000) { if (next(latest + 1, zone)?.let { it <= now } == true) latest++ else break }
         if (next(latest + 1, zone)?.let { it <= now } == true) return Plan("too_many_missed")
@@ -102,11 +106,13 @@ import java.util.TimeZone
         val added = plan.skippedIndices.orEmpty().map { Run(it, occurrence(it, zone), now, "skipped", amountSat) } +
             Run(plan.occurrenceIndex!!, plan.scheduledFor!!, now, "success", amountSat)
         return copy(runs = (added.reversed() + runs).take(24), occurrencesPaid = occurrencesPaid + 1,
-            consecutiveFailures = 0, lastError = null, issue = null, retryNotBefore = null, inFlight = null, updatedAt = now).advance(plan.occurrenceIndex + 1, zone)
+            consecutiveFailures = 0, lastError = null, issue = null, retryNotBefore = null, inFlight = null, updatedAt = now).advance(plan.occurrenceIndex + 1,
+            zone)
     }
     fun failure(plan: Plan, message: String, retryable: Boolean, now: Long, issue: RecurringIssue? = null): RecurringPayment {
         val failures = consecutiveFailures + 1
-        return copy(inFlight = null, consecutiveFailures = failures, lastError = message, issue = issue ?: RecurringIssue(if (retryable) RecurringIssue.Code.retryableFailure else RecurringIssue.Code.uncertain), updatedAt = now,
+        return copy(inFlight = null, consecutiveFailures = failures, lastError = message,
+            issue = issue ?: RecurringIssue(if (retryable) RecurringIssue.Code.retryableFailure else RecurringIssue.Code.uncertain), updatedAt = now,
             status = if (retryable) status else "needs_attention",
             retryNotBefore = if (retryable) now + minOf(900_000L * (1L shl (failures.coerceIn(1, 16) - 1)), 21_600_000) else null,
             runs = (listOf(Run(plan.occurrenceIndex!!, plan.scheduledFor!!, now, "failed", amountSat, message)) + runs).take(24))

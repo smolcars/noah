@@ -14,7 +14,11 @@ data class PersistedBackupState(
     var lastBackupId: String? = null,
     var lastUploadedSnapshotSha256: String? = null,
 ) {
-    fun markPending() { backupPending = true; if (lastBackupStatus != "in_progress") lastBackupStatus = "idle"; lastBackupError = null }
+    fun markPending() {
+        backupPending = true
+        if (lastBackupStatus != "in_progress") lastBackupStatus = "idle"
+        lastBackupError = null
+    }
     fun markInProgress(now: Double) { backupPending = true; lastBackupStatus = "in_progress"; lastBackupAttemptAt = now; lastBackupError = null }
     fun markSuccess(sha: String, id: String?, uploaded: Boolean, pending: Boolean, now: Double) {
         backupPending = pending; lastBackupStatus = if (uploaded) "success" else "idle"

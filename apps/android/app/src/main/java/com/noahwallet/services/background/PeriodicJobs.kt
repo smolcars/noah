@@ -8,7 +8,7 @@ import kotlinx.coroutines.*
 
 /** Only stage boundaries stop; admitted native calls and detached executors must settle. */
 class PeriodicJobs(private val d: Dependencies) {
-    class Dependencies(
+    data class Dependencies(
         val eligible: suspend () -> Boolean,
         val recurringDue: suspend () -> Boolean,
         val ensureWalletOpen: suspend () -> Unit,

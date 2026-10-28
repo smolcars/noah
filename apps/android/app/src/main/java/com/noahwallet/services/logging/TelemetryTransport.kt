@@ -53,9 +53,10 @@ internal class TelemetryTransport(private val delegate: ITransport, private val 
         private fun session(item: SentryEnvelopeItem): SentryEnvelopeItem? {
             val original = Json.parseToJsonElement(item.data.toString(Charsets.UTF_8)).jsonObject
             // Release Health needs random session/install IDs, never an app-set user identity.
-            for (key in listOf("sid", "did")) original[key]?.let {
-                if (it !is JsonPrimitive || !it.isString || !sessionID.matches(it.content)) return null
+            val randomIDs = listOf("sid", "did").all { key ->
+                original[key]?.let { it is JsonPrimitive && it.isString && sessionID.matches(it.content) } ?: true
             }
+            if (!randomIDs) return null
             val attrs = original["attrs"]?.jsonObject ?: return null
             val clean = buildJsonObject {
                 for (key in listOf("sid", "did", "init", "started", "timestamp", "status", "seq", "errors", "duration")) {
@@ -68,8 +69,8 @@ internal class TelemetryTransport(private val delegate: ITransport, private val 
                 }
             }
             if (!AppTelemetry.isSafePayload(clean)) return null
-            val session = serializer.deserialize(StringReader(clean.toString()), Session::class.java) ?: return null
-            return SentryEnvelopeItem.fromSession(serializer, session)
+            return serializer.deserialize(StringReader(clean.toString()), Session::class.java)
+                ?.let { SentryEnvelopeItem.fromSession(serializer, it) }
         }
     }
 }

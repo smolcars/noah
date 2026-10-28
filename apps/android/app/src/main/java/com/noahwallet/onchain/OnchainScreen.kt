@@ -39,7 +39,10 @@ private fun onchainWallet(app: AppModel, rule: (Boolean, Boolean, Boolean, Boole
 /** Waits while the wallet is only briefly not ready ([ExitRules.settling]), as after every app switch; true once it's ready. */
 internal suspend fun onchainSettle(app: AppModel): Boolean {
     // shortcut: checks every half second for up to 30 s; a flow of the session's state would replace it.
-    repeat(60) { if (!onchainWallet(app, ExitRules::settling)) return onchainReady(app); delay(500) }
+    repeat(60) {
+        if (!onchainWallet(app, ExitRules::settling)) return onchainReady(app)
+        delay(500)
+    }
     return onchainReady(app)
 }
 internal fun onchainDependencies(app: AppModel) =
@@ -47,6 +50,7 @@ internal fun onchainDependencies(app: AppModel) =
         ExitSeen.stored(app.settings), settle = { onchainSettle(app) }, shared = SharedOverview.shared) { onchainReady(app) }
 
 /** The model's calls on [session], each mutation under [lifecycle]'s gate; a device test runs them on a fake wallet. */
+@Suppress("LongParameterList") // wiring: one argument per dependency
 internal fun onchainDependencies(session: com.noahwallet.services.wallet.WalletSession, lifecycle: com.noahwallet.services.wallet.WalletLifecycle,
     funding: AutoBoardFunding, claims: ExitClaimRecords, seen: ExitSeen, settle: suspend () -> Boolean = { false },
     shared: SharedOverview? = null, ready: () -> Boolean) = OnchainModel.Dependencies(
@@ -163,7 +167,11 @@ internal fun TransactionRow(txid: String) {
     val uri = LocalUriHandler.current
     DetailRow("Transaction ID", txid)
     TextButton({ copy(context, txid) }) { Text(tr("Copy transaction ID")) }
-    if (BuildConfig.APP_VARIANT != "regtest") TextButton({ uri.openUri("https://mempool.space/" + (if (BuildConfig.APP_VARIANT == "signet") "signet/" else "") + "tx/$txid") }) { Text(tr("View in explorer")) }
+    if (BuildConfig.APP_VARIANT != "regtest") {
+        TextButton({ uri.openUri("https://mempool.space/" + (if (BuildConfig.APP_VARIANT == "signet") "signet/" else "") + "tx/$txid") }) {
+            Text(tr("View in explorer"))
+        }
+    }
 }
 
 @Composable
@@ -171,48 +179,74 @@ internal fun OnchainStatus(app: AppModel, model: OnchainModel) {
     val scope = rememberCoroutineScope()
     var overrideID by remember { mutableStateOf<String?>(null) }
     if (model.loading || model.busy) LinearProgressIndicator(Modifier.fillMaxWidth())
-    model.attempts.forEach { attempt ->
-        HorizontalDivider()
-        Text(tr(if (attempt.overrideAudit != null) "Overridden attempt" else if (attempt.receipt == null) "Check operation status" else "Submitted"), style = MaterialTheme.typography.titleLarge)
-        Text(tr(attempt.quote.action.title))
-        AmountRow(app, "Reviewed amount", attempt.quote.amount)
-        Text(tr(java.text.DateFormat.getDateTimeInstance().format(java.util.Date(attempt.quote.createdAt))))
-        Text(tr(attempt.receipt?.message ?: OnchainFailure.uncertain.text))
-        attempt.overrideAudit?.let { audit ->
-            Text(tr("Repeat protection overridden") + ": " + java.text.DateFormat.getDateTimeInstance().format(java.util.Date(audit.overriddenAt)))
-            Text(tr(audit.statusMessage)); Text(tr(audit.title)); Text(tr(audit.warning)); Text(tr(audit.confirmation))
-        }
-        attempt.receipt?.chainStatus?.let { Text(tr(it.text)) }
-        attempt.receipt?.statusError?.let { Text(tr(it), color = MaterialTheme.colorScheme.error) }
-        attempt.receipt?.onchainFee?.let { AmountRow(app, "Actual onchain fee", it) }
-        if (attempt.receipt != null && attempt.quote.action == OnchainAction.board) {
-            val amounts = attempt.receipt.boardAmounts(attempt.quote)
-            AmountRow(app, "Ark fee", checkNotNull(attempt.quote.fee))
-            AmountRow(app, "Ark receives", amounts.arkReceives)
-            AmountRow(app, "Total leaving onchain wallet", amounts.totalLeaving)
-        }
-        (attempt.receipt?.txid ?: attempt.txid)?.let { TransactionRow(it) }
-        if (attempt.receipt != null && !attempt.receipt.broadcastRetryPending) {
-            TextButton({ scope.launch { model.acknowledge(attempt.id) } }, enabled = !model.busy && !app.isWalletSuspended) { Text(tr("Done")) }
-            if (attempt.receipt.txid != null) TextButton({ scope.launch { model.checkStatus(attempt.id) } }, enabled = !model.busy && !app.isWalletSuspended) { Text(tr("Refresh network status")) }
-        }
-        else {
-            Text(tr("Noah checks again automatically as your wallet syncs."))
-            TextButton({ scope.launch { model.checkStatus(attempt.id) } }, enabled = !model.busy && !app.isWalletSuspended) { Text(tr("Check status")) }
-            // An uncertain board stays locked until Check status settles it, so it has no override.
-            if (attempt.receipt == null && attempt.overrideAudit == null && !attempt.uncertainBoard) TextButton({ overrideID = attempt.id }, enabled = !model.busy && !app.isWalletSuspended) { Text(tr("Override repeat protection…"), color = MaterialTheme.colorScheme.error) }
-        }
-    }
-    overrideID?.let { id -> WalletAlertDialog(onDismissRequest = { overrideID = null },
-        title = { Text(tr(OnchainOperationJournal.overrideTitle)) }, text = { Text(tr(OnchainOperationJournal.overrideWarning)) },
-        dismissButton = { TextButton({ overrideID = null }) { Text(tr("Keep attempt")) } },
-        confirmButton = { TextButton({ overrideID = null; scope.launch { model.overrideUncertain(id) } }) { Text(tr(OnchainOperationJournal.overrideConfirmation)) } }) }
+    model.attempts.forEach { attempt -> AttemptStatus(app, model, attempt, scope) { overrideID = it } }
+    overrideID?.let { id -> OverrideDialog({ overrideID = null }) { overrideID = null; scope.launch { model.overrideUncertain(id) } } }
     if (model.estimateFallback != null) {
         Text(tr("Fee estimate unavailable"))
         TextButton(model::continueWithoutEstimate, enabled = !model.busy) { Text(tr("Continue without estimate")) }
     }
     model.error?.let { Text(tr(it), color = MaterialTheme.colorScheme.error) }
     model.message?.let { Text(tr(it)) }
+}
+
+/** One saved attempt: what it reviewed, its receipt or why it's uncertain, and what can be done next. */
+@Composable
+private fun AttemptStatus(app: AppModel, model: OnchainModel, attempt: OnchainOperationJournal.Attempt, scope: kotlinx.coroutines.CoroutineScope,
+    override: (String) -> Unit) {
+    HorizontalDivider()
+    Text(tr(if (attempt.overrideAudit != null) "Overridden attempt" else if (attempt.receipt == null) "Check operation status" else "Submitted"),
+        style = MaterialTheme.typography.titleLarge)
+    Text(tr(attempt.quote.action.title))
+    AmountRow(app, "Reviewed amount", attempt.quote.amount)
+    Text(tr(java.text.DateFormat.getDateTimeInstance().format(java.util.Date(attempt.quote.createdAt))))
+    Text(tr(attempt.receipt?.message ?: OnchainFailure.uncertain.text))
+    attempt.overrideAudit?.let { audit ->
+        Text(tr("Repeat protection overridden") + ": " + java.text.DateFormat.getDateTimeInstance().format(java.util.Date(audit.overriddenAt)))
+        Text(tr(audit.statusMessage)); Text(tr(audit.title)); Text(tr(audit.warning)); Text(tr(audit.confirmation))
+    }
+    attempt.receipt?.let { ReceiptRows(app, attempt, it) }
+    (attempt.receipt?.txid ?: attempt.txid)?.let { TransactionRow(it) }
+    AttemptActions(app, model, attempt, scope, override)
+}
+
+@Composable
+private fun ReceiptRows(app: AppModel, attempt: OnchainOperationJournal.Attempt, receipt: OnchainReceipt) {
+    receipt.chainStatus?.let { Text(tr(it.text)) }
+    receipt.statusError?.let { Text(tr(it), color = MaterialTheme.colorScheme.error) }
+    receipt.onchainFee?.let { AmountRow(app, "Actual onchain fee", it) }
+    if (attempt.quote.action == OnchainAction.board) {
+        val amounts = receipt.boardAmounts(attempt.quote)
+        AmountRow(app, "Ark fee", checkNotNull(attempt.quote.fee))
+        AmountRow(app, "Ark receives", amounts.arkReceives)
+        AmountRow(app, "Total leaving onchain wallet", amounts.totalLeaving)
+    }
+}
+
+/** Done and Refresh for a settled receipt; otherwise Check status and, unless locked, the override. */
+@Composable
+private fun AttemptActions(app: AppModel, model: OnchainModel, attempt: OnchainOperationJournal.Attempt, scope: kotlinx.coroutines.CoroutineScope,
+    override: (String) -> Unit) {
+    val enabled = !model.busy && !app.isWalletSuspended
+    if (attempt.receipt != null && !attempt.receipt.broadcastRetryPending) {
+        TextButton({ scope.launch { model.acknowledge(attempt.id) } }, enabled = enabled) { Text(tr("Done")) }
+        if (attempt.receipt.txid != null) TextButton({ scope.launch { model.checkStatus(attempt.id) } },
+            enabled = enabled) { Text(tr("Refresh network status")) }
+    }
+    else {
+        Text(tr("Noah checks again automatically as your wallet syncs."))
+        TextButton({ scope.launch { model.checkStatus(attempt.id) } }, enabled = enabled) { Text(tr("Check status")) }
+        // An uncertain board stays locked until Check status settles it, so it has no override.
+        if (attempt.overridable()) TextButton({ override(attempt.id) },
+            enabled = enabled) { Text(tr("Override repeat protection…"), color = MaterialTheme.colorScheme.error) }
+    }
+}
+
+@Composable
+private fun OverrideDialog(dismiss: () -> Unit, confirm: () -> Unit) {
+    WalletAlertDialog(onDismissRequest = dismiss,
+        title = { Text(tr(OnchainOperationJournal.overrideTitle)) }, text = { Text(tr(OnchainOperationJournal.overrideWarning)) },
+        dismissButton = { TextButton(dismiss) { Text(tr("Keep attempt")) } },
+        confirmButton = { TextButton(confirm) { Text(tr(OnchainOperationJournal.overrideConfirmation)) } })
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -224,41 +258,65 @@ internal fun OnchainReview(app: AppModel, quote: OnchainQuote, onDismiss: () -> 
     WalletModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text(tr(if (quote.feesUnknown) "Continue without estimate?" else quote.action.title), style = MaterialTheme.typography.headlineSmall)
-            AmountRow(app, if (quote.action == OnchainAction.board) "Amount boarded" else "Amount selected", quote.amount)
-            if (quote.ids.isNotEmpty()) Text(tr("VTXOs selected") + ": " + quote.ids.size)
-            if (quote.action != OnchainAction.cancel && quote.fee != null && quote.chainFee != null) {
-                AmountRow(app, when (quote.action) { OnchainAction.board -> "Ark fee"; OnchainAction.refresh -> "Refresh fee"; else -> "Estimated claim fee" }, quote.fee)
-                if (quote.action in setOf(OnchainAction.board, OnchainAction.startExit, OnchainAction.progress))
-                    AmountRow(app, if (quote.action == OnchainAction.board) "Onchain fee" else "Estimated broadcast fees", quote.chainFee)
-                AmountRow(app, if (quote.action == OnchainAction.board) "Ark receives" else "Amount after fee", quote.net)
-            }
-            quote.preparedBoard?.let { prepared ->
-                AmountRow(app, "Total leaving onchain wallet", quote.totalLeaving)
-                DetailRow("Signed transaction size", "${prepared.vsize} vB")
-                DetailRow("Funding inputs", "${prepared.inputs.size}")
-            }
-            if (quote.automatic) AmountRow(app, "Onchain reserve left", quote.confirmed - quote.amount - checkNotNull(quote.chainFee))
-            quote.destination?.let { DetailRow("Destination", it) }
-            quote.externalDestinationWarning?.let { Text(tr(it), color = MaterialTheme.colorScheme.error) }
-            if (quote.feesUnknown) {
-                Text(tr("Fee estimate unavailable. Fees and amount to receive are unknown. Continue without an estimate only if you accept this uncertainty."), color = MaterialTheme.colorScheme.error)
-                if (quote.action == OnchainAction.startExit) Text(tr("Broadcast funding status is unknown; confirmed onchain funds are required."))
-            }
-            Text(reviewText(quote))
-            if (quote.action in setOf(OnchainAction.startExit, OnchainAction.progress, OnchainAction.claim)) {
-                if (quote.fee != null && quote.chainFee != null) ExitRules.warning(quote.amount, quote.fee, quote.totalFee, quote.action == OnchainAction.claim)?.let { Text(tr(it), color = MaterialTheme.colorScheme.error) }
-                if (!quote.feesUnknown && !quote.fundable) Text(tr("Additional confirmed onchain funds required. You are starting tracking anyway; fund the wallet before progressing."))
-            }
+            ReviewAmounts(app, quote)
+            ReviewDetails(app, quote)
+            ReviewWarnings(quote)
             if (!current) Text(tr(OnchainFailure.changed.text), color = MaterialTheme.colorScheme.error)
-            Button(confirm, enabled = current && !app.isWalletSuspended) { Text(tr(if (quote.feesUnknown) { if (quote.action == OnchainAction.claim) "Broadcast without estimate" else "Start Selected Exit" } else quote.action.title)) }
+            Button(confirm,
+                enabled = current && !app.isWalletSuspended) {
+                val unestimated = if (quote.action == OnchainAction.claim) "Broadcast without estimate" else "Start Selected Exit"
+                Text(tr(if (quote.feesUnknown) unestimated else quote.action.title))
+            }
             TextButton(cancel) { Text(tr(cancelTitle)) }
         }
     }
 }
+@Composable
+private fun ReviewAmounts(app: AppModel, quote: OnchainQuote) {
+    AmountRow(app, if (quote.action == OnchainAction.board) "Amount boarded" else "Amount selected", quote.amount)
+    if (quote.ids.isNotEmpty()) Text(tr("VTXOs selected") + ": " + quote.ids.size)
+    if (quote.action != OnchainAction.cancel && quote.fee != null && quote.chainFee != null) {
+        AmountRow(app, when (quote.action) { OnchainAction.board -> "Ark fee"; OnchainAction.refresh -> "Refresh fee"; else -> "Estimated claim fee" },
+            quote.fee)
+        if (quote.action in setOf(OnchainAction.board, OnchainAction.startExit, OnchainAction.progress))
+            AmountRow(app, if (quote.action == OnchainAction.board) "Onchain fee" else "Estimated broadcast fees", quote.chainFee)
+        AmountRow(app, if (quote.action == OnchainAction.board) "Ark receives" else "Amount after fee", quote.net)
+    }
+}
+
+@Composable
+private fun ReviewDetails(app: AppModel, quote: OnchainQuote) {
+    quote.preparedBoard?.let { prepared ->
+        AmountRow(app, "Total leaving onchain wallet", quote.totalLeaving)
+        DetailRow("Signed transaction size", "${prepared.vsize} vB")
+        DetailRow("Funding inputs", "${prepared.inputs.size}")
+    }
+    if (quote.automatic) AmountRow(app, "Onchain reserve left", quote.confirmed - quote.amount - checkNotNull(quote.chainFee))
+    quote.destination?.let { DetailRow("Destination", it) }
+    quote.externalDestinationWarning?.let { Text(tr(it), color = MaterialTheme.colorScheme.error) }
+}
+
+@Composable
+private fun ReviewWarnings(quote: OnchainQuote) {
+    if (quote.feesUnknown) {
+        Text(tr("Fee estimate unavailable. Fees and amount to receive are unknown. Continue without an estimate only if you accept this uncertainty."),
+            color = MaterialTheme.colorScheme.error)
+        if (quote.action == OnchainAction.startExit) Text(tr("Broadcast funding status is unknown; confirmed onchain funds are required."))
+    }
+    Text(reviewText(quote))
+    if (quote.action in setOf(OnchainAction.startExit, OnchainAction.progress, OnchainAction.claim)) {
+        if (quote.fee != null && quote.chainFee != null) ExitRules.warning(quote.amount, quote.fee, quote.totalFee,
+            quote.action == OnchainAction.claim)?.let { Text(tr(it), color = MaterialTheme.colorScheme.error) }
+        @Suppress("MaxLineLength") // one translation source string
+        if (!quote.feesUnknown && !quote.fundable) Text(tr("Additional confirmed onchain funds required. You are starting tracking anyway; fund the wallet before progressing."))
+    }
+}
+
 /** The review's explanation; MAX adds its own sentence, translated separately. */
 @Composable
 internal fun reviewText(quote: OnchainQuote): String = tr(reviewExplanation(quote)) +
     if (quote.action == OnchainAction.board && quote.boardAll) " " + tr("MAX uses confirmed funds only and deducts the onchain fee from that balance.") else ""
+@Suppress("MaxLineLength") // translation source strings
 internal fun reviewExplanation(quote: OnchainQuote): String = when (quote.action) {
     OnchainAction.board -> "Move onchain bitcoin into Ark using this exact signed funding transaction. The boarding amount includes the Ark fee; the onchain fee is paid in addition. Funds become spendable after the board completes. This review expires after two minutes."
     OnchainAction.refresh -> "This refreshes the selected VTXOs in a delegated Ark round."

@@ -1,6 +1,11 @@
 package com.noahwallet.services.wallet
 
-import kotlinx.coroutines.*
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 /** The UI deadline never cancels native work or releases its session reservation. */
 internal class EsploraOpenWait {

@@ -22,8 +22,11 @@ class RecurringStore(private val read: () -> String?, private val write: (String
     private var policyLedger: RecurringPolicyLedger? = null
     private var automation: RecurringAutomationAuthority? = null
     private var policyBinding: (() -> Binding)? = null
-    internal fun protectPolicies(file: File, sync: (File) -> Unit = ::syncDirectory, syncFile: (java.io.FileDescriptor) -> Unit = { it.sync() }, binding: () -> Binding) = synchronized(lock) {
-        if (policyLedger == null) { policyLedger = RecurringPolicyLedger(file, policyWarning, sync, syncFile); policyBinding = binding; automation = RecurringAutomationAuthority(file.parentFile!!) { target, bytes -> durableRecurringWrite(target, bytes, sync, syncFile) } }
+    internal fun protectPolicies(file: File, sync: (File) -> Unit = ::syncDirectory, syncFile: (java.io.FileDescriptor) -> Unit = { it.sync() },
+        binding: () -> Binding) = synchronized(lock) {
+        if (policyLedger == null) { policyLedger = RecurringPolicyLedger(file, policyWarning, sync,
+            syncFile); policyBinding = binding; automation = RecurringAutomationAuthority(file.parentFile!!) { target, bytes -> durableRecurringWrite(target,
+            bytes, sync, syncFile) } }
     }
     private fun protected(state: State, automationOverlay: Boolean = true): State {
         val ledger = policyLedger ?: return state
@@ -34,7 +37,8 @@ class RecurringStore(private val read: () -> String?, private val write: (String
         }.getOrElse { policyWarning(); state.schedules.keys }
         val automationStopped = owner != null && automationOverlay && automation?.allowed() == false
         return state.copy(schedules = state.schedules.mapValues { (id, schedule) ->
-            if ((id in stopped || automationStopped) && !schedule.unsupportedStorage) schedule.copy(status = "needs_attention", lastError = if (id in stopped) RecurringPolicyLedger.message else RecurringAutomationAuthority.message,
+            if ((id in stopped || automationStopped) && !schedule.unsupportedStorage) schedule.copy(status = "needs_attention",
+                lastError = if (id in stopped) RecurringPolicyLedger.message else RecurringAutomationAuthority.message,
                 issue = RecurringIssue(if (id in stopped) RecurringIssue.Code.policyEvidence else RecurringIssue.Code.automationStopped),
                 stopReason = if (id in stopped) RecurringPayment.StopReason.policyEvidence else RecurringPayment.StopReason.automationStopped) else schedule
         })
@@ -42,40 +46,49 @@ class RecurringStore(private val read: () -> String?, private val write: (String
     internal fun automationGeneration(): String? = synchronized(lock) { automation?.generation() }
     private fun envelope(raw: String? = read()): JsonObject {
         check(!writeFailed) { "Recurring payment storage failed. Restart Noah; sending is stopped." }
-        val stored = raw ?: return buildJsonObject { put("version", 0); putJsonObject("state") { putJsonObject("schedules") {}; put("serverSyncPending", false) } }
+        val stored = raw ?: return buildJsonObject { put("version",
+            0); putJsonObject("state") { putJsonObject("schedules") {}; put("serverSyncPending", false) } }
         return json.parseToJsonElement(stored).jsonObject.also {
             val version = it["version"]
-            require(version == null || version is JsonPrimitive && !version.isString && version.content == "0") { "Recurring payment data couldn't be read. Your saved schedules have been preserved. Sending is stopped." }
+            require(version == null || (version is JsonPrimitive && !version.isString && version.content == "0")) {
+                "Recurring payment data couldn't be read. Your saved schedules have been preserved. Sending is stopped."
+            }
             it.getValue("state").jsonObject.getValue("schedules").jsonObject
         }
     }
     fun load(): State = synchronized(lock) { recoverSettlements(); val raw = read(); protected(decode(envelope(raw), raw)) }
     /** Settlement records submitted money against policy authority, without a temporary wallet overlay. */
-    internal fun settlementState(): State = synchronized(lock) { recoverSettlements(); read().let { protected(decode(envelope(it), it), automationOverlay = false) } }
+    internal fun settlementState(): State = synchronized(lock) { recoverSettlements(); read().let { protected(decode(envelope(it), it),
+        automationOverlay = false) } }
     private fun recoverSettlements() {
         val ledger = policyLedger ?: return
-        fun replay() {
-            if (!ledger.hasPending) return
-            val original = read(); val envelope = envelope(original); val before = decode(envelope, original, migrateIssue = false)
-            val owner = policyBinding!!()
-            check(before.binding == null || before.binding == owner) { RecurringPolicyLedger.message }
-            val pending = ledger.pending(before.binding ?: owner, before.schedules)
-            if (pending.isEmpty()) return
-            val state = envelope.getValue("state").jsonObject.toMutableMap()
-            val rows = state.getValue("schedules").jsonObject.toMutableMap()
-            pending.forEach { row -> rows[row.id] = JsonObject(rows.getValue(row.id).jsonObject + json.encodeToJsonElement(row).jsonObject) }
-            state["schedules"] = JsonObject(rows); state["serverSyncPending"] = JsonPrimitive(true)
-            val updated = JsonObject(envelope + ("state" to JsonObject(state)))
-            val raw = if (original == null) updated.toString() else preserveRows(original, envelope, updated)
-            try { write(raw) } catch (failure: Exception) { writeFailed = true; throw failure }
-            ledger.finish(before.binding ?: owner, decode(updated, raw, migrateIssue = false).schedules)
-        }
-        replay()
+        replay(ledger)
         // Reason conversion must not change an unfinished record's original digest.
         val original = read(); val before = decode(envelope(original), original, migrateIssue = false)
         val owner = runCatching { policyBinding!!() }.getOrNull() ?: return
         if (before.binding != null && before.binding != owner) return
-        if (ledger.migrate(before.binding ?: owner, before.schedules)) replay()
+        if (ledger.migrate(before.binding ?: owner, before.schedules)) replay(ledger)
+    }
+    private fun replay(ledger: RecurringPolicyLedger) {
+        if (!ledger.hasPending) return
+        val original = read(); val envelope = envelope(original); val before = decode(envelope, original, migrateIssue = false)
+        val owner = policyBinding!!()
+        check(before.binding == null || before.binding == owner) { RecurringPolicyLedger.message }
+        val pending = ledger.pending(before.binding ?: owner, before.schedules)
+        if (pending.isEmpty()) return
+        val state = envelope.getValue("state").jsonObject.toMutableMap()
+        val rows = state.getValue("schedules").jsonObject.toMutableMap()
+        pending.forEach { row -> rows[row.id] = JsonObject(rows.getValue(row.id).jsonObject + json.encodeToJsonElement(row).jsonObject) }
+        state["schedules"] = JsonObject(rows); state["serverSyncPending"] = JsonPrimitive(true)
+        val updated = JsonObject(envelope + ("state" to JsonObject(state)))
+        val raw = if (original == null) updated.toString() else preserveRows(original, envelope, updated)
+        writeOrStop(raw)
+        ledger.finish(before.binding ?: owner, decode(updated, raw, migrateIssue = false).schedules)
+    }
+    /** A failed write stops all later reads and writes in this process. */
+    private fun writeOrStop(raw: String) {
+        var written = false
+        try { write(raw); written = true } finally { if (!written) writeFailed = true }
     }
     internal fun settlementApplied(id: String, token: String): Boolean = synchronized(lock) {
         recoverSettlements()
@@ -90,23 +103,28 @@ class RecurringStore(private val read: () -> String?, private val write: (String
         binding?.let { require(it.wallet.fingerprint.isNotBlank() && it.wallet.network.isNotBlank()); UUID.fromString(it.instance) }
         // RN may store amounts above native approval limits; retain each row and its original bytes.
         val visible = schedules.mapValues { (_, schedule) ->
-            if (!schedule.unsupportedStorage && schedule.amountSat > RecurringPayment.maximumAmount) schedule.copy(status = "needs_attention", lastError = RecurringPayment.amountLimitMessage, issue = RecurringIssue(RecurringIssue.Code.amountLimit))
+            if (!schedule.unsupportedStorage && schedule.amountSat > RecurringPayment.maximumAmount) schedule.copy(status = "needs_attention",
+                lastError = RecurringPayment.amountLimitMessage, issue = RecurringIssue(RecurringIssue.Code.amountLimit))
             else schedule
         }
         return State(visible, state["serverSyncPending"]?.jsonPrimitive?.booleanOrNull ?: true, binding)
     }
-    private fun change(policyID: String? = null, reapproval: Boolean = false, settlementKey: String? = null, mutate: (MutableMap<String, JsonElement>, State) -> Unit) = synchronized(lock) {
+    private fun change(policyID: String? = null, reapproval: Boolean = false, settlementKey: String? = null,
+        mutate: (MutableMap<String, JsonElement>, State) -> Unit) = synchronized(lock) {
         recoverSettlements()
         val original = read(); val envelope = envelope(original); val before = decode(envelope, original)
         val state = envelope.getValue("state").jsonObject.toMutableMap(); mutate(state, before)
         val updated = JsonObject(envelope + ("state" to JsonObject(state)))
         val raw = if (original == null) updated.toString() else preserveRows(original, envelope, updated)
         val after = decode(updated, raw)
-        policyLedger?.commit(before.binding ?: policyBinding!!(), before.schedules, after.schedules, policyID, reapproval, settlementKey)
-        try { write(raw) } catch (failure: Exception) { writeFailed = true; throw failure }
+        policyLedger?.commit(before.binding ?: policyBinding!!(), before.schedules, after.schedules,
+            RecurringPolicyLedger.Change(policyID, reapproval, settlementKey))
+        writeOrStop(raw)
         if (settlementKey != null) policyLedger?.finish(before.binding ?: policyBinding!!(), after.schedules)
     }
-    fun bind(binding: Binding) = change { state, _ -> state["nativeWalletBinding"] = json.encodeToJsonElement(binding); state["serverSyncPending"] = JsonPrimitive(true) }
+    fun bind(binding: Binding) = change { state, _ ->
+        state["nativeWalletBinding"] = json.encodeToJsonElement(binding); state["serverSyncPending"] = JsonPrimitive(true)
+    }
     private fun payment(id: String, raw: JsonElement, original: String? = null, migrateIssue: Boolean = true): RecurringPayment {
         val decoded = runCatching {
             requireUniqueRecurringProperties(original ?: raw.toString())
@@ -124,7 +142,8 @@ class RecurringStore(private val read: () -> String?, private val write: (String
                 (fields?.get("destinationType") as? JsonPrimitive)?.contentOrNull.orEmpty(),
                 (fields?.get("amountSat") as? JsonPrimitive)?.content?.toLongOrNull() ?: 0,
                 interval = RecurringInterval("month", 1), startAt = 0, createdAt = 0, updatedAt = 0))
-                .copy(id = id, status = "needs_attention", lastError = RecurringPayment.unsupportedMessage, issue = RecurringIssue(RecurringIssue.Code.unsupported), unsupportedStorage = true)
+                .copy(id = id, status = "needs_attention", lastError = RecurringPayment.unsupportedMessage,
+                    issue = RecurringIssue(RecurringIssue.Code.unsupported), unsupportedStorage = true)
         }
     }
     private fun requireNumericTokens(row: JsonObject) {
@@ -156,7 +175,8 @@ class RecurringStore(private val read: () -> String?, private val write: (String
             numbers(run, 1, safeInteger, "amountSat")
         }
     }
-    fun upsert(schedule: RecurringPayment, reapproval: Boolean = false, settlementKey: String? = null) = change(if (schedule.unsupportedStorage) null else schedule.id, reapproval, settlementKey) { state, before ->
+    fun upsert(schedule: RecurringPayment, reapproval: Boolean = false,
+        settlementKey: String? = null) = change(if (schedule.unsupportedStorage) null else schedule.id, reapproval, settlementKey) { state, before ->
         val schedules = state.getValue("schedules").jsonObject.toMutableMap()
         val previous = (schedules[schedule.id] as? JsonObject).orEmpty()
         schedules[schedule.id] = if (schedule.unsupportedStorage || before.schedules[schedule.id]?.unsupportedStorage == true) {
@@ -169,11 +189,14 @@ class RecurringStore(private val read: () -> String?, private val write: (String
     fun updateIf(expected: RecurringPayment, replacement: RecurringPayment, reapproval: Boolean = false): Boolean = synchronized(lock) {
         if (load().schedules[expected.id] != expected) false else { upsert(replacement, reapproval); true }
     }
-    fun remove(id: String) = change(id) { state, _ -> state["schedules"] = JsonObject(state.getValue("schedules").jsonObject - id); state["serverSyncPending"] = JsonPrimitive(true) }
+    fun remove(id: String) = change(id) { state, _ ->
+        state["schedules"] = JsonObject(state.getValue("schedules").jsonObject - id); state["serverSyncPending"] = JsonPrimitive(true)
+    }
     fun setPending(value: Boolean) = change { state, _ -> state["serverSyncPending"] = JsonPrimitive(value) }
     fun protectLegacyBeforeReplacement() = synchronized(lock) {
         val state = load()
-        if (state.binding == null && state.schedules.isNotEmpty()) bind(Binding(SendIdentity("unverified-previous-wallet", "unknown"), UUID.randomUUID().toString()))
+        if (state.binding == null && state.schedules.isNotEmpty()) bind(Binding(SendIdentity("unverified-previous-wallet", "unknown"),
+            UUID.randomUUID().toString()))
     }
     private fun preserveRows(raw: String, before: JsonObject, after: JsonObject): String {
         val originalRows = recurringRawFields(recurringRawFields(recurringRawFields(raw).getValue("state")).getValue("schedules"))
@@ -223,35 +246,58 @@ internal fun durableRecurringWrite(file: File, bytes: ByteArray, sync: (File) ->
 /** Input has already passed JSON validation; retain original value slices on unrelated writes. */
 private fun recurringRawFields(raw: String): Map<String, String> {
     val fields = linkedMapOf<String, String>()
-    var index = raw.indexOf('{') + 1
-    fun whitespace() { while (raw[index].isWhitespace()) index++ }
-    whitespace()
+    var index = skipWhitespace(raw, raw.indexOf('{') + 1)
     while (raw[index] != '}') {
-        val keyStart = index++
-        while (raw[index] != '"') { if (raw[index] == '\\') index++; index++ }
-        index++
+        val keyStart = index
+        index = stringEnd(raw, keyStart)
         val key = RecurringStore.json.decodeFromString<String>(raw.substring(keyStart, index))
-        whitespace(); index++; whitespace()
+        index = skipWhitespace(raw, skipWhitespace(raw, index) + 1)
         val start = index
-        var depth = 0; var quoted = false; var escaped = false
-        while (index < raw.length) {
-            val char = raw[index]
-            if (quoted) {
-                if (escaped) escaped = false
-                else if (char == '\\') escaped = true
-                else if (char == '"') quoted = false
-            } else {
-                if (depth == 0 && (char == ',' || char == '}')) break
-                if (char == '"') quoted = true
-                else if (char == '{' || char == '[') depth++
-                else if (char == '}' || char == ']') depth--
-            }
-            index++
-        }
+        index = valueEnd(raw, start)
         fields[key] = raw.substring(start, index)
-        if (raw[index] == ',') { index++; whitespace() }
+        if (raw[index] == ',') index = skipWhitespace(raw, index + 1)
     }
     return fields
+}
+
+private fun skipWhitespace(raw: String, start: Int): Int {
+    var index = start
+    while (raw[index].isWhitespace()) index++
+    return index
+}
+
+/** [start] is a string's opening quote; returns the index just past its closing quote. */
+private fun stringEnd(raw: String, start: Int): Int {
+    var index = start + 1
+    while (raw[index] != '"') {
+        if (raw[index] == '\\') index++
+        index++
+    }
+    return index + 1
+}
+
+/** The end of the value starting at [start]: the next top-level comma or closing brace. */
+private fun valueEnd(raw: String, start: Int): Int {
+    var index = start
+    var depth = 0; var quoted = false; var escaped = false
+    while (index < raw.length) {
+        val char = raw[index]
+        when {
+            escaped -> escaped = false // only ever set inside a string
+            quoted -> if (char == '\\') escaped = true else if (char == '"') quoted = false
+            depth == 0 && (char == ',' || char == '}') -> break
+            char == '"' -> quoted = true
+            else -> depth += nesting(char)
+        }
+        index++
+    }
+    return index
+}
+
+private fun nesting(char: Char) = when (char) {
+    '{', '[' -> 1
+    '}', ']' -> -1
+    else -> 0
 }
 
 /** Check original property tokens before kotlinx collapses duplicate keys, including unknown objects. */
@@ -264,17 +310,22 @@ private fun requireUniqueRecurringProperties(raw: String) {
             '[' -> objects.add(null)
             '}', ']' -> objects.removeAt(objects.lastIndex)
             '"' -> {
-                val start = index++
-                while (raw[index] != '"') { if (raw[index] == '\\') index++; index++ }
-                val end = ++index
-                while (index < raw.length && raw[index].isWhitespace()) index++
-                if (index < raw.length && raw[index] == ':') {
-                    val key = RecurringStore.json.decodeFromString<String>(raw.substring(start, end))
-                    require(objects.last()!!.add(key)) { """Duplicate recurring property""" }
-                }
+                index = recordKey(raw, index, objects)
                 continue
             }
         }
         index++
     }
+}
+
+/** Records the string at [start] in the innermost object if it is a property name; returns where scanning resumes. */
+private fun recordKey(raw: String, start: Int, objects: List<MutableSet<String>?>): Int {
+    val end = stringEnd(raw, start)
+    var index = end
+    while (index < raw.length && raw[index].isWhitespace()) index++
+    if (index < raw.length && raw[index] == ':') {
+        val key = RecurringStore.json.decodeFromString<String>(raw.substring(start, end))
+        require(objects.last()!!.add(key)) { """Duplicate recurring property""" }
+    }
+    return index
 }

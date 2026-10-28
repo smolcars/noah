@@ -19,7 +19,11 @@ object RecurringFeePolicy {
         val ppm = if (rest == Long.MAX_VALUE) Long.MAX_VALUE else add(whole, rest / 1_000_000 + if (rest % 1_000_000 == 0L) 0 else 1)
         val worst = maxOf(s.minFeeSats, add(s.baseFeeSats, ppm))
         val cap = minOf(multiply(worst, 2), maxOf(200, amount / 50))
-        val reason = when { quoteFee > cap || quoteFee == Long.MAX_VALUE -> "quote_exceeds_cap"; worst > cap || worst == Long.MAX_VALUE -> "schedule_exceeds_cap"; else -> "within_cap" }
+        val reason = when {
+            quoteFee > cap || quoteFee == Long.MAX_VALUE -> "quote_exceeds_cap"
+            worst > cap || worst == Long.MAX_VALUE -> "schedule_exceeds_cap"
+            else -> "within_cap"
+        }
         return Decision(worst, cap, reason == "within_cap", reason)
     }
     fun approvalIssue(amount: Long, method: String, fee: Long, schedule: RecurringFeeSchedule?): RecurringIssue? {
@@ -36,7 +40,9 @@ object RecurringFeePolicy {
         if (d.autoPay) return null
         return when (d.reason) {
             "quote_exceeds_cap" -> "The fee for this payment ($fee sats) is above your automatic limit of ${d.capSat} sats. Review it to pay manually."
-            "schedule_exceeds_cap" -> "Ark's published Lightning fees for this amount can reach ${d.worstCaseFeeSat} sats, above your automatic limit of ${d.capSat} sats. Review it to pay manually."
+            "schedule_exceeds_cap" ->
+                @Suppress("MaxLineLength") // one translation source string
+                "Ark's published Lightning fees for this amount can reach ${d.worstCaseFeeSat} sats, above your automatic limit of ${d.capSat} sats. Review it to pay manually."
             else -> "The fee for this Ark payment must be 0 sats to pay automatically. Review it to pay manually."
         }
     }

@@ -13,21 +13,33 @@ object SendReconciliation {
     /** The exact movement for history metadata, never a destination/amount/time match.
      *  Movements that predate the attempt (an inherited Lightning checkpoint) are left untouched. */
     fun metadataMovementID(receipt: SendReceipt, snapshot: SendSnapshot): UInt? = receipt.movementID?.takeIf { it !in snapshot.movementIDs }
-    fun isLightning(movement: Movement, hash: String) = movement.subsystemName == "bark.lightning_send" && movement.subsystemKind == "send" && movement.paymentHash == hash
+    fun isLightning(movement: Movement,
+        hash: String) = movement.subsystemName == "bark.lightning_send" && movement.subsystemKind == "send" && movement.paymentHash == hash
     fun matches(movement: Movement, payment: SendPayment, hash: String?): Boolean {
         if (payment.source == SendSource.onchain) return false
-        val subsystem = movement.subsystemName.lowercase(); val kind = movement.subsystemKind.lowercase()
-        when (payment.method) {
-            "ark" -> if (subsystem != "bark.arkoor" || kind != "send") return false
-            "lightning", "lnurl", "offer" -> if (subsystem != "bark.lightning_send" || kind != "send") return false
-            "onchain" -> if (payment.source != SendSource.offchain || subsystem !in listOf("bark.offboard", "bark.round") || kind != if (payment.max) "offboard" else "send_onchain") return false
-            else -> return false
-        }
+        if (!subsystemMatches(movement, payment)) return false
         if (hash != null) return movement.paymentHash == hash
-        if (movement.intendedBalanceSats >= 0 && movement.effectiveBalanceSats >= 0 || payment.method == "lightning") return false
-        return movement.sentToAddresses.any { it.paymentMethod.value == payment.destination && (payment.max || it.amountSats == payment.amount.toULong()) } ||
-            payment.method == "offer" && movement.lightningOffer == payment.destination && movement.sentToAddresses.sumOf { it.amountSats } == payment.amount.toULong()
+        if ((movement.intendedBalanceSats >= 0 && movement.effectiveBalanceSats >= 0) || payment.method == "lightning") return false
+        return sentTo(movement, payment)
     }
+    private fun subsystemMatches(movement: Movement, payment: SendPayment): Boolean {
+        val subsystem = movement.subsystemName.lowercase(); val kind = movement.subsystemKind.lowercase()
+        return when (payment.method) {
+            "ark" -> subsystem == "bark.arkoor" && kind == "send"
+            "lightning", "lnurl", "offer" -> subsystem == "bark.lightning_send" && kind == "send"
+            "onchain" -> payment.source == SendSource.offchain && subsystem in listOf("bark.offboard", "bark.round") &&
+                kind == if (payment.max) "offboard" else "send_onchain"
+            else -> false
+        }
+    }
+    private fun sentTo(movement: Movement, payment: SendPayment): Boolean =
+        movement.sentToAddresses.any { it.paymentMethod.value == payment.destination && (payment.max || it.amountSats == payment.amount.toULong()) } ||
+            (payment.method == "offer" && movement.lightningOffer == payment.destination &&
+                movement.sentToAddresses.sumOf { it.amountSats } == payment.amount.toULong())
+    /** What the movement sent; null when an output is negative or the sum overflows. */
+    private fun sentAmount(movement: Movement): Long? = runCatching {
+        movement.sentToAddresses.fold(0L) { sum, x -> Math.addExact(sum, x.amountSats.toLong().also { require(it >= 0) }) }
+    }.getOrNull()
     /** What a successful send's effective balance took beyond [actual]. A retried invoice's reused movement keeps its first
      *  attempt's fee field, so this is its fee; null when bark's numbers can't give one. */
     fun lightningFee(movement: Movement, actual: Long): Long? = lightningFee(movement.effectiveBalanceSats, actual)
@@ -42,7 +54,7 @@ object SendReconciliation {
     private fun alreadyPaid(receipt: SendReceipt, fixed: Boolean) = SendResolution.AlreadyPaid(if (fixed) receipt else receipt.copy(amount = 0, fee = null))
     fun lightning(candidates: List<Movement>, hash: String, amount: Long, snapshot: SendSnapshot, fixed: Boolean): SendResolution {
         val movement = candidates.singleOrNull()?.takeIf { isLightning(it, hash) } ?: return SendResolution.Uncertain
-        val actual = runCatching { movement.sentToAddresses.fold(0L) { sum, x -> Math.addExact(sum, x.amountSats.toLong().also { require(it >= 0) }) } }.getOrNull() ?: return SendResolution.Uncertain
+        val actual = sentAmount(movement) ?: return SendResolution.Uncertain
         if (movement.status == "successful" && actual > 0) {
             val receipt = receipt(movement, actual, hash)
             if (movement.id in snapshot.movementIDs) return alreadyPaid(receipt, fixed)
@@ -59,11 +71,13 @@ object SendReconciliation {
      * balance took beyond the amount: the fee field keeps the first attempt's. Failure needs the movement to have
      * completed after [startedAt]; until then the attempt may still be running.
      */
-    fun lightningAttempt(candidates: List<Movement>, hash: String, amount: Long, snapshot: SendSnapshot, startedAt: Long?, fixed: Boolean): SendResolution {
+    @Suppress("LongParameterList") // the attempt's evidence, each part varied by its tests
+    fun lightningAttempt(candidates: List<Movement>, hash: String, amount: Long, snapshot: SendSnapshot, startedAt: Long?,
+        fixed: Boolean): SendResolution {
         val movement = candidates.singleOrNull()?.takeIf { isLightning(it, hash) } ?: return SendResolution.Uncertain
         if (movement.id !in snapshot.movementIDs) return lightning(candidates, hash, amount, snapshot, fixed)
-        val actual = runCatching { movement.sentToAddresses.fold(0L) { sum, x -> Math.addExact(sum, x.amountSats.toLong().also { require(it >= 0) }) } }.getOrNull() ?: return SendResolution.Uncertain
-        val completedSince = startedAt?.let { start -> movement.completedAt?.let { HistoryRules.parseDate(it) }?.time?.let { it > start } }
+        val actual = sentAmount(movement) ?: return SendResolution.Uncertain
+        val completedSince = startedAt?.let { start -> completedAfter(movement, start) }
         if (movement.status == "successful" && actual > 0) {
             val receipt = receipt(movement, actual, hash)
             return when (snapshot.invoicePaid ?: completedSince?.not()) {
@@ -72,16 +86,21 @@ object SendReconciliation {
                 null -> SendResolution.Uncertain
             }
         }
-        if (actual != amount || movement.status !in listOf("failed", "canceled")) return SendResolution.Uncertain
-        return if (completedSince == true) SendResolution.Failed else SendResolution.Uncertain
+        return failedAttempt(movement, actual, amount, completedSince)
     }
+    /** Failed only when the movement for this amount failed and completed after this attempt started. */
+    private fun failedAttempt(movement: Movement, actual: Long, amount: Long, completedSince: Boolean?): SendResolution {
+        val failed = actual == amount && movement.status in listOf("failed", "canceled")
+        return if (failed && completedSince == true) SendResolution.Failed else SendResolution.Uncertain
+    }
+    private fun completedAfter(movement: Movement, start: Long): Boolean? = movement.completedAt?.let { HistoryRules.parseDate(it) }?.time?.let { it > start }
     fun ark(attempt: SendAttempt, movements: List<Movement>): SendResolution {
         val payment = attempt.payment
         if (payment.source == SendSource.onchain) return SendResolution.Uncertain
         val hash = if (payment.method in listOf("lightning", "lnurl")) attempt.paymentHash ?: PaymentEncoding.invoice(payment.destination)?.hash else null
         val candidates = movements.filter {
-            matches(it, payment, hash) && (hash != null || it.id !in attempt.snapshot.movementIDs &&
-                (HistoryRules.parseDate(it.createdAt)?.time ?: Long.MIN_VALUE) >= attempt.startedAt)
+            matches(it, payment, hash) && (hash != null || (it.id !in attempt.snapshot.movementIDs &&
+                (HistoryRules.parseDate(it.createdAt)?.time ?: Long.MIN_VALUE) >= attempt.startedAt))
         }
         return if (hash != null) lightningAttempt(candidates, hash, payment.amount, attempt.snapshot, attempt.startedAt,
             fixesAmount(attempt.snapshot.resolvedInvoice ?: payment.destination)) else SendResolution.Candidates(candidates.map { it.id })
@@ -90,12 +109,14 @@ object SendReconciliation {
     fun offboardReceipt(receipt: SendReceipt, payment: SendPayment, movements: List<Movement>): SendReceipt {
         if (receipt.proof != SendReceipt.Proof.submitReturnedTxid || receipt.txid == null) return receipt
         val matches = movements.filter {
-            (receipt.movementID == null || it.id == receipt.movementID) && it.subsystemName == "bark.offboard" && it.subsystemKind == (if (payment.max) "offboard" else "send_onchain") &&
+            (receipt.movementID == null || it.id == receipt.movementID) && it.subsystemName == "bark.offboard" &&
+                it.subsystemKind == (if (payment.max) "offboard" else "send_onchain") &&
                 runCatching { Json.parseToJsonElement(it.metadataJson).jsonObject["offboard_txid"]?.jsonPrimitive?.content }.getOrNull() == receipt.txid
         }
         val movement = matches.singleOrNull() ?: return receipt
-        val amount = runCatching { SendTransaction.amount(payment.destination, Json.parseToJsonElement(movement.metadataJson).jsonObject.getValue("offboard_tx").jsonPrimitive.content) }.getOrNull() ?: return receipt
-        if (amount <= 0 || !payment.max && amount != payment.amount) return receipt
+        val amount = runCatching { SendTransaction.amount(payment.destination,
+            Json.parseToJsonElement(movement.metadataJson).jsonObject.getValue("offboard_tx").jsonPrimitive.content) }.getOrNull() ?: return receipt
+        if (amount <= 0 || (!payment.max && amount != payment.amount)) return receipt
         return receipt.copy(amount = amount, amountIsPending = false, fee = movement.offchainFeeSats.toLong(), movementID = movement.id)
     }
     fun withChainStatus(resolution: SendResolution, source: SendSource?, status: ChainStatus): SendResolution {
@@ -134,35 +155,57 @@ object SendReconciliation {
         val receipt = attempt.receipt
         val originalTxid = receipt?.txid ?: attempt.broadcastingTxid
         val original = transactions.firstOrNull { it.txid == originalTxid }
+        val conflict = confirmedConflict(attempt, transactions, originalTxid, original)
+        if (receipt != null && receipt.proof in listOf(SendReceipt.Proof.submitReturnedTxid, SendReceipt.Proof.preparedTxid) && receipt.txid != null) {
+            return SendResolution.Paid(receiptWithStatus(receipt, attempt, original, conflict))
+        }
+        val txid = attempt.broadcastingTxid; val quote = attempt.quote
+        val preparedSend = attempt.payment.method == "onchain" && attempt.payment.source == SendSource.onchain
+        if (txid != null && quote?.prepared?.txid == txid && preparedSend) {
+            if (original == null && conflict == null) return SendResolution.Uncertain
+            return SendResolution.Paid(SendReceipt(quote.amount, txid = txid, status = preparedStatus(original, conflict),
+                fee = quote.fee, proof = SendReceipt.Proof.preparedTxid, broadcastRetryPending = original?.confirmation == null,
+                confirmedConflictTxid = conflict))
+        }
+        return possibleTransactions(attempt, transactions)
+    }
+    /** A confirmed transaction other than the original that spends one of its inputs. */
+    private fun confirmedConflict(attempt: SendAttempt, transactions: List<WalletTransaction>, originalTxid: String?,
+        original: WalletTransaction?): String? {
         val preparedInputs = attempt.quote?.prepared?.takeIf { it.txid == originalTxid }?.inputs
         val inputs = if (preparedInputs != null) preparedInputs.takeIf { points ->
             points.isNotEmpty() && points.all { Regex("[0-9a-f]{64}").matches(it.txid) }
         } else original?.let { runCatching { SendTransaction.parse(it.txHex).inputs }.getOrNull() }
-        val conflict = inputs?.toSet()?.let { points -> transactions.firstOrNull { tx ->
+        return inputs?.toSet()?.let { points -> transactions.firstOrNull { tx ->
             tx.txid != originalTxid && tx.confirmation != null &&
                 runCatching { SendTransaction.parse(tx.txHex).inputs.any { it in points } }.getOrDefault(false)
         }?.txid }
-        if (receipt != null && receipt.proof in listOf(SendReceipt.Proof.submitReturnedTxid, SendReceipt.Proof.preparedTxid) && receipt.txid != null) {
-            val status = when {
-                conflict != null -> SendReceipt.Status.conflicted
-                original != null -> if (original.confirmation == null) SendReceipt.Status.submitted else SendReceipt.Status.confirmed
-                attempt.payment.source == SendSource.offchain -> SendReceipt.Status.submitted
-                else -> SendReceipt.Status.unlocated
-            }
-            return SendResolution.Paid(receipt.copy(status = status, confirmedConflictTxid = conflict,
-                fee = original?.onchainFeeSats?.toLong() ?: receipt.fee,
-                broadcastRetryPending = original?.confirmation == null && receipt.broadcastRetryPending))
+    }
+    private fun receiptWithStatus(receipt: SendReceipt, attempt: SendAttempt, original: WalletTransaction?, conflict: String?): SendReceipt {
+        val status = when {
+            conflict != null -> SendReceipt.Status.conflicted
+            original != null -> if (original.confirmation == null) SendReceipt.Status.submitted else SendReceipt.Status.confirmed
+            attempt.payment.source == SendSource.offchain -> SendReceipt.Status.submitted
+            else -> SendReceipt.Status.unlocated
         }
-        val txid = attempt.broadcastingTxid; val quote = attempt.quote
-        if (txid != null && quote?.prepared?.txid == txid && attempt.payment.method == "onchain" && attempt.payment.source == SendSource.onchain) {
-            if (original == null && conflict == null) return SendResolution.Uncertain
-            return SendResolution.Paid(SendReceipt(quote.amount, txid = txid,
-                status = if (conflict != null) SendReceipt.Status.conflicted else if (original?.confirmation == null) SendReceipt.Status.submitted else SendReceipt.Status.confirmed,
-                fee = quote.fee, proof = SendReceipt.Proof.preparedTxid, broadcastRetryPending = original?.confirmation == null,
-                confirmedConflictTxid = conflict))
-        }
-        if (attempt.payment.method != "onchain" || attempt.payment.source != SendSource.onchain || attempt.payment.max || attempt.snapshot.bdkTxids == null) return SendResolution.Uncertain
-        val candidates = transactions.filter { it.txid !in attempt.snapshot.bdkTxids && it.balanceChangeSats < 0 && SendTransaction.amount(attempt.payment.destination, it.txHex) == attempt.payment.amount }.map { it.txid }
+        return receipt.copy(status = status, confirmedConflictTxid = conflict,
+            fee = original?.onchainFeeSats?.toLong() ?: receipt.fee,
+            broadcastRetryPending = original?.confirmation == null && receipt.broadcastRetryPending)
+    }
+    private fun preparedStatus(original: WalletTransaction?, conflict: String?) = when {
+        conflict != null -> SendReceipt.Status.conflicted
+        original?.confirmation == null -> SendReceipt.Status.submitted
+        else -> SendReceipt.Status.confirmed
+    }
+    /** For an on-chain send with no saved txid: new outgoing transactions paying exactly this amount to this address. */
+    private fun possibleTransactions(attempt: SendAttempt, transactions: List<WalletTransaction>): SendResolution {
+        val payment = attempt.payment
+        val known = attempt.snapshot.bdkTxids
+        val bdkSend = payment.method == "onchain" && payment.source == SendSource.onchain && !payment.max
+        if (!bdkSend || known == null) return SendResolution.Uncertain
+        val candidates = transactions.filter {
+            it.txid !in known && it.balanceChangeSats < 0 && SendTransaction.amount(payment.destination, it.txHex) == payment.amount
+        }.map { it.txid }
         return if (candidates.isEmpty()) SendResolution.Uncertain else SendResolution.PossibleTransactions(candidates.sorted())
     }
 }
@@ -181,9 +224,15 @@ object SendTransaction {
     fun parse(hex: String): Parsed {
         require(hex.length % 2 == 0)
         val bytes = hex.chunked(2).map { it.toInt(16).toByte() }.toByteArray(); var cursor = 0
-        fun take(count: Int): ByteArray { require(count >= 0 && count <= bytes.size - cursor); return bytes.copyOfRange(cursor, cursor + count).also { cursor += count } }
+        fun take(count: Int): ByteArray { require(count >= 0 && count <= bytes.size - cursor); return bytes.copyOfRange(cursor,
+            cursor + count).also { cursor += count } }
         fun integer(count: Int): ULong = take(count).mapIndexed { i, x -> (x.toInt() and 255).toULong() shl (i * 8) }.fold(0uL) { a, x -> a or x }
-        fun size(): Int { val tag = integer(1); val value = if (tag < 253u) tag else integer(if (tag == 253uL) 2 else if (tag == 254uL) 4 else 8); require(value <= bytes.size.toULong()); return value.toInt() }
+        fun size(): Int {
+            val tag = integer(1)
+            val value = if (tag < 253u) tag else integer(if (tag == 253uL) 2 else if (tag == 254uL) 4 else 8)
+            require(value <= bytes.size.toULong())
+            return value.toInt()
+        }
         take(4)
         val witness = bytes.size > cursor + 1 && bytes[cursor] == 0.toByte() && bytes[cursor + 1] == 1.toByte()
         if (witness) take(2)

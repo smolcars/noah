@@ -12,6 +12,7 @@ import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
 
 /** Files precede secrets: an interrupted deletion must remain recoverable from backup. */
+@Suppress("LongParameterList") // dependency seams: tests inject a fake for each deletion step
 class WalletLifecycle(
     private val session: WalletSession,
     private val location: WalletDataLocation,
@@ -36,7 +37,9 @@ class WalletLifecycle(
 ) {
     companion object { const val automationStopKey = "native-recurring-automation-stop-generation" }
     class WaitingForSecureStorage : Exception("Waiting for secure storage. Unlock your device and try again.")
-    class RestoreSettingsUnavailable : Exception("Restored wallet settings can't be saved yet. Try Resume again when storage is available. Recurring payments remain stopped.")
+    class RestoreSettingsUnavailable : Exception(
+        "Restored wallet settings can't be saved yet. Try Resume again when storage is available. Recurring payments remain stopped.",
+    )
     class RestorePending : Exception("""Restart Noah to settle the pending restore before deleting""")
     class BackupBusy : Exception("Noah is still finishing a backup. Try again in a moment.")
     class TemporaryFiles : Exception("Noah couldn't remove temporary wallet files. Restart Noah and try again.")
@@ -105,8 +108,9 @@ class WalletLifecycle(
         stopDurably()
         mutation.withLock {
             persistSuspended(true)
-            try { settleBackground(); session.closeSettled() }
-            catch (failure: Exception) { persistSuspended(false); throw failure }
+            var closed = false
+            try { settleBackground(); session.closeSettled(); closed = true }
+            finally { if (!closed) persistSuspended(false) }
         }
     }
 
@@ -119,10 +123,15 @@ class WalletLifecycle(
                 if (transaction.settingsPending || receipt.pending) throw RestoreSettingsUnavailable()
             }
             authority()?.resume()
-            try { setSuspended(false) } catch (failure: Exception) { authority()?.stop(); throw failure }
+            var resumed = false
+            try { setSuspended(false); resumed = true } finally { if (!resumed) authority()?.stop() }
         }
     }
-    private fun authority() = if (location.directory.isDirectory) com.noahwallet.recurring.RecurringAutomationAuthority(location.directory) { file, bytes -> com.noahwallet.recurring.durableRecurringWrite(file, bytes, syncIdentityDirectory) } else null
+    private fun authority() = if (!location.directory.isDirectory) null else {
+        com.noahwallet.recurring.RecurringAutomationAuthority(location.directory) { file, bytes ->
+            com.noahwallet.recurring.durableRecurringWrite(file, bytes, syncIdentityDirectory)
+        }
+    }
     private fun stopDurably() { authority()?.stop(); stopAutomation() }
     private fun persistSuspended(value: Boolean) { authority()?.suspension(value); setSuspended(value) }
 
@@ -136,51 +145,69 @@ class WalletLifecycle(
         val wasSuspended = isSuspended()
         persistSuspended(true)
         try {
+            var deleted = false
             try {
-                withTimeout(drainTimeoutMillis) { settleBackground(); drainExports() }
-            } catch (_: TimeoutCancellationException) { throw BackupBusy() }
-            session.closeSettled()
-            val reservation = session.reserve()
-            try {
-                if (location.restorePending) throw RestorePending()
-                try { sweepScratch() } catch (_: Exception) { throw TemporaryFiles() }
-                // The durable marker commits the deletion; every later launch finishes it.
-                val seed = readSeed()
-                if (location.deletionMarker.exists()) {
-                    when (location.deletionStatus(seed)) {
-                        WalletDataLocation.DeletionStatus.waitingForSecret -> throw WaitingForSecureStorage()
-                        WalletDataLocation.DeletionStatus.mismatched -> discardDeletionMarker()
-                        WalletDataLocation.DeletionStatus.matching -> Unit
-                    }
-                }
-                if (!location.deletionMarker.exists()) {
-                    if (seed is com.noahwallet.services.storage.SecretResult.Unavailable) throw WaitingForSecureStorage()
-                    location.removeDiscardedDeletionData { syncFiles() }
-                    location.writeDeletionIdentity(seed, syncIdentityDirectory)
-                    syncFiles()
-                }
-                cancelPeriodicWork()
-                try { deregister() } catch (_: Exception) { warn("Deregistration failed while deleting wallet") }
-                if (location.directory.exists()) {
-                    // Also finishes an older app's committed marker over abandoned staging.
-                    check(!location.deletionDirectory.exists() || location.deletionDirectory.deleteRecursively()) { "Cannot delete prior staged wallet files" }
-                    check(location.directory.renameTo(location.deletionDirectory)) { "Cannot stage wallet deletion" }
-                    syncFiles()
-                }
-                check(!location.deletionDirectory.exists() || location.deletionDirectory.deleteRecursively()) { "Cannot delete wallet files" }
-                check(!location.restoreDirectory.exists() || location.restoreDirectory.deleteRecursively()) { "Cannot delete restore files" }
-                syncFiles()
-                com.noahwallet.recurring.RecurringAutomationAuthority.deleted(location.directory)
-                deleteSeed()
-                clearToken()
-                clearSettings()
-                clearWidget()
-                check(location.deletionMarker.delete())
-                syncFiles()
-            } finally { session.release(reservation) }
-        } catch (failure: Exception) {
-            if (!location.deletionMarker.exists()) persistSuspended(wasSuspended)
-            throw failure
+                drainBackground()
+                session.closeSettled()
+                val reservation = session.reserve()
+                try { deleteReserved() } finally { session.release(reservation) }
+                deleted = true
+            } finally {
+                if (!deleted && !location.deletionMarker.exists()) persistSuspended(wasSuspended)
+            }
         } finally { finishBackground() }
+    }
+
+    private suspend fun drainBackground() {
+        try {
+            withTimeout(drainTimeoutMillis) { settleBackground(); drainExports() }
+        } catch (_: TimeoutCancellationException) { throw BackupBusy() }
+    }
+
+    /** Called holding the session reservation. */
+    private suspend fun deleteReserved() {
+        if (location.restorePending) throw RestorePending()
+        try { sweepScratch() } catch (_: Exception) { throw TemporaryFiles() }
+        commitDeletion()
+        cancelPeriodicWork()
+        try { deregister() } catch (_: Exception) { warn("Deregistration failed while deleting wallet") }
+        removeWalletFiles()
+        com.noahwallet.recurring.RecurringAutomationAuthority.deleted(location.directory)
+        deleteSeed()
+        clearToken()
+        clearSettings()
+        clearWidget()
+        check(location.deletionMarker.delete())
+        syncFiles()
+    }
+
+    /** The durable marker commits the deletion; every later launch finishes it. */
+    private suspend fun commitDeletion() {
+        val seed = readSeed()
+        if (location.deletionMarker.exists()) {
+            when (location.deletionStatus(seed)) {
+                WalletDataLocation.DeletionStatus.waitingForSecret -> throw WaitingForSecureStorage()
+                WalletDataLocation.DeletionStatus.mismatched -> discardDeletionMarker()
+                WalletDataLocation.DeletionStatus.matching -> Unit
+            }
+        }
+        if (!location.deletionMarker.exists()) {
+            if (seed is com.noahwallet.services.storage.SecretResult.Unavailable) throw WaitingForSecureStorage()
+            location.removeDiscardedDeletionData { syncFiles() }
+            location.writeDeletionIdentity(seed, syncIdentityDirectory)
+            syncFiles()
+        }
+    }
+
+    private fun removeWalletFiles() {
+        if (location.directory.exists()) {
+            // Also finishes an older app's committed marker over abandoned staging.
+            check(!location.deletionDirectory.exists() || location.deletionDirectory.deleteRecursively()) { "Cannot delete prior staged wallet files" }
+            check(location.directory.renameTo(location.deletionDirectory)) { "Cannot stage wallet deletion" }
+            syncFiles()
+        }
+        check(!location.deletionDirectory.exists() || location.deletionDirectory.deleteRecursively()) { "Cannot delete wallet files" }
+        check(!location.restoreDirectory.exists() || location.restoreDirectory.deleteRecursively()) { "Cannot delete restore files" }
+        syncFiles()
     }
 }

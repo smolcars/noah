@@ -8,10 +8,22 @@ import com.noahwallet.services.logging.AppLog
 import com.noahwallet.services.server.*
 import com.noahwallet.services.storage.*
 import com.noahwallet.services.wallet.WalletSession
-import kotlinx.coroutines.*
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.InternalCoroutinesApi
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancelAndJoin
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.flow.takeWhile
+import kotlinx.coroutines.job
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
+import kotlinx.coroutines.withContext
 
 /** One shared session, token provider and server client for launch and future background work. */
 class AppServices private constructor(private val context: Context) {
@@ -54,9 +66,14 @@ class AppServices private constructor(private val context: Context) {
     ))
     private var backupObserver: Job? = null
 
-    @Synchronized fun reconcileBackupTriggers(foreground: Boolean = false) {
+    private fun backupTriggersAllowed(): Boolean {
         val wallet = settings.persistedState<PersistedWalletState>(PersistedWalletState.key)
-        if (!session.isOpen || wallet?.isInitialized == false || wallet?.isWalletSuspended == true || registration.state.isBackupEnabled != true) {
+        val usable = wallet?.isInitialized != false && wallet?.isWalletSuspended != true
+        return session.isOpen && usable && registration.state.isBackupEnabled == true
+    }
+
+    @Synchronized fun reconcileBackupTriggers(foreground: Boolean = false) {
+        if (!backupTriggersAllowed()) {
             backupObserver?.cancel(); backupObserver = null; backupCoordinator.cancelScheduled(); return
         }
         if (backupObserver?.isActive != true) backupObserver = scope.launch {
@@ -71,7 +88,7 @@ class AppServices private constructor(private val context: Context) {
                         }
                         !resubscribe
                     }.collect { }
-                } while (resubscribe && isActive)
+                } while (resubscribe && coroutineContext[Job]?.isActive != false)
             } catch (cancelled: CancellationException) { throw cancelled }
             catch (_: Exception) { backupCoordinator.schedule(BackupCoordinator.Reason.startup, true) }
         }
@@ -106,12 +123,14 @@ class AppServices private constructor(private val context: Context) {
     @Volatile var recurringAutomationStorageFailed = false; private set
     fun stopRecurringAutomation() {
         val generation = java.util.UUID.randomUUID().toString()
+        var stopped = false
         try {
             val directory = WalletDataLocation(context.filesDir, variant).directory
             if (directory.isDirectory) com.noahwallet.recurring.RecurringAutomationAuthority(directory).stop()
             settings.set(generation, com.noahwallet.services.wallet.WalletLifecycle.automationStopKey); settings.sync()
             check(settings.string(com.noahwallet.services.wallet.WalletLifecycle.automationStopKey) == generation)
-        } catch (failure: Exception) { recurringAutomationStorageFailed = true; throw failure }
+            stopped = true
+        } finally { if (!stopped) recurringAutomationStorageFailed = true }
     }
 
     val lifecycle = com.noahwallet.services.wallet.WalletLifecycle(
@@ -128,7 +147,7 @@ class AppServices private constructor(private val context: Context) {
         clearSettings = {
             settings.removeAll()
             backupCoordinator.reloadStatus()
-            check(context.getSharedPreferences("gt_store", Context.MODE_PRIVATE).edit().clear().commit())
+            check(context.getSharedPreferences("gt_store", Context.MODE_PRIVATE).commitEdit { clear() })
         },
         clearWidget = { com.noahwallet.services.push.WidgetDataWriter.clear(context, variant) },
         sweepScratch = {
@@ -180,7 +199,8 @@ class AppServices private constructor(private val context: Context) {
     class RestoreNotSettled : Exception("""Interrupted restore not settled yet""")
 
     /** Headless opens only read seeds; pending restore/deletion always waits for foreground recovery. */
-    private val walletOpener = StoredWalletOpener(seed, { settings.persistedState<PersistedWalletState>(PersistedWalletState.key) }) { session.ensureOpen(it, true, BuildConfig.VERSION_NAME) }
+    private val walletOpener = StoredWalletOpener(seed,
+        { settings.persistedState<PersistedWalletState>(PersistedWalletState.key) }) { session.ensureOpen(it, true, BuildConfig.VERSION_NAME) }
 
     suspend fun ensureWalletOpen(walletMutationHeld: Boolean = false) = openWallet(walletMutationHeld, foreground = false)
 
@@ -194,7 +214,18 @@ class AppServices private constructor(private val context: Context) {
     private suspend fun openWallet(walletMutationHeld: Boolean, foreground: Boolean,
         customWait: com.noahwallet.services.wallet.EsploraOpenWait? = null,
         lateCompletion: suspend (Boolean) -> Unit = {}): Unit = withContext(Dispatchers.IO) {
-        if (!walletMutationHeld) { lifecycle.withWalletMutation { openWallet(walletMutationHeld = true, foreground, customWait, lateCompletion) }; return@withContext }
+        if (!walletMutationHeld) { lifecycle.withWalletMutation { openWallet(walletMutationHeld = true, foreground, customWait,
+            lateCompletion) }; return@withContext }
+        prepareOpen(walletMutationHeld, foreground)
+        val store = com.noahwallet.services.wallet.EsploraSettings(settings)
+        val custom = foreground && customWait != null && variant != "regtest"
+        val endpoint = if (custom && !session.isOpen) store.resolve(variant) else null
+        if (endpoint != null && customWait != null) openWithCustomEndpoint(endpoint, customWait, lateCompletion)
+        else if (foreground) walletOpener.openInForeground() else walletOpener.ensureOpen()
+    }
+
+    /** Called holding the wallet mutation: settles restore and refuses suspended or ineligible wallets. */
+    private suspend fun prepareOpen(walletMutationHeld: Boolean, foreground: Boolean) {
         settings.validateStores()
         if (!foreground) requireBackgroundWallet()
         val location = WalletDataLocation(context.filesDir, variant)
@@ -205,48 +236,50 @@ class AppServices private constructor(private val context: Context) {
         }
         settings.validateStores()
         if (!foreground) settings.requireHealthy()
-        val store = com.noahwallet.services.wallet.EsploraSettings(settings)
-        val endpoint = if (foreground && customWait != null && variant != "regtest" && !session.isOpen) store.resolve(variant) else null
-        if (endpoint != null && customWait != null) {
-            val mnemonic = (seed.read() as? SecretResult.Found)?.value ?: throw SeedItem.Unavailable()
-            val selection = com.noahwallet.services.wallet.EsploraSettings.Selection(endpoint, variant)
-            val reservation = session.reserve()
-            customWait.run(lateCompletion = lateCompletion) { wait ->
-                try {
-                    try {
-                        withContext(com.noahwallet.services.wallet.EsploraOpening(selection)) {
-                            session.reopen(reservation, mnemonic, BuildConfig.VERSION_NAME) { wait.commit {} }
-                        }
-                    } catch (failure: Exception) {
-                        if (!wait.timedOut) throw failure
-                        wait.waitForDefault()
-                        val fallback = com.noahwallet.services.wallet.EsploraSettings.Selection(variant = variant)
-                        settings.useDefaultEsplora(variant)
-                        withContext(com.noahwallet.services.wallet.EsploraOpening(fallback)) {
-                            session.reopen(reservation, mnemonic, BuildConfig.VERSION_NAME) {}
-                        }
-                    }
-                    check(seed.save(mnemonic) is SecretResult.Found) { "Wallet seed migration unavailable" }
-                } finally { session.release(reservation) }
-            }
-        } else if (foreground) walletOpener.openInForeground() else walletOpener.ensureOpen()
     }
 
-    suspend fun switchEsploraEndpoint(input: String?, lateCompletion: suspend (Boolean) -> Unit = {}) {
-        val endpoint = (input ?: com.noahwallet.services.wallet.WalletConfiguration.base(variant).esplora)?.let {
-            com.noahwallet.services.wallet.EsploraEndpoint.validate(it, variant)
+    private suspend fun openWithCustomEndpoint(endpoint: String, customWait: com.noahwallet.services.wallet.EsploraOpenWait,
+        lateCompletion: suspend (Boolean) -> Unit) {
+        val mnemonic = storedSeed()
+        val selection = com.noahwallet.services.wallet.EsploraSettings.Selection(endpoint, variant)
+        val reservation = session.reserve()
+        customWait.run(lateCompletion = lateCompletion) { wait ->
+            try {
+                reopenOrFallBack(wait, reservation, mnemonic, selection)
+                check(seed.save(mnemonic) is SecretResult.Found) { "Wallet seed migration unavailable" }
+            } finally { session.release(reservation) }
         }
+    }
+
+    private suspend fun reopenOrFallBack(wait: com.noahwallet.services.wallet.EsploraOpenWait, reservation: WalletSession.Reservation,
+        mnemonic: String, selection: com.noahwallet.services.wallet.EsploraSettings.Selection) {
+        try {
+            withContext(com.noahwallet.services.wallet.EsploraOpening(selection)) {
+                session.reopen(reservation, mnemonic, BuildConfig.VERSION_NAME) { wait.commit {} }
+            }
+        } catch (@Suppress("TooGenericExceptionCaught") failure: Exception) { // any open failure after the UI deadline falls back
+            if (!wait.timedOut) throw failure
+            wait.waitForDefault()
+            val fallback = com.noahwallet.services.wallet.EsploraSettings.Selection(variant = variant)
+            settings.useDefaultEsplora(variant)
+            withContext(com.noahwallet.services.wallet.EsploraOpening(fallback)) {
+                session.reopen(reservation, mnemonic, BuildConfig.VERSION_NAME) {}
+            }
+        }
+    }
+
+    private suspend fun storedSeed(): String = (seed.read() as? SecretResult.Found)?.value ?: throw SeedItem.Unavailable()
+
+    suspend fun switchEsploraEndpoint(input: String?, lateCompletion: suspend (Boolean) -> Unit = {}) {
+        val default = com.noahwallet.services.wallet.WalletConfiguration.base(variant).esplora
+        val endpoint = (input ?: default)?.let { com.noahwallet.services.wallet.EsploraEndpoint.validate(it, variant) }
         if (variant == "regtest") throw com.noahwallet.services.wallet.EsploraEndpoint.Failure("Regtest wallets use Bitcoin Core instead of Esplora.")
         val store = com.noahwallet.services.wallet.EsploraSettings(settings)
-        val candidate = com.noahwallet.services.wallet.EsploraSettings.Selection(endpoint = endpoint?.takeUnless { it == com.noahwallet.services.wallet.WalletConfiguration.base(variant).esplora }, variant = variant)
+        val candidate = com.noahwallet.services.wallet.EsploraSettings.Selection(endpoint = endpoint?.takeUnless { it == default }, variant = variant)
         com.noahwallet.services.background.PeriodicExecution.awaitIdle()
         com.noahwallet.services.wallet.WalletBackgroundActivity.withExclusiveAccess {
             lifecycle.withWalletMutation {
-                if (recoverRestore(walletMutationHeld = true) == RestoreTransaction.Recovery.waitingForSecret) throw RestoreNotSettled()
-                if (!session.isOpen || settings.persistedState<PersistedWalletState>(PersistedWalletState.key)?.isWalletSuspended == true) {
-                    throw com.noahwallet.services.wallet.EsploraEndpoint.Failure("Open your wallet before changing the endpoint.")
-                }
-                val mnemonic = (seed.read() as? SecretResult.Found)?.value ?: throw SeedItem.Unavailable()
+                val mnemonic = endpointChangeMnemonic()
                 // The detached interval owns both settings and handles until success or rollback.
                 withContext(NonCancellable + Dispatchers.IO) {
                     val prepared = store.prepare(candidate)
@@ -269,6 +302,15 @@ class AppServices private constructor(private val context: Context) {
         }
     }
 
+    /** Called holding the wallet mutation: an endpoint change needs a settled, open, unsuspended wallet. */
+    private suspend fun endpointChangeMnemonic(): String {
+        if (recoverRestore(walletMutationHeld = true) == RestoreTransaction.Recovery.waitingForSecret) throw RestoreNotSettled()
+        if (!session.isOpen || settings.persistedState<PersistedWalletState>(PersistedWalletState.key)?.isWalletSuspended == true) {
+            throw com.noahwallet.services.wallet.EsploraEndpoint.Failure("Open your wallet before changing the endpoint.")
+        }
+        return storedSeed()
+    }
+
     private val foregroundSync = com.noahwallet.services.wallet.ForegroundWalletSync { lifecycle.withWalletMutation(it) }
 
     /** Foreground only: retain existing session/reservation rules and never open a wallet here. */
@@ -281,10 +323,7 @@ class AppServices private constructor(private val context: Context) {
             withContext(Dispatchers.IO + com.noahwallet.services.wallet.WalletExecutionBudget(budget)) {
                 foregroundSync.run {
                     currentCoroutineContext().ensureActive()
-                    val location = WalletDataLocation(context.filesDir, variant)
-                    val wallet = settings.persistedState<PersistedWalletState>(PersistedWalletState.key)
-                    if (!budget.available || !isOnboarded() || wallet?.isWalletSuspended == true ||
-                        location.restorePending || location.deletionMarker.exists() || !session.isOpen) return@run
+                    if (!budget.available || !foregroundSyncAllowed()) return@run
                     com.noahwallet.services.wallet.WalletBackgroundActivity.during {
                         session.sync(includingLightningClaims = true)
                     }
@@ -295,33 +334,47 @@ class AppServices private constructor(private val context: Context) {
         finally { cancellation.dispose() }
     }
 
+    private fun foregroundSyncAllowed(): Boolean {
+        val location = WalletDataLocation(context.filesDir, variant)
+        val wallet = settings.persistedState<PersistedWalletState>(PersistedWalletState.key)
+        val settled = !location.restorePending && !location.deletionMarker.exists()
+        return isOnboarded() && wallet?.isWalletSuspended != true && settled && session.isOpen
+    }
+
     fun startServerServices() {
         scope.launch {
             try { com.noahwallet.services.background.PeriodicWork.reconcile(context, this@AppServices) }
             catch (cancelled: CancellationException) { throw cancelled }
             catch (_: Exception) { log.w("Periodic wallet work scheduling failed") }
             startup.withLock {
-                if (!session.isOpen || !isOnboarded() || settings.persistedState<PersistedWalletState>(PersistedWalletState.key)?.isWalletSuspended == true) return@withLock
-                try {
-                    registration.ensureRegistered()
-                    com.noahwallet.recurring.RecurringRuntime.shared(context).foreground()
-                    reconcileBackupTriggers()
-                    try { registration.refreshMailboxIfNeeded() }
-                    catch (cancelled: CancellationException) { throw cancelled }
-                    catch (_: Exception) { log.w("Mailbox authorization failed; it will retry on resume") }
-                    com.noahwallet.services.push.PushWork.register(context)
-                    if (!started) {
-                        registration.reportLastLogin()
-                        started = true
-                    }
-                } catch (cancelled: CancellationException) { throw cancelled }
+                val suspended = settings.persistedState<PersistedWalletState>(PersistedWalletState.key)?.isWalletSuspended == true
+                if (!session.isOpen || !isOnboarded() || suspended) return@withLock
+                try { setUpServer() }
+                catch (cancelled: CancellationException) { throw cancelled }
                 catch (_: Exception) { log.w("Server setup failed; it will retry on the next launch or resume") }
             }
         }
     }
 
+    /** Called holding [startup]. */
+    private suspend fun setUpServer() {
+        registration.ensureRegistered()
+        com.noahwallet.recurring.RecurringRuntime.shared(context).foreground()
+        reconcileBackupTriggers()
+        try { registration.refreshMailboxIfNeeded() }
+        catch (cancelled: CancellationException) { throw cancelled }
+        catch (_: Exception) { log.w("Mailbox authorization failed; it will retry on resume") }
+        com.noahwallet.services.push.PushWork.register(context)
+        if (!started) {
+            registration.reportLastLogin()
+            started = true
+        }
+    }
+
     companion object {
-        @Volatile private var instance: AppServices? = null
+        @android.annotation.SuppressLint("StaticFieldLeak") // only the application context
+        @Volatile
+        private var instance: AppServices? = null
         fun shared(context: Context): AppServices = instance ?: synchronized(this) {
             instance ?: AppServices(context.applicationContext).also { instance = it }
         }

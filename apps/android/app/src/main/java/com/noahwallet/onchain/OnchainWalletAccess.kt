@@ -48,7 +48,7 @@ internal interface OnchainWalletAccess {
 }
 
 internal class BarkOnchainAccess(private val wallet: Wallet, private val onchain: OnchainWallet, warn: (String) -> Unit) : OnchainWalletAccess {
-    private val preparations = BoardPreparations(wallet::discardPreparedBoard, { wallet.submitPreparedBoard(it); Unit }, warn)
+    private val preparations = BoardPreparations(wallet::discardPreparedBoard, { wallet.submitPreparedBoard(it) }, warn)
     suspend fun retryDiscards() = preparations.retryDiscards()
     suspend fun discardAll() = preparations.discardAll()
     override val walletID get() = wallet.fingerprint()
@@ -73,7 +73,8 @@ internal class BarkOnchainAccess(private val wallet: Wallet, private val onchain
     override suspend fun minimum() = wallet.arkInfo()?.minBoardAmountSats?.toLong()
     override suspend fun regularSatPerKwu() = onchain.feeRates().regularSatPerKwu.toLong()
     override suspend fun refreshFee(ids: List<String>) = wallet.estimateRefreshFee(ids)
-    override suspend fun exitFee(ids: List<String>, destination: String?) = wallet.estimateEmergencyExitFee(ids, feeRateSatPerVb = null, destination = destination)
+    override suspend fun exitFee(ids: List<String>, destination: String?) = wallet.estimateEmergencyExitFee(ids, feeRateSatPerVb = null,
+        destination = destination)
     override suspend fun prepareBoard(amount: Long, all: Boolean, rate: ULong, excluded: Set<String>): PreparedBoard {
         val outpoints = excluded.mapNotNull { point -> point.substringAfterLast(':').toUIntOrNull()?.let { OutPoint(point.substringBeforeLast(':'), it) } }
         val prepared = wallet.prepareBoard(if (all) OnchainSendAmount.DrainAll else OnchainSendAmount.Amount(amount.toULong()), rate, true, outpoints)
@@ -126,28 +127,29 @@ internal fun vtxoState(state: VtxoState) = when (state) {
     VtxoState.Spendable -> "Spendable"; is VtxoState.Locked -> "Locked"; VtxoState.Spent -> "Spent"
     VtxoState.Exited -> "Exited"; VtxoState.Unknown -> "Unknown"
 }
-internal fun exitState(value: ExitState): Pair<String, ExitDetails> {
-    fun block(b: BlockRef) = ExitDetails.Block(b.height.toLong(), b.hash)
-    return when (value) {
-        is ExitState.Start -> "Start" to ExitDetails(kind = "start", tip_height = value.tipHeight.toLong())
-        is ExitState.Processing -> "Processing" to ExitDetails(kind = "processing", tip_height = value.tipHeight.toLong(), transactions = value.transactions.map { tx ->
-            val status = when (val s = tx.status) {
-                ExitTxStatus.VerifyInputs -> ExitDetails.Status("verify-inputs")
-                is ExitTxStatus.AwaitingInputConfirmation -> ExitDetails.Status("awaiting-input-confirmation")
-                ExitTxStatus.AwaitingCpfpBroadcast -> ExitDetails.Status("awaiting-cpfp-broadcast")
-                is ExitTxStatus.AwaitingConfirmation -> ExitDetails.Status("awaiting-confirmation", s.childTxid, origin = exitOrigin(s.origin))
-                is ExitTxStatus.Confirmed -> ExitDetails.Status("confirmed", s.childTxid, block(s.block), exitOrigin(s.origin))
-            }
-            ExitDetails.Transaction(tx.txid, status)
-        })
-        is ExitState.AwaitingDelta -> "AwaitingDelta" to ExitDetails(kind = "awaiting-delta", tip_height = value.tipHeight.toLong(), confirmed_block = block(value.confirmedBlock), claimable_height = value.claimableHeight.toLong())
-        is ExitState.Claimable -> "Claimable" to ExitDetails(kind = "claimable", tip_height = value.tipHeight.toLong(), claimable_since = block(value.claimableSince), last_scanned_block = value.lastScannedBlock?.let(::block))
-        is ExitState.ClaimInProgress -> "ClaimInProgress" to ExitDetails(kind = "claim-in-progress", tip_height = value.tipHeight.toLong(), claimable_since = block(value.claimableSince), claim_txid = value.claimTxid)
-        is ExitState.Claimed -> "Claimed" to ExitDetails(kind = "claimed", tip_height = value.tipHeight.toLong(), block = block(value.block), txid = value.txid)
-        is ExitState.VtxoAlreadySpent -> "VtxoAlreadySpent" to ExitDetails(kind = "vtxo-already-spent", tip_height = value.tipHeight.toLong())
-        is ExitState.VtxoSwept -> "VtxoSwept" to ExitDetails(kind = "vtxo-swept", tip_height = value.tipHeight.toLong())
-        is ExitState.Canceled -> "Canceled" to ExitDetails(kind = "canceled", tip_height = value.tipHeight.toLong())
-    }
+private fun block(b: BlockRef) = ExitDetails.Block(b.height.toLong(), b.hash)
+private fun exitTxStatus(s: ExitTxStatus) = when (s) {
+    ExitTxStatus.VerifyInputs -> ExitDetails.Status("verify-inputs")
+    is ExitTxStatus.AwaitingInputConfirmation -> ExitDetails.Status("awaiting-input-confirmation")
+    ExitTxStatus.AwaitingCpfpBroadcast -> ExitDetails.Status("awaiting-cpfp-broadcast")
+    is ExitTxStatus.AwaitingConfirmation -> ExitDetails.Status("awaiting-confirmation", s.childTxid, origin = exitOrigin(s.origin))
+    is ExitTxStatus.Confirmed -> ExitDetails.Status("confirmed", s.childTxid, block(s.block), exitOrigin(s.origin))
+}
+internal fun exitState(value: ExitState): Pair<String, ExitDetails> = when (value) {
+    is ExitState.Start -> "Start" to ExitDetails(kind = "start", tip_height = value.tipHeight.toLong())
+    is ExitState.Processing -> "Processing" to ExitDetails(kind = "processing", tip_height = value.tipHeight.toLong(),
+        transactions = value.transactions.map { tx -> ExitDetails.Transaction(tx.txid, exitTxStatus(tx.status)) })
+    is ExitState.AwaitingDelta -> "AwaitingDelta" to ExitDetails(kind = "awaiting-delta", tip_height = value.tipHeight.toLong(),
+        confirmed_block = block(value.confirmedBlock), claimable_height = value.claimableHeight.toLong())
+    is ExitState.Claimable -> "Claimable" to ExitDetails(kind = "claimable", tip_height = value.tipHeight.toLong(),
+        claimable_since = block(value.claimableSince), last_scanned_block = value.lastScannedBlock?.let(::block))
+    is ExitState.ClaimInProgress -> "ClaimInProgress" to ExitDetails(kind = "claim-in-progress", tip_height = value.tipHeight.toLong(),
+        claimable_since = block(value.claimableSince), claim_txid = value.claimTxid)
+    is ExitState.Claimed ->
+        "Claimed" to ExitDetails(kind = "claimed", tip_height = value.tipHeight.toLong(), block = block(value.block), txid = value.txid)
+    is ExitState.VtxoAlreadySpent -> "VtxoAlreadySpent" to ExitDetails(kind = "vtxo-already-spent", tip_height = value.tipHeight.toLong())
+    is ExitState.VtxoSwept -> "VtxoSwept" to ExitDetails(kind = "vtxo-swept", tip_height = value.tipHeight.toLong())
+    is ExitState.Canceled -> "Canceled" to ExitDetails(kind = "canceled", tip_height = value.tipHeight.toLong())
 }
 
 /** Who paid a transaction's fee child: this wallet, or another wallet's child seen in the mempool or a block. */
@@ -157,7 +159,7 @@ internal fun exitOrigin(origin: ExitTxOrigin) = when (origin) {
 
 internal fun validateClaimDestination(address: String, network: String) {
     val actual = com.noahwallet.send.PaymentEncoding.bitcoinNetwork(address)
-    if (actual == null || !(actual == network || actual == "testnet" &&
-            (network == "signet" || network == "regtest" && !address.startsWith("tb1", ignoreCase = true))))
-        fail(OnchainFailure.invalid)
+    // Testnet addresses also pay signet, and non-bech32 ones regtest.
+    val testnet = actual == "testnet" && (network == "signet" || (network == "regtest" && !address.startsWith("tb1", ignoreCase = true)))
+    if (actual == null || !(actual == network || testnet)) fail(OnchainFailure.invalid)
 }

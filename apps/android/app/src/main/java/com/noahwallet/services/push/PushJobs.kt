@@ -9,6 +9,7 @@ import kotlinx.coroutines.currentCoroutineContext
 import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeout
+import kotlin.coroutines.CoroutineContext
 
 /** The two transports share routing, including status reporting when wallet open fails. */
 class PushJobs(private val dependencies: Dependencies, private val reportAllowanceMillis: Long = REPORT_ALLOWANCE_MILLIS) {
@@ -17,7 +18,7 @@ class PushJobs(private val dependencies: Dependencies, private val reportAllowan
         const val REPORT_ALLOWANCE_MILLIS = 5_000L
     }
 
-    class Dependencies(
+    data class Dependencies(
         val ensureWalletOpen: suspend () -> Unit,
         val maintenance: suspend () -> Unit,
         val createInvoice: suspend (ULong) -> String,
@@ -45,80 +46,104 @@ class PushJobs(private val dependencies: Dependencies, private val reportAllowan
     private suspend fun handleNotification(notification: NotificationData) {
         val caller = currentCoroutineContext()
         caller.checkWalletAdmission()
-        val d = dependencies
         when (notification) {
-            is NotificationDataMaintenance -> {
-                val failure = try {
-                    d.ensureWalletOpen()
-                    caller.checkWalletAdmission()
-                    d.maintenance()
-                    null
-                } catch (cancelled: CancellationException) { throw cancelled }
-                catch (error: Exception) { error }
-                bestEffort("Failed to report maintenance status") {
-                    d.reportMaintenance(notification.notificationK1, failure == null)
-                }
-                if (failure != null) throw failure
-                bestEffort("Failed to refresh widget") { d.refreshWidget { caller.checkWalletAdmission() } }
-                // Last: exits move here even when bark's daemon isn't running.
-                caller.checkWalletAdmission()
-                d.progressExits()
-            }
-            is NotificationDataLightningInvoiceRequest -> {
-                require(notification.amount >= 0)
-                d.ensureWalletOpen()
-                caller.checkWalletAdmission()
-                val invoice = d.createInvoice(notification.amount.toULong() / 1000u)
-                caller.checkWalletAdmission()
-                d.submitInvoice(notification.transactionId, invoice)
-            }
-            is NotificationDataLightningClaimRequest -> {
-                require(notification.amountSat >= 0)
-                d.ensureWalletOpen()
-                caller.checkWalletAdmission()
-                d.claimLightning()
-                bestEffort("Failed to announce Lightning receive") {
-                    d.announceReceived(notification.amountSat, notification.amountUsd, notification.paymentHash)
-                }
-                bestEffort("Failed to refresh widget") { d.refreshWidget { caller.checkWalletAdmission() } }
-            }
+            is NotificationDataMaintenance -> maintenance(caller, notification)
+            is NotificationDataLightningInvoiceRequest -> invoiceRequest(caller, notification)
+            is NotificationDataLightningClaimRequest -> claimRequest(caller, notification)
             is NotificationDataHeartbeat -> bestEffort("Failed to answer heartbeat") {
-                d.heartbeat(notification.notificationId)
+                dependencies.heartbeat(notification.notificationId)
             }
-            is NotificationDataBackupTrigger -> {
-                var attempted = false
-                val failure = try {
-                    d.ensureWalletOpen()
-                    caller.checkWalletAdmission()
-                    attempted = true
-                    d.backup()
-                    null
-                } catch (cancelled: CancellationException) { throw cancelled }
-                catch (error: Exception) { error }
-                // A backup that settled is reported even after the budget; only its report gets the allowance.
-                if (!attempted) caller.checkWalletAdmission()
-                withReportAllowance("Failed to report backup status") { d.reportBackup(notification.notificationK1, failure == null) }
-                if (failure != null) throw failure
-            }
-            is NotificationDataRecurringPaymentDue -> com.noahwallet.recurring.RecurringPushDeadline().run { budget ->
-                currentCoroutineContext().ensureActive()
+            is NotificationDataBackupTrigger -> backupTrigger(caller, notification)
+            is NotificationDataRecurringPaymentDue -> recurringDue(caller)
+        }
+    }
+
+    private suspend fun maintenance(caller: CoroutineContext, notification: NotificationDataMaintenance) {
+        val d = dependencies
+        val failure = failureOf {
+            d.ensureWalletOpen()
+            caller.checkWalletAdmission()
+            d.maintenance()
+        }
+        bestEffort("Failed to report maintenance status") {
+            d.reportMaintenance(notification.notificationK1, failure == null)
+        }
+        if (failure != null) throw failure
+        bestEffort("Failed to refresh widget") { d.refreshWidget { caller.checkWalletAdmission() } }
+        // Last: exits move here even when bark's daemon isn't running.
+        caller.checkWalletAdmission()
+        d.progressExits()
+    }
+
+    private suspend fun invoiceRequest(caller: CoroutineContext, notification: NotificationDataLightningInvoiceRequest) {
+        val d = dependencies
+        require(notification.amount >= 0)
+        d.ensureWalletOpen()
+        caller.checkWalletAdmission()
+        val invoice = d.createInvoice(notification.amount.toULong() / 1000u)
+        caller.checkWalletAdmission()
+        d.submitInvoice(notification.transactionId, invoice)
+    }
+
+    private suspend fun claimRequest(caller: CoroutineContext, notification: NotificationDataLightningClaimRequest) {
+        val d = dependencies
+        require(notification.amountSat >= 0)
+        d.ensureWalletOpen()
+        caller.checkWalletAdmission()
+        d.claimLightning()
+        bestEffort("Failed to announce Lightning receive") {
+            d.announceReceived(notification.amountSat, notification.amountUsd, notification.paymentHash)
+        }
+        bestEffort("Failed to refresh widget") { d.refreshWidget { caller.checkWalletAdmission() } }
+    }
+
+    private suspend fun backupTrigger(caller: CoroutineContext, notification: NotificationDataBackupTrigger) {
+        val d = dependencies
+        var attempted = false
+        val failure = failureOf {
+            d.ensureWalletOpen()
+            caller.checkWalletAdmission()
+            attempted = true
+            d.backup()
+        }
+        // A backup that settled is reported even after the budget; only its report gets the allowance.
+        if (!attempted) caller.checkWalletAdmission()
+        withReportAllowance("Failed to report backup status") { d.reportBackup(notification.notificationK1, failure == null) }
+        if (failure != null) throw failure
+    }
+
+    private suspend fun recurringDue(caller: CoroutineContext) = com.noahwallet.recurring.RecurringPushDeadline().run { budget ->
+        val d = dependencies
+        currentCoroutineContext().ensureActive()
+        caller.checkWalletAdmission()
+        requireBudget(budget)
+        d.ensureWalletOpen()
+        currentCoroutineContext().ensureActive()
+        caller.checkWalletAdmission()
+        requireBudget(budget)
+        d.recurring(budget)
+        caller.checkWalletAdmission()
+        requireBudget(budget)
+        bestEffort("Failed to refresh widget") {
+            d.refreshWidget {
                 caller.checkWalletAdmission()
-                if (!budget.available) throw CancellationException()
-                d.ensureWalletOpen()
-                currentCoroutineContext().ensureActive()
-                caller.checkWalletAdmission()
-                if (!budget.available) throw CancellationException()
-                d.recurring(budget)
-                caller.checkWalletAdmission()
-                if (!budget.available) throw CancellationException()
-                bestEffort("Failed to refresh widget") {
-                    d.refreshWidget {
-                        caller.checkWalletAdmission()
-                        if (!budget.available) throw CancellationException()
-                    }
-                }
+                requireBudget(budget)
             }
         }
+    }
+
+    private fun requireBudget(budget: com.noahwallet.recurring.RecurringBudget) {
+        if (!budget.available) throw CancellationException()
+    }
+
+    /** What [block] threw, so it can be reported before it's rethrown; cancellation propagates. */
+    private suspend fun failureOf(block: suspend () -> Unit): Exception? = try {
+        block()
+        null
+    } catch (cancelled: CancellationException) {
+        throw cancelled
+    } catch (@Suppress("TooGenericExceptionCaught") failure: Exception) { // reported to the server, then rethrown
+        failure
     }
 
     /** Bounded by its own timeout instead of the push budget; caller cancellation still stops it. */

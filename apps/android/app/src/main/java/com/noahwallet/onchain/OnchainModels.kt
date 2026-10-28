@@ -89,7 +89,13 @@ data class VtxoModel(
     val exitDelta: Long, val anchorPoint: String, val point: String, val expiring: Boolean, val tip: Long,
 ) {
     val expired get() = state != "Locked" && expiry <= tip
-    val statusID get() = when { state == "Locked" -> VtxoStatus.locked; expired -> VtxoStatus.expired; expiring -> VtxoStatus.expiring; state == "Spendable" -> VtxoStatus.active; else -> null }
+    val statusID get() = when {
+        state == "Locked" -> VtxoStatus.locked
+        expired -> VtxoStatus.expired
+        expiring -> VtxoStatus.expiring
+        state == "Spendable" -> VtxoStatus.active
+        else -> null
+    }
     val status get() = statusID?.label ?: state
     val eligible get() = ExitRules.eligible(state, amount)
     val refreshable get() = state == "Spendable"

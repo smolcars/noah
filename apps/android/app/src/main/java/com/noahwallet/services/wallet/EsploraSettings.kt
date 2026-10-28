@@ -54,12 +54,13 @@ class EsploraSettings(private val read: (String) -> String?, private val write: 
     /** Write ahead before closing handles; a failed write leaves the live wallet alone. */
     fun prepare(candidate: Selection): Record = Record(selection(candidate.variant), candidate).also(::save)
     /** The caller owns the lifecycle gate and a closed-session reservation across both attempts. */
-    suspend fun change(candidate: Selection, prepared: Record? = null, commitCandidate: (() -> Unit) -> Unit = { it() }, reopen: suspend (Selection, () -> Unit) -> Unit) {
+    suspend fun change(candidate: Selection, prepared: Record? = null, commitCandidate: (() -> Unit) -> Unit = { it() },
+        reopen: suspend (Selection, () -> Unit) -> Unit) {
         val previous = (prepared ?: prepare(candidate)).active
         try {
             reopen(candidate) { commitCandidate { save(Record(candidate)) } }
         }
-        catch (failure: Exception) {
+        catch (_: Exception) {
             runCatching { save(Record(previous)) }
             try { reopen(previous) {} }
             catch (_: Exception) { throw EsploraEndpoint.Failure("Endpoint not changed. Restart Noah to reopen the previous endpoint.") }

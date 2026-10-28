@@ -1,6 +1,16 @@
 package com.noahwallet.send
 
-import kotlinx.coroutines.*
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.CoroutineStart
+import kotlinx.coroutines.Deferred
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.async
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 
 /** Owned by the open session; disposal keeps ownership of reserved inputs until native success. */
 internal class SendPreparations(private val discardNative: suspend (String) -> Unit,
@@ -30,7 +40,8 @@ internal class SendPreparations(private val discardNative: suspend (String) -> U
     }
     fun consume(payment: SendPayment, quote: SendQuote): Boolean = synchronized(lock) {
         val held = reviews[quote.prepared?.id] ?: return false
-        if (!held.claimed || held.discardRequested || held.broadcasting || held.payment != payment || held.quote != quote) return false
+        val claimed = held.claimed && !held.discardRequested && !held.broadcasting
+        if (!claimed || held.payment != payment || held.quote != quote) return false
         held.broadcasting = true
         true
     }

@@ -5,7 +5,7 @@ import kotlinx.coroutines.*
 
 /** UI state never replays a mutation. Refresh reconciles cached evidence, including retained originals. */
 class OnchainModel(private val dependencies: Dependencies, private val detailID: String? = null) {
-    class Dependencies(
+    data class Dependencies(
         val ready: () -> Boolean, val overview: suspend () -> OnchainOverview,
         val quote: suspend (OnchainAction, List<String>, Long, String?) -> OnchainQuote,
         val execute: suspend (OnchainQuote) -> String, val attempts: suspend () -> List<OnchainOperationJournal.Attempt>,
@@ -29,7 +29,8 @@ class OnchainModel(private val dependencies: Dependencies, private val detailID:
      * so a failure is unknown, never "no record": a refresh retries it.
      */
     suspend fun coin(id: String): Result<VtxoModel> = try { Result.success(dependencies.coin(id)) }
-    catch (cancelled: CancellationException) { throw cancelled } catch (failure: Exception) { Result.failure(failure) }
+    catch (cancelled: CancellationException) { throw cancelled }
+    catch (@Suppress("TooGenericExceptionCaught") failure: Exception) { Result.failure(failure) } // shown as unknown, retried
     var overview by mutableStateOf<OnchainOverview?>(null); private set
     /** Counts completed overview reads (pull to refresh, the periodic read), so a coin lookup can retry after each. */
     var revision by mutableIntStateOf(0); private set
@@ -65,7 +66,9 @@ class OnchainModel(private val dependencies: Dependencies, private val detailID:
             val mine = dependencies.claimOwnership(address.trim())
             if (address == claimDestination && dependencies.ready()) claimDestinationIsMine = mine
         } catch (cancelled: CancellationException) { throw cancelled }
-        catch (_: Exception) { if (address == claimDestination) claimDestinationError = "Enter a valid Bitcoin address for this network when the wallet is ready." }
+        catch (_: Exception) {
+            if (address == claimDestination) claimDestinationError = "Enter a valid Bitcoin address for this network when the wallet is ready."
+        }
     }
     private var generation = 0
     /** The shown quote is Home's Renew: it's submitted through [Dependencies.executeRenewal]. */
@@ -92,11 +95,7 @@ class OnchainModel(private val dependencies: Dependencies, private val detailID:
             attempts = visible(saved)
             // A sync, a background job or a reopen holds the wallet for a moment: keep what's shown and wait for it.
             if (!dependencies.ready() && !dependencies.settle()) { unavailable(); fail(OnchainFailure.unavailable) }
-            var receiptError: String? = null
-            for (attempt in saved.filter { it.receipt == null || it.receipt.txid != null }) {
-                try { dependencies.check(attempt.id) } catch (cancelled: CancellationException) { throw cancelled } catch (_: Exception) { receiptError = com.noahwallet.services.wallet.ChainStatus.errorText }
-            }
-            try { dependencies.refreshReceipts() } catch (cancelled: CancellationException) { throw cancelled } catch (_: Exception) { }
+            val receiptError = checkReceipts(saved)
             attempts = visible(dependencies.attempts())
             val token = generation
             val since = dependencies.shared?.epoch
@@ -104,12 +103,25 @@ class OnchainModel(private val dependencies: Dependencies, private val detailID:
             val latest = dependencies.overview()
             if (generation == token && dependencies.ready()) {
                 exit = detail; overview = latest; error = receiptError; revision++
-                since?.let { dependencies.shared?.read(latest, it) }
+                since?.let { dependencies.shared.read(latest, it) }
             }
             // The wallet got busy during the read: read again, which waits for it.
             else if (!dependencies.ready()) readAgain = true
         } catch (cancelled: CancellationException) { throw cancelled }
-        catch (failure: Exception) { error = (failure as? OnchainException)?.message ?: "Couldn't read wallet status. Pull to refresh." }
+        catch (@Suppress("TooGenericExceptionCaught") failure: Exception) { // UI boundary: typed failures show their own message
+            error = (failure as? OnchainException)?.message ?: "Couldn't read wallet status. Pull to refresh."
+        }
+    }
+    /** Checks every unresolved or broadcast attempt; the chain source's error when any check failed. */
+    private suspend fun checkReceipts(saved: List<OnchainOperationJournal.Attempt>): String? {
+        var receiptError: String? = null
+        for (attempt in saved.filter { it.receipt == null || it.receipt.txid != null }) {
+            try { dependencies.check(attempt.id) }
+            catch (cancelled: CancellationException) { throw cancelled }
+            catch (_: Exception) { receiptError = com.noahwallet.services.wallet.ChainStatus.errorText }
+        }
+        try { dependencies.refreshReceipts() } catch (cancelled: CancellationException) { throw cancelled } catch (_: Exception) { }
+        return receiptError
     }
     suspend fun review(action: OnchainAction, ids: List<String> = emptyList(), amount: Long = 0, destination: String? = null,
         renewal: Boolean = false) {
@@ -122,15 +134,25 @@ class OnchainModel(private val dependencies: Dependencies, private val detailID:
             if (attempts.any { it.blocks(action, ids) }) fail(OnchainFailure.busy)
             val caller = currentCoroutineContext()
             val fresh = withContext(NonCancellable) { dependencies.quote(action, ids, amount, destination) }
-            if (caller.isActive && token == generation && dependencies.ready()) { quote = fresh; this.renewal = renewal }
-            else withContext(NonCancellable) { dependencies.discard(fresh) }
+            show(fresh, renewal, token, caller)
         } catch (cancelled: CancellationException) { throw cancelled }
         catch (failure: ExitEstimateUnavailable) {
             if (token == generation && dependencies.ready()) estimateFallback = failure.review
         }
-        catch (failure: Exception) { if (token == generation) error = (failure as? OnchainException ?: failure as? ExitNotPossible)?.message ?: "Couldn't prepare the review. Nothing was submitted. Try again when the wallet is ready." }
+        catch (@Suppress("TooGenericExceptionCaught") failure: Exception) { // UI boundary: typed failures show their own message
+            if (token == generation) {
+                error = shown(failure) ?: "Couldn't prepare the review. Nothing was submitted. Try again when the wallet is ready."
+            }
+        }
         finally { busy = false }
     }
+    /** Shows [fresh] if nothing replaced or canceled its review meanwhile; otherwise releases it. */
+    private suspend fun show(fresh: OnchainQuote, renewal: Boolean, token: Int, caller: kotlin.coroutines.CoroutineContext) {
+        if (caller.isActive && token == generation && dependencies.ready()) { quote = fresh; this.renewal = renewal }
+        else withContext(NonCancellable) { dependencies.discard(fresh) }
+    }
+    /** The wallet's typed failures carry the message to show. */
+    private fun shown(failure: Exception) = (failure as? OnchainException ?: failure as? ExitNotPossible)?.message
     fun continueWithoutEstimate() {
         if (busy) return
         val fallback = estimateFallback ?: return
@@ -151,13 +173,10 @@ class OnchainModel(private val dependencies: Dependencies, private val detailID:
             if (!dependencies.ready() || !reviewed.current()) fail(OnchainFailure.changed)
             message = if (renewing) dependencies.executeRenewal(reviewed) else dependencies.execute(reviewed)
         } catch (cancelled: CancellationException) { throw cancelled }
-        catch (failure: ExitEstimateUnavailable) {
-            if (token == generation && dependencies.ready()) {
-                try { estimateFallback = failure.preserving(reviewed).review }
-                catch (expired: OnchainException) { error = expired.message }
-            }
+        catch (failure: ExitEstimateUnavailable) { keepFallback(failure, reviewed, token) }
+        catch (@Suppress("TooGenericExceptionCaught") failure: Exception) { // UI boundary: typed failures show their own message
+            error = shown(failure) ?: OnchainFailure.uncertain.text
         }
-        catch (failure: Exception) { error = (failure as? OnchainException ?: failure as? ExitNotPossible)?.message ?: OnchainFailure.uncertain.text }
         finally {
             // Reads that ran during the submission may have missed it, even when Back canceled its caller.
             dependencies.shared?.changed()
@@ -167,11 +186,17 @@ class OnchainModel(private val dependencies: Dependencies, private val detailID:
         load()
         if (submissionError != null) error = submissionError
     }
+    private fun keepFallback(failure: ExitEstimateUnavailable, reviewed: OnchainQuote, token: Int) {
+        if (token == generation && dependencies.ready()) {
+            try { estimateFallback = failure.preserving(reviewed).review }
+            catch (expired: OnchainException) { error = expired.message }
+        }
+    }
     suspend fun acknowledge(id: String) {
         if (busy) return
         try { dependencies.acknowledge(id); attempts = attempts.filter { it.id != id }; message = null }
         catch (cancelled: CancellationException) { throw cancelled }
-        catch (failure: Exception) { error = OnchainFailure.uncertain.text }
+        catch (_: Exception) { error = OnchainFailure.uncertain.text }
     }
     suspend fun checkStatus(id: String) {
         if (busy) return
@@ -184,7 +209,9 @@ class OnchainModel(private val dependencies: Dependencies, private val detailID:
             message = if (resolved && attempts.none { it.id == id }) OnchainFailure.boardNotAttempted.text
             else if (resolved) "Status resolved. Review the receipt." else "Status remains uncertain. Noah checks again automatically as your wallet syncs."
         } catch (cancelled: CancellationException) { throw cancelled }
-        catch (failure: Exception) { error = (failure as? OnchainException)?.message ?: "Couldn't check status. The attempt is still saved." }
+        catch (@Suppress("TooGenericExceptionCaught") failure: Exception) { // UI boundary: typed failures show their own message
+            error = (failure as? OnchainException)?.message ?: "Couldn't check status. The attempt is still saved."
+        }
         finally { busy = false }
     }
     suspend fun overrideUncertain(id: String) {
@@ -193,14 +220,15 @@ class OnchainModel(private val dependencies: Dependencies, private val detailID:
         try {
             dependencies.override(id); attempts = visible(dependencies.attempts())
             message = "Repeat protection overridden. The original attempt is still saved. Review the current wallet state before submitting again."
-        } catch (failure: Exception) { error = OnchainFailure.uncertain.text }
+        } catch (_: Exception) { error = OnchainFailure.uncertain.text }
         finally { busy = false }
     }
 }
 
 /**
  * The freshest overview any page's model has read since the last submission (an exit started, canceled or claimed, a
- * board, a renew), whether or not the page that submitted it is still there. The Emergency exit page shows it when Back returns there, until its own read arrives, so it
+ * board, a renew), whether or not the page that submitted it is still there. The Emergency exit page shows it when Back returns there,
+ until its own read arrives, so it
  * never shows exits as they were before what you just did.
  */
 @Stable

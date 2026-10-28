@@ -71,7 +71,8 @@ internal fun intervalText(interval: RecurringInterval): String = when {
 @Composable
 private fun scheduleLine(s: RecurringPayment, running: Boolean, locale: java.util.Locale): Pair<String, Boolean> = when {
     s.inFlight != null && running -> tr("Sending") to false
-    s.status == "active" -> (s.nextRunAt?.let { tr("{interval} · next {date}", intervalText(s.interval), recurringShortDay(it, locale)) } ?: intervalText(s.interval)) to false
+    s.status == "active" -> (s.nextRunAt?.let { tr("{interval} · next {date}", intervalText(s.interval),
+        recurringShortDay(it, locale)) } ?: intervalText(s.interval)) to false
     s.status == "paused" -> tr("Paused") to false
     s.status == "completed" -> tr("Completed") to false
     s.status == "needs_approval" -> tr("Needs approval") to true
@@ -109,29 +110,42 @@ internal fun RecurringListPage(app: AppModel, nav: SettingsNav) {
         if (shown.isEmpty()) EmptyRecurring(!app.isWalletSuspended) { nav.open(EditorPage(null)) }
         else Column(Modifier.padding(top = 8.dp)) {
             shown.forEachIndexed { index, s ->
-                val (line, failed) = scheduleLine(s, executor.running, locale)
-                Row(Modifier.fillMaxWidth().height(66.dp)
-                    .drawBehind { if (index < shown.lastIndex) drawRect(palette.hairline, Offset(56.dp.toPx(), size.height - 1.dp.toPx()), Size(size.width - 56.dp.toPx(), 1.dp.toPx())) }
-                    .clickable(role = Role.Button) { nav.open(SchedulePage(s.id)) }.testTag("recurring-row-${s.id}"),
-                    verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                    ScheduleAvatar(s, large = false)
-                    Column(Modifier.weight(1f)) {
-                        Text(s.label, style = HomeType.rowTitle, color = palette.foreground, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                        Text(line, style = HomeType.small, color = if (failed) palette.failure else palette.muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                    }
-                    Text(s.formattedAmount(app.amountUnit, locale).let { if (app.hidden) "••••" else it }, style = HomeType.amount,
-                        color = if (s.status == "active") palette.foreground else palette.muted, maxLines = 1)
-                }
+                ScheduleListRow(app, s, executor.running, locale, divider = index < shown.lastIndex) { nav.open(SchedulePage(s.id)) }
             }
         }
         if (shown.any { it.status == "active" }) SettingsLink(if (executor.running) tr("Sending…") else tr("Run due payments now"),
             Modifier.padding(top = 6.dp).testTag("recurring-run-due"), enabled = !executor.running && !app.isWalletSuspended) {
             actionError = null
-            scope.launch { try { runtime.executeInForeground(manual = true) } catch (e: Exception) { actionError = e.message ?: "Couldn't update recurring payments. Try again." } }
+            scope.launch {
+                try { runtime.executeInForeground(manual = true) }
+                catch (@Suppress("TooGenericExceptionCaught") e: Exception) { // UI boundary: shows why the run stopped
+                    actionError = e.message ?: "Couldn't update recurring payments. Try again."
+                }
+            }
         }
         if (shown.isNotEmpty()) FinePrint(tr("Keep notifications on so payments can go through while Noah is closed."))
         if (executor.syncPending) FinePrint(tr("Wake-up schedule hasn't synced yet. Noah will retry when opened."))
         (actionError ?: executor.error)?.let { FinePrint(tr(it), failed = true) }
+    }
+}
+
+@Composable
+private fun ScheduleListRow(app: AppModel, s: RecurringPayment, running: Boolean, locale: java.util.Locale, divider: Boolean, open: () -> Unit) {
+    val palette = LocalPalette.current
+    val (line, failed) = scheduleLine(s, running, locale)
+    Row(Modifier.fillMaxWidth().height(66.dp)
+        .drawBehind { if (divider) drawRect(palette.hairline, Offset(56.dp.toPx(), size.height - 1.dp.toPx()),
+            Size(size.width - 56.dp.toPx(), 1.dp.toPx())) }
+        .clickable(role = Role.Button) { open() }.testTag("recurring-row-${s.id}"),
+        verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
+        ScheduleAvatar(s, large = false)
+        Column(Modifier.weight(1f)) {
+            Text(s.label, style = HomeType.rowTitle, color = palette.foreground, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(line, style = HomeType.small, color = if (failed) palette.failure else palette.muted, maxLines = 1,
+                overflow = TextOverflow.Ellipsis)
+        }
+        Text(s.formattedAmount(app.amountUnit, locale).let { if (app.hidden) "••••" else it }, style = HomeType.amount,
+            color = if (s.status == "active") palette.foreground else palette.muted, maxLines = 1)
     }
 }
 
@@ -171,10 +185,11 @@ private fun EmptyRecurring(enabled: Boolean, create: () -> Unit) {
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-internal fun ScheduleScreen(app: AppModel, nav: SettingsNav, id: String, executor: RecurringExecutor = RecurringRuntime.shared(LocalContext.current).executor,
-    approve: suspend (RecurringExecutor.Review) -> Unit = RecurringRuntime.shared(LocalContext.current).let { runtime -> { runtime.executeInForeground(manual = true, approval = it) } }) {
-    val palette = LocalPalette.current
-    val context = LocalContext.current
+internal fun ScheduleScreen(app: AppModel, nav: SettingsNav, id: String,
+    executor: RecurringExecutor = RecurringRuntime.shared(LocalContext.current).executor,
+    approve: suspend (RecurringExecutor.Review) -> Unit = RecurringRuntime.shared(LocalContext.current).let { runtime ->
+        { runtime.executeInForeground(manual = true, approval = it) }
+    }) {
     val haptics = rememberHaptics()
     val toasts = LocalSettingsToasts.current
     val locale = java.util.Locale.forLanguageTag(app.localeIdentifier)
@@ -192,85 +207,169 @@ internal fun ScheduleScreen(app: AppModel, nav: SettingsNav, id: String, executo
     // A canceled schedule falls back to the list.
     LaunchedEffect(s == null, loaded) { if (loaded && s == null) nav.pop() }
     if (s == null) { SettingsFrame(tr("Recurring payment"), nav.back, hero = true) {}; return }
-    fun act(done: String? = null, work: suspend () -> Unit) {
-        actionError = null
-        scope.launch {
-            try { work(); done?.let { haptics.success(); toasts.show(it) } }
-            catch (e: Exception) { actionError = e.message ?: "Couldn't update recurring payments. Try again." }
-        }
-    }
+    val actions = ScheduleActionRunner(scope, haptics, toasts) { actionError = it }
+    fun act(done: String? = null, work: suspend () -> Unit) = actions.run(done, work)
     val paused = tr("Paused"); val resumed = tr("Resumed"); val canceled = tr("Canceled")
-    val attention = s.status == "needs_attention" || s.inFlight != null
-    val adjustable = s.status != "completed" && (s.status != "needs_attention" || s.requiresPolicyApproval)
-    val canResume = s.status == "active" || (s.inFlight == null || s.requiresPolicyApproval) && !app.isWalletSuspended
-    val resumeTitle = if (s.status == "active") tr("Pause") else if (s.requiresPolicyApproval) tr("Approve and resume") else tr("Resume")
-    fun pauseOrResume() = act(if (s.status == "active") paused else resumed) { if (s.status == "active") executor.pause(s.id) else executor.resume(s.id) }
-    SettingsFrame(tr("Recurring payment"), nav.back, hero = true, foot = when {
-        s.status == "needs_approval" -> ({
-            FootPill(tr("Review and pay"), Modifier.testTag("recurring-review-pay"), enabled = !executor.running && !executor.controller.locked && !app.isWalletSuspended) {
-                act { preparing = true; try { review = executor.review(s.id) } finally { preparing = false } }
-            }
-        })
-        adjustable -> ({ FootPill(resumeTitle, Modifier.testTag("recurring-pause-resume"), outlined = s.status == "active", enabled = canResume) { pauseOrResume() } })
-        else -> null
+    val controls = ScheduleControls(s, app.isWalletSuspended, resumeTitle(s), executor)
+    fun pauseOrResume() = act(if (s.status == "active") paused else resumed) {
+        if (s.status == "active") executor.pause(s.id) else executor.resume(s.id)
+    }
+    SettingsFrame(tr("Recurring payment"), nav.back, hero = true, foot = scheduleFoot(s, controls, ::pauseOrResume) {
+        act { preparing = true; try { review = executor.review(s.id) } finally { preparing = false } }
     }) {
-        Column(Modifier.padding(top = 6.dp)) {
-            ScheduleAvatar(s, large = true)
-            Text(if (app.hidden) "••••" else s.formattedAmount(app.amountUnit, locale), Modifier.padding(top = 18.dp), style = ActivityType.big, color = palette.foreground, maxLines = 1)
-            val (line, failed) = scheduleLine(s, executor.running, locale)
-            Text(line, Modifier.padding(top = 10.dp), style = ActivityType.status, color = if (failed) palette.failure else if (s.status == "paused") palette.muted else palette.foreground)
-            Text(s.label, Modifier.padding(top = 3.dp), style = HomeType.line, color = palette.muted)
-        }
-        Column(Modifier.padding(top = 22.dp)) {
-            if (s.destinationType == "lnurl") DetailRow(tr("To"), s.destination, copy = s.destination, toasts = toasts)
-            else DetailRow(tr("To"), short(s.destination, 10, 4), ValueKind.mono, copy = s.destination, toasts = toasts)
-            DetailRow(tr("Via"), if (s.destinationType == "ark") tr("Ark") else tr("Lightning"),
-                glyph = if (s.destinationType == "ark") SettingsIcons.ark else SettingsIcons.lightning, toasts = toasts)
-            if (!s.unsupportedStorage) DetailRow(tr("Repeats"), intervalText(s.interval), toasts = toasts)
-            if (s.status == "active") s.nextRunAt?.let { DetailRow(tr("Next"), recurringDate(it), toasts = toasts) }
-            DetailRow(tr("Ends"), s.endAt?.let { recurringDay(it) } ?: s.maxOccurrences?.let { trPlural("After {n} payments", it) } ?: tr("Never"), toasts = toasts)
-            DetailRow(tr("Paid"), trPlural("{n} payments", s.occurrencesPaid), toasts = toasts, last = s.runs.isEmpty())
-            s.runs.firstOrNull()?.let { run ->
-                DetailRow(tr("Last"), recurringDate(run.attemptedAt) + " · " + when (run.status) { "success" -> tr("Sent"); "skipped" -> tr("Skipped"); else -> tr("Failed") },
-                    toasts = toasts, failed = run.status != "success" && run.status != "skipped", last = true)
-            }
-        }
-        s.lastError?.let { FinePrint(s.issue?.message(context) ?: tr(it), failed = true) }
-        val rows = mutableListOf<@Composable (Boolean) -> Unit>()
-        if (adjustable && (s.inFlight == null || s.requiresPolicyApproval)) rows += { d -> SettingsRow(tr("Edit"), divider = d, enabled = !app.isWalletSuspended,
-            modifier = Modifier.testTag("recurring-edit")) { nav.open(EditorPage(s.id)) } }
-        if (s.status == "needs_approval") rows += { d -> SettingsRow(resumeTitle, end = RowEnd.None, divider = d, enabled = canResume) { pauseOrResume() } }
-        if (attention) rows += { d -> SettingsRow(tr("Check status"), end = RowEnd.None, divider = d, enabled = !executor.running,
-            modifier = Modifier.testTag("recurring-check")) { act { executor.checkStatus(s.id) } } }
-        if (attention && !s.requiresPolicyApproval) rows += { d -> SettingsRow(tr("Resume after checking history"), divider = d, enabled = !executor.running,
-            modifier = Modifier.testTag("recurring-override")) { overrideStep = 1 } }
-        rows += { d -> SettingsRow(if (s.status == "completed") tr("Remove payment") else tr("Cancel payment"), danger = true, divider = d,
-            modifier = Modifier.testTag("recurring-cancel")) { cancelling = true } }
-        SettingsGroup(rows = rows)
+        ScheduleSummary(app, s, executor.running, locale)
+        ScheduleDetails(s, toasts)
+        ScheduleActions(app, s, executor.running, controls, ScheduleActionHandlers(
+            edit = { nav.open(EditorPage(s.id)) }, pauseOrResume = ::pauseOrResume, checkStatus = { act { executor.checkStatus(s.id) } },
+            override = { overrideStep = 1 }, cancel = { cancelling = true }))
         actionError?.let { FinePrint(tr(it), failed = true) }
     }
-    if (cancelling) SettingsSheet({ cancelling = false }, tr("Cancel {name}?", s.label),
-        tr("No more payments will be sent. Payments already sent can't be undone. An in-progress payment may still complete.")) { close ->
-        SheetActions(tr("Keep payment"), if (s.status == "completed") tr("Remove payment") else tr("Cancel payment"), onCancel = close, danger = true,
-            confirmTag = "recurring-cancel-confirm", onConfirm = { close(); act(canceled) { executor.cancel(s.id) } })
-    }
-    // Both resume steps stay: "Have you checked?", then "You could pay twice".
-    if (overrideStep == 1) SettingsSheet({ overrideStep = 0 }, tr("Have you checked?"),
-        tr("Check Activity for this payment's last attempt and ask the recipient whether it arrived.")) { close ->
-        SheetActions(tr("Keep stopped"), tr("I checked"), onCancel = close, confirmTag = "recurring-override-checked", onConfirm = { overrideStep = 2 })
-    }
-    if (overrideStep == 2) SettingsSheet({ overrideStep = 0 }, tr("You could pay twice"), tr(RecurringExecutor.overrideWarning)) { close ->
-        SheetActions(tr("Keep stopped"), tr(RecurringExecutor.overrideConfirmation), onCancel = close, danger = true, confirmTag = "recurring-override-confirm",
-            onConfirm = { close(); act(resumed) { executor.overrideAndResume(s.id, true) } })
-    }
+    if (cancelling) CancelScheduleSheet(s, { cancelling = false }) { act(canceled) { executor.cancel(s.id) } }
+    OverrideSheets(overrideStep, { overrideStep = it }) { act(resumed) { executor.overrideAndResume(s.id, true) } }
     review?.let { item ->
         // A run that returns after this sheet was replaced never closes the new one.
-        ApprovalSheet(app, item, executor.controller, close = { if (review === item) review = null }, reload = { act { executor.reload() } },
-            pay = { finished -> act { try { approve(item) } finally { finished() } } },
-            done = { act {
-                executor.controller.acknowledge()
-                if (!executor.controller.locked) { review = null; executor.reload() }
-            } })
+        ScheduleApproval(app, item, executor, approve, { act(work = it) }, close = { if (review === item) review = null }) { review = null }
+    }
+}
+
+@Composable
+private fun ScheduleApproval(app: AppModel, item: RecurringExecutor.Review, executor: RecurringExecutor,
+    approve: suspend (RecurringExecutor.Review) -> Unit, act: (suspend () -> Unit) -> Unit, close: () -> Unit, clear: () -> Unit) {
+    ApprovalSheet(app, item, executor.controller, close = close, reload = { act { executor.reload() } },
+        pay = { finished -> act { try { approve(item) } finally { finished() } } },
+        done = { act {
+            executor.controller.acknowledge()
+            if (!executor.controller.locked) { clear(); executor.reload() }
+        } })
+}
+
+/** Runs a schedule action, then confirms it, or shows why it failed. */
+private class ScheduleActionRunner(private val scope: kotlinx.coroutines.CoroutineScope, private val haptics: com.noahwallet.ui.onboarding.Haptics,
+    private val toasts: com.noahwallet.ui.home.HomeToasts, private val showError: (String?) -> Unit) {
+    fun run(done: String?, work: suspend () -> Unit) {
+        showError(null)
+        scope.launch {
+            try { work(); done?.let { haptics.success(); toasts.show(it) } }
+            catch (@Suppress("TooGenericExceptionCaught") e: Exception) { // UI boundary: shows why the action failed
+                showError(e.message ?: "Couldn't update recurring payments. Try again.")
+            }
+        }
+    }
+}
+
+/** What a schedule's state allows on its screen. */
+private class ScheduleControls(s: RecurringPayment, suspended: Boolean, val resumeTitle: String, executor: RecurringExecutor) {
+    val attention = s.status == "needs_attention" || s.inFlight != null
+    val adjustable = s.status != "completed" && (s.status != "needs_attention" || s.requiresPolicyApproval)
+    val canResume = s.status == "active" || ((s.inFlight == null || s.requiresPolicyApproval) && !suspended)
+    val edit = adjustable && (s.inFlight == null || s.requiresPolicyApproval)
+    val reviewable = !executor.running && !executor.controller.locked && !suspended
+}
+
+@Composable
+private fun resumeTitle(s: RecurringPayment) = when {
+    s.status == "active" -> tr("Pause")
+    s.requiresPolicyApproval -> tr("Approve and resume")
+    else -> tr("Resume")
+}
+
+/** Review and pay for a payment awaiting approval, else Pause or Resume when the schedule can change. */
+private fun scheduleFoot(s: RecurringPayment, controls: ScheduleControls, pauseOrResume: () -> Unit,
+    review: () -> Unit): (@Composable RowScope.() -> Unit)? = when {
+    s.status == "needs_approval" -> ({
+        FootPill(tr("Review and pay"), Modifier.testTag("recurring-review-pay"), enabled = controls.reviewable) { review() }
+    })
+    controls.adjustable -> ({ FootPill(controls.resumeTitle, Modifier.testTag("recurring-pause-resume"), outlined = s.status == "active",
+        enabled = controls.canResume) { pauseOrResume() } })
+    else -> null
+}
+
+@Composable
+private fun ScheduleSummary(app: AppModel, s: RecurringPayment, running: Boolean, locale: java.util.Locale) {
+    val palette = LocalPalette.current
+    Column(Modifier.padding(top = 6.dp)) {
+        ScheduleAvatar(s, large = true)
+        Text(if (app.hidden) "••••" else s.formattedAmount(app.amountUnit, locale), Modifier.padding(top = 18.dp), style = ActivityType.big,
+            color = palette.foreground, maxLines = 1)
+        val (line, failed) = scheduleLine(s, running, locale)
+        Text(line, Modifier.padding(top = 10.dp), style = ActivityType.status,
+            color = if (failed) palette.failure else if (s.status == "paused") palette.muted else palette.foreground)
+        Text(s.label, Modifier.padding(top = 3.dp), style = HomeType.line, color = palette.muted)
+    }
+}
+
+@Composable
+private fun ScheduleDetails(s: RecurringPayment, toasts: com.noahwallet.ui.home.HomeToasts) {
+    val context = LocalContext.current
+    Column(Modifier.padding(top = 22.dp)) {
+        if (s.destinationType == "lnurl") DetailRow(tr("To"), s.destination, copy = s.destination, toasts = toasts)
+        else DetailRow(tr("To"), short(s.destination, 10, 4), ValueKind.mono, copy = s.destination, toasts = toasts)
+        DetailRow(tr("Via"), if (s.destinationType == "ark") tr("Ark") else tr("Lightning"),
+            glyph = if (s.destinationType == "ark") SettingsIcons.ark else SettingsIcons.lightning, toasts = toasts)
+        if (!s.unsupportedStorage) DetailRow(tr("Repeats"), intervalText(s.interval), toasts = toasts)
+        if (s.status == "active") s.nextRunAt?.let { DetailRow(tr("Next"), recurringDate(it), toasts = toasts) }
+        DetailRow(tr("Ends"), s.endAt?.let { recurringDay(it) } ?: s.maxOccurrences?.let { trPlural("After {n} payments", it) } ?: tr("Never"),
+            toasts = toasts)
+        DetailRow(tr("Paid"), trPlural("{n} payments", s.occurrencesPaid), toasts = toasts, last = s.runs.isEmpty())
+        s.runs.firstOrNull()?.let { run -> LastRunRow(run, toasts) }
+    }
+    s.lastError?.let { FinePrint(s.issue?.message(context) ?: tr(it), failed = true) }
+}
+
+@Composable
+private fun LastRunRow(run: RecurringPayment.Run, toasts: com.noahwallet.ui.home.HomeToasts) {
+    val outcome = when (run.status) {
+        "success" -> tr("Sent")
+        "skipped" -> tr("Skipped")
+        else -> tr("Failed")
+    }
+    DetailRow(tr("Last"), recurringDate(run.attemptedAt) + " · " + outcome,
+        toasts = toasts, failed = run.status != "success" && run.status != "skipped", last = true)
+}
+
+private class ScheduleActionHandlers(val edit: () -> Unit, val pauseOrResume: () -> Unit, val checkStatus: () -> Unit,
+    val override: () -> Unit, val cancel: () -> Unit)
+
+@Composable
+private fun ScheduleActions(app: AppModel, s: RecurringPayment, running: Boolean, controls: ScheduleControls, handlers: ScheduleActionHandlers) {
+    val rows = mutableListOf<@Composable (Boolean) -> Unit>()
+    if (controls.edit) rows += { d -> SettingsRow(tr("Edit"), divider = d,
+        enabled = !app.isWalletSuspended,
+        modifier = Modifier.testTag("recurring-edit")) { handlers.edit() } }
+    if (s.status == "needs_approval") rows += { d ->
+        SettingsRow(controls.resumeTitle, end = RowEnd.None, divider = d, enabled = controls.canResume) { handlers.pauseOrResume() }
+    }
+    if (controls.attention) rows += { d -> SettingsRow(tr("Check status"), end = RowEnd.None, divider = d, enabled = !running,
+        modifier = Modifier.testTag("recurring-check")) { handlers.checkStatus() } }
+    if (controls.attention && !s.requiresPolicyApproval) rows += { d ->
+        SettingsRow(tr("Resume after checking history"), divider = d, enabled = !running, modifier = Modifier.testTag("recurring-override")) {
+            handlers.override()
+        }
+    }
+    rows += { d -> SettingsRow(if (s.status == "completed") tr("Remove payment") else tr("Cancel payment"), danger = true, divider = d,
+        modifier = Modifier.testTag("recurring-cancel")) { handlers.cancel() } }
+    SettingsGroup(rows = rows)
+}
+
+@Composable
+private fun CancelScheduleSheet(s: RecurringPayment, dismiss: () -> Unit, confirm: () -> Unit) {
+    SettingsSheet(dismiss, tr("Cancel {name}?", s.label),
+        tr("No more payments will be sent. Payments already sent can't be undone. An in-progress payment may still complete.")) { close ->
+        SheetActions(tr("Keep payment"), if (s.status == "completed") tr("Remove payment") else tr("Cancel payment"), onCancel = close, danger = true,
+            confirmTag = "recurring-cancel-confirm", onConfirm = { close(); confirm() })
+    }
+}
+
+// Both resume steps stay: "Have you checked?", then "You could pay twice".
+@Composable
+private fun OverrideSheets(step: Int, changeStep: (Int) -> Unit, confirm: () -> Unit) {
+    if (step == 1) SettingsSheet({ changeStep(0) }, tr("Have you checked?"),
+        tr("Check Activity for this payment's last attempt and ask the recipient whether it arrived.")) { close ->
+        SheetActions(tr("Keep stopped"), tr("I checked"), onCancel = close, confirmTag = "recurring-override-checked", onConfirm = { changeStep(2) })
+    }
+    if (step == 2) SettingsSheet({ changeStep(0) }, tr("You could pay twice"), tr(RecurringExecutor.overrideWarning)) { close ->
+        SheetActions(tr("Keep stopped"), tr(RecurringExecutor.overrideConfirmation), onCancel = close, danger = true,
+            confirmTag = "recurring-override-confirm", onConfirm = { close(); confirm() })
     }
 }
 

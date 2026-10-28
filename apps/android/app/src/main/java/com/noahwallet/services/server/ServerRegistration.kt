@@ -10,6 +10,7 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
+@Suppress("LongParameterList") // dependency seams: tests inject device, clock and mailbox fakes
 class ServerRegistration(
     private val client: HttpClient,
     private val storage: ServerStateStorage,

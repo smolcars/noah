@@ -29,20 +29,19 @@ internal class NativeSecretStore(
         if (bytes == null) SecretResult.NotFound
         else if (bytes.size < 29 || bytes[0] != 1.toByte()) {
             SecretResult.Unavailable(SecretFailure.invalidCiphertext)
-        } else {
-            val key = keys.existing(alias)
-            if (key == null) SecretResult.Unavailable(SecretFailure.missingKey)
-            else {
-                val cipher = Cipher.getInstance("AES/GCM/NoPadding")
-                cipher.init(Cipher.DECRYPT_MODE, key, GCMParameterSpec(128, bytes.copyOfRange(1, 13)))
-                val plaintext = cipher.doFinal(bytes, 13, bytes.size - 13)
-                try { SecretResult.Found(plaintext.strictUtf8()) } finally { plaintext.fill(0) }
-            }
-        }
+        } else decrypt(bytes)
     } catch (_: java.nio.charset.CharacterCodingException) {
         SecretResult.Unavailable(SecretFailure.invalidMnemonic)
     } catch (_: Exception) {
         SecretResult.Unavailable(SecretFailure.storageUnreadable)
+    }
+
+    private fun decrypt(bytes: ByteArray): SecretResult {
+        val key = keys.existing(alias) ?: return SecretResult.Unavailable(SecretFailure.missingKey)
+        val cipher = Cipher.getInstance("AES/GCM/NoPadding")
+        cipher.init(Cipher.DECRYPT_MODE, key, GCMParameterSpec(128, bytes.copyOfRange(1, 13)))
+        val plaintext = cipher.doFinal(bytes, 13, bytes.size - 13)
+        return try { SecretResult.Found(plaintext.strictUtf8()) } finally { plaintext.fill(0) }
     }
 
     /**

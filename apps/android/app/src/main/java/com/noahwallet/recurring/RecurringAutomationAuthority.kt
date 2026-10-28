@@ -23,12 +23,15 @@ internal class RecurringAutomationAuthority(directory: File,
             }
             val marker = RecurringStore.json.decodeFromString<Marker>(marker.readText())
             val raw = file.readText()
-            require(RecurringStore.json.parseToJsonElement(raw).jsonObject.keys.containsAll(listOf("version", "instance", "generation", "suspended", "stopped")))
+            require(RecurringStore.json.parseToJsonElement(raw).jsonObject.keys.containsAll(listOf("version", "instance", "generation", "suspended",
+                "stopped")))
             return RecurringStore.json.decodeFromString<State>(raw).also {
                 require(marker.version == 1 && it.version == 1 && marker.instance == it.instance)
                 UUID.fromString(it.instance); UUID.fromString(it.generation)
             }
-        } catch (failure: Exception) { failed.add(file.path); throw IllegalStateException(message, failure) }
+        } catch (@Suppress("TooGenericExceptionCaught") failure: Exception) { // unreadable state reads as stopped, cause kept
+            failed.add(file.path); throw IllegalStateException(message, failure)
+        }
     }
     fun generation(): String = synchronized(lock) {
         state().also { check(!it.suspended && !it.stopped) { message } }.generation
@@ -40,8 +43,9 @@ internal class RecurringAutomationAuthority(directory: File,
     }
     fun resume() = change { it.copy(generation = UUID.randomUUID().toString(), suspended = false, stopped = false) }
     private fun change(mutate: (State) -> State) = synchronized(lock) {
-        try { write(file, RecurringStore.json.encodeToString(mutate(state())).toByteArray()) }
-        catch (failure: Exception) { failed.add(file.path); throw failure }
+        var written = false
+        try { write(file, RecurringStore.json.encodeToString(mutate(state())).toByteArray()); written = true }
+        finally { if (!written) failed.add(file.path) }
     }
     companion object {
         fun deleted(directory: File) = synchronized(lock) { failed.remove(File(directory, ".noah-recurring-automation.json").path) }

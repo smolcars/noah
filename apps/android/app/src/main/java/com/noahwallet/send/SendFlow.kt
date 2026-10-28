@@ -24,17 +24,24 @@ import kotlinx.serialization.Serializable
 object SendFlow {
     fun rails(type: String?, request: Map<String, String>?): List<SendRail> {
         if (type == "bip321" && request != null) return SendRail.entries.filter { method(it, request) != null }
-        return when (type) { "ark" -> listOf(SendRail.ark); "lightning", "offer", "lnurl" -> listOf(SendRail.lightning); "onchain" -> listOf(SendRail.onchain); else -> emptyList() }
+        return when (type) {
+            "ark" -> listOf(SendRail.ark)
+            "lightning", "offer", "lnurl" -> listOf(SendRail.lightning)
+            "onchain" -> listOf(SendRail.onchain)
+            else -> emptyList()
+        }
     }
     fun method(rail: SendRail, request: Map<String, String>) = when (rail) {
         SendRail.ark -> "ark".takeIf { "arkAddress" in request }
         SendRail.lightning -> if ("lightningInvoice" in request) "lightning" else "offer".takeIf { "offer" in request }
         SendRail.onchain -> "onchain".takeIf { "onchainAddress" in request }
     }
-    fun label(type: String?) = mapOf("ark" to "Ark address", "lightning" to "Lightning invoice", "offer" to "Lightning offer", "lnurl" to "Lightning address", "onchain" to "On-chain address", "bip321" to "Bitcoin payment request")[type]
+    fun label(type: String?) = mapOf("ark" to "Ark address", "lightning" to "Lightning invoice", "offer" to "Lightning offer", "lnurl" to "Lightning address",
+        "onchain" to "On-chain address", "bip321" to "Bitcoin payment request")[type]
     fun recommend(rails: List<SendRail>, availability: Map<String, Boolean>) = rails.firstOrNull { availability[it.name] != false } ?: rails.firstOrNull()
     fun canNote(type: String?, allowed: Int) = type == "lnurl" && allowed > 0
-    fun canMax(type: String?, request: Map<String, String>?) = type == "onchain" || type == "bip321" && request?.containsKey("onchainAddress") == true
-    fun maxBalance(source: SendSource?, onchain: Long, offchain: Long) = when (source) { SendSource.onchain -> onchain; SendSource.offchain -> offchain; null -> maxOf(onchain, offchain) }
+    fun canMax(type: String?, request: Map<String, String>?) = type == "onchain" || (type == "bip321" && request?.containsKey("onchainAddress") == true)
+    fun maxBalance(source: SendSource?, onchain: Long,
+        offchain: Long) = when (source) { SendSource.onchain -> onchain; SendSource.offchain -> offchain; null -> maxOf(onchain, offchain) }
     fun sdkFeeRate(satsPerKwu: ULong): ULong = satsPerKwu / 250u + if (satsPerKwu % 250u == 0uL) 0u else 1u
 }

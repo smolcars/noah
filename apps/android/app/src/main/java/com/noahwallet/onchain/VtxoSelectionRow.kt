@@ -27,6 +27,9 @@ internal fun VtxoSelectionRow(id: String, amount: String, status: String, checke
     }
 }
 
+// VtxoSelectionSemanticsTest builds this standalone, so it stays a factory rather than a Modifier extension.
+@android.annotation.SuppressLint("ModifierFactoryExtensionFunction")
+@Suppress("LongParameterList") // the row's toggle state and the parts TalkBack reads
 internal fun vtxoSelectionModifier(id: String, amount: String, status: String, checked: Boolean,
     enabled: Boolean, onCheckedChange: (Boolean) -> Unit): Modifier = Modifier.fillMaxWidth()
     .toggleable(value = checked, enabled = enabled, role = Role.Checkbox, onValueChange = onCheckedChange)

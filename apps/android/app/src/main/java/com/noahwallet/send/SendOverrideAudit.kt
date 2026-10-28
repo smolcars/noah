@@ -17,6 +17,7 @@ import java.util.UUID
     companion object {
         const val titleText = "You could pay twice"
         const val confirmationText = "Start a new payment anyway"
+        @Suppress("MaxLineLength") // one translation source string
         const val warningText = "Forgetting this attempt does not cancel Bark’s stored transaction or its future broadcast retries. This payment may still complete. Check your full wallet history and confirm with the recipient first. Sending again may spend twice and cannot undo the first payment."
     }
 }

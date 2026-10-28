@@ -22,7 +22,11 @@ class RecurringRuntime private constructor(context: Context) {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
     val executor = RecurringExecutor(RecurringExecutor.Dependencies(store,
         RecurringJournal.shared(File(location.directory, "noah-recurring-journal.json")), SendRuntime.shared(context).controller,
-        ensureOpen = { services.ensureWalletOpen(walletMutationHeld = true) }, binding = { if (!location.databaseExists) throw RecurringExecutor.NoWallet(); RecurringStore.binding(location) },
+        ensureOpen = { services.ensureWalletOpen(walletMutationHeld = true) },
+        binding = {
+            if (!location.databaseExists) throw RecurringExecutor.NoWallet()
+            RecurringStore.binding(location)
+        },
         allowed = {
             requireAdmission(location, settings.persistedState<PersistedWalletState>(PersistedWalletState.key), services.recurringAutomationStorageFailed)
         }, quote = { RecurringRecipient.quote(it, services.session) },
@@ -41,7 +45,8 @@ class RecurringRuntime private constructor(context: Context) {
             }
         }, withWalletMutation = { services.lifecycle.withWalletMutation(it) }), scope)
     internal val syncForegroundAdmission = com.noahwallet.services.wallet.ForegroundSyncAdmission()
-    internal fun foregroundRunner(refreshSummary: suspend () -> Unit) = RecurringForegroundRunner(scope, refreshSummary = refreshSummary, isOnboarded = services::isOnboarded) { budget ->
+    internal fun foregroundRunner(refreshSummary: suspend () -> Unit) = RecurringForegroundRunner(scope, refreshSummary = refreshSummary,
+        isOnboarded = services::isOnboarded) { budget ->
         syncForegroundAdmission.run { admission ->
             services.syncInForeground(admission)
             if (budget.available && admission.available) executor.execute(budget = admission)
@@ -69,7 +74,8 @@ class RecurringRuntime private constructor(context: Context) {
         }
         internal fun requireAdmission(location: WalletDataLocation, wallet: PersistedWalletState?, storageFailed: Boolean) {
             if (!location.databaseExists) throw RecurringExecutor.NoWallet()
-            check(!storageFailed && !location.restorePending && !location.deletionMarker.exists() && wallet?.isInitialized != false && wallet?.isWalletSuspended != true) { "Wallet suspended or replacement pending. Sending is stopped." }
+            check(!storageFailed && !location.restorePending && !location.deletionMarker.exists() &&
+                wallet?.isInitialized != false && wallet?.isWalletSuspended != true) { "Wallet suspended or replacement pending. Sending is stopped." }
         }
         @Volatile private var instance: RecurringRuntime? = null
         fun shared(context: Context) = instance ?: synchronized(this) { instance ?: RecurringRuntime(context.applicationContext).also { instance = it } }
@@ -99,7 +105,8 @@ object RecurringRecipient {
         var payment = SendPayment(destination, type, schedule.amountSat, comment = schedule.comment)
         if (type == "lnurl") {
             val route = session.resolveSendRecipient(destination)
-            require(Math.multiplyExact(schedule.amountSat, 1000) in route.minMsat..route.maxMsat) { "The recipient no longer accepts this amount. Update or cancel the recurring payment." }
+            require(Math.multiplyExact(schedule.amountSat,
+                1000) in route.minMsat..route.maxMsat) { "The recipient no longer accepts this amount. Update or cancel the recurring payment." }
             // Match attended Send: a note must reach the recipient through LNURL.
             if (route.arkAddress != null && schedule.comment.isEmpty()) payment = payment.copy(destination = route.arkAddress, method = "ark")
         }

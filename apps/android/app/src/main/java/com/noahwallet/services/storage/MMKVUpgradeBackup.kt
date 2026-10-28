@@ -12,28 +12,30 @@ internal class MMKVUpgradeBackup(private val root: File, private val id: String,
     private val manifest get() = File(directory, "manifest")
 
     fun prepare() {
-        if (!directory.exists()) {
-            val staging = File(directory.path + ".pending")
-            if (staging.exists()) check(staging.deleteRecursively())
-            check(staging.mkdirs())
-            val present = names.map { File(root, it).exists() }
-            if (present.any { it }) {
-                names.filter { File(root, it).exists() }.forEach { name ->
-                    File(root, name).inputStream().use { input ->
-                        FileOutputStream(File(staging, name)).use { output -> input.copyTo(output); output.fd.sync() }
-                    }
-                }
-            }
-            FileOutputStream(File(staging, "manifest")).use {
-                it.write("${if (present.any { it }) 1 else 0}\n0".toByteArray()); it.fd.sync()
-            }
-            sync(staging)
-            check(staging.renameTo(directory))
-            sync(directory.parentFile!!)
-        }
+        if (!directory.exists()) stage()
         recordedSize()
         sync(directory)
         sync(directory.parentFile!!)
+    }
+
+    private fun stage() {
+        val staging = File(directory.path + ".pending")
+        if (staging.exists()) check(staging.deleteRecursively())
+        check(staging.mkdirs())
+        val present = names.map { File(root, it).exists() }
+        if (present.any { it }) {
+            names.filter { File(root, it).exists() }.forEach { name -> copySynced(File(root, name), File(staging, name)) }
+        }
+        FileOutputStream(File(staging, "manifest")).use {
+            it.write("${if (present.any { it }) 1 else 0}\n0".toByteArray()); it.fd.sync()
+        }
+        sync(staging)
+        check(staging.renameTo(directory))
+        sync(directory.parentFile!!)
+    }
+
+    private fun copySynced(source: File, target: File) = source.inputStream().use { input ->
+        FileOutputStream(target).use { output -> input.copyTo(output); output.fd.sync() }
     }
 
     val hasContent get() = manifest.readLines().first() == "1"

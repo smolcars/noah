@@ -21,14 +21,13 @@ class ScratchSpace(val root: File, private val syncDirectory: (File) -> Unit = {
 
     suspend fun drainForWalletDeletion(timeoutMillis: Long = 30_000) {
         synchronized(inUse) { check(!deleting); deleting = true }
-        try { kotlinx.coroutines.withTimeout(timeoutMillis) { operations.first { it == 0 } } }
-        catch (failure: Exception) {
-            finishWalletDeletion()
-            if (failure is kotlinx.coroutines.TimeoutCancellationException) {
-                throw com.noahwallet.services.wallet.WalletLifecycle.BackupBusy()
-            }
-            throw failure
-        }
+        var drained = false
+        try {
+            kotlinx.coroutines.withTimeout(timeoutMillis) { operations.first { it == 0 } }
+            drained = true
+        } catch (_: kotlinx.coroutines.TimeoutCancellationException) {
+            throw com.noahwallet.services.wallet.WalletLifecycle.BackupBusy()
+        } finally { if (!drained) finishWalletDeletion() }
     }
 
     fun finishWalletDeletion() = synchronized(inUse) { deleting = false }

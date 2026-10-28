@@ -12,7 +12,9 @@ object PaymentEncoding {
         if (value != value.lowercase() && value != value.uppercase()) return null
         val lower = value.lowercase(); val split = lower.lastIndexOf('1')
         if (split < 1) return null
-        val prefix = lower.take(split); val encoded = lower.drop(split + 1)
+        return decodeBech32(lower.take(split), lower.drop(split + 1))
+    }
+    private fun decodeBech32(prefix: String, encoded: String): Bech32? {
         if (encoded.length !in 6..8000 || prefix.any { it.code !in 33..126 }) return null
         val words = encoded.map { alphabet.indexOf(it) }
         if (words.any { it < 0 }) return null
@@ -65,15 +67,18 @@ object PaymentEncoding {
     }
     fun bitcoinNetwork(value: String): String? {
         val decoded = bech32(value)
-        if (decoded != null && value.length <= 90) {
-            val version = decoded.words.firstOrNull() ?: return null
-            val program = bytes(decoded.words.drop(1)) ?: return null
-            if (version !in 0..16 || program.size !in 2..40 ||
-                (if (version == 0) decoded.isM || program.size !in listOf(20, 32) else !decoded.isM)) return null
-            return mapOf("bc" to "mainnet", "tb" to "testnet", "bcrt" to "regtest")[decoded.prefix]
-        }
+        if (decoded != null && value.length <= 90) return segwitNetwork(decoded)
         return when (base58(value)?.first()?.toInt()?.and(255)) { 0, 5 -> "mainnet"; 111, 196 -> "testnet"; else -> null }
     }
+    private fun segwitNetwork(decoded: Bech32): String? {
+        val version = decoded.words.firstOrNull() ?: return null
+        val program = bytes(decoded.words.drop(1)) ?: return null
+        if (!validWitness(version, program.size, decoded.isM)) return null
+        return mapOf("bc" to "mainnet", "tb" to "testnet", "bcrt" to "regtest")[decoded.prefix]
+    }
+    /** BIP-141/350: v0 programs are 20 or 32 bytes under bech32; later versions use bech32m. */
+    private fun validWitness(version: Int, size: Int, isM: Boolean) = version in 0..16 && size in 2..40 &&
+        (if (version == 0) !isM && size in listOf(20, 32) else isM)
     fun bitcoinScript(value: String): ByteArray? {
         if (bitcoinNetwork(value) == null) return null
         bech32(value)?.let {
@@ -81,7 +86,8 @@ object PaymentEncoding {
             return byteArrayOf((if (version == 0) 0 else 0x50 + version).toByte(), program.size.toByte()) + program
         }
         val decoded = base58(value) ?: return null
-        return if (decoded[0].toInt() and 255 in listOf(0, 111)) byteArrayOf(0x76, 0xa9.toByte(), 0x14) + decoded.drop(1).toByteArray() + byteArrayOf(0x88.toByte(), 0xac.toByte())
+        return if (decoded[0].toInt() and 255 in listOf(0, 111)) byteArrayOf(0x76, 0xa9.toByte(),
+            0x14) + decoded.drop(1).toByteArray() + byteArrayOf(0x88.toByte(), 0xac.toByte())
         else byteArrayOf(0xa9.toByte(), 0x14) + decoded.drop(1).toByteArray() + byteArrayOf(0x87.toByte())
     }
     data class Invoice(val network: String, val sats: BigDecimal?, val hash: String, val expires: Long, val descriptionHash: String?,
@@ -91,25 +97,42 @@ object PaymentEncoding {
         if (decoded.isM || decoded.words.size < 111) return null
         val networkPrefix = listOf("lnbcrt", "lntbs", "lnbc", "lntb").firstOrNull { decoded.prefix.startsWith(it) } ?: return null
         val hrp = decoded.prefix.removePrefix(networkPrefix)
-        var amount: BigDecimal? = null
-        if (hrp.isNotEmpty()) {
-            val unit = hrp.last(); val suffix = unit in "munp"; val digits = if (suffix) hrp.dropLast(1) else hrp
-            if (digits.isEmpty() || digits.any { it !in '0'..'9' } || (unit == 'p' && !digits.endsWith('0'))) return null
-            amount = digits.toBigDecimalOrNull()?.multiply(if (suffix) mapOf('m' to "100000", 'u' to "100", 'n' to "0.1", 'p' to "0.0001").getValue(unit).toBigDecimal() else BigDecimal(100000000)) ?: return null
-        }
+        val amount = if (hrp.isEmpty()) null else hrpAmount(hrp) ?: return null
         val payload = decoded.words.dropLast(104)
+        val fields = invoiceFields(payload) ?: return null
+        val timestamp = payload.take(7).fold(0L) { acc, x -> acc * 32 + x }
+        return Invoice(mapOf("lnbc" to "mainnet", "lntb" to "testnet", "lntbs" to "signet", "lnbcrt" to "regtest").getValue(networkPrefix), amount,
+            fields.hash, timestamp + fields.expiry, fields.descriptionHash, fields.description)
+    }
+    /** A BOLT11 amount: digits and an optional multiplier; a pico amount must be whole millisatoshis. */
+    private fun hrpAmount(hrp: String): BigDecimal? {
+        val unit = hrp.last(); val suffix = unit in "munp"; val digits = if (suffix) hrp.dropLast(1) else hrp
+        val malformed = digits.isEmpty() || digits.any { it !in '0'..'9' } || (unit == 'p' && !digits.endsWith('0'))
+        if (malformed) return null
+        return digits.toBigDecimalOrNull()?.multiply(if (suffix) mapOf('m' to "100000", 'u' to "100", 'n' to "0.1",
+            'p' to "0.0001").getValue(unit).toBigDecimal() else BigDecimal(100000000))
+    }
+    private fun hash32(data: List<Int>) = bytes(data)?.takeIf { it.size == 32 }?.let(::hex)
+    private class InvoiceFields(val hash: String, val descriptionHash: String?, val expiry: Long, val description: String?)
+    /** The tagged fields after the timestamp; null unless they end exactly at the signature and include a payment hash. */
+    private fun invoiceFields(payload: List<Int>): InvoiceFields? {
         var index = 7; var hash: String? = null; var descriptionHash: String? = null; var expiry = 3600L; var description: String? = null
         while (index + 3 <= payload.size) {
             val tag = payload[index]; val count = payload[index + 1] * 32 + payload[index + 2]; index += 3
             if (index + count > payload.size) return null
             val data = payload.subList(index, index + count); index += count
-            if (tag == 1 || tag == 23) bytes(data)?.takeIf { it.size == 32 }?.let { if (tag == 1) hash = hex(it) else descriptionHash = hex(it) }
-            if (tag == 6) { if (data.size > 12) return null; expiry = data.fold(0L) { acc, x -> acc * 32 + x } }
-            if (tag == 13) description = utf8(data)
+            when (tag) {
+                1 -> hash = hash32(data) ?: hash
+                23 -> descriptionHash = hash32(data) ?: descriptionHash
+                6 -> {
+                    if (data.size > 12) return null
+                    expiry = data.fold(0L) { acc, x -> acc * 32 + x }
+                }
+                13 -> description = utf8(data)
+            }
         }
-        if (hash == null || index != payload.size) return null
-        val timestamp = payload.take(7).fold(0L) { acc, x -> acc * 32 + x }
-        return Invoice(mapOf("lnbc" to "mainnet", "lntb" to "testnet", "lntbs" to "signet", "lnbcrt" to "regtest").getValue(networkPrefix), amount, hash!!, timestamp + expiry, descriptionHash, description)
+        val found = hash ?: return null
+        return if (index != payload.size) null else InvoiceFields(found, descriptionHash, expiry, description)
     }
     /** A BOLT12 offer's `offer_description` (TLV 10): bech32 words without a checksum, `+` joins split parts. */
     fun offerDescription(offer: String): String? {
@@ -117,6 +140,20 @@ object PaymentEncoding {
         if (!value.startsWith("lno1")) return null
         val words = value.drop(4).map { alphabet.indexOf(it) }.takeIf { it.none { word -> word < 0 } } ?: return null
         val tlv = bytes(words) ?: return null
+        return description(TlvReader(tlv), tlv)
+    }
+    private fun description(reader: TlvReader, tlv: ByteArray): String? {
+        while (reader.index < tlv.size) {
+            val type = reader.bigSize()
+            val length = reader.bigSize()?.takeIf { it >= 0 && it <= tlv.size - reader.index }
+            if (type == null || length == null) return null
+            if (type == 10L) return utf8(tlv.copyOfRange(reader.index, reader.index + length.toInt()))
+            reader.index += length.toInt()
+        }
+        return null
+    }
+    /** BOLT's BigSize integers, read from [tlv] in order. */
+    private class TlvReader(private val tlv: ByteArray) {
         var index = 0
         fun bigSize(): Long? {
             val first = tlv.getOrNull(index++)?.toInt()?.and(255) ?: return null
@@ -124,13 +161,6 @@ object PaymentEncoding {
             if (index + width > tlv.size) return null
             return (0 until width).fold(0L) { acc, i -> (acc shl 8) or (tlv[index + i].toLong() and 255) }.also { index += width }
         }
-        while (index < tlv.size) {
-            val type = bigSize() ?: return null; val length = bigSize() ?: return null
-            if (length < 0 || length > tlv.size - index) return null
-            if (type == 10L) return utf8(tlv.copyOfRange(index, index + length.toInt()))
-            index += length.toInt()
-        }
-        return null
     }
     private fun utf8(words: List<Int>) = bytes(words)?.let(::utf8)
     private fun utf8(data: ByteArray): String? = runCatching {

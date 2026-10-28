@@ -24,6 +24,7 @@ object BackupCrypto {
     }
 
     /** Deterministic fixture entry point. Production callers must use fresh random salt/nonce. */
+    @Suppress("LongParameterList") // salt and nonce are the known-answer test seam
     internal fun encrypt(
         plaintext: ByteArray, mnemonic: String, version: Version, salt: ByteArray, nonce: ByteArray, rounds: Int = pbkdf2Rounds,
     ): ByteArray {
@@ -37,9 +38,7 @@ object BackupCrypto {
     }
 
     fun decrypt(envelope: ByteArray, mnemonic: String, expecting: Version, rounds: Int = pbkdf2Rounds): ByteArray {
-        if (envelope.size < 45) throw Failure(Reason.tooShort)
-        if ((envelope[0].toInt() and 255) > Version.snapshot.byte.toInt()) throw Failure(Reason.newerVersion)
-        if (envelope[0] != expecting.byte) throw Failure(Reason.unexpectedVersion)
+        headerFailure(envelope, expecting)?.let { throw Failure(it) }
         val key = deriveKey(mnemonic, envelope.copyOfRange(1, 17), rounds)
         return try {
             val cipher = Cipher.getInstance("AES/GCM/NoPadding")
@@ -49,6 +48,13 @@ object BackupCrypto {
         } catch (_: Exception) {
             throw Failure(Reason.authenticationFailed)
         } finally { key.fill(0) }
+    }
+
+    private fun headerFailure(envelope: ByteArray, expecting: Version): Reason? = when {
+        envelope.size < 45 -> Reason.tooShort
+        (envelope[0].toInt() and 255) > Version.snapshot.byte.toInt() -> Reason.newerVersion
+        envelope[0] != expecting.byte -> Reason.unexpectedVersion
+        else -> null
     }
 
     // Android only guarantees the PBKDF2-SHA256 factory on API 26+. RFC 8018's
