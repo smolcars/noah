@@ -1,6 +1,9 @@
-# Git hooks: `just install` (or `lefthook install`) sets them up; the tools come from the Nix shell.
+# Native checks for husky's pre-commit (`lefthook run pre-commit`); the tools come from the Nix shell.
 # Fast checks on staged files only; CI also builds with warnings as errors and runs Android Lint.
 # Fix formatting with `just native-format`.
+# husky owns the git hooks; lefthook only runs these jobs.
+no_auto_install: true
+
 pre-commit:
   parallel: true
   jobs:

@@ -1,2 +1,4 @@
 bun client check
 cargo fmt --check
+# Native lint on staged files (lefthook.yml); CI's native-lint job runs it too.
+if command -v lefthook >/dev/null; then lefthook run pre-commit; else echo "lefthook not found: native lint skipped (enter the Nix shell)"; fi

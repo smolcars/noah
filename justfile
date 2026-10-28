@@ -18,7 +18,6 @@ fmt:
 # Install dependencies
 install:
     bun install
-    command -v lefthook >/dev/null && lefthook install || echo "lefthook not found: enter the Nix shell to install the git hooks"
 
 # Start Expo dev server
 start:
