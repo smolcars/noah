@@ -45,7 +45,7 @@ internal fun OnchainPage(app: AppModel, nav: SettingsNav) {
     val locale = Locale.forLanguageTag(app.localeIdentifier)
     var minimum by remember { mutableStateOf<Long?>(null) }
     var confirmations by remember { mutableStateOf<Long?>(null) }
-    var autoBoard by remember { mutableStateOf(SettingsPreferences.transaction(app.settings.string("transaction-storage"))["isAutoBoardingEnabled"]?.jsonPrimitive?.booleanOrNull != false) }
+    var autoBoard by remember { mutableStateOf(autoBoardEnabled(app)) }
     var moving by rememberSaveable { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     LaunchedEffect(app.isWalletSuspended) {
@@ -58,11 +58,7 @@ internal fun OnchainPage(app: AppModel, nav: SettingsNav) {
         locale)
     val overview = model.overview
     // A submitted board until it has the confirmations Ark needs: Send's block row follows it.
-    val boarding = model.attempts.firstOrNull { attempt ->
-        val status = attempt.receipt?.chainStatus
-        attempt.quote.action == OnchainAction.board && attempt.receipt?.txid != null && attempt.overrideAudit == null &&
-            (status?.kind != ChainStatus.Kind.confirmed || overview != null && status.height != null && overview.tip - status.height + 1 < (confirmations ?: 1))
-    }
+    val boarding = model.attempts.firstOrNull { boardingUnsettled(it, overview, confirmations) }
     SettingsFrame(com.noahwallet.localization.tr("On-chain"), nav.back, foot = if (boarding != null) null else ({
         FootPill(tr("Move to Ark"), Modifier.testTag("board-open"), enabled = (overview?.confirmed ?: 0) > 0 && !model.busy && !app.isWalletSuspended) {
             model.invalidate(); moving = true
@@ -75,23 +71,39 @@ internal fun OnchainPage(app: AppModel, nav: SettingsNav) {
             else -> tr("Confirmed")
         })
         if (boarding != null && overview != null) ActivityBlockRow(overview.tip, boarding.receipt?.chainStatus?.height, confirmations ?: 1, locale)
-        SettingsGroup(rows = listOfNotNull(
-            { d -> SettingsRow(tr("Move automatically"), SettingsIcons.refresh, divider = d, modifier = Modifier.testTag("settings-auto-board"),
-                sub = minimum?.let { tr("Asks when you have {amount} or more", money(BoardingRules.threshold(it))) } ?: tr("Auto-board threshold unavailable"),
-                end = RowEnd.Toggle(autoBoard, !app.busy) { value ->
-                    app.action("Couldn't save auto-board preference.") {
-                        app.settings.set(SettingsPreferences.autoBoard(app.settings.string("transaction-storage"), value), "transaction-storage")
-                        autoBoard = value
-                    }
-                }) },
-            if (minimum != null) ({ d -> SettingsRow(tr("Smallest move"), SettingsIcons.ark, value = money(minimum!!), numeric = true, end = RowEnd.None,
-                divider = d) }) else null,
-        ))
+        AutoBoardRows(app, autoBoard, minimum, ::money) { autoBoard = it }
         FinePrint(tr("Bitcoin in Ark moves instantly and costs less to send.") + (confirmations?.let { " " + tr("It needs {n} confirmations to arrive.",
             it.toString()) } ?: ""))
         OnchainStatus(app, model)
     }
     if (moving) BoardSheet(app, model, overview?.confirmed ?: 0, ::money, scope) { moving = false; model.invalidate() }
+}
+
+private fun autoBoardEnabled(app: AppModel) =
+    SettingsPreferences.transaction(app.settings.string("transaction-storage"))["isAutoBoardingEnabled"]?.jsonPrimitive?.booleanOrNull != false
+
+/** A submitted board until it has the confirmations Ark needs. */
+private fun boardingUnsettled(attempt: OnchainOperationJournal.Attempt, overview: OnchainOverview?, confirmations: Long?): Boolean {
+    val status = attempt.receipt?.chainStatus
+    val submitted = attempt.quote.action == OnchainAction.board && attempt.receipt?.txid != null && attempt.overrideAudit == null
+    val short = overview != null && status?.height != null && overview.tip - status.height + 1 < (confirmations ?: 1)
+    return submitted && (status?.kind != ChainStatus.Kind.confirmed || short)
+}
+
+@Composable
+private fun AutoBoardRows(app: AppModel, autoBoard: Boolean, minimum: Long?, money: (Long) -> String, saved: (Boolean) -> Unit) {
+    SettingsGroup(rows = listOfNotNull(
+        { d -> SettingsRow(tr("Move automatically"), SettingsIcons.refresh, divider = d, modifier = Modifier.testTag("settings-auto-board"),
+            sub = minimum?.let { tr("Asks when you have {amount} or more", money(BoardingRules.threshold(it))) } ?: tr("Auto-board threshold unavailable"),
+            end = RowEnd.Toggle(autoBoard, !app.busy) { value ->
+                app.action("Couldn't save auto-board preference.") {
+                    app.settings.set(SettingsPreferences.autoBoard(app.settings.string("transaction-storage"), value), "transaction-storage")
+                    saved(value)
+                }
+            }) },
+        if (minimum != null) ({ d -> SettingsRow(tr("Smallest move"), SettingsIcons.ark, value = money(minimum), numeric = true, end = RowEnd.None,
+            divider = d) }) else null,
+    ))
 }
 
 /**
@@ -121,21 +133,19 @@ private fun BoardSheet(app: AppModel, model: OnchainModel, confirmed: Long, mone
                     Modifier.weight(1f).semantics { contentDescription = label }.testTag("board-amount"), enabled = !model.busy,
                     textStyle = SettingsType.total.copy(color = palette.foreground), singleLine = true, cursorBrush = SolidColor(palette.orange),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    decorationBox = { inner -> Box { if (amount.isEmpty()) Text("0", style = SettingsType.total, color = palette.muted); inner() } })
+                    decorationBox = { inner ->
+                        Box {
+                            if (amount.isEmpty()) Text("0", style = SettingsType.total, color = palette.muted)
+                            inner()
+                        }
+                    })
                 if (!bip177) Text(" " + tr("sats"), Modifier.padding(bottom = 6.dp), style = HomeType.line, color = palette.muted)
             }
             com.noahwallet.ui.home.Pill(tr("Max"), Modifier.testTag("board-max"), outlined = !max, enabled = !model.busy && confirmed > 0) {
                 haptics.selection(); amount = if (max) "" else "MAX"; model.invalidate()
             }
         }
-        if (quote != null) Column(Modifier.padding(top = 6.dp)) {
-            DetailRow(tr("Ark fee"), money(checkNotNull(quote.fee)), ValueKind.number, toasts = toasts)
-            DetailRow(tr("Network fee"), money(checkNotNull(quote.chainFee)), ValueKind.number, toasts = toasts)
-            DetailRow(tr("Arrives in Ark"), money(quote.net), ValueKind.number, toasts = toasts)
-            DetailRow(tr("Total"), money(quote.totalLeaving), ValueKind.number, toasts = toasts, last = true)
-            FinePrint(reviewText(quote))
-            if (!current) FinePrint(tr(OnchainFailure.changed.text), failed = true)
-        }
+        if (quote != null) BoardReviewRows(quote, current, money)
         model.error?.let { FinePrint(tr(it), failed = true) }
         SheetActions(tr("Cancel"), if (quote == null) tr("Review") else tr("Move"), onCancel = close, loading = model.busy, confirmTag = "board-review",
             enabled = !model.busy && !app.isWalletSuspended && if (quote == null) max || (sats ?: 0) > 0 else current, onConfirm = {
@@ -145,5 +155,18 @@ private fun BoardSheet(app: AppModel, model: OnchainModel, confirmed: Long, mone
                     else { model.confirm(); app.refresh(); if (model.error == null) { haptics.success(); close() } }
                 }
             })
+    }
+}
+
+@Composable
+private fun BoardReviewRows(quote: OnchainQuote, current: Boolean, money: (Long) -> String) {
+    val toasts = LocalSettingsToasts.current
+    Column(Modifier.padding(top = 6.dp)) {
+        DetailRow(tr("Ark fee"), money(checkNotNull(quote.fee)), ValueKind.number, toasts = toasts)
+        DetailRow(tr("Network fee"), money(checkNotNull(quote.chainFee)), ValueKind.number, toasts = toasts)
+        DetailRow(tr("Arrives in Ark"), money(quote.net), ValueKind.number, toasts = toasts)
+        DetailRow(tr("Total"), money(quote.totalLeaving), ValueKind.number, toasts = toasts, last = true)
+        FinePrint(reviewText(quote))
+        if (!current) FinePrint(tr(OnchainFailure.changed.text), failed = true)
     }
 }

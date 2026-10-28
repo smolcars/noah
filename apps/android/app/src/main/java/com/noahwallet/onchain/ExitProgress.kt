@@ -92,7 +92,9 @@ internal fun ExitProgressPage(app: AppModel, nav: SettingsNav, id: String) {
     // What the claim cost and where it went: Noah's record of it, or its attempt while the journal still has it.
     val claimRecords = remember(app.settings) { ExitClaimRecords.stored(app.settings) }
     val record = remember(model.revision, stage?.claimTxid) { claimRecords.of(id, stage?.claimTxid) }
-    val claim = model.attempts.firstOrNull { it.quote.action == OnchainAction.claim && id in it.quote.ids && (stage?.claimTxid == null || it.receipt?.txid == stage.claimTxid) }
+    val claim = model.attempts.firstOrNull {
+        it.quote.action == OnchainAction.claim && id in it.quote.ids && (stage?.claimTxid == null || it.receipt?.txid == stage.claimTxid)
+    }
     val claimEstimate by produceState<Long?>(null, stage?.phase == ExitStage.Phase.claimable) {
         if (stage?.phase == ExitStage.Phase.claimable) value = try { withContext(Dispatchers.IO) { app.session.exitCosts(listOf(id))[id]?.claim } }
         catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled } catch (_: Exception) { null }
@@ -189,6 +191,7 @@ internal fun ExitProgressContent(exit: ExitModel?, stage: ExitStage?, context: E
         if (wide) ExitHeader(exit, stage, received, money, exitSubLine(stage, context, money))
         if (failed) Warning(tr("Add about {amount} on-chain. Noah sends the next transaction once it confirms.", money(need)), failed = true)
         if (checkLink) SettingsLink(tr("Move exit forward"), Modifier.testTag("exit-check"), enabled = !busy && !suspended, onClick = check)
+        @Suppress("MaxLineLength") // one translation source string
         if (stage.stale && stage.live) Warning(trPlural("This exit is behind the current chain height: last checked {n} blocks ago, at block {height}. Moving it forward can also send exit transactions.",
             context.tip - (exit.details.tip_height ?: context.tip), number(exit.details.tip_height ?: 0)), SettingsIcons.clock)
         ExitRows(exit, stage, context, money)
@@ -305,6 +308,7 @@ private fun exitSubLine(stage: ExitStage, context: ExitContext, money: (Long) ->
 
 /** One sentence per phase beside the picture on wide windows (prototype `EXPL`). */
 @Composable
+@Suppress("MaxLineLength") // translation source strings
 private fun exitExplanation(stage: ExitStage, delta: Long?): String = when {
     stage.stale && stage.live -> tr("Noah hasn’t checked on this exit in a while. Moving it forward can also send its next step or raise a fee.")
     stage.attention == ExitStage.Attention.needsFunds -> tr("Each transaction’s fee comes from your confirmed on-chain bitcoin. Noah sends the next one once a deposit confirms.")
@@ -420,7 +424,8 @@ private fun ExitDetailRows(exit: ExitModel, stage: ExitStage, context: ExitConte
             val state = when {
                 tx?.status?.block != null -> tr("Block {height}", number(tx.status.block.height))
                 i == stage.current && stage.attention == ExitStage.Attention.needsFunds -> tr("Needs on-chain funds")
-                tx?.status?.kind == "awaiting-confirmation" -> if (tx.status.origin != null && tx.status.origin != "wallet") tr("Sent by someone else") else tr("In the mempool")
+                tx?.status?.kind == "awaiting-confirmation" ->
+                    if (tx.status.origin != null && tx.status.origin != "wallet") tr("Sent by someone else") else tr("In the mempool")
                 tx?.status?.kind == "awaiting-cpfp-broadcast" -> tr("Ready to send")
                 stage.phase in setOf(ExitStage.Phase.wait, ExitStage.Phase.claimable, ExitStage.Phase.claiming, ExitStage.Phase.claimed) -> tr("In a block")
                 else -> tr("Not sent yet")
@@ -456,6 +461,7 @@ private fun ExitDetailRows(exit: ExitModel, stage: ExitStage, context: ExitConte
 private fun CheckSheet(quote: OnchainQuote, busy: Boolean, money: (Long) -> String, dismiss: () -> Unit, check: () -> Unit) {
     var current by remember(quote) { mutableStateOf(quote.current()) }
     LaunchedEffect(quote) { while (current) { kotlinx.coroutines.delay(250); current = quote.current() } }
+    @Suppress("MaxLineLength") // one translation source string
     SettingsSheet(dismiss, tr("Move your exit forward?"),
         tr("Sends the next step of your exit, or raises the fee on a step that’s stuck. Fees come from your on-chain bitcoin. Noah also does this on its own, including in the background when the system lets it."),
         modifier = Modifier.testTag("exit-check-sheet")) { close ->

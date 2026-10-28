@@ -62,7 +62,8 @@ internal fun ExitClaimScreen(model: OnchainModel, nav: SettingsNav, phoneAddress
     }
     // Today's claim review for this destination: read-only, fresh for 30 s, asked again when the destination changes and when
     // the page comes back (pausing drops it), so Claim never stays off.
-    val resumed = androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle.currentStateAsState().value.isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED)
+    val resumed = androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle.currentStateAsState().value
+        .isAtLeast(androidx.lifecycle.Lifecycle.State.RESUMED)
     var pending by remember { mutableStateOf(false) }
     LaunchedEffect(destination, ids, resumed) {
         model.invalidate()
@@ -161,6 +162,7 @@ internal fun ExitClaimContent(exits: List<ExitModel>, tip: Long, quote: OnchainQ
             TotalRow(tr("You get"), known?.let { "~" + money(it.net) } ?: "—")
         }
         if (known != null) ExitRules.warning(known.amount, checkNotNull(known.fee), known.totalFee, claimOnly = true)?.let { Warning(tr(it), failed = true) }
+        @Suppress("MaxLineLength") // one translation source string
         if ((quote ?: fallback)?.feesUnknown == true) Warning(tr("Fee estimate unavailable. Fees and amount to receive are unknown. Continue without an estimate only if you accept this uncertainty."), failed = true)
         if (quote != null && !current) Warning(tr(OnchainFailure.changed.text), failed = true)
         FinePrint(tr("Every exit that’s ready goes in this one transaction. Earlier network fees aren’t taken again."))

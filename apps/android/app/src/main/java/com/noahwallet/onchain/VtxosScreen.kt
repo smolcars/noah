@@ -100,7 +100,10 @@ internal fun VtxosPage(app: AppModel, nav: SettingsNav) {
     SettingsFrame(tr("VTXOs"), nav.back, chip = if (filter == VtxoRules.Filter.all) null else ({
         FilterChip(filterName(filter)) { filter = VtxoRules.Filter.all }
     }), actions = {
-        VtxoMenu(filter, enabled = !model.busy, onFilter = { if (it != filter) haptics.selection(); filter = it },
+        VtxoMenu(filter, enabled = !model.busy, onFilter = {
+            if (it != filter) haptics.selection()
+            filter = it
+        },
             onSelect = { selecting = true; selected = VtxoRules.preselected(vtxos).toList(); model.invalidate() },
             onRefresh = { model.invalidate(); scope.launch { model.load() } })
     }, foot = if (!selecting) null else ({
@@ -385,7 +388,10 @@ internal fun VtxoDetailPage(app: AppModel, nav: SettingsNav, id: String) {
             if (stored != null) {
                 DetailRow(tr("VTXO ID"), short(id), ValueKind.mono, copy = id, toasts = toasts, last = true)
                 FinePrint(tr("Couldn't read wallet status. Pull to refresh."))
-            } else if (!model.loading && model.overview == null) FinePrint(tr("This VTXO is no longer in the wallet's current VTXOs. Refresh to check its status."))
+            } else if (!model.loading && model.overview == null) {
+                @Suppress("MaxLineLength") // one translation source string
+                FinePrint(tr("This VTXO is no longer in the wallet's current VTXOs. Refresh to check its status."))
+            }
             OnchainStatus(app, model)
             return@SettingsFrame
         }

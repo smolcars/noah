@@ -62,7 +62,8 @@ internal data class TreeShape(val kind: Kind, val group: String, val l: Float, v
         circle && other.circle -> hypot(x - other.x, y - other.y) < (r - l) / 2 + (other.r - other.l) / 2 + margin
         circle -> near(this, other, margin)
         other.circle -> near(other, this, margin)
-        else -> l - margin / 2 < other.r + margin / 2 && other.l - margin / 2 < r + margin / 2 && t - margin / 2 < other.b + margin / 2 && other.t - margin / 2 < b + margin / 2
+        else -> l - margin / 2 < other.r + margin / 2 && other.l - margin / 2 < r + margin / 2 &&
+            t - margin / 2 < other.b + margin / 2 && other.t - margin / 2 < b + margin / 2
     }
 
     fun inside(width: Float, height: Float) = l >= 0f && t >= 0f && r <= width && b <= height
@@ -236,7 +237,7 @@ internal class TreeLayout(val scene: ExitScene, val words: TreeStrings, val geo:
         fun frame(item: TreeLabels.Item, geo: TreeGeometry, measure: TreeMeasure, group: String): TreeShape {
             val width = item.lines.indices.maxOf { measure.width(item.lines[it].text, lineSize(item, it, geo), item.lines[it].bold) }
             var l = item.x?.let { it - width } ?: geo.labels; var t = item.top; var r = l + width; var b = item.bottom
-            if (item.pill != null) pill(item, geo, measure).let { (pl, pt, pr, pb) -> l = min(l, pl); t = min(t, pt); r = max(r, pr); b = max(b, pb) }
+            if (item.pill != null) pill(item, geo, measure).let { p -> l = min(l, p[0]); t = min(t, p[1]); r = max(r, p[2]); b = max(b, p[3]) }
             return TreeShape.box(TreeShape.Kind.label, group, l, t, r, b)
         }
 

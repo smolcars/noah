@@ -243,7 +243,8 @@ internal class ExitFunding(private val interval: Long, private val now: () -> Lo
             val tried = entry.tried || (run != null && now() - entry.since >= interval)
             val fee = exit.nextPackageFee
             tried && fee != null && confirmed < fee
-        }.values.map { it.id }.toSet() + exits.filter { exit -> reported[exit.id]?.let { exit.state !in ExitTimeline.terminal && confirmed < it } == true }.map { it.id }
+        }.values.map { it.id }.toSet() +
+            exits.filter { exit -> reported[exit.id]?.let { exit.state !in ExitTimeline.terminal && confirmed < it } == true }.map { it.id }
     }
 
     /** A Check the chain's statuses short of confirmed funds: what bark needs for each exit ([needed]). */
@@ -271,13 +272,15 @@ internal class ExitFunding(private val interval: Long, private val now: () -> Lo
 
     private fun parkedIn(exits: List<ExitModel>) = exits.mapNotNull { exit ->
         exit.details.transactions?.firstOrNull { it.status.kind != "confirmed" }
-            ?.takeIf { exit.state == "Processing" && it.status.kind == "awaiting-cpfp-broadcast" }?.let { "${exit.id}/${it.txid}/${ExitStages.episode(exit, it.txid)}" to exit }
+            ?.takeIf { exit.state == "Processing" && it.status.kind == "awaiting-cpfp-broadcast" }
+            ?.let { "${exit.id}/${it.txid}/${ExitStages.episode(exit, it.txid)}" to exit }
     }.toMap()
 
     companion object {
         /** bark's daemon interval as Noah configures it, with a margin for the progress itself. */
         val shared by lazy {
-            ExitFunding(com.noahwallet.services.wallet.WalletConfiguration.base(com.noahwallet.BuildConfig.APP_VARIANT).daemonSyncIntervalSecs.toLong() * 1_000 + 15_000)
+            val configuration = com.noahwallet.services.wallet.WalletConfiguration.base(com.noahwallet.BuildConfig.APP_VARIANT)
+            ExitFunding(configuration.daemonSyncIntervalSecs.toLong() * 1_000 + 15_000)
         }
     }
 }

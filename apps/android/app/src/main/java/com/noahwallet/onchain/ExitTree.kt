@@ -198,7 +198,10 @@ internal object ExitFold {
                 val run = runs.firstOrNull { i in it.range }
                 if (run == null) { add(i..i); i++; continue }
                 val r = run.range; val folded = r.count() - run.own
-                if (run.old) { if (folded > 0) add(r.first until r.first + folded); for (k in r.first + folded..r.last) add(k..k) }
+                if (run.old) {
+                    if (folded > 0) add(r.first until r.first + folded)
+                    for (k in r.first + folded..r.last) add(k..k)
+                }
                 else { for (k in r.first until r.first + run.own) add(k..k); if (folded > 0) add(r.first + run.own..r.last) }
                 i = r.last + 1
             }
@@ -414,7 +417,8 @@ internal object TreeLabels {
         fun fold(folded: List<Item>): Item? {
             val from = folded.minOf { it.blocks!!.first }; val to = folded.maxOf { it.blocks!!.last }
             val middle = folded.map { it.y }.average().toFloat()
-            val ys = listOf(middle) + (folded.map { it.y } + generateSequence(top) { it + 2 }.takeWhile { it <= bottom }).sortedBy { kotlin.math.abs(it - middle) }
+            val ys = listOf(middle) +
+                (folded.map { it.y } + generateSequence(top) { it + 2 }.takeWhile { it <= bottom }).sortedBy { kotlin.math.abs(it - middle) }
             val spots = ys.map { y -> span(fit(Item(y, listOf(Line(range(from, to), Tone.strong)), 0f, blocks = from..to, key = "range"))) }
             return spots.firstOrNull { !clash(it, 3f) } ?: spots.firstOrNull { !clash(it, 1f) }
         }
@@ -520,7 +524,9 @@ internal object ExitGutter {
         fun branches(group: List<Int>, at: Int) = group.filter { ids[it].size > at }.groupBy { ids[it][at] }.values
         fun least(group: List<Int>, from: Int): Int {
             val p = parting(group, from); val trunk = kinds(group, from, p)
-            val own = trunk.count { it == ExitFold.Kind.current } + trunk.indices.count { i -> trunk[i] != ExitFold.Kind.current && trunk.getOrNull(i - 1).let { it == null || it == ExitFold.Kind.current } }
+            val own = trunk.count { it == ExitFold.Kind.current } + trunk.indices.count { i ->
+                trunk[i] != ExitFold.Kind.current && trunk.getOrNull(i - 1).let { it == null || it == ExitFold.Kind.current }
+            }
             return own + (branches(group, p).maxOfOrNull { least(it, p) } ?: 0)
         }
         fun fold(group: List<Int>, from: Int, budget: Int) {

@@ -229,7 +229,8 @@ internal fun ExitWarningContent(exits: List<ExitModel>, tip: Long, delta: Long?,
         }
         LaunchedEffect(exits.isNotEmpty()) { if (exits.isNotEmpty()) revealed.value = true }
         AnimatedVisibility(shown, enter = enter,
-            exit = if (reduceMotion) fadeOut(tween(NoahTokens.Motion.REDUCE_MOTION_FADE_MS)) else fadeOut(NoahTokens.Motion.snappy()) + shrinkVertically(NoahTokens.Motion.snappy())) {
+            exit = if (reduceMotion) fadeOut(tween(NoahTokens.Motion.REDUCE_MOTION_FADE_MS))
+            else fadeOut(NoahTokens.Motion.snappy()) + shrinkVertically(NoahTokens.Motion.snappy())) {
             ExitEntry.of(stages.values)?.let { entry ->
                 ExitEntryCard(entry, exitCounts(stages.values), Modifier.padding(top = 14.dp)) { if (exits.size == 1) open(exits[0].id) else all() }
             }
@@ -436,12 +437,15 @@ internal fun ExitChooseContent(all: List<VtxoModel>, costs: Map<String, ExitCost
             ExitValueRow(tr("Claim fee"), fees?.fee?.let { "~" + money(it) } ?: "—", ValueKind.number, last = true)
             TotalRow(tr("You get"), fees?.fee?.let { "~" + money(ExitRules.received(value, it)) } ?: money(value))
         }
+        val unestimated = chosen.isNotEmpty() && (classified || !everything) && quote == null
         if (short > 0) {
             Warning(tr("Add about {amount} on-chain first. Each exit transaction’s fee comes from there.", money(short)), failed = true)
             SettingsLink(tr("Add on-chain funds"), Modifier.padding(top = 4.dp).testTag("exit-add-funds")) { deposit(short) }
-        } else if (fees != null && confirmed != null) FinePrint(tr("Network fees come from your on-chain {amount} at {rate} sat/vB. Transactions your VTXOs share are paid once. Fees may change.",
-            money(confirmed), fees.feeRate.toString()))
-        else if (chosen.isNotEmpty() && (classified || !everything) && quote == null) FinePrint(tr("Fee estimate unavailable"))
+        } else if (fees != null && confirmed != null) {
+            @Suppress("MaxLineLength") // one translation source string
+            FinePrint(tr("Network fees come from your on-chain {amount} at {rate} sat/vB. Transactions your VTXOs share are paid once. Fees may change.",
+                money(confirmed), fees.feeRate.toString()))
+        } else if (unestimated) FinePrint(tr("Fee estimate unavailable"))
         if (fees != null && value > 0 && fees.totalFee >= value) Warning(tr("Fees are more than these VTXOs are worth."), failed = true)
         if (everything) {
             if (unknown > 0) {
@@ -526,7 +530,10 @@ internal fun ExitDepositSheet(app: AppModel, need: Long, dismiss: () -> Unit) {
     var address by remember { mutableStateOf<String?>(null) }
     var error by remember { mutableStateOf<String?>(null) }
     LaunchedEffect(app.isWalletSuspended) {
-        try { if (!onchainReady(app)) fail(OnchainFailure.unavailable); address = app.session.exitDepositAddress() }
+        try {
+            if (!onchainReady(app)) fail(OnchainFailure.unavailable)
+            address = app.session.exitDepositAddress()
+        }
         catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
         catch (_: Exception) { error = "Couldn't load a deposit address. Close and try again when the wallet is ready." }
     }

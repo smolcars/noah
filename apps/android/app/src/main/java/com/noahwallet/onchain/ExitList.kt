@@ -82,7 +82,10 @@ internal fun ExitListContent(exits: List<ExitModel>, tip: Long, needsFunds: Set<
     val shared = ExitList.shared(exits)
     ExitFrame(tr("Exits"), back, chip = filter?.let { key -> { com.noahwallet.ui.settings.FilterChip(tr(ExitTimeline.labels[key] ?: key)) { filter = null } } },
         actions = {
-            StateMenu(filter, exits.map { it.state }.distinct()) { if (it != filter) haptics.selection(); filter = it }
+            StateMenu(filter, exits.map { it.state }.distinct()) {
+                if (it != filter) haptics.selection()
+                filter = it
+            }
         }, foot = {
             FootPill(tr("Exit more VTXOs"), Modifier.testTag("exit-more"), wrap = true, outlined = claimable.isNotEmpty(), enabled = !suspended, onClick = more)
             if (claimable.isNotEmpty()) FootPill(tr("Claim {amount}", money(claimable.sumOf { it.amount })), Modifier.testTag("exit-list-claim"), wrap = true,
@@ -102,6 +105,7 @@ internal fun ExitListContent(exits: List<ExitModel>, tip: Long, needsFunds: Set<
         }
         // Today's stale-exit warning, only with Noah's evidence that nothing progresses these.
         val stale = live.count { stages.getValue(it.id).stale }
+        @Suppress("MaxLineLength") // one translation source string
         if (stale > 0) Warning(trPlural("{n} exits are behind the current chain height. Move any of them forward to catch up; this can also send exit transactions.", stale),
             SettingsIcons.clock)
         val visible = exits.filter { filter == null || it.state == filter }
@@ -205,7 +209,7 @@ private fun SharedRows(rows: List<Pair<ExitModel, ExitStage>>, tip: Long, money:
     val paths = rows.map { (exit, stage) -> ExitGutter.path(exit, stage) }
     val coins = rows.mapIndexed { i, (_, stage) -> GutterCoin(paths[i], stage, tip) }
     val density = androidx.compose.ui.platform.LocalDensity.current.density
-    val centers = remember(rows.size) { mutableStateListOf(*Array(rows.size) { Float.NaN }) }
+    val centers = remember(rows.size) { List(rows.size) { Float.NaN }.toMutableStateList() }
     // Each transaction is drawn once, in its furthest state among the exits that share it (as the gutter's layout draws it).
     val states = ExitGutter.states(paths)
     val waiting = paths.flatMap { it.dropLast(1) }.map { it.first }.distinct().filter { states[it] == ExitGutter.St.waiting }

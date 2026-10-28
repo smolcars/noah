@@ -106,7 +106,8 @@ internal fun ExitPicture(scene: ExitScene, description: String, modifier: Modifi
         val shown = move.to
         val layout = TreeLayout.of(shown, w, h, scale, wide, words, measure, balance, received)
         val before = move.from?.takeIf { it != shown && !move.labels.isNaN() }?.let { TreeLayout.of(it, w, h, scale, wide, words, measure, balance, received) }
-        val stay = before?.labels.orEmpty().filter { old -> layout.labels.any { it.key == old.key && kotlin.math.abs(it.top - old.top) < .5f } }.map { it.key }.toSet()
+        val stay = before?.labels.orEmpty().filter { old -> layout.labels.any { it.key == old.key && kotlin.math.abs(it.top - old.top) < .5f } }
+            .map { it.key }.toSet()
         val frame = { TreeFrame(layout.geo, move, clock.value, before?.ys) }
         Glows(frame, breath, palette, shown)
         Canvas(Modifier.fillMaxSize()) {
@@ -180,7 +181,8 @@ private fun clamp(x: Float, a: Float = 0f, b: Float = 1f) = x.coerceIn(a, b)
 private object TreeIcons {
     private fun parse(d: String) = PathParser().parsePathString(d).toPath()
     val phone = parse("m0 0M8.5 2.8h7a2.2 2.2 0 0 1 2.2 2.2v14a2.2 2.2 0 0 1-2.2 2.2h-7A2.2 2.2 0 0 1 6.3 19V5a2.2 2.2 0 0 1 2.2-2.2zM10.6 18.3h2.8")
-    val wallet = parse("m0 0M4.5 7.2A2.2 2.2 0 0 1 6.7 5h9.8v2.6M4.5 7.2v10.6a1.9 1.9 0 0 0 1.9 1.9h12.4a.9.9 0 0 0 .9-.9v-9.5a.9.9 0 0 0-.9-.9H6.7a2.2 2.2 0 0 1-2.2-2.2zM15.6 13.6h.01")
+    val wallet = parse("m0 0M4.5 7.2A2.2 2.2 0 0 1 6.7 5h9.8v2.6" +
+        "M4.5 7.2v10.6a1.9 1.9 0 0 0 1.9 1.9h12.4a.9.9 0 0 0 .9-.9v-9.5a.9.9 0 0 0-.9-.9H6.7a2.2 2.2 0 0 1-2.2-2.2zM15.6 13.6h.01")
     val check = parse("m0 0M5 12.5l4.5 4.5L19 7.5")
 }
 
@@ -292,7 +294,11 @@ private fun DrawScope.drawTree(f: TreeFrame, palette: NoahTokens.Palette, measur
     fun measure(value: String, size: Float, bold: Boolean = false) = measurer.measure(value, styles.style(size, bold))
     val canU = f.cancel; val treeA = f.tree
     val labA = if (s.explain) m.labels(t) else 1 - f.dim
-    fun tone(tone: TreeLabels.Tone) = when (tone) { TreeLabels.Tone.strong -> palette.foreground; TreeLabels.Tone.failure -> palette.failure; else -> palette.muted }
+    fun tone(tone: TreeLabels.Tone) = when (tone) {
+        TreeLabels.Tone.strong -> palette.foreground
+        TreeLabels.Tone.failure -> palette.failure
+        else -> palette.muted
+    }
 
     // Ark: a faint line at the top with the server. Your VTXO sits on it until the exit starts; a cancel brings it back.
     val arkA = m.ark(t)
@@ -448,7 +454,8 @@ private fun DrawScope.drawTree(f: TreeFrame, palette: NoahTokens.Palette, measur
     val land = f.land
     if (land < .98f) treeCoin(f.coin, f.coinR * (1 + .18f * (1 - m.stamp(last, t)) * if (coinMined > 0f) 1f else 0f),
         if (coinMined > .5f) palette.foreground else palette.soft, palette.orange, 1 - clamp((land - .85f) / .13f))
-    if (f.send(last) > 0f && coinMined < 1f && f.pulse != last && !s.canceled) drawCircle(if (s.stale) palette.muted else palette.orange, f.coinR + 5, f.coin,
+    val sending = f.send(last) > 0f && coinMined < 1f
+    if (sending && f.pulse != last && !s.canceled) drawCircle(if (s.stale) palette.muted else palette.orange, f.coinR + 5, f.coin,
         alpha = f.send(last) * .6f, style = Stroke(1.6f, pathEffect = PathEffect.dashPathEffect(floatArrayOf(3f, 2.6f))))
     if (land > .5f) drawCircle(palette.muted, rC * .8f, Offset(tx, yC), alpha = .45f * clamp((land - .5f) * 2) * treeA,
         style = Stroke(1.3f, pathEffect = PathEffect.dashPathEffect(floatArrayOf(3f, 3f))))
@@ -503,7 +510,8 @@ private fun DrawScope.drawTree(f: TreeFrame, palette: NoahTokens.Palette, measur
             if (a <= .01f) continue
             val x = item.x ?: geo.labels; val align = if (item.x != null) 1 else -1
             // The current pose's pill and its first line(s) are the overlay's ([Pill]), which breathes.
-            if (item.pill != null && pills) TreeLayout.pill(item, geo) { text, size, bold -> styles.width(measurer, text, size, bold) }.let { (l, top, r, b) ->
+            if (item.pill != null && pills) TreeLayout.pill(item, geo) { text, size, bold -> styles.width(measurer, text, size, bold) }.let { box ->
+                val l = box[0]; val top = box[1]; val r = box[2]; val b = box[3]
                 val radius = CornerRadius((geo.lineHeight + 5) / 2)
                 drawRoundRect(palette.background, Offset(l, top), Size(r - l, b - top), radius, alpha = a)
                 drawRoundRect(pillColor(item.pill, palette), Offset(l, top), Size(r - l, b - top), radius, alpha = a * .9f, style = Stroke(1.4f))
@@ -616,7 +624,8 @@ private fun Pill(item: TreeLabels.Item, layout: TreeLayout, measurer: TextMeasur
     breath: Breath, palette: NoahTokens.Palette, fixed: Float?, move: TreeMotion) {
     val geo = layout.geo
     val pill = checkNotNull(item.pill)
-    val (l, t, r, b) = TreeLayout.pill(item, geo, measure)
+    val box = TreeLayout.pill(item, geo, measure)
+    val l = box[0]; val t = box[1]; val r = box[2]; val b = box[3]
     val lines = (0 until item.head).map { measurer.measure(item.lines[it].text, styles.style(geo.fontSize, item.lines[it].bold)) }
     val right = item.x != null
     Box(Modifier.offset { IntOffset((l * density).roundToInt(), (t * density).roundToInt()) }.size((r - l).dp, (b - t).dp).drawBehind {

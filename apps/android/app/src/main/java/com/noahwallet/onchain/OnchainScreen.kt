@@ -39,7 +39,10 @@ private fun onchainWallet(app: AppModel, rule: (Boolean, Boolean, Boolean, Boole
 /** Waits while the wallet is only briefly not ready ([ExitRules.settling]), as after every app switch; true once it's ready. */
 internal suspend fun onchainSettle(app: AppModel): Boolean {
     // shortcut: checks every half second for up to 30 s; a flow of the session's state would replace it.
-    repeat(60) { if (!onchainWallet(app, ExitRules::settling)) return onchainReady(app); delay(500) }
+    repeat(60) {
+        if (!onchainWallet(app, ExitRules::settling)) return onchainReady(app)
+        delay(500)
+    }
     return onchainReady(app)
 }
 internal fun onchainDependencies(app: AppModel) =
@@ -163,7 +166,11 @@ internal fun TransactionRow(txid: String) {
     val uri = LocalUriHandler.current
     DetailRow("Transaction ID", txid)
     TextButton({ copy(context, txid) }) { Text(tr("Copy transaction ID")) }
-    if (BuildConfig.APP_VARIANT != "regtest") TextButton({ uri.openUri("https://mempool.space/" + (if (BuildConfig.APP_VARIANT == "signet") "signet/" else "") + "tx/$txid") }) { Text(tr("View in explorer")) }
+    if (BuildConfig.APP_VARIANT != "regtest") {
+        TextButton({ uri.openUri("https://mempool.space/" + (if (BuildConfig.APP_VARIANT == "signet") "signet/" else "") + "tx/$txid") }) {
+            Text(tr("View in explorer"))
+        }
+    }
 }
 
 @Composable
@@ -209,7 +216,9 @@ internal fun OnchainStatus(app: AppModel, model: OnchainModel) {
     overrideID?.let { id -> WalletAlertDialog(onDismissRequest = { overrideID = null },
         title = { Text(tr(OnchainOperationJournal.overrideTitle)) }, text = { Text(tr(OnchainOperationJournal.overrideWarning)) },
         dismissButton = { TextButton({ overrideID = null }) { Text(tr("Keep attempt")) } },
-        confirmButton = { TextButton({ overrideID = null; scope.launch { model.overrideUncertain(id) } }) { Text(tr(OnchainOperationJournal.overrideConfirmation)) } }) }
+        confirmButton = {
+            TextButton({ overrideID = null; scope.launch { model.overrideUncertain(id) } }) { Text(tr(OnchainOperationJournal.overrideConfirmation)) }
+        }) }
     if (model.estimateFallback != null) {
         Text(tr("Fee estimate unavailable"))
         TextButton(model::continueWithoutEstimate, enabled = !model.busy) { Text(tr("Continue without estimate")) }
@@ -253,11 +262,15 @@ internal fun OnchainReview(app: AppModel, quote: OnchainQuote, onDismiss: () -> 
             if (quote.action in setOf(OnchainAction.startExit, OnchainAction.progress, OnchainAction.claim)) {
                 if (quote.fee != null && quote.chainFee != null) ExitRules.warning(quote.amount, quote.fee, quote.totalFee,
                     quote.action == OnchainAction.claim)?.let { Text(tr(it), color = MaterialTheme.colorScheme.error) }
+                @Suppress("MaxLineLength") // one translation source string
                 if (!quote.feesUnknown && !quote.fundable) Text(tr("Additional confirmed onchain funds required. You are starting tracking anyway; fund the wallet before progressing."))
             }
             if (!current) Text(tr(OnchainFailure.changed.text), color = MaterialTheme.colorScheme.error)
             Button(confirm,
-                enabled = current && !app.isWalletSuspended) { Text(tr(if (quote.feesUnknown) { if (quote.action == OnchainAction.claim) "Broadcast without estimate" else "Start Selected Exit" } else quote.action.title)) }
+                enabled = current && !app.isWalletSuspended) {
+                val unestimated = if (quote.action == OnchainAction.claim) "Broadcast without estimate" else "Start Selected Exit"
+                Text(tr(if (quote.feesUnknown) unestimated else quote.action.title))
+            }
             TextButton(cancel) { Text(tr(cancelTitle)) }
         }
     }
@@ -266,6 +279,7 @@ internal fun OnchainReview(app: AppModel, quote: OnchainQuote, onDismiss: () -> 
 @Composable
 internal fun reviewText(quote: OnchainQuote): String = tr(reviewExplanation(quote)) +
     if (quote.action == OnchainAction.board && quote.boardAll) " " + tr("MAX uses confirmed funds only and deducts the onchain fee from that balance.") else ""
+@Suppress("MaxLineLength") // translation source strings
 internal fun reviewExplanation(quote: OnchainQuote): String = when (quote.action) {
     OnchainAction.board -> "Move onchain bitcoin into Ark using this exact signed funding transaction. The boarding amount includes the Ark fee; the onchain fee is paid in addition. Funds become spendable after the board completes. This review expires after two minutes."
     OnchainAction.refresh -> "This refreshes the selected VTXOs in a delegated Ark round."
