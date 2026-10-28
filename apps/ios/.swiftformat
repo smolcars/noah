@@ -1,0 +1,17 @@
+# Matches the house style: compact one-line bodies, no blank lines between members, inline pattern lets, wide lines.
+--swift-version 6.0
+# NoahAppIntents.swift mirrors the RN copy line for line; AppIntentTests compares their 2-space-indented declarations.
+--exclude Noah/API/Generated,build,Noah/Services/AppIntents/NoahAppIntents.swift
+--indent 4
+--max-width 160
+--ranges no-space
+--decimal-grouping ignore
+--pattern-let inline
+--closing-paren same-line
+--disable wrapFunctionBodies,wrapPropertyBodies,wrapLoopBodies
+--disable blankLinesBetweenScopes,conditionalAssignment,docComments,noForceUnwrapInTests
+--disable hoistTry,hoistAwait,andOperator,wrapMultilineStatementBraces
+# Explicit Sendable documents intent and guards against members that would drop the inferred conformance.
+--disable redundantSendable
+# Breaks enums with a doc comment after the case list (moves it inside `case a, b, ///`).
+--disable docCommentsBeforeModifiers

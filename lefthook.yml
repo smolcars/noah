@@ -1,42 +1,26 @@
-# EXAMPLE USAGE:
-#
-#   Refer for explanation to following link:
-#   https://lefthook.dev/configuration/
-#
-# pre-push:
-#   jobs:
-#     - name: packages audit
-#       tags:
-#         - frontend
-#         - security
-#       run: yarn audit
-#
-#     - name: gems audit
-#       tags:
-#         - backend
-#         - security
-#       run: bundle audit
-#
-# pre-commit:
-#   parallel: true
-#   jobs:
-#     - run: yarn eslint {staged_files}
-#       glob: "*.{js,ts,jsx,tsx}"
-#
-#     - name: rubocop
-#       glob: "*.rb"
-#       exclude:
-#         - config/application.rb
-#         - config/routes.rb
-#       run: bundle exec rubocop --force-exclusion {all_files}
-#
-#     - name: govet
-#       files: git ls-files -m
-#       glob: "*.go"
-#       run: go vet {files}
-#
-#     - script: "hello.js"
-#       runner: node
-#
-#     - script: "hello.go"
-#       runner: go run
+# Git hooks: `just install` (or `lefthook install`) sets them up; the tools come from the Nix shell.
+# Fast checks on staged files only; CI also builds with warnings as errors and runs Android Lint.
+# Fix formatting with `just native-format`.
+pre-commit:
+  parallel: true
+  jobs:
+    - name: swiftformat
+      root: apps/ios/
+      glob: "*.swift"
+      exclude: ["apps/ios/Noah/API/Generated/**", "apps/ios/Noah/Services/AppIntents/NoahAppIntents.swift"]
+      run: swiftformat --lint {staged_files}
+    - name: swiftlint
+      root: apps/ios/
+      glob: "*.swift"
+      exclude: ["apps/ios/Noah/API/Generated/**"]
+      run: swiftlint lint --strict --quiet --force-exclude {staged_files}
+    - name: ktlint
+      root: apps/android/
+      glob: "*.{kt,kts}"
+      exclude: ["**/generated/**"]
+      run: ktlint --relative {staged_files}
+    - name: detekt
+      root: apps/android/
+      glob: "*.{kt,kts}"
+      exclude: ["**/generated/**"]
+      run: detekt --input "$(echo {staged_files} | tr ' ' ',')" --build-upon-default-config --all-rules --config Config/detekt/detekt.yml

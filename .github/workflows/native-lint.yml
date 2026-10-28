@@ -1,0 +1,40 @@
+name: Native lint
+
+on:
+  pull_request:
+    paths:
+      - "apps/ios/**"
+      - "apps/android/**"
+      - "flake.nix"
+      - "flake.lock"
+      - "justfile"
+      - ".github/workflows/native-lint.yml"
+      - "!**/*.md"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# A new push to the same PR cancels the old run.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+# The same pinned tools as the pre-commit hook, from the flake's native-lint shell. Compiler warnings
+# and Android Lint run in native-ios.yml and native-android.yml, which build the apps anyway.
+jobs:
+  lint:
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        platform: [ios, android]
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install Nix
+        uses: cachix/install-nix-action@13d8dd58da0234aa297dedd986986ccb8e7f3e24 # v31.11.1
+
+      - name: Lint
+        run: nix develop .#native-lint --command just ${{ matrix.platform }}-native-lint

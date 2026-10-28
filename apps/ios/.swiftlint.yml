@@ -1,0 +1,84 @@
+# Every SwiftLint rule is on except those listed below; SwiftFormat owns layout.
+# CI runs --strict against .swiftlint-baseline.json, so only new violations fail.
+# For a deliberate exception, disable the rule on that line and say why:
+#   // swiftlint:disable:next force_try - pattern is a compile-time constant
+excluded:
+  - Noah/API/Generated
+  - build
+opt_in_rules:
+  - all
+disabled_rules:
+  # Layout: SwiftFormat enforces the house style instead.
+  - attributes
+  - closure_end_indentation
+  - collection_alignment
+  - conditional_returns_on_newline
+  - contrasted_opening_brace
+  - indentation_width
+  - let_var_whitespace
+  - multiline_arguments
+  - multiline_arguments_brackets
+  - multiline_call_arguments
+  - multiline_function_chains
+  - multiline_literal_brackets
+  - multiline_parameters
+  - multiline_parameters_brackets
+  - number_separator
+  - prefer_condition_list
+  - sorted_imports
+  - switch_case_on_newline
+  - trailing_closure
+  - vertical_parameter_alignment_on_call
+  - vertical_whitespace_closing_braces
+  - operator_usage_whitespace
+  - vertical_whitespace_between_cases
+  # Ordering and declaration style with no safety value.
+  - file_types_order
+  - type_contents_order
+  - sorted_enum_cases
+  - one_declaration_per_file
+  - no_grouping_extension
+  - anonymous_argument_in_multiline_closure
+  - prefixed_toplevel_constant
+  - object_literal
+  - required_deinit
+  # Contradicts Swift idiom: type inference and internal-by-default.
+  - explicit_type_interface
+  - explicit_acl
+  - explicit_top_level_acl
+  - explicit_enum_raw_value
+  # Conflicts with extension_access_modifier, and with SwiftFormat's inline pattern lets.
+  - no_extension_access_modifier
+  - pattern_matching_keywords
+  # Layout constants in SwiftUI are clearer inline.
+  - no_magic_numbers
+  # Not used here: Swift Testing replaces XCTest/Nimble.
+  - prefer_nimble
+  # House style: short local names and SwiftUI trailing closures.
+  - identifier_name
+  - multiple_closures_with_trailing_closure
+  # Layout rules from the default set.
+  - colon
+  - comma
+  - opening_brace
+  - statement_position
+  - switch_case_alignment
+  - trailing_comma
+  - vertical_parameter_alignment
+  - closure_parameter_position
+force_cast: error
+force_try: error
+force_unwrapping: error
+no_empty_block:
+  # No-op closure defaults (`= {}`) are intended; empty functions, catches and ifs still fail.
+  disabled_block_types: [closure_blocks]
+line_length:
+  warning: 160
+  error: 220
+  ignores_comments: true
+  ignores_urls: true
+  ignores_interpolated_strings: true
+function_body_length: { warning: 80, error: 200 }
+type_body_length: { warning: 500, error: 1000 }
+file_length: { warning: 800, error: 1500 }
+cyclomatic_complexity: { warning: 15, error: 30 }

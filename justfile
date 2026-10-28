@@ -18,6 +18,7 @@ fmt:
 # Install dependencies
 install:
     bun install
+    command -v lefthook >/dev/null && lefthook install || echo "lefthook not found: enter the Nix shell to install the git hooks"
 
 # Start Expo dev server
 start:
@@ -120,6 +121,20 @@ android-native-install variant="Regtest":
 
 android-native-test:
     cd apps/android && ./gradlew :app:testRegtestDebugUnitTest
+
+# Native lint and format (apps/ios, apps/android). Tools come from the Nix shell; the pre-commit hook runs the same checks.
+native-lint: ios-native-lint android-native-lint
+
+native-format:
+    cd apps/ios && swiftformat .
+    cd apps/android && ktlint --format --relative "**/*.kt" "**/*.kts" "!**/build/**" "!**/generated/**"
+
+ios-native-lint:
+    cd apps/ios && swiftformat --lint . && swiftlint lint --strict
+
+android-native-lint:
+    cd apps/android && ktlint --relative "**/*.kt" "**/*.kts" "!**/build/**" "!**/generated/**"
+    cd apps/android && detekt --input . --excludes "**/build/**,**/generated/**" --build-upon-default-config --all-rules --config Config/detekt/detekt.yml
 
 # Server commands
 server:

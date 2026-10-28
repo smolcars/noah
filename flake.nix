@@ -140,6 +140,16 @@
 
       };
 
+      # Native lint and format tools; `just native-lint` and the pre-commit hook run them.
+      nativeLintPackagesFor =
+        pkgs: with pkgs; [
+          detekt
+          ktlint
+          lefthook
+          swiftformat
+          swiftlint
+        ];
+
       # System-specific shell configuration
       mkShellFor =
         system:
@@ -153,7 +163,7 @@
             grpcurl
             just
             rust-analyzer
-          ];
+          ] ++ nativeLintPackagesFor pkgs;
 
           darwinPackages = with pkgs; [
             bundler
@@ -218,6 +228,13 @@
         {
           default = mkShellFor system;
           server = mkServerShellFor system;
+          native-lint =
+            let
+              pkgs = pkgsFor system;
+            in
+            pkgs.mkShellNoCC {
+              buildInputs = [ pkgs.just ] ++ nativeLintPackagesFor pkgs;
+            };
           android-ci =
             let
               pkgs = pkgsFor system;
