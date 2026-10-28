@@ -16,9 +16,11 @@ enum WidgetDataWriter {
 
     /// What a writer read besides the balance (`WalletSession.widgetFacts`).
     struct Facts: Equatable, Sendable {
-        /// Settled balance changes for the wave. Nil when not read: the earlier days stay as written and
+        /// The balance changes for the wave. Nil when not read: the earlier days stay as written and
         /// today takes the new balance.
         var changes: [WidgetWave.Change]? // swiftlint:disable:this discouraged_optional_collection - nil: not read, unlike no changes
+        /// Pending incoming movements, changes once the balance written counts them (`WidgetBalanceHistory.counted`).
+        var incoming: [WidgetBalanceHistory.Incoming] = []
         var renewal = Renewal.unknown
         /// Incoming unconfirmed on-chain (`HomeStatusLine.incomingOnchain`); nil when not read.
         var incomingOnchain: UInt64?
@@ -91,7 +93,8 @@ enum WidgetDataWriter {
         let current = Int64(clamping: balance.totalSats)
         var daily: [Int64]? // swiftlint:disable:this discouraged_optional_collection - nil: unknown (calm water)
         if let changes = facts.changes {
-            daily = WidgetWave.dailyBalances(current: current, changes: changes, now: now, calendar: calendar)
+            daily = WidgetWave.dailyBalances(current: current, changes: changes + WidgetBalanceHistory.counted(facts.incoming, in: balance),
+                                             now: now, calendar: calendar)
         } else if let previous, let written = previous.dailyBalances, written.count == WidgetWave.days + 1 {
             daily = Array(WidgetWave.shifted(written, writtenAt: previous.writtenAt, now: now, calendar: calendar).dropLast()) + [current]
         }

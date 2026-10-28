@@ -47,8 +47,10 @@ extension WalletSession {
             }
             if let (movements, chain) = records {
                 let estimates = chain.reduce(into: [String: Date]()) { $0[$1.txid] = WidgetBalanceHistory.estimate($1, tip: tip, now: now) }
-                let confirmed = dates.dates(estimates, keeping: Set(chain.map(\.txid)))
-                facts.changes = WidgetBalanceHistory.changes(movements: movements, chain: chain, confirmed: confirmed, now: now)
+                let chainDates = dates.dates(estimates, keeping: Set(chain.map(\.txid)),
+                                             unconfirmed: Set(chain.filter { $0.confirmation == nil }.map(\.txid)), now: now)
+                facts.changes = WidgetBalanceHistory.changes(movements: movements, chain: chain, chainDates: chainDates, now: now)
+                facts.incoming = WidgetBalanceHistory.incoming(movements: movements, now: now)
             }
             if let expiring = try? await handles.wallet.getExpiringVtxos(
                 thresholdBlocks: UInt32(WalletConfiguration.base(for: .current).vtxoRefreshExpiryThreshold)) {

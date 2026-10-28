@@ -329,7 +329,7 @@ extension ForegroundWidgetRefreshTests {
     }
 }
 
-/// Bark's records → the wave's settled balance changes, against the history fixtures Activity is held to.
+/// Bark's records → the wave's balance changes, against the history fixtures Activity is held to.
 struct WidgetBalanceHistoryTests {
     private static let now = Date(timeIntervalSince1970: 1_793_113_200)
 
@@ -340,19 +340,21 @@ struct WidgetBalanceHistoryTests {
         var settled = 0
         for fixture in cases {
             let movement = try #require(fixture.input.movement).sdk
-            let changes = WidgetBalanceHistory.changes(movements: [movement], chain: [], confirmed: [:], now: Self.now)
+            let changes = WidgetBalanceHistory.changes(movements: [movement], chain: [], chainDates: [:], now: Self.now)
             if movement.status == "successful" && movement.effectiveBalanceSats != 0 {
                 settled += 1
                 let row = HistoryMapping.transaction(movement, now: Self.now)
                 #expect(changes == [.init(at: try #require(row.timestamp), delta: movement.effectiveBalanceSats)], "\(fixture.name)")
             } else {
-                #expect(changes.isEmpty, "\(fixture.name)") // Pending, failed and canceled aren't changes.
+                // Failed and canceled aren't changes, nor pending ones that still hold their sats (no fixture names an offboard's
+                // transaction; incoming ones wait for the balance, `pendingMovementsCountOnceTheBalanceDoes`).
+                #expect(changes.isEmpty, "\(fixture.name)")
             }
         }
         #expect(settled > 0)
     }
 
-    @Test func confirmedChainTransactionsAreChanges() throws {
+    @Test func chainTransactionsAreChangesConfirmedOrNot() throws {
         let cases = try Fixtures.load("transaction-history", input: HistoryFixtureTests.Input.self, expected: HistoryFixtureTests.JSON.self)
             .filter { $0.input.operation == "onchain" }
         #expect(cases.count == 6)
@@ -360,10 +362,10 @@ struct WidgetBalanceHistoryTests {
             let chain = try #require(fixture.input.onchain).decode(HistoryFixtureTests.ChainInput.self).sdk
             let estimate = WidgetBalanceHistory.estimate(chain, tip: 48, now: Self.now)
             #expect(estimate == chain.confirmation.map { Self.now.addingTimeInterval(-Double(48 - $0.height) * 600) }, "\(fixture.name)")
-            // Dated by the store; a date for an unconfirmed transaction still doesn't make it a change.
+            // Dated by the store, confirmed or not: the on-chain total counts both.
             let at = Self.now.addingTimeInterval(-86_400)
-            let changes = WidgetBalanceHistory.changes(movements: [], chain: [chain], confirmed: [chain.txid: at], now: Self.now)
-            if chain.confirmation != nil, chain.balanceChangeSats != 0 {
+            let changes = WidgetBalanceHistory.changes(movements: [], chain: [chain], chainDates: [chain.txid: at], now: Self.now)
+            if chain.balanceChangeSats != 0 {
                 #expect(changes == [.init(at: at, delta: chain.balanceChangeSats)], "\(fixture.name)")
             } else {
                 #expect(changes.isEmpty, "\(fixture.name)")
@@ -371,8 +373,9 @@ struct WidgetBalanceHistoryTests {
         }
     }
 
-    /// A board's two halves count together on its date, and neither while it's pending.
-    @Test func boardsCountBothHalvesTogether() throws {
+    /// A board's two halves count on its date: the funding transaction as the on-chain total counts it, the board once
+    /// the balance does.
+    @Test func boardsCountBothHalvesOnTheirDate() throws {
         func board(_ status: String) -> Movement {
             Movement(id: 7, status: status, subsystemName: "bark.board", subsystemKind: "board",
                      metadataJson: #"{"chain_anchor":"funding-txid:0"}"#, intendedBalanceSats: 50_000, effectiveBalanceSats: 50_000,
@@ -384,13 +387,17 @@ struct WidgetBalanceHistoryTests {
                                         confirmation: .init(height: 10, hash: "block"), isCpfp: false)
         let created = try #require(HistoryRules.parseDate("2026-10-01T12:00:00.000Z"))
         let elsewhere: [String: Date] = ["funding-txid": Self.now] // Never used for a transaction a movement names.
-        #expect(WidgetBalanceHistory.changes(movements: [board("successful")], chain: [funding], confirmed: elsewhere, now: Self.now)
+        #expect(WidgetBalanceHistory.changes(movements: [board("successful")], chain: [funding], chainDates: elsewhere, now: Self.now)
             == [.init(at: created, delta: 50_000), .init(at: created, delta: -50_500)])
-        #expect(WidgetBalanceHistory.changes(movements: [board("pending")], chain: [funding], confirmed: elsewhere, now: Self.now).isEmpty)
-        // Not yet in a block: not a change.
         var unconfirmed = funding
         unconfirmed.confirmation = nil
-        #expect(WidgetBalanceHistory.changes(movements: [], chain: [unconfirmed], confirmed: elsewhere, now: Self.now).isEmpty)
+        for transaction in [funding, unconfirmed] {
+            #expect(WidgetBalanceHistory.changes(movements: [board("pending")], chain: [transaction], chainDates: elsewhere, now: Self.now)
+                == [.init(at: created, delta: -50_500)])
+        }
+        let incoming = WidgetBalanceHistory.incoming(movements: [board("pending")], now: Self.now)
+        #expect(WidgetBalanceHistory.counted(incoming, in: Self.balance(boarding: 50_000)) == [.init(at: created, delta: 50_000)])
+        #expect(WidgetBalanceHistory.counted(incoming, in: Self.balance(boarding: 0)).isEmpty) // Still broadcasting.
     }
 
     private static var utc: Calendar {
@@ -421,7 +428,7 @@ struct WidgetBalanceHistoryTests {
             let renewal = Self.movement("bark.round", "refresh", metadata: #"{"funding_txid":"round-txid"}"#, effective: 0,
                                         created: created, status: "pending")
             for movements in [[offboard], [renewal, offboard], [offboard, renewal]] {
-                let changes = WidgetBalanceHistory.changes(movements: movements, chain: [credit], confirmed: recently, now: Self.now)
+                let changes = WidgetBalanceHistory.changes(movements: movements, chain: [credit], chainDates: recently, now: Self.now)
                 #expect(changes == [.init(at: created, delta: -50_300), .init(at: created, delta: 50_000)], "\(days) days")
                 let values = WidgetWave.dailyBalances(current: 100_000, changes: changes, now: Self.now, calendar: Self.utc)
                 #expect(WidgetWave.change(values) == (days > 30 ? 0 : -300), "\(days) days")
@@ -442,7 +449,7 @@ struct WidgetBalanceHistoryTests {
             let now = Self.now.addingTimeInterval(day * 86_400)
             let estimate = try #require(WidgetBalanceHistory.estimate(receive, tip: tip, now: now))
             let confirmed = dates.dates([receive.txid: estimate], keeping: [receive.txid])
-            let changes = WidgetBalanceHistory.changes(movements: [], chain: [receive], confirmed: confirmed, now: now)
+            let changes = WidgetBalanceHistory.changes(movements: [], chain: [receive], chainDates: confirmed, now: now)
             seen += changes.map(\.at)
         }
         #expect(seen == Array(repeating: Self.now.addingTimeInterval(-3_600), count: 4))
@@ -454,5 +461,107 @@ struct WidgetBalanceHistoryTests {
         #expect(dates.dates([receive.txid: Self.now], keeping: [receive.txid]) == [receive.txid: Self.now])
         dates.clear()
         #expect(!FileManager.default.fileExists(atPath: folder.appending(path: "dates.json").path))
+    }
+
+    private static func balance(spendable: UInt64 = 0, sending: UInt64 = 0, claimable: UInt64 = 0, boarding: UInt64 = 0,
+                                confirmed: UInt64 = 0, unconfirmed: UInt64 = 0) -> WalletBalance {
+        WalletBalance(ark: .init(spendable: spendable, needsRefresh: 0, pendingLightningSend: sending, claimableLightningReceive: claimable,
+                                 pendingInRound: 0, pendingExit: 0, pendingBoard: boarding, pendingArkoorSend: 0, pendingOffboard: 0),
+                      onchain: .init(confirmed: confirmed, pending: unconfirmed, total: confirmed + unconfirmed))
+    }
+
+    /// The writer's 31 days for `balance` and the records, as `widgetFacts` reads them.
+    private static func days(_ balance: WalletBalance, _ movements: [Movement] = [], chain: [WalletTransaction] = [],
+                             chainDates: [String: Date] = [:], now: Date = now) throws -> [Int64] {
+        let facts = WidgetDataWriter.Facts(changes: WidgetBalanceHistory.changes(movements: movements, chain: chain, chainDates: chainDates,
+                                                                                 now: now),
+                                           incoming: WidgetBalanceHistory.incoming(movements: movements, now: now))
+        let snapshot = WidgetDataWriter.snapshot(balance: balance, facts: facts, previous: nil,
+                                                 display: .init(hidden: false, unit: .bip177, currency: "USD"), quote: nil,
+                                                 variant: .regtest, now: now, calendar: utc)
+        let days = try #require(snapshot.dailyBalances)
+        #expect(days.last == Int64(balance.totalSats))
+        return days
+    }
+
+    /// 100,000 sats that arrived ten days ago, settled.
+    private static let earlier = movement("bark.arkoor", "receive", metadata: "{}", effective: 100_000, created: now.addingTimeInterval(-10 * 86_400))
+    private static let before = Array(repeating: Int64(0), count: 20) + Array(repeating: 100_000, count: 10)
+
+    /// An unconfirmed on-chain receive is in the balance, so it's today's change from when it's first seen, and confirming
+    /// (even the next day, even with History's block time) never moves it.
+    @Test func anUnconfirmedReceiveIsTodaysChangeAndStaysThere() throws {
+        let folder = FileManager.default.temporaryDirectory.appending(path: "widget-dates-\(UUID())")
+        defer { try? FileManager.default.removeItem(at: folder) }
+        let dates = WidgetChainDates(url: folder.appending(path: "dates.json"))
+        var receive = WalletTransaction(txid: "receive-txid", txHex: "", onchainFeeSats: nil, balanceChangeSats: 50_000,
+                                        confirmation: nil, isCpfp: false)
+        let seen = Self.now.addingTimeInterval(-3_600)
+        let pending = try Self.days(Self.balance(spendable: 100_000, unconfirmed: 50_000), [Self.earlier], chain: [receive],
+                                    chainDates: dates.dates([:], keeping: [receive.txid], unconfirmed: [receive.txid], now: seen))
+        #expect(pending == Self.before + [150_000])
+
+        receive.confirmation = .init(height: 1_000, hash: "h")
+        let tomorrow = Self.now.addingTimeInterval(86_400)
+        dates.record(txid: receive.txid, at: tomorrow.addingTimeInterval(-600)) // History's block time doesn't move it either.
+        let estimate = try #require(WidgetBalanceHistory.estimate(receive, tip: 1_001, now: tomorrow))
+        let confirmed = try Self.days(Self.balance(spendable: 100_000, confirmed: 50_000), [Self.earlier], chain: [receive],
+                                      chainDates: dates.dates([receive.txid: estimate], keeping: [receive.txid], now: tomorrow), now: tomorrow)
+        #expect(confirmed == Array(pending.dropFirst()) + [150_000])
+    }
+
+    /// A Lightning send in flight still holds its sats in the balance (`pendingLightningSend`), so it isn't a change until
+    /// it settles; an on-chain send from Ark is one once its transaction is out.
+    @Test func aPendingLightningSendIsNoChangeUntilItSettles() throws {
+        let created = Self.now.addingTimeInterval(-600)
+        let send = { (status: String) in Self.movement("bark.lightning_send", "send", metadata: "{}", effective: -20_010, created: created, status: status) }
+        #expect(try Self.days(Self.balance(spendable: 79_990, sending: 20_010), [Self.earlier, send("pending")]) == Self.before + [100_000])
+        #expect(try Self.days(Self.balance(spendable: 79_990), [Self.earlier, send("successful")]) == Self.before + [79_990])
+
+        let onchain = { (metadata: String) in
+            Self.movement("bark.offboard", "send_onchain", metadata: metadata, effective: -30_300, created: created, status: "pending")
+        }
+        // Its sats held while it's prepared (`pendingOffboard`), then gone once it names its broadcast transaction.
+        let held = WalletBalance(ark: .init(spendable: 69_700, needsRefresh: 0, pendingLightningSend: 0, claimableLightningReceive: 0,
+                                            pendingInRound: 0, pendingExit: 0, pendingBoard: 0, pendingArkoorSend: 0, pendingOffboard: 30_300),
+                                 onchain: .init(confirmed: 0, pending: 0, total: 0))
+        #expect(try Self.days(held, [Self.earlier, onchain("{}")]) == Self.before + [100_000])
+        #expect(try Self.days(Self.balance(spendable: 69_700), [Self.earlier, onchain(#"{"offboard_txid":"out"}"#)]) == Self.before + [69_700])
+    }
+
+    /// A board: nothing while its funding transaction isn't out; then the funding transaction and the board (once
+    /// `pendingBoard` counts it) are today's change, net of the fee, and nothing moves when it confirms and completes.
+    @Test func aPendingBoardCountsBothHalvesFromItsDate() throws {
+        let deposit = WalletTransaction(txid: "deposit-txid", txHex: "", onchainFeeSats: nil, balanceChangeSats: 50_500,
+                                        confirmation: .init(height: 900, hash: "d"), isCpfp: false)
+        let dated: [String: Date] = [deposit.txid: Self.now.addingTimeInterval(-10 * 86_400)]
+        let created = Self.now.addingTimeInterval(-600)
+        let board = { (status: String) in
+            Self.movement("bark.board", "board", metadata: #"{"chain_anchor":"funding-txid:0"}"#, effective: 50_000, created: created, status: status)
+        }
+        var funding = WalletTransaction(txid: "funding-txid", txHex: "", onchainFeeSats: 500, balanceChangeSats: -50_500,
+                                        confirmation: nil, isCpfp: false)
+        let earlier = Array(repeating: Int64(0), count: 20) + Array(repeating: 50_500, count: 10)
+        #expect(try Self.days(Self.balance(confirmed: 50_500), [board("pending")], chain: [deposit], chainDates: dated) == earlier + [50_500])
+        #expect(try Self.days(Self.balance(boarding: 50_000), [board("pending")], chain: [deposit, funding], chainDates: dated)
+            == earlier + [50_000])
+        funding.confirmation = .init(height: 1_000, hash: "f")
+        #expect(try Self.days(Self.balance(boarding: 50_000), [board("pending")], chain: [deposit, funding], chainDates: dated)
+            == earlier + [50_000])
+        #expect(try Self.days(Self.balance(spendable: 50_000), [board("successful")], chain: [deposit, funding], chainDates: dated)
+            == earlier + [50_000])
+    }
+
+    /// A Lightning receive counts once the balance does (`claimableLightningReceive`), and if it then fails it's no
+    /// change at all: the earlier days never move.
+    @Test func aPendingReceiveThatFailsLeavesNoChange() throws {
+        let created = Self.now.addingTimeInterval(-600)
+        let receive = { (status: String, effective: Int64) in
+            Self.movement("bark.lightning_receive", "receive", metadata: "{}", effective: effective, created: created, status: status)
+        }
+        #expect(try Self.days(Self.balance(spendable: 100_000), [Self.earlier, receive("pending", 30_000)]) == Self.before + [100_000])
+        #expect(try Self.days(Self.balance(spendable: 100_000, claimable: 30_000), [Self.earlier, receive("pending", 30_000)])
+            == Self.before + [130_000])
+        #expect(try Self.days(Self.balance(spendable: 100_000), [Self.earlier, receive("failed", 0)]) == Self.before + [100_000])
     }
 }
