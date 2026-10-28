@@ -1,12 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- No wallet (never set up, or deleted): just the longship, centred, on calm water. Never ₿ 0. -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     android:id="@android:id/background"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@drawable/widget_background"
     android:clipToOutline="true"
-    android:layoutDirection="ltr">
+    android:layoutDirection="ltr"
+    tools:ignore="UseAppTint">
 
     <FrameLayout
         android:id="@+id/widget_sea_box"

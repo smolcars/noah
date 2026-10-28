@@ -1,12 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- The 2×1 widget (widgets.md, Android): the longship, the balance and one line (status, or fiat). -->
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     android:id="@android:id/background"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@drawable/widget_background"
     android:clipToOutline="true"
     android:layoutDirection="ltr"
+    tools:ignore="UseAppTint"
     android:gravity="center_vertical"
     android:orientation="horizontal"
     android:paddingStart="16dp"

@@ -4,12 +4,14 @@
     fills the trailing ~52% and Receive · Scan · Send run along the bottom. Heights are fixed for WidgetLayout.
 -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     android:id="@android:id/background"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:background="@drawable/widget_background"
     android:clipToOutline="true"
-    android:layoutDirection="ltr">
+    android:layoutDirection="ltr"
+    tools:ignore="UseAppTint">
 
     <FrameLayout
         android:id="@+id/widget_sea_box"

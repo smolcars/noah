@@ -1,12 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <!-- The widget picker's scalable preview (Android 12+): the 2×2 with sample data, not the user's wallet. -->
 <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools"
     android:id="@android:id/background"
     android:layout_width="180dp"
     android:layout_height="180dp"
     android:background="@drawable/widget_background"
     android:clipToOutline="true"
-    android:layoutDirection="ltr">
+    android:layoutDirection="ltr"
+    tools:ignore="UseAppTint">
 
     <ImageView
         android:layout_width="match_parent"
