@@ -1,4 +1,6 @@
-# Overrides on top of detekt's defaults (build-upon-default-config). ktlint owns layout.
+# Overrides on top of detekt's defaults (build-upon-default-config); --all-rules turns on the rest. ktlint owns layout.
+# Rules that need type resolution (e.g. SuspendFunSwallowedCancellation, UnsafeCallOnNullableType) don't run: the CLI has
+# no compile classpath, and type resolution on Kotlin 2.4 needs detekt 2, still alpha. Android Lint and the compiler cover part.
 complexity:
   LongParameterList:
     # Composables take state and callbacks as parameters by design.
@@ -32,16 +34,3 @@ style:
     excludeGuardClauses: true
   ForbiddenComment:
     active: false
-coroutines:
-  GlobalCoroutineUsage:
-    active: true
-  SuspendFunSwallowedCancellation:
-    active: true
-potential-bugs:
-  DontDowncastCollectionTypes:
-    active: true
-  ElseCaseInsteadOfExhaustiveWhen:
-    active: true
-exceptions:
-  ObjectExtendsThrowable:
-    active: true

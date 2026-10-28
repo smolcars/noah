@@ -1,5 +1,5 @@
 # Every SwiftLint rule is on except those listed below; SwiftFormat owns layout.
-# CI runs --strict against .swiftlint-baseline.json, so only new violations fail.
+# CI and the pre-commit hook run --strict with no baseline: every violation fails.
 # For a deliberate exception, disable the rule on that line and say why:
 #   // swiftlint:disable:next force_try - pattern is a compile-time constant
 excluded:
