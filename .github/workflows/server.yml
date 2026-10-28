@@ -2,17 +2,7 @@ name: Server CI
 
 on:
   pull_request:
-  push:
-    branches:
-      - master
-    paths:
-      - "server/**"
-      - "Cargo.toml"
-      - "Cargo.lock"
-      - "rust-toolchain.toml"
-      - "Dockerfile"
-      - ".github/workflows/server.yml"
-      - "!**/*.md"
+  workflow_call:
 
 jobs:
   changes:
@@ -103,13 +93,28 @@ jobs:
       - name: 🔨 Build noah-cli
         run: cargo build --bin noah-cli
 
+  railway_checks:
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    steps:
+      - uses: actions/checkout@v6
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+      - run: npm install --ignore-scripts --no-package-lock --workspaces=false
+      - run: node --test .railway/release.test.mjs
+
   server_gate:
     runs-on: blacksmith-4vcpu-ubuntu-2404
-    needs: [changes, server_build_and_test]
+    needs: [changes, server_build_and_test, railway_checks]
     if: always()
     steps:
       - name: ✅ Gate
         run: |
+          if [[ "${{ needs.railway_checks.result }}" != "success" ]]; then
+            echo "Railway release checks failed"
+            exit 1
+          fi
+
           if [[ "${{ needs.changes.result }}" != "success" ]]; then
             echo "Server change detection failed"
             exit 1
