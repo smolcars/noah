@@ -21,14 +21,13 @@ The active configuration runs Postgres 18, persistent Redis with AOF and
 volume. The API imports the CI-published image through a wrapper Dockerfile; Barkd's
 dedicated [Dockerfile](barkd/Dockerfile) pins its existing image by digest. The API checks
 `/health`; Barkd has a 30-second shutdown grace period.
-Daily, weekly, and monthly volume backups are enabled. The
-[migration runbook](../docs/railway_signet_migration_plan.md) records the verified
-imports, recovery copies, and acceptance checks.
-
-The user approved execution on 2026-10-27. The Fly API and Barkd are fenced with
-sleep commands and stopped; their historical stores are retained for recovery.
-Never start those old wallet files alongside the active Railway wallet. Do not
-reapply an older preparation config that replaces Barkd with the importer image.
+Daily, weekly, and monthly volume backups are enabled. Migration and receive
+acceptance completed; the old Fly services and stores were deleted on 2026-10-29.
+Encrypted migration archives are retained privately outside Git. They are stale
+recovery material: never start an archived wallet alongside the active wallet.
+Do not reapply an older preparation config that replaces Barkd with the importer
+image. Follow the [wallet recovery safeguards](mainnet/README.md#recovery-safeguards)
+for either network, using that network's own wallet and credentials.
 
 ## Releases
 

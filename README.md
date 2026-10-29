@@ -170,13 +170,13 @@ just up
 just create-barkd-wallet
 ```
 
-The service uses the same versioned multi-architecture image as Fly, shares Noah's network
+The service uses the same versioned multi-architecture image as Railway, shares Noah's network
 namespace so the server reaches it at a loopback URL, and publishes the API only on
 `127.0.0.1:3001`. Authentication is disabled only in this local trusted environment. To test a
 locally built image before publication:
 
 ```bash
-docker build --file fly/barkd.Dockerfile --tag noah-barkd:local .
+docker build --file docker/barkd/Dockerfile --tag noah-barkd:local .
 BARKD_IMAGE=noah-barkd:local just up
 ```
 
@@ -363,6 +363,15 @@ The server uses environment variables for configuration. For local development, 
 - For release builds, run `cargo build --release`.
 
 ---
+
+## Server deployments
+
+The wallet services run on Railway. Master pushes deploy signet; `v*` tags deploy
+mainnet after Server CI and image publication. Barkd upgrades are manual. See the
+[signet](.railway/README.md) and [mainnet](.railway/mainnet/README.md) operations notes.
+
+Metabase and its dashboard database remain on Fly pending their separate migration;
+their [configuration and setup notes](fly/mainnet-metabase-setup.md) are retained.
 
 ## 📦 Building for Production
 

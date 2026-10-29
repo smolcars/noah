@@ -1,11 +1,37 @@
-# Mainnet preparation
+# Railway mainnet
 
-Production cutover completed on **2026-10-29**. The preparation and rehearsal
-records below are historical; current release instructions follow them.
+Production cutover and a real Lightning receive acceptance completed on
+**2026-10-29**. The API, Postgres 18 HA/PITR, Redis and Barkd 0.8.0 run on Railway.
+The retired Fly wallet services and stores have been deleted. Encrypted final
+migration artifacts and recovery evidence are retained privately outside Git.
 
-The [migration runbook](../../docs/railway_mainnet_migration_plan.md) requires
-explicit cutover approval. These files do not create a production environment,
-copy data, or change GitHub variables on merge. Signet's configuration is separate.
+Metabase is paused on Fly with its separate dashboard database preserved. Its
+reporting connection must use Railway before analytics resumes; see the
+[retained Metabase notes](../../fly/mainnet-metabase-setup.md).
+
+**The IaC file is still the held preparation snapshot. Do not apply it to the
+live environment:** it would replace the active API and Barkd with sleeping tools
+containers. The preparation records below describe the state at each rehearsal,
+not the current running application state. Normal releases do not apply IaC.
+
+## Recovery safeguards
+
+- Keep independent encrypted Postgres, Redis and complete wallet archives with
+  their manifests and decryption key in the private recovery store, outside Git.
+  Verify backups regularly; an archive without its key is not recoverable.
+- For a wallet transfer, stop all wallet activity before archiving the complete
+  `/data/barkd` tree, including hidden files and SQLite journal/WAL companions.
+  Verify hashes, ownership and modes; run SQLite integrity checks on a disposable
+  copy. A mnemonic or the main SQLite file alone does not preserve action state.
+- Restore files using a tools-only container. Never initialize a new wallet over
+  the restored files or run two copies of the same wallet. Keep the original
+  writer stopped until the replacement's identity, state and receive are verified.
+- Restore Postgres and Redis from a coordinated maintenance snapshot with writers
+  stopped. Replace Redis state, preserving absolute expirations and consumed
+  one-time keys; do not merge it with stale rehearsal or recovery state.
+- The cutover archives are historical after Railway accepts writes. Reconcile
+  newer wallet, Postgres and Redis activity before any data rollback. DNS or an
+  image rollback does not restore data, and the old Fly stack no longer exists.
 
 ## Provisioning record
 
@@ -28,8 +54,8 @@ and contains no wallet database. Subsequently, 21 production integration secrets
 and settings were staged with deploys skipped and verified equal to the running
 Fly API, including the existing `RUST_LOG`. `NTFY_AUTH_TOKEN` was excluded and
 destination connection references were retained. Backup/recovery and Redis
-rehearsal results are recorded below. HA conversion is complete; application
-activation still requires separate cutover approval.
+rehearsal results are recorded below. HA conversion and application activation
+subsequently completed during the approved cutover.
 
 ## Postgres rehearsal
 
@@ -50,12 +76,9 @@ references to those provider objects. Source ownership and privileges were not
 imported. The encrypted snapshot is retained privately outside Git; temporary
 plaintext dump and remote staging files were removed.
 
-Railway now contains a **rehearsal snapshot**, not the final cutover dataset.
-Fly remains authoritative and continues accepting writes. API and Barkd remain
-on `/bin/sleep infinity`; the wallet volume is empty after the offline recovery
-test below.
-Replace the rehearsal copies with a fresh final migration set after the
-approved write freeze, before activating either application.
+At this stage Railway contained only a rehearsal snapshot, with its API and
+Barkd held on `/bin/sleep infinity`. The approved cutover later replaced these
+copies with a fresh migration set captured after all source writers stopped.
 
 ## Postgres HA preparation
 
@@ -98,9 +121,8 @@ cluster. Keep a fresh backup and final recovery verification in the cutover.
 
 The installed native policy is **asynchronous replication** (`synchronous_mode`
 false). Automatic failover can therefore lose recent unreplicated commits; it
-does not establish zero data loss. Choose the required durability policy before
-activation. API and Barkd remain on their sleeping tools images, Fly remains
-authoritative, and DNS is unchanged.
+does not establish zero data loss. This native policy was retained at cutover.
+API and Barkd were still on sleeping tools images during this rehearsal.
 
 ## Backup and recovery rehearsal
 
@@ -198,15 +220,15 @@ The encrypted complete-volume archive, manifest and recovery evidence are
 retained privately outside Git and temporary storage. Both public health probes
 returned 200 afterward.
 
-This tests recovery from a live volume snapshot, which becomes stale as Fly
-continues writing. It is not the final stopped-wallet migration set or a Barkd
-0.8.0 runtime test. After the separately approved freeze, take a fresh complete
-archive from the stopped source, repeat validation, and only then activate the
-single restored wallet as specified in the runbook.
+This tested recovery from a live volume snapshot, not the final stopped-wallet
+migration set or Barkd 0.8.0 runtime. The approved cutover subsequently used a
+fresh complete archive from the stopped wallet, repeated validation, and activated
+exactly one restored wallet. A real production receive settled and appeared in
+the user's wallet afterward.
 
 ## Held HA configuration
 
-[railway.ts](railway.ts) now captures the **existing held HA environment**,
+[railway.ts](railway.ts) captures the **historical held HA environment**,
 replacing the retired standalone bootstrap. It rejects every project/environment
 except Noah production and requires `RAILWAY_MAINNET_ENVIRONMENT_ID` to equal
 `f39192f6-6cea-4c33-83cd-b62259cd10cb` and
@@ -218,7 +240,7 @@ railway config plan --file .railway/mainnet/railway.ts --environment "$RAILWAY_M
 ```
 
 The snapshot contains all ten services, eight volumes and the PITR bucket. Both
-API and Barkd still run `/bin/sleep infinity`. Existing variables, including
+API and Barkd are declared with `/bin/sleep infinity`. Existing variables, including
 connection references and `RUST_LOG`, use `preserve()`; no secret values are in
 the file. The retired `NTFY_AUTH_TOKEN` remains absent. Volume sizes are capacity
 limits, not measured disk usage.
@@ -230,7 +252,7 @@ and ignores authored HA variables and mount overrides. This snapshot instead
 uses `service()` for the existing database services, preserves membership and
 their exact mounted volume IDs, and keeps image update policies under the native
 database flows. The four database/service classification warnings are expected.
-The reviewed native plan reports **zero changes**; no IaC apply was needed.
+The pre-cutover native plan reported **zero changes**; no IaC apply was needed then.
 
 Use Railway's native HA commands for conversion, scaling and switchover; refresh
 and review the snapshot after changing topology. PITR and backup policies also
@@ -239,13 +261,11 @@ apply this held snapshot after activating the applications: it could revert
 their images and commands. No normal release workflow performs initial migration
 or applies this infrastructure file.
 
-During the approved cutover, after verifying final imports, use the CLI/API to
-replace the tools sources with the reviewed pinned images, clear the sleep start
-commands (preserving each image's normal entrypoint), and configure Dockerfile
-builds for later wrapper uploads. Keep one Barkd replica on the same `/data`
-volume, its required mount, and 30-second grace. Configure API `/health`, port
-3000 and the custom domain. Start Barkd first, verify it, then start the API as
-specified in the runbook. These changes are not performed by CI or this PR.
+The approved cutover replaced the tools sources with reviewed pinned images,
+cleared the sleep start commands to preserve the images' normal entrypoints, and
+configured Dockerfile builds for later wrapper uploads. Barkd remains a singleton
+on the same `/data` volume with a 30-second grace period. The API uses `/health`,
+port 3000 and `noahwallet.io`. Barkd was verified before activating the API.
 
 ## Releases after acceptance
 
@@ -257,8 +277,9 @@ environment approval and ref restrictions still enforced.
 
 The Fly tag job and both manual Fly deployment workflows have been removed.
 Current workflows do not read `MAINNET_DEPLOY_TARGET`; retain its repository
-value `railway` to fence historical Fly workflow revisions. Keep old Fly wallet
-Machines stopped and inert; removing CI paths does not delete retained resources.
+value `railway` to fence historical Fly workflow revisions. The retired Fly
+wallet resources and deployment secrets have been removed; Metabase is retained
+for a separate migration.
 
 In GitHub's existing `production` environment, install:
 
