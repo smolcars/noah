@@ -17,7 +17,7 @@ const apiId = "22222222-2222-2222-2222-222222222222";
 const barkdId = "33333333-3333-3333-3333-333333333333";
 const digest = `sha256:${"a".repeat(64)}`;
 
-test("HA preparation rejects the wrong project, environment and version; applications remain inert", async () => {
+test("production configuration rejects the wrong target and preserves active wallet applications", async () => {
   const originalId = process.env.RAILWAY_MAINNET_ENVIRONMENT_ID;
   const originalMajor = process.env.RAILWAY_MAINNET_POSTGRES_MAJOR;
   try {
@@ -40,8 +40,9 @@ test("HA preparation rejects the wrong project, environment and version; applica
     expect(resources.some((r) => r.type === "database")).toBe(false);
     for (const name of ["api-mainnet", "noah-barkd-mainnet"]) {
       const service = resources.find((r) => r.name === name);
-      expect(service.source.image).toBe("debian:bookworm-slim");
-      expect(service.deploy.startCommand).toBe("/bin/sleep infinity");
+      expect(service.source.image).toMatch(/^niteshbalusu\/noah-(server|barkd)@sha256:[a-f0-9]{64}$/);
+      expect(service.deploy.startCommand).toBeUndefined();
+      expect(service.build.builder).toBe("DOCKERFILE");
       expect(service.deploy.sleepApplication).not.toBe(true);
     }
     const wallet = resources.find((r) => r.name === "noah-barkd-mainnet");
