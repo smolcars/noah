@@ -1,6 +1,6 @@
 # Metabase on Railway
 
-Metabase v0.62.1.3 is being migrated separately from the live Noah wallet services. Its
+Metabase v0.62.1.3 runs on Railway separately from the Noah wallet services. Its
 application database stores dashboards, questions, users and connection settings;
 its reporting connection reads Noah's existing mainnet database.
 
@@ -68,10 +68,17 @@ verified through API readback and a named restored-volume snapshot was requested
 All ten pre-existing production deployment IDs were unchanged. The approved
 hostname is `metabase.noahwallet.io`; its previous A record is retained privately
 for recovery until cutover. Administrator login and all 12 saved Noah queries are verified; public HTTPS
-and final acceptance remain pending.
+is verified against the Railway edge; browser acceptance and Fly retirement
+remain pending.
 
 The original 1 GiB application limit passed startup and all 12 saved Noah
 queries, but anonymous memory reached about 988 MiB. The deployed limit is
 therefore 1.5 GiB with the same 512 MiB Java heap, leaving room for native JVM
 memory. Reporting database ID 2 was updated in place; all 12 queries completed
 with the new read-only role and returned the expected 984-user total.
+
+DNS now routes `metabase.noahwallet.io` to `9wwolztt.up.railway.app`, with a
+valid certificate and propagated provider DNS status. Cached clients may still
+resolve the previous address until its TTL expires. The final native IaC plan
+reports no changes. The app and its database are serving successful deployments;
+all ten existing wallet-service deployment IDs are unchanged.
