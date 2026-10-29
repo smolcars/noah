@@ -44,9 +44,10 @@ change to the wallet services, HA cluster, existing volumes or PITR bucket.
    `/api/health`, memory limits and a recovery copy before changing the hostname.
    Configure `MB_SITE_URL` for the agreed hostname and enable scheduled jobs once
    the reporting connection is verified.
-7. Keep Fly stopped until acceptance. After acceptance, archive recovery evidence,
-   delete only Metabase's old app/database and remove its remaining Fly files.
-   New dashboard edits on Railway require reconciliation before any data rollback.
+7. Keep Fly stopped until acceptance. After acceptance, archive recovery evidence
+   and delete only Metabase's old live app and database. The legacy Fly configuration
+   files have already been removed from the repository. New dashboard edits on
+   Railway require reconciliation before any data rollback.
 
 The original `MB_ENCRYPTION_SECRET_KEY` is required to read stored credentials.
 Never regenerate it during migration, put it in a plan/repository, or log API
@@ -67,9 +68,9 @@ constraints were valid. `citext` and `plpgsql` were retained. Daily backups were
 verified through API readback and a named restored-volume snapshot was requested.
 All ten pre-existing production deployment IDs were unchanged. The approved
 hostname is `metabase.noahwallet.io`; its previous A record is retained privately
-for recovery until cutover. Administrator login and all 12 saved Noah queries are verified; public HTTPS
-is verified against the Railway edge; browser acceptance and Fly retirement
-remain pending.
+for recovery until acceptance. Administrator login and all 12 saved Noah queries
+are verified; public HTTPS is verified against the Railway edge. Browser acceptance
+and Fly retirement remain pending.
 
 The original 1 GiB application limit passed startup and all 12 saved Noah
 queries, but anonymous memory reached about 988 MiB. The deployed limit is

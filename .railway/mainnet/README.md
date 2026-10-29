@@ -245,11 +245,14 @@ custom limits/mount settings. Do not apply unreviewed `config pull` output over
 HA. Use native HA commands for cluster lifecycle; backup/PITR policy remains
 CLI/API-managed and must be verified by readback.
 
-Before any apply, compare the live API and Barkd source/deployment settings with
-the file. Image pins record the last verified sources; refresh them if releases
-have changed the service configuration. Reject unrelated restarts, credential
-changes, missing resources or deletions. Normal API and Barkd release workflows
-never apply this full environment graph.
+CI uploads API and Barkd releases with `railway up`, which does not update these
+image pins. Before an apply that touches either service, set its pin to the image
+digest of its latest successful deployment and compare the live deployment
+settings with the file. Do not use `railway redeploy --from-source` for these
+uploaded releases: it pulls the configured image, which may be older than the
+serving deployment. Reject unrelated restarts, credential changes, missing
+resources or deletions. Normal API and Barkd release workflows never apply this
+full environment graph.
 
 ## Releases after acceptance
 
