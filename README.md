@@ -370,8 +370,8 @@ The wallet services run on Railway. Master pushes deploy signet; `v*` tags deplo
 mainnet after Server CI and image publication. Barkd upgrades are manual. See the
 [signet](.railway/README.md) and [mainnet](.railway/mainnet/README.md) operations notes.
 
-Metabase and its dashboard database remain on Fly pending their separate migration;
-their [configuration and setup notes](fly/mainnet-metabase-setup.md) are retained.
+Metabase and its dedicated application database run on Railway; see the
+[Metabase operations notes](.railway/metabase/README.md).
 
 ## 📦 Building for Production
 
