@@ -4,11 +4,33 @@ The [migration runbook](../../docs/railway_mainnet_migration_plan.md) requires
 explicit cutover approval. These files do not create a production environment,
 copy data, or change GitHub variables on merge. Signet's configuration is separate.
 
+## Provisioning record
+
+The held bootstrap was provisioned on **2026-10-29** in the existing Noah project
+(`8847a6a1-bf07-4321-a62b-9839e9954e46`), production environment
+`f39192f6-6cea-4c33-83cd-b62259cd10cb`.
+
+| Resource | ID |
+| --- | --- |
+| `api-mainnet` | `4f866c7b-6b84-4275-a9fb-aee6bceb1fa6` |
+| `noah-barkd-mainnet` | `679b8d67-f0db-43ba-8b02-213d81482d11` |
+| `postgres-mainnet` | `421299ae-2646-42f4-8a23-155e47c15a43` |
+| `redis-mainnet` | `a214a946-1dd7-4904-9267-ebdc03b0bca7` |
+| `bark_data_mainnet` volume | `78ed2cd5-3d94-4bdf-9491-27be0d1dcc1d` |
+
+Runtime checks confirmed Postgres 18.6 with no application tables; empty Redis
+8.2.11 with AOF, `everysec`, and `noeviction`; and both application containers
+running only `/bin/sleep infinity`. The 1 GB wallet volume is mounted at `/data`
+and contains no wallet database. Production integration secrets and data have not
+been imported. HA/PITR, recovery rehearsal, and application activation remain
+separate preparation/cutover steps.
+
 ## One-time bootstrap
 
 [railway.ts](railway.ts) is only for a **fresh** `production` environment in the
 existing Noah project. Set `RAILWAY_MAINNET_ENVIRONMENT_ID` to its actual UUID and
-`RAILWAY_MAINNET_POSTGRES_MAJOR` to the chosen, rehearsed major (16, 17 or 18).
+`RAILWAY_MAINNET_POSTGRES_MAJOR=18`, the chosen target for the 16.15 source.
+Rehearse the logical restore before cutover.
 The file rejects missing/mismatched IDs and signet. After provisioning approval,
 link the native CLI to project `8847a6a1-bf07-4321-a62b-9839e9954e46` and that
 environment, then preview:
@@ -27,6 +49,15 @@ import secrets from Fly. Review additional variables before every apply.
 Service/volume names (`api-mainnet`, `postgres-mainnet`, `redis-mainnet`,
 `bark_data_mainnet`, `noah-barkd-mainnet`) are distinct from signet so the bootstrap
 does not bind to existing signet resource IDs by name.
+
+After initial creation, inspect another plan before importing data. The database
+creation template may use its default Redis command; the provisioning run needed
+a second reviewed apply to install the declared AOF/eviction settings. Verify
+those settings in the running Redis process, not just the authoring file.
+
+CLI 5.71.0 also reports `deploy.sleepApplication: false` as drift when the
+environment-config response omits that default. The public API confirms `false`
+for both held services. Do not reapply solely for those two default-value diffs.
 
 This is a **bootstrap, not an HA or active-runtime configuration**. Enable the
 chosen HA/PITR and backup schedules separately through Railway's supported

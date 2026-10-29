@@ -26,16 +26,24 @@ database; do not leave dashboards serving the frozen Fly dataset. Preserve its
 application database and encryption key, and recreate its reporting role with
 read-only privileges. See [the existing setup](../fly/mainnet-metabase-setup.md).
 
-Resolve these choices before implementation or provisioning:
+Confirmed choices:
+
+- **Postgres:** source 16.15; target 18, using a logical dump and restore. Native
+  Fly access works from the MacBook Pro. Both the API's older hostname and the
+  current managed-cluster endpoint were verified against the same internal
+  database identity. The source is approximately 60 MB with 984 users and 22
+  successful SQLx migrations. Rehearse the restore before cutover.
+- **Barkd:** upgrade the live 0.7.1 wallet to 0.8.0 when activating Railway.
+  Pin the reviewed 0.8.0 image, retain the untouched offline source backup, and
+  verify the restored wallet before starting the API.
+- **Metabase:** migrate separately after the wallet services are accepted.
+
+Remaining choices before activation:
 
 - **Postgres protection and cost:** recommend HA, enabled PITR, and independent
   encrypted logical backups. Railway's default template is a single node; HA and
   PITR are explicit features, not properties of the Pro subscription. Size and
   price the full topology against the actual Fly setup before choosing it.
-- **Postgres major version:** inventory the source first. Prefer keeping the
-  major version for the initial move; a newer target is acceptable only after a
-  successful compatibility and restore rehearsal. Do not change Barkd version or
-  wallet format during this migration.
 - **Maintenance window:** provisionally reserve 60–90 minutes, then replace this
   estimate with timed export, restore, validation, payment-drain, and DNS/TLS
   measurements. Choose an abort deadline before activating the destination.
@@ -97,7 +105,7 @@ Platform references: [Postgres](https://docs.railway.com/databases/postgresql),
    reviewed CI-built image without recompiling Rust. Keep production API
    releases manual/tag-based, with production environment protections and a
    separately scoped Railway token; master remains signet-only. Barkd stays
-   manual and pinned to its current production digest. Serialize production API
+   manual and pinned to the reviewed 0.8.0 digest. Serialize production API
    and Barkd releases. Fence all existing Fly mainnet deployment paths before
    the freeze: the tag job in [server-push.yml](../.github/workflows/server-push.yml),
    [manual API deploy](../.github/workflows/fly-mainnet-deploy.yml), and
@@ -181,7 +189,7 @@ Git, Docker images, and the application's own volume/deletion boundary.
    topology before activation; verify the completed first backup and recovery
    coverage. The bootstrap alone does not supply these protections. Configure
    the API's Dockerfile build and `/health` check before its first image upload.
-6. Start the single Railway Barkd with the original image entrypoint, clearing
+6. Start the single Railway Barkd 0.8.0 with the original image entrypoint, clearing
    importer command overrides and keeping the same restored volume. Confirm
    network, wallet identity, reconciled balances/actions, and authenticated
    private reachability. Then start the pinned API image on the restored stores;
