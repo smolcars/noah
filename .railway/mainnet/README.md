@@ -49,7 +49,8 @@ plaintext dump and remote staging files were removed.
 
 Railway now contains a **rehearsal snapshot**, not the final cutover dataset.
 Fly remains authoritative and continues accepting writes. API and Barkd remain
-on `/bin/sleep infinity`; the wallet volume has not received source state.
+on `/bin/sleep infinity`; the wallet volume is empty after the offline recovery
+test below.
 Replace the rehearsal copies with a fresh final migration set after the
 approved write freeze, before activating either application.
 
@@ -120,6 +121,39 @@ survived, and consumed keys remained absent. Synthetic keys were then removed.
 Fly was unchanged. This live scan is a rehearsal, not a frozen final snapshot;
 replace the destination keyspace after the approved freeze rather than merging
 it with a later export.
+
+## Barkd wallet recovery rehearsal
+
+A fresh Fly volume snapshot at **2026-10-29 20:42:57 UTC** was restored into a
+separate temporary Fly app with a Debian tools-only Machine. The original Barkd
+0.7.1 Machine kept running with the same instance/configuration. The clone never
+contained or ran the Barkd executable. Its mount-root ownership was normalized
+to the recorded source metadata before archiving the complete `/data` tree.
+
+The encrypted archive contains all seven regular files, totaling 35,533,811
+uncompressed bytes, including configuration/authentication material and the
+SQLite database. Archive encryption/decryption hashes were verified, and the
+archived auth token matched the staged API setting without printing either.
+The archive was streamed into a private temporary subdirectory of the held
+Railway wallet volume; `/data/barkd` remained absent throughout the test.
+
+All restored file hashes, numeric owners/groups and modes matched the archive,
+including the `999:999`, mode-0700 wallet directory. SQLite checks on a separate
+disposable copy passed: **32 tables, integrity `ok`, zero foreign-key violations**.
+The pristine restored files also matched after restarting only Railway's held
+tools container. No Barkd daemon or API process was activated.
+
+The temporary Fly app/volume and Railway plaintext copies were removed after
+verification. The Railway wallet volume again contains only `lost+found`.
+The encrypted complete-volume archive, manifest and recovery evidence are
+retained privately outside Git and temporary storage. Both public health probes
+returned 200 afterward.
+
+This tests recovery from a live volume snapshot, which becomes stale as Fly
+continues writing. It is not the final stopped-wallet migration set or a Barkd
+0.8.0 runtime test. After the separately approved freeze, take a fresh complete
+archive from the stopped source, repeat validation, and only then activate the
+single restored wallet as specified in the runbook.
 
 ## Held preparation configuration
 
