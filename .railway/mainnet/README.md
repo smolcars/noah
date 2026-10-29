@@ -25,8 +25,8 @@ and contains no wallet database. Subsequently, 21 production integration secrets
 and settings were staged with deploys skipped and verified equal to the running
 Fly API, including the existing `RUST_LOG`. `NTFY_AUTH_TOKEN` was excluded and
 destination connection references were retained. Backup/recovery and Redis
-rehearsal results are recorded below. HA and application activation remain
-separate decisions/steps.
+rehearsal results are recorded below. HA conversion is complete; application
+activation still requires separate cutover approval.
 
 ## Postgres rehearsal
 
@@ -54,13 +54,59 @@ test below.
 Replace the rehearsal copies with a fresh final migration set after the
 approved write freeze, before activating either application.
 
+## Postgres HA preparation
+
+On **2026-10-29**, [enable-ha.mjs](enable-ha.mjs) converted only the existing
+Railway destination with the native `railway postgres ha convert` command:
+
+- Three Postgres 18.6 data nodes: `postgres-mainnet`, `Postgres-2`, `Postgres-3`.
+- Three etcd services, each with its own volume.
+- One `Postgres HA` HAProxy service with **two running replicas**.
+
+The API's existing connection reference was moved to HAProxy by the native
+conversion, and its running tools container was checked to resolve that endpoint.
+The original database volume and the imported rehearsal dataset were retained.
+The script fixes the Noah project, production environment and database UUIDs;
+refuses active application images, missing PITR wiring or an unexpected Postgres
+image; and requires `--apply` before conversion. Repeating it on an HA cluster
+does not convert or scale anything. It does not claim runtime health from a
+successful conversion response.
+
+```sh
+RAILWAY_CLI=/path/to/railway bun .railway/mainnet/enable-ha.mjs
+# Only for the initial conversion of this held standalone destination:
+RAILWAY_CLI=/path/to/railway bun .railway/mainnet/enable-ha.mjs --apply
+```
+
+A quick automatic-failover drill wrote a disposable marker through HAProxy and
+restarted only the original primary with `railway restart`. Patroni promoted
+`Postgres-3`; a new connection through the same proxy read the marker and accepted
+a write. The old primary rejoined, both replicas streamed with zero replay lag,
+and all 12 application-table fingerprints still matched the imported snapshot.
+The marker schema was removed afterward. This was a graceful primary restart,
+not a network-partition or regional-outage test; no outage duration was measured.
+
+On the promoted primary, `pgbackrest check` passed and the archive catalog reported
+`ok` with a completed full backup. The HA image needs `WAL_ARCHIVE_*` mapped to
+pgBackRest options and its image-owned `${PGDATA}/.pgbackrest_repo_path` when
+running these checks through a new SSH session, as the CLI's PITR probe does.
+The earlier standalone PITR restore exercise below was not repeated on the HA
+cluster. Keep a fresh backup and final recovery verification in the cutover.
+
+The installed native policy is **asynchronous replication** (`synchronous_mode`
+false). Automatic failover can therefore lose recent unreplicated commits; it
+does not establish zero data loss. Choose the required durability policy before
+activation. API and Barkd remain on their sleeping tools images, Fly remains
+authoritative, and DNS is unchanged.
+
 ## Backup and recovery rehearsal
 
 Postgres PITR was enabled with the native CLI on **2026-10-29**, using the private
 `Postgres-PITR` bucket. WAL archiving and a completed pgBackRest full backup
 (`20261029-191226F`) were verified directly. The stock image schedules weekly
 full and daily differential backups, retaining four full and fourteen
-differential backups. This is still a single-node database, without HA.
+differential backups. The initial recovery exercise below used the standalone
+database, before the HA conversion recorded above.
 
 A synthetic marker was committed before **19:35:04.167420 UTC** and changed
 afterward, only in the Railway rehearsal database. `railway postgres pitr restore`
@@ -155,49 +201,40 @@ continues writing. It is not the final stopped-wallet migration set or a Barkd
 archive from the stopped source, repeat validation, and only then activate the
 single restored wallet as specified in the runbook.
 
-## Held preparation configuration
+## Held HA configuration
 
-[railway.ts](railway.ts) provisions and preserves the **held, single-node**
-`production` environment in the existing Noah project. Set
-`RAILWAY_MAINNET_ENVIRONMENT_ID` to its actual UUID and
-`RAILWAY_MAINNET_POSTGRES_MAJOR=18`, the chosen target for the 16.15 source.
-Rehearse the logical restore before cutover.
-The file rejects missing/mismatched IDs and signet. After provisioning approval,
-link the native CLI to project `8847a6a1-bf07-4321-a62b-9839e9954e46` and that
-environment, then preview:
+[railway.ts](railway.ts) now captures the **existing held HA environment**,
+replacing the retired standalone bootstrap. It rejects every project/environment
+except Noah production and requires `RAILWAY_MAINNET_ENVIRONMENT_ID` to equal
+`f39192f6-6cea-4c33-83cd-b62259cd10cb` and
+`RAILWAY_MAINNET_POSTGRES_MAJOR=18`. Link the native CLI to the Noah project and
+production environment, then preview:
 
 ```sh
 railway config plan --file .railway/mainnet/railway.ts --environment "$RAILWAY_MAINNET_ENVIRONMENT_ID"
 ```
 
-Review the plan before any apply. The graph has Postgres, persistent Redis with
-AOF and `noeviction`, a 1 GB wallet volume, the PITR bucket, and two Debian tools
-services. Database volumes and their installed backup policies remain in place.
-Both API and Barkd run `/bin/sleep infinity`; neither application or wallet can
-start. There is no public domain or API healthcheck at this stage. Inventory disk
-requirements and adjust capacity before applying or importing. Transfer existing
-production secrets privately; `preserve()` keeps installed values but does not
-import secrets from Fly. Review additional variables before every apply.
-Exclude the retired `NTFY_AUTH_TOKEN`. Preserve the existing production `RUST_LOG`
-value exactly; the API defaults to `server=debug,tower_http=debug` when it is unset.
-Service/volume names (`api-mainnet`, `postgres-mainnet`, `redis-mainnet`,
-`bark_data_mainnet`, `noah-barkd-mainnet`) are distinct from signet so the bootstrap
-does not bind to existing signet resource IDs by name.
+The snapshot contains all ten services, eight volumes and the PITR bucket. Both
+API and Barkd still run `/bin/sleep infinity`. Existing variables, including
+connection references and `RUST_LOG`, use `preserve()`; no secret values are in
+the file. The retired `NTFY_AUTH_TOKEN` remains absent. Volume sizes are capacity
+limits, not measured disk usage.
 
-After initial creation, inspect another plan before importing data. The database
-creation template may use its default Redis command; the provisioning run needed
-a second reviewed apply to install the declared AOF/eviction settings. Verify
-those settings in the running Redis process, not just the authoring file.
+Do not apply the raw output of `railway config pull` over HA. CLI 5.71.0's import
+omits cluster membership metadata and renders the data nodes with `postgres()`.
+The database compiler supplies standalone defaults, including credential fields,
+and ignores authored HA variables and mount overrides. This snapshot instead
+uses `service()` for the existing database services, preserves membership and
+their exact mounted volume IDs, and keeps image update policies under the native
+database flows. The four database/service classification warnings are expected.
+The reviewed native plan reports **zero changes**; no IaC apply was needed.
 
-CLI 5.71.0 also reports `deploy.sleepApplication: false` as drift when the
-environment-config response omits that default. The public API confirms `false`
-for both held services. Do not reapply solely for those two default-value diffs.
-
-This is **not an HA or active-runtime configuration**. PITR enablement, recovery,
-and backup policies use Railway's CLI/API, with runtime verification. Never
-reapply this graph over a converted HA cluster or activated wallet. Doing so could
-remove cluster resources or stop applications.
-Do not enable normal release workflows to perform the initial migration.
+Use Railway's native HA commands for conversion, scaling and switchover; refresh
+and review the snapshot after changing topology. PITR and backup policies also
+remain CLI/API-managed. Never apply the retired bootstrap from Git history, or
+apply this held snapshot after activating the applications: it could revert
+their images and commands. No normal release workflow performs initial migration
+or applies this infrastructure file.
 
 During the approved cutover, after verifying final imports, use the CLI/API to
 replace the tools sources with the reviewed pinned images, clear the sleep start
