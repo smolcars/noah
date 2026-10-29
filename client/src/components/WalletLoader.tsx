@@ -45,8 +45,11 @@ const WalletLoader: React.FC<WalletLoaderProps> = ({ children }) => {
           return;
         }
 
-        // If wallet isn't loaded, load it (prevent concurrent attempts)
-        if (!actuallyLoaded && !isLoadingRef.current) {
+        // Ensure native readiness and store state agree (prevent concurrent attempts).
+        if (
+          (!actuallyLoaded || !useWalletStore.getState().isWalletLoaded) &&
+          !isLoadingRef.current
+        ) {
           isLoadingRef.current = true;
           loadWallet(undefined, {
             onSettled: () => {

@@ -157,9 +157,14 @@ export const useWalletStore = create<WalletState>()(
     {
       name: "wallet-storage",
       storage: createJSONStorage(() => zustandStorage),
+      merge: (persistedState, currentState) => ({
+        ...currentState,
+        ...(persistedState as Partial<WalletState>),
+        // Native readiness belongs to this process, including for legacy persisted state.
+        isWalletLoaded: currentState.isWalletLoaded,
+      }),
       partialize: (state) => ({
         isInitialized: state.isInitialized,
-        isWalletLoaded: state.isWalletLoaded,
         staticVtxoPubkey: state.staticVtxoPubkey,
         isBiometricsEnabled: state.isBiometricsEnabled,
         isDebugModeEnabled: state.isDebugModeEnabled,
