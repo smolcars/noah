@@ -8,7 +8,7 @@ import {
   volume,
 } from "railway/iac";
 
-// Held HA snapshot: use enable-ha.mjs and Railway's native HA commands for cluster lifecycle.
+// Live production snapshot: use Railway's native HA commands for cluster lifecycle.
 // Use service(): CLI 5.71.0 database() supplies standalone defaults and drops HA settings.
 export default defineRailway((ctx) => {
   if (
@@ -310,13 +310,15 @@ export default defineRailway((ctx) => {
     },
   });
   const apiMainnet = service("api-mainnet", {
-    source: image("debian:bookworm-slim", {
+    source: image("niteshbalusu/noah-server@sha256:4b60519ea9ea1868773c1824b441dcdf3b0b6c7e259c29d135131e4cd54bff8d", {
       autoUpdates: { type: "disabled" },
     }),
-    build: { buildEnvironment: "V3", builder: "RAILPACK" },
-    start: "/bin/sleep infinity",
+    build: { buildEnvironment: "V3", builder: "DOCKERFILE", dockerfilePath: "Dockerfile" },
     replicas: { iad: 1 },
-    deploy: { drainingSeconds: 30, restartPolicyType: "ALWAYS" },
+    healthcheck: "/health",
+    healthcheckTimeout: 120,
+    domains: [{ domain: "noahwallet.io", port: 3000 }],
+    deploy: { drainingSeconds: 30, overlapSeconds: 0, restartPolicyType: "ALWAYS" },
     env: {
       ARK_SERVER_URL: preserve(),
       AUTH_JWT_SECRET: preserve(),
@@ -402,14 +404,14 @@ export default defineRailway((ctx) => {
     },
   });
   const noahBarkdMainnet = service("noah-barkd-mainnet", {
-    source: image("debian:bookworm-slim", {
+    source: image("niteshbalusu/noah-barkd@sha256:e1d9dff674ff1c548d27a5c6f2c84e0a690921867ec2b49aacc6a82cb5b78e6d", {
       autoUpdates: { type: "disabled" },
     }),
-    build: { buildEnvironment: "V3", builder: "RAILPACK" },
-    start: "/bin/sleep infinity",
+    build: { buildEnvironment: "V3", builder: "DOCKERFILE", dockerfilePath: "Dockerfile" },
     replicas: { iad: 1 },
     deploy: {
       drainingSeconds: 30,
+      overlapSeconds: 0,
       requiredMountPath: "/data",
       restartPolicyType: "ALWAYS",
     },
@@ -422,8 +424,74 @@ export default defineRailway((ctx) => {
     },
   });
 
+  const metabaseData = volume("postgres-metabase-volume", {
+    region: "iad",
+    sizeMB: 5120,
+  });
+  // Use service(): the native database compiler drops limits and custom mounts.
+  const metabaseDb = service("postgres-metabase", {
+    source: image("ghcr.io/railwayapp-templates/postgres-ssl:18"),
+    replicas: { iad: 1 },
+    deploy: {
+      requiredMountPath: "/var/lib/postgresql/data",
+      restartPolicyType: "ALWAYS",
+      drainingSeconds: 60,
+      limitOverride: { containers: { cpu: 1, memoryBytes: 2 * 1024 ** 3 } },
+    },
+    volumeMounts: { "/var/lib/postgresql/data": metabaseData },
+    env: {
+      POSTGRES_DB: "metabase",
+      POSTGRES_USER: "metabase",
+      POSTGRES_PASSWORD: preserve(),
+      PGDATA: "/var/lib/postgresql/data/pgdata",
+      PGHOST: "${{RAILWAY_PRIVATE_DOMAIN}}",
+      PGPORT: "5432",
+      PGUSER: "${{POSTGRES_USER}}",
+      PGDATABASE: "${{POSTGRES_DB}}",
+      PGPASSWORD: "${{POSTGRES_PASSWORD}}",
+      DATABASE_URL: "postgresql://${{PGUSER}}:${{POSTGRES_PASSWORD}}@${{RAILWAY_PRIVATE_DOMAIN}}:5432/${{PGDATABASE}}",
+      SSL_CERT_DAYS: "820",
+    },
+  });
+  const metabase = service("metabase", {
+    source: image("metabase/metabase@sha256:9ee98fcaf46d7a1c21cd1a35a7162361dbeb5dc3be6b93ef75135fd6d97ef64b", {
+      autoUpdates: { type: "disabled" },
+    }),
+    domains: [{ domain: "metabase.noahwallet.io", port: 3000 }],
+    healthcheck: "/api/health",
+    healthcheckTimeout: 600,
+    replicas: { iad: 1 },
+    deploy: {
+      restartPolicyType: "ALWAYS",
+      drainingSeconds: 30,
+      overlapSeconds: 0,
+      limitOverride: { containers: { cpu: 1, memoryBytes: 1024 ** 3 } },
+    },
+    env: {
+      MB_DB_TYPE: "postgres",
+      MB_DB_HOST: metabaseDb.env.PGHOST,
+      MB_DB_PORT: metabaseDb.env.PGPORT,
+      MB_DB_DBNAME: metabaseDb.env.PGDATABASE,
+      MB_DB_USER: metabaseDb.env.PGUSER,
+      MB_DB_PASS: metabaseDb.env.PGPASSWORD,
+      MB_ENCRYPTION_SECRET_KEY: preserve(),
+      MB_JETTY_HOST: "0.0.0.0",
+      MB_JETTY_PORT: "3000",
+      PORT: "3000",
+      MB_LOAD_SAMPLE_CONTENT: "false",
+      MB_SITE_URL: "https://metabase.noahwallet.io",
+      JAVA_OPTS: "-Xms128m -Xmx512m",
+      MB_APPLICATION_DB_MAX_CONNECTION_POOL_SIZE: "5",
+      MB_JDBC_DATA_WAREHOUSE_MAX_CONNECTION_POOL_SIZE: "5",
+      MB_DISABLE_SCHEDULER: "true",
+    },
+  });
+
   return project("noah", {
     resources: [
+      metabase,
+      metabaseDb,
+      metabaseData,
       Postgres3,
       etcd2,
       PostgresHA,

@@ -5,14 +5,13 @@ Production cutover and a real Lightning receive acceptance completed on
 The retired Fly wallet services and stores have been deleted. Encrypted final
 migration artifacts and recovery evidence are retained privately outside Git.
 
-Metabase is paused on Fly with its separate dashboard database preserved. Its
-reporting connection must use Railway before analytics resumes; see the
-[retained Metabase notes](../../fly/mainnet-metabase-setup.md).
+Metabase's separate Railway migration is documented in the
+[Metabase operations notes](../metabase/README.md). Its Fly app remains stopped
+until acceptance; its application database is retained until retirement.
 
-**The IaC file is still the held preparation snapshot. Do not apply it to the
-live environment:** it would replace the active API and Barkd with sleeping tools
-containers. The preparation records below describe the state at each rehearsal,
-not the current running application state. Normal releases do not apply IaC.
+The IaC now matches the verified live wallet sources and includes Metabase.
+Normal releases do not apply IaC. The preparation records below describe the
+state at each rehearsal, not the current running application state.
 
 ## Recovery safeguards
 
@@ -226,46 +225,31 @@ fresh complete archive from the stopped wallet, repeated validation, and activat
 exactly one restored wallet. A real production receive settled and appeared in
 the user's wallet afterward.
 
-## Held HA configuration
+## Production HA configuration
 
-[railway.ts](railway.ts) captures the **historical held HA environment**,
-replacing the retired standalone bootstrap. It rejects every project/environment
-except Noah production and requires `RAILWAY_MAINNET_ENVIRONMENT_ID` to equal
-`f39192f6-6cea-4c33-83cd-b62259cd10cb` and
-`RAILWAY_MAINNET_POSTGRES_MAJOR=18`. Link the native CLI to the Noah project and
-production environment, then preview:
+[railway.ts](railway.ts) preserves the existing production HA services, volumes,
+PITR bucket and current API/Barkd image sources. It also manages the separate
+Metabase services and database volume. Never reapply an old held preparation
+revision over the live applications.
+
+Set `RAILWAY_MAINNET_ENVIRONMENT_ID=f39192f6-6cea-4c33-83cd-b62259cd10cb` and
+`RAILWAY_MAINNET_POSTGRES_MAJOR=18`, then review a fresh native plan:
 
 ```sh
 railway config plan --file .railway/mainnet/railway.ts --environment "$RAILWAY_MAINNET_ENVIRONMENT_ID"
 ```
 
-The snapshot contains all ten services, eight volumes and the PITR bucket. Both
-API and Barkd are declared with `/bin/sleep infinity`. Existing variables, including
-connection references and `RUST_LOG`, use `preserve()`; no secret values are in
-the file. The retired `NTFY_AUTH_TOKEN` remains absent. Volume sizes are capacity
-limits, not measured disk usage.
+The file uses `service()` to preserve native HA membership, mount IDs and
+variables. CLI 5.71.0's database compiler supplies standalone defaults and drops
+custom limits/mount settings. Do not apply unreviewed `config pull` output over
+HA. Use native HA commands for cluster lifecycle; backup/PITR policy remains
+CLI/API-managed and must be verified by readback.
 
-Do not apply the raw output of `railway config pull` over HA. CLI 5.71.0's import
-omits cluster membership metadata and renders the data nodes with `postgres()`.
-The database compiler supplies standalone defaults, including credential fields,
-and ignores authored HA variables and mount overrides. This snapshot instead
-uses `service()` for the existing database services, preserves membership and
-their exact mounted volume IDs, and keeps image update policies under the native
-database flows. The four database/service classification warnings are expected.
-The pre-cutover native plan reported **zero changes**; no IaC apply was needed then.
-
-Use Railway's native HA commands for conversion, scaling and switchover; refresh
-and review the snapshot after changing topology. PITR and backup policies also
-remain CLI/API-managed. Never apply the retired bootstrap from Git history, or
-apply this held snapshot after activating the applications: it could revert
-their images and commands. No normal release workflow performs initial migration
-or applies this infrastructure file.
-
-The approved cutover replaced the tools sources with reviewed pinned images,
-cleared the sleep start commands to preserve the images' normal entrypoints, and
-configured Dockerfile builds for later wrapper uploads. Barkd remains a singleton
-on the same `/data` volume with a 30-second grace period. The API uses `/health`,
-port 3000 and `noahwallet.io`. Barkd was verified before activating the API.
+Before any apply, compare the live API and Barkd source/deployment settings with
+the file. Image pins record the last verified sources; refresh them if releases
+have changed the service configuration. Reject unrelated restarts, credential
+changes, missing resources or deletions. Normal API and Barkd release workflows
+never apply this full environment graph.
 
 ## Releases after acceptance
 
@@ -278,8 +262,8 @@ environment approval and ref restrictions still enforced.
 The Fly tag job and both manual Fly deployment workflows have been removed.
 Current workflows do not read `MAINNET_DEPLOY_TARGET`; retain its repository
 value `railway` to fence historical Fly workflow revisions. The retired Fly
-wallet resources and deployment secrets have been removed; Metabase is retained
-for a separate migration.
+wallet resources and deployment secrets have been removed; Metabase migration
+and retirement are tracked in its operations notes.
 
 In GitHub's existing `production` environment, install:
 
