@@ -95,7 +95,6 @@ export default defineRailway((ctx) => {
       MAINTENANCE_NOTIFICATION_ADVANCE_SECS: preserve(),
       MINIMUM_APP_VERSION: preserve(),
       NOTIFICATION_SPACING_MINUTES: preserve(),
-      NTFY_AUTH_TOKEN: preserve(),
       POSTGRES_MIN_CONNECTIONS: preserve(),
       PRIVATE_PORT: preserve(),
       RUN_MAILBOX_WORKER: preserve(),

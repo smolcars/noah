@@ -46,6 +46,8 @@ start. There is no public domain or API healthcheck at this stage. Inventory dis
 requirements and adjust capacity before applying or importing. Transfer existing
 production secrets privately; `preserve()` keeps installed values but does not
 import secrets from Fly. Review additional variables before every apply.
+Exclude the retired `NTFY_AUTH_TOKEN`. Choose `RUST_LOG` before activation:
+the API defaults to `server=debug,tower_http=debug` when it is unset.
 Service/volume names (`api-mainnet`, `postgres-mainnet`, `redis-mainnet`,
 `bark_data_mainnet`, `noah-barkd-mainnet`) are distinct from signet so the bootstrap
 does not bind to existing signet resource IDs by name.
