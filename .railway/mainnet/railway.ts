@@ -1,4 +1,4 @@
-import { database, defineRailway, image, preserve, project, redis, service, volume } from "railway/iac";
+import { bucket, database, defineRailway, image, preserve, project, redis, service, volume } from "railway/iac";
 
 // Bootstrap only. Never reapply over an activated wallet or an HA database cluster.
 export default defineRailway((ctx) => {
@@ -19,6 +19,8 @@ export default defineRailway((ctx) => {
   }
 
   const region = "iad";
+  // Keep the existing PITR bucket in the graph; backup operations use CLI/API (see README).
+  const pitr = bucket("Postgres-PITR", { region });
   const db = database("postgres-mainnet", "postgres", {
     image: `ghcr.io/railwayapp-templates/postgres-ssl:${postgresMajor}`,
     defaultMountPath: "/var/lib/postgresql/data",
@@ -116,5 +118,5 @@ export default defineRailway((ctx) => {
     },
   });
 
-  return project("noah", { resources: [db, cache, barkData, barkd, api] });
+  return project("noah", { resources: [db, cache, barkData, pitr, barkd, api] });
 });

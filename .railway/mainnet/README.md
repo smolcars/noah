@@ -24,8 +24,9 @@ running only `/bin/sleep infinity`. The 1 GB wallet volume is mounted at `/data`
 and contains no wallet database. Subsequently, 21 production integration secrets
 and settings were staged with deploys skipped and verified equal to the running
 Fly API, including the existing `RUST_LOG`. `NTFY_AUTH_TOKEN` was excluded and
-destination connection references were retained. HA/PITR, recovery rehearsal,
-and application activation remain separate preparation/cutover steps.
+destination connection references were retained. Backup/recovery and Redis
+rehearsal results are recorded below. HA and application activation remain
+separate decisions/steps.
 
 ## Postgres rehearsal
 
@@ -48,14 +49,83 @@ plaintext dump and remote staging files were removed.
 
 Railway now contains a **rehearsal snapshot**, not the final cutover dataset.
 Fly remains authoritative and continues accepting writes. API and Barkd remain
-on `/bin/sleep infinity`; Redis and the wallet volume have not received source
-state. Replace the rehearsal copy with a fresh final migration set after the
+on `/bin/sleep infinity`; the wallet volume has not received source state.
+Replace the rehearsal copies with a fresh final migration set after the
 approved write freeze, before activating either application.
 
-## One-time bootstrap
+## Backup and recovery rehearsal
 
-[railway.ts](railway.ts) is only for a **fresh** `production` environment in the
-existing Noah project. Set `RAILWAY_MAINNET_ENVIRONMENT_ID` to its actual UUID and
+Postgres PITR was enabled with the native CLI on **2026-10-29**, using the private
+`Postgres-PITR` bucket. WAL archiving and a completed pgBackRest full backup
+(`20261029-191226F`) were verified directly. The stock image schedules weekly
+full and daily differential backups, retaining four full and fourteen
+differential backups. This is still a single-node database, without HA.
+
+A synthetic marker was committed before **19:35:04.167420 UTC** and changed
+afterward, only in the Railway rehearsal database. `railway postgres pitr restore`
+created a separate service at that timestamp: the recovered marker had the
+earlier value while the primary retained the later one. All 12 public table
+fingerprints, three sequences, and index/constraint checks passed on the recovered
+database. Its WAL archiving was off, so the recovery clone did not overwrite the
+source archive. The temporary recovery service and marker were removed after
+validation. Volume deletion was accepted; Railway retains the detached volume
+until its scheduled purge on **2026-10-31 19:47 UTC**.
+
+Daily, weekly, and monthly volume backups are enabled for Postgres, Redis, and
+Barkd. Railway reports retention of 6, 27, and 89 days respectively. Named manual
+snapshots, `mainnet-preparation-2026-10-29`, were also created and listed. The
+wallet snapshot covers an empty staging volume; it does not back up the live Fly
+wallet. Keep the complete offline wallet archive and its recovery test in the
+cutover requirements. The encrypted logical Postgres rehearsal backup is retained
+privately outside Railway and Git.
+
+The SDK exposes `backupSchedules`, but **CLI 5.71.0 does not reliably apply it**.
+A controlled test on the empty held wallet volume changed its API policy to
+daily-only: IaC planned all three schedules and reported an applied result, but
+API readback still showed daily-only. The full policy was immediately restored
+and verified through the API. The native database compiler also drops attachment
+and variable overrides. Do not add ineffective backup declarations or treat a
+successful apply as proof of protection. Use the supported API and verify readback:
+
+```sh
+railway api 'mutation Policy($id:String!,$kinds:[VolumeInstanceBackupScheduleKind!]!){volumeInstanceBackupScheduleUpdate(volumeInstanceId:$id,kinds:$kinds)}' \
+  --raw-var id="$VOLUME_INSTANCE_ID" --var 'kinds=["DAILY","WEEKLY","MONTHLY"]'
+railway api 'query Policy($id:String!){volumeInstanceBackupScheduleList(volumeInstanceId:$id){kind retentionSeconds}}' \
+  --raw-var id="$VOLUME_INSTANCE_ID"
+```
+
+Use the **volume instance**, not volume ID, from the selected production
+environment. The authoring file includes the existing PITR bucket so a later plan
+does not delete it. PITR enablement and the installed `WAL_ARCHIVE_*` wiring remain
+CLI-managed. Use `railway postgres pitr enable` for initial setup and
+`railway postgres pitr restore --at <UTC> --new-service-name <temporary-name>` for
+recovery drills. Validate the new database and remove only that disposable
+service/volume. Never apply the full environment graph while temporary recovery
+resources exist: omitted resources can be planned for deletion. Reject plans that
+remove the PITR bucket, credentials, or existing volumes.
+
+## Redis rehearsal
+
+A read-only source export at **2026-10-29 19:31:47 UTC** found two permanent string
+keys, both in the maintenance family, and no other keys. Its encrypted artifact
+was transferred from the MacBook Pro; both ciphertext and plaintext hashes were
+verified, with plaintext kept in memory. The empty Railway Redis DB0 received
+both values and retained their exact bytes and permanent expirations.
+
+Separate synthetic test databases verified binary values, absolute expiry
+deadlines, expired-key skipping, one-time `GETDEL` behavior, and refusal to restore
+into a nonempty target. After an acknowledged AOF fsync and a destination-only
+Redis restart, the process ID changed, the source values and absolute deadline
+survived, and consumed keys remained absent. Synthetic keys were then removed.
+Fly was unchanged. This live scan is a rehearsal, not a frozen final snapshot;
+replace the destination keyspace after the approved freeze rather than merging
+it with a later export.
+
+## Held preparation configuration
+
+[railway.ts](railway.ts) provisions and preserves the **held, single-node**
+`production` environment in the existing Noah project. Set
+`RAILWAY_MAINNET_ENVIRONMENT_ID` to its actual UUID and
 `RAILWAY_MAINNET_POSTGRES_MAJOR=18`, the chosen target for the 16.15 source.
 Rehearse the logical restore before cutover.
 The file rejects missing/mismatched IDs and signet. After provisioning approval,
@@ -66,8 +136,9 @@ environment, then preview:
 railway config plan --file .railway/mainnet/railway.ts --environment "$RAILWAY_MAINNET_ENVIRONMENT_ID"
 ```
 
-Review the plan before any apply. The initial graph has Postgres, persistent
-Redis with AOF and `noeviction`, a 1 GB wallet volume, and two Debian tools services.
+Review the plan before any apply. The graph has Postgres, persistent Redis with
+AOF and `noeviction`, a 1 GB wallet volume, the PITR bucket, and two Debian tools
+services. Database volumes and their installed backup policies remain in place.
 Both API and Barkd run `/bin/sleep infinity`; neither application or wallet can
 start. There is no public domain or API healthcheck at this stage. Inventory disk
 requirements and adjust capacity before applying or importing. Transfer existing
@@ -88,10 +159,10 @@ CLI 5.71.0 also reports `deploy.sleepApplication: false` as drift when the
 environment-config response omits that default. The public API confirms `false`
 for both held services. Do not reapply solely for those two default-value diffs.
 
-This is a **bootstrap, not an HA or active-runtime configuration**. Enable the
-chosen HA/PITR and backup schedules separately through Railway's supported
-CLI/API flows, test them, and never reapply this graph over a converted HA cluster
-or activated wallet. Doing so could remove cluster resources or stop applications.
+This is **not an HA or active-runtime configuration**. PITR enablement, recovery,
+and backup policies use Railway's CLI/API, with runtime verification. Never
+reapply this graph over a converted HA cluster or activated wallet. Doing so could
+remove cluster resources or stop applications.
 Do not enable normal release workflows to perform the initial migration.
 
 During the approved cutover, after verifying final imports, use the CLI/API to
