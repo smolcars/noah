@@ -21,9 +21,36 @@ The held bootstrap was provisioned on **2026-10-29** in the existing Noah projec
 Runtime checks confirmed Postgres 18.6 with no application tables; empty Redis
 8.2.11 with AOF, `everysec`, and `noeviction`; and both application containers
 running only `/bin/sleep infinity`. The 1 GB wallet volume is mounted at `/data`
-and contains no wallet database. Production integration secrets and data have not
-been imported. HA/PITR, recovery rehearsal, and application activation remain
-separate preparation/cutover steps.
+and contains no wallet database. Subsequently, 21 production integration secrets
+and settings were staged with deploys skipped and verified equal to the running
+Fly API, including the existing `RUST_LOG`. `NTFY_AUTH_TOKEN` was excluded and
+destination connection references were retained. HA/PITR, recovery rehearsal,
+and application activation remain separate preparation/cutover steps.
+
+## Postgres rehearsal
+
+The **2026-10-29 18:51:13 UTC** source snapshot was exported from the MacBook Pro
+using a shared read-only snapshot for the dump and verification manifest. The
+Postgres 16.15 dump took 4.27 seconds; the single-transaction restore into Railway
+18.6 took 4.17 seconds. These timings exclude wallet draining, transfer,
+verification, DNS/TLS, and backup/recovery preparation.
+
+All 12 application tables matched exact row counts and full-row fingerprints,
+including 984 users and all 22 successful SQLx migrations/checksums. Three
+sequence states matched their archived values, with next values above existing IDs;
+all indexes and constraints were valid. `ANALYZE` completed.
+
+The restore retains `pg_trgm` 1.6 and omits Fly's `pg_stat_monitor`, `pgaudit`, and
+PgBouncer helper schema/authentication function. The application has no
+references to those provider objects. Source ownership and privileges were not
+imported. The encrypted snapshot is retained privately outside Git; temporary
+plaintext dump and remote staging files were removed.
+
+Railway now contains a **rehearsal snapshot**, not the final cutover dataset.
+Fly remains authoritative and continues accepting writes. API and Barkd remain
+on `/bin/sleep infinity`; Redis and the wallet volume have not received source
+state. Replace the rehearsal copy with a fresh final migration set after the
+approved write freeze, before activating either application.
 
 ## One-time bootstrap
 
@@ -46,8 +73,8 @@ start. There is no public domain or API healthcheck at this stage. Inventory dis
 requirements and adjust capacity before applying or importing. Transfer existing
 production secrets privately; `preserve()` keeps installed values but does not
 import secrets from Fly. Review additional variables before every apply.
-Exclude the retired `NTFY_AUTH_TOKEN`. Choose `RUST_LOG` before activation:
-the API defaults to `server=debug,tower_http=debug` when it is unset.
+Exclude the retired `NTFY_AUTH_TOKEN`. Preserve the existing production `RUST_LOG`
+value exactly; the API defaults to `server=debug,tower_http=debug` when it is unset.
 Service/volume names (`api-mainnet`, `postgres-mainnet`, `redis-mainnet`,
 `bark_data_mainnet`, `noah-barkd-mainnet`) are distinct from signet so the bootstrap
 does not bind to existing signet resource IDs by name.
