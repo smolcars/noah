@@ -1,8 +1,11 @@
 # Mainnet migration from Fly to Railway
 
-Planning date: **2026-10-29**. Status: **proposed; no production changes authorized**.
-This PR records the plan for discussion. Merging it does not provision services,
-change deployments, copy production data, or approve the cutover.
+Planning date: **2026-10-29**. Status: **preparation code for review; cutover not authorized**.
+This PR includes the runbook, exact mainnet Barkd hostname support, an inert
+production bootstrap, and guarded release workflows. Fly remains the default
+production target. Merging does not provision services, transfer production data,
+set deployment-target variables, or approve the cutover. See the
+[bootstrap and release instructions](../.railway/mainnet/README.md).
 
 Use the completed [signet migration](railway_signet_migration_plan.md) as the
 operational reference: prepare and rehearse while Fly serves production, then
@@ -57,8 +60,12 @@ Platform references: [Postgres](https://docs.railway.com/databases/postgresql),
    endpoints. Inventory every database writer and hostname used by clients.
 2. **Prepare production configuration.** Use a fresh production environment with
    fresh volumes and production-only project/environment guards. The existing
-   [IaC](../.railway/railway.ts) deliberately rejects environments other than
-   signet; do not remove that guard or apply it to production. Provision the
+   [signet IaC](../.railway/railway.ts) deliberately rejects environments other than
+   signet; do not remove that guard or apply it to production. The separate
+   [production bootstrap](../.railway/mainnet/railway.ts) requires the exact
+   production environment ID and an explicitly chosen Postgres major. It starts
+   with a single-node database for import/rehearsal, not the final HA topology.
+   Never reapply it after HA conversion or wallet activation. Provision the
    chosen database topology, persistent authenticated Redis with eviction
    disabled, a private singleton Barkd service with `/data`, and one API instance
    initially. Disable service sleeping and image/GitHub autodeploys during the
@@ -69,11 +76,11 @@ Platform references: [Postgres](https://docs.railway.com/databases/postgresql),
    shutdown grace explicitly, starting with the existing Fly 30 seconds and
    increasing it if rehearsal requires it. Railway's default is zero seconds;
    see [deployment lifecycle](https://docs.railway.com/deployments/reference#singleton-deploys).
-4. **Prepare the hostname change.** [Server validation](../server/src/config.rs)
-   currently permits only `noah-barkd-mainnet.internal:3000` for mainnet. Add the
-   exact intended Railway origin, `http://noah-barkd-mainnet.railway.internal:3000`,
-   preserving network separation, port/origin checks, and regtest restrictions.
-   Add accepted/rejected-URL tests. Build a reviewed API image containing the
+4. **Prepare the hostname change.** This PR extends
+   [server validation](../server/src/config.rs) to permit the exact Railway origin
+   `http://noah-barkd-mainnet.railway.internal:3000` alongside its existing Fly
+   origin, preserving network separation, port/origin checks, and regtest
+   restrictions, with accepted/rejected-URL tests. Build a reviewed API image containing the
    required change and schema compatible with the production dataset; avoid
    bundling unrelated feature or database changes into the move.
 5. **Transfer production configuration privately.** Preserve `AUTH_JWT_SECRET`
@@ -97,6 +104,11 @@ Platform references: [Postgres](https://docs.railway.com/databases/postgresql),
    [manual Barkd deploy](../.github/workflows/barkd-mainnet-deploy.yml). Verify no
    queued/running deployment can undo the source fences. Image publication alone
    must not deploy production. Keep all release automation held through cutover.
+   The repository variable `MAINNET_DEPLOY_TARGET` selects the path: empty or
+   `fly` keeps Fly, `paused` blocks both, and `railway` enables the new path.
+   Set `railway` only after the approved migration and acceptance, not merely
+   when bootstrap services exist. Production environment variables supply the
+   destination UUIDs; neither workflows nor bootstrap invent them.
 7. **Prepare DNS and access.** Inventory Cloudflare's current apex A/AAAA/CNAME,
    TTL, proxy mode, ownership records, and TLS settings; preserve unrelated mail,
    verification, and subdomain records. Register the Railway custom domain and
@@ -165,6 +177,10 @@ Git, Docker images, and the application's own volume/deletion boundary.
    Redis values/types/expiration deadlines, and every wallet file checksum and
    permission. Correct any failure before continuing. **Do not start the API to
    initialize its schema before restoring Postgres.**
+   Enable Postgres HA/PITR and scheduled volume backups according to the chosen
+   topology before activation; verify the completed first backup and recovery
+   coverage. The bootstrap alone does not supply these protections. Configure
+   the API's Dockerfile build and `/health` check before its first image upload.
 6. Start the single Railway Barkd with the original image entrypoint, clearing
    importer command overrides and keeping the same restored volume. Confirm
    network, wallet identity, reconciled balances/actions, and authenticated

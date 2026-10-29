@@ -1,0 +1,77 @@
+name: Mainnet Railway Deploy
+
+on:
+  workflow_dispatch:
+    inputs:
+      component:
+        description: Service to deploy (Barkd requires a fresh wallet backup)
+        type: choice
+        options: [api, barkd]
+        required: true
+      image_digest:
+        description: Reviewed published image digest (sha256, not a tag)
+        type: string
+        required: true
+  workflow_call:
+    inputs:
+      component:
+        type: string
+        required: true
+      image_digest:
+        type: string
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  deploy:
+    name: Deploy mainnet ${{ inputs.component }} to Railway
+    if: >-
+      vars.MAINNET_DEPLOY_TARGET == 'railway' &&
+      (github.ref == 'refs/heads/master' ||
+       (github.ref_type == 'tag' && startsWith(github.ref_name, 'v') && inputs.component == 'api'))
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    environment: production
+    timeout-minutes: 30
+    concurrency:
+      group: railway-mainnet-deploy
+      cancel-in-progress: false
+    steps:
+      - uses: actions/setup-node@v6
+        with:
+          node-version: '24'
+      - name: Install pinned Railway CLI
+        run: npm install --global @railway/cli@5.71.0
+      - name: Deploy the reviewed image
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_MAINNET_TOKEN }}
+          RAILWAY_PROJECT: 8847a6a1-bf07-4321-a62b-9839e9954e46
+          RAILWAY_ENVIRONMENT: ${{ vars.RAILWAY_MAINNET_ENVIRONMENT_ID }}
+          API_SERVICE: ${{ vars.RAILWAY_MAINNET_API_SERVICE_ID }}
+          BARKD_SERVICE: ${{ vars.RAILWAY_MAINNET_BARKD_SERVICE_ID }}
+          COMPONENT: ${{ inputs.component }}
+          IMAGE_DIGEST: ${{ inputs.image_digest }}
+        shell: bash
+        run: |
+          test -n "$RAILWAY_TOKEN"
+          [[ "$IMAGE_DIGEST" =~ ^sha256:[a-f0-9]{64}$ ]]
+          for id in "$RAILWAY_ENVIRONMENT" "$API_SERVICE" "$BARKD_SERVICE"; do
+            [[ "$id" =~ ^[a-f0-9]{8}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{4}-[a-f0-9]{12}$ ]]
+            case "$id" in
+              37880684-30ae-4242-af12-ddba1ba620ad|2dac716c-bcd0-4c2c-ab77-6f3226548ca8|0250c7b1-1916-44e0-81e7-afc947c4c5ad) exit 1 ;;
+            esac
+          done
+          test "$API_SERVICE" != "$BARKD_SERVICE"
+          case "$COMPONENT" in
+            api) service="$API_SERVICE"; image="niteshbalusu/noah-server" ;;
+            barkd) service="$BARKD_SERVICE"; image="niteshbalusu/noah-barkd" ;;
+            *) exit 1 ;;
+          esac
+          deploy_context=$(mktemp -d "$RUNNER_TEMP/noah-mainnet-image.XXXXXX")
+          trap 'rm -rf "$deploy_context"' EXIT
+          printf 'FROM %s@%s\n' "$image" "$IMAGE_DIGEST" > "$deploy_context/Dockerfile"
+          railway up "$deploy_context" --path-as-root --project "$RAILWAY_PROJECT" --environment "$RAILWAY_ENVIRONMENT" --service "$service" --ci --message "$COMPONENT $IMAGE_DIGEST"
+          if [[ "$COMPONENT" == api ]]; then
+            curl --fail --silent --show-error https://noahwallet.io/health
+          fi
