@@ -1,5 +1,8 @@
 # Mainnet preparation
 
+Production cutover completed on **2026-10-29**. The preparation and rehearsal
+records below are historical; current release instructions follow them.
+
 The [migration runbook](../../docs/railway_mainnet_migration_plan.md) requires
 explicit cutover approval. These files do not create a production environment,
 copy data, or change GitHub variables on merge. Signet's configuration is separate.
@@ -246,18 +249,16 @@ specified in the runbook. These changes are not performed by CI or this PR.
 
 ## Releases after acceptance
 
-`MAINNET_DEPLOY_TARGET` is a **repository-level** variable:
+Railway is the sole production deployment target. Pushing a `v*` tag runs Server
+CI and image publication, then deploys that commit's published image to mainnet.
+Master pushes deploy only signet. The tag caller inherits secrets so the reusable
+workflow receives `RAILWAY_MAINNET_TOKEN`, with the existing GitHub `production`
+environment approval and ref restrictions still enforced.
 
-| Value | Fly paths | Railway paths |
-| --- | --- | --- |
-| Missing or `fly` | Existing tag and manual deploys | Disabled |
-| `paused` or any unknown value | Disabled | Disabled |
-| `railway` | Disabled | Enabled |
-
-At the approved freeze, set `paused`, cancel/drain queued and running deployments,
-and fence the Fly Machines. Old workflow revisions lack these guards; the variable
-alone does not cancel work or stop Machines. Set `railway` only after activation,
-DNS/TLS, payment acceptance, and verification of the active runtime settings.
+The Fly tag job and both manual Fly deployment workflows have been removed.
+Current workflows do not read `MAINNET_DEPLOY_TARGET`; retain its repository
+value `railway` to fence historical Fly workflow revisions. Keep old Fly wallet
+Machines stopped and inert; removing CI paths does not delete retained resources.
 
 In GitHub's existing `production` environment, install:
 
@@ -275,7 +276,7 @@ temporary single-`FROM` Dockerfile using CLI 5.71.0; it does not apply IaC or co
 Rust. API and Barkd releases share a concurrency group.
 
 For an explicit release of a previously reviewed, published digest, dispatch from
-master after acceptance:
+master:
 
 ```sh
 gh workflow run mainnet-railway-deploy.yml --ref master \
@@ -283,7 +284,9 @@ gh workflow run mainnet-railway-deploy.yml --ref master \
 ```
 
 Use `component=barkd` with the reviewed Barkd digest for a manual wallet upgrade,
-after a fresh backup and wallet-format compatibility checks. API releases never
+after a fresh backup and wallet-format compatibility checks. Build new Barkd
+images using [docker/barkd/Dockerfile](../../docker/barkd/Dockerfile) and the manual
+`barkd-build-push.yml` workflow. API releases never
 restart Barkd. The workflow fixes each component's image repository and target
 service, rejects malformed digests, and stops on upload failure. The API also
 checks public `/health`; verify the new serving deployment/revision separately,

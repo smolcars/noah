@@ -31,7 +31,7 @@ RUN apt-get update \
     && install --directory --owner barkd --group barkd --mode 0700 /data
 
 COPY --from=downloader /barkd /usr/local/bin/barkd
-COPY fly/barkd-entrypoint.sh /usr/local/bin/barkd-entrypoint
+COPY docker/barkd/entrypoint.sh /usr/local/bin/barkd-entrypoint
 
 ENV BARKD_DATADIR=/data/barkd \
     BARKD_BIND_HOST=:: \

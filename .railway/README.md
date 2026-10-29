@@ -18,7 +18,7 @@ railway config apply --environment signet
 
 The active configuration runs Postgres 18, persistent Redis with AOF and
 `noeviction`, the API, and one Barkd 0.8.0 instance with its restored `/data`
-volume. The API is built from uploaded source using the root Dockerfile; Barkd's
+volume. The API imports the CI-published image through a wrapper Dockerfile; Barkd's
 dedicated [Dockerfile](barkd/Dockerfile) pins its existing image by digest. The API checks
 `/health`; Barkd has a 30-second shutdown grace period.
 Daily, weekly, and monthly volume backups are enabled. The
@@ -59,9 +59,9 @@ the server and its embedded migrations; the Railway upload contains only the
 wrapper Dockerfile.
 
 Existing image publication also serves mainnet and manual image consumers.
-`v*` tags keep their existing mainnet Fly deployment and do not deploy
-signet. The Fly signet API job is removed and the manual Barkd workflow now deploys
-to Railway. Keep
+`v*` tags deploy the same published image to mainnet Railway and do not deploy
+signet; see the [mainnet release instructions](mainnet/README.md#releases-after-acceptance).
+Fly deployment jobs have been removed. Keep
 `SIGNET_DEPLOY_TARGET=railway` as a fence for historical workflow versions.
 
 **Barkd upgrades remain manual:** build and review the new image, update its digest

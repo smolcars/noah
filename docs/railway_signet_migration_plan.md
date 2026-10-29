@@ -67,7 +67,7 @@ Set Barkd's `RAILWAY_DEPLOYMENT_DRAINING_SECONDS=30` explicitly as the initial v
 
 1. **Allow the exact Railway signet Barkd origin.** [Config](../server/src/config.rs) currently pins `http://noah-barkd-signet.internal:3000`. Add the exact private Railway signet hostname assigned to this service, preserving origin validation, port checks, mainnet separation, and regtest loopback restrictions. Do not allow arbitrary hosts or every `.railway.internal` name. Add focused accepted/rejected-URL tests.
    The LNURL limiter also needs the hosting proxy's trusted client-IP header: retain `fly-client-ip` on Fly and select Railway's `X-Real-IP` only in a Railway process. Never accept a caller-supplied Fly header on Railway. [Railway request headers](https://docs.railway.com/networking/public-networking/specs-and-limits).
-2. **Prepare manual Railway deployment settings/workflow.** Reuse the root [Dockerfile](../Dockerfile) and [Barkd image](../fly/barkd.Dockerfile). Record digests; do not follow mutable `latest` during the window.
+2. **Prepare manual Railway deployment settings/workflow.** Reuse the root [Dockerfile](../Dockerfile) and [Barkd image](../docker/barkd/Dockerfile). Record digests; do not follow mutable `latest` during the window.
 3. **Pause the old Fly deployment path.** [server-push.yml](../.github/workflows/server-push.yml) deploys signet to Fly after image publication. Merge the guard for `SIGNET_DEPLOY_TARGET`, set that repository variable to `railway`, and check for already queued/running deployments before freezing writes. The guarded mainnet tag job still requires image publication and permits the intentionally skipped Fly signet job; a failed signet job remains a block. The same guard protects manual Barkd signet deployments. Image publication also produces `sha-<commit>` multi-architecture tags for a fixed deployment version.
 4. **Prepare and rehearse an offline volume importer** and a binary-safe Redis copier as described below. These are operator tools, not new app features.
 
@@ -201,7 +201,7 @@ Copy **the complete `/data` volume**, including `/data/barkd`, SQLite databases 
 
 ### Access the source after stopping it
 
-Fly SSH/SFTP requires a running Machine. **Do not restart the normal Barkd command to retrieve its files.** Keep the same source volume, temporarily replace the stopped Machine's command with `/bin/sleep infinity`, and start that maintenance instance only. The installed `flyctl machine update --help` supports `--command`, `--restart no`, and `--skip-start`; validate the saved config and retain the same volume attachment. Source [entrypoint](../fly/barkd-entrypoint.sh) accepts this command without invoking Barkd.
+Fly SSH/SFTP requires a running Machine. **Do not restart the normal Barkd command to retrieve its files.** Keep the same source volume, temporarily replace the stopped Machine's command with `/bin/sleep infinity`, and start that maintenance instance only. The installed `flyctl machine update --help` supports `--command`, `--restart no`, and `--skip-start`; validate the saved config and retain the same volume attachment. Source [entrypoint](../docker/barkd/entrypoint.sh) accepts this command without invoking Barkd.
 
 Illustrative templates, after recording the real Machine ID and saving its original config:
 

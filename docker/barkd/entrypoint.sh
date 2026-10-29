@@ -1,7 +1,7 @@
 #!/bin/sh
 set -eu
 
-# Fly mounts volumes as root:root on every boot. Reclaim the mount before
+# Mounted volumes may be owned by root. Reclaim the mount before
 # dropping privileges so barkd can initialize its nested datadir.
 chown barkd:barkd /data
 chmod 0700 /data

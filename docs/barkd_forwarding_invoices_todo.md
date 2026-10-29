@@ -109,7 +109,7 @@ These items block implementation or mainnet rollout.
 
 ### Container image
 
-- [ ] Add `fly/barkd.Dockerfile`.
+- [ ] Add `docker/barkd/Dockerfile`.
 - [ ] Pin an explicit barkd release version.
 - [ ] Download the matching Linux release binary or compile the tagged source.
 - [ ] Verify the release checksum during the image build.

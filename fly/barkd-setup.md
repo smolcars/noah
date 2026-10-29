@@ -1,5 +1,10 @@
 # Barkd Fly setup
 
+Historical reference only: both networks now run on Railway. Fly deployment
+workflows are retired; keep old wallets stopped. Use the current
+[signet](../.railway/README.md#releases) and
+[mainnet](../.railway/mainnet/README.md#releases-after-acceptance) release instructions.
+
 Noah uses one private barkd app and wallet per Bitcoin network. Barkd owns its SQLite wallet state
 in `/data/barkd` on a Fly Volume; the Noah server remains stateless and calls barkd over Fly's
 private 6PN network. The subdirectory keeps the filesystem's `lost+found` directory outside Barkd's
@@ -12,12 +17,12 @@ Barkd 0.8.0 and later can also serve the `bark-web` wallet UI on the API port; t
 
 ## Files
 
-- `fly/barkd.Dockerfile`: pinned barkd runtime image
+- `docker/barkd/Dockerfile`: pinned barkd runtime image
 - `fly/signet.barkd.fly.toml`: `noah-barkd-signet`
 - `fly/mainnet.barkd.fly.toml`: `noah-barkd-mainnet`
 - `.github/workflows/barkd-build-push.yml`: manual multi-architecture image publication
 - `.github/workflows/barkd-signet-deploy.yml`: manual signet deployment
-- `.github/workflows/barkd-mainnet-deploy.yml`: manual production-approved mainnet deployment
+- `.github/workflows/mainnet-railway-deploy.yml`: current manual mainnet Railway deployment
 
 ## Build the image locally
 
@@ -26,7 +31,7 @@ asset through BuildKit's `TARGETARCH` and verifies a pinned SHA-256 for each arc
 
 ```sh
 docker build \
-  --file fly/barkd.Dockerfile \
+  --file docker/barkd/Dockerfile \
   --tag noah-barkd:0.8.0 \
   .
 
@@ -172,11 +177,11 @@ Never reuse the signet volume, mnemonic, REST token, or wallet fingerprint on ma
 Deploy mainnet manually after publishing and testing the pinned image on signet:
 
 ```sh
-gh workflow run barkd-mainnet-deploy.yml --ref master
+# The mainnet Fly deployment workflow has been retired.
 ```
 
-The workflow uses the GitHub `production` environment for approval and requires a
-`FLY_BARKD_MAINNET_API_TOKEN` secret with access to only the mainnet barkd app.
+Current mainnet releases use Railway and the GitHub `production` environment;
+see the release instructions linked above.
 
 ## Snapshots and restore
 
@@ -213,7 +218,7 @@ in-progress action.
 1. Disable new forwarded invoices in Noah.
 2. Leave barkd running until existing paid receives settle.
 3. Create and verify an on-demand volume snapshot.
-4. Update the pinned barkd version and both architecture checksums in `fly/barkd.Dockerfile`, the
+4. Update the pinned barkd version and both architecture checksums in `docker/barkd/Dockerfile`, the
    image tags in the Fly and Compose configs, and `BARK_VERSION` in the build workflow.
 5. Dispatch the image build workflow and deploy the versioned image to signet.
 6. Test signet, then dispatch the production-approved mainnet deployment.

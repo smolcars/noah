@@ -1,10 +1,9 @@
 # Mainnet migration from Fly to Railway
 
-Planning date: **2026-10-29**. Status: **preparation code for review; cutover not authorized**.
-This PR includes the runbook, exact mainnet Barkd hostname support, an inert
-production bootstrap, and guarded release workflows. Fly remains the default
-production target. Merging does not provision services, transfer production data,
-set deployment-target variables, or approve the cutover. See the
+Planning date: **2026-10-29**. Status: **production cutover completed 2026-10-29**.
+This is the historical migration procedure. Production API, Postgres HA/PITR,
+Redis and Barkd 0.8.0 now run on Railway; Fly wallet services remain stopped and
+fenced. Tag and manual release workflows deploy only to Railway. See the
 [bootstrap and release instructions](../.railway/mainnet/README.md).
 
 Use the completed [signet migration](railway_signet_migration_plan.md) as the
@@ -108,16 +107,13 @@ Platform references: [Postgres](https://docs.railway.com/databases/postgresql),
    releases manual/tag-based, with production environment protections and a
    separately scoped Railway token; master remains signet-only. Barkd stays
    manual and pinned to the reviewed 0.8.0 digest. Serialize production API
-   and Barkd releases. Fence all existing Fly mainnet deployment paths before
-   the freeze: the tag job in [server-push.yml](../.github/workflows/server-push.yml),
-   [manual API deploy](../.github/workflows/fly-mainnet-deploy.yml), and
-   [manual Barkd deploy](../.github/workflows/barkd-mainnet-deploy.yml). Verify no
-   queued/running deployment can undo the source fences. Image publication alone
-   must not deploy production. Keep all release automation held through cutover.
-   The repository variable `MAINNET_DEPLOY_TARGET` selects the path: empty or
-   `fly` keeps Fly, `paused` blocks both, and `railway` enables the new path.
-   Set `railway` only after the approved migration and acceptance, not merely
-   when bootstrap services exist. Production environment variables supply the
+   and Barkd releases. At cutover, the Fly tag job and both manual Fly deployment
+   workflows were fenced with `MAINNET_DEPLOY_TARGET=paused`, and queued/running
+   deployments were checked before stopping writers. Those Fly paths have since
+   been removed. Current workflows deploy directly to Railway; retain the
+   repository variable's `railway` value only as a fence for historical workflow
+   revisions. Image publication alone must not deploy production outside a `v*`
+   tag or an explicit manual release. Production environment variables supply the
    destination UUIDs; neither workflows nor bootstrap invent them.
 7. **Prepare DNS and access.** Inventory Cloudflare's current apex A/AAAA/CNAME,
    TTL, proxy mode, ownership records, and TLS settings; preserve unrelated mail,
