@@ -28,9 +28,8 @@ jobs:
   deploy:
     name: Deploy mainnet ${{ inputs.component }} to Railway
     if: >-
-      vars.MAINNET_DEPLOY_TARGET == 'railway' &&
-      (github.ref == 'refs/heads/master' ||
-       (github.ref_type == 'tag' && startsWith(github.ref_name, 'v') && inputs.component == 'api'))
+      github.ref == 'refs/heads/master' ||
+      (github.ref_type == 'tag' && startsWith(github.ref_name, 'v') && inputs.component == 'api')
     runs-on: blacksmith-4vcpu-ubuntu-2404
     environment: production
     timeout-minutes: 30

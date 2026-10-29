@@ -1,5 +1,10 @@
 # Barkd Forwarding Invoices TODO
 
+Historical feature backlog. The unchecked items below are not an inventory of
+what is deployed. Infrastructure now runs on Railway; use the
+[signet](../.railway/README.md) and [mainnet](../.railway/mainnet/README.md)
+operations notes for configuration, releases and wallet recovery.
+
 ## Goal
 
 Let the Noah server create Lightning invoices for users without waking their devices. Noah will
@@ -15,10 +20,10 @@ outbound access to the configured Ark server and chain source.
 
 ## Locked Decisions
 
-- [x] Run barkd as a separate Fly app, not inside the replicated Noah server process.
-- [x] Run exactly one barkd Machine per network with one attached Fly Volume.
-- [x] Keep the existing Noah server stateless and retain its blue/green deployment strategy.
-- [x] Reach barkd over Fly's private 6PN network and require barkd bearer authentication.
+- [x] Run barkd as a separate service, not inside the replicated Noah server process.
+- [x] Run exactly one barkd instance per network with one attached persistent volume.
+- [x] Keep the Noah server stateless and deploy it independently from Barkd.
+- [x] Reach barkd over Railway's private network and require barkd bearer authentication.
 - [x] Do not allocate public IPs or expose barkd's REST API or Swagger UI publicly.
 - [x] Use barkd's `POST /api/v1/lightning/receives/invoice/for-address` endpoint.
 - [x] Roll out on signet before creating the mainnet wallet.
@@ -37,10 +42,6 @@ outbound access to the configured Ark server and chain source.
 - [Get Lightning receive status](https://second.tech/docs/barkd/api-reference/lightning/get-receive-status)
 - [Get Ark server info](https://second.tech/docs/barkd/api-reference/wallet/get-ark-server-info)
 - [Bark backup requirements](https://second.tech/docs/backups)
-- [Fly private app networking](https://fly.io/docs/networking/app-services/)
-- [Fly Volume behavior](https://fly.io/docs/volumes/overview/)
-- [Fly Volume snapshots](https://fly.io/docs/volumes/snapshots/)
-- [Fly deployment strategies](https://fly.io/docs/reference/configuration/#picking-a-deployment-strategy)
 
 This plan was last checked against barkd `0.6.1` and the linked documentation on 2026-08-17.
 Pin the deployed version; do not build from a moving branch or use an unpinned `latest` image.
@@ -52,28 +53,28 @@ Lightning payer
       |
       | LNURL callback
       v
-Noah server (one or more blue/green Machines)
+Noah server
       |
       | 1. Read the user's Ark address from Postgres
-      | 2. Authenticated HTTP over Fly 6PN
+      | 2. Authenticated HTTP over the private network
       v
-barkd (one always-on Machine in iad)
+barkd (one always-on instance in iad)
       |
       | SQLite database, mnemonic, auth token
       v
-Fly Volume mounted at /data
+Persistent volume mounted at /data
       |
       | Paid receive is claimed directly to the user's address
       v
 User's Ark mailbox
 ```
 
-Use separate apps and wallets for each network:
+Use separate Railway environments and wallets for each network:
 
-| Network | Proposed Fly app | Noah caller | Datadir |
+| Network | Barkd service | Noah caller | Datadir |
 | --- | --- | --- | --- |
-| Signet | `noah-barkd-signet` | `noah-signet` | `/data` |
-| Mainnet | `noah-barkd-mainnet` | `noah-mainnet` | `/data` |
+| Signet | `noah-barkd-signet` | `api` | `/data/barkd` |
+| Mainnet | `noah-barkd-mainnet` | `api-mainnet` | `/data/barkd` |
 
 ## Phase 0: Resolve Protocol and Product Gates
 
@@ -105,169 +106,14 @@ These items block implementation or mainnet rollout.
 - [ ] Continue taking the address only from the authenticated Noah user record; never accept a
   forwarding address directly from the public LNURL callback request.
 
-## Phase 1: Package Barkd
+## Infrastructure and wallet operations
 
-### Container image
-
-- [ ] Add `fly/barkd.Dockerfile`.
-- [ ] Pin an explicit barkd release version.
-- [ ] Download the matching Linux release binary or compile the tagged source.
-- [ ] Verify the release checksum during the image build.
-- [ ] Include only the runtime files required by barkd and health/debug tooling that operators
-  intentionally need.
-- [ ] Run `barkd --version` in CI and assert the pinned version.
-- [ ] Decide how the mounted volume gets ownership and permissions before dropping privileges.
-- [ ] Ensure the mnemonic, SQLite database, and auth-token file are readable only by the barkd
-  runtime user.
-- [ ] Do not enable `--expose-mnemonic` in the normal container command.
-- [ ] Do not use `BARKD_NO_AUTH`.
-
-The normal process should be equivalent to:
-
-```sh
-barkd --datadir /data/barkd --host :: --port 3000
-```
-
-`barkd` currently parses `--host` as an IP address, so use the IPv6 wildcard `::`; do not pass the
-Fly hostname `fly-local-6pn` as the flag value.
-
-### CI and releases
-
-- [ ] Add a workflow or documented manual command for building and publishing the pinned image.
-- [ ] Keep barkd image deployment separate from the Noah server image deployment.
-- [ ] Require a tested database backup before every barkd version upgrade.
-- [ ] Read upstream release notes for database migrations and downgrade compatibility.
-- [ ] Do not assume rolling back the binary is safe after the new binary has migrated SQLite.
-
-## Phase 2: Add Fly Apps and Volumes
-
-### Configuration files
-
-- [ ] Add `fly/signet.barkd.fly.toml`.
-- [ ] Add `fly/mainnet.barkd.fly.toml` only after signet passes the rollout gates.
-- [ ] Use `iad`, matching the Noah server's primary region.
-- [ ] Mount a volume named `bark_data` at `/data`.
-- [ ] Configure `BARKD_DATADIR=/data/barkd`, `BARKD_BIND_HOST=::`, and `BARKD_BIND_PORT=3000`.
-- [ ] Keep the datadir below the volume root so Fly's filesystem-owned `lost+found` directory does
-  not prevent wallet creation.
-- [ ] Use `strategy = "rolling"`; Fly blue/green and canary deployments are not supported for
-  Machines with attached volumes.
-- [ ] Keep one Machine running with auto-stop disabled.
-- [ ] Add a top-level TCP check on port 3000. Do not put a bearer token in `fly.toml` merely to make
-  an HTTP health check work.
-- [ ] Do not add `[http_service]`, `[[services]]`, or public IPs. Noah can connect directly over 6PN.
-
-Expected configuration shape:
-
-```toml
-app = "noah-barkd-signet"
-primary_region = "iad"
-
-[build]
-  dockerfile = "barkd.Dockerfile"
-
-[deploy]
-  strategy = "rolling"
-
-[env]
-  BARKD_DATADIR = "/data/barkd"
-  BARKD_BIND_HOST = "::"
-  BARKD_BIND_PORT = "3000"
-
-[[mounts]]
-  source = "bark_data"
-  destination = "/data"
-  snapshot_retention = 30
-
-[checks.barkd_tcp]
-  type = "tcp"
-  port = 3000
-  interval = "30s"
-  timeout = "5s"
-  grace_period = "15s"
-
-[[vm]]
-  memory = "512mb"
-  cpu_kind = "shared"
-  cpus = 1
-```
-
-Validate the VM size under concurrent signet invoice creation before copying it to mainnet.
-
-### One-time Fly provisioning
-
-- [ ] Create the signet app in the same Fly organization as `noah-signet`.
-- [ ] Create one `bark_data` volume in `iad` and choose its size explicitly.
-- [ ] Deploy exactly one Machine.
-- [ ] Verify `fly volumes list` shows the volume attached to that Machine.
-- [ ] Verify `fly machine list` shows only one barkd Machine.
-- [ ] Verify `fly ips list` shows no public IPs. Release any public IP allocated accidentally.
-- [ ] From a Noah Machine, resolve `noah-barkd-signet.internal` and connect to port 3000.
-- [ ] Confirm the API is unreachable from the public internet.
-
-Illustrative commands; verify them against the installed `flyctl` before execution:
-
-```sh
-fly apps create noah-barkd-signet
-fly volumes create bark_data --app noah-barkd-signet --region iad --size 1
-fly deploy --config fly/signet.barkd.fly.toml --remote-only --ha=false
-fly scale count 1 --app noah-barkd-signet
-fly ips list --app noah-barkd-signet
-```
-
-## Phase 3: Initialize and Snapshot Each Wallet
-
-### Wallet initialization
-
-- [ ] Start barkd with the empty mounted datadir. It should generate its REST auth token.
-- [ ] Retrieve the bearer token in a controlled operator session with
-  `barkd --datadir /data/barkd secret show`.
-- [ ] Store the token as `BARKD_AUTH_TOKEN` on the corresponding Noah app.
-- [ ] Store `BARKD_URL=http://noah-barkd-signet.internal:3000` on `noah-signet`.
-- [ ] Do not store the bearer token in Git, logs, Docker layers, or `fly.toml`.
-- [ ] Reach barkd through an operator tunnel or private Machine and call
-  `POST /api/v1/wallet/create` exactly once.
-- [ ] Use the documented Second signet endpoints:
-  - Ark server: `https://ark.signet.2nd.dev`
-  - Esplora: `https://esplora.signet.2nd.dev`
-- [ ] Record the returned wallet fingerprint and compare it after every restore.
-- [ ] Retrieve the generated mnemonic in a controlled session and store it in the approved offline
-  secret-management/recovery system.
-- [ ] Ensure the normal deployment is restarted without mnemonic exposure enabled.
-- [ ] Repeat the process independently for mainnet; never reuse the signet mnemonic or datadir.
-
-Current documented mainnet connection details are:
-
-- Ark server: `https://ark.second.tech`
-- Esplora: `https://mempool.second.tech/api`
-- Network value: `mainnet`
-
-Reconfirm these endpoints in Second's documentation at the time of mainnet initialization.
-
-### Fly Volume snapshots
-
-The initial backup policy intentionally uses Fly Volume snapshots only. Fly takes automatic daily
-snapshots and supports retention from 1 to 60 days. This accepts up to roughly one day of database
-state loss after a volume-host failure; the mnemonic remains the recovery backstop for wallet
-balance, while recent payment history and in-progress action state may be missing.
-
-- [ ] Set `snapshot_retention = 30` on the barkd mount and confirm automatic snapshots are enabled.
-- [ ] Store the mnemonic outside Fly in the approved offline recovery system; do not rely on the
-  volume snapshot as the only copy of it.
-- [ ] After provisioning, list snapshots and confirm a snapshot reaches the `created` state.
-- [ ] Create an on-demand snapshot before every barkd upgrade or risky operational change.
-- [ ] Record the volume ID in the operator runbook so snapshots remain discoverable after deletion.
-- [ ] Perform a full restore rehearsal on signet:
-  - Stop the original Machine.
-  - List snapshots with `fly volumes snapshots list <volume-id>`.
-  - Restore the selected snapshot into a fresh volume of equal or greater size.
-  - Start exactly one replacement Machine.
-  - Confirm the fingerprint, pending actions, and receive history.
-  - Pay a new invoice and verify delivery.
-- [ ] Write the mainnet disaster-recovery runbook before enabling mainnet traffic.
-
-Continuous off-Machine backups with `bark-backupd` or another tool are a future hardening option,
-not an initial rollout requirement.
+The container image lives in [docker/barkd](../docker/barkd/Dockerfile). Railway
+configuration, manual upgrades, volume backups and recovery are documented in
+its operations notes above. The signet and mainnet wallets already exist; do not
+initialize replacement wallets or restore an old copy alongside either active
+wallet. Preserve the complete datadir and verify backup/format compatibility
+before a Barkd upgrade.
 
 ## Phase 4: Add a Small Noah Barkd Client
 
@@ -279,8 +125,8 @@ not an initial rollout requirement.
   - `BARKD_AUTH_TOKEN`, required only when enabled and always redacted
   - `BARKD_REQUEST_TIMEOUT_SECONDS`, with a conservative default
 - [ ] Fail server startup when the feature is enabled but URL or token is missing.
-- [ ] Validate that the production URL is HTTP on an approved `.internal` hostname; private 6PN
-  traffic already travels through Fly's encrypted WireGuard network.
+- [ ] Validate that the production URL is HTTP on the approved network-specific Railway hostname;
+  traffic stays on the private service network.
 - [ ] Never log the authorization header, mnemonic, preimage, or full response bodies from errors.
 
 ### Client module
@@ -311,7 +157,7 @@ trait ForwardingInvoiceProvider {
 - [ ] Allow status GETs to retry with bounded backoff.
 - [ ] Store the client in `AppStruct` as an optional dependency controlled by the feature flag.
 - [ ] Add a startup/degraded-readiness probe using authenticated `GET /api/v1/wallet/ark-info`, but
-  do not make temporary barkd unavailability remove every Noah web Machine from service.
+  do not make temporary barkd unavailability remove every Noah API instance from service.
 
 ### Tests for the client
 
@@ -366,7 +212,7 @@ negotiation fails.
   reconciliation, and alerts, not for reconstructing Bark actions.
 - [ ] Add a bounded reconciliation worker that calls
   `GET /api/v1/lightning/receives/{identifier}` for non-terminal rows.
-- [ ] Use the existing Postgres worker-claim pattern so multiple Noah Machines do not poll the same
+- [ ] Use the existing Postgres worker-claim pattern so multiple Noah instances do not poll the same
   row concurrently.
 - [ ] Map and persist barkd states: `awaiting-payment`, `htlcs-ready`, `preimage-revealed`,
   `delivering`, and `settled`.
@@ -423,10 +269,10 @@ negotiation fails.
 - [ ] Verify automatic snapshots regularly and before/after barkd upgrades.
 - [ ] Alert when barkd is unreachable, unauthorized, disconnected from the Ark server, or has a
   stuck paid receive.
-- [ ] Alert when the Fly volume is near capacity.
+- [ ] Alert when the wallet volume is near capacity.
 - [ ] Document bearer-token rotation:
   - Rotate with `barkd --datadir /data/barkd secret refresh` in a controlled session.
-  - Update the corresponding Noah Fly secret.
+  - Update the corresponding Noah Railway variable.
   - Restart/roll Noah and verify authentication.
 - [ ] Document volume-host failure and restoration from continuous backup.
 - [ ] Document barkd upgrades, database backup, verification, and rollback constraints.
@@ -452,20 +298,20 @@ negotiation fails.
 - [ ] Do not stop or delete barkd during an application rollback.
 - [ ] Continue reconciling every invoice already returned to a payer until it settles or reaches a
   documented terminal recovery state.
-- [ ] Preserve the Fly Volume, mnemonic, bearer token, and backups even if the feature remains
+- [ ] Preserve the wallet volume, mnemonic, bearer token, and backups even if the feature remains
   disabled.
 
 ## Definition of Done
 
-- [ ] Barkd is reachable from Noah over private 6PN and unreachable publicly.
-- [ ] Exactly one barkd Machine owns exactly one attached volume per network.
-- [ ] Noah remains blue/green deployable without a volume.
+- [ ] Barkd is reachable from Noah over the private service network and unreachable publicly.
+- [ ] Exactly one barkd instance owns exactly one attached volume per network.
+- [ ] Noah remains independently deployable without a volume.
 - [ ] The bearer token and mnemonic never appear in source control or logs.
 - [ ] A stored user Ark address can receive a paid Lightning invoice without waking the device.
 - [ ] The destination wallet discovers and spends the forwarded VTXO after syncing.
 - [ ] Barkd cannot redirect or spend an output created for the stored destination address.
 - [ ] A barkd restart resumes a paid parked delivery.
-- [ ] Fly snapshot creation and restore have been tested successfully.
+- [ ] Wallet backup creation and restore have been tested successfully.
 - [ ] Stuck paid receives produce actionable alerts.
 - [ ] Disabling the feature restores the old invoice flow without abandoning existing barkd
   actions.

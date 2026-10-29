@@ -1,31 +1,42 @@
 # Mainnet Metabase Fly setup
 
-`fly/mainnet.metabase.fly.toml` is the Fly app config for the Noah mainnet
-Metabase instance.
+`fly/mainnet.metabase.fly.toml` is retained until Metabase's separate migration.
+It is the only remaining Fly deployment config in this repository.
+
+## Retained state after wallet cutover
+
+As of **2026-10-29**, `noah-mainnet-metabase` is stopped with an inert sleep
+command. Its separate application database, `noah-mainnet-metabase-db`
+(`kyzl60xpw9xopj9g`), is preserved and ready. The old Noah production database
+was deleted; its reporting hostname/IP must not be used again.
+
+Keep the existing application database credentials and `MB_ENCRYPTION_SECRET_KEY`.
+The encryption key is required to read Metabase's stored connection secrets;
+do not replace it with a newly generated value during migration.
 
 Metabase needs two Postgres connections:
 
 - an application database, where Metabase stores its own users, dashboards,
   saved questions, permissions, and sync metadata
-- a read-only reporting connection to the existing Noah mainnet database
+- a read-only reporting connection to the authoritative Noah mainnet database
 
-The current Noah mainnet Managed Postgres cluster is:
+The wallet services now run on Railway; see the
+[mainnet operations notes](../.railway/mainnet/README.md). Preserve Metabase's
+application database and encryption key when moving it, and reconnect reporting
+using a dedicated read-only Railway database role before resuming analytics. Railway
+private DNS cannot be reached directly from Fly; connectivity must be arranged
+if Metabase resumes there before its migration. Do not restart it against the
+retired data source.
 
-```text
-Cluster ID: 3x9jv02ywl6r6qp7
-Cluster name: noah-mainnet-db
-Database: fly-db
-Schema admin user: fly-user
-Region: iad
-Direct IP: fdaa:38:716f:0:1::4
-```
+## Historical one-time setup
 
-Fly Managed Postgres roles are cluster-wide. A `schema_admin` user can read and
-write across the cluster, so the safest setup is to use a separate small Managed
-Postgres cluster for Metabase's application database and use a `reader` user on
-`noah-mainnet-db` only for reporting.
+These commands document the original bootstrap. The app and application database
+already exist; do not rerun this setup over the retained resources. The normal
+deployment command would also replace the deliberate sleep command.
 
-## One-time setup
+The original setup used a separate Fly Managed Postgres cluster for Metabase's
+application database and a cluster-wide `reader` role for reporting. Recreate
+read-only reporting privileges on Railway during migration.
 
 Create the Metabase Fly app:
 
@@ -74,14 +85,6 @@ fly secrets set -a noah-mainnet-metabase \
   MB_ENCRYPTION_SECRET_KEY='<random 32+ character secret>'
 ```
 
-Create a read-only reporting user on the existing Noah mainnet cluster:
-
-```sh
-fly mpg users create 3x9jv02ywl6r6qp7 \
-  --username metabase-readonly \
-  --role reader
-```
-
 Deploy Metabase:
 
 ```sh
@@ -92,19 +95,6 @@ The first boot can be slow because Metabase creates and migrates its application
 database before `/api/health` returns healthy. The Fly config uses a longer
 deploy wait for that first start.
 
-After the first deploy, open Metabase and add the Noah mainnet database as a
-data source:
-
-```text
-Database type: PostgreSQL
-Host: fdaa:38:716f:0:1::4
-Port: 5432
-Database name: fly-db
-User: metabase-readonly
-Password: <metabase-readonly password from Fly>
-Use a secure connection: disabled
-```
-
-This keeps Metabase's own state outside the production Noah cluster while
-limiting reporting access to read-only queries against the production `fly-db`
-database.
+The original reporting connection is retired. Configure the new Railway data
+source during the separate Metabase migration, then verify existing questions,
+dashboards and read-only access before resuming analytics.

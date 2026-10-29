@@ -50,7 +50,7 @@ jobs:
         uses: useblacksmith/build-push-action@v2
         with:
           context: .
-          file: fly/barkd.Dockerfile
+          file: docker/barkd/Dockerfile
           platforms: ${{ matrix.platform }}
           push: true
           build-args: |
@@ -80,17 +80,17 @@ jobs:
 
       - name: 🎯 Create and push multi-arch manifests
         run: |
-          docker buildx imagetools create -t ghcr.io/smolcars/noah-barkd:${BARK_VERSION} \
-            ghcr.io/smolcars/noah-barkd:${BARK_VERSION}-amd64 \
-            ghcr.io/smolcars/noah-barkd:${BARK_VERSION}-arm64
+          docker buildx imagetools create -t "ghcr.io/smolcars/noah-barkd:${BARK_VERSION}" \
+            "ghcr.io/smolcars/noah-barkd:${BARK_VERSION}-amd64" \
+            "ghcr.io/smolcars/noah-barkd:${BARK_VERSION}-arm64"
 
           docker buildx imagetools create -t ghcr.io/smolcars/noah-barkd:latest \
             ghcr.io/smolcars/noah-barkd:latest-amd64 \
             ghcr.io/smolcars/noah-barkd:latest-arm64
 
-          docker buildx imagetools create -t ${{ secrets.DOCKERHUB_USERNAME }}/noah-barkd:${BARK_VERSION} \
-            ${{ secrets.DOCKERHUB_USERNAME }}/noah-barkd:${BARK_VERSION}-amd64 \
-            ${{ secrets.DOCKERHUB_USERNAME }}/noah-barkd:${BARK_VERSION}-arm64
+          docker buildx imagetools create -t "${{ secrets.DOCKERHUB_USERNAME }}/noah-barkd:${BARK_VERSION}" \
+            "${{ secrets.DOCKERHUB_USERNAME }}/noah-barkd:${BARK_VERSION}-amd64" \
+            "${{ secrets.DOCKERHUB_USERNAME }}/noah-barkd:${BARK_VERSION}-arm64"
 
           docker buildx imagetools create -t ${{ secrets.DOCKERHUB_USERNAME }}/noah-barkd:latest \
             ${{ secrets.DOCKERHUB_USERNAME }}/noah-barkd:latest-amd64 \

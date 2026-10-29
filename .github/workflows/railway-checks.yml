@@ -6,8 +6,7 @@ on:
       - .railway/**
       - .github/workflows/server-push.yml
       - .github/workflows/mainnet-railway-deploy.yml
-      - .github/workflows/fly-mainnet-deploy.yml
-      - .github/workflows/barkd-mainnet-deploy.yml
+      - .github/workflows/barkd-build-push.yml
       - .github/workflows/railway-checks.yml
       - package.json
       - bun.lock

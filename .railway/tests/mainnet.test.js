@@ -60,30 +60,34 @@ test("HA preparation rejects the wrong project, environment and version; applica
   }
 });
 
-function enabled(expression, target, tag = true, component = "api") {
-  const github = { ref_type: tag ? "tag" : "branch", ref_name: tag ? "v1.0.0" : "master", ref: tag ? "refs/tags/v1.0.0" : "refs/heads/master" };
-  const condition = expression.replace(/\$\{\{|\}\}/g, "").replaceAll("needs.create-manifest", 'needs["create-manifest"]');
-  return Function("github", "vars", "needs", "inputs", "startsWith", "cancelled", `return (${condition});`)(
-    github, { MAINNET_DEPLOY_TARGET: target }, { "create-manifest": { result: "success" } }, { component },
-    (value, prefix) => value.startsWith(prefix), () => false,
+function enabled(expression, ref, component = "api") {
+  const github = { ref_type: ref.startsWith("refs/tags/") ? "tag" : "branch", ref_name: ref.split("/").slice(2).join("/"), ref };
+  return Function("github", "inputs", "startsWith", `return (${expression});`)(
+    github, { component }, (value, prefix) => value.startsWith(prefix),
   );
 }
 
-test("Fly stays the default; paused/unknown targets cannot deploy; Railway tags require CI and publication", () => {
-  for (const target of ["", "fly", "paused", "railway", "unexpected"]) {
-    const fly = target === "" || target === "fly";
-    expect(enabled(releases.jobs["mainnet-fly-deploy"].if, target)).toBe(fly);
-    for (const name of ["fly-mainnet-deploy.yml", "barkd-mainnet-deploy.yml"]) {
-      expect(enabled(workflow(name).jobs.deploy.if, target)).toBe(fly);
-    }
-    expect(enabled(releases.jobs["mainnet-railway-deploy"].if, target)).toBe(target === "railway");
-    expect(enabled(releases.jobs["mainnet-railway-deploy"].if, target, false)).toBe(false);
-    expect(enabled(railway.jobs.deploy.if, target, false, "barkd")).toBe(target === "railway");
-    expect(enabled(railway.jobs.deploy.if, target, true, "barkd")).toBe(false);
+test("master deploys signet and v tags deploy mainnet after CI and publication, with inherited secrets", () => {
+  for (const ref of ["refs/heads/master", "refs/heads/feature", "refs/tags/v1.0.0", "refs/tags/other"]) {
+    expect(enabled(releases.jobs["mainnet-railway-deploy"].if, ref)).toBe(ref === "refs/tags/v1.0.0");
+    expect(enabled(releases.jobs["railway-signet-deploy"].if, ref)).toBe(ref === "refs/heads/master");
   }
   expect(releases.jobs["mainnet-railway-deploy"].needs).toEqual(["server-checks", "create-manifest"]);
-  expect(enabled(releases.jobs["server-checks"].if, "railway")).toBe(true);
-  expect(enabled(releases.jobs["server-checks"].if, "fly")).toBe(false);
+  expect(releases.jobs["railway-signet-deploy"].needs).toEqual(["server-checks", "create-manifest"]);
+  expect(releases.jobs["server-checks"]).not.toHaveProperty("if");
+  expect(releases.jobs["mainnet-railway-deploy"].secrets).toBe("inherit");
+  expect(releases.jobs["mainnet-railway-deploy"].with.image_digest).toBe("${{ needs.create-manifest.outputs.image_digest }}");
+  const signetDeploy = releases.jobs["railway-signet-deploy"].steps.find((step) => step.name === "Deploy the published signet image");
+  expect(signetDeploy.env.SIGNET_IMAGE_DIGEST).toBe("${{ needs.create-manifest.outputs.image_digest }}");
+});
+
+test("manual mainnet releases keep production approval and shared concurrency; Barkd cannot deploy from tags", () => {
+  for (const component of ["api", "barkd"]) {
+    expect(enabled(railway.jobs.deploy.if, "refs/heads/master", component)).toBe(true);
+    expect(enabled(railway.jobs.deploy.if, "refs/heads/feature", component)).toBe(false);
+    expect(enabled(railway.jobs.deploy.if, "refs/tags/v1.0.0", component)).toBe(component === "api");
+    expect(enabled(railway.jobs.deploy.if, "refs/tags/other", component)).toBe(false);
+  }
   expect(railway.jobs.deploy.environment).toBe("production");
   expect(railway.jobs.deploy.concurrency).toEqual({ group: "railway-mainnet-deploy", "cancel-in-progress": false });
   expect(railway.on).not.toHaveProperty("push");

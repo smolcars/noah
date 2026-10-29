@@ -12,7 +12,8 @@ It is intentionally operational: where code lives, how the runtime behaves, and 
   - `client/`: React Native + Expo mobile app.
   - `server/`: Rust Axum backend.
   - `scripts/`: local regtest/dev stack tooling.
-  - `fly/`: Fly.io deployment configs.
+  - `.railway/`: Railway configuration and deployment/recovery notes.
+  - `fly/`: retained Metabase configuration pending its migration.
   - `docs/`: deep-dive docs for push/widgets/notification coordination.
 
 ## Monorepo map
