@@ -6,6 +6,7 @@ use std::str::FromStr;
 pub const ARK_USER_AGENT: &str = concat!("noah-server/", env!("CARGO_PKG_VERSION"));
 
 const BARKD_MAINNET_HOST: &str = "noah-barkd-mainnet.internal";
+const BARKD_MAINNET_RAILWAY_HOST: &str = "noah-barkd-mainnet.railway.internal";
 const BARKD_SIGNET_HOST: &str = "noah-barkd-signet.internal";
 const BARKD_SIGNET_RAILWAY_HOST: &str = "noah-barkd-signet.railway.internal";
 const BARKD_PORT: u16 = 3000;
@@ -25,8 +26,12 @@ fn validate_barkd_url(network: Network, url: &reqwest::Url) -> Result<()> {
     let host = url.host_str().context("BARKD_URL must include a host")?;
     match network {
         Network::Bitcoin => {
-            if host != BARKD_MAINNET_HOST || url.port() != Some(BARKD_PORT) {
-                anyhow::bail!("mainnet BARKD_URL must be http://{BARKD_MAINNET_HOST}:{BARKD_PORT}");
+            if ![BARKD_MAINNET_HOST, BARKD_MAINNET_RAILWAY_HOST].contains(&host)
+                || url.port() != Some(BARKD_PORT)
+            {
+                anyhow::bail!(
+                    "mainnet BARKD_URL must be http://{BARKD_MAINNET_HOST}:{BARKD_PORT} or http://{BARKD_MAINNET_RAILWAY_HOST}:{BARKD_PORT}"
+                );
             }
         }
         Network::Signet => {
@@ -470,6 +475,72 @@ mod tests {
             (
                 Network::Signet,
                 "http://:token@noah-barkd-signet.railway.internal:3000",
+            ),
+        ] {
+            assert!(!validate(network, url), "accepted unsafe barkd URL: {url}");
+        }
+    }
+
+    #[test]
+    fn mainnet_barkd_urls_are_pinned_to_the_private_railway_service() {
+        assert!(validate(
+            Network::Bitcoin,
+            "http://noah-barkd-mainnet.railway.internal:3000"
+        ));
+        assert!(validate(
+            Network::Bitcoin,
+            "http://noah-barkd-mainnet.railway.internal:3000/"
+        ));
+
+        for (network, url) in [
+            (
+                Network::Signet,
+                "http://noah-barkd-mainnet.railway.internal:3000",
+            ),
+            (
+                Network::Regtest,
+                "http://noah-barkd-mainnet.railway.internal:3000",
+            ),
+            (
+                Network::Bitcoin,
+                "http://noah-barkd-signet.railway.internal:3000",
+            ),
+            (Network::Bitcoin, "http://other.railway.internal:3000"),
+            (
+                Network::Bitcoin,
+                "http://noah-barkd-mainnet.railway.internal.example.com:3000",
+            ),
+            (
+                Network::Bitcoin,
+                "https://noah-barkd-mainnet.railway.internal:3000",
+            ),
+            (
+                Network::Bitcoin,
+                "http://noah-barkd-mainnet.railway.internal",
+            ),
+            (
+                Network::Bitcoin,
+                "http://noah-barkd-mainnet.railway.internal:3001",
+            ),
+            (
+                Network::Bitcoin,
+                "http://noah-barkd-mainnet.railway.internal:3000/api",
+            ),
+            (
+                Network::Bitcoin,
+                "http://noah-barkd-mainnet.railway.internal:3000/?key=value",
+            ),
+            (
+                Network::Bitcoin,
+                "http://noah-barkd-mainnet.railway.internal:3000/#fragment",
+            ),
+            (
+                Network::Bitcoin,
+                "http://token@noah-barkd-mainnet.railway.internal:3000",
+            ),
+            (
+                Network::Bitcoin,
+                "http://:token@noah-barkd-mainnet.railway.internal:3000",
             ),
         ] {
             assert!(!validate(network, url), "accepted unsafe barkd URL: {url}");

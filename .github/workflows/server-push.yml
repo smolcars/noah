@@ -19,6 +19,7 @@ on:
       - ".github/workflows/server.yml"
       - ".github/workflows/server-push.yml"
       - "!.railway/barkd/**"
+      - "!.railway/mainnet/**"
       - "!fly/barkd.Dockerfile"
       - "!fly/barkd-entrypoint.sh"
       - "!fly/*.barkd.fly.toml"
@@ -26,7 +27,9 @@ on:
 
 jobs:
   server-checks:
-    if: github.ref == 'refs/heads/master'
+    if: >-
+      github.ref == 'refs/heads/master' ||
+      (github.ref_type == 'tag' && startsWith(github.ref_name, 'v') && vars.MAINNET_DEPLOY_TARGET == 'railway')
     uses: ./.github/workflows/server.yml
 
   server-build-and-push:
@@ -77,6 +80,7 @@ jobs:
     runs-on: blacksmith-4vcpu-ubuntu-2404
     outputs:
       signet_digest: ${{ steps.signet_image.outputs.digest }}
+      mainnet_digest: ${{ steps.mainnet_image.outputs.digest }}
     steps:
       - name: 🔐 Login to GitHub Container Registry
         uses: docker/login-action@v4
@@ -108,6 +112,15 @@ jobs:
       - name: Resolve the published signet image digest
         id: signet_image
         if: github.ref == 'refs/heads/master'
+        shell: bash
+        run: |
+          digest=$(docker buildx imagetools inspect "niteshbalusu/noah-server:sha-$GITHUB_SHA" --format '{{json .Manifest}}' | jq -er '.digest')
+          [[ "$digest" =~ ^sha256:[a-f0-9]{64}$ ]]
+          echo "digest=$digest" >> "$GITHUB_OUTPUT"
+
+      - name: Resolve the published mainnet image digest
+        id: mainnet_image
+        if: github.ref_type == 'tag' && vars.MAINNET_DEPLOY_TARGET == 'railway'
         shell: bash
         run: |
           digest=$(docker buildx imagetools inspect "niteshbalusu/noah-server:sha-$GITHUB_SHA" --format '{{json .Manifest}}' | jq -er '.digest')
@@ -169,7 +182,8 @@ jobs:
     needs: create-manifest
     if: >-
       ${{ !cancelled() && needs.create-manifest.result == 'success' &&
-          github.ref_type == 'tag' && startsWith(github.ref_name, 'v') }}
+          github.ref_type == 'tag' && startsWith(github.ref_name, 'v') &&
+          (vars.MAINNET_DEPLOY_TARGET == '' || vars.MAINNET_DEPLOY_TARGET == 'fly') }}
     runs-on: blacksmith-4vcpu-ubuntu-2404
     environment: production
     concurrency: fly-mainnet-deploy
@@ -182,3 +196,11 @@ jobs:
       - run: flyctl deploy --config fly/mainnet.fly.toml --remote-only
         env:
           FLY_API_TOKEN: ${{ secrets.FLY_MAINNET_API_TOKEN }}
+
+  mainnet-railway-deploy:
+    needs: [server-checks, create-manifest]
+    if: github.ref_type == 'tag' && startsWith(github.ref_name, 'v') && vars.MAINNET_DEPLOY_TARGET == 'railway'
+    uses: ./.github/workflows/mainnet-railway-deploy.yml
+    with:
+      component: api
+      image_digest: ${{ needs.create-manifest.outputs.mainnet_digest }}
