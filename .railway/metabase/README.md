@@ -11,11 +11,11 @@ change to the wallet services, HA cluster, existing volumes or PITR bucket.
 
 ## Small deployment
 
-- `metabase`: one instance, 1 vCPU / 1 GiB limit, Java heap 128–512 MiB. No volume.
+- `metabase`: one instance, 1 vCPU / 1.5 GiB limit, Java heap 128–512 MiB. No volume.
 - `postgres-metabase`: one private Postgres 18 node, 1 vCPU / 2 GiB limit, 5 GiB
   persistent volume. No public database proxy, HA or PITR initially.
 - Both run in Virginia in the existing production environment. Railway bills
-  actual CPU/memory usage; resource limits are ceilings. Budget roughly $10–15
+  actual CPU/memory usage; resource limits are ceilings. Budget roughly $12–18
   extra per month for light use, subject to measured memory and CPU after startup.
 - Daily volume backups protect Metabase's application database; this permits up
   to a day's loss of dashboard edits. Keep an independent encrypted export.
@@ -67,4 +67,11 @@ constraints were valid. `citext` and `plpgsql` were retained. Daily backups were
 verified through API readback and a named restored-volume snapshot was requested.
 All ten pre-existing production deployment IDs were unchanged. The approved
 hostname is `metabase.noahwallet.io`; its previous A record is retained privately
-for recovery until cutover. Reporting/dashboard acceptance is still pending.
+for recovery until cutover. Administrator login and all 12 saved Noah queries are verified; public HTTPS
+and final acceptance remain pending.
+
+The original 1 GiB application limit passed startup and all 12 saved Noah
+queries, but anonymous memory reached about 988 MiB. The deployed limit is
+therefore 1.5 GiB with the same 512 MiB Java heap, leaving room for native JVM
+memory. Reporting database ID 2 was updated in place; all 12 queries completed
+with the new read-only role and returned the expected 984-user total.

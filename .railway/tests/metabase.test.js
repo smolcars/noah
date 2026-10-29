@@ -13,13 +13,14 @@ test("Metabase has a private independent database and capped resources, with the
     const db = definition.resources.find((r) => r.name === "postgres-metabase");
     const volume = definition.resources.find((r) => r.name === "postgres-metabase-volume");
     expect(app.source.image).toMatch(/^metabase\/metabase@sha256:[a-f0-9]{64}$/);
-    expect(app.deploy.limitOverride.containers).toEqual({ cpu: 1, memoryBytes: 1024 ** 3 });
+    expect(app.deploy.limitOverride.containers).toEqual({ cpu: 1, memoryBytes: 1536 * 1024 ** 2 });
     expect(app.deploy.startCommand).toBeUndefined();
     expect(app.deploy.healthcheckPath).toBe("/api/health");
     expect(app.deploy.healthcheckTimeout).toBe(600);
     expect(app.variables.MB_DB_PASS.resource).toBe(db.address);
     expect(app.variables.MB_ENCRYPTION_SECRET_KEY.type).toBe("preserve");
     expect(app.variables.PORT.value).toBe("3000");
+    expect(app.variables.MB_DISABLE_SCHEDULER.value).toBe("false");
     expect(app.variables.JAVA_OPTS.value).toBe("-Xms128m -Xmx512m");
     expect(db.deploy.limitOverride.containers).toEqual({ cpu: 1, memoryBytes: 2 * 1024 ** 3 });
     expect(db.networking?.tcpProxies).toBeUndefined();

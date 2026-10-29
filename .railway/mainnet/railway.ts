@@ -465,7 +465,7 @@ export default defineRailway((ctx) => {
       restartPolicyType: "ALWAYS",
       drainingSeconds: 30,
       overlapSeconds: 0,
-      limitOverride: { containers: { cpu: 1, memoryBytes: 1024 ** 3 } },
+      limitOverride: { containers: { cpu: 1, memoryBytes: 1536 * 1024 ** 2 } },
     },
     env: {
       MB_DB_TYPE: "postgres",
@@ -483,7 +483,7 @@ export default defineRailway((ctx) => {
       JAVA_OPTS: "-Xms128m -Xmx512m",
       MB_APPLICATION_DB_MAX_CONNECTION_POOL_SIZE: "5",
       MB_JDBC_DATA_WAREHOUSE_MAX_CONNECTION_POOL_SIZE: "5",
-      MB_DISABLE_SCHEDULER: "true",
+      MB_DISABLE_SCHEDULER: "false",
     },
   });
 
