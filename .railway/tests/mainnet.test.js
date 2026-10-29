@@ -17,13 +17,13 @@ const apiId = "22222222-2222-2222-2222-222222222222";
 const barkdId = "33333333-3333-3333-3333-333333333333";
 const digest = `sha256:${"a".repeat(64)}`;
 
-test("bootstrap rejects the wrong project, environment and missing version; applications remain inert", async () => {
+test("HA preparation rejects the wrong project, environment and version; applications remain inert", async () => {
   const originalId = process.env.RAILWAY_MAINNET_ENVIRONMENT_ID;
   const originalMajor = process.env.RAILWAY_MAINNET_POSTGRES_MAJOR;
   try {
-    process.env.RAILWAY_MAINNET_ENVIRONMENT_ID = environmentId;
-    process.env.RAILWAY_MAINNET_POSTGRES_MAJOR = "17";
-    const context = { projectId: "8847a6a1-bf07-4321-a62b-9839e9954e46", environmentId, environment: "production" };
+    process.env.RAILWAY_MAINNET_ENVIRONMENT_ID = "f39192f6-6cea-4c33-83cd-b62259cd10cb";
+    process.env.RAILWAY_MAINNET_POSTGRES_MAJOR = "18";
+    const context = { projectId: "8847a6a1-bf07-4321-a62b-9839e9954e46", environmentId: process.env.RAILWAY_MAINNET_ENVIRONMENT_ID, environment: "production" };
     for (const override of [{ projectId: "other" }, { environmentId: "other" }, { environment: "signet" }]) {
       expect(() => bootstrap(createRailwayContext({ ...context, ...override }))).toThrow();
     }
@@ -32,12 +32,17 @@ test("bootstrap rejects the wrong project, environment and missing version; appl
     const signetDefinition = await signet(createRailwayContext({ ...context, environment: "signet", environmentId: "37880684-30ae-4242-af12-ddba1ba620ad" }));
     const signetNames = new Set(signetDefinition.resources.map((resource) => resource.name));
     expect(resources.map((resource) => resource.name).filter((name) => signetNames.has(name))).toEqual([]);
-    expect(resources.find((r) => r.name === "postgres-mainnet").image).toEndWith(":17");
+    const members = resources.filter((r) => r.clusterRole);
+    expect(members.filter((r) => ["root", "replica"].includes(r.clusterRole))).toHaveLength(3);
+    expect(members.filter((r) => r.clusterRole === "internal")).toHaveLength(3);
+    expect(resources.find((r) => r.clusterRole === "edge").deploy.multiRegionConfig).toEqual({ iad: { numReplicas: 2 } });
+    expect(resources.find((r) => r.name === "postgres-mainnet").source.image).toEndWith("postgres-patroni:18");
+    expect(resources.some((r) => r.type === "database")).toBe(false);
     for (const name of ["api-mainnet", "noah-barkd-mainnet"]) {
       const service = resources.find((r) => r.name === name);
       expect(service.source.image).toBe("debian:bookworm-slim");
       expect(service.deploy.startCommand).toBe("/bin/sleep infinity");
-      expect(service.deploy.sleepApplication).toBe(false);
+      expect(service.deploy.sleepApplication).not.toBe(true);
     }
     const wallet = resources.find((r) => r.name === "noah-barkd-mainnet");
     expect(wallet.deploy.requiredMountPath).toBe("/data");

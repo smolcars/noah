@@ -40,10 +40,11 @@ Confirmed choices:
 
 Remaining choices before activation:
 
-- **Postgres protection and cost:** recommend HA, enabled PITR, and independent
-  encrypted logical backups. Railway's default template is a single node; HA and
-  PITR are explicit features, not properties of the Pro subscription. Size and
-  price the full topology against the actual Fly setup before choosing it.
+- **Postgres protection and cost:** destination HA and PITR are now enabled and
+  a primary-restart failover drill passed; see the preparation record. The native
+  replication policy is asynchronous, so choose the required durability policy
+  before activation. Keep independent encrypted logical backups and account for
+  all three data nodes, three coordinators and two proxy instances in the cost.
 - **Maintenance window:** provisionally reserve 60–90 minutes, then replace this
   estimate with timed export, restore, validation, payment-drain, and DNS/TLS
   measurements. Choose an abort deadline before activating the destination.
@@ -70,11 +71,12 @@ Platform references: [Postgres](https://docs.railway.com/databases/postgresql),
    fresh volumes and production-only project/environment guards. The existing
    [signet IaC](../.railway/railway.ts) deliberately rejects environments other than
    signet; do not remove that guard or apply it to production. The separate
-   [production bootstrap](../.railway/mainnet/railway.ts) requires the exact
-   production environment ID and an explicitly chosen Postgres major. It starts
-   with a single-node database for import/rehearsal, not the final HA topology.
-   Never reapply it after HA conversion or wallet activation. Provision the
-   chosen database topology, persistent authenticated Redis with eviction
+   [production configuration](../.railway/mainnet/railway.ts) requires the exact
+   production environment ID and Postgres 18. The initial standalone bootstrap
+   used for import/rehearsal is retired; the current file captures the converted,
+   held HA environment. Never reapply an old standalone revision over HA or the
+   held snapshot after wallet activation. Verify the chosen database topology,
+   persistent authenticated Redis with eviction
    disabled, a private singleton Barkd service with `/data`, and one API instance
    initially. Disable service sleeping and image/GitHub autodeploys during the
    move. Configure and test backup schedules and recovery.
@@ -185,9 +187,9 @@ Git, Docker images, and the application's own volume/deletion boundary.
    Redis values/types/expiration deadlines, and every wallet file checksum and
    permission. Correct any failure before continuing. **Do not start the API to
    initialize its schema before restoring Postgres.**
-   Enable Postgres HA/PITR and scheduled volume backups according to the chosen
-   topology before activation; verify the completed first backup and recovery
-   coverage. The bootstrap alone does not supply these protections. Configure
+   Verify the existing Postgres HA/PITR and scheduled volume backups against the
+   chosen topology before activation; verify a completed backup and recovery
+   coverage for the final dataset. IaC alone does not supply these protections. Configure
    the API's Dockerfile build and `/health` check before its first image upload.
 6. Start the single Railway Barkd 0.8.0 with the original image entrypoint, clearing
    importer command overrides and keeping the same restored volume. Confirm
