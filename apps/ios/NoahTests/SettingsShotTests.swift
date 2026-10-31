@@ -8,8 +8,8 @@ import UIKit
 /// recurring data. The recovery phrase is the prototype's sample phrase, never a real one. Write a state
 /// to Documents/set-shot; "stop" ends the session. Light and dark come from the simulator's appearance;
 /// a wide window (the Duo open) shows the panes.
-/// States: root, profile, lightning-address, email, backup, recovery-gated, recovery-shown, vtxos, vtxo,
-/// onchain, recurring, schedule, editor, notifications, advanced, ark-server, esplora, logs, debug,
+/// States: root, profile, lightning-address, email, backup, recovery-gated, recovery-shown, vtxos, vtxos-stacked,
+/// vtxo, onchain, recurring, schedule, editor, notifications, advanced, ark-server, esplora, logs, debug,
 /// feedback, about, delete, unit, currency, language.
 @MainActor
 @Suite(.enabled(if: ProcessInfo.processInfo.environment["NOAH_SET_SHOTS"] == "1"))
@@ -70,9 +70,19 @@ struct SettingsShotTests {
         vtxo(10, 4_200, left: 120, kind: "arkoor"), vtxo(11, 3_342, left: 96, kind: "round"), vtxo(12, 1_000, left: 2_950, kind: "arkoor", locked: true),
     ]
 
-    static func onchain() -> OnchainModel {
+    /// Three VTXOs expiring within a day of each other: their dots stack three high on the expiry line.
+    nonisolated static let stacked: [VtxoModel] = [
+        vtxo(1, 149_750, left: 14, kind: "round"), vtxo(2, 149_750, left: 15, kind: "round"), vtxo(3, 41_030, left: 17, kind: "arkoor"),
+    ]
+
+    /// `delay` holds the overview back, so the page shows its loading state first.
+    static func onchain(_ vtxos: [VtxoModel] = vtxos, delay: Duration = .zero) -> OnchainModel {
         let overview = OnchainOverview(walletID: "fixture", vtxos: vtxos, exits: [], confirmed: 10_000, tip: tip, pendingTotal: 0, claimableHeight: nil)
-        return OnchainModel(dependencies: .init(ready: { true }, overview: { overview },
+        let read: @Sendable () async throws -> OnchainOverview = {
+            try await Task.sleep(for: delay)
+            return overview
+        }
+        return OnchainModel(dependencies: .init(ready: { true }, overview: read,
                                                 quote: { action, ids, amount, _ in
                                                     let sats = ids.isEmpty ? amount : vtxos.filter { ids.contains($0.id) }.reduce(0) { $0 + $1.amount }
                                                     return .init(
@@ -132,7 +142,8 @@ struct SettingsShotTests {
             OnchainOverview(walletID: "fixture", vtxos: Self.vtxos, exits: [], confirmed: 10_000, tip: Self.tip, pendingTotal: 0, claimableHeight: nil)
         }, notificationsOn: { true }, storage: storage))
         let fixture = SettingsFixture(
-            summary: HomeShotTests.summary(ark: 142_742, onchain: 10_000), storage: storage, onchain: { Self.onchain() },
+            summary: HomeShotTests.summary(ark: 142_742, onchain: 10_000), storage: storage,
+            onchain: { state == "vtxos-stacked" ? Self.onchain(Self.stacked, delay: .seconds(2)) : Self.onchain() },
             phrase: .init(authenticate: { _ in state == "recovery-shown" ? .authenticated : .denied }, hasNoScreenLock: { false },
                           words: { Self.phrase }, generation: { 0 }),
             executor: recurring.executor,
@@ -148,7 +159,8 @@ struct SettingsShotTests {
             sheet: ["delete": .delete, "unit": .unit, "currency": .currency, "language": .language][state])
         let pages: [String: SettingsPage] = [
             "profile": .profile, "lightning-address": .lightningAddress, "email": .email, "backup": .backup,
-            "recovery-gated": .recovery, "recovery-shown": .recovery, "vtxos": .vtxos, "vtxo": .vtxo(Self.vtxos[9].id), "onchain": .onchain,
+            "recovery-gated": .recovery, "recovery-shown": .recovery, "vtxos": .vtxos, "vtxos-stacked": .vtxos, "vtxo": .vtxo(Self.vtxos[9].id),
+            "onchain": .onchain,
             "recurring": .recurring, "schedule": .schedule("s1"), "editor": .editor(nil), "notifications": .notifications,
             "advanced": .advanced, "ark-server": .arkServer, "esplora": .esplora, "logs": .logs, "debug": .debug,
             "feedback": .feedback, "about": .about,

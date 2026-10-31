@@ -32,7 +32,8 @@ struct VtxosView: View {
                 .padding(.top, 4)
             }
             if model.overview == nil {
-                if model.loading { ProgressView().frame(maxWidth: .infinity).padding(.top, 40) }
+                // Loading shows OnchainStatusSection's spinner below, the page's only one.
+                EmptyView()
             } else if vtxos.isEmpty {
                 empty
             } else {
@@ -93,7 +94,6 @@ struct VtxosView: View {
         Text(verbatim: L10n.plural("In {n} VTXOs", count: vtxos.count, locale: language))
             .noahText(NoahTokens.Typography.sub).foregroundStyle(NoahTokens.Colors.muted).padding(.top, 3)
         VtxoTimeline(vtxos: vtxos, threshold: UInt32(WalletConfiguration.base(for: .current).vtxoRefreshExpiryThreshold))
-            .frame(height: 80)
             .padding(.top, 20)
         if !due.isEmpty {
             HStack(spacing: 8) {
@@ -333,8 +333,60 @@ struct VtxoAvatar: View {
     }
 }
 
+/// Where the expiry line's dots go (Android's `ExpiryLineStack` matches it): largest first, each
+/// resting on the baseline and, while it touches one placed before it, rising in 1.5 pt steps (60 at
+/// most) until it clears it by 1.5 pt. The line is as tall as its highest ring needs, never under 80 pt;
+/// the extra height goes above the baseline, so the axis and its labels stay put.
+enum VtxoTimelineStack {
+    struct Dot: Equatable {
+        /// Its VTXO's index in the amounts placed.
+        let index: Int
+        let x: Double
+        let radius: Double
+        /// The centre's height above the baseline.
+        let lift: Double
+    }
+
+    struct Placement: Equatable {
+        /// In the order they're placed and drawn: largest first, ties in list order.
+        let dots: [Dot]
+        let height: Double
+    }
+
+    /// The line's height before stacking needed more.
+    static let minimumHeight = 80.0
+    /// Baseline to the bottom edge: the axis, its ticks and labels.
+    static let below = 30.0
+    /// Clear space above the highest ring, as the due band's inset from the top.
+    static let margin = 6.0
+    /// How far a due VTXO's orange ring reaches past its dot: 2.5 out, plus half its 2 pt stroke.
+    static let ring = 3.5
+
+    /// 3 to 10 by the square root of its share of the largest.
+    static func radius(_ amount: UInt64, largest: UInt64) -> Double {
+        3 + 7 * (Double(amount) / Double(max(largest, 1))).squareRoot()
+    }
+
+    /// `x` places a dot of that radius by its VTXO's index; stacking only ever moves dots up.
+    static func place(amounts: [UInt64], x: (_ index: Int, _ radius: Double) -> Double) -> Placement {
+        let largest = amounts.max() ?? 1
+        let order = amounts.indices.sorted { amounts[$0] == amounts[$1] ? $0 < $1 : amounts[$0] > amounts[$1] }
+        var dots: [Dot] = []
+        for index in order {
+            let radius = Self.radius(amounts[index], largest: largest), at = x(index, radius)
+            var lift = radius
+            for _ in 0..<60 where dots.contains(where: { hypot($0.x - at, $0.lift - lift) < $0.radius + radius + 1.5 }) {
+                lift += 1.5
+            }
+            dots.append(Dot(index: index, x: at, radius: radius, lift: lift))
+        }
+        let top = dots.map { $0.lift + $0.radius + ring }.max() ?? 0
+        return Placement(dots: dots, height: max(minimumHeight, below + top + margin))
+    }
+}
+
 /// Every VTXO placed by blocks left, sized by amount; the expiring ones ringed in orange inside
-/// the shaded refresh window, locked ones dashed.
+/// the shaded refresh window, locked ones dashed. Tall enough for its stacked dots.
 private struct VtxoTimeline: View {
     let vtxos: [VtxoModel]
     let threshold: UInt32
@@ -343,17 +395,18 @@ private struct VtxoTimeline: View {
     var body: some View {
         let lefts = vtxos.map { max(0, Int64($0.expiry) - Int64($0.tip)) }
         let span = max(lefts.max() ?? 0, Int64(threshold) * 4, 24)
-        let largest = Double(vtxos.map(\.amount).max() ?? 1)
-        Canvas { context, size in
-            draw(context, size: size, lefts: lefts, span: span, largest: largest)
+        VtxoTimelineFrame(amounts: vtxos.map(\.amount), lefts: lefts, span: span) {
+            Canvas { context, size in
+                draw(context, size: size, lefts: lefts, span: span)
+            }
         }
         .accessibilityElement()
         .accessibilityLabel(Text(L10n.text("When your VTXOs expire", locale: locale.identifier)))
     }
 
-    private func draw(_ context: GraphicsContext, size: CGSize, lefts: [Int64], span: Int64, largest: Double) {
-        let x0: CGFloat = 6, x1 = size.width - 6, base: CGFloat = 50
-        func x(_ blocks: Int64) -> CGFloat { x0 + (x1 - x0) * CGFloat(min(blocks, span)) / CGFloat(span) }
+    private func draw(_ context: GraphicsContext, size: CGSize, lefts: [Int64], span: Int64) {
+        let x0: CGFloat = 6, x1 = size.width - 6, base = size.height - VtxoTimelineStack.below
+        func x(_ blocks: Int64) -> CGFloat { VtxoTimelineFrame.x(blocks, span: span, width: size.width) }
         if vtxos.contains(where: VtxoList.isDue) {
             context.fill(Path(roundedRect: CGRect(x: x0, y: 6, width: x(Int64(threshold)) - x0 + 4, height: base - 6), cornerRadius: 4),
                          with: .color(NoahTokens.Colors.orangeTint))
@@ -366,14 +419,9 @@ private struct VtxoTimeline: View {
             context.draw(Text(verbatim: label).font(NoahTokens.Typography.caption.font(size: 11)).foregroundStyle(NoahTokens.Colors.muted),
                          at: CGPoint(x: at, y: base + 22), anchor: tick == 0 ? .leading : tick == 4 ? .trailing : .center)
         }
-        var placed: [(CGPoint, CGFloat)] = []
-        for (vtxo, left) in zip(vtxos, lefts).sorted(by: { $0.0.amount > $1.0.amount }) {
-            let radius = 3 + 7 * CGFloat((Double(vtxo.amount) / largest).squareRoot())
-            var center = CGPoint(x: min(max(x(left), x0 + radius), x1 - radius), y: base - radius)
-            for _ in 0..<60 where placed.contains(where: { hypot($0.0.x - center.x, $0.0.y - center.y) < $0.1 + radius + 1.5 }) {
-                center.y -= 1.5
-            }
-            placed.append((center, radius))
+        for placed in VtxoTimelineFrame.stack(amounts: vtxos.map(\.amount), lefts: lefts, span: span, width: size.width).dots {
+            let vtxo = vtxos[placed.index], radius = CGFloat(placed.radius)
+            let center = CGPoint(x: placed.x, y: base - placed.lift)
             let dot = Path(ellipseIn: CGRect(x: center.x - radius, y: center.y - radius, width: radius * 2, height: radius * 2))
             if vtxo.state == "Locked" {
                 context.stroke(dot, with: .color(NoahTokens.Colors.foreground), style: StrokeStyle(lineWidth: 1.4, dash: [2.5, 2]))
@@ -386,6 +434,36 @@ private struct VtxoTimeline: View {
                                    with: .color(NoahTokens.Colors.orange), lineWidth: 2)
                 }
             }
+        }
+    }
+}
+
+/// Gives the expiry line the height its dots need at the width it's offered.
+private struct VtxoTimelineFrame: Layout {
+    let amounts: [UInt64]
+    let lefts: [Int64]
+    let span: Int64
+
+    func sizeThatFits(proposal: ProposedViewSize, subviews _: Subviews, cache _: inout ()) -> CGSize {
+        let width = proposal.replacingUnspecifiedDimensions().width
+        guard width.isFinite else { return CGSize(width: width, height: VtxoTimelineStack.minimumHeight) }
+        return CGSize(width: width, height: Self.stack(amounts: amounts, lefts: lefts, span: span, width: width).height)
+    }
+
+    func placeSubviews(in bounds: CGRect, proposal _: ProposedViewSize, subviews: Subviews, cache _: inout ()) {
+        for subview in subviews { subview.place(at: bounds.origin, proposal: ProposedViewSize(bounds.size)) }
+    }
+
+    /// A VTXO's place on the line by blocks left.
+    static func x(_ blocks: Int64, span: Int64, width: CGFloat) -> CGFloat {
+        let x0: CGFloat = 6, x1 = width - 6
+        return x0 + (x1 - x0) * CGFloat(min(blocks, span)) / CGFloat(span)
+    }
+
+    /// The dots at this width, each kept clear of the ends.
+    static func stack(amounts: [UInt64], lefts: [Int64], span: Int64, width: CGFloat) -> VtxoTimelineStack.Placement {
+        VtxoTimelineStack.place(amounts: amounts) { index, radius in
+            Double(min(max(x(lefts[index], span: span, width: width), 6 + radius), width - 6 - radius))
         }
     }
 }
@@ -438,7 +516,8 @@ struct VtxoDetailView: View {
                 case .failed: SettingsFine(text: L10n.text("Couldn't read wallet status. Pull to refresh.", locale: language), failure: true)
                 case .missing, .coin:
                     SettingsFine(text: L10n.text("This VTXO is no longer in the wallet's current VTXOs. Refresh to check its status.", locale: language))
-                case .loading: ProgressView().frame(maxWidth: .infinity).padding(.top, 18)
+                // While busy, OnchainStatusSection's spinner below is the only one.
+                case .loading: if !model.busy { ProgressView().frame(maxWidth: .infinity).padding(.top, 18) }
                 }
             }
             OnchainStatusSection(model: model).settingsReceipts().padding(.top, 18)

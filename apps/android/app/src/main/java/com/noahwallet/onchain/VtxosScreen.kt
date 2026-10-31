@@ -310,8 +310,53 @@ private fun EmptyVtxos() {
 }
 
 /**
- * The expiry line (prototype `timeline`): every VTXO placed by when it expires, sized by amount, stacked where they meet.
- * Orange rings and the tinted band mark those within the renew threshold; locked ones are dashed.
+ * Where the expiry line's dots go (iOS's `VtxoTimelineStack` matches it), in dp: largest first, each resting on the baseline
+ * and, while it touches one placed before it, rising in 1.5 dp steps (60 at most) until it clears it by 1.5 dp. The line is
+ * as tall as its highest ring needs, never under 80 dp; the extra height goes above the baseline, so the axis and its labels
+ * stay put.
+ */
+internal object ExpiryLineStack {
+    /** [index] is its VTXO's in the amounts placed; [lift] is the centre's height above the baseline. */
+    data class Dot(val index: Int, val x: Double, val radius: Double, val lift: Double)
+
+    /** [dots] in the order they're placed and drawn: largest first, ties in list order. */
+    data class Placement(val dots: List<Dot>, val height: Double)
+
+    /** The line's height before stacking needed more. */
+    const val MINIMUM_HEIGHT = 80.0
+
+    /** Baseline to the bottom edge: the axis, its ticks and labels. */
+    const val BELOW = 30.0
+
+    /** Clear space above the highest ring, as the due band's inset from the top. */
+    const val MARGIN = 6.0
+
+    /** How far a due VTXO's orange ring reaches past its dot: 2.5 out, plus half its 2 dp stroke. */
+    const val RING = 3.5
+
+    /** 3 to 10 by the square root of its share of the largest. */
+    fun radius(amount: Long, largest: Long) = 3 + 7 * kotlin.math.sqrt(amount.toDouble() / largest.coerceAtLeast(1))
+
+    /** [x] places a dot of that radius by its VTXO's index; stacking only ever moves dots up. */
+    fun place(amounts: List<Long>, x: (index: Int, radius: Double) -> Double): Placement {
+        val largest = amounts.maxOrNull() ?: 1
+        val dots = mutableListOf<Dot>()
+        for (index in amounts.indices.sortedWith(compareByDescending<Int> { amounts[it] }.thenBy { it })) {
+            val radius = radius(amounts[index], largest)
+            val at = x(index, radius)
+            var lift = radius
+            var tries = 0
+            while (tries++ < 60 && dots.any { kotlin.math.hypot(it.x - at, it.lift - lift) < it.radius + radius + 1.5 }) lift += 1.5
+            dots += Dot(index, at, radius, lift)
+        }
+        val top = dots.maxOfOrNull { it.lift + it.radius + RING } ?: 0.0
+        return Placement(dots, maxOf(MINIMUM_HEIGHT, BELOW + top + MARGIN))
+    }
+}
+
+/**
+ * The expiry line (prototype `timeline`): every VTXO placed by when it expires, sized by amount, stacked where they meet,
+ * and tall enough for the stack. Orange rings and the tinted band mark those within the renew threshold; locked ones are dashed.
  */
 @Composable
 private fun ExpiryLine(vtxos: List<VtxoModel>, lifetime: Long) {
@@ -323,30 +368,33 @@ private fun ExpiryLine(vtxos: List<VtxoModel>, lifetime: Long) {
     val labels = (0..7).map { it * step }.filter { it <= lifetime }.take(5).map { blocks -> blocks to expiryLabel(blocks, step, unit) }
     val style = TextStyle(fontFamily = NoahTokens.Display, fontWeight = FontWeight.Medium, fontSize = 11.sp)
     val description = tr("When your VTXOs expire")
-    val biggest = vtxos.maxOf { it.amount }.coerceAtLeast(1)
-    Canvas(Modifier.padding(top = 20.dp).fillMaxWidth().height(80.dp).semantics { contentDescription = description }.testTag("vtxos-expiry-line")) {
-        val x0 = 6.dp.toPx(); val x1 = size.width - 6.dp.toPx(); val base = 50.dp.toPx()
-        fun x(blocks: Long) = x0 + (x1 - x0) * (blocks.coerceIn(0, lifetime).toFloat() / lifetime)
-        if (vtxos.any { it.state != "Locked" && (it.expiry - it.tip) <= threshold })
-            drawRoundRect(palette.orangeTint, Offset(x0, 6.dp.toPx()), Size(x(threshold) - x0 + 4.dp.toPx(), base - 6.dp.toPx()), CornerRadius(4.dp.toPx()))
-        drawLine(palette.hairline, Offset(x0, base + 6.dp.toPx()), Offset(x1, base + 6.dp.toPx()), 1.dp.toPx())
-        labels.forEachIndexed { i, (blocks, label) ->
-            val x = x(blocks)
-            drawLine(palette.muted, Offset(x, base + 3.dp.toPx()), Offset(x, base + 9.dp.toPx()), 1.dp.toPx())
-            val text = measurer.measure(label, style.copy(color = palette.muted))
-            val left = if (i == 0) x else (x - text.size.width / 2f).coerceAtMost(size.width - text.size.width)
-            drawText(text, topLeft = Offset(left, base + 13.dp.toPx()))
+    BoxWithConstraints(Modifier.padding(top = 20.dp).fillMaxWidth()) {
+        // The dots in dp at this width, by blocks left as the line places them.
+        val width = maxWidth.value.toDouble()
+        val stack = ExpiryLineStack.place(vtxos.map { it.amount }) { index, _ ->
+            6 + (width - 12) * ((vtxos[index].expiry - vtxos[index].tip).coerceIn(0, lifetime).toDouble() / lifetime)
         }
-        val placed = mutableListOf<Triple<Float, Float, Float>>()
-        for (vtxo in vtxos.sortedByDescending { it.amount }) {
-            val r = (3f + 7f * kotlin.math.sqrt(vtxo.amount.toFloat() / biggest)) * density
-            val cx = x(vtxo.expiry - vtxo.tip)
-            var cy = base - r
-            var tries = 0
-            while (tries++ < 60 && placed.any { (px, py, pr) -> kotlin.math.hypot(px - cx, py - cy) < pr + r + 1.5f * density }) cy -= 1.5f * density
-            placed += Triple(cx, cy, r)
-            val locked = vtxo.state == "Locked"
-            expiryCoin(Offset(cx, cy), r, locked, due = !locked && vtxo.expiry - vtxo.tip <= threshold, palette)
+        Canvas(Modifier.fillMaxWidth().height(stack.height.dp).semantics { contentDescription = description }.testTag("vtxos-expiry-line")) {
+            val x0 = 6.dp.toPx(); val x1 = size.width - 6.dp.toPx(); val base = size.height - ExpiryLineStack.BELOW.dp.toPx()
+            fun x(blocks: Long) = x0 + (x1 - x0) * (blocks.coerceIn(0, lifetime).toFloat() / lifetime)
+            if (vtxos.any { it.state != "Locked" && (it.expiry - it.tip) <= threshold }) {
+                drawRoundRect(palette.orangeTint, Offset(x0, 6.dp.toPx()), Size(x(threshold) - x0 + 4.dp.toPx(), base - 6.dp.toPx()),
+                    CornerRadius(4.dp.toPx()))
+            }
+            drawLine(palette.hairline, Offset(x0, base + 6.dp.toPx()), Offset(x1, base + 6.dp.toPx()), 1.dp.toPx())
+            labels.forEachIndexed { i, (blocks, label) ->
+                val x = x(blocks)
+                drawLine(palette.muted, Offset(x, base + 3.dp.toPx()), Offset(x, base + 9.dp.toPx()), 1.dp.toPx())
+                val text = measurer.measure(label, style.copy(color = palette.muted))
+                val left = if (i == 0) x else (x - text.size.width / 2f).coerceAtMost(size.width - text.size.width)
+                drawText(text, topLeft = Offset(left, base + 13.dp.toPx()))
+            }
+            for (dot in stack.dots) {
+                val vtxo = vtxos[dot.index]
+                val locked = vtxo.state == "Locked"
+                expiryCoin(Offset(dot.x.toFloat() * density, base - dot.lift.toFloat() * density), dot.radius.toFloat() * density, locked,
+                    due = !locked && vtxo.expiry - vtxo.tip <= threshold, palette)
+            }
         }
     }
 }
