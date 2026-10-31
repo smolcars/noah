@@ -32,7 +32,8 @@ struct VtxosView: View {
                 .padding(.top, 4)
             }
             if model.overview == nil {
-                if model.loading { ProgressView().frame(maxWidth: .infinity).padding(.top, 40) }
+                // Loading shows OnchainStatusSection's spinner below, the page's only one.
+                EmptyView()
             } else if vtxos.isEmpty {
                 empty
             } else {
@@ -515,7 +516,8 @@ struct VtxoDetailView: View {
                 case .failed: SettingsFine(text: L10n.text("Couldn't read wallet status. Pull to refresh.", locale: language), failure: true)
                 case .missing, .coin:
                     SettingsFine(text: L10n.text("This VTXO is no longer in the wallet's current VTXOs. Refresh to check its status.", locale: language))
-                case .loading: ProgressView().frame(maxWidth: .infinity).padding(.top, 18)
+                // While busy, OnchainStatusSection's spinner below is the only one.
+                case .loading: if !model.busy { ProgressView().frame(maxWidth: .infinity).padding(.top, 18) }
                 }
             }
             OnchainStatusSection(model: model).settingsReceipts().padding(.top, 18)
