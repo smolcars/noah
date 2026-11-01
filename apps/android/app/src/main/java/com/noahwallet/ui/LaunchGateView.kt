@@ -184,7 +184,8 @@ private fun ForegroundStart(model: AppModel) {
     val lifecycleOwner = LocalLifecycleOwner.current
     LaunchedEffect(lifecycleOwner) {
         lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
-            model.start()
+            // A cold launch opens here: sync once it's open, as bark's daemon did at startup before Noah stopped running it.
+            model.start()?.join()
             if (model.open) {
                 model.services.startServerServices()
                 com.noahwallet.recurring.RecurringRuntime.shared(context).syncForegroundAdmission.run {

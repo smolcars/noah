@@ -322,7 +322,8 @@ class AppServices private constructor(private val context: Context) {
 
     /**
      * Foreground only: retain existing session/reservation rules and never open a wallet here. [entering]: the app just
-     * came to the front, so this pass (or the next one that runs) also runs delegated maintenance.
+     * came to the front, so this pass (or the next one that runs) also runs delegated maintenance, as the first pass on
+     * a wallet that has just opened does.
      */
     @OptIn(InternalCoroutinesApi::class)
     suspend fun syncInForeground(budget: com.noahwallet.recurring.RecurringBudget, entering: Boolean = false) {
@@ -335,7 +336,7 @@ class AppServices private constructor(private val context: Context) {
                 foregroundSync.run {
                     currentCoroutineContext().ensureActive()
                     if (!budget.available || !foregroundSyncAllowed()) return@run
-                    com.noahwallet.services.wallet.WalletBackgroundActivity.during { foregroundWork.run() }
+                    com.noahwallet.services.wallet.WalletBackgroundActivity.during { foregroundWork.run(session.walletChanges.value) }
                 }
             }
         } catch (cancelled: CancellationException) { throw cancelled }

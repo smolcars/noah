@@ -151,6 +151,16 @@ native handles; concurrent `ensureOpen` calls share one attempt. Canceling a UI
 waiter does not cancel that attempt. Native calls are counted; close stops observers and drains those calls.
 Kotlin explicitly closes both handles, including the onchain handle on open failure.
 
+bark's daemon never runs. In bark 0.8.0 it joins round attempt 0 interactively whenever a VTXO is due for
+refresh, and every round Noah joins is delegated, so every open passes `runDaemon = false`
+(`WalletOpenWithoutDaemonTest`), as RN's nitro-ark does. The app does the rest of the daemon's work while it's in
+front (`ForegroundWalletWork`): the pass at launch (once the wallet has opened), on each resume and every 60 s syncs
+(bark, the on-chain wallet, Lightning claims) and moves any live exit forward at bark's fee rate; the first pass
+after each resume, and on each new open (create, restore, endpoint change), also runs `maintenanceDelegated`.
+Background jobs keep their own delegated maintenance and exit progress. Ark receives arrive on the next sync
+(within 60 s while open): bark-bolt-ffi 0.7.2 exposes no mailbox stream without the daemon. bark connects to the
+Ark server on its first call after an open, so `arkInfo()` is empty until then.
+
 `WalletCreator` resumes existing data or saves a new seed before creating files.
 Any nonempty datadir counts as existing data. Cleanup is limited to a failed fresh
 attempt in an absent/empty datadir; a failed close or cleanup keeps the seed.
@@ -637,10 +647,10 @@ tip at which Noah first saw each transaction in its status, per episode (where t
 append-only history, in this run: bark restarts a canceled exit with empty history, and starting or canceling forgets
 the exit's evidence), and blocks stuck in the mempool count from there. "Needs
 on-chain funds" is inferred (`ExitFunding`): a transaction in `AwaitingCpfpBroadcast` while the confirmed balance is
-below its package's fee at the rate bark's own estimate reports, once bark has tried (a completed Check the chain, or
-one configured daemon sync interval plus 15 s within one daemon run, restarted on return from the background), within
-the same parking episode. The stale warning needs evidence that nothing
-progresses exits: the last Check the chain failed, or the wallet is open without bark's daemon. "Fees more than it's
+below its package's fee at the rate bark's own estimate reports, once bark has tried (a completed progress left it
+parked: each foreground pass, a background job or Check the chain), within the same parking episode. The stale warning
+needs evidence that nothing progresses exits: the last progress failed or couldn't run. Every progress call takes the
+session's on-chain lock, so two never build competing fee children. "Fees more than it's
 worth" uses each VTXO's standalone estimate until bark-bolt-ffi's estimate has per-transaction data; "All" waits until
 every VTXO has one (Try again asks for the rest). A fee child's fee
 is what left the wallet (BDK can't price its anchor input).
@@ -686,7 +696,7 @@ Email delivery/OTP entry and real push delivery were not repeated in this screen
 
 `services/backup` ports the reviewed iOS design. `WalletSession` reservations cover
 fresh creation and restore, counted native calls finish despite cancellation, and
-close stops both observer kinds before draining calls and stopping the daemon.
+close stops both observer kinds before draining calls and closing the handles.
 An unfinished restore blocks ordinary open/create. Failed verification teardown
 quarantines its handles and leaves the journal for recovery after a successful
 close or process restart; files are never swapped beneath live native work.

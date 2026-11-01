@@ -27,17 +27,22 @@ internal class ForegroundWalletWorkTest : WalletSessionFixture() {
         progressExits = { calls += "exits" },
     )
 
-    @Test fun eachPassSyncsThenMovesExitsAndOnlyAnEntryRunsMaintenanceOnce() = runBlocking {
+    @Test fun eachPassSyncsThenMovesExitsAndOnlyAnEntryOrANewOpenRunsMaintenanceOnce() = runBlocking {
         val calls = mutableListOf<String>()
         val work = work(calls)
-        work.run()
+        work.run(open = 1)
+        assertEquals("the first pass on a wallet that has just opened", listOf("sync", "maintenance", "exits"), calls)
+        calls.clear(); work.run(1)
         assertEquals("a tick never runs maintenance", listOf("sync", "exits"), calls)
-        calls.clear(); work.entered(); work.run()
+        calls.clear(); work.entered(); work.run(1)
         assertEquals(listOf("sync", "maintenance", "exits"), calls)
-        calls.clear(); work.run()
+        calls.clear(); work.run(1)
         assertEquals("once per entry", listOf("sync", "exits"), calls)
         // Two entries before a pass runs (one dropped behind a pass in flight): still once.
-        calls.clear(); work.entered(); work.entered(); work.run(); work.run()
+        calls.clear(); work.entered(); work.entered(); work.run(1); work.run(1)
+        assertEquals(listOf("sync", "maintenance", "exits", "sync", "exits"), calls)
+        // Reopened (an endpoint change, a restore) or created while in front: once more, without a new entry.
+        calls.clear(); work.run(3); work.run(3)
         assertEquals(listOf("sync", "maintenance", "exits", "sync", "exits"), calls)
     }
 
@@ -46,9 +51,9 @@ internal class ForegroundWalletWorkTest : WalletSessionFixture() {
             val calls = mutableListOf<String>()
             val work = work(calls, failing)
             work.entered()
-            assertTrue(failing, runCatching { work.run() }.exceptionOrNull() is Boom)
+            assertTrue(failing, runCatching { work.run(1) }.exceptionOrNull() is Boom)
             assertEquals(failing, listOf("sync", "maintenance", "exits"), calls)
-            calls.clear(); runCatching { work.run() }
+            calls.clear(); runCatching { work.run(1) }
             assertEquals("a failed entry isn't retried on every tick ($failing)", listOf("sync", "exits"), calls)
         }
     }
@@ -63,16 +68,18 @@ internal class ForegroundWalletWorkTest : WalletSessionFixture() {
             val work = ForegroundWalletWork({ session.sync(includingLightningClaims = true) }, session::maintenanceDelegated) {
                 session.progressPendingExits { fail(it) }
             }
-            work.run()
+            val open = session.walletChanges.value
+            work.run(open)
             assertEquals("only finished exits: bark isn't asked", 0, exits.progressed)
             exits.exits += ExitVtxo("a", 30_000u, ExitState.Start(100u), false)
-            work.run(); work.run()
+            work.run(open); work.run(open)
             assertEquals("each pass while one is live, at bark's own rate", 2, exits.progressed)
             exits.exits = exits.exits.filter { it.vtxoId != "a" }
-            work.run()
+            work.run(open)
             assertEquals(2, exits.progressed)
-            work.entered(); work.run()
-            assertEquals(listOf("sync", "sync", "sync", "sync", "sync", "maintenance"), handles.calls)
+            work.entered(); work.run(open)
+            assertEquals("the new open's first pass and the entry", listOf("sync", "maintenance", "sync", "sync", "sync", "sync", "maintenance"),
+                handles.calls)
             session.close()
         }
     }
