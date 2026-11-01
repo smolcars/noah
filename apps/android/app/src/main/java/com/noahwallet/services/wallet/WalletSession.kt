@@ -86,6 +86,9 @@ class WalletSession internal constructor(
         suspend fun pendingLightningReceives(): List<io.github.niteshbalusu11.bark.LightningReceive> = throw UnsupportedOperationException()
         suspend fun pendingBoardVtxos(): List<io.github.niteshbalusu11.bark.Vtxo> = throw UnsupportedOperationException()
         suspend fun sync()
+        /** [sync]'s two halves, for the foreground pass ([ForegroundWalletWork]), which syncs the on-chain wallet last. */
+        suspend fun syncWallet(): Unit = throw UnsupportedOperationException()
+        suspend fun syncOnchain(): Unit = throw UnsupportedOperationException()
         suspend fun maintenanceDelegated()
         suspend fun bolt11Invoice(amountSats: ULong): String
         suspend fun claimLightningReceives()
@@ -391,6 +394,15 @@ class WalletSession internal constructor(
             if (includingLightningClaims) flight.run(handles::sync, handles::claimLightningReceives)
             else flight.run(handles::sync)
         }
+    }
+
+    /** The foreground pass's sync before its other stages: bark's wallet and Lightning claims; [syncOnchain] runs last. */
+    suspend fun syncWalletAndClaims() {
+        if (isOpen) withOpen { handles -> (handles.synchronization ?: syncFlight).run(handles::syncWallet, handles::claimLightningReceives) }
+    }
+
+    suspend fun syncOnchain() {
+        if (isOpen) withOpen { handles -> (handles.synchronization ?: syncFlight).run(handles::syncOnchain) }
     }
 
     suspend fun transactionHistory(): List<HistoryTransaction> = withOpen { handles ->
@@ -767,6 +779,8 @@ class WalletSession internal constructor(
         override suspend fun pendingLightningReceives() = wallet.pendingLightningReceives()
         override suspend fun pendingBoardVtxos() = wallet.pendingBoardVtxos()
         override suspend fun sync() { WalletSync.attemptAll({ onchain.sync() }, { wallet.sync() }) }
+        override suspend fun syncWallet() { wallet.sync() }
+        override suspend fun syncOnchain() { onchain.sync() }
         override suspend fun maintenanceDelegated() { wallet.maintenanceDelegated() }
         override suspend fun bolt11Invoice(amountSats: ULong) = wallet.bolt11Invoice(amountSats, null).invoice
         override suspend fun claimLightningReceives() { wallet.tryClaimAllLightningReceives(false) }

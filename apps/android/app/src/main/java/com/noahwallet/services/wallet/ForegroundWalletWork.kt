@@ -7,14 +7,21 @@ import java.util.concurrent.atomic.AtomicBoolean
  * foreground pass syncs and moves any live exit forward, and the first pass after the app comes to the front, or on a
  * wallet that has just opened (created, restored or reopened), also runs delegated maintenance, so VTXOs due for refresh
  * go into a delegated round. Background jobs cover the time in between.
+ *
+ * The on-chain wallet syncs last: its sync holds that wallet for the whole Esplora round trip, and every read of it
+ * (Home's balance and history) waits meanwhile. Nothing before it needs it fresh: bark's sync and maintenance don't touch
+ * it, and exit progress funds fee children from the confirmed coins the last pass found, as bark's daemon did, whose exit
+ * loop never waited for its on-chain sync.
  */
 internal class ForegroundWalletWork(
+    /** bark's wallet sync and Lightning claims, without the on-chain wallet's. */
     private val sync: suspend () -> Unit,
     private val maintenance: suspend () -> Unit,
     /** How many refreshes bark has recorded, failed ones included (its `bark.round` refresh movements). */
     private val refreshes: suspend () -> Int,
     /** Never throws but for cancellation; calls bark only while an exit is live. */
     private val progressExits: suspend () -> Unit,
+    private val syncOnchain: suspend () -> Unit,
     /** The app log: a pass that runs maintenance (after a launch or a return to the front) logs its stages' timing. */
     private val log: (String) -> Unit = {},
 ) {
@@ -39,13 +46,13 @@ internal class ForegroundWalletWork(
         val timing = if (maintain) com.noahwallet.services.logging.PassTiming(log) else null
         fun timed(stage: String, work: suspend () -> Unit): suspend () -> Unit = timing?.let { { it.run(stage, work) } } ?: work
         try {
-            if (maintain) WalletSync.attemptAll(timed("sync", sync), timed("delegated maintenance") {
+            if (maintain) WalletSync.attemptAll(timed("wallet sync", sync), timed("delegated maintenance") {
                 val created = refreshes()
                 var completed = false
                 try { maintenance(); completed = true }
                 finally { settled = completed || refreshes() > created }
-            }, timed("exit progress", progressExits))
-            else WalletSync.attemptAll(sync, progressExits)
+            }, timed("exit progress", progressExits), timed("on-chain sync", syncOnchain))
+            else WalletSync.attemptAll(sync, progressExits, syncOnchain)
         } finally {
             if (!settled) maintenanceDue.set(true)
         }

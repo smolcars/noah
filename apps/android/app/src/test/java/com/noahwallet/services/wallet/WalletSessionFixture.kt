@@ -105,6 +105,8 @@ internal abstract class WalletSessionFixture {
                 WalletBalance(WalletBalance.Ark(1u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u), WalletBalance.Onchain(0u, 0u, 0u)), 2)
         }
         override suspend fun sync() { assertFalse(closed); calls += "sync" }
+        override suspend fun syncWallet() { assertFalse(closed); calls += "wallet sync" }
+        override suspend fun syncOnchain() { assertFalse(closed); calls += "on-chain sync" }
         override suspend fun maintenanceDelegated() { assertFalse(closed); calls += "maintenance" }
         override suspend fun bolt11Invoice(amountSats: ULong): String { check(!closed); return "invoice-$amountSats" }
         override suspend fun claimLightningReceives() { assertFalse(closed) }

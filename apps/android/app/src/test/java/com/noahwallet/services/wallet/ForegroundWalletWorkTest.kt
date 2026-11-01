@@ -26,38 +26,60 @@ internal class ForegroundWalletWorkTest : WalletSessionFixture() {
         maintenance = { calls += "maintenance"; if (failing == "maintenance") throw Boom() },
         refreshes = { 0 },
         progressExits = { calls += "exits" },
+        syncOnchain = { calls += "onchain"; if (failing == "onchain") throw Boom() },
     )
 
     @Test fun eachPassSyncsThenMovesExitsAndOnlyAnEntryOrANewOpenRunsMaintenanceOnce() = runBlocking {
         val calls = mutableListOf<String>()
         val work = work(calls)
         work.run(open = 1)
-        assertEquals("the first pass on a wallet that has just opened", listOf("sync", "maintenance", "exits"), calls)
+        assertEquals("the first pass on a wallet that has just opened", listOf("sync", "maintenance", "exits", "onchain"), calls)
         calls.clear(); work.run(1)
-        assertEquals("a tick never runs maintenance", listOf("sync", "exits"), calls)
+        assertEquals("a tick never runs maintenance", listOf("sync", "exits", "onchain"), calls)
         calls.clear(); work.entered(); work.run(1)
-        assertEquals(listOf("sync", "maintenance", "exits"), calls)
+        assertEquals(listOf("sync", "maintenance", "exits", "onchain"), calls)
         calls.clear(); work.run(1)
-        assertEquals("once per entry", listOf("sync", "exits"), calls)
+        assertEquals("once per entry", listOf("sync", "exits", "onchain"), calls)
         // Two entries before a pass runs (one dropped behind a pass in flight): still once.
         calls.clear(); work.entered(); work.entered(); work.run(1); work.run(1)
-        assertEquals(listOf("sync", "maintenance", "exits", "sync", "exits"), calls)
+        assertEquals(listOf("sync", "maintenance", "exits", "onchain", "sync", "exits", "onchain"), calls)
         // Reopened (an endpoint change, a restore) or created while in front: once more, without a new entry.
         calls.clear(); work.run(3); work.run(3)
-        assertEquals(listOf("sync", "maintenance", "exits", "sync", "exits"), calls)
+        assertEquals(listOf("sync", "maintenance", "exits", "onchain", "sync", "exits", "onchain"), calls)
+    }
+
+    /**
+     * The on-chain sync holds the on-chain wallet for its whole Esplora round trip, and Home's balance and history wait
+     * for it: it runs last in every pass, so bark's sync, maintenance, Lightning claims and exit progress don't wait.
+     */
+    @Test fun theOnchainSyncRunsLastInEveryPass() = runBlocking {
+        val calls = mutableListOf<String>()
+        val work = work(calls)
+        work.run(open = 1); work.run(1)
+        assertEquals(listOf("sync", "maintenance", "exits", "onchain", "sync", "exits", "onchain"), calls)
     }
 
     @Test fun aFailedStageLetsTheRestRunAndIsRethrown() = runBlocking {
-        for (failing in listOf("sync", "maintenance")) {
+        for (failing in listOf("sync", "maintenance", "onchain")) {
             val calls = mutableListOf<String>()
             val work = work(calls, failing)
             work.entered()
             assertTrue(failing, runCatching { work.run(1) }.exceptionOrNull() is Boom)
-            assertEquals(failing, listOf("sync", "maintenance", "exits"), calls)
+            assertEquals(failing, listOf("sync", "maintenance", "exits", "onchain"), calls)
             calls.clear(); runCatching { work.run(1) }
             assertEquals("only a maintenance that failed runs again ($failing)",
-                if (failing == "maintenance") listOf("sync", "maintenance", "exits") else listOf("sync", "exits"), calls)
+                if (failing == "maintenance") listOf("sync", "maintenance", "exits", "onchain") else listOf("sync", "exits", "onchain"), calls)
         }
+    }
+
+    @Test fun anEntrysPassLogsEachStagesTiming() = runBlocking {
+        val lines = mutableListOf<String>()
+        val work = ForegroundWalletWork(sync = {}, maintenance = {}, refreshes = { 0 }, progressExits = {}, syncOnchain = {}, log = lines::add)
+        work.run(open = 1)
+        assertEquals(listOf("wallet sync", "delegated maintenance", "exit progress", "on-chain sync").flatMap { listOf("$it started", "$it done") },
+            lines.map { it.removePrefix("Foreground pass: ").substringBefore(" at +") })
+        lines.clear(); work.run(1)
+        assertEquals("a tick logs nothing", emptyList<String>(), lines)
     }
 
     /**
@@ -73,9 +95,10 @@ internal class ForegroundWalletWorkTest : WalletSessionFixture() {
             maintenance = { calls += "maintenance"; if (offline) throw Boom() },
             refreshes = { 0 },
             progressExits = { calls += "exits" },
+            syncOnchain = { calls += "onchain" },
         )
         repeat(2) { assertTrue(runCatching { work.run(open = 1) }.exceptionOrNull() is Boom) }
-        assertEquals("once per pass while it fails", List(2) { listOf("sync", "maintenance", "exits") }.flatten(), calls)
+        assertEquals("once per pass while it fails", List(2) { listOf("sync", "maintenance", "exits", "onchain") }.flatten(), calls)
         // A pass that ends before maintenance starts (its budget gone) leaves it due as well.
         calls.clear()
         val cancelled = runCatching {
@@ -84,7 +107,7 @@ internal class ForegroundWalletWorkTest : WalletSessionFixture() {
         assertTrue(cancelled.exceptionOrNull() is kotlinx.coroutines.CancellationException)
         offline = false
         calls.clear(); work.run(1); work.run(1)
-        assertEquals("done once it completes", listOf("sync", "maintenance", "exits", "sync", "exits"), calls)
+        assertEquals("done once it completes", listOf("sync", "maintenance", "exits", "onchain", "sync", "exits", "onchain"), calls)
     }
 
     /**
@@ -104,13 +127,15 @@ internal class ForegroundWalletWorkTest : WalletSessionFixture() {
             },
             refreshes = { refreshes },
             progressExits = { calls += "exits" },
+            syncOnchain = { calls += "onchain" },
         )
         repeat(3) { runCatching { work.run(open = 1) } }
-        assertEquals("refused: once this entry", listOf("sync", "maintenance", "exits") + List(2) { listOf("sync", "exits") }.flatten(), calls)
+        assertEquals("refused: once this entry",
+            listOf("sync", "maintenance", "exits", "onchain") + List(2) { listOf("sync", "exits", "onchain") }.flatten(), calls)
         assertEquals(1, refreshes)
         reachable = false
         calls.clear(); work.entered(); repeat(2) { runCatching { work.run(1) } }
-        assertEquals("offline: again on each pass", List(2) { listOf("sync", "maintenance", "exits") }.flatten(), calls)
+        assertEquals("offline: again on each pass", List(2) { listOf("sync", "maintenance", "exits", "onchain") }.flatten(), calls)
     }
 
     @Test fun theForegroundPassMovesExitsOnlyWhileOneIsLive() = runBlocking {
@@ -120,9 +145,9 @@ internal class ForegroundWalletWorkTest : WalletSessionFixture() {
             val handles = Handles().apply { exitWallet = exits }
             val session = WalletSession("regtest", location, opener = { _, _, _, _ -> handles })
             session.createNew("unused", "test")
-            val work = ForegroundWalletWork({ session.sync(includingLightningClaims = true) }, session::maintenanceDelegated,
+            val work = ForegroundWalletWork(session::syncWalletAndClaims, session::maintenanceDelegated,
                 { session.movements().count(com.noahwallet.history.HistoryMapping::isRefresh) },
-                progressExits = { session.progressPendingExits { fail(it) } })
+                progressExits = { session.progressPendingExits { fail(it) } }, syncOnchain = session::syncOnchain)
             val open = session.walletChanges.value
             work.run(open)
             assertEquals("only finished exits: bark isn't asked", 0, exits.progressed)
@@ -133,8 +158,9 @@ internal class ForegroundWalletWorkTest : WalletSessionFixture() {
             work.run(open)
             assertEquals(2, exits.progressed)
             work.entered(); work.run(open)
-            assertEquals("the new open's first pass and the entry", listOf("sync", "maintenance", "sync", "sync", "sync", "sync", "maintenance"),
-                handles.calls)
+            val tick = listOf("wallet sync", "on-chain sync")
+            val maintained = listOf("wallet sync", "maintenance", "on-chain sync")
+            assertEquals("the new open's first pass and the entry", maintained + tick + tick + tick + maintained, handles.calls)
             session.close()
         }
     }

@@ -444,6 +444,18 @@ class AppModel(application: Application, val settings: SettingsStorage = Setting
         catch (_: Exception) { error = "Couldn't load your balance. Pull down to try again." }
     }
 
+    /**
+     * The app came to the front with the wallet open, a cold launch's open included: Home's summary and history rows,
+     * then [pass] (the foreground pass), then the summary again. Home reads first because the pass's on-chain sync holds
+     * the on-chain wallet for its whole Esplora round trip, and Home's balance and history wait for it meanwhile.
+     */
+    suspend fun catchUpInForeground(pass: suspend () -> Unit) {
+        refresh()
+        history.refresh(preferredCurrency)
+        pass()
+        refresh()
+    }
+
     fun toggleBalance() {
         val value = !hidden
         val envelope = settings.string("privacy-storage")?.let { runCatching { Json.parseToJsonElement(it).jsonObject }.getOrNull() }.orEmpty()
