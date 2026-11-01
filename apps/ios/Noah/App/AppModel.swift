@@ -400,6 +400,8 @@ extension AppModel {
             phase = .blocked(.secureStorageUnavailable)
             return
         }
+        // Home's history read for this open is one that finishes after this.
+        let historyReads = await session.historyReadsFinished
         do {
             let wait = EsploraOpenWait()
             customOpenWait = wait
@@ -430,24 +432,32 @@ extension AppModel {
             return
         }
         if phase == .wallet { await pushPermission.refresh() }
-        syncOpenedWallet()
+        syncOpenedWallet(historyReadsBefore: historyReads)
         await reconcileBackupTriggers()
         await startServerServices()
     }
 
     /// Nothing else syncs a wallet just opened until the first foreground tick: one pass now, which also runs the
-    /// delegated maintenance the open left due, after Home's read (`ForegroundCatchUp`).
-    private func syncOpenedWallet() {
+    /// delegated maintenance the open left due, after Home's read and its first history read (`ForegroundCatchUp`).
+    private func syncOpenedWallet(historyReadsBefore historyReads: Int) {
         Task { [weak self] in
             guard let self else { return }
             await ForegroundExecution.run {
                 guard phase == .wallet, !isWalletSuspended, !pushPermission.blocksWallet(initialized: true) else { return }
-                await ForegroundCatchUp(home: refresh, pass: { await AppServices.shared.syncInForeground() }) {
-                    guard !Task.isCancelled, self.phase == .wallet, !self.isWalletSuspended else { return false }
-                    return await self.session.isOpen
-                }.run()
+                await ForegroundCatchUp(
+                    home: refresh,
+                    history: { await self.historyRead(finishedSince: historyReads) },
+                    pass: { await AppServices.shared.syncInForeground() }) {
+                        guard !Task.isCancelled, self.phase == .wallet, !self.isWalletSuspended else { return false }
+                        return await self.session.isOpen
+                    }.run()
             }
         }
+    }
+
+    /// `ForegroundCatchUp`'s wait for Home's history read; without a baseline, only for one already running.
+    private func historyRead(finishedSince baseline: Int?) async {
+        await session.waitForHistoryReads(finishedSince: baseline, within: ForegroundCatchUp.historyWait)
     }
 
     // MARK: Danger zone (Settings)
@@ -604,11 +614,15 @@ extension AppModel {
             guard !pushPermission.blocksWallet(initialized: true) else { return }
             if wasBlocked { await startServerServices() }
             try? await server.refreshMailboxIfNeeded()
-            await ForegroundCatchUp(home: refresh, pass: { await AppServices.shared.syncInForeground() }) {
-                await RecurringExecutor.shared.execute()
-                synced = self.summaryRevision
-                return true
-            }.run()
+            // Only a history read already running (the scene's return starts one) holds the pass.
+            await ForegroundCatchUp(
+                home: refresh,
+                history: { await self.historyRead(finishedSince: nil) },
+                pass: { await AppServices.shared.syncInForeground() }) {
+                    await RecurringExecutor.shared.execute()
+                    synced = self.summaryRevision
+                    return true
+                }.run()
         }
         catchUp.finish(started, summaryRevision: synced)
         await reconcileBackupTriggers()

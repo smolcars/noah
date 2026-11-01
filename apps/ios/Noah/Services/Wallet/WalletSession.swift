@@ -135,6 +135,7 @@ actor WalletSession {
     private var exclusiveSend = false
     @TaskLocal private static var sendWork = false
     private var drainWaiters: [CheckedContinuation<Void, Never>] = []
+    private var historyReads = (running: 0, finished: 0)
     private var observers: [UUID: Observer] = [:]
 
     /// Long-lived readers (receive completion, state changes). Not counted
@@ -523,7 +524,9 @@ extension WalletSession {
 
     /// Both reads stay counted until completion; no observer holds a wallet call open.
     func transactionHistory() async throws -> [HistoryTransaction] {
-        try await withOpenWallet { handles in
+        historyReadStarted()
+        defer { historyReadFinished() }
+        return try await withOpenWallet { handles in
             let movements = try await handles.wallet.history().filter(HistoryMapping.include).map { HistoryMapping.transaction($0) }
             // Optional: without bark's exit records a fee child still shows, as a plain on-chain send.
             let exits = (try? await handles.wallet.listAllExits(includeHistory: true, includeTransactions: false)) ?? []
@@ -531,6 +534,26 @@ extension WalletSession {
             let chain = try await handles.onchain.transactions().filter { $0.balanceChangeSats != 0 }
                 .map { HistoryMapping.transaction($0, exitFeeFor: exitFees[$0.txid]) }
             return movements + chain
+        }
+    }
+
+    /// Home's and Activity's history reads (`transactionHistory`, which `HistoryModel` calls on its own): how many are
+    /// running and how many have finished. A launch's or return's foreground pass waits briefly for them
+    /// (`ForegroundCatchUp`), so its on-chain sync doesn't hold the on-chain wallet while they read it.
+    var historyReadsFinished: Int { historyReads.finished }
+    func historyReadStarted() { historyReads.running += 1 }
+    func historyReadFinished() {
+        historyReads.running -= 1
+        historyReads.finished += 1
+    }
+
+    /// Returns once no history read is running and, given `baseline` (`historyReadsFinished` before an open), one has
+    /// finished since; at the latest after `limit`.
+    func waitForHistoryReads(finishedSince baseline: Int?, within limit: Duration) async {
+        let deadline = ContinuousClock.now + limit
+        while historyReads.running > 0 || baseline.map({ historyReads.finished <= $0 }) == true {
+            guard ContinuousClock.now < deadline, !Task.isCancelled else { return }
+            try? await Task.sleep(for: .milliseconds(50))
         }
     }
 
