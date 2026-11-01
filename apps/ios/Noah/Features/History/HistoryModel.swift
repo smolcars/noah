@@ -65,7 +65,7 @@ final class HistoryModel {
                 chainStatus: { try await session.chainTransactionStatus($0) },
                 coin: { try await session.vtxo($0) },
                 blockTimeRead: { WidgetChainDates.shared.record(txid: $0, at: $1) },
-                rowsShown: { LaunchTiming.shared.mark(.historyShown, detail: " (\($0) rows)") })
+                rowsShown: { LaunchTiming.shared.mark(.historyShown, suffix: " (\($0) rows)") })
         }
     }
 

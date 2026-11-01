@@ -22,9 +22,9 @@ final class LaunchTiming: Sendable {
         self.started = started
     }
 
-    func mark(_ milestone: Milestone, detail: String = "", now: Date = Date()) {
+    func mark(_ milestone: Milestone, suffix: String = "", now: Date = Date()) {
         guard logged.withLock({ $0.insert(milestone).inserted }) else { return }
-        log("\(milestone.rawValue) at +\(Self.milliseconds(now.timeIntervalSince(started))) ms\(detail)")
+        log("\(milestone.rawValue) at +\(Self.milliseconds(now.timeIntervalSince(started))) ms\(suffix)")
     }
 
     static func milliseconds(_ interval: TimeInterval) -> Int { Int((interval * 1000).rounded()) }

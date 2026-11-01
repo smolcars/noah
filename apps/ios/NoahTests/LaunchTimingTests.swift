@@ -13,7 +13,7 @@ struct LaunchTimingTests {
         timing.mark(.walletOpened, now: start.addingTimeInterval(0.25))
         timing.mark(.summaryShown, now: start.addingTimeInterval(0.4))
         timing.mark(.summaryShown, now: start.addingTimeInterval(9))
-        timing.mark(.historyShown, detail: " (3 rows)", now: start.addingTimeInterval(1.5))
+        timing.mark(.historyShown, suffix: " (3 rows)", now: start.addingTimeInterval(1.5))
         #expect(lines.withLock { $0 } == ["Wallet open done at +250 ms", "First summary shown at +400 ms",
                                           "First history rows shown at +1500 ms (3 rows)"])
     }

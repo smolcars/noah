@@ -25,7 +25,7 @@ extension WalletSession {
                 syncOnchain: timed("on-chain sync") { _ = try await handles.onchain.sync() },
                 sync: timed("wallet sync") { try await handles.wallet.sync() },
                 maintenance: timed("delegated maintenance") { try await handles.wallet.maintenanceDelegated() },
-                claimLightning: timed("Lightning claims") { _ = try await handles.wallet.tryClaimAllLightningReceives(wait: false) },
+                claimLightning: timed("lightning claims") { _ = try await handles.wallet.tryClaimAllLightningReceives(wait: false) },
                 progressExits: timed("exit progress") {
                     _ = try await session.progressPendingExits(access: WalletSession.exitProgressAccess(handles))
                 },
