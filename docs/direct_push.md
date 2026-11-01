@@ -35,12 +35,19 @@ TestFlight, ad-hoc and App Store builds, sandbox for Xcode builds.
 ## Before the iOS release
 
 Direct silent pushes use Apple's documented settings: type `background`, priority 5.
-Expo sends these wake-ups at priority 10. Apple treats background pushes as low
-priority, and the Lightning-address flow gives the phone 45 s to return an invoice.
+Expo sends these wake-ups at priority 10. What matters is that silent wakes keep running
+refreshes and `maintenance_delegated`. Lightning-address speed isn't a release blocker
+(owner's decision, 2026-11-01).
 
-Measure wake-up latency on a physical iPhone, Expo against direct, with the app
-backgrounded and swiped away, on battery. Direct passes if at least 95% of wake-ups
-arrive within 10 s. Don't ship raw APNs registration in a store build until it passes.
+Check a `maintenance` push on a TestFlight or ad-hoc build, which uses production APNs.
+So far, on an iPhone 17 with the sandbox:
+
+- With budget available, Expo and direct at priority 5 and 10 woke the app in under a
+  second.
+- At one push a minute, iOS throttled every route after eight pushes, Expo included.
+  Space test pushes well apart: Apple suggests no more than two or three an hour.
+- One Lightning-address invoice at priority 5 timed out at 45 s just after install. The
+  next one, through Expo, took 1 s. The cause is unknown.
 
 ## Retiring Expo
 
