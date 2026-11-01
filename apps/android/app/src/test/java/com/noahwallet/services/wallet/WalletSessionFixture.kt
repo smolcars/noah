@@ -15,12 +15,17 @@ internal abstract class WalletSessionFixture {
     protected class Boom : Exception()
     protected class Handles : WalletSession.Handles {
         var exitsRead = false
-        override val m6 = object : com.noahwallet.onchain.OnchainWalletAccess {
+        /** Replaces the offline exit wallet below, for tests that move exits. */
+        var exitWallet: com.noahwallet.onchain.OnchainWalletAccess? = null
+        override val m6 get() = exitWallet ?: offline
+        private val offline = object : com.noahwallet.onchain.OnchainWalletAccess {
             override val walletID = "wallet"
             override suspend fun exits(): List<io.github.niteshbalusu11.bark.ExitVtxo> {
                 exitsRead = true; throw io.github.niteshbalusu11.bark.BarkError("offline", io.github.niteshbalusu11.bark.BarkErrorCode.OTHER)
             }
         }
+        /** The sync and maintenance calls bark got, in order. */
+        val calls = mutableListOf<String>()
         override val send = com.noahwallet.send.FakeSendWallet()
         var preparations: com.noahwallet.send.SendPreparations? = null
         var beforeRetry: suspend () -> Unit = {}
@@ -94,8 +99,8 @@ internal abstract class WalletSessionFixture {
             return WalletSession.Summary(Network.REGTEST, "abcd",
                 WalletBalance(WalletBalance.Ark(1u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u), WalletBalance.Onchain(0u, 0u, 0u)), 2)
         }
-        override suspend fun sync() { assertFalse(closed) }
-        override suspend fun maintenanceDelegated() { assertFalse(closed) }
+        override suspend fun sync() { assertFalse(closed); calls += "sync" }
+        override suspend fun maintenanceDelegated() { assertFalse(closed); calls += "maintenance" }
         override suspend fun bolt11Invoice(amountSats: ULong): String { check(!closed); return "invoice-$amountSats" }
         override suspend fun claimLightningReceives() { assertFalse(closed) }
         override suspend fun createSnapshot(destination: File): WalletSnapshotInfo = throw UnsupportedOperationException()

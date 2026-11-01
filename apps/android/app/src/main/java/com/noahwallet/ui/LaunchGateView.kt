@@ -177,7 +177,7 @@ private fun rememberPlatformGate(model: AppModel, activity: androidx.fragment.ap
     return PlatformGate(gatesReady, hasResolvedPlatformGate, platformGate, requesting, ::requestPermission) { gateRevision++ }
 }
 
-/** Each time the app is in front: open the wallet if it isn't, and sync and refresh it if it is. */
+/** Each time the app is in front: open the wallet if it isn't, and sync (with delegated maintenance) and refresh it if it is. */
 @Composable
 private fun ForegroundStart(model: AppModel) {
     val context = LocalContext.current.applicationContext
@@ -188,7 +188,7 @@ private fun ForegroundStart(model: AppModel) {
             if (model.open) {
                 model.services.startServerServices()
                 com.noahwallet.recurring.RecurringRuntime.shared(context).syncForegroundAdmission.run {
-                    model.services.syncInForeground(it)
+                    model.services.syncInForeground(it, entering = true)
                 }
                 model.refresh()
             }
