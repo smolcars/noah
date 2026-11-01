@@ -16,7 +16,8 @@ struct ForegroundPassTests {
               claimLightning: { calls.withLock { $0.append("lightning") } },
               progressExits: { calls.withLock { $0.append("exits") }; try await progressExits() },
               takeMaintenance: { due.withLock { taken in defer { taken = false }; return taken } },
-              maintenanceFailed: { due.withLock { $0 = true } })
+              maintenanceFailed: { due.withLock { $0 = true } },
+              refreshes: { 0 })
     }
 
     @Test func foregroundEntryRunsDelegatedMaintenanceOnceInPlaceOfTheSync() async throws {
@@ -58,6 +59,30 @@ struct ForegroundPassTests {
         try await WalletSync().run(pass.stages)
         try await WalletSync().run(pass.stages)
         #expect(calls.withLock { $0 } == ["onchain", "maintenance", "lightning", "exits", "onchain", "sync", "lightning", "exits"])
+    }
+
+    /// A maintenance that failed after creating its refresh (the server down or refusing it) left a failed renewal in
+    /// history, so the next entry tries again, not the next pass; one that fails before any refresh (offline) still does.
+    @Test func aRefreshThatFailedIsNotRetriedUntilTheNextEntry() async throws {
+        struct Refused: Error {}
+        let calls = Locked<[String]>([]), due = Locked(true), refreshes = Locked(0), reachable = Locked(true)
+        var pass = Self.pass(calls, due: due)
+        pass.maintenance = {
+            calls.withLock { $0.append("maintenance") }
+            if reachable.withLock({ $0 }) { refreshes.withLock { $0 += 1 } }
+            throw Refused()
+        }
+        pass.refreshes = { refreshes.withLock { $0 } }
+        let maintained = ["onchain", "maintenance", "lightning", "exits"], synced = ["onchain", "sync", "lightning", "exits"]
+        await #expect(throws: Refused.self) { try await WalletSync().run(pass.stages) }
+        try await WalletSync().run(pass.stages)
+        try await WalletSync().run(pass.stages)
+        #expect(calls.withLock { $0 } == maintained + synced + synced)
+        reachable.withLock { $0 = false }
+        calls.withLock { $0 = [] }
+        due.withLock { $0 = true } // The next entry, offline.
+        for _ in 0..<2 { await #expect(throws: Refused.self) { try await WalletSync().run(pass.stages) } }
+        #expect(calls.withLock { $0 } == maintained + maintained)
     }
 
     @Test func eachTickMovesExitsOnlyWhileOneIsLive() async throws {
