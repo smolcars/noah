@@ -97,7 +97,11 @@ internal class ForegroundWalletWorkTest : WalletSessionFixture() {
         var reachable = true
         val work = ForegroundWalletWork(
             sync = { calls += "sync" },
-            maintenance = { calls += "maintenance"; if (reachable) refreshes++; throw Boom() },
+            maintenance = {
+                calls += "maintenance"
+                if (reachable) refreshes++
+                throw Boom()
+            },
             refreshes = { refreshes },
             progressExits = { calls += "exits" },
         )
