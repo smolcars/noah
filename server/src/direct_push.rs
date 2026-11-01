@@ -32,6 +32,9 @@ const FCM_TOKEN_REFRESH_MARGIN: Duration = Duration::from_secs(5 * 60);
 /// the phone 45 s, so a send doesn't keep trying for long.
 const RETRY_DELAYS: [Duration; 2] = [Duration::from_millis(500), Duration::from_secs(2)];
 const MAX_RETRY_AFTER: Duration = Duration::from_secs(5);
+/// Covers waiting for the auth token, requests and retry delays. Mailbox processing waits
+/// on each send, and a wake-up later than this is unlikely to beat the 45 s invoice limit.
+const SEND_DEADLINE: Duration = Duration::from_secs(20);
 
 /// What one send attempt means for the next step.
 #[derive(Debug, PartialEq)]
@@ -89,6 +92,7 @@ pub struct DirectPush {
     client: Client,
     apns: Option<Apns>,
     fcm: Option<Fcm>,
+    send_deadline: Duration,
 }
 
 impl DirectPush {
@@ -143,7 +147,18 @@ impl DirectPush {
             }
         };
 
-        Ok(Self { client, apns, fcm })
+        Ok(Self {
+            client,
+            apns,
+            fcm,
+            send_deadline: SEND_DEADLINE,
+        })
+    }
+
+    #[cfg(test)]
+    #[allow(dead_code)] // the library's test build has no direct push tests
+    pub(crate) fn use_send_deadline(&mut self, deadline: Duration) {
+        self.send_deadline = deadline;
     }
 
     #[cfg(test)]
@@ -172,6 +187,17 @@ impl DirectPush {
     ///
     /// Errors name no device token or credential, so callers can log them.
     pub async fn send(
+        &self,
+        target: &PushTarget,
+        data: &PushNotificationData,
+        sound: bool,
+    ) -> Result<()> {
+        tokio::time::timeout(self.send_deadline, self.deliver(target, data, sound))
+            .await
+            .map_err(|_| anyhow!("Direct push gave up at its deadline"))?
+    }
+
+    async fn deliver(
         &self,
         target: &PushTarget,
         data: &PushNotificationData,

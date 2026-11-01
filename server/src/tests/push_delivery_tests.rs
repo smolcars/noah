@@ -856,6 +856,7 @@ lwIDAQAB
         answers: Arc<Mutex<Vec<(StatusCode, Value)>>>,
         received: Arc<Mutex<Vec<Received>>>,
         token_requests: Arc<Mutex<Vec<String>>>,
+        stall_token_requests: bool,
     }
 
     impl Provider {
@@ -883,6 +884,9 @@ lwIDAQAB
                     post(move |body: String| {
                         let oauth = oauth.clone();
                         async move {
+                            if oauth.stall_token_requests {
+                                std::future::pending::<()>().await;
+                            }
                             oauth.token_requests.lock().unwrap().push(body);
                             Json(json!({
                                 "access_token": GOOGLE_ACCESS_TOKEN,
@@ -936,10 +940,21 @@ lwIDAQAB
 
     /// An app whose direct pushes go to `provider`.
     async fn state_using(state: &AppState, provider: &Provider) -> AppState {
+        state_using_deadline(state, provider, None).await
+    }
+
+    async fn state_using_deadline(
+        state: &AppState,
+        provider: &Provider,
+        deadline: Option<Duration>,
+    ) -> AppState {
         let url = provider.start().await;
         let mut direct_push =
             DirectPush::from_config(&config_with_credentials(&format!("{url}/token"))).unwrap();
         direct_push.use_urls(&url, &url);
+        if let Some(deadline) = deadline {
+            direct_push.use_send_deadline(deadline);
+        }
         Arc::new(AppStruct {
             direct_push: Arc::new(direct_push),
             ..(**state).clone()
@@ -1219,6 +1234,36 @@ lwIDAQAB
 
         assert_eq!(provider.received().len(), 2);
         assert_eq!(provider.token_requests().len(), 2);
+    }
+
+    /// Sends share one token request, so without a deadline a stalled token endpoint
+    /// makes each waiting send take its turn at the HTTP timeout.
+    #[tracing_test::traced_test]
+    #[tokio::test]
+    async fn sends_waiting_on_a_stalled_token_request_stop_at_the_deadline() {
+        let (_, state, _guard) = setup_test_app().await;
+        let provider = Provider {
+            stall_token_requests: true,
+            ..Provider::default()
+        };
+        let state = state_using_deadline(&state, &provider, Some(Duration::from_millis(200))).await;
+        let first = user_with_target(&state, 1, FCM_TOKEN, PushProvider::Fcm, false).await;
+        let second = user_with_target(&state, 2, FCM_TOKEN, PushProvider::Fcm, false).await;
+        let third = user_with_target(&state, 3, FCM_TOKEN, PushProvider::Fcm, false).await;
+
+        let started = std::time::Instant::now();
+        let dispatched = tokio::join!(
+            send_unique(&state, &first),
+            send_unique(&state, &second),
+            send_unique(&state, &third),
+        );
+
+        assert_eq!(dispatched, (0, 0, 0));
+        // Well under the 10 s the HTTP client would wait for even one token request.
+        assert!(started.elapsed() < Duration::from_secs(5));
+        assert!(provider.received().is_empty());
+        assert!(logs_contain("Direct push gave up at its deadline"));
+        assert!(!logs_contain(FCM_TOKEN));
     }
 
     /// Tokens are kept: a device that is gone misses its heartbeats and is deregistered.
