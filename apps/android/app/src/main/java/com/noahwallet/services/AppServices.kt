@@ -317,6 +317,7 @@ class AppServices private constructor(private val context: Context) {
     private val foregroundWork = com.noahwallet.services.wallet.ForegroundWalletWork(
         sync = { session.sync(includingLightningClaims = true) },
         maintenance = session::maintenanceDelegated,
+        refreshes = { session.movements().count(com.noahwallet.history.HistoryMapping::isRefresh) },
         progressExits = { session.progressPendingExits { AppLog(context, "wallet").w("Foreground exit progress failed: $it") } },
     )
 

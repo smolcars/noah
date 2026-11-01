@@ -158,7 +158,9 @@ front (`ForegroundWalletWork`): the pass at launch (once the wallet has opened),
 (bark, the on-chain wallet, Lightning claims) and moves any live exit forward at bark's fee rate; the first pass
 after each resume, and on each new open (create, restore, endpoint change), also runs `maintenanceDelegated`, and each
 later pass runs it again until one completes: bark's sync never moves an interactive attempt an older version left, so
-a maintenance that failed offline would otherwise leave its VTXOs locked until the next resume. Background jobs keep their own delegated maintenance and exit progress. Ark receives arrive on the next sync
+a maintenance that failed offline would otherwise leave its VTXOs locked until the next resume. One that failed after
+creating its refresh (the Ark server down or refusing it) waits for the next resume instead, since each try would add a
+failed renewal to history. Background jobs keep their own delegated maintenance and exit progress. Ark receives arrive on the next sync
 (within 60 s while open): bark-bolt-ffi 0.7.2 exposes no mailbox stream without the daemon. bark connects to the
 Ark server on its first call after an open, so `arkInfo()` is empty until then.
 

@@ -11,6 +11,8 @@ import java.util.concurrent.atomic.AtomicBoolean
 internal class ForegroundWalletWork(
     private val sync: suspend () -> Unit,
     private val maintenance: suspend () -> Unit,
+    /** How many refreshes bark has recorded, failed ones included (its `bark.round` refresh movements). */
+    private val refreshes: suspend () -> Int,
     /** Never throws but for cancellation; calls bark only while an exit is live. */
     private val progressExits: suspend () -> Unit,
 ) {
@@ -25,17 +27,23 @@ internal class ForegroundWalletWork(
      * [open] is the wallet's current open ([WalletSession.walletChanges]). Every stage runs, admission checked before
      * each; the first failure is rethrown once all have tried. A maintenance that doesn't complete (failed offline, or
      * the pass ended first) stays due for the next pass: bark's sync never moves an interactive attempt an older version
-     * left, so only maintenance frees its VTXOs.
+     * left, so only maintenance frees its VTXOs. One that failed after creating its refresh (the server down or refusing
+     * it) doesn't: each try would leave another failed renewal in history, so the next entry tries again.
      */
     suspend fun run(open: Long) {
         val maintain = maintenanceDue.getAndSet(false) or (open != lastOpen)
         lastOpen = open
-        var maintained = !maintain
+        var settled = !maintain
         try {
-            if (maintain) WalletSync.attemptAll(sync, { maintenance(); maintained = true }, progressExits)
+            if (maintain) WalletSync.attemptAll(sync, {
+                val created = refreshes()
+                var completed = false
+                try { maintenance(); completed = true }
+                finally { settled = completed || refreshes() > created }
+            }, progressExits)
             else WalletSync.attemptAll(sync, progressExits)
         } finally {
-            if (!maintained) maintenanceDue.set(true)
+            if (!settled) maintenanceDue.set(true)
         }
     }
 }

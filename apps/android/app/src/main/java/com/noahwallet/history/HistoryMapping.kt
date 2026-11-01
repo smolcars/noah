@@ -18,6 +18,8 @@ object HistoryMapping {
     private fun subsystemID(m: Movement): String? = "${m.subsystemName.lowercase(Locale.ROOT)}:${m.subsystemKind.lowercase(Locale.ROOT)}"
         .takeIf { it in kinds || it in listOf("bark.arkoor:send", "bark.lightning_send:send") }
     fun isFailedOrCanceled(status: String) = status in listOf("failed", "canceled")
+    /** A refresh bark recorded (a renewal, failed ones included). */
+    fun isRefresh(m: Movement) = subsystemID(m) == "bark.round:refresh"
     /** Every movement that changed or meant to change the balance, failed ones included; free renewals stay out. */
     fun include(m: Movement) = kinds[subsystemID(m)] in listOf("onboard", "offboard") ||
         m.intendedBalanceSats != 0L || m.effectiveBalanceSats != 0L

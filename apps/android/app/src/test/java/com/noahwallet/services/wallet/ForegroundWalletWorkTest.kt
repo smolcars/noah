@@ -24,6 +24,7 @@ internal class ForegroundWalletWorkTest : WalletSessionFixture() {
     private fun work(calls: MutableList<String>, failing: String? = null) = ForegroundWalletWork(
         sync = { calls += "sync"; if (failing == "sync") throw Boom() },
         maintenance = { calls += "maintenance"; if (failing == "maintenance") throw Boom() },
+        refreshes = { 0 },
         progressExits = { calls += "exits" },
     )
 
@@ -70,6 +71,7 @@ internal class ForegroundWalletWorkTest : WalletSessionFixture() {
         val work = ForegroundWalletWork(
             sync = { calls += "sync" },
             maintenance = { calls += "maintenance"; if (offline) throw Boom() },
+            refreshes = { 0 },
             progressExits = { calls += "exits" },
         )
         repeat(2) { assertTrue(runCatching { work.run(open = 1) }.exceptionOrNull() is Boom) }
@@ -85,6 +87,28 @@ internal class ForegroundWalletWorkTest : WalletSessionFixture() {
         assertEquals("done once it completes", listOf("sync", "maintenance", "exits", "sync", "exits"), calls)
     }
 
+    /**
+     * A maintenance that failed after creating its refresh (the server down or refusing it) left a failed renewal in
+     * history, so it isn't tried again until the next entry; one that fails before any refresh (offline) still is.
+     */
+    @Test fun aRefreshThatFailedIsNotRetriedUntilTheNextEntry() = runBlocking {
+        val calls = mutableListOf<String>()
+        var refreshes = 0
+        var reachable = true
+        val work = ForegroundWalletWork(
+            sync = { calls += "sync" },
+            maintenance = { calls += "maintenance"; if (reachable) refreshes++; throw Boom() },
+            refreshes = { refreshes },
+            progressExits = { calls += "exits" },
+        )
+        repeat(3) { runCatching { work.run(open = 1) } }
+        assertEquals("refused: once this entry", listOf("sync", "maintenance", "exits") + List(2) { listOf("sync", "exits") }.flatten(), calls)
+        assertEquals(1, refreshes)
+        reachable = false
+        calls.clear(); work.entered(); repeat(2) { runCatching { work.run(1) } }
+        assertEquals("offline: again on each pass", List(2) { listOf("sync", "maintenance", "exits") }.flatten(), calls)
+    }
+
     @Test fun theForegroundPassMovesExitsOnlyWhileOneIsLive() = runBlocking {
         withLocation { location ->
             val exits = Exits(listOf(ExitVtxo("done", 30_000u, ExitState.Canceled(100u), false),
@@ -92,7 +116,8 @@ internal class ForegroundWalletWorkTest : WalletSessionFixture() {
             val handles = Handles().apply { exitWallet = exits }
             val session = WalletSession("regtest", location, opener = { _, _, _, _ -> handles })
             session.createNew("unused", "test")
-            val work = ForegroundWalletWork({ session.sync(includingLightningClaims = true) }, session::maintenanceDelegated) {
+            val work = ForegroundWalletWork({ session.sync(includingLightningClaims = true) }, session::maintenanceDelegated,
+                { session.movements().count(com.noahwallet.history.HistoryMapping::isRefresh) }) {
                 session.progressPendingExits { fail(it) }
             }
             val open = session.walletChanges.value
