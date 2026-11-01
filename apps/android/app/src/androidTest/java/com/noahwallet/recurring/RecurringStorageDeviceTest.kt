@@ -44,7 +44,7 @@ class RecurringStorageDeviceTest {
         val location = WalletDataLocation(root, "regtest")
         val session = WalletSession("regtest", location)
         try {
-            session.createNew(io.github.niteshbalusu11.bark.generateMnemonic(), false, "recurring-storage-test")
+            session.createNew(io.github.niteshbalusu11.bark.generateMnemonic(), "recurring-storage-test")
             session.closeSettled()
             val first = RecurringStore.binding(location)
             assertEquals(first, RecurringStore.binding(location))

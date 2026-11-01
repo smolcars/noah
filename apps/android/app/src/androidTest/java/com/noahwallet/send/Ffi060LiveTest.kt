@@ -39,7 +39,7 @@ class Ffi060LiveTest {
         if (stage == "create") return@runBlocking create(seed, marker)
         check(marker.exists())
         val mnemonic = (seed.read() as SecretResult.Found).value
-        session.ensureOpen(mnemonic, false, "ffi060-live")
+        session.ensureOpen(mnemonic, "ffi060-live")
         check(session.summary()!!.fingerprint == marker.readText())
         try {
             when (stage) {
@@ -60,7 +60,7 @@ class Ffi060LiveTest {
         check(!location.hasAnyData && seed.read() == SecretResult.NotFound && !marker.exists())
         val phrase = generateMnemonic()
         check(seed.save(phrase) is SecretResult.Found)
-        session.createNew(phrase, false, "ffi060-live")
+        session.createNew(phrase, "ffi060-live")
         val fingerprint = session.summary()!!.fingerprint
         marker.writeText(fingerprint)
         SettingsStorage(context).apply {
@@ -215,7 +215,7 @@ class Ffi060LiveTest {
         val before = session.summary()!!
         val ids = session.movements().map { it.id }.toSet()
         session.closeSettled()
-        session.ensureOpen(mnemonic, false, "ffi060-live")
+        session.ensureOpen(mnemonic, "ffi060-live")
         val after = session.summary()!!
         assertEquals(before.fingerprint, after.fingerprint); assertEquals(before.movementCount, after.movementCount)
         assertEquals(before.balance.ark.spendable, after.balance.ark.spendable)

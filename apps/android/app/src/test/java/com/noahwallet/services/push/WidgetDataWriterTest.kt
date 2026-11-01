@@ -287,7 +287,6 @@ internal class WidgetHandles(override val m6: OnchainWalletAccess, val balances:
     override suspend fun bolt11Invoice(amountSats: ULong): String = error("unused")
     override suspend fun claimLightningReceives() = Unit
     override suspend fun createSnapshot(destination: File): WalletSnapshotInfo = error("unused")
-    override suspend fun stopDaemonWait() = Unit
     override fun close() = Unit
 }
 

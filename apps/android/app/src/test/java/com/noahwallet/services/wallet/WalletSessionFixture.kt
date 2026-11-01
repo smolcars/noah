@@ -31,7 +31,14 @@ internal abstract class WalletSessionFixture {
         var beforeRetry: suspend () -> Unit = {}
         override suspend fun retrySendDiscards() { beforeRetry(); preparations?.retryDiscards() }
         var sendReviewsDiscarded = false
-        override suspend fun discardSendReviews() { preparations?.discardAll(); sendReviewsDiscarded = true }
+        var discardFails = false
+        var discardEntered: CompletableDeferred<Unit>? = null
+        var discardGate: CompletableDeferred<Unit>? = null
+        override suspend fun discardSendReviews() {
+            discardEntered?.complete(Unit); discardGate?.await()
+            if (discardFails) throw Boom()
+            preparations?.discardAll(); sendReviewsDiscarded = true
+        }
         val subscribed = CompletableDeferred<Unit>()
         val waiting = CompletableDeferred<Unit>()
         val released = CompletableDeferred<Unit>()
@@ -88,9 +95,7 @@ internal abstract class WalletSessionFixture {
         override suspend fun peekPublicKey(index: UInt): String { check(initialized); return "public-key-0" }
         override suspend fun peekAddress(index: UInt) = "ark-test"
         var closed = false
-        var stopFails = false
-        var stopEntered: CompletableDeferred<Unit>? = null
-        var stopGate: CompletableDeferred<Unit>? = null
+        var closeFails = false
         var summaryGate: CompletableDeferred<Unit>? = null
         var summaryEntered: CompletableDeferred<Unit>? = null
         override suspend fun summary(): WalletSession.Summary {
@@ -104,11 +109,10 @@ internal abstract class WalletSessionFixture {
         override suspend fun bolt11Invoice(amountSats: ULong): String { check(!closed); return "invoice-$amountSats" }
         override suspend fun claimLightningReceives() { assertFalse(closed) }
         override suspend fun createSnapshot(destination: File): WalletSnapshotInfo = throw UnsupportedOperationException()
-        override suspend fun stopDaemonWait() {
-            stopEntered?.complete(Unit); stopGate?.await()
-            if (stopFails) throw Boom()
+        override fun close() {
+            if (closeFails) throw Boom()
+            closed = true
         }
-        override fun close() { closed = true }
     }
     protected suspend fun withLocation(block: suspend (WalletDataLocation) -> Unit) {
         val root = Files.createTempDirectory("session").toFile()

@@ -202,7 +202,7 @@ class AppServices private constructor(private val context: Context) {
 
     /** Headless opens only read seeds; pending restore/deletion always waits for foreground recovery. */
     private val walletOpener = StoredWalletOpener(seed,
-        { settings.persistedState<PersistedWalletState>(PersistedWalletState.key) }) { session.ensureOpen(it, true, BuildConfig.VERSION_NAME) }
+        { settings.persistedState<PersistedWalletState>(PersistedWalletState.key) }) { session.ensureOpen(it, BuildConfig.VERSION_NAME) }
 
     suspend fun ensureWalletOpen(walletMutationHeld: Boolean = false) = openWallet(walletMutationHeld, foreground = false)
 

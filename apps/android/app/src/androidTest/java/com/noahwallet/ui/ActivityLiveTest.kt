@@ -41,7 +41,7 @@ class ActivityLiveTest {
         // `-e adopt 1`: take over a disposable wallet made through the app's own onboarding (Back checks need one).
         check(marker.exists() || args.getString("adopt") == "1")
         val mnemonic = (seed.read() as SecretResult.Found).value
-        session.ensureOpen(mnemonic, false, "activity-live")
+        session.ensureOpen(mnemonic, "activity-live")
         if (!marker.exists()) marker.writeText(session.summary()!!.fingerprint)
         check(session.summary()!!.fingerprint == marker.readText())
         try {
@@ -54,7 +54,7 @@ class ActivityLiveTest {
         check(!location.hasAnyData && seed.read() == SecretResult.NotFound && !marker.exists())
         val phrase = generateMnemonic()
         check(seed.save(phrase) is SecretResult.Found)
-        session.createNew(phrase, false, "activity-live")
+        session.createNew(phrase, "activity-live")
         marker.writeText(session.summary()!!.fingerprint)
         SettingsStorage(context).apply {
             setPersistedState(PersistedWalletState(isInitialized = true, isWalletLoaded = true,

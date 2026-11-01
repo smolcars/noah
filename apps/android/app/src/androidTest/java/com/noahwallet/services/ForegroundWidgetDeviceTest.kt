@@ -89,7 +89,7 @@ class ForegroundWidgetDeviceTest {
             val admission = ForegroundSyncAdmission()
             scenario.onActivity { it.lifecycle.addObserver(admission) }
             try {
-                session.createNew(generateMnemonic(), true, "widget-test")
+                session.createNew(generateMnemonic(), "widget-test")
                 val invoice = session.bolt11Invoice(20_000u)
                 val connection = URI(url!!).toURL().openConnection() as HttpURLConnection
                 try {

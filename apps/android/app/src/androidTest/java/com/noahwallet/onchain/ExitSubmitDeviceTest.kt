@@ -102,7 +102,6 @@ class ExitSubmitDeviceTest {
         override suspend fun bolt11Invoice(amountSats: ULong): String = error("unused")
         override suspend fun claimLightningReceives() = Unit
         override suspend fun createSnapshot(destination: File): WalletSnapshotInfo = error("unused")
-        override suspend fun stopDaemonWait() = Unit
         override fun close() = Unit
     }
 
@@ -110,9 +109,9 @@ class ExitSubmitDeviceTest {
     private class Process(val session: WalletSession, val lifecycle: WalletLifecycle)
     private fun launch(bark: Bark): Process = runBlocking {
         val session = WalletSession("regtest", location, inspect = { WalletDatabase.Properties("regtest", "fixture") },
-            opener = { _, _, _, _, _ -> Handles(bark) })
-        if (location.databaseExists) session.openExisting("unused", false, "test")
-        else { session.createNew("unused", false, "test"); location.database.writeText("fixture") }
+            opener = { _, _, _, _ -> Handles(bark) })
+        if (location.databaseExists) session.openExisting("unused", "test")
+        else { session.createNew("unused", "test"); location.database.writeText("fixture") }
         Process(session, WalletLifecycle(session, location, setSuspended = {}, deregister = {}, readSeed = { error("unused") }, deleteSeed = {},
             clearToken = {}, clearSettings = {}, clearWidget = {}, sweepScratch = {}))
     }

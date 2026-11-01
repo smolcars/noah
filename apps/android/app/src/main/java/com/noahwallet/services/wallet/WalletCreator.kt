@@ -103,7 +103,7 @@ class WalletCreator(private val dependencies: Dependencies) {
                 datadirExists = { location.directory.exists() },
                 removeAttemptFiles = location::removeAttemptFiles,
                 generateMnemonic = ::generateMnemonic,
-                openExisting = { session.ensureOpen(it, true, BuildConfig.VERSION_NAME) },
+                openExisting = { session.ensureOpen(it, BuildConfig.VERSION_NAME) },
                 reserve = {
                     val reservation = session.reserve()
                     var removed = false
@@ -117,7 +117,7 @@ class WalletCreator(private val dependencies: Dependencies) {
                     }
                 },
                 release = session::release,
-                createNew = { reservation, mnemonic -> session.createNew(reservation, mnemonic, true, BuildConfig.VERSION_NAME) },
+                createNew = { reservation, mnemonic -> session.createNew(reservation, mnemonic, BuildConfig.VERSION_NAME) },
                 beginOnboarding = settings::beginOnboarding,
             ))
         }

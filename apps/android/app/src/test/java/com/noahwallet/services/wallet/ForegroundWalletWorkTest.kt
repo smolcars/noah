@@ -58,8 +58,8 @@ internal class ForegroundWalletWorkTest : WalletSessionFixture() {
             val exits = Exits(listOf(ExitVtxo("done", 30_000u, ExitState.Canceled(100u), false),
                 ExitVtxo("gone", 30_000u, ExitState.VtxoAlreadySpent(100u), false)))
             val handles = Handles().apply { exitWallet = exits }
-            val session = WalletSession("regtest", location, opener = { _, _, _, _, _ -> handles })
-            session.createNew("unused", false, "test")
+            val session = WalletSession("regtest", location, opener = { _, _, _, _ -> handles })
+            session.createNew("unused", "test")
             val work = ForegroundWalletWork({ session.sync(includingLightningClaims = true) }, session::maintenanceDelegated) {
                 session.progressPendingExits { fail(it) }
             }
@@ -83,11 +83,11 @@ internal class ForegroundWalletWorkTest : WalletSessionFixture() {
             val funding = com.noahwallet.onchain.ExitFunding.shared
             val exits = Exits(listOf(ExitVtxo("a", 30_000u, ExitState.Start(100u), false)))
             val handles = Handles().apply { exitWallet = exits }
-            val session = WalletSession("regtest", location, opener = { _, _, _, _, _ -> handles })
+            val session = WalletSession("regtest", location, opener = { _, _, _, _ -> handles })
             var reasons = 0
             session.progressPendingExits { reasons++ }
             assertTrue("couldn't run: the wallet isn't open", funding.checkFailed)
-            session.createNew("unused", false, "test")
+            session.createNew("unused", "test")
             session.progressPendingExits { fail(it) }
             assertFalse("a completed progress: exits are moving", funding.checkFailed)
             exits.error = BarkError("offline", BarkErrorCode.OTHER)

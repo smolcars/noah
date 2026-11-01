@@ -56,7 +56,7 @@ class StoredMnemonicTest {
                     assertFalse(create)
                     throw stoppedBeforeSDK
                 })
-            assertSame(stoppedBeforeSDK, runCatching { opener(raw, "unused", false, "test", false) }.exceptionOrNull())
+            assertSame(stoppedBeforeSDK, runCatching { opener(raw, "unused", "test", false) }.exceptionOrNull())
             val derive: (String) -> String = { normalized -> assertTrue(case.name, normalized == expected); "public-test-result" }
             com.noahwallet.services.server.ServerClient.loginKey("regtest", raw, derive)
             com.noahwallet.services.server.ServerClient.signChallenge("challenge", "regtest", raw, derive)

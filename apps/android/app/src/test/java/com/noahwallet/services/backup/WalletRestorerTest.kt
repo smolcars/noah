@@ -34,9 +34,8 @@ class WalletRestorerTest {
         override suspend fun bolt11Invoice(amountSats: ULong): String = error("unused")
         override suspend fun claimLightningReceives() = Unit
         override suspend fun createSnapshot(destination: File): WalletSnapshotInfo = error("unused")
-        var stopFails = false
-        override suspend fun stopDaemonWait() { if (stopFails) throw Boom() }
-        override fun close() = Unit
+        var closeFails = false
+        override fun close() { if (closeFails) throw Boom() }
     }
     private class World {
         val root = Files.createTempDirectory("restorer").toFile()
@@ -56,8 +55,8 @@ class WalletRestorerTest {
         var verifyGate: CompletableDeferred<Unit>? = null
         val entered = CompletableDeferred<Unit>()
         val session = WalletSession("regtest", location, inspect = { WalletDatabase.Properties("regtest", "abcd") },
-            opener = { _, _, daemon, _, create ->
-                assertFalse(daemon); assertFalse(create); entered.complete(Unit); verifyGate?.await()
+            opener = { _, _, _, create ->
+                assertFalse(create); entered.complete(Unit); verifyGate?.await()
                 if (openerFails) throw Boom()
                 handles
             })
@@ -204,7 +203,7 @@ class WalletRestorerTest {
         entered.await(); restore.cancel(); delay(20)
         assertFalse(restore.isCompleted); assertEquals("new wallet", location.database.readText()); assertTrue(location.restorePending)
         assertTrue(runCatching { session.reserve() }.isFailure)
-        assertTrue(runCatching { session.ensureOpen("old seed", false, "test") }.isFailure)
+        assertTrue(runCatching { session.ensureOpen("old seed", "test") }.isFailure)
         assertTrue(runCatching { session.close() }.isFailure)
         assertTrue(runCatching { restorer.restore(validSeed) }.isFailure)
         assertNull(session.summary()); gate.complete(Unit); restore.join(); previous()
@@ -263,7 +262,7 @@ class WalletRestorerTest {
             tx.prepare(); repeat(300) { File(tx.work, "plain-$it").writeText("plain") }
             val start = java.util.concurrent.CountDownLatch(1)
             val recovery = async(Dispatchers.IO) { start.await(); WalletRestorer.recoverInterruptedRestore(session, location, seed, tx) }
-            val open = async(Dispatchers.IO) { start.await(); runCatching { session.ensureOpen("old seed", false, "test") } }
+            val open = async(Dispatchers.IO) { start.await(); runCatching { session.ensureOpen("old seed", "test") } }
             start.countDown()
             assertEquals(RestoreTransaction.Recovery.nothingPending, recovery.await())
             assertTrue("open must not find the session busy", open.await().isSuccess)
@@ -293,7 +292,7 @@ class WalletRestorerTest {
     } }
     @Test fun launchWhileOpeningSweepsOnlyAbandonedRestoreWork() = runBlocking { world {
         openerFails = true; verifyGate = CompletableDeferred(); tx.prepare(); File(tx.work, "plain").writeText("plain")
-        val opening = async { runCatching { session.ensureOpen("old seed", false, "test") } }; entered.await()
+        val opening = async { runCatching { session.ensureOpen("old seed", "test") } }; entered.await()
         assertEquals(RestoreTransaction.Recovery.nothingPending, WalletRestorer.recoverInterruptedRestore(session, location, seed, tx))
         assertFalse(tx.work.exists()); verifyGate!!.complete(Unit); opening.await()
     } }
@@ -303,13 +302,13 @@ class WalletRestorerTest {
         assertTrue(tx.work.exists()); session.release(hold)
     } }
     @Test fun failedVerificationTeardownQuarantinesFilesUntilClosed() = runBlocking { world {
-        handles.stopFails = true
+        handles.closeFails = true
         val failure = runCatching { restorer().restore(validSeed) }.exceptionOrNull() as WalletSession.OpenError
         assertEquals(WalletSession.OpenFailure.teardownFailed, failure.reason)
         assertTrue(location.restorePending); assertFalse(session.isOpen)
         assertEquals("new wallet", location.database.readText()); assertTrue("Previous seed differs", seed.value == "old seed")
         assertTrue(runCatching { session.reserve() }.isFailure)
-        handles.stopFails = false; session.close()
+        handles.closeFails = false; session.close()
         WalletRestorer.recoverInterruptedRestore(session, location, seed, tx); previous()
     } }
 }

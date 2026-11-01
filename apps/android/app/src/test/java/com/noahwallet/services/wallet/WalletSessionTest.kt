@@ -18,15 +18,15 @@ internal class WalletSessionTest : WalletSessionFixture() {
             var opened = false
             val session = WalletSession("regtest", location,
                 inspect = { WalletDatabase.Properties("regtest", "abcd") },
-                opener = { _, _, _, _, _ -> opened = true; Handles() })
+                opener = { _, _, _, _ -> opened = true; Handles() })
             val reservation = if (operation == "create") null else session.reserve()
             val budget = com.noahwallet.recurring.RecurringBudget()
             launch(Dispatchers.IO + WalletExecutionBudget(budget)) {
                 if (cancel) currentCoroutineContext().cancel() else budget.revoke()
                 runCatching {
                     when (operation) {
-                        "create" -> session.createNew("unused", false, "test")
-                        "reserved-create" -> session.createNew(reservation!!, "unused", false, "test")
+                        "create" -> session.createNew("unused", "test")
+                        "reserved-create" -> session.createNew(reservation!!, "unused", "test")
                         else -> session.verify(reservation!!, "unused", "test")
                     }
                 }
@@ -42,8 +42,8 @@ internal class WalletSessionTest : WalletSessionFixture() {
             val entered = CompletableDeferred<Unit>()
             val release = CompletableDeferred<Unit>()
             val handles = Handles().apply { beforeRetry = { entered.complete(Unit); release.await() } }
-            val session = WalletSession("regtest", location, opener = { _, _, _, _, _ -> handles })
-            session.createNew("unused", false, "test")
+            val session = WalletSession("regtest", location, opener = { _, _, _, _ -> handles })
+            session.createNew("unused", "test")
             val budget = com.noahwallet.recurring.RecurringBudget()
             var started = false
             val caller = launch(Dispatchers.IO + WalletExecutionBudget(budget)) {
@@ -62,8 +62,8 @@ internal class WalletSessionTest : WalletSessionFixture() {
         for (cancel in listOf(true, false)) withLocation { location ->
             val entered = CompletableDeferred<Unit>()
             val release = CompletableDeferred<Unit>()
-            val session = WalletSession("regtest", location, opener = { _, _, _, _, _ -> Handles() })
-            session.createNew("unused", false, "test")
+            val session = WalletSession("regtest", location, opener = { _, _, _, _ -> Handles() })
+            session.createNew("unused", "test")
             val first = launch { session.withSendReservation { entered.complete(Unit); release.await() } }
             entered.await()
             val budget = com.noahwallet.recurring.RecurringBudget()
@@ -84,8 +84,8 @@ internal class WalletSessionTest : WalletSessionFixture() {
     @Test fun cancelledCallerCannotAdmitNewNativeRead() = runBlocking {
         withLocation { location ->
             val handles = Handles()
-            val session = WalletSession("regtest", location, opener = { _, _, _, _, _ -> handles })
-            session.createNew("public-test-input", false, "test")
+            val session = WalletSession("regtest", location, opener = { _, _, _, _ -> handles })
+            session.createNew("public-test-input", "test")
             var nativeStarted = false
             val work = launch(Dispatchers.IO) {
                 currentCoroutineContext().cancel()
@@ -106,9 +106,9 @@ internal class WalletSessionTest : WalletSessionFixture() {
             val session = WalletSession("regtest", location,
                 isSuspended = { entered.countDown(); check(release.await(5, java.util.concurrent.TimeUnit.SECONDS)); false },
                 inspect = { WalletDatabase.Properties("regtest", "abcd") },
-                opener = { _, _, _, _, _ -> opened.complete(Unit); throw Boom() })
+                opener = { _, _, _, _ -> opened.complete(Unit); throw Boom() })
             val work = launch(Dispatchers.IO + WalletExecutionBudget(budget)) {
-                runCatching { session.ensureOpen("unused", false, "test") }
+                runCatching { session.ensureOpen("unused", "test") }
             }
             assertTrue(entered.await(5, java.util.concurrent.TimeUnit.SECONDS))
             if (cancelCaller) work.cancel() else budget.revoke()
@@ -124,8 +124,8 @@ internal class WalletSessionTest : WalletSessionFixture() {
             val entered = CompletableDeferred<Unit>()
             val release = CompletableDeferred<Unit>()
             val handles = Handles().apply { beforeRetry = { entered.complete(Unit); release.await() } }
-            val session = WalletSession("regtest", location, opener = { _, _, _, _, _ -> handles })
-            session.createNew("public-test-input", false, "test")
+            val session = WalletSession("regtest", location, opener = { _, _, _, _ -> handles })
+            session.createNew("public-test-input", "test")
             val budget = com.noahwallet.recurring.RecurringBudget()
             var nativeStarted = false
             val work = launch(Dispatchers.IO + WalletExecutionBudget(budget)) {
@@ -143,11 +143,11 @@ internal class WalletSessionTest : WalletSessionFixture() {
     @Test fun aReusedSessionCannotAuthorizeMigrationOfAnotherCredential() = runBlocking {
         withLocation { location ->
             val handles = Handles()
-            val session = WalletSession("regtest", location, opener = { _, _, _, _, _ -> handles })
-            session.createNew("first-public-test-input", false, "test")
-            session.ensureOpen("first-public-test-input", false, "test")
+            val session = WalletSession("regtest", location, opener = { _, _, _, _ -> handles })
+            session.createNew("first-public-test-input", "test")
+            session.ensureOpen("first-public-test-input", "test")
             assertFailure(WalletSession.OpenFailure.seedConflict,
-                runCatching { session.ensureOpen("different-public-test-input", false, "test") })
+                runCatching { session.ensureOpen("different-public-test-input", "test") })
             session.close()
         }
     }
@@ -167,8 +167,8 @@ internal class WalletSessionTest : WalletSessionFixture() {
                     check(release.await(5, java.util.concurrent.TimeUnit.SECONDS))
                     true
                 } else false
-            }, opener = { _, _, _, _, _ -> handles })
-            session.createNew("public-test-input", false, "test")
+            }, opener = { _, _, _, _ -> handles })
+            session.createNew("public-test-input", "test")
             newSingleThreadContext("launch-main").use { main ->
                 val caller = withContext(main) { Thread.currentThread() }
                 gate = true
@@ -190,8 +190,8 @@ internal class WalletSessionTest : WalletSessionFixture() {
     @Test fun backgroundExitProgressFailureIsLoggedNeverThrown() = runBlocking {
         withLocation { location ->
             val handles = Handles()
-            val session = WalletSession("regtest", location, opener = { _, _, _, _, _ -> handles })
-            session.createNew("unused", false, "test")
+            val session = WalletSession("regtest", location, opener = { _, _, _, _ -> handles })
+            session.createNew("unused", "test")
             val warnings = mutableListOf<String>()
             // The background job holds the wallet: the step still runs, where the UI's onchain calls are refused.
             WalletBackgroundActivity.exclusive { session.progressPendingExits { warnings += it } }
@@ -210,8 +210,8 @@ internal class WalletSessionTest : WalletSessionFixture() {
                 reserved = false
             }, {})
             handles.preparations = held
-            val session = WalletSession("regtest", location, opener = { _, _, _, _, _ -> handles })
-            session.createNew("unused", false, "test")
+            val session = WalletSession("regtest", location, opener = { _, _, _, _ -> handles })
+            session.createNew("unused", "test")
             held.retain("unvalidated")
             held.discard("unvalidated")
             assertTrue(reserved); assertEquals(3, calls)
@@ -225,8 +225,8 @@ internal class WalletSessionTest : WalletSessionFixture() {
             val handles = Handles(); var calls = 0
             val held = com.noahwallet.send.SendPreparations({ calls++; if (calls <= 3) error("discard") }, {})
             handles.preparations = held
-            val session = WalletSession("regtest", location, opener = { _, _, _, _, _ -> handles })
-            session.createNew("unused", false, "test"); held.retain("unvalidated")
+            val session = WalletSession("regtest", location, opener = { _, _, _, _ -> handles })
+            session.createNew("unused", "test"); held.retain("unvalidated")
             assertTrue(runCatching { session.close() }.exceptionOrNull() is com.noahwallet.send.SendFailure)
             assertTrue(session.isOpen); assertFalse(handles.closed); assertFalse(handles.sendReviewsDiscarded)
             assertEquals(3, calls)
@@ -235,8 +235,8 @@ internal class WalletSessionTest : WalletSessionFixture() {
     }
     @Test fun canceledQuoteDiscardsTheSuccessfulNativeResult() = runBlocking {
         withLocation { location ->
-            val handles = Handles(); val session = WalletSession("regtest", location, opener = { _, _, _, _, _ -> handles })
-            session.createNew("unused", false, "test")
+            val handles = Handles(); val session = WalletSession("regtest", location, opener = { _, _, _, _ -> handles })
+            session.createNew("unused", "test")
             val entered = CompletableDeferred<Unit>(); val gate = CompletableDeferred<Unit>()
             handles.send.quoteBlock = { entered.complete(Unit); gate.await(); com.noahwallet.send.chainQuote }
             val quoting = launch { session.quoteSend(com.noahwallet.send.chainPayment) }
@@ -248,8 +248,8 @@ internal class WalletSessionTest : WalletSessionFixture() {
     @Test fun recurringReservationDrainsCallsExcludesCloseAndSurvivesCancellation() = runBlocking {
         withLocation { location ->
             val handles = Handles().apply { summaryEntered = CompletableDeferred(); summaryGate = CompletableDeferred() }
-            val session = WalletSession("regtest", location, opener = { _, _, _, _, _ -> handles })
-            session.createNew("unused", false, "test")
+            val session = WalletSession("regtest", location, opener = { _, _, _, _ -> handles })
+            session.createNew("unused", "test")
             val reading = launch { session.summary() }; handles.summaryEntered!!.await()
             val entered = CompletableDeferred<Unit>(); val gate = CompletableDeferred<Unit>()
             val sending = launch { session.withRecurringReservation { entered.complete(Unit); gate.await(); assertFalse(handles.closed) } }
@@ -265,8 +265,8 @@ internal class WalletSessionTest : WalletSessionFixture() {
     @Test fun failedSuspendOrDeletePermanentlyRevokesPendingRecurringSubmission() = runBlocking {
         for (delete in listOf(false, true)) withLocation { location ->
             val handles = Handles()
-            val session = WalletSession("regtest", location, opener = { _, _, _, _, _ -> handles })
-            session.createNew("unused", false, "test")
+            val session = WalletSession("regtest", location, opener = { _, _, _, _ -> handles })
+            session.createNew("unused", "test")
             val world = com.noahwallet.recurring.RecurringWorld(this, handles.send) { body -> session.withRecurringReservation(body) }
             world.add()
             val entered = CompletableDeferred<Unit>(); val gate = CompletableDeferred<Unit>()
@@ -286,8 +286,8 @@ internal class WalletSessionTest : WalletSessionFixture() {
     @Test fun sendReservationIsCountedShieldedAndExcludesReplacement() = runBlocking {
         withLocation { location ->
             val handles = Handles()
-            val session = WalletSession("regtest", location, opener = { _, _, _, _, _ -> handles })
-            session.createNew("unused", false, "test")
+            val session = WalletSession("regtest", location, opener = { _, _, _, _ -> handles })
+            session.createNew("unused", "test")
             val entered = CompletableDeferred<Unit>(); val gate = CompletableDeferred<Unit>()
             val sending = launch { session.withSendReservation { entered.complete(Unit); gate.await(); assertFalse(handles.closed) } }
             entered.await(); sending.cancel()
@@ -300,9 +300,9 @@ internal class WalletSessionTest : WalletSessionFixture() {
     @Test fun canceledHistoryReadCompletesBothReadsBeforeClose() = runBlocking {
         withLocation { location ->
             val handles = Handles().apply { historyEntered = CompletableDeferred(); historyGate = CompletableDeferred() }
-            val session = WalletSession("regtest", location, opener = { _, _, _, _, _ -> handles })
+            val session = WalletSession("regtest", location, opener = { _, _, _, _ -> handles })
             assertTrue(runCatching { session.transactionHistory() }.exceptionOrNull() is WalletSession.SessionError)
-            session.createNew("unused", false, "test")
+            session.createNew("unused", "test")
             val reading = launch { session.transactionHistory() }
             handles.historyEntered!!.await(); reading.cancel()
             val closing = launch { session.close() }
@@ -314,8 +314,8 @@ internal class WalletSessionTest : WalletSessionFixture() {
     @Test fun closeStopsStateObserverBeforeDrainingCalls() = runBlocking {
         withLocation { location ->
             val handles = Handles().apply { summaryEntered = CompletableDeferred(); summaryGate = CompletableDeferred() }
-            val session = WalletSession("regtest", location, opener = { _, _, _, _, _ -> handles })
-            session.createNew("unused", false, "test")
+            val session = WalletSession("regtest", location, opener = { _, _, _, _ -> handles })
+            session.createNew("unused", "test")
             val observer = launch { runCatching { session.stateChanges().collect() } }
             handles.changeWaiting.await()
             val call = launch { session.summary() }; handles.summaryEntered!!.await()
@@ -329,8 +329,8 @@ internal class WalletSessionTest : WalletSessionFixture() {
     @Test fun closeReleasesWaitingReceiveObserverBeforeClosingHandles() = runBlocking {
         withLocation { location ->
             val handles = Handles()
-            val session = WalletSession("regtest", location, opener = { _, _, _, _, _ -> handles })
-            session.createNew("unused", false, "test")
+            val session = WalletSession("regtest", location, opener = { _, _, _, _ -> handles })
+            session.createNew("unused", "test")
             val observer = launch { session.receiveCompletion(ReceiveRequest("ark-test", "chain-test")) }
             handles.waiting.await()
             withTimeout(2000) { session.close(); observer.join() }
@@ -341,8 +341,8 @@ internal class WalletSessionTest : WalletSessionFixture() {
     @Test fun closeAlsoCancelsBeforeNativeWaitHasRegistered() = runBlocking {
         withLocation { location ->
             val handles = Handles().apply { beforeNativeWait = CompletableDeferred() }
-            val session = WalletSession("regtest", location, opener = { _, _, _, _, _ -> handles })
-            session.createNew("unused", false, "test")
+            val session = WalletSession("regtest", location, opener = { _, _, _, _ -> handles })
+            session.createNew("unused", "test")
             val observer = launch { session.receiveCompletion(ReceiveRequest("ark-test", "chain-test")) }
             handles.waiting.await()
             val closing = async { session.close() }
@@ -360,8 +360,8 @@ internal class WalletSessionTest : WalletSessionFixture() {
         repeat(20) {
             withLocation { location ->
                 val handles = Handles()
-                val session = WalletSession("regtest", location, opener = { _, _, _, _, _ -> handles })
-                session.createNew("unused", false, "test")
+                val session = WalletSession("regtest", location, opener = { _, _, _, _ -> handles })
+                session.createNew("unused", "test")
                 val observer = launch(Dispatchers.Default) {
                     runCatching { session.receiveCompletion(ReceiveRequest("ark-test", "chain-test")) }
                 }
@@ -375,8 +375,8 @@ internal class WalletSessionTest : WalletSessionFixture() {
     @Test fun cancelReceiveObserverReleasesHolderButLeavesWalletUsable() = runBlocking {
         withLocation { location ->
             val handles = Handles()
-            val session = WalletSession("regtest", location, opener = { _, _, _, _, _ -> handles })
-            session.createNew("unused", false, "test")
+            val session = WalletSession("regtest", location, opener = { _, _, _, _ -> handles })
+            session.createNew("unused", "test")
             val observer = launch { session.receiveCompletion(ReceiveRequest("ark-test", "chain-test")) }
             handles.waiting.await()
             withTimeout(2000) { observer.cancelAndJoin() }
@@ -388,8 +388,8 @@ internal class WalletSessionTest : WalletSessionFixture() {
     @Test fun canceledOperationKeepsMutexUntilNativeWorkFinishes() = runBlocking {
         withLocation { location ->
             val handles = Handles().apply { summaryEntered = CompletableDeferred(); summaryGate = CompletableDeferred() }
-            val session = WalletSession("regtest", location, opener = { _, _, _, _, _ -> handles })
-            session.createNew("unused", false, "test")
+            val session = WalletSession("regtest", location, opener = { _, _, _, _ -> handles })
+            session.createNew("unused", "test")
             val reading = launch { session.summary() }
             handles.summaryEntered!!.await(); reading.cancel()
             val closing = launch { session.close() }

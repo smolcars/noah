@@ -94,7 +94,7 @@ class FundedCrossPlatformBackupTest {
             assertFalse(outcome.cleanupPending); assertFalse(location.restorePending)
             val saved = seed.read()
             assertTrue(saved is SecretResult.Found && saved.value == phrase)
-            session.ensureOpen(phrase, true, "funded-backup-test")
+            session.ensureOpen(phrase, "funded-backup-test")
             request("check/ios/before-sync", buildJsonObject { put("state", state(session)) })
             session.sync()
             request("check/ios/after-sync", buildJsonObject { put("state", state(session)) })
@@ -136,7 +136,7 @@ class FundedCrossPlatformBackupTest {
         val source = WalletSession("regtest", WalletDataLocation(File(root, "source").apply { mkdirs() }, "regtest"))
         try {
             val phrase = generateMnemonic()
-            source.createNew(phrase, true, "funded-backup-test")
+            source.createNew(phrase, "funded-backup-test")
             request("onchain", buildJsonObject { put("address", source.receiveRequest().onchainAddress) })
             fund(source)
             val funded = source.summary()!!
