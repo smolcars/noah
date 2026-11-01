@@ -10,6 +10,8 @@ extension WalletSession {
         var progressExits: @Sendable () async throws -> Void
         /// Whether a foreground entry left delegated maintenance due; taking it clears it.
         var takeMaintenance: @Sendable () async -> Bool
+        /// A maintenance that failed: due again for the next pass.
+        var maintenanceFailed: @Sendable () async -> Void
 
         static func live(_ session: WalletSession, _ handles: Handles) -> Self {
             .init(syncOnchain: { _ = try await handles.onchain.sync() },
@@ -17,17 +19,23 @@ extension WalletSession {
                   maintenance: { try await handles.wallet.maintenanceDelegated() },
                   claimLightning: { _ = try await handles.wallet.tryClaimAllLightningReceives(wait: false) },
                   progressExits: { _ = try await session.progressPendingExits(access: WalletSession.exitProgressAccess(handles)) },
-                  takeMaintenance: { await session.takeForegroundMaintenance() })
+                  takeMaintenance: { await session.takeForegroundMaintenance() },
+                  maintenanceFailed: { await session.foregroundMaintenanceFailed() })
         }
 
         /// RN's foreground stages, each attempted on its own. The first pass after a foreground entry runs bark's
         /// delegated maintenance in place of the wallet sync (it starts with one), so VTXOs due for refresh go into
-        /// a delegated round. Every pass then moves live exits.
+        /// a delegated round; one that fails (offline) runs again on each later pass until it completes, since
+        /// bark's sync never moves an interactive attempt an older version left, so its VTXOs stay locked until
+        /// maintenance does. Every pass then moves live exits.
         var stages: [@Sendable () async throws -> Void] {
-            let sync = sync, maintenance = maintenance, takeMaintenance = takeMaintenance
+            let sync = sync, maintenance = maintenance, takeMaintenance = takeMaintenance, maintenanceFailed = maintenanceFailed
             return [
                 syncOnchain,
-                { if await takeMaintenance() { try await maintenance() } else { try await sync() } },
+                {
+                    guard await takeMaintenance() else { return try await sync() }
+                    do { try await maintenance() } catch { await maintenanceFailed(); throw error }
+                },
                 claimLightning,
                 progressExits,
             ]

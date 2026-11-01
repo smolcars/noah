@@ -62,6 +62,8 @@ actor WalletSession {
         defer { maintenanceDue = false }
         return maintenanceDue
     }
+    /// The pass's maintenance failed: the next pass runs it again.
+    func foregroundMaintenanceFailed() { if isOpen { maintenanceDue = true } }
     /// Serializes the app's own exit progress (foreground pass, background jobs, Check the chain): two
     /// concurrent `progress_exits_with_cpfp` calls could each build a fee child for the same transaction.
     let exitProgressGate = WalletMutationGate()

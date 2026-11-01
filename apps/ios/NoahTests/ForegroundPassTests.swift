@@ -15,7 +15,8 @@ struct ForegroundPassTests {
               maintenance: { calls.withLock { $0.append("maintenance") } },
               claimLightning: { calls.withLock { $0.append("lightning") } },
               progressExits: { calls.withLock { $0.append("exits") }; try await progressExits() },
-              takeMaintenance: { due.withLock { taken in defer { taken = false }; return taken } })
+              takeMaintenance: { due.withLock { taken in defer { taken = false }; return taken } },
+              maintenanceFailed: { due.withLock { $0 = true } })
     }
 
     @Test func foregroundEntryRunsDelegatedMaintenanceOnceInPlaceOfTheSync() async throws {
@@ -38,10 +39,25 @@ struct ForegroundPassTests {
         pass.maintenance = { throw Boom() }
         await #expect(throws: Boom.self) { try await WalletSync().run(pass.stages) }
         #expect(calls.withLock { $0 } == ["onchain", "lightning", "exits"])
-        // A failed maintenance isn't retried every tick; the next foreground entry runs it again.
+    }
+
+    /// An entry's maintenance that fails (opened offline) runs again on each later pass, one per 60 s tick, until it
+    /// completes: bark's sync never moves an interactive attempt an older version left, so its VTXOs stay locked till then.
+    @Test func aFailedMaintenanceRunsOnEachLaterPassUntilItCompletes() async throws {
+        struct Offline: Error {}
+        let calls = Locked<[String]>([]), due = Locked(true), offline = Locked(true)
+        var pass = Self.pass(calls, due: due)
+        pass.maintenance = {
+            calls.withLock { $0.append("maintenance") }
+            if offline.withLock({ $0 }) { throw Offline() }
+        }
+        for _ in 0..<2 { await #expect(throws: Offline.self) { try await WalletSync().run(pass.stages) } }
+        #expect(calls.withLock { $0 } == Array(repeating: ["onchain", "maintenance", "lightning", "exits"], count: 2).flatMap(\.self))
+        offline.withLock { $0 = false }
         calls.withLock { $0 = [] }
         try await WalletSync().run(pass.stages)
-        #expect(calls.withLock { $0 } == ["onchain", "sync", "lightning", "exits"])
+        try await WalletSync().run(pass.stages)
+        #expect(calls.withLock { $0 } == ["onchain", "maintenance", "lightning", "exits", "onchain", "sync", "lightning", "exits"])
     }
 
     @Test func eachTickMovesExitsOnlyWhileOneIsLive() async throws {

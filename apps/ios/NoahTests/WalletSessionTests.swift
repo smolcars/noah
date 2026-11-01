@@ -205,7 +205,8 @@ struct WalletSessionTests {
     }
 
     /// Each foreground entry (a foreground open, the app coming back to an open wallet) leaves delegated maintenance
-    /// due for one foreground pass; background opens, closes and coming back to a closed wallet don't.
+    /// due for one foreground pass, or until its maintenance stops failing; background opens, closes and coming back to
+    /// a closed wallet don't.
     @Test(.regtestStack, .timeLimit(.minutes(1))) func foregroundEntriesLeaveMaintenanceDueOnce() async throws {
         defer { try? FileManager.default.removeItem(at: documents) }
         let session = offlineSession()
@@ -216,8 +217,11 @@ struct WalletSessionTests {
         await session.appBecameActive()
         #expect(await session.takeForegroundMaintenance())
         #expect(await !session.takeForegroundMaintenance())
+        await session.foregroundMaintenanceFailed()
+        #expect(await session.takeForegroundMaintenance())
         await session.appBecameActive()
         try await session.close()
+        await session.foregroundMaintenanceFailed()
         #expect(await !session.takeForegroundMaintenance())
         await session.appBecameActive()
         #expect(await !session.takeForegroundMaintenance())
