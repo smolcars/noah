@@ -63,12 +63,16 @@ extension WalletSession {
     }
 
     /// Nothing without a pending exit (Move exit forward's own filter), else one call at bark's own fee rate,
-    /// recorded like a completed Move exit forward, never toasted. True when it called bark.
+    /// recorded like a completed Move exit forward, never toasted. True when it called bark. Admission is checked
+    /// once the gate is held: a Check the chain ahead of it can outlast the app being in front, or the job's budget.
     @discardableResult
     nonisolated func progressPendingExits(access: ExitProgressAccess) async throws -> Bool {
         guard try await access.exits().contains(where: { ExitRules.live(Self.exitState($0.state).0) }) else { return false }
-        try BackgroundExecution.checkActive()
-        _ = try await progressExits(nil, access: access)
+        _ = try await exitProgressGate.withLock {
+            try await ForegroundExecution.checkActive()
+            try BackgroundExecution.checkActive()
+            return try await self.progressExitsLocked(nil, access: access)
+        }
         return true
     }
 

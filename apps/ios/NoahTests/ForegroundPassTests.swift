@@ -83,6 +83,40 @@ struct ForegroundPassTests {
         #expect(rates.rates == [nil, nil])
     }
 
+    /// A pass queued behind Check the chain doesn't call bark if the app left while it waited: its budget is revoked,
+    /// or the scene is no longer active (`ForegroundExecution`).
+    @Test(arguments: [false, true]) func aPassQueuedBehindCheckTheChainNeverProgressesOnceTheAppHasLeft(sceneOnly: Bool) async throws {
+        let session = WalletSession()
+        let rates = Locked<[UInt64?]>([]), active = Locked(true)
+        let check = RecurringReservationTests.Gate()
+        let live = ExitVtxo(vtxoId: "v", amountSats: 31_000, state: .start(tipHeight: 100), isClaimable: false)
+        let access = WalletSession.ExitProgressAccess(
+            walletID: "w", exits: { [live] },
+            progress: { rate in
+                rates.withLock { $0.append(rate) }
+                if rate != nil { await check.wait() }
+                return []
+            },
+            models: { [] }, tip: { 120 })
+        let manual = Task { try await session.progressExits(12, access: access) }
+        let deadline = ContinuousClock.now + .seconds(5)
+        while !(await check.entered), ContinuousClock.now < deadline { await Task.yield() }
+        try #require(await check.entered)
+        let budget = RecurringSubmissionBudget()
+        let tick = Task {
+            try await ForegroundExecution.$admission.withValue({ active.withLock { $0 } }) {
+                try await RecurringSubmissionBudget.$current.withValue(budget) { try await session.progressPendingExits(access: access) }
+            }
+        }
+        while await session.exitProgressGate.waitingCount == 0, ContinuousClock.now < deadline { await Task.yield() }
+        try #require(await session.exitProgressGate.waitingCount == 1)
+        if sceneOnly { active.withLock { $0 = false } } else { budget.revoke() }
+        await check.release()
+        _ = try await manual.value
+        await #expect(throws: CancellationError.self) { _ = try await tick.value }
+        #expect(rates.withLock { $0 } == [12])
+    }
+
     /// Check the chain, the foreground pass and background jobs each call bark; one at a time.
     @Test func theAppsExitProgressCallsNeverOverlap() async throws {
         let session = WalletSession()
