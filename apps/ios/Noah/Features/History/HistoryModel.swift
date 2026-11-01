@@ -21,6 +21,8 @@ final class HistoryModel {
         var coin: @Sendable (String) async throws -> VtxoModel? = { _ in nil }
         /// A confirmed transaction's block time, for the widgets' wave (`WidgetChainDates`).
         var blockTimeRead: @Sendable (String, Date) -> Void = { _, _ in }
+        /// The wallet's rows were published (how many), before enrichment.
+        var rowsShown: @Sendable (Int) -> Void = { _ in }
 
         static func live(session: WalletSession, client: Client, variant: AppVariant) -> Self {
             Self(
@@ -62,7 +64,8 @@ final class HistoryModel {
                 chainTip: { try await session.chainTip() },
                 chainStatus: { try await session.chainTransactionStatus($0) },
                 coin: { try await session.vtxo($0) },
-                blockTimeRead: { WidgetChainDates.shared.record(txid: $0, at: $1) })
+                blockTimeRead: { WidgetChainDates.shared.record(txid: $0, at: $1) },
+                rowsShown: { LaunchTiming.shared.mark(.historyShown, suffix: " (\($0) rows)") })
         }
     }
 
@@ -158,6 +161,7 @@ final class HistoryModel {
             isLoading = false
             error = nil
             revision += 1
+            dependencies.rowsShown(transactions.count)
             // One worker bounds optional requests without holding up wallet observation.
             enrichment = Task {
                 await previous?.value

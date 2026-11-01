@@ -356,6 +356,7 @@ extension AppModel {
             summary = latest
             summaryRevision += 1
             walletError = nil
+            LaunchTiming.shared.mark(.summaryShown)
         } catch is CancellationError { return }
         catch {
             log.e("Failed to read wallet summary: \(Self.describe(error))")
@@ -399,6 +400,8 @@ extension AppModel {
             phase = .blocked(.secureStorageUnavailable)
             return
         }
+        // Home's history read for this open is one that finishes after this.
+        let historyReads = await session.historyReadsFinished
         do {
             let wait = EsploraOpenWait()
             customOpenWait = wait
@@ -406,10 +409,12 @@ extension AppModel {
                 await self?.customOpenFinished(success)
             }
             customOpenWait = nil
+            LaunchTiming.shared.mark(.walletOpened)
             if let latest = try await session.summary() {
                 summary = latest
                 summaryRevision += 1
                 walletError = nil
+                LaunchTiming.shared.mark(.summaryShown)
             }
             // Identity checks must finish before exposing wallet/settings actions.
             if phase == .launching && !customServerUnresponsive { phase = resumeOnboarding ? .onboarding : .wallet }
@@ -427,23 +432,32 @@ extension AppModel {
             return
         }
         if phase == .wallet { await pushPermission.refresh() }
-        syncOpenedWallet()
+        syncOpenedWallet(historyReadsBefore: historyReads)
         await reconcileBackupTriggers()
         await startServerServices()
     }
 
     /// Nothing else syncs a wallet just opened until the first foreground tick: one pass now, which also runs the
-    /// delegated maintenance the open left due.
-    private func syncOpenedWallet() {
+    /// delegated maintenance the open left due, after Home's read and its first history read (`ForegroundCatchUp`).
+    private func syncOpenedWallet(historyReadsBefore historyReads: Int) {
         Task { [weak self] in
             guard let self else { return }
             await ForegroundExecution.run {
                 guard phase == .wallet, !isWalletSuspended, !pushPermission.blocksWallet(initialized: true) else { return }
-                await AppServices.shared.syncInForeground()
-                guard !Task.isCancelled, phase == .wallet, !isWalletSuspended, await session.isOpen else { return }
-                await refresh()
+                await ForegroundCatchUp(
+                    home: refresh,
+                    history: { await self.historyRead(finishedSince: historyReads) },
+                    pass: { await AppServices.shared.syncInForeground() }) {
+                        guard !Task.isCancelled, self.phase == .wallet, !self.isWalletSuspended else { return false }
+                        return await self.session.isOpen
+                    }.run()
             }
         }
+    }
+
+    /// `ForegroundCatchUp`'s wait for Home's history read; without a baseline, only for one already running.
+    private func historyRead(finishedSince baseline: Int?) async {
+        await session.waitForHistoryReads(finishedSince: baseline, within: ForegroundCatchUp.historyWait)
     }
 
     // MARK: Danger zone (Settings)
@@ -600,10 +614,15 @@ extension AppModel {
             guard !pushPermission.blocksWallet(initialized: true) else { return }
             if wasBlocked { await startServerServices() }
             try? await server.refreshMailboxIfNeeded()
-            await AppServices.shared.syncInForeground()
-            await RecurringExecutor.shared.execute()
-            synced = summaryRevision
-            await refresh()
+            // Only a history read already running (the scene's return starts one) holds the pass.
+            await ForegroundCatchUp(
+                home: refresh,
+                history: { await self.historyRead(finishedSince: nil) },
+                pass: { await AppServices.shared.syncInForeground() }) {
+                    await RecurringExecutor.shared.execute()
+                    synced = self.summaryRevision
+                    return true
+                }.run()
         }
         catchUp.finish(started, summaryRevision: synced)
         await reconcileBackupTriggers()
