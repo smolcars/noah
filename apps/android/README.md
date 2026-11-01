@@ -155,7 +155,9 @@ bark's daemon never runs. In bark 0.8.0 it joins round attempt 0 interactively w
 refresh, and every round Noah joins is delegated, so every open passes `runDaemon = false`
 (`WalletOpenWithoutDaemonTest`), as RN's nitro-ark does. The app does the rest of the daemon's work while it's in
 front (`ForegroundWalletWork`): the pass at launch (once the wallet has opened), on each resume and every 60 s syncs
-(bark, the on-chain wallet, Lightning claims) and moves any live exit forward at bark's fee rate; the first pass
+bark and Lightning claims, moves any live exit forward at bark's fee rate and syncs the on-chain wallet last. That sync
+holds the on-chain wallet for its whole Esplora round trip and Home's balance and history wait for it, so launch and
+resume read Home before their pass (`AppModel.catchUpInForeground`). The first pass
 after each resume, and on each new open (create, restore, endpoint change), also runs `maintenanceDelegated`, and each
 later pass runs it again until one completes: bark's sync never moves an interactive attempt an older version left, so
 a maintenance that failed offline would otherwise leave its VTXOs locked until the next resume. One that failed after
