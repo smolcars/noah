@@ -23,12 +23,19 @@ internal class ForegroundWalletWork(
 
     /**
      * [open] is the wallet's current open ([WalletSession.walletChanges]). Every stage runs, admission checked before
-     * each; the first failure is rethrown once all have tried.
+     * each; the first failure is rethrown once all have tried. A maintenance that doesn't complete (failed offline, or
+     * the pass ended first) stays due for the next pass: bark's sync never moves an interactive attempt an older version
+     * left, so only maintenance frees its VTXOs.
      */
     suspend fun run(open: Long) {
         val maintain = maintenanceDue.getAndSet(false) or (open != lastOpen)
         lastOpen = open
-        if (maintain) WalletSync.attemptAll(sync, maintenance, progressExits)
-        else WalletSync.attemptAll(sync, progressExits)
+        var maintained = !maintain
+        try {
+            if (maintain) WalletSync.attemptAll(sync, { maintenance(); maintained = true }, progressExits)
+            else WalletSync.attemptAll(sync, progressExits)
+        } finally {
+            if (!maintained) maintenanceDue.set(true)
+        }
     }
 }

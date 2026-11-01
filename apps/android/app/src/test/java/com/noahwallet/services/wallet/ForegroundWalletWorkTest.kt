@@ -54,8 +54,35 @@ internal class ForegroundWalletWorkTest : WalletSessionFixture() {
             assertTrue(failing, runCatching { work.run(1) }.exceptionOrNull() is Boom)
             assertEquals(failing, listOf("sync", "maintenance", "exits"), calls)
             calls.clear(); runCatching { work.run(1) }
-            assertEquals("a failed entry isn't retried on every tick ($failing)", listOf("sync", "exits"), calls)
+            assertEquals("only a maintenance that failed runs again ($failing)",
+                if (failing == "maintenance") listOf("sync", "maintenance", "exits") else listOf("sync", "exits"), calls)
         }
+    }
+
+    /**
+     * An entry's maintenance that fails (opened offline) stays due: each later pass, one per 60 s tick, tries it again
+     * until it completes. bark's sync never moves an interactive attempt an older app version left behind, so until then
+     * its VTXOs stay locked.
+     */
+    @Test fun aMaintenanceThatDidNotCompleteRunsOnEachLaterPassUntilItDoes() = runBlocking {
+        val calls = mutableListOf<String>()
+        var offline = true
+        val work = ForegroundWalletWork(
+            sync = { calls += "sync" },
+            maintenance = { calls += "maintenance"; if (offline) throw Boom() },
+            progressExits = { calls += "exits" },
+        )
+        repeat(2) { assertTrue(runCatching { work.run(open = 1) }.exceptionOrNull() is Boom) }
+        assertEquals("once per pass while it fails", List(2) { listOf("sync", "maintenance", "exits") }.flatten(), calls)
+        // A pass that ends before maintenance starts (its budget gone) leaves it due as well.
+        calls.clear()
+        val cancelled = runCatching {
+            kotlinx.coroutines.withContext(WalletExecutionBudget(com.noahwallet.recurring.RecurringBudget().apply { revoke() })) { work.run(1) }
+        }
+        assertTrue(cancelled.exceptionOrNull() is kotlinx.coroutines.CancellationException)
+        offline = false
+        calls.clear(); work.run(1); work.run(1)
+        assertEquals("done once it completes", listOf("sync", "maintenance", "exits", "sync", "exits"), calls)
     }
 
     @Test fun theForegroundPassMovesExitsOnlyWhileOneIsLive() = runBlocking {
