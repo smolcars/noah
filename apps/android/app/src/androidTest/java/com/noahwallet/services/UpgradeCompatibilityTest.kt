@@ -59,7 +59,7 @@ class UpgradeCompatibilityTest {
         if (funded) assertLaunchKeptState(expected, session, settings, baseline)
         if (args.getString("rnExpoTokenRegistered") == "1") assertMovesToRawToken(context)
         val finalSummary = requireNotNull(session.summary())
-        File(context.filesDir, "noah-upgrade-result.json").writeText(result(finalSummary, settings, oldValue, state, args).toString())
+        File(context.filesDir, "noah-upgrade-result.json").writeText(result(finalSummary, settings, oldValue, state).toString())
         comparisonRoot.deleteRecursively()
     }
 
@@ -217,8 +217,7 @@ class UpgradeCompatibilityTest {
     }
 
     /** The public upgrade evidence the runner compares across the RN and native installs. */
-    private fun result(summary: WalletSession.Summary, settings: SettingsStorage, oldValue: String, state: PersistedWalletState?,
-        args: android.os.Bundle) = buildJsonObject {
+    private fun result(summary: WalletSession.Summary, settings: SettingsStorage, oldValue: String, state: PersistedWalletState?) = buildJsonObject {
         put("loginKey", com.noahwallet.services.server.ServerClient.loginKey("regtest", oldValue))
         put("fingerprint", summary.fingerprint)
         put("movements", summary.movementCount)
