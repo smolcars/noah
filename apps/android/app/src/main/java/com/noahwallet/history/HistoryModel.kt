@@ -40,13 +40,16 @@ class HistoryModel(private val dependencies: Dependencies) {
         val warn: (String) -> Unit = {},
         /** Recurring payments the journal recorded as paid, to name the rows they made. */
         val recurring: suspend () -> List<HistoryMapping.RecurringLink> = { emptyList() },
+        /** The wallet's rows were published (how many), before enrichment. */
+        val rowsShown: (Int) -> Unit = {},
     ) {
         companion object {
             @Suppress("LongParameterList") // the app's wiring: each of the history's sources and hooks, from AppModel
             fun live(session: WalletSession, client: HttpClient, variant: String,
                 suspended: () -> Boolean, warn: (String) -> Unit,
                 esploraEndpoint: () -> String? = { WalletConfiguration.base(variant).esplora },
-                recurring: suspend () -> List<HistoryMapping.RecurringLink> = { emptyList() }): Dependencies {
+                recurring: suspend () -> List<HistoryMapping.RecurringLink> = { emptyList() },
+                rowsShown: (Int) -> Unit = {}): Dependencies {
                 val explorer = OkHttpClient.Builder().callTimeout(10, TimeUnit.SECONDS).build()
                 fun available() { if (suspended()) throw AppServices.WalletSuspended() }
                 return Dependencies(
@@ -80,7 +83,7 @@ class HistoryModel(private val dependencies: Dependencies) {
                     price = { timestamp, currency -> V0HistoricalPriceClient(client)
                         .historicalFiatPrice(HistoricalFiatPricePayload(currency, timestamp)).value().rate },
                     currentPrice = { currency -> V0PricesClient(client).fiatPrices(JsonObject(emptyMap())).value().rates[currency] },
-                    warn = warn, recurring = recurring,
+                    warn = warn, recurring = recurring, rowsShown = rowsShown,
                 )
             }
         }
@@ -147,6 +150,7 @@ class HistoryModel(private val dependencies: Dependencies) {
             currentCoroutineContext().ensureActive()
             if (request != generation) return
             transactions = HistoryRules.unified(latest); isLoading = false; error = null; revision++
+            dependencies.rowsShown(transactions.size)
             // One worker bounds optional requests; it never blocks the wallet event consumer.
             enrichment = CoroutineScope(currentCoroutineContext()).launch {
                 enrichmentLock.withLock { enrich(latest, currency, request) }

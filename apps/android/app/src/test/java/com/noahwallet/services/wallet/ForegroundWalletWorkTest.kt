@@ -121,9 +121,8 @@ internal class ForegroundWalletWorkTest : WalletSessionFixture() {
             val session = WalletSession("regtest", location, opener = { _, _, _, _ -> handles })
             session.createNew("unused", "test")
             val work = ForegroundWalletWork({ session.sync(includingLightningClaims = true) }, session::maintenanceDelegated,
-                { session.movements().count(com.noahwallet.history.HistoryMapping::isRefresh) }) {
-                session.progressPendingExits { fail(it) }
-            }
+                { session.movements().count(com.noahwallet.history.HistoryMapping::isRefresh) },
+                progressExits = { session.progressPendingExits { fail(it) } })
             val open = session.walletChanges.value
             work.run(open)
             assertEquals("only finished exits: bark isn't asked", 0, exits.progressed)

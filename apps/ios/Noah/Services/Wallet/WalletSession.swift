@@ -688,12 +688,14 @@ extension WalletSession {
         }
     }
 
-    /// The foreground tick's pass (`ForegroundPass`), in the same flight as every other sync.
+    /// The foreground tick's pass (`ForegroundPass`), in the same flight as every other sync. A pass after a launch or a
+    /// return to the front (maintenance due) logs its stages' timing.
     func syncInForeground() async throws {
         guard isOpen else { return }
         let flight = syncFlight
+        let timing = maintenanceDue ? PassTiming() : nil
         try await withOpenWallet { handles in
-            try await flight.run(ForegroundPass.live(self, handles).stages.map { stage in
+            try await flight.run(ForegroundPass.live(self, handles, timing: timing).stages.map { stage in
                 { try await self.runSyncStage({ _ in try await stage() }, handles: handles) }
             })
         }

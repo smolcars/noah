@@ -319,6 +319,7 @@ class AppServices private constructor(private val context: Context) {
         maintenance = session::maintenanceDelegated,
         refreshes = { session.movements().count(com.noahwallet.history.HistoryMapping::isRefresh) },
         progressExits = { session.progressPendingExits { AppLog(context, "wallet").w("Foreground exit progress failed: $it") } },
+        log = AppLog(context, "wallet")::i,
     )
 
     /**

@@ -356,6 +356,7 @@ extension AppModel {
             summary = latest
             summaryRevision += 1
             walletError = nil
+            LaunchTiming.shared.mark(.summaryShown)
         } catch is CancellationError { return }
         catch {
             log.e("Failed to read wallet summary: \(Self.describe(error))")
@@ -406,10 +407,12 @@ extension AppModel {
                 await self?.customOpenFinished(success)
             }
             customOpenWait = nil
+            LaunchTiming.shared.mark(.walletOpened)
             if let latest = try await session.summary() {
                 summary = latest
                 summaryRevision += 1
                 walletError = nil
+                LaunchTiming.shared.mark(.summaryShown)
             }
             // Identity checks must finish before exposing wallet/settings actions.
             if phase == .launching && !customServerUnresponsive { phase = resumeOnboarding ? .onboarding : .wallet }

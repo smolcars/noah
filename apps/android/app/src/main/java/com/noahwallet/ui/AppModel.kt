@@ -9,6 +9,7 @@ import com.noahwallet.formatting.BitcoinAmountUnit
 import com.noahwallet.services.AppServices
 import com.noahwallet.services.backup.*
 import com.noahwallet.services.launch.LaunchState
+import com.noahwallet.services.logging.LaunchTiming
 import com.noahwallet.services.storage.*
 import com.noahwallet.services.wallet.*
 import kotlinx.coroutines.*
@@ -140,6 +141,7 @@ class AppModel(application: Application, val settings: SettingsStorage = Setting
         esploraEndpoint = { WalletConfiguration.effective(BuildConfig.APP_VARIANT,
             EsploraSettings(settings).selection(BuildConfig.APP_VARIANT).endpoint).esplora },
         recurring = { withContext(Dispatchers.IO) { com.noahwallet.recurring.RecurringJournal.historyLinks(application, settings) } },
+        rowsShown = { LaunchTiming.shared(application).mark(LaunchTiming.Milestone.historyShown, " ($it rows)") },
     ))
     var recurringNotification by mutableStateOf(false)
     var autoBoardSuccessBanner by mutableStateOf<Pair<Long, Long>?>(null)
@@ -314,6 +316,7 @@ class AppModel(application: Application, val settings: SettingsStorage = Setting
             services.openWalletInForeground(walletMutationHeld = true, customWait = wait, lateCompletion = ::lateOpen)
             customOpenWait = null
         }
+        LaunchTiming.shared(getApplication()).mark(LaunchTiming.Milestone.walletOpened)
         open = true
         onboarded = services.isOnboarded()
         if (!onboarded) step = OnboardingNavigation.resumeStep
@@ -436,6 +439,7 @@ class AppModel(application: Application, val settings: SettingsStorage = Setting
             }
             summaryRevision++
             error = null
+            if (summary != null) LaunchTiming.shared(getApplication()).mark(LaunchTiming.Milestone.summaryShown)
         } catch (_: CancellationException) { caller.ensureActive() }
         catch (_: Exception) { error = "Couldn't load your balance. Pull down to try again." }
     }

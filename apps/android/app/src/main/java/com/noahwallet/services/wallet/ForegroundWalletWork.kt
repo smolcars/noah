@@ -15,6 +15,8 @@ internal class ForegroundWalletWork(
     private val refreshes: suspend () -> Int,
     /** Never throws but for cancellation; calls bark only while an exit is live. */
     private val progressExits: suspend () -> Unit,
+    /** The app log: a pass that runs maintenance (after a launch or a return to the front) logs its stages' timing. */
+    private val log: (String) -> Unit = {},
 ) {
     private val maintenanceDue = AtomicBoolean(false)
     /** The open ([WalletSession.walletChanges]) the last pass ran on; passes never overlap ([ForegroundWalletSync]). */
@@ -34,13 +36,15 @@ internal class ForegroundWalletWork(
         val maintain = maintenanceDue.getAndSet(false) or (open != lastOpen)
         lastOpen = open
         var settled = !maintain
+        val timing = if (maintain) com.noahwallet.services.logging.PassTiming(log) else null
+        fun timed(stage: String, work: suspend () -> Unit): suspend () -> Unit = timing?.let { { it.run(stage, work) } } ?: work
         try {
-            if (maintain) WalletSync.attemptAll(sync, {
+            if (maintain) WalletSync.attemptAll(timed("sync", sync), timed("delegated maintenance") {
                 val created = refreshes()
                 var completed = false
                 try { maintenance(); completed = true }
                 finally { settled = completed || refreshes() > created }
-            }, progressExits)
+            }, timed("exit progress", progressExits))
             else WalletSync.attemptAll(sync, progressExits)
         } finally {
             if (!settled) maintenanceDue.set(true)
