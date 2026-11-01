@@ -159,9 +159,9 @@ struct ExitProgressTests {
 
     @Test func staleOnlyWithEvidenceThatNothingProgresses() {
         let behind = Self.exit("Processing", Self.processing(Self.path.map { Self.tx($0, "verify-inputs") }, tip: 90))
-        // bark's daemon keeps exits current while it runs: never stale, however old bark's record.
+        // The foreground pass keeps exits current while it runs: never stale, however old bark's record.
         #expect(!ExitProgress(behind, tip: 100).stale)
-        // No daemon, or the last Check the chain failed.
+        // No foreground pass for this wallet, or the last exit progress failed.
         #expect(ExitProgress(behind, tip: 100, progressing: false).stale)
         // "Last checked" is Noah's own check, never bark's frozen height.
         #expect(ExitProgress(behind, tip: 100).checked == nil)
@@ -202,40 +202,40 @@ struct ExitProgressTests {
         let exit = Self.exit("Processing", Self.processing(txs, tip: 101))
         #expect(exit.parkedTxid == "l2" && exit.parkedEpisode == "l2|awaiting-cpfp-broadcast|0")
         let t0 = Date(timeIntervalSince1970: 1_000)
-        func needs(_ confirmed: UInt64 = 310, fee: UInt64? = 1_215, proven: [String: String] = [:], seen: Date? = t0, daemon: Date? = .distantPast,
+        func needs(_ confirmed: UInt64 = 310, fee: UInt64? = 1_215, proven: [String: String] = [:], seen: Date? = t0, progress: Date? = .distantPast,
                    at seconds: TimeInterval = 0, _ subject: ExitModel = exit) -> Bool {
             ExitFunds.needsFunds(
                 subject,
                 confirmed: confirmed,
                 packageFee: fee,
                 proven: proven,
-                timing: .init(parkedSince: seen, daemonSince: daemon, now: t0.addingTimeInterval(seconds)))
+                timing: .init(parkedSince: seen, progressSince: progress, now: t0.addingTimeInterval(seconds)))
         }
-        // Funds short, but bark hasn't had a full daemon cycle to try yet: no label.
+        // Funds short, but no foreground pass has had a full tick to try yet: no label.
         #expect(!needs(at: 0) && !needs(at: 74))
-        // One daemon interval and its margin since Noah first saw it parked.
+        // One tick and its margin since Noah first saw it parked.
         #expect(needs(at: 75))
-        // The daemon started after it parked: the cycle counts from then.
-        #expect(!needs(daemon: t0.addingTimeInterval(30), at: 75) && needs(daemon: t0.addingTimeInterval(30), at: 105))
-        // Without the daemon, elapsed time proves nothing; a completed Check the chain does.
+        // The foreground pass started after it parked: the cycle counts from then.
+        #expect(!needs(progress: t0.addingTimeInterval(30), at: 75) && needs(progress: t0.addingTimeInterval(30), at: 105))
+        // Without the foreground pass, elapsed time proves nothing; a completed exit progress does.
         let proof = ["v": "l2|awaiting-cpfp-broadcast|0"]
-        #expect(!needs(daemon: nil, at: 10_000) && needs(proven: proof, daemon: nil, at: 0))
+        #expect(!needs(progress: nil, at: 10_000) && needs(proven: proof, progress: nil, at: 0))
         // Funds arrive, or nothing to compare against: cleared.
         #expect(!needs(1_215, at: 10_000) && !needs(fee: nil, proven: proof, at: 10_000))
         // Proof for another transaction doesn't carry over; once it has its child it isn't parked.
-        #expect(!needs(proven: ["v": "root|awaiting-cpfp-broadcast|0"], daemon: nil, at: 0))
+        #expect(!needs(proven: ["v": "root|awaiting-cpfp-broadcast|0"], progress: nil, at: 0))
         // Proof for another exit doesn't either.
-        #expect(!needs(proven: ["w": "l2|awaiting-cpfp-broadcast|0"], daemon: nil, at: 0))
+        #expect(!needs(proven: ["w": "l2|awaiting-cpfp-broadcast|0"], progress: nil, at: 0))
         var moved = txs
         moved[1] = Self.tx("l2", "awaiting-confirmation", child: "c1", origin: "wallet")
         let paid = Self.processing(moved, tip: 101)
         #expect(!needs(proven: proof, at: 10_000, Self.exit("Processing", paid)))
         // Its child fell out of the mempool and it parked again: a new episode. The old proof and the old
-        // sighting are gone with the status change; it waits for a check or a daemon cycle again.
+        // sighting are gone with the status change; it waits for a check or a foreground tick again.
         let first = Self.processing(txs, tip: 101)
         let again = Self.exit("Processing", Self.processing(txs, tip: 103), history: [first, paid])
         #expect(again.parkedEpisode == "l2|awaiting-cpfp-broadcast|2")
-        #expect(!needs(proven: proof, daemon: nil, at: 10_000, again))
+        #expect(!needs(proven: proof, progress: nil, at: 10_000, again))
         var sightings = ExitSightings()
         _ = sightings.observe([Self.exit("Processing", first)], tip: 101, now: t0)
         _ = sightings.observe([Self.exit("Processing", paid, history: [first])], tip: 102, now: t0.addingTimeInterval(30))
@@ -244,7 +244,7 @@ struct ExitProgressTests {
         let since = sightings.seen[episode]?.at
         #expect(since == t0.addingTimeInterval(600))
         #expect(!needs(seen: since, at: 674, again) && needs(seen: since, at: 675, again))
-        #expect(needs(proven: ["v": episode], daemon: nil, at: 0, again))
+        #expect(needs(proven: ["v": episode], progress: nil, at: 0, again))
     }
 
     @Test func aRestartedExitIsANewRun() throws {
@@ -260,13 +260,13 @@ struct ExitProgressTests {
             confirmed: 100,
             packageFee: 1_215,
             proven: ["v": firstEpisode],
-            timing: .init(parkedSince: nil, daemonSince: nil, now: Date())))
+            timing: .init(parkedSince: nil, progressSince: nil, now: Date())))
         #expect(!ExitFunds.needsFunds(
             again,
             confirmed: 100,
             packageFee: 1_215,
             proven: ["v": firstEpisode],
-            timing: .init(parkedSince: nil, daemonSince: nil, now: Date())))
+            timing: .init(parkedSince: nil, progressSince: nil, now: Date())))
         var sightings = ExitSightings()
         _ = sightings.observe([first], tip: 100, now: Date(timeIntervalSince1970: 1))
         #expect(sightings.seen[againEpisode] == nil)
@@ -288,19 +288,19 @@ struct ExitProgressTests {
     }
 
     @Test func barkHistoryIsNoEvidence() {
-        // bark recorded it parked at an earlier tip, but only a completed Check the chain or a daemon cycle
+        // bark recorded it parked at an earlier tip, but only a completed exit progress or a foreground tick
         // Noah saw within this episode counts.
         var txs = Self.path.map { Self.tx($0, "verify-inputs") }
         txs[0] = Self.tx("root", "awaiting-cpfp-broadcast")
         let exit = Self.exit("Processing", Self.processing(txs, tip: 102), history: [Self.processing(txs, tip: 100)])
         #expect(exit.parkedEpisode == "root|awaiting-cpfp-broadcast|0")
-        #expect(!ExitFunds.needsFunds(exit, confirmed: 100, packageFee: 1_215, proven: [:], timing: .init(parkedSince: nil, daemonSince: nil, now: Date())))
+        #expect(!ExitFunds.needsFunds(exit, confirmed: 100, packageFee: 1_215, proven: [:], timing: .init(parkedSince: nil, progressSince: nil, now: Date())))
         #expect(!ExitFunds.needsFunds(
             exit,
             confirmed: 100,
             packageFee: 1_215,
             proven: [:],
-            timing: .init(parkedSince: nil, daemonSince: .distantPast, now: Date())))
+            timing: .init(parkedSince: nil, progressSince: .distantPast, now: Date())))
     }
 
     @Test func sightingsKeepTheFirstTipAndForgetWhatMovedOn() throws {
@@ -347,7 +347,7 @@ struct ExitProgressTests {
             confirmed: 1_180,
             packageFee: 1_215,
             proven: ["v": "root|awaiting-cpfp-broadcast|0"],
-            timing: .init(parkedSince: nil, daemonSince: nil, now: Date())))
+            timing: .init(parkedSince: nil, progressSince: nil, now: Date())))
     }
 
     @Test func aLongerRealPathKeepsEveryNodeAfterStart() {

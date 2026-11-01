@@ -198,7 +198,7 @@ final class OnchainModel {
                 invalidate()
                 throw OnchainFailure.unavailable
             }
-            // Reconcile retained originals too; a later daemon sync can resolve an override.
+            // Reconcile retained originals too; a later sync can resolve an override.
             var statusFailed = false
             for attempt in saved where attempt.receipt == nil || attempt.receipt?.txid != nil {
                 do { _ = try await dependencies.check(attempt.id) }
@@ -318,8 +318,8 @@ final class OnchainModel {
     }
     /// When this wallet's exit transactions were first seen in their status.
     private(set) var sightings: (walletID: String, value: ExitSightings) = ("", .init())
-    /// When the app last left or came back. bark's daemon doesn't run while it's away, so the daemon's
-    /// clock counts from here at the earliest, whatever clock the last read brought.
+    /// When the app last left or came back. The foreground pass doesn't run while it's away, so its exit
+    /// progress clock counts from here at the earliest, whatever clock the last read brought.
     private(set) var sceneChangedAt = Date.distantPast
     func sceneChanged(at now: Date = Date()) { sceneChangedAt = now }
 
@@ -332,14 +332,14 @@ final class OnchainModel {
                 confirmed: $0.confirmed,
                 packageFee: $0.packageFees[exit.id],
                 proven: $0.provenParked,
-                timing: .init(parkedSince: parkedSince, daemonSince: $0.daemonSince.map { max($0, sceneChangedAt) }, now: now))
+                timing: .init(parkedSince: parkedSince, progressSince: $0.exitProgressSince.map { max($0, sceneChangedAt) }, now: now))
         } ?? false
         let claimSent = attempts.contains { attempt in
             attempt.quote.action == .claim && attempt.quote.ids.contains(exit.id) && attempt.receipt?.txid.map(exit.awaitsClaim) == true
         }
         return ExitProgress(exit, tip: overview?.tip ?? exit.details.tip_height ?? 0, needsFunds: needsFunds, claimSent: claimSent,
                             checkedTip: overview?.checkedTip,
-                            progressing: overview.map { $0.daemonSince != nil && !$0.checkFailed } ?? true, seen: sightings.value.tips)
+                            progressing: overview.map { $0.exitProgressSince != nil && !$0.checkFailed } ?? true, seen: sightings.value.tips)
     }
 
     /// Why bark refused the last exit estimate, when it can never exit what was asked.

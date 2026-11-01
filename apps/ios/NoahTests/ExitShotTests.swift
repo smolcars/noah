@@ -233,7 +233,7 @@ struct ExitShotTests {
             exits: exits, confirmed: confirmed, tip: at, pendingTotal: 0, claimableHeight: nil)
         overview.exitDelta = 144
         overview.packageFees = packageFees
-        overview.daemonSince = progressing ? .distantPast : nil
+        overview.exitProgressSince = progressing ? .distantPast : nil
         // A completed Check the chain left these waiting for a fee child.
         overview.provenParked = [vtxos[0].id: episode("l2", "awaiting-cpfp-broadcast"), vtxos[4].id: episode("r3-l2", "awaiting-cpfp-broadcast")]
         overview.childFees = Dictionary(uniqueKeysWithValues: (["rbf0", "rbf1", "cc"] + (0...8).map { "c\($0)" }).map {

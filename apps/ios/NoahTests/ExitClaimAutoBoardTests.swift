@@ -175,17 +175,17 @@ struct ExitClaimAutoBoardTests {
     }
 }
 
-/// An open page keeps the daemon clock of its last read; coming back restarts it there too, so needs-funds
-/// waits for a daemon cycle after the app returns instead of showing at once.
+/// An open page keeps the exit progress clock of its last read; coming back restarts it there too, so needs-funds
+/// waits for a foreground tick after the app returns instead of showing at once.
 @MainActor
 struct ExitSceneTests {
-    @Test func comingBackRestartsTheDaemonEvidence() async throws {
+    @Test func comingBackRestartsTheProgressEvidence() async throws {
         var txs = ExitProgressTests.path.map { ExitProgressTests.tx($0, "verify-inputs") }
         txs[0] = ExitProgressTests.tx("root", "awaiting-cpfp-broadcast")
         let exit = ExitProgressTests.exit("Processing", ExitProgressTests.processing(txs))
         var read = OnchainOverview(walletID: "wallet", vtxos: [], exits: [exit], confirmed: 100, tip: 100, pendingTotal: 0, claimableHeight: nil)
         read.packageFees = [exit.id: 1_215]
-        read.daemonSince = .distantPast
+        read.exitProgressSince = .distantPast
         let overview = read
         let seen = try ["wallet": ExitSightings(seen: [#require(exit.parkedEpisode): .init(tip: 100, at: .distantPast)])]
         let stored = try #require(String(bytes: JSONEncoder().encode(seen), encoding: .utf8))
@@ -202,6 +202,26 @@ struct ExitSceneTests {
         model.sceneChanged(at: now)
         #expect(model.progress(exit, now: now.addingTimeInterval(74)).phase == .sending)
         #expect(model.progress(exit, now: now.addingTimeInterval(75)).phase == .needsFunds)
+    }
+
+    /// An exit reads as progressing while the app's own progress runs, and as stalled only when the last
+    /// call failed or the foreground pass doesn't run for this wallet (opened for background work).
+    @Test(arguments: [(Date?.some(.distantPast), false, false), (nil, false, true), (.distantPast, true, true)])
+    func staleOnlyWhenTheAppsProgressFailsOrCantRun(since: Date?, failed: Bool, stale: Bool) async {
+        let exit = ExitProgressTests.exit("Processing", ExitProgressTests.processing(ExitProgressTests.path.map {
+            ExitProgressTests.tx($0, "verify-inputs")
+        }, tip: 90))
+        var read = OnchainOverview(walletID: "wallet", vtxos: [], exits: [exit], confirmed: 100_000, tip: 100, pendingTotal: 0, claimableHeight: nil)
+        read.exitProgressSince = since
+        read.checkFailed = failed
+        let overview = read
+        let model = OnchainModel(dependencies: .init(ready: { true }, overview: { overview },
+                                                     quote: { _, _, _, _ in throw OnchainFailure.unavailable },
+                                                     execute: { _ in throw OnchainFailure.unavailable },
+                                                     attempt: { [] }, acknowledge: { _ in },
+                                                     sightings: .init(read: { nil }, write: { _ in })))
+        await model.load()
+        #expect(model.progress(exit).stale == stale)
     }
 }
 

@@ -44,8 +44,8 @@ struct ExitProgress: Equatable, Sendable {
     /// The tip at the app's own last completed progress (Check the chain). bark keeps a state's
     /// height until something changes, so that height isn't when it last checked.
     var checked: UInt32?
-    /// Still sending while Noah has evidence nothing progresses it: the last Check the chain failed,
-    /// or the wallet is open without bark's daemon (which otherwise keeps exits current).
+    /// Still sending while Noah has evidence nothing progresses it: the app's last exit progress (its
+    /// foreground pass, a background job or Check the chain) failed, or that pass doesn't run for this wallet.
     var stale = false
     var cancelable = false
 
@@ -70,8 +70,8 @@ struct ExitProgress: Equatable, Sendable {
     init(phase: Phase) { self.phase = phase }
 
     /// `tip` is the wallet's tip. `claimSent`: Noah journaled a broadcast claim bark hasn't seen yet.
-    /// `checkedTip`: Noah's last completed Check the chain. `progressing`: bark's daemon runs and the
-    /// last Check didn't fail. `seen`: the tip at which Noah first saw each transaction in its status.
+    /// `checkedTip`: Noah's last completed exit progress. `progressing`: the app's foreground pass moves exits
+    /// and the last progress didn't fail. `seen`: the tip at which Noah first saw each transaction in its status.
     init(_ exit: ExitModel, tip: UInt32, needsFunds: Bool = false, claimSent: Bool = false,
          checkedTip: UInt32? = nil, progressing: Bool = true, seen: [String: UInt32] = [:]) {
         let details = exit.details
@@ -293,7 +293,7 @@ struct ExitWalletStore<Value: Codable & Sendable>: Sendable {
 /// the status changes. No error strings are matched. Should Check the chain get FFI 0.7.0's typed
 /// `exitInsufficientConfirmedFunds`, bark's `neededSats` is that package's fee, and that progress the proof.
 enum ExitFunds {
-    /// bark's `daemon_sync_interval_secs` default (Noah doesn't set it), plus a margin for a cycle in flight.
+    /// The foreground pass's 60 s tick (`RecurringForegroundRunner`), plus a margin for a pass in flight.
     static let cycle: TimeInterval = 60 + 15
 
     /// bark's canonical CPFP child (estimate.rs `canonical_cpfp_child_weight`): P2A and P2TR key-spend in, P2TR out.
@@ -304,17 +304,16 @@ enum ExitFunds {
         (satPerVb * 250 * (parentWeight + childWeight) + 999) / 1000
     }
 
-    /// `proven`: the episode a completed Check the chain left parked, by exit. `parkedSince`: Noah's first
-    /// sighting of this episode. `daemonSince`: since when bark's daemon has run uninterrupted.
-    /// `parkedSince`: Noah's first sighting of this episode. `daemonSince`: since when bark's daemon has run uninterrupted.
-    struct Timing { var parkedSince: Date?; var daemonSince: Date?; var now: Date }
+    /// `proven`: the episode a completed exit progress left parked, by exit. `parkedSince`: Noah's first
+    /// sighting of this episode. `progressSince`: since when the foreground pass has moved exits uninterrupted.
+    struct Timing { var parkedSince: Date?; var progressSince: Date?; var now: Date }
     static func needsFunds(_ exit: ExitModel, confirmed: UInt64, packageFee: UInt64?, proven: [String: String], timing: Timing) -> Bool {
-        let parkedSince = timing.parkedSince, daemonSince = timing.daemonSince, now = timing.now
+        let parkedSince = timing.parkedSince, progressSince = timing.progressSince, now = timing.now
         guard let episode = exit.parkedEpisode, let packageFee, confirmed < packageFee else { return false }
         if proven[exit.id] == episode { return true }
-        // Only after bark has had a full daemon cycle to fund it, so the label doesn't flash before it tried.
-        guard let parkedSince, let daemonSince else { return false }
-        return now.timeIntervalSince(max(parkedSince, daemonSince)) >= cycle
+        // Only after a full foreground pass could fund it, so the label doesn't flash before one tried.
+        guard let parkedSince, let progressSince else { return false }
+        return now.timeIntervalSince(max(parkedSince, progressSince)) >= cycle
     }
 }
 

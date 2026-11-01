@@ -47,12 +47,12 @@ actor WalletSession {
         let onchain: OnchainWallet
     }
 
-    /// Since when bark's daemon has been progressing exits (every 60 s) in this session, restarted when
-    /// the app comes back (it doesn't run while suspended); nil without it. Set wherever the daemon
-    /// starts and cleared wherever it stops. The app can't see its cycles.
-    private(set) var daemonSince: Date?
+    /// Since when the app's foreground pass has been progressing exits (each 60 s tick, `ForegroundPass`) in
+    /// this session, restarted when the app comes back (the tick doesn't run while it's away); nil when the
+    /// wallet was opened for background work. Set by every foreground open, cleared by every close.
+    private(set) var exitProgressSince: Date?
     func appBecameActive() {
-        daemonSince = daemonSince.map { _ in Date() }
+        exitProgressSince = exitProgressSince.map { _ in Date() }
         if isOpen { maintenanceDue = true }
     }
     /// Set by each foreground entry (a foreground open, the app coming back); the next foreground pass
@@ -212,10 +212,10 @@ actor WalletSession {
                 guard RecurringSubmissionBudget.$current.withValue(admission, operation: { RecurringSubmissionBudget.available }) else {
                     throw CancellationError()
                 }
-                let daemon = runDaemon && Self.backgroundOwner == nil
-                let handles = try await opener(mnemonic, datadir, daemon, appVersion, false)
-                daemonSince = daemon ? Date() : nil
-                maintenanceDue = Self.backgroundOwner == nil
+                let foreground = Self.backgroundOwner == nil
+                let handles = try await opener(mnemonic, datadir, runDaemon && foreground, appVersion, false)
+                exitProgressSince = foreground ? Date() : nil
+                maintenanceDue = foreground
                 state = .open(handles)
                 return handles
             } catch {
@@ -276,7 +276,7 @@ actor WalletSession {
                 state = previousState
                 throw error
             }
-            daemonSince = nil
+            exitProgressSince = nil
             maintenanceDue = false
             state = reservation.map { .reserved($0.id) } ?? .closed
         }
@@ -299,12 +299,12 @@ actor WalletSession {
         try checkHeld(reservation)
         try checkExistingDatabase()
         let handles = try await Task { try await opener(mnemonic, location.directory.path, true, appVersion, false) }.value
-        daemonSince = Date()
+        exitProgressSince = Date()
         do { try commit() }
         catch {
             do { try await Task { try await handles.wallet.stopDaemonWait() }.value }
             catch { state = .quarantined(handles); throw OpenError.teardownFailed }
-            daemonSince = nil
+            exitProgressSince = nil
             throw error
         }
         maintenanceDue = true
@@ -381,7 +381,7 @@ actor WalletSession {
         let opener = opener
         let datadir = location.directory.path
         let handles = try await Task { try await opener(mnemonic, datadir, runDaemon, appVersion, true) }.value
-        daemonSince = runDaemon ? Date() : nil
+        exitProgressSince = Date()
         do {
             // RN creation persists key 0 before peeking its registration address.
             _ = try await Task { try await handles.wallet.deriveStoreNextKeypair() }.value
@@ -392,7 +392,7 @@ actor WalletSession {
                 state = .open(handles)
                 throw OpenError.teardownFailed
             }
-            daemonSince = nil
+            exitProgressSince = nil
             throw error
         }
         if self === WalletSession.shared { await SendPaymentController.shared.reloadForWalletChange() }

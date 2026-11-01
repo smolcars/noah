@@ -159,29 +159,38 @@ struct WalletSessionTests {
         }
     }
 
-    /// Exits read the daemon's clock: every path that starts bark's daemon sets it, every stop clears it.
-    /// A cold launch with a custom Esplora opens through `reopen`.
-    @Test(.regtestStack, .timeLimit(.minutes(1))) func theDaemonClockFollowsEveryOpenAndClose() async throws {
+    /// Exits read the foreground pass's clock: every foreground open sets it (a cold launch with a custom
+    /// Esplora opens through `reopen`), every close clears it, and a background job's open never sets it.
+    @Test(.regtestStack, .timeLimit(.minutes(1))) func theExitProgressClockFollowsEveryForegroundOpenAndClose() async throws {
         defer { try? FileManager.default.removeItem(at: documents) }
         let session = offlineSession()
         let mnemonic = try generateMnemonic()
-        try await session.createNew(mnemonic: mnemonic, runDaemon: true, appVersion: "test")
-        #expect(await session.daemonSince != nil)
+        try await session.createNew(mnemonic: mnemonic, runDaemon: false, appVersion: "test")
+        #expect(await session.exitProgressSince != nil)
         let reservation = try await session.reserveForConfigurationChange()
-        #expect(await session.daemonSince == nil)
+        #expect(await session.exitProgressSince == nil)
         try await session.reopen(reservation, mnemonic: mnemonic, appVersion: "test", commit: {})
-        #expect(await session.daemonSince != nil)
+        #expect(await session.exitProgressSince != nil)
         try await session.close()
-        #expect(await session.daemonSince == nil)
+        #expect(await session.exitProgressSince == nil)
         try await session.ensureOpen(mnemonic: mnemonic, runDaemon: false, appVersion: "test")
-        #expect(await session.daemonSince == nil)
+        let opened = try #require(await session.exitProgressSince)
+        // Coming back restarts it; it can't have run while the app was away.
+        await session.appBecameActive()
+        #expect(try #require(await session.exitProgressSince) >= opened)
         try await session.close()
-        // A configuration that fails to commit stops the daemon again.
+        await session.appBecameActive()
+        #expect(await session.exitProgressSince == nil)
+        try await session.withBackgroundAccess {
+            try await session.ensureOpen(mnemonic: mnemonic, runDaemon: false, appVersion: "test")
+            #expect(await session.exitProgressSince == nil)
+        }
+        // A configuration that fails to commit leaves it cleared.
         let failing = try await session.reserveForConfigurationChange()
         await #expect(throws: OpenerFailed.self) {
             try await session.reopen(failing, mnemonic: mnemonic, appVersion: "test", commit: { throw OpenerFailed() })
         }
-        #expect(await session.daemonSince == nil)
+        #expect(await session.exitProgressSince == nil)
         await session.release(failing)
     }
 

@@ -70,8 +70,8 @@ struct OnchainOverview: Sendable {
     var packageFees: [String: UInt64] = [:]
     /// The claims Noah built, by claim txid (`ExitClaimRecord`).
     var claimRecords: [String: ExitClaimRecord] = [:]
-    /// Since when bark's daemon has been progressing exits in this session; nil without it.
-    var daemonSince: Date? = .distantPast
+    /// Since when the app's foreground pass has been progressing exits in this session; nil without it.
+    var exitProgressSince: Date? = .distantPast
     /// The app's own last exit progress (Check the chain): its tip, the parking episode it left waiting
     /// for a fee child after trying to fund it, by exit, and whether it failed.
     var checkedTip: UInt32?
