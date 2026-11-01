@@ -61,7 +61,7 @@ struct ServerRegistrationTests {
     }
 
     @Test func explicitPushRegistrationOnlySkipsUnsupportedDevices() throws {
-        try PushRegistration.Outcome.registered(expoToken: "test").requireCompleted()
+        try PushRegistration.Outcome.registered(pushToken: "test").requireCompleted()
         try PushRegistration.Outcome.deviceNotSupported.requireCompleted()
         #expect(throws: IdentityValidationError.self) { try PushRegistration.Outcome.permissionDenied.requireCompleted() }
     }

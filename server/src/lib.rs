@@ -7,6 +7,7 @@ pub mod barkd_client;
 pub mod cache;
 pub mod config;
 pub mod db;
+pub mod direct_push;
 pub mod email_client;
 pub mod errors;
 pub mod mailbox_auth;
@@ -36,6 +37,7 @@ pub struct AppStruct {
     pub push_deliveries:
         Option<tokio::sync::mpsc::UnboundedSender<(String, push::PushNotificationData)>>,
     pub config: Arc<Config>,
+    pub direct_push: Arc<direct_push::DirectPush>,
     pub lnurl_domain: String,
     pub ark_server_pubkey: Arc<tokio::sync::RwLock<Option<String>>>,
     pub db_pool: PgPool,
@@ -72,6 +74,7 @@ pub async fn build_app_state(config: Config) -> anyhow::Result<AppState> {
         #[cfg(test)]
         push_deliveries: None,
         config: Arc::new(config.clone()),
+        direct_push: Arc::new(direct_push::DirectPush::from_config(&config)?),
         lnurl_domain: config.lnurl_domain.clone(),
         ark_server_pubkey: Arc::new(tokio::sync::RwLock::new(None)),
         db_pool,

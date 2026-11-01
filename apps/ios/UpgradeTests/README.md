@@ -94,26 +94,22 @@ The runner stops at the first failed check. On success it prints the RN baseline
 - widget identities match (`check-widgets.py`), and the placed SpringBoard widget
   survives (`check-widget-placement.py`).
 
-`UpgradeCompatibilityTests` runs with `TEST_RUNNER_NOAH_UPGRADE_CHECK=1`. On a
-simulator, `registeredExpoIdentityAndTokenAreUnchanged()` is skipped, because RN
-never registers for push there. That skip is expected. The result JSON holds only
-public identity and counters, never the phrase, keys, auth JWT or Expo token.
+`UpgradeCompatibilityTests` runs with `TEST_RUNNER_NOAH_UPGRADE_CHECK=1`. The result
+JSON holds only public identity and counters, never the phrase, keys, auth JWT or
+push token.
 
-## Expo token on a physical iPhone
+## Push token on a physical iPhone
 
-Push-token continuity can only be checked on a device.
+Moving from Expo to a raw APNs token can only be checked on a device.
 
 1. Build RN regtest (Release) for the device with `EXPO_PUBLIC_REGTEST_URL` and
    `EXPO_PUBLIC_REGTEST_SERVER_URL` pointing at the Mac's LAN IP. Install it,
-   complete onboarding and allow notifications.
-2. Read the RN wallet's Expo push token privately from the server database.
-3. Build native with `-configuration Release-Regtest NOAH_REGTEST_HOST=<lan-ip>
+   complete onboarding and allow notifications. The server row holds an Expo token.
+2. Build native with `-configuration Release-Regtest NOAH_REGTEST_HOST=<lan-ip>
    NOAH_REGTEST_SERVER_URL=http://<lan-ip>:3000` and the same signing identity.
    Install it over RN with `devicectl`; keep the app and keychain.
-4. Run `UpgradeCompatibilityTests` on the device with `TEST_RUNNER_NOAH_UPGRADE_CHECK=1`
-   and the token in `TEST_RUNNER_NOAH_UPGRADE_EXPECT_EXPO_TOKEN`
-   (`TEST_RUNNER_NOAH_UPGRADE_EXPECT_EXPO_ID` is optional). The test compares
-   values without printing them. Check a delivered push separately.
+3. Open the app. The row in `push_tokens` must now have `provider = 'apns'`. Check a
+   delivered push separately, on a server with APNs credentials.
 
 Use a fresh RN install. If the RN wallet was deleted in RN Settings before
 onboarding again, RN keeps writing to its deleted MMKV file, so native finds no
@@ -144,5 +140,5 @@ and checks recovery in a fresh process. See
 
 These need no prepared sandbox: `RNStoreTests` (RN store envelopes, from
 `apps/fixtures/rn-store-compatibility.json`), `MMKVRecoveryTests`,
-`SeedSafetyTests`, `LaunchStateTests` and `ExpoInstallationIDTests`. The RN store
+`SeedSafetyTests` and `LaunchStateTests`. The RN store
 inventory is in [STORES.md](../../android/UpgradeTests/STORES.md).

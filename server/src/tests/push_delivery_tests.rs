@@ -204,7 +204,16 @@ async fn push_transport_policy_and_registration_replacement_are_preserved() {
             tokens.find_by_pubkey(&pubkey).await.unwrap().as_deref(),
             Some(token)
         );
-        assert_eq!(tokens.find_all().await.unwrap(), vec![token.to_string()]);
+        assert_eq!(
+            tokens
+                .find_all()
+                .await
+                .unwrap()
+                .into_iter()
+                .map(|target| target.push_token)
+                .collect::<Vec<_>>(),
+            vec![token.to_string()]
+        );
         for kind in [
             "lightning_invoice_request",
             "lightning_claim_request",
@@ -751,5 +760,608 @@ mod expo_tickets {
             }
             assert_no_secrets_logged(lines)
         });
+    }
+}
+
+/// Direct APNs and FCM sends, against stand-ins for both services.
+mod direct_push {
+    use std::sync::{
+        Mutex,
+        atomic::{AtomicUsize, Ordering},
+    };
+
+    use axum::{
+        Json, Router,
+        body::Bytes,
+        http::{HeaderMap, StatusCode, Uri},
+        response::IntoResponse,
+        routing::{any, post},
+    };
+    use expo_push_notification_client::Expo;
+    use jsonwebtoken::{Algorithm, DecodingKey, Validation, decode, decode_header};
+    use serde_json::{Value, json};
+
+    use super::*;
+    use crate::{
+        AppState,
+        config::Config,
+        db::user_repo::UserRepository,
+        direct_push::DirectPush,
+        push::{PushNotificationData, send_batched_notifications, send_unique_k1_notifications},
+        types::{NotificationRequestData, PushProvider, RecurringPaymentDueNotification},
+    };
+
+    // Throwaway keys generated for these tests; they sign nothing real.
+    const APNS_TEST_KEY: &str = "-----BEGIN PRIVATE KEY-----
+MIGHAgEAMBMGByqGSM49AgEGCCqGSM49AwEHBG0wawIBAQQgbtOHWZEbIdnYWJ9G
+83+BNfIy3Wg3HhFY13ElOwoScvehRANCAASq/cnMCf1AAC81JzUqAH3HOCNVu7XT
+qziEeeK9iNKHR4poDdxItDzYzWr/n7s94kty3wVy+Al49ZmyQsOJchTF
+-----END PRIVATE KEY-----";
+    const APNS_TEST_PUBLIC_KEY: &str = "-----BEGIN PUBLIC KEY-----
+MFkwEwYHKoZIzj0CAQYIKoZIzj0DAQcDQgAEqv3JzAn9QAAvNSc1KgB9xzgjVbu1
+06s4hHnivYjSh0eKaA3cSLQ82M1q/5+7PeJLct8FcvgJePWZskLDiXIUxQ==
+-----END PUBLIC KEY-----";
+    const FCM_TEST_KEY: &str = "-----BEGIN PRIVATE KEY-----
+MIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQCvqqqs3zgn1DjN
+OKiIt8pRmahlnUCsFBhuU0gJUsInN2+NHNf40EmNsFkxXnsQH8EbAkBvCiLzYeVf
+lGDHR70bMF9E8r8cjtgdPf/2BJsURobRzkU92PxDdpndmDepQF9erfXXpUDK3qya
+excvAIvi9aW1uiV3hzk9LQAXMerq+NR0xtFzPDpGlReaRAU8ybLgfRdXeuWUFp+E
+4gf1/olalVdRDIGlagXES9yrf8CoA1WpOI8/QVpBiJdyRvMldLMAl961PA0vvAn5
+xSCe7UwPjJEN3TKhmL/KvpM65OQeXpDot8Mrp80WxHUyruQGiiKkWcnVahQ/LYIt
+JAQPFb2XAgMBAAECggEAEnUzfM7xlsHGUXida3bVqTBPkOnD31uMhknK58E3NFQE
+rRugQn0ZlWviW1J1n31EAZisI4lkSxV4uqEbxXoEupl2ZodpIaY4EA6GhBekzIMX
+7G3+OYrrVWgIr8+BiGUCqwSgBc96g4vVMArfUJQqnqeNXg8X8RDCKMA/N7C04d55
+o+e/sJbjEO/iTH05KF7ufl2/FZWhr5WGRZQGHt2YZRMsV7g/h5Vtjht2fFHAGm2l
+1kushoLtvY8UXuvufG3IJtU6hpV/n/eXSOknDhC1xhoyqzmq9zWXwPX2nR5ox29A
+BBogTO7Mqh0ca/VVubDIIxacrOcPcvSkERiLdkU8hQKBgQDqZR8ee2jx/GEAiB+U
+Oqs+Z2PYUobCJLZ5ab7sE2XknyxYzQlkGcnLwfYMDoBgWM8g2ji9vmNjZSE+k2qB
+f7GCwucd2sINJSeLafVZc827NkOqumI8+aYRsAIrYaDeIIV+SvsoKDSU2mc+MLkr
+KUAxvTiOLO7ybdhMa6rrobUrHQKBgQC/28SJtXBFUO2QkRKdxVbQBsLbcyQ1lND9
+UF5MT5tXaX8cXA0B4V4fXwhpOpC8t05RmOhnduMSpO5ygNtJ6Vz7g9VlQKj4bxVf
+x61UXGV7Mc1EYMOv8w9TV+6T/GVq3K3//xn+xeU0LKjPmAkzoxuwKNXWJ57KFPCy
+m9Ju77o5QwKBgQCQLVNO9KpA7vTb1t9V1iCvaflIfrrVgK+dTyZZIDV0w1QL61Lz
+d8lgxBYMpH7ixL3jf1eXnxyTbwlb7GF+9oTB4hE3k+/5FfmVD8ATHeBWX7KPucXj
+q8wy5QjwlkTVXTu/y29h7Bkr1ova/S1pFx6deb7n9UulY1vA5hlkhzthIQKBgBID
+RyOKtly7qWI+TJolce4cBGVoHQkuzKRLzF6rxrDhRb7a4ZnAl/6oBHkkt3wQVbkR
+exhjsBQLChwT/wKkd0dh7EISXQreGwqgC6T0+84iMdxunVDCqDix88NPGhJ7X5a+
+U6l42PkaDEtZQdvoP2w9mT3/AEiGyMZsHMivlzNTAoGBALzmptklRZXdC7mzHSJQ
+i7foAyk5IoGiLUF9uEVfDEfh8Es/PrPs8PFdP7pAJi4ezlL+OvVtn7htYjAAV5Ts
+g1sELP0xF63OK73/Oiudkwar7u9ruhlxXajsTLhzo6k/7nx1GyZAsHRvB0ahzmwI
+x2TheTi/KO+SQTU6rRx3QfLf
+-----END PRIVATE KEY-----";
+    const FCM_TEST_PUBLIC_KEY: &str = "-----BEGIN PUBLIC KEY-----
+MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAr6qqrN84J9Q4zTioiLfK
+UZmoZZ1ArBQYblNICVLCJzdvjRzX+NBJjbBZMV57EB/BGwJAbwoi82HlX5Rgx0e9
+GzBfRPK/HI7YHT3/9gSbFEaG0c5FPdj8Q3aZ3Zg3qUBfXq3116VAyt6smnsXLwCL
+4vWltbold4c5PS0AFzHq6vjUdMbRczw6RpUXmkQFPMmy4H0XV3rllBafhOIH9f6J
+WpVXUQyBpWoFxEvcq3/AqANVqTiPP0FaQYiXckbzJXSzAJfetTwNL7wJ+cUgnu1M
+D4yRDd0yoZi/yr6TOuTkHl6Q6LfDK6fNFsR1Mq7kBooipFnJ1WoUPy2CLSQEDxW9
+lwIDAQAB
+-----END PUBLIC KEY-----";
+    const APNS_TOKEN: &str = "abcdef0123456789abcdef0123456789abcdef0123456789abcdef0123456789";
+    const FCM_TOKEN: &str = "fcm-device-secret:APA91b";
+    const GOOGLE_ACCESS_TOKEN: &str = "google-access-secret";
+
+    #[derive(Clone, Debug)]
+    struct Received {
+        path: String,
+        headers: HeaderMap,
+        body: Value,
+    }
+
+    /// Answers each request with the next status and JSON body, then with 200 once the
+    /// list is used up, and records what it received.
+    #[derive(Clone, Default)]
+    struct Provider {
+        answers: Arc<Mutex<Vec<(StatusCode, Value)>>>,
+        received: Arc<Mutex<Vec<Received>>>,
+        token_requests: Arc<Mutex<Vec<String>>>,
+    }
+
+    impl Provider {
+        fn answering(answers: Vec<(StatusCode, Value)>) -> Self {
+            Self {
+                answers: Arc::new(Mutex::new(answers)),
+                ..Self::default()
+            }
+        }
+
+        fn received(&self) -> Vec<Received> {
+            self.received.lock().unwrap().clone()
+        }
+
+        fn token_requests(&self) -> Vec<String> {
+            self.token_requests.lock().unwrap().clone()
+        }
+
+        async fn start(&self) -> String {
+            let provider = self.clone();
+            let oauth = self.clone();
+            let router = Router::new()
+                .route(
+                    "/token",
+                    post(move |body: String| {
+                        let oauth = oauth.clone();
+                        async move {
+                            oauth.token_requests.lock().unwrap().push(body);
+                            Json(json!({
+                                "access_token": GOOGLE_ACCESS_TOKEN,
+                                "expires_in": 3599,
+                            }))
+                        }
+                    }),
+                )
+                .fallback(any(move |uri: Uri, headers: HeaderMap, body: Bytes| {
+                    let provider = provider.clone();
+                    async move {
+                        provider.received.lock().unwrap().push(Received {
+                            path: uri.path().to_string(),
+                            headers,
+                            body: serde_json::from_slice(&body).unwrap(),
+                        });
+                        let mut answers = provider.answers.lock().unwrap();
+                        if answers.is_empty() {
+                            (StatusCode::OK, Json(json!({}))).into_response()
+                        } else {
+                            let (status, body) = answers.remove(0);
+                            (status, Json(body)).into_response()
+                        }
+                    }
+                }));
+            let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+            let url = format!("http://{}", listener.local_addr().unwrap());
+            tokio::spawn(async move { axum::serve(listener, router).await });
+            url
+        }
+    }
+
+    fn config_with_credentials(token_uri: &str) -> Config {
+        Config {
+            apns_key_p8: Some(APNS_TEST_KEY.to_string()),
+            apns_key_id: Some("KEYID12345".to_string()),
+            apns_team_id: Some("TEAMID1234".to_string()),
+            apns_topic: Some("com.noahwallet.regtest".to_string()),
+            fcm_service_account_json: Some(
+                json!({
+                    "project_id": "noah-test",
+                    "client_email": "push@noah-test.iam.gserviceaccount.com",
+                    "private_key": FCM_TEST_KEY,
+                    "token_uri": token_uri,
+                })
+                .to_string(),
+            ),
+            ..TestUser::get_config()
+        }
+    }
+
+    /// An app whose direct pushes go to `provider`.
+    async fn state_using(state: &AppState, provider: &Provider) -> AppState {
+        let url = provider.start().await;
+        let mut direct_push =
+            DirectPush::from_config(&config_with_credentials(&format!("{url}/token"))).unwrap();
+        direct_push.use_urls(&url, &url);
+        Arc::new(AppStruct {
+            direct_push: Arc::new(direct_push),
+            ..(**state).clone()
+        })
+    }
+
+    /// An Expo stand-in that counts its requests, for proving a direct send skips Expo.
+    async fn counting_expo() -> (Expo, Arc<AtomicUsize>) {
+        let requests = Arc::new(AtomicUsize::new(0));
+        let counter = requests.clone();
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let url = format!("http://{}", listener.local_addr().unwrap());
+        let router = Router::new().fallback(any(move || {
+            let counter = counter.clone();
+            async move {
+                counter.fetch_add(1, Ordering::SeqCst);
+                StatusCode::OK
+            }
+        }));
+        tokio::spawn(async move { axum::serve(listener, router).await });
+        (
+            Expo::new_with_base_url(Some("expo-access-secret".to_string()), &url),
+            requests,
+        )
+    }
+
+    async fn user_with_target(
+        state: &AppState,
+        key: u8,
+        token: &str,
+        provider: PushProvider,
+        apns_sandbox: bool,
+    ) -> String {
+        let pubkey = TestUser::new_with_key(&[key; 32]).pubkey().to_string();
+        let mut tx = state.db_pool.begin().await.unwrap();
+        UserRepository::create(&mut tx, &pubkey, &format!("user{key}@localhost"), None)
+            .await
+            .unwrap();
+        tx.commit().await.unwrap();
+        PushTokenRepository::new(&state.db_pool)
+            .upsert_with_provider(&pubkey, token, Some(provider), apns_sandbox)
+            .await
+            .unwrap();
+        pubkey
+    }
+
+    fn claim_push() -> PushNotificationData {
+        PushNotificationData {
+            title: None,
+            body: None,
+            data: json!({ "notification_type": "lightning_claim_request" }).to_string(),
+            priority: Priority::High,
+            content_available: true,
+        }
+    }
+
+    async fn send_batched(state: &AppState, push: PushNotificationData, pubkey: &str) {
+        let (expo, expo_requests) = counting_expo().await;
+        send_batched_notifications(expo, state.clone(), push, Some(pubkey.to_string()), true)
+            .await
+            .unwrap();
+        assert_eq!(expo_requests.load(Ordering::SeqCst), 0);
+    }
+
+    async fn send_unique(state: &AppState, pubkey: &str) -> usize {
+        let (expo, expo_requests) = counting_expo().await;
+        let dispatched = send_unique_k1_notifications(
+            expo,
+            state.clone(),
+            NotificationRequestData::RecurringPaymentDue(RecurringPaymentDueNotification {
+                due_count: 1,
+            }),
+            Some(pubkey.to_string()),
+        )
+        .await
+        .unwrap()
+        .len();
+        assert_eq!(expo_requests.load(Ordering::SeqCst), 0);
+        dispatched
+    }
+
+    fn header<'a>(received: &'a Received, name: &str) -> &'a str {
+        received.headers.get(name).unwrap().to_str().unwrap()
+    }
+
+    #[tokio::test]
+    async fn apns_gets_a_signed_request_for_the_tokens_environment() {
+        let (_, state, _guard) = setup_test_app().await;
+        let provider = Provider::default();
+        let state = state_using(&state, &provider).await;
+        let production = user_with_target(&state, 1, APNS_TOKEN, PushProvider::Apns, false).await;
+        let sandbox = user_with_target(&state, 2, APNS_TOKEN, PushProvider::Apns, true).await;
+
+        send_batched(&state, claim_push(), &production).await;
+        assert_eq!(send_unique(&state, &sandbox).await, 1);
+
+        let received = provider.received();
+        assert_eq!(received.len(), 2);
+        assert_eq!(
+            received[0].path,
+            format!("/production/3/device/{APNS_TOKEN}")
+        );
+        assert_eq!(received[1].path, format!("/sandbox/3/device/{APNS_TOKEN}"));
+        for request in &received {
+            assert_eq!(header(request, "apns-topic"), "com.noahwallet.regtest");
+            assert_eq!(header(request, "apns-push-type"), "background");
+            assert_eq!(header(request, "apns-priority"), "5");
+            assert!(header(request, "apns-expiration").parse::<u64>().unwrap() > 0);
+            assert_eq!(request.body["aps"], json!({ "content-available": 1 }));
+            assert!(
+                request.body["body"]
+                    .as_str()
+                    .unwrap()
+                    .contains("notification_type")
+            );
+        }
+
+        // The token is reused and verifies against the key's public half.
+        let provider_token = header(&received[0], "authorization")
+            .strip_prefix("Bearer ")
+            .unwrap();
+        assert_eq!(
+            header(&received[1], "authorization"),
+            format!("Bearer {provider_token}")
+        );
+        let token_header = decode_header(provider_token).unwrap();
+        assert_eq!(token_header.alg, Algorithm::ES256);
+        assert_eq!(token_header.kid.as_deref(), Some("KEYID12345"));
+        let mut validation = Validation::new(Algorithm::ES256);
+        validation.required_spec_claims.clear();
+        validation.validate_exp = false;
+        let claims = decode::<Value>(
+            provider_token,
+            &DecodingKey::from_ec_pem(APNS_TEST_PUBLIC_KEY.as_bytes()).unwrap(),
+            &validation,
+        )
+        .unwrap()
+        .claims;
+        assert_eq!(claims["iss"], "TEAMID1234");
+        assert!(claims["iat"].as_u64().unwrap() > 0);
+    }
+
+    #[tokio::test]
+    async fn fcm_gets_a_data_message_and_shares_one_access_token() {
+        let (_, state, _guard) = setup_test_app().await;
+        let provider = Provider::default();
+        let state = state_using(&state, &provider).await;
+        let pubkey = user_with_target(&state, 1, FCM_TOKEN, PushProvider::Fcm, false).await;
+
+        send_batched(&state, claim_push(), &pubkey).await;
+        send_batched(
+            &state,
+            PushNotificationData {
+                title: Some("Payment received".to_string()),
+                body: Some("You received 1 sat".to_string()),
+                data: "{}".to_string(),
+                priority: Priority::Normal,
+                content_available: false,
+            },
+            &pubkey,
+        )
+        .await;
+
+        let received = provider.received();
+        assert_eq!(received.len(), 2);
+        for request in &received {
+            assert_eq!(request.path, "/v1/projects/noah-test/messages:send");
+            assert_eq!(
+                header(request, "authorization"),
+                format!("Bearer {GOOGLE_ACCESS_TOKEN}")
+            );
+            assert_eq!(request.body["message"]["token"], FCM_TOKEN);
+            assert!(request.body["message"].get("notification").is_none());
+        }
+        assert_eq!(received[0].body["message"]["android"]["priority"], "HIGH");
+        assert!(
+            received[0].body["message"]["data"]["body"]
+                .as_str()
+                .unwrap()
+                .contains("lightning_claim_request")
+        );
+        assert_eq!(received[1].body["message"]["android"]["priority"], "NORMAL");
+        assert_eq!(
+            received[1].body["message"]["data"]["title"],
+            "Payment received"
+        );
+        assert_eq!(
+            received[1].body["message"]["data"]["message"],
+            "You received 1 sat"
+        );
+
+        let token_requests = provider.token_requests();
+        assert_eq!(token_requests.len(), 1);
+        let form: std::collections::HashMap<String, String> =
+            reqwest::Url::parse(&format!("http://localhost/?{}", token_requests[0]))
+                .unwrap()
+                .query_pairs()
+                .into_owned()
+                .collect();
+        assert_eq!(
+            form["grant_type"],
+            "urn:ietf:params:oauth:grant-type:jwt-bearer"
+        );
+        let mut validation = Validation::new(Algorithm::RS256);
+        validation.validate_aud = false;
+        let claims = decode::<Value>(
+            &form["assertion"],
+            &DecodingKey::from_rsa_pem(FCM_TEST_PUBLIC_KEY.as_bytes()).unwrap(),
+            &validation,
+        )
+        .unwrap()
+        .claims;
+        assert_eq!(claims["iss"], "push@noah-test.iam.gserviceaccount.com");
+        assert_eq!(
+            claims["scope"],
+            "https://www.googleapis.com/auth/firebase.messaging"
+        );
+    }
+
+    #[tracing_test::traced_test]
+    #[tokio::test]
+    async fn transient_failures_are_retried_until_the_send_succeeds() {
+        let (_, state, _guard) = setup_test_app().await;
+        let provider = Provider::answering(vec![
+            (
+                StatusCode::SERVICE_UNAVAILABLE,
+                json!({ "reason": "ServiceUnavailable" }),
+            ),
+            (
+                StatusCode::TOO_MANY_REQUESTS,
+                json!({ "reason": "TooManyRequests" }),
+            ),
+        ]);
+        let state = state_using(&state, &provider).await;
+        let pubkey = user_with_target(&state, 1, APNS_TOKEN, PushProvider::Apns, false).await;
+
+        assert_eq!(send_unique(&state, &pubkey).await, 1);
+
+        assert_eq!(provider.received().len(), 3);
+        assert!(!logs_contain("Failed to send push notification"));
+    }
+
+    #[tracing_test::traced_test]
+    #[tokio::test]
+    async fn a_send_that_keeps_failing_stops_and_logs_without_secrets() {
+        let (_, state, _guard) = setup_test_app().await;
+        let provider = Provider::answering(vec![
+            (StatusCode::SERVICE_UNAVAILABLE, json!({})),
+            (StatusCode::SERVICE_UNAVAILABLE, json!({})),
+            (StatusCode::SERVICE_UNAVAILABLE, json!({})),
+            (StatusCode::SERVICE_UNAVAILABLE, json!({})),
+        ]);
+        let state = state_using(&state, &provider).await;
+        let pubkey = user_with_target(&state, 1, FCM_TOKEN, PushProvider::Fcm, false).await;
+
+        assert_eq!(send_unique(&state, &pubkey).await, 0);
+
+        assert_eq!(provider.received().len(), 3);
+        assert!(logs_contain("Failed to send push notification"));
+        assert!(logs_contain("recurring_payment_due"));
+        assert!(logs_contain("503"));
+        assert!(!logs_contain(FCM_TOKEN));
+        assert!(!logs_contain(GOOGLE_ACCESS_TOKEN));
+    }
+
+    #[tokio::test]
+    async fn a_refused_access_token_is_replaced_before_the_retry() {
+        let (_, state, _guard) = setup_test_app().await;
+        let provider = Provider::answering(vec![(
+            StatusCode::UNAUTHORIZED,
+            json!({ "error": { "status": "UNAUTHENTICATED" } }),
+        )]);
+        let state = state_using(&state, &provider).await;
+        let pubkey = user_with_target(&state, 1, FCM_TOKEN, PushProvider::Fcm, false).await;
+
+        assert_eq!(send_unique(&state, &pubkey).await, 1);
+
+        assert_eq!(provider.received().len(), 2);
+        assert_eq!(provider.token_requests().len(), 2);
+    }
+
+    /// Tokens are kept: a device that is gone misses its heartbeats and is deregistered.
+    #[tracing_test::traced_test]
+    #[tokio::test]
+    async fn an_unregistered_token_is_not_retried_and_is_kept() {
+        let (_, state, _guard) = setup_test_app().await;
+        let cases = [
+            (
+                PushProvider::Apns,
+                APNS_TOKEN,
+                StatusCode::GONE,
+                json!({ "reason": "Unregistered" }),
+            ),
+            (
+                PushProvider::Fcm,
+                FCM_TOKEN,
+                StatusCode::NOT_FOUND,
+                json!({ "error": { "details": [{ "errorCode": "UNREGISTERED" }] } }),
+            ),
+        ];
+        for (key, (kind, token, status, body)) in (1..).zip(cases) {
+            let provider = Provider::answering(vec![(status, body)]);
+            let state = state_using(&state, &provider).await;
+            let pubkey = user_with_target(&state, key, token, kind, false).await;
+
+            // The provider accepted the request, so the device still counts as dispatched.
+            assert_eq!(send_unique(&state, &pubkey).await, 1);
+
+            assert_eq!(provider.received().len(), 1);
+            assert_eq!(
+                PushTokenRepository::new(&state.db_pool)
+                    .find_by_pubkey(&pubkey)
+                    .await
+                    .unwrap()
+                    .as_deref(),
+                Some(token)
+            );
+        }
+        assert!(logs_contain("no longer registered"));
+        assert!(!logs_contain("Failed to send push notification"));
+        assert!(!logs_contain(APNS_TOKEN));
+    }
+
+    /// Could mean a wrong topic or environment rather than a dead device, so the token
+    /// stays and the error reaches the logs.
+    #[tracing_test::traced_test]
+    #[tokio::test]
+    async fn a_rejected_device_token_is_logged_and_not_retried() {
+        let (_, state, _guard) = setup_test_app().await;
+        let provider = Provider::answering(vec![(
+            StatusCode::BAD_REQUEST,
+            json!({ "reason": "BadDeviceToken" }),
+        )]);
+        let state = state_using(&state, &provider).await;
+        let pubkey = user_with_target(&state, 1, APNS_TOKEN, PushProvider::Apns, false).await;
+
+        assert_eq!(send_unique(&state, &pubkey).await, 0);
+
+        assert_eq!(provider.received().len(), 1);
+        assert!(logs_contain("BadDeviceToken"));
+        assert!(!logs_contain(APNS_TOKEN));
+    }
+
+    #[tracing_test::traced_test]
+    #[tokio::test]
+    async fn a_raw_token_without_server_credentials_is_logged() {
+        let (_, state, _guard) = setup_test_app().await;
+        let apns = user_with_target(&state, 1, APNS_TOKEN, PushProvider::Apns, false).await;
+        let fcm = user_with_target(&state, 2, FCM_TOKEN, PushProvider::Fcm, false).await;
+
+        assert_eq!(send_unique(&state, &apns).await, 0);
+        assert_eq!(send_unique(&state, &fcm).await, 0);
+
+        assert!(logs_contain("APNs credentials are not configured"));
+        assert!(logs_contain("FCM credentials are not configured"));
+    }
+
+    #[test]
+    fn unusable_credentials_stop_startup_without_quoting_them() {
+        let error = |config: Config| {
+            DirectPush::from_config(&config)
+                .err()
+                .expect("expected a credentials error")
+                .to_string()
+        };
+        let valid = config_with_credentials("http://localhost/token");
+        assert!(DirectPush::from_config(&valid).is_ok());
+        assert!(DirectPush::from_config(&TestUser::get_config()).is_ok());
+
+        assert!(
+            error(Config {
+                apns_topic: None,
+                ..valid.clone()
+            })
+            .contains("must be set together")
+        );
+        let bad_key = error(Config {
+            apns_key_p8: Some("not-a-key-secret".to_string()),
+            ..valid.clone()
+        });
+        assert!(bad_key.contains("APNS_KEY_P8") && !bad_key.contains("not-a-key-secret"));
+        let bad_account = error(Config {
+            fcm_service_account_json: Some(r#"{"private_key":"not-a-key-secret""#.to_string()),
+            ..valid.clone()
+        });
+        assert!(
+            bad_account.contains("FCM_SERVICE_ACCOUNT_JSON")
+                && !bad_account.contains("not-a-key-secret")
+        );
+        let bad_rsa = error(Config {
+            fcm_service_account_json: Some(
+                json!({
+                    "project_id": "noah-test",
+                    "client_email": "push@noah-test.iam.gserviceaccount.com",
+                    "private_key": "not-a-key-secret",
+                    "token_uri": "http://localhost/token",
+                })
+                .to_string(),
+            ),
+            ..valid
+        });
+        assert!(bad_rsa.contains("invalid private key") && !bad_rsa.contains("not-a-key-secret"));
+    }
+
+    /// Run by hand: `cargo test -p server --bin server apns_negotiates_http2 -- --ignored`.
+    /// Needs network, and proves the shared client can talk to the real service.
+    #[tokio::test]
+    #[ignore = "reaches the real APNs sandbox"]
+    async fn apns_negotiates_http2_on_the_real_service() {
+        let response = reqwest::Client::new()
+            .post(format!(
+                "https://api.sandbox.push.apple.com/3/device/{APNS_TOKEN}"
+            ))
+            .json(&json!({}))
+            .send()
+            .await
+            .unwrap();
+        assert_eq!(response.version(), reqwest::Version::HTTP_2);
+        assert_eq!(response.status(), StatusCode::FORBIDDEN);
+        assert_eq!(
+            response.json::<Value>().await.unwrap()["reason"],
+            "MissingProviderToken"
+        );
     }
 }

@@ -30,7 +30,7 @@ Hard rules:
 2. No new shared-logic runtime: app logic is written twice (Swift + Kotlin). Parity is enforced with shared JSON fixtures in `apps/fixtures/` (inputs → expected outputs) consumed by XCTest and JUnit. No Swift-on-Android, no KMP, no extra Rust crate.
 3. Missing bark-bolt-ffi APIs are implemented in a separate thread (handoff prompt: [ffi-handoff-prompt.md](ffi-handoff-prompt.md)). Native work codes against a thin `WalletService` protocol/interface so features can progress before the FFI release lands.
 4. Every RN screen is migrated; iOS and Android ship together.
-5. Raw APNs/FCM token registration: later (no test access yet). Keep Expo only for now.
+5. Raw APNs/FCM token registration: done in place of Expo, see [docs/direct_push.md](../direct_push.md). Originally deferred for lack of test access.
 6. Noah design system ("impeccable", the Noah way): later, no rush.
 7. OS deep links (`bitcoin:`, `lightning:`, `lnurl`): nice to have, after parity.
 
@@ -43,7 +43,7 @@ Hard rules:
 - Wallet: bark-bolt-ffi (SPM XCFramework / AAR). One `WalletCoordinator` (Swift actor / Kotlin Mutex service) owns wallet lifetime and serializes all wallet ops for UI, push, background tasks, backups, App Intents.
 - Shared logic: written twice, enforced by shared JSON fixtures (see decision 2).
 - Server contract: Utoipa → `api/openapi.json` (+ normalization step) → swift-openapi-generator + Fabrikt (kotlinx). ts-rs stays for RN. CI drift gate. u64 → Int64/Long.
-- Push: keep Expo. iOS silent push via app delegate (~30 s budget). Android own FirebaseMessagingService + WorkManager. UnifiedPush in pure Kotlin.
+- Push: direct APNs and FCM ([docs/direct_push.md](../direct_push.md)). iOS silent push via app delegate (~30 s budget). Android own FirebaseMessagingService + WorkManager. UnifiedPush in pure Kotlin.
 - Storage: MMKV (settings/state), Keychain/Keystore (secrets), bark DB (wallet), app-group stores (widgets).
 
 ## bark-bolt-ffi gaps (needed for parity)
@@ -101,7 +101,6 @@ MapLibre native, offline snapshot, search, location, clustering, merchant detail
 
 ### Backlog (after parity)
 - OS deep links for bitcoin:/lightning:/lnurl.
-- Raw APNs/FCM token registration alongside Expo (server + client).
 - Noah design system setup.
 - iOS keychain accessibility policy review (ThisDeviceOnly).
 

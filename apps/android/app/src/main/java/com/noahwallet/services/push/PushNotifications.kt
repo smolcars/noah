@@ -59,7 +59,7 @@ object PushNotifications {
         context.getSystemService(NotificationManager::class.java).notify("lightning-$paymentHash", 1, notification)
     }
 
-    /** Expo sends visible receipts as data title/message; FCM also supports a notification envelope. */
+    /** The server and Expo send visible receipts as data title/message; FCM also supports a notification envelope. */
     fun remote(context: Context, message: com.google.firebase.messaging.RemoteMessage) = show(context,
         title = message.notification?.title ?: message.data["title"],
         body = message.notification?.body ?: message.data["message"],

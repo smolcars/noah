@@ -194,12 +194,39 @@ pub struct RegisterPayload {
     pub ark_address: Option<String>,
 }
 
+/// The service that delivers to a raw device token.
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, TS, utoipa::ToSchema)]
+#[serde(rename_all = "lowercase")]
+#[ts(export, export_to = "../../client/src/types/serverTypes.ts")]
+pub enum PushProvider {
+    Apns,
+    Fcm,
+}
+
+impl PushProvider {
+    pub fn as_str(self) -> &'static str {
+        match self {
+            Self::Apns => "apns",
+            Self::Fcm => "fcm",
+        }
+    }
+}
+
 /// Defines the payload for registering a push notification token.
 #[derive(Serialize, Deserialize, TS, utoipa::ToSchema)]
 #[ts(export, export_to = "../../client/src/types/serverTypes.ts")]
 pub struct RegisterPushToken {
-    /// The Expo push token for the user's device.
+    /// A raw APNs or FCM device token when `provider` is set. Otherwise an Expo push
+    /// token or a UnifiedPush endpoint.
     pub push_token: String,
+    /// Which service delivers to a raw device token. Omitted by Expo and UnifiedPush clients.
+    #[serde(default)]
+    #[ts(optional)]
+    pub provider: Option<PushProvider>,
+    /// Whether an APNs token belongs to the sandbox environment. Defaults to false.
+    #[serde(default)]
+    #[ts(optional)]
+    pub apns_sandbox: Option<bool>,
 }
 
 /// Defines the payload for granting mailbox authorization to the server.

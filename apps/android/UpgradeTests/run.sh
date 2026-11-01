@@ -2,7 +2,7 @@
 # Fresh GMS emulator: RN release -> native debug, same certificate and sandbox.
 # Usage: run.sh emulator-5594 [path/to/prebuilt-RN-regtest-release.apk]
 # FUNDED=1: Ark receive/send, confirmed onchain funds, paused recurring rule and settings.
-# Use a root-capable Google APIs image so the release app's Expo ID can be
+# Use a root-capable Google APIs image so the release app's data can be
 # hashed before replacement. Native replacement never uninstalls or clears data.
 # FUNDED uses the RN prepare flow, which resets only the fresh test install.
 set -euo pipefail
@@ -36,7 +36,7 @@ fi
 "$ADB" -s "$SERIAL" root >/dev/null
 "$ADB" -s "$SERIAL" wait-for-device
 [[ "$("$ADB" -s "$SERIAL" shell id -u | tr -d '\r')" == 0 ]] || {
-    echo 'Use a root-capable Google APIs emulator to capture the release Expo ID'; exit 1;
+    echo 'Use a root-capable Google APIs emulator to capture the release app data'; exit 1;
 }
 
 check_disk() {
@@ -135,7 +135,7 @@ run_flow "$HERE/rn-place-widget.yml"
 "$ADB" -s "$SERIAL" shell am instrument -w -r "$BUNDLE.test/com.noahwallet.services.RNPushBaseline" > "$ARTIFACTS/expo-baseline.txt"
 EXPO_TOKEN_HASH="$(sed -n 's/^INSTRUMENTATION_RESULT: expoTokenSha256=//p' "$ARTIFACTS/expo-baseline.txt" | tr -d '\r')"
 [[ "$EXPO_TOKEN_HASH" =~ ^[0-9a-f]{64}$ ]] || {
-    echo 'Real RN-runtime Expo token baseline unavailable; refusing to claim continuity'; exit 1;
+    echo 'Real RN-runtime Expo token baseline unavailable; refusing to claim the move to a raw token'; exit 1;
 }
 echo 'Real Expo token provisioned in RN sandbox (SHA-256 only)'
 WIDGET_INFO_HASH="$(sed -n 's/^INSTRUMENTATION_RESULT: widgetInfoSha256=//p' "$ARTIFACTS/expo-baseline.txt" | tr -d '\r')"
@@ -164,41 +164,6 @@ if [[ "${FUNDED:-0}" == 1 ]]; then
 fi
 echo "RN DB: fingerprint=$fingerprint movements=$movements spendable=$spendable"
 
-EXPO_HASH="$(python3 - "$ADB" "$SERIAL" "$BUNDLE" <<'PY'
-import hashlib, subprocess, sys, uuid, xml.etree.ElementTree as ET
-adb, serial, bundle = sys.argv[1:]
-base = '/data/user/0/' + bundle
-
-def read(path):
-    # exec-out can return success with cat's missing-file diagnostic in stdout.
-    exists = subprocess.run([adb, '-s', serial, 'shell', 'test', '-f', base + path], capture_output=True)
-    if exists.returncode != 0:
-        return None
-    result = subprocess.run([adb, '-s', serial, 'exec-out', 'cat', base + path], capture_output=True)
-    if result.returncode != 0:
-        sys.exit('Could not read an existing RN Expo identity file')
-    return result.stdout
-
-def file_uuid(path):
-    value = read(path)
-    if value is not None:
-        try:
-            return str(uuid.UUID(value.decode().splitlines()[0]))
-        except (ValueError, IndexError, UnicodeError):
-            pass
-
-value = file_uuid('/no_backup/expo_notifications_installation_uuid.txt')
-if value is None:
-    prefs = read('/shared_prefs/host.exp.exponent.SharedPreferences.xml')
-    if prefs is not None:
-        value = next((s.text or '' for s in ET.fromstring(prefs).findall('string') if s.get('name') == 'uuid'), None)
-if value is None:
-    value = file_uuid('/no_backup/expo_installation_uuid.txt')
-print('absent' if value is None else hashlib.sha256(value.encode()).hexdigest())
-PY
-)"
-[[ "$EXPO_HASH" != absent ]] || { echo 'RN Expo installation UUID missing'; exit 1; }
-echo 'RN Expo ID captured (SHA-256 only)'
 # Preserve every live RN data/CRC file before replacement.
 "$ADB" -s "$SERIAL" pull "/data/user/0/$BUNDLE/files/mmkv" "$ARTIFACTS/mmkv-stopped" >/dev/null
 python3 "$ROOT/apps/ios/UpgradeTests/check-mmkv.py" record "$ARTIFACTS/mmkv-stopped" "$ARTIFACTS/mmkv-stopped.json"
@@ -238,7 +203,7 @@ python3 "$HERE/check-launcher.py" "$BUNDLE" "$ARTIFACTS"
 "$ADB" -s "$SERIAL" install -r "$TEST_APK"
 "$ADB" -s "$SERIAL" shell am instrument -w -r \
     -e class com.noahwallet.services.UpgradeCompatibilityTest \
-    -e noahUpgradeCheck 1 -e expoIdSha256 "$EXPO_HASH" -e expoTokenSha256 "$EXPO_TOKEN_HASH" \
+    -e noahUpgradeCheck 1 -e rnExpoTokenRegistered 1 \
     -e funded "${FUNDED:-0}" -e expectedOnchain 30000 -e widgetInfoSha256 "$WIDGET_INFO_HASH" \
     -e expectedFingerprint "$fingerprint" -e expectedMovementIds "$movement_ids" -e expectedMovements "$movements" -e expectedSpendable "$spendable" \
     "$BUNDLE.test/androidx.test.runner.AndroidJUnitRunner" | tee "$ARTIFACTS/instrumentation.txt"
@@ -263,4 +228,4 @@ if [[ "${FUNDED:-0}" == 1 ]]; then
     python3 "$ROOT/apps/ios/UpgradeTests/check-server-sync.py" "$sync_since" "$login_key" "ktor-client"
 fi
 cp "$ARTIFACTS/result.json" "${UPGRADE_EVIDENCE:-/private/tmp/noah-android-upgrade-evidence.json}"
-echo "Upgrade compatibility assertions passed (wallet, settings, notices, MMKV, server sync, Expo and launcher); elapsed ${SECONDS}s"
+echo "Upgrade compatibility assertions passed (wallet, settings, notices, MMKV, server sync, raw push token and launcher); elapsed ${SECONDS}s"

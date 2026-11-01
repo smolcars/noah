@@ -257,7 +257,7 @@ fn all_ts_exports_and_unsigned_fields_have_schemas() {
             }
         }
     }
-    assert_eq!(exports, 59);
+    assert_eq!(exports, 60);
     let amount = &doc["paths"]["/.well-known/lnurlp/{username}"]["get"]["parameters"][1]["schema"];
     assert_eq!(amount["format"], "int64");
     assert_eq!(amount["minimum"].as_f64(), Some(0.0));

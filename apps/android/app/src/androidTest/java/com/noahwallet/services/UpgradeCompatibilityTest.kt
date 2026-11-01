@@ -53,18 +53,14 @@ class UpgradeCompatibilityTest {
         expected.assertSame(summary)
         if (funded) assertFundedHistory(expected, session, summary, settings, baseline)
         args.getString("widgetInfoSha256")?.let { assertWidget(context, it) }
-        val expo = ExpoInstallationID(context)
-        assertExpoID(expo, args.getString("expoIdSha256"))
         // Exercise the first real native foreground launch, including recurring automation gates.
         InstrumentationRegistry.getInstrumentation().startActivitySync(android.content.Intent(context,
             com.noahwallet.MainActivity::class.java).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
         if (funded) assertLaunchKeptState(expected, session, settings, baseline)
-        args.getString("expoTokenSha256")?.let { assertExpoToken(context, it) }
+        if (args.getString("rnExpoTokenRegistered") == "1") assertMovesToRawToken(context)
         val finalSummary = requireNotNull(session.summary())
         File(context.filesDir, "noah-upgrade-result.json").writeText(result(finalSummary, settings, oldValue, state, args).toString())
         comparisonRoot.deleteRecursively()
-        val id = expo.getOrCreate()
-        assertTrue("Expo UUID changed across reads", id == ExpoInstallationID(context).getOrCreate())
     }
 
     /** What the RN wallet held before the upgrade, from the runner's arguments. */
@@ -195,16 +191,6 @@ class UpgradeCompatibilityTest {
         assertEquals("com.noahwallet.MainActivity", shortcut.activity?.className)
     }
 
-    private fun assertExpoID(expo: ExpoInstallationID, expectedHash: String?) {
-        if (expectedHash != null && expectedHash != "absent") {
-            val id = expo.read()
-            assertNotNull("Existing Expo ID missing", id)
-            val hash = MessageDigest.getInstance("SHA-256").digest(id!!.toByteArray())
-                .joinToString("") { "%02x".format(it) }
-            assertTrue("Expo ID changed", expectedHash == hash)
-        }
-    }
-
     private suspend fun assertLaunchKeptState(expected: Expected, session: WalletSession, settings: SettingsStorage, baseline: Baseline) {
         kotlinx.coroutines.withTimeout(20000) {
             while (RecurringStore(settings).load().binding == null) kotlinx.coroutines.delay(100)
@@ -222,14 +208,12 @@ class UpgradeCompatibilityTest {
             PersistedServerState.decode(settings.string(PersistedServerState.key)).isMailboxAuthorizationEnabled)
     }
 
-    private suspend fun assertExpoToken(context: android.content.Context, expected: String) {
-        assertTrue("Real Expo token expectation missing", expected.matches(Regex("[0-9a-f]{64}")))
-        var actual: String? = null
-        val outcome = PushRuntime(context, AppServices.shared(context)).register { token ->
-            actual = MessageDigest.getInstance("SHA-256").digest(token.toByteArray()).joinToString("") { "%02x".format(it) }
-        }
+    /** The RN wallet registered an Expo token; the first native registration replaces it. */
+    private suspend fun assertMovesToRawToken(context: android.content.Context) {
+        var registered: String? = null
+        val outcome = PushRuntime(context, AppServices.shared(context)).register { registered = it }
         assertEquals(com.noahwallet.services.push.PushRegistration.Outcome.registered, outcome)
-        assertTrue("Expo token changed", actual == expected)
+        assertTrue("Still registering an Expo token", registered?.contains("PushToken[") == false)
     }
 
     /** The public upgrade evidence the runner compares across the RN and native installs. */
@@ -247,8 +231,6 @@ class UpgradeCompatibilityTest {
         put("biometrics", state?.isBiometricsEnabled)
         put("autoBoarding", SettingsPreferences.transaction(settings.string("transaction-storage"))["isAutoBoardingEnabled"] ?: JsonNull)
         put("recurringSchedules", RecurringStore(settings).load().schedules.size)
-        put("expoIdSha256", args.getString("expoIdSha256"))
-        put("expoTokenSha256", args.getString("expoTokenSha256"))
     }
 }
 

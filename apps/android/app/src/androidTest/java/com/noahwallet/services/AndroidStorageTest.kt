@@ -116,38 +116,6 @@ class AndroidStorageTest {
         }
     }
 
-    @Test fun expoPrecedenceMigrationAndSessionCaching() {
-        val directory = File(context.cacheDir, "expo-test-${UUID.randomUUID()}").apply { mkdirs() }
-        val prefsName = "expo-test-${UUID.randomUUID()}"
-        val prefs = context.getSharedPreferences(prefsName, Context.MODE_PRIVATE)
-        val primary = UUID.randomUUID().toString()
-        val preference = UUID.randomUUID().toString()
-        val legacyFile = UUID.randomUUID().toString()
-        try {
-            File(directory, ExpoInstallationID.fileName).writeText(primary)
-            prefs.edit().putString("uuid", preference).commit()
-            File(directory, "expo_installation_uuid.txt").writeText(legacyFile)
-            assertEquals(primary, ExpoInstallationID(directory, prefs).getOrCreate())
-            File(directory, ExpoInstallationID.fileName).delete()
-            assertEquals(preference, ExpoInstallationID(directory, prefs).getOrCreate())
-            assertFalse(prefs.contains("uuid"))
-            assertEquals(preference, File(directory, ExpoInstallationID.fileName).readText())
-            File(directory, ExpoInstallationID.fileName).writeText("invalid UUID")
-            assertEquals(legacyFile, ExpoInstallationID(directory, prefs).getOrCreate())
-            assertTrue(File(directory, "expo_installation_uuid.txt").exists())
-            directory.listFiles()!!.forEach { it.delete() }
-            val created = ExpoInstallationID(directory, prefs).getOrCreate()
-            assertEquals(created, ExpoInstallationID(directory, prefs).getOrCreate())
-            val badDirectory = File(directory, "file-not-directory").apply { writeText("") }
-            val unavailable = ExpoInstallationID(badDirectory, prefs)
-            val session = unavailable.getOrCreate()
-            assertEquals(session, unavailable.getOrCreate())
-        } finally {
-            directory.deleteRecursively()
-            context.deleteSharedPreferences(prefsName)
-        }
-    }
-
     /** On a real filesystem the settings stamp works: unchanged reads never open the file; a same-size replacement is read. */
     @SdkSuppress(minSdkVersion = 28) // StrictMode's violation listener
     @Test

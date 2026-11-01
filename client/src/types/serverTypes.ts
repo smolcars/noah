@@ -145,6 +145,11 @@ export type MaintenanceNotification = { notification_k1: string, };
 export type NotificationData = { "notification_type": "maintenance" } & MaintenanceNotification | { "notification_type": "lightning_invoice_request" } & LightningInvoiceRequestNotification | { "notification_type": "lightning_claim_request" } & LightningClaimRequestNotification | { "notification_type": "backup_trigger" } & BackupTriggerNotification | { "notification_type": "heartbeat" } & HeartbeatNotification | { "notification_type": "recurring_payment_due" } & RecurringPaymentDueNotification;
 
 /**
+ * The service that delivers to a raw device token.
+ */
+export type PushProvider = "apns" | "fcm";
+
+/**
  * Silent push asking the device to execute its locally stored recurring
  * payments that are due. Carries no amounts or recipients: the device checks
  * its own schedules and only pays within the policy the user approved.
@@ -186,9 +191,18 @@ ark_address: string | null, };
  */
 export type RegisterPushToken = { 
 /**
- * The Expo push token for the user's device.
+ * A raw APNs or FCM device token when `provider` is set. Otherwise an Expo push
+ * token or a UnifiedPush endpoint.
  */
-push_token: string, };
+push_token: string, 
+/**
+ * Which service delivers to a raw device token. Omitted by Expo and UnifiedPush clients.
+ */
+provider?: PushProvider, 
+/**
+ * Whether an APNs token belongs to the sandbox environment. Defaults to false.
+ */
+apns_sandbox?: boolean, };
 
 /**
  * Represents the response for an user registration.

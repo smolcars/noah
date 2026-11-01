@@ -1,8 +1,12 @@
 use anyhow::{Context, Result};
 use clap::{Parser, Subcommand};
-use expo_push_notification_client::{Expo, ExpoClientOptions, ExpoPushMessage, Sound};
+use expo_push_notification_client::{Expo, ExpoClientOptions, ExpoPushMessage, Priority, Sound};
 use server::config::Config;
+use server::db::push_token_repo::PushTokenRepository;
+use server::direct_push::DirectPush;
 use server::mailbox_auth::backfill_mailbox_authorizations;
+use server::push::PushNotificationData;
+use server::types::PushProvider;
 use sqlx::postgres::PgPoolOptions;
 
 #[derive(Parser)]
@@ -95,19 +99,29 @@ async fn cmd_broadcast(config: &Config, title: String, body: String, dry_run: bo
         .await
         .context("Failed to connect to database")?;
 
-    let tokens: Vec<String> = sqlx::query_scalar("SELECT push_token FROM push_tokens")
-        .fetch_all(&pool)
+    let (direct_targets, other_targets): (Vec<_>, Vec<_>) = PushTokenRepository::new(&pool)
+        .find_all()
         .await
-        .context("Failed to fetch push tokens")?;
+        .context("Failed to fetch push tokens")?
+        .into_iter()
+        .partition(|target| target.provider.is_some());
 
-    let expo_tokens: Vec<_> = tokens.into_iter().filter(|t| is_expo_token(t)).collect();
+    let expo_tokens: Vec<_> = other_targets
+        .into_iter()
+        .map(|target| target.push_token)
+        .filter(|t| is_expo_token(t))
+        .collect();
 
-    if expo_tokens.is_empty() {
-        println!("No Expo push tokens registered. Nothing to send.");
+    if expo_tokens.is_empty() && direct_targets.is_empty() {
+        println!("No Expo, APNs or FCM push tokens registered. Nothing to send.");
         return Ok(());
     }
 
-    println!("Found {} Expo tokens", expo_tokens.len());
+    println!(
+        "Found {} Expo tokens and {} APNs or FCM tokens",
+        expo_tokens.len(),
+        direct_targets.len()
+    );
     println!();
     println!("Title: {}", title);
     println!("Body: {}", body);
@@ -173,6 +187,27 @@ async fn cmd_broadcast(config: &Config, title: String, body: String, dry_run: bo
         }
     }
 
+    if !direct_targets.is_empty() {
+        let direct_push = DirectPush::from_config(config)?;
+        let message = PushNotificationData {
+            title: Some(title.clone()),
+            body: Some(body.clone()),
+            data: "{}".to_string(),
+            priority: Priority::High,
+            content_available: false,
+        };
+        for target in &direct_targets {
+            match direct_push.send(target, &message, true).await {
+                Ok(()) => success_count += 1,
+                Err(e) => {
+                    error_count += 1;
+                    eprintln!("  Failed direct send to {}: {}", target.pubkey, e);
+                }
+            }
+        }
+        println!("  Sent {} APNs or FCM tokens", direct_targets.len());
+    }
+
     println!();
     println!("Done!");
     println!("  Successful: {}", success_count);
@@ -198,18 +233,31 @@ async fn cmd_stats(config: &Config) -> Result<()> {
         .await
         .unwrap_or(0);
 
-    let tokens: Vec<String> = sqlx::query_scalar("SELECT push_token FROM push_tokens")
-        .fetch_all(&pool)
+    let targets = PushTokenRepository::new(&pool)
+        .find_all()
         .await
         .unwrap_or_default();
 
-    let expo_count = tokens.iter().filter(|t| is_expo_token(t)).count();
+    let expo_count = targets
+        .iter()
+        .filter(|t| t.provider.is_none() && is_expo_token(&t.push_token))
+        .count();
+    let apns_count = targets
+        .iter()
+        .filter(|t| t.provider == Some(PushProvider::Apns))
+        .count();
+    let fcm_count = targets
+        .iter()
+        .filter(|t| t.provider == Some(PushProvider::Fcm))
+        .count();
 
     println!("Noah Server Statistics");
     println!("======================");
     println!("Total users: {}", user_count);
     println!("Push tokens: {}", push_token_count);
     println!("  - Expo: {}", expo_count);
+    println!("  - APNs: {}", apns_count);
+    println!("  - FCM: {}", fcm_count);
 
     Ok(())
 }

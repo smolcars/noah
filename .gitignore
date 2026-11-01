@@ -57,6 +57,7 @@ sentry.properties
 target/
 server/target/
 .env
+fcm-service-account.json
 noah-regtest.db
 config.toml
 .lnd-data

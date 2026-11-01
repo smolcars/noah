@@ -141,7 +141,7 @@ class UnifiedPushSetup internal constructor(private val context: android.content
                     try {
                         withContext(Dispatchers.IO) { if (services.registration.state.isRegisteredWithServer == true)
                             com.noahwallet.api.generated.client.V0RegisterPushTokenClient(services.client)
-                                .registerPushToken(com.noahwallet.api.generated.models.RegisterPushToken(received)).value() }
+                                .registerPushToken(com.noahwallet.api.generated.models.RegisterPushToken(pushToken = received)).value() }
                     } catch (cancelled: CancellationException) { throw cancelled }
                     catch (_: Exception) { withContext(Dispatchers.IO) { com.noahwallet.services.logging.AppLog(context,
                         "push").w("""UnifiedPush server registration failed; queued for retry""") } }
