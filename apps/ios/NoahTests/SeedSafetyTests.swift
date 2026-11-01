@@ -60,7 +60,7 @@ struct SeedSafetyTests {
         let root = FileManager.default.temporaryDirectory.appending(path: "normalized-open-\(UUID().uuidString)")
         defer { try? FileManager.default.removeItem(at: root) }
         let location = WalletDataLocation(variant: .regtest, documentsDirectory: root)
-        let session = WalletSession(variant: .regtest, location: location) { mnemonic, datadir, _, _, create in
+        let session = WalletSession(variant: .regtest, location: location) { mnemonic, datadir, _, create in
             let config = WalletConfiguration.base(for: .regtest).sdkConfig(userAgent: "test")
             let onchain = try await OnchainWallet.default(network: .regtest, mnemonic: mnemonic, config: config, datadir: datadir)
             let wallet = try await Wallet.openWithOnchain(network: .regtest, mnemonicOrSeed: mnemonic, config: config,
@@ -68,7 +68,7 @@ struct SeedSafetyTests {
                                                                                createWithoutServer: true, skipRecovery: true), onchain: onchain)
             return .init(wallet: wallet, onchain: onchain)
         }
-        try await session.createNew(mnemonic: cases[0].input.raw, runDaemon: false, appVersion: "test")
+        try await session.createNew(mnemonic: cases[0].input.raw, appVersion: "test")
         try await session.close()
         for vector in cases where vector.input.exerciseCrypto {
             // The same normalized input used by the live opener must pass real SDK fingerprint preflight.
@@ -173,7 +173,7 @@ struct SeedSafetyTests {
         let seed = try generateMnemonic()
         let session = WalletSession(variant: .regtest, location: location)
         await #expect(throws: StoredSeed.Failure.conflict) {
-            try await session.openExisting(mnemonic: seed, runDaemon: false, appVersion: "test")
+            try await session.openExisting(mnemonic: seed, appVersion: "test")
         }
         let unchanged = try Data(contentsOf: location.database) == before
         #expect(unchanged)
@@ -182,7 +182,7 @@ struct SeedSafetyTests {
         let candidate = Data("legacy candidate".utf8)
         try candidate.write(to: legacy)
         await #expect(throws: StoredSeed.Failure.conflict) {
-            try await session.openExisting(mnemonic: seed, runDaemon: false, appVersion: "test")
+            try await session.openExisting(mnemonic: seed, appVersion: "test")
         }
         #expect(try Data(contentsOf: location.database) == before)
         #expect(try Data(contentsOf: legacy) == candidate)

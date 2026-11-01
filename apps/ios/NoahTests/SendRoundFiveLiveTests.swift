@@ -49,7 +49,7 @@ struct SendRoundFiveLiveTests {
         try #require(AppVariant.current == .regtest)
         let session = WalletSession.shared
         guard case .found(let mnemonic) = KeychainPassword.mnemonic(for: .regtest).read() else { Issue.record("No disposable seed"); return }
-        try await session.ensureOpen(mnemonic: mnemonic, runDaemon: false, appVersion: "send-r5-live")
+        try await session.ensureOpen(mnemonic: mnemonic, appVersion: "send-r5-live")
         let payment = try payment()
         let quote = try await session.quoteSend(payment)
         try #require(quote.checkpoint != nil, "Checkpoint no longer pending: never submit a fresh payment in this adoption test")

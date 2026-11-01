@@ -22,7 +22,7 @@ struct SendLiveTests {
             Issue.record("Create and fund a dedicated regtest simulator wallet first")
             return
         }
-        try await session.ensureOpen(mnemonic: seed, runDaemon: true, appVersion: "send-live-test")
+        try await session.ensureOpen(mnemonic: seed, appVersion: "send-live-test")
         try await session.sync()
         let controller = SendPaymentController(
             dependencies: .live(session: session, variant: .regtest))
@@ -79,7 +79,7 @@ struct SendRoundTwoLiveTests {
         let recipient = try #require(environment["NOAH_SEND_ARK_RECIPIENT"])
         let invoice = try #require(environment["NOAH_SEND_INVOICE"])
         let session = WalletSession(variant: .regtest)
-        try await session.createNew(mnemonic: try generateMnemonic(), runDaemon: true, appVersion: "send-round2-live")
+        try await session.createNew(mnemonic: try generateMnemonic(), appVersion: "send-round2-live")
         let request = try await session.receiveRequest()
         let addressFile = URL.documentsDirectory.appending(path: "send-round2-funding-address.txt")
         try request.arkAddress.write(to: addressFile, atomically: true, encoding: .utf8)
@@ -135,7 +135,7 @@ struct SendRoundThreeLiveTests {
         let recipient = try #require(environment["NOAH_SEND_ONCHAIN_RECIPIENT"])
         try #require(PaymentEncoding.invoice(invoice)?.sats == nil)
         let session = WalletSession(variant: .regtest)
-        try await session.createNew(mnemonic: try generateMnemonic(), runDaemon: false, appVersion: "send-round3-live")
+        try await session.createNew(mnemonic: try generateMnemonic(), appVersion: "send-round3-live")
         let request = try await session.receiveRequest()
         let documents = URL.documentsDirectory
         try JSONEncoder().encode(["ark": request.arkAddress, "onchain": request.onchainAddress])

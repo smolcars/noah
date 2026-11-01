@@ -24,7 +24,7 @@ struct WalletCreatorTests {
             variant: .regtest,
             location: WalletDataLocation(
                 variant: .regtest,
-                documentsDirectory: FileManager.default.temporaryDirectory.appending(path: "creator-\(UUID().uuidString)"))) { _, _, _, _, _ in throw Boom() }
+                documentsDirectory: FileManager.default.temporaryDirectory.appending(path: "creator-\(UUID().uuidString)"))) { _, _, _, _ in throw Boom() }
 
         func withLock<T>(_ body: () throws -> T) rethrows -> T { lock.lock(); defer { lock.unlock() }; return try body() }
 

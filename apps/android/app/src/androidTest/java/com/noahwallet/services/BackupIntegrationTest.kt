@@ -40,7 +40,7 @@ class BackupIntegrationTest {
             readMnemonic = { mnemonic }, login = { ServerClient.login(public, "regtest", it) })
         var stage = "create"
         try {
-            session.createNew(mnemonic, false, "backup-it")
+            session.createNew(mnemonic, "backup-it")
             ServerClient.make(endpoint, tokens).use { client ->
                 stage = "register"
                 V0RegisterClient(client).register(RegisterPayload()).value()
@@ -64,7 +64,7 @@ class BackupIntegrationTest {
                 assertFalse(outcome.cleanupPending); assertFalse(restored.isOpen)
                 assertTrue("Restored seed matches", seed.value == mnemonic)
                 stage = "reopen and compare"
-                restored.ensureOpen(mnemonic, false, "backup-it")
+                restored.ensureOpen(mnemonic, "backup-it")
                 val summary = restored.summary()!!
                 assertEquals(original.fingerprint, summary.fingerprint)
                 assertEquals(original.movementCount, summary.movementCount)
@@ -117,7 +117,7 @@ class BackupIntegrationTest {
             val outcome = restorer.restore(fixturePhrase) { stage = it.name }
             assertEquals("node-fixture", outcome.backupId); assertFalse(outcome.cleanupPending)
             stage = "reopen"
-            session.ensureOpen(fixturePhrase, false, "node-fixture")
+            session.ensureOpen(fixturePhrase, "node-fixture")
             val summary = session.summary()!!
             stage = "compare"
             val expected = BackupArchive.parseManifest(File(context.cacheDir, "backup-node-fixture/manifest.json").readBytes())

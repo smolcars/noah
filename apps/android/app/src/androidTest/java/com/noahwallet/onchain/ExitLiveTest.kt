@@ -33,8 +33,7 @@ class ExitLiveTest {
             if (stage == "create") return@runBlocking run.create(location, seed, owned)
             check(owned.exists()) { "Refusing to use an unowned wallet" }
             val mnemonic = (seed.read() as SecretResult.Found).value
-            // Cancellation must win before final broadcast: only this explicit stage disables the daemon.
-            session.ensureOpen(mnemonic, stage != "cancel-cycle", "m6-owned-live")
+            session.ensureOpen(mnemonic, "m6-owned-live")
             check(session.summary()!!.fingerprint == owned.readText())
             run.perform()
         } finally { session.closeSettled() }
@@ -79,7 +78,7 @@ class ExitLiveTest {
         check(!location.hasAnyData && seed.read() == SecretResult.NotFound && !owned.exists())
         val mnemonic = generateMnemonic()
         check(seed.save(mnemonic) is SecretResult.Found)
-        session.createNew(mnemonic, true, "m6-owned-live")
+        session.createNew(mnemonic, "m6-owned-live")
         val summary = checkNotNull(session.summary())
         owned.writeText(summary.fingerprint)
         settings.setPersistedState(PersistedWalletState(isInitialized = true, isWalletLoaded = true), PersistedWalletState.key, 0)

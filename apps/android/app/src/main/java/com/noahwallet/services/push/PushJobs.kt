@@ -70,7 +70,7 @@ class PushJobs(private val dependencies: Dependencies, private val reportAllowan
         }
         if (failure != null) throw failure
         bestEffort("Failed to refresh widget") { d.refreshWidget { caller.checkWalletAdmission() } }
-        // Last: exits move here even when bark's daemon isn't running.
+        // Last: exits move only through Noah's own progress (bark's daemon never runs).
         caller.checkWalletAdmission()
         d.progressExits()
     }

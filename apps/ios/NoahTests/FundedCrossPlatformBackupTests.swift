@@ -56,7 +56,7 @@ struct FundedCrossPlatformBackupTests {
         do {
             if mode == "produce" {
                 let phrase = try generateMnemonic()
-                try await session.createNew(mnemonic: phrase, runDaemon: true, appVersion: "funded-backup-test")
+                try await session.createNew(mnemonic: phrase, appVersion: "funded-backup-test")
                 let address = try await session.receiveRequest().onchainAddress
                 _ = try await request("onchain", ["address": address])
                 var previous: UInt64 = 0
@@ -95,7 +95,7 @@ struct FundedCrossPlatformBackupTests {
                 try #require(!outcome.cleanupPending && !location.restorePending)
                 let seedMatches = seed.read() == .found(phrase)
                 try #require(seedMatches)
-                try await session.ensureOpen(mnemonic: phrase, runDaemon: true, appVersion: "funded-backup-test")
+                try await session.ensureOpen(mnemonic: phrase, appVersion: "funded-backup-test")
                 _ = try await request("check/android/before-sync", ["state": try await state(session)])
                 try await session.sync()
                 _ = try await request("check/android/after-sync", ["state": try await state(session)])

@@ -21,7 +21,7 @@ struct BackupIntegrationTests {
         let location = WalletDataLocation(variant: .regtest, documentsDirectory: root)
         let session = WalletSession(variant: .regtest, location: location)
         let mnemonic = try generateMnemonic()
-        try await session.createNew(mnemonic: mnemonic, runDaemon: false, appVersion: "backup-it")
+        try await session.createNew(mnemonic: mnemonic, appVersion: "backup-it")
         defer { Task { try? await session.close() } }
 
         let memory = Memory()
@@ -92,7 +92,7 @@ struct BackupIntegrationTests {
         #expect(outcome.snapshotSha256 == first.snapshotSha256)
         #expect(seedItem.read() == .found(mnemonic))
         #expect(await !restoredSession.isOpen, "restore leaves the session closed")
-        try await restoredSession.ensureOpen(mnemonic: mnemonic, runDaemon: false, appVersion: "test")
+        try await restoredSession.ensureOpen(mnemonic: mnemonic, appVersion: "test")
         let restored = try #require(try await restoredSession.summary())
         #expect(restored.fingerprint == original.fingerprint)
         #expect(restored.movementCount == original.movementCount)

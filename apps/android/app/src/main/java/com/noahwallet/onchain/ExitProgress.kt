@@ -60,10 +60,10 @@ internal fun ExitProgressPage(app: AppModel, nav: SettingsNav, id: String) {
     val seenStore = remember(app.settings) { ExitSeen.stored(app.settings) }
     // Recomputed on each completed read (every minute, as before), even an unchanged one; never a timer of its own.
     val (needsFunds, seen) = remember(model.revision) {
-        overview?.let { o -> ExitFunding.shared.needsFunds(exits, o.confirmed, app.session.daemonRun) to seenStore.note(exits,
+        overview?.let { o -> ExitFunding.shared.needsFunds(exits, o.confirmed) to seenStore.note(exits,
             o.tip) } ?: (emptySet<String>() to emptyMap())
     }
-    val stalled = ExitFunding.shared.checkFailed || app.session.openWithoutDaemon
+    val stalled = ExitFunding.shared.checkFailed
     val stage = exit?.let { ExitClaims.apply(it, ExitStages.of(it, exitTip(it, overview), id in needsFunds, seen, stalled),
         ExitClaims.submitted(model.attempts)[id]) }
     // What the claim cost and where it went: Noah's record of it, or its attempt while the journal still has it.

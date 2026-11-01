@@ -13,7 +13,7 @@ import Testing
         defer { try? FileManager.default.removeItem(at: root) }
         let session = WalletSession(variant: .regtest, location: .init(variant: .regtest, documentsDirectory: root))
         do {
-            try await session.createNew(mnemonic: generateMnemonic(), runDaemon: true, appVersion: "widget-test")
+            try await session.createNew(mnemonic: generateMnemonic(), appVersion: "widget-test")
             let invoice = try await session.bolt11Invoice(amountSats: 20_000)
             let funding = try #require(ProcessInfo.processInfo.environment["NOAH_WIDGET_FUNDING_URL"])
             let fundingURL = try #require(URL(string: funding))

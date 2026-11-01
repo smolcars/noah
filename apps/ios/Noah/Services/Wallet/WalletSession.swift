@@ -40,18 +40,33 @@ actor WalletSession {
     /// Opener seam so lifecycle rules can be tested without the SDK.
     /// `create` allows bark to create a new wallet in an empty datadir.
     typealias Opener = @Sendable (
-        _ mnemonic: String, _ datadir: String, _ runDaemon: Bool, _ appVersion: String, _ create: Bool) async throws -> Handles
+        _ mnemonic: String, _ datadir: String, _ appVersion: String, _ create: Bool) async throws -> Handles
 
     struct Handles: @unchecked Sendable {
         let wallet: Wallet
         let onchain: OnchainWallet
     }
 
-    /// Since when bark's daemon has been progressing exits (every 60 s) in this session, restarted when
-    /// the app comes back (it doesn't run while suspended); nil without it. Set wherever the daemon
-    /// starts and cleared wherever it stops. The app can't see its cycles.
-    private(set) var daemonSince: Date?
-    func appBecameActive() { daemonSince = daemonSince.map { _ in Date() } }
+    /// Since when the app's foreground pass has been progressing exits (each 60 s tick, `ForegroundPass`) in
+    /// this session, restarted when the app comes back (the tick doesn't run while it's away); nil when the
+    /// wallet was opened for background work. Set by every foreground open, cleared by every close.
+    private(set) var exitProgressSince: Date?
+    func appBecameActive() {
+        exitProgressSince = exitProgressSince.map { _ in Date() }
+        if isOpen { maintenanceDue = true }
+    }
+    /// Set by each foreground entry (a foreground open, the app coming back); the next foreground pass
+    /// takes it and runs bark's delegated maintenance once (`syncInForeground`). Cleared by every close.
+    private var maintenanceDue = false
+    func takeForegroundMaintenance() -> Bool {
+        defer { maintenanceDue = false }
+        return maintenanceDue
+    }
+    /// The pass's maintenance failed: the next pass runs it again.
+    func foregroundMaintenanceFailed() { if isOpen { maintenanceDue = true } }
+    /// Serializes the app's own exit progress (foreground pass, background jobs, Check the chain): two
+    /// concurrent `progress_exits_with_cpfp` calls could each build a fee child for the same transaction.
+    let exitProgressGate = WalletMutationGate()
     /// The app's own last exit progress (Check the chain), per wallet: the tip, the parking episode
     /// (`ExitModel.parkedEpisode`) still waiting for a fee child after a completed call tried to fund
     /// it, by exit, what bark said it needed when it reported too few confirmed funds, or that it failed.
@@ -181,7 +196,7 @@ actor WalletSession {
     /// Opens the wallet the React Native app (or a previous native run)
     /// created. Refuses to run if the database is absent, is not a bark
     /// wallet, or belongs to another network.
-    func openExisting(mnemonic: String, runDaemon: Bool, appVersion: String) async throws {
+    func openExisting(mnemonic: String, appVersion: String) async throws {
         try checkAccess()
         try BackgroundExecution.checkActive()
         guard case .closed = state else { throw OpenError.busy }
@@ -199,9 +214,10 @@ actor WalletSession {
                 guard RecurringSubmissionBudget.$current.withValue(admission, operation: { RecurringSubmissionBudget.available }) else {
                     throw CancellationError()
                 }
-                let daemon = runDaemon && Self.backgroundOwner == nil
-                let handles = try await opener(mnemonic, datadir, daemon, appVersion, false)
-                daemonSince = daemon ? Date() : nil
+                let foreground = Self.backgroundOwner == nil
+                let handles = try await opener(mnemonic, datadir, appVersion, false)
+                exitProgressSince = foreground ? Date() : nil
+                maintenanceDue = foreground
                 state = .open(handles)
                 return handles
             } catch {
@@ -221,7 +237,7 @@ actor WalletSession {
     /// Opens the existing wallet unless it is already open (RN's
     /// `loadWalletIfNeeded`). Still rejects overlapping open/close.
     /// Waits for an open already in progress instead of failing.
-    func ensureOpen(mnemonic: String, runDaemon: Bool, appVersion: String) async throws {
+    func ensureOpen(mnemonic: String, appVersion: String) async throws {
         try checkAccess()
         try BackgroundExecution.checkActive()
         switch state {
@@ -232,12 +248,13 @@ actor WalletSession {
         case .closing, .reserved, .quarantined:
             throw OpenError.busy
         case .closed:
-            try await openExisting(mnemonic: mnemonic, runDaemon: runDaemon, appVersion: appVersion)
+            try await openExisting(mnemonic: mnemonic, appVersion: appVersion)
         }
     }
 
-    /// Stops new wallet calls, waits for the running ones, then stops the
-    /// daemon. Only then is the session closed.
+    /// Stops new wallet calls, waits for the running ones, then waits for
+    /// bark's teardown (`stopDaemonWait`; no daemon runs, so nothing is left
+    /// to stop). Only then is the session closed.
     func close() async throws { try await close(reserving: nil) }
 
     private func close(reserving reservation: Reservation?) async throws {
@@ -262,7 +279,8 @@ actor WalletSession {
                 state = previousState
                 throw error
             }
-            daemonSince = nil
+            exitProgressSince = nil
+            maintenanceDue = false
             state = reservation.map { .reserved($0.id) } ?? .closed
         }
     }
@@ -283,15 +301,16 @@ actor WalletSession {
                 commit: @Sendable () throws -> Void) async throws {
         try checkHeld(reservation)
         try checkExistingDatabase()
-        let handles = try await Task { try await opener(mnemonic, location.directory.path, true, appVersion, false) }.value
-        daemonSince = Date()
+        let handles = try await Task { try await opener(mnemonic, location.directory.path, appVersion, false) }.value
+        exitProgressSince = Date()
         do { try commit() }
         catch {
             do { try await Task { try await handles.wallet.stopDaemonWait() }.value }
             catch { state = .quarantined(handles); throw OpenError.teardownFailed }
-            daemonSince = nil
+            exitProgressSince = nil
             throw error
         }
+        maintenanceDue = true
         state = .open(handles)
     }
 
@@ -336,7 +355,7 @@ actor WalletSession {
         return true
     }
 
-    /// Opens the datadir's wallet with `mnemonic`, without the daemon, and
+    /// Opens the datadir's wallet with `mnemonic` and
     /// shuts it again: proof a restored wallet is usable before its seed is
     /// committed. Finishes even if the caller is cancelled, so the files are
     /// never swapped back while bark is still on them.
@@ -346,7 +365,7 @@ actor WalletSession {
         let opener = opener
         let datadir = location.directory.path
         try await Task {
-            let handles = try await opener(mnemonic, datadir, false, appVersion, false)
+            let handles = try await opener(mnemonic, datadir, appVersion, false)
             try await handles.wallet.stopDaemonWait()
         }.value
     }
@@ -355,7 +374,7 @@ actor WalletSession {
     /// ends the reservation. If it fails, the reservation is still held and
     /// nothing is running on the files, so the caller can remove what the
     /// attempt created before anyone else gets in.
-    func createNew(_ reservation: Reservation, mnemonic: String, runDaemon: Bool, appVersion: String) async throws {
+    func createNew(_ reservation: Reservation, mnemonic: String, appVersion: String) async throws {
         guard Self.backgroundOwner == nil else { throw OpenError.busy }
         try checkHeld(reservation)
         guard !location.restorePending else { throw OpenError.restorePending }
@@ -364,8 +383,8 @@ actor WalletSession {
         if self === WalletSession.shared { try RecurringStore().protectLegacyBeforeReplacement() }
         let opener = opener
         let datadir = location.directory.path
-        let handles = try await Task { try await opener(mnemonic, datadir, runDaemon, appVersion, true) }.value
-        daemonSince = runDaemon ? Date() : nil
+        let handles = try await Task { try await opener(mnemonic, datadir, appVersion, true) }.value
+        exitProgressSince = Date()
         do {
             // RN creation persists key 0 before peeking its registration address.
             _ = try await Task { try await handles.wallet.deriveStoreNextKeypair() }.value
@@ -376,18 +395,19 @@ actor WalletSession {
                 state = .open(handles)
                 throw OpenError.teardownFailed
             }
-            daemonSince = nil
+            exitProgressSince = nil
             throw error
         }
         if self === WalletSession.shared { await SendPaymentController.shared.reloadForWalletChange() }
+        maintenanceDue = true
         state = .open(handles)
     }
 
     /// `createNew` under its own reservation (integration tests).
-    func createNew(mnemonic: String, runDaemon: Bool, appVersion: String) async throws {
+    func createNew(mnemonic: String, appVersion: String) async throws {
         let reservation = try reserve()
         do {
-            try await createNew(reservation, mnemonic: mnemonic, runDaemon: runDaemon, appVersion: appVersion)
+            try await createNew(reservation, mnemonic: mnemonic, appVersion: appVersion)
         } catch {
             release(reservation)
             throw error
@@ -668,6 +688,17 @@ extension WalletSession {
         }
     }
 
+    /// The foreground tick's pass (`ForegroundPass`), in the same flight as every other sync.
+    func syncInForeground() async throws {
+        guard isOpen else { return }
+        let flight = syncFlight
+        try await withOpenWallet { handles in
+            try await flight.run(ForegroundPass.live(self, handles).stages.map { stage in
+                { try await self.runSyncStage({ _ in try await stage() }, handles: handles) }
+            })
+        }
+    }
+
     private func runSyncStage(_ stage: @escaping @Sendable (Handles) async throws -> Void, handles: Handles) async throws {
         try await ForegroundExecution.checkActive()
         try BackgroundExecution.checkActive()
@@ -676,8 +707,14 @@ extension WalletSession {
         try await Task { try await stage(handles) }.value
     }
 
+    /// Every open runs without bark's daemon, as RN does: its round handler joins rounds interactively to
+    /// refresh due VTXOs. The foreground pass and background jobs do its other work (`ForegroundPass`).
+    static func openArgs(datadir: String, create: Bool) -> WalletOpenArgs {
+        WalletOpenArgs(runDaemon: false, datadir: datadir, createIfNotExists: create)
+    }
+
     private static func sdkOpener(variant: AppVariant) -> Opener {
-        { mnemonic, datadir, runDaemon, appVersion, create in
+        { mnemonic, datadir, appVersion, create in
             let mnemonic = try StoredSeed.normalized(mnemonic)
             let location = WalletDataLocation(variant: variant, documentsDirectory: URL(fileURLWithPath: datadir).deletingLastPathComponent())
             guard !location.hasMultipleDatabases else { throw StoredSeed.Failure.conflict }
@@ -708,7 +745,7 @@ extension WalletSession {
                 network: configuration.network,
                 mnemonicOrSeed: mnemonic,
                 config: config,
-                args: WalletOpenArgs(runDaemon: runDaemon, datadir: datadir, createIfNotExists: create),
+                args: openArgs(datadir: datadir, create: create),
                 onchain: onchain)
             return Handles(wallet: wallet, onchain: onchain)
         }

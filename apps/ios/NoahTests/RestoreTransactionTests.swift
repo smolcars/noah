@@ -253,12 +253,12 @@ struct RestoreTransactionTests {
         defer { try? FileManager.default.removeItem(at: root) }
         _ = try begun()
         struct Unreachable: Error {}
-        let session = WalletSession(variant: .regtest, location: location) { _, _, _, _, _ in throw Unreachable() }
+        let session = WalletSession(variant: .regtest, location: location) { _, _, _, _ in throw Unreachable() }
         await #expect(throws: WalletSession.OpenError.restorePending) {
-            try await session.openExisting(mnemonic: newSeed, runDaemon: false, appVersion: "test")
+            try await session.openExisting(mnemonic: newSeed, appVersion: "test")
         }
         await #expect(throws: WalletSession.OpenError.restorePending) {
-            try await session.createNew(mnemonic: newSeed, runDaemon: false, appVersion: "test")
+            try await session.createNew(mnemonic: newSeed, appVersion: "test")
         }
     }
 

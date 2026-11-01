@@ -32,7 +32,7 @@ class Ffi050LiveTest {
         try {
             if (stage == "create") return@runBlocking run.create(seed, marker)
             check(marker.exists())
-            session.ensureOpen((seed.read() as SecretResult.Found).value, false, "ffi050-4978")
+            session.ensureOpen((seed.read() as SecretResult.Found).value, "ffi050-4978")
             check(session.summary()!!.fingerprint == marker.readText())
             when (stage) {
                 "sync" -> run.syncOverview()
@@ -58,7 +58,7 @@ class Ffi050LiveTest {
         check(!location.hasAnyData && seed.read() == SecretResult.NotFound && !marker.exists())
         val phrase = generateMnemonic()
         check(seed.save(phrase) is SecretResult.Found)
-        session.createNew(phrase, false, "ffi050-4978")
+        session.createNew(phrase, "ffi050-4978")
         session.sync()
         val fingerprint = session.summary()!!.fingerprint
         marker.writeText(fingerprint)

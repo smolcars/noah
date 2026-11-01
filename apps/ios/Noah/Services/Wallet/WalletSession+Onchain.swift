@@ -24,7 +24,7 @@ extension WalletSession {
             // What the exit screens add; optional, so a failed read never hides the exits themselves.
             overview.exitDelta = try? await handles.wallet.arkInfo()?.vtxoExitDelta
             overview.claimRecords = ExitClaimRecord.Store(key: ExitClaimRecord.key).load(walletID: overview.walletID) ?? [:]
-            overview.daemonSince = await self.daemonSince
+            overview.exitProgressSince = await self.exitProgressSince
             let check = await self.exitChecks[overview.walletID]
             if let check {
                 overview.checkedTip = check.tip

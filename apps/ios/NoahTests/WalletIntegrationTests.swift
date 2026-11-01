@@ -27,10 +27,10 @@ struct WalletIntegrationTests {
             datadirExists: { FileManager.default.fileExists(atPath: location.directory.path) },
             removeAttemptFiles: { _ in (try? FileManager.default.removeItem(at: location.directory)) != nil },
             generateMnemonic: { try generateMnemonic() },
-            openExisting: { try await session.ensureOpen(mnemonic: $0, runDaemon: false, appVersion: "it") },
+            openExisting: { try await session.ensureOpen(mnemonic: $0, appVersion: "it") },
             reserve: { try await session.reserve() },
             release: { await session.release($0) },
-            createNew: { try await session.createNew($0, mnemonic: $1, runDaemon: false, appVersion: "it") }))
+            createNew: { try await session.createNew($0, mnemonic: $1, appVersion: "it") }))
 
         try await creator.createOrResume()
         #expect(location.databaseExists)

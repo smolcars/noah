@@ -15,18 +15,30 @@ internal abstract class WalletSessionFixture {
     protected class Boom : Exception()
     protected class Handles : WalletSession.Handles {
         var exitsRead = false
-        override val m6 = object : com.noahwallet.onchain.OnchainWalletAccess {
+        /** Replaces the offline exit wallet below, for tests that move exits. */
+        var exitWallet: com.noahwallet.onchain.OnchainWalletAccess? = null
+        override val m6 get() = exitWallet ?: offline
+        private val offline = object : com.noahwallet.onchain.OnchainWalletAccess {
             override val walletID = "wallet"
             override suspend fun exits(): List<io.github.niteshbalusu11.bark.ExitVtxo> {
                 exitsRead = true; throw io.github.niteshbalusu11.bark.BarkError("offline", io.github.niteshbalusu11.bark.BarkErrorCode.OTHER)
             }
         }
+        /** The sync and maintenance calls bark got, in order. */
+        val calls = mutableListOf<String>()
         override val send = com.noahwallet.send.FakeSendWallet()
         var preparations: com.noahwallet.send.SendPreparations? = null
         var beforeRetry: suspend () -> Unit = {}
         override suspend fun retrySendDiscards() { beforeRetry(); preparations?.retryDiscards() }
         var sendReviewsDiscarded = false
-        override suspend fun discardSendReviews() { preparations?.discardAll(); sendReviewsDiscarded = true }
+        var discardFails = false
+        var discardEntered: CompletableDeferred<Unit>? = null
+        var discardGate: CompletableDeferred<Unit>? = null
+        override suspend fun discardSendReviews() {
+            discardEntered?.complete(Unit); discardGate?.await()
+            if (discardFails) throw Boom()
+            preparations?.discardAll(); sendReviewsDiscarded = true
+        }
         val subscribed = CompletableDeferred<Unit>()
         val waiting = CompletableDeferred<Unit>()
         val released = CompletableDeferred<Unit>()
@@ -83,9 +95,7 @@ internal abstract class WalletSessionFixture {
         override suspend fun peekPublicKey(index: UInt): String { check(initialized); return "public-key-0" }
         override suspend fun peekAddress(index: UInt) = "ark-test"
         var closed = false
-        var stopFails = false
-        var stopEntered: CompletableDeferred<Unit>? = null
-        var stopGate: CompletableDeferred<Unit>? = null
+        var closeFails = false
         var summaryGate: CompletableDeferred<Unit>? = null
         var summaryEntered: CompletableDeferred<Unit>? = null
         override suspend fun summary(): WalletSession.Summary {
@@ -94,16 +104,15 @@ internal abstract class WalletSessionFixture {
             return WalletSession.Summary(Network.REGTEST, "abcd",
                 WalletBalance(WalletBalance.Ark(1u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u), WalletBalance.Onchain(0u, 0u, 0u)), 2)
         }
-        override suspend fun sync() { assertFalse(closed) }
-        override suspend fun maintenanceDelegated() { assertFalse(closed) }
+        override suspend fun sync() { assertFalse(closed); calls += "sync" }
+        override suspend fun maintenanceDelegated() { assertFalse(closed); calls += "maintenance" }
         override suspend fun bolt11Invoice(amountSats: ULong): String { check(!closed); return "invoice-$amountSats" }
         override suspend fun claimLightningReceives() { assertFalse(closed) }
         override suspend fun createSnapshot(destination: File): WalletSnapshotInfo = throw UnsupportedOperationException()
-        override suspend fun stopDaemonWait() {
-            stopEntered?.complete(Unit); stopGate?.await()
-            if (stopFails) throw Boom()
+        override fun close() {
+            if (closeFails) throw Boom()
+            closed = true
         }
-        override fun close() { closed = true }
     }
     protected suspend fun withLocation(block: suspend (WalletDataLocation) -> Unit) {
         val root = Files.createTempDirectory("session").toFile()

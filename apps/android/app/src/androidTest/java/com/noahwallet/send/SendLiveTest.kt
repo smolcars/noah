@@ -25,7 +25,7 @@ class SendLiveTest {
             com.noahwallet.MainActivity::class.java).addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK))
         val session = WalletSession.shared(context)
         val seed = (SeedStorage(context, "regtest").read() as SecretResult.Found).value
-        session.ensureOpen(seed, false, BuildConfig.VERSION_NAME)
+        session.ensureOpen(seed, BuildConfig.VERSION_NAME)
         instrumentation.runOnMainSync {
             val model = androidx.lifecycle.ViewModelProvider(activity as com.noahwallet.MainActivity)[com.noahwallet.ui.AppModel::class.java]
             activity.setContent { com.noahwallet.ui.NoahTheme { com.noahwallet.ui.SendScreen(model) {} } }
@@ -62,7 +62,7 @@ class SendLiveTest {
         val address = InstrumentationRegistry.getArguments().getString("recipient") ?: error("External regtest recipient required")
         val session = WalletSession.shared(context)
         val seed = (SeedStorage(context, "regtest").read() as SecretResult.Found).value
-        session.ensureOpen(seed, false, BuildConfig.VERSION_NAME)
+        session.ensureOpen(seed, BuildConfig.VERSION_NAME)
         session.sync()
         val payment = SendPayment(address, "onchain", 5000, SendSource.onchain)
         val quote = session.quoteSend(payment)
@@ -74,7 +74,7 @@ class SendLiveTest {
             assertTrue("Discarded handles cannot be claimed", runCatching { wallet.prepare(payment, quote) }.isFailure)
         }
         session.closeSettled()
-        session.ensureOpen(seed, false, BuildConfig.VERSION_NAME)
+        session.ensureOpen(seed, BuildConfig.VERSION_NAME)
         session.withSendReservation { wallet -> assertTrue("Prepared ids are process/session local", runCatching { wallet.prepare(payment, next) }.isFailure) }
         File(context.filesDir, "send-live-lifecycle.json").writeText(buildJsonObject {
             put("backoutReprepared", true); put("closeRejectsStaleID", true); put("amount", next.amount); put("fee", next.fee)

@@ -12,7 +12,7 @@ struct OnchainOrphanBoardTests {
         defer { server.stop() }
         let config = Config(serverAddress: "http://127.0.0.1:1", esploraAddress: server.url)
         let location = WalletDataLocation(variant: .regtest, documentsDirectory: root)
-        let session = WalletSession(variant: .regtest, location: location) { mnemonic, datadir, _, _, create in
+        let session = WalletSession(variant: .regtest, location: location) { mnemonic, datadir, _, create in
             let onchain = try await OnchainWallet.default(network: .regtest, mnemonic: mnemonic, config: config, datadir: datadir)
             let wallet = try await Wallet.openWithOnchain(network: .regtest, mnemonicOrSeed: mnemonic, config: config,
                                                           args: WalletOpenArgs(runDaemon: false, datadir: datadir, createIfNotExists: create,
@@ -20,7 +20,7 @@ struct OnchainOrphanBoardTests {
             return .init(wallet: wallet, onchain: onchain)
         }
         let mnemonic = try generateMnemonic()
-        try await session.createNew(mnemonic: mnemonic, runDaemon: false, appVersion: "test")
+        try await session.createNew(mnemonic: mnemonic, appVersion: "test")
         try await session.close()
         let txid = String(repeating: "ab", count: 32)
         // Pinned Bark saves the movement before its board checkpoint and local transaction.
@@ -37,7 +37,7 @@ struct OnchainOrphanBoardTests {
         let inserted = sqlite3_exec(db, sql, nil, nil, nil)
         sqlite3_close(db)
         try #require(inserted == SQLITE_OK)
-        try await session.ensureOpen(mnemonic: mnemonic, runDaemon: false, appVersion: "test")
+        try await session.ensureOpen(mnemonic: mnemonic, appVersion: "test")
         do {
             let walletID = try await session.withOpenWallet { handles in
                 let movements = try await handles.wallet.history()

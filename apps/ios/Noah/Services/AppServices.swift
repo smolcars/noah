@@ -69,7 +69,7 @@ final class AppServices: Sendable {
         let mnemonic = try HeadlessWalletGate.mnemonic(
             location: WalletDataLocation(variant: variant), settings: .shared, readSeed: { self.seed.read() })
         try Task.checkCancellation()
-        try await session.ensureOpen(mnemonic: mnemonic, runDaemon: WalletSession.backgroundOwner == nil, appVersion: appVersion)
+        try await session.ensureOpen(mnemonic: mnemonic, appVersion: appVersion)
         try Task.checkCancellation()
     }
 
@@ -91,7 +91,8 @@ final class AppServices: Sendable {
         }
     }
 
-    /// Called by the app-wide foreground timer; never opens or recovers a wallet.
+    /// Called by the app-wide foreground timer, on foreground entry and after a foreground open; never opens or
+    /// recovers a wallet.
     func syncInForeground() async {
         do {
             try await foregroundSync.run { [self] in
@@ -103,7 +104,7 @@ final class AppServices: Sendable {
                       !location.restorePending, !FileManager.default.fileExists(atPath: location.deletionMarker.path),
                       await session.isOpen else { return }
                 await WalletBackgroundActivity.shared.begin()
-                do { try await session.sync(includingLightningClaims: true) }
+                do { try await session.syncInForeground() }
                 catch { await WalletBackgroundActivity.shared.end(); throw error }
                 await WalletBackgroundActivity.shared.end()
             }
@@ -156,7 +157,7 @@ final class AppServices: Sendable {
                                 lateCompletion: @escaping @Sendable (Bool) async -> Void) async throws {
         let store = EsploraSettings()
         guard variant != .regtest, let endpoint = try await store.resolve(for: variant), !(await session.isOpen) else {
-            try await session.ensureOpen(mnemonic: mnemonic, runDaemon: true, appVersion: appVersion)
+            try await session.ensureOpen(mnemonic: mnemonic, appVersion: appVersion)
             return
         }
         let selection = EsploraSettings.Selection(endpoint: endpoint, variant: variant.rawValue)

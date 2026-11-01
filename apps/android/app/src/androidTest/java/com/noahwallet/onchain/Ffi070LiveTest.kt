@@ -31,7 +31,7 @@ class Ffi070LiveTest {
         require(BuildConfig.REGTEST_ARK_URL.isNotEmpty() && BuildConfig.REGTEST_BITCOIND_URL.isNotEmpty())
         val marker = File(context.filesDir, "ffi060-upgrade-owned")
         check(marker.exists())
-        session.ensureOpen((SeedStorage(context, "regtest").read() as SecretResult.Found).value, false, "ffi070-live")
+        session.ensureOpen((SeedStorage(context, "regtest").read() as SecretResult.Found).value, "ffi070-live")
         check(session.summary()!!.fingerprint == marker.readText())
         try {
             when (stage) {

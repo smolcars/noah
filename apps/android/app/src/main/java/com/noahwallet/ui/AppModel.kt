@@ -259,10 +259,11 @@ class AppModel(application: Application, val settings: SettingsStorage = Setting
     private val launchBlocked get() =
         starting || busy || customServerUnresponsive || !restore.canLeave || open || (isWalletSuspended && onboarded)
 
-    fun start() {
-        if (launchBlocked) return
+    /** The launch's open, which runs on its own; null when launch is blocked (already open, or another launch runs). */
+    fun start(): kotlinx.coroutines.Job? {
+        if (launchBlocked) return null
         starting = true
-        viewModelScope.launch {
+        return viewModelScope.launch {
             var recovering = true
             @Suppress("TooGenericExceptionCaught") // launch boundary: any open failure becomes the launch screen's state
             try {

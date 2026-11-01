@@ -77,7 +77,7 @@ class SettingsLifecycleDeviceTest {
         assertFalse(services.session.isOpen)
         assertTrue(runCatching { services.backupCoordinator.flush(BackupCoordinator.Reason.push, false) }.isFailure)
         val seed = (SeedStorage(context, "regtest").read() as SecretResult.Found).value
-        assertTrue(runCatching { services.session.ensureOpen(seed, false, "settings-it") }.isFailure)
+        assertTrue(runCatching { services.session.ensureOpen(seed, "settings-it") }.isFailure)
     }
 
     @Suppress("DEPRECATION")

@@ -207,17 +207,17 @@ class ExitStagesTest {
             exit("Processing", now, history = listOf(ExitDetails(kind = "start", tip_height = began)) + later, next = 1_215)
         val parked = processing(102, tx("root", "awaiting-cpfp-broadcast"), tx("leaf", "verify-inputs"))
         val first = run(100, processing(101, tx("root", "verify-inputs"), tx("leaf", "verify-inputs")), now = parked)
-        val funding = ExitFunding(75_000) { 0 }
+        val funding = ExitFunding()
         funding.checked(listOf(first), completed = true)
-        assertEquals(setOf("v1"), funding.needsFunds(listOf(first), 0, 1))
+        assertEquals(setOf("v1"), funding.needsFunds(listOf(first), 0))
         // bark restarts a canceled exit with empty history: the same transaction parks at the same place in a later run.
         val restarted = run(108, processing(109, tx("root", "verify-inputs"), tx("leaf", "verify-inputs")), now = parked.copy(tip_height = 110))
         assertEquals("the same place in its history", "100:2" to "108:2", ExitStages.episode(first, "root") to ExitStages.episode(restarted, "root"))
-        assertTrue("a new run needs its own proof", funding.needsFunds(listOf(restarted), 0, 1).isEmpty())
+        assertTrue("a new run needs its own proof", funding.needsFunds(listOf(restarted), 0).isEmpty())
         // Restarted within the same block, the keys would match: starting or canceling forgets the exit's evidence.
-        val again = ExitFunding(75_000) { 0 }
+        val again = ExitFunding()
         again.checked(listOf(first), completed = true); again.forget(listOf("v1"))
-        assertTrue(again.needsFunds(listOf(first), 0, 1).isEmpty())
+        assertTrue(again.needsFunds(listOf(first), 0).isEmpty())
         var stored: String? = null
         val seen = ExitSeen({ stored }, { stored = it })
         assertEquals(100L, seen.note(listOf(first), 100).getValue("v1/root/awaiting-cpfp-broadcast/100:2"))
@@ -227,24 +227,24 @@ class ExitStagesTest {
         seen.forget(listOf("v1")); assertEquals(120L, seen.note(listOf(first), 120).getValue("v1/root/awaiting-cpfp-broadcast/100:2"))
     }
 
-    @Test fun waitingTimeFromBeforeTheBackgroundDoesNotCount() {
-        var now = 0L
-        val funding = ExitFunding(75_000) { now }
-        funding.needsFunds(listOf(parked), 0, 1)
-        // Backgrounded for a while, the run unchanged: bark's daemon may not have run, so the wait starts over on return.
-        now = 300_000; funding.backgrounded()
-        assertTrue(funding.needsFunds(listOf(parked), 0, 1).isEmpty())
-        now = 374_999; assertTrue(funding.needsFunds(listOf(parked), 0, 1).isEmpty())
-        now = 375_000; assertEquals(setOf("v1"), funding.needsFunds(listOf(parked), 0, 1))
-        // A completed Check the chain is proof whatever happens after.
-        val checking = ExitFunding(75_000) { 0 }
-        checking.checked(listOf(parked), completed = true); checking.backgrounded()
-        assertEquals(setOf("v1"), checking.needsFunds(listOf(parked), 0, 1))
+    @Test fun onlyACompletedProgressCountsAsBarkHavingTried() {
+        val funding = ExitFunding()
+        // Seen parked many times, with no progress in between: no proof bark tried, however long it's been.
+        repeat(3) { assertTrue(funding.needsFunds(listOf(parked), 0).isEmpty()) }
+        // A progress that failed or couldn't run isn't proof either; one that completed is, whatever happens after.
+        funding.checked(listOf(parked), completed = false)
+        assertTrue(funding.needsFunds(listOf(parked), 0).isEmpty())
+        funding.checked(emptyList(), completed = true)
+        assertTrue("it completed, but this one wasn't parked when Noah read", funding.needsFunds(listOf(parked), 0).isEmpty())
+        funding.checked(listOf(parked), completed = true)
+        assertEquals(setOf("v1"), funding.needsFunds(listOf(parked), 0))
+        funding.checked(emptyList(), completed = false)
+        assertEquals("a later failure doesn't undo bark's try", setOf("v1"), funding.needsFunds(listOf(parked), 0))
     }
 
     @Test fun anExitIsStaleOnlyWithEvidenceThatNothingProgressesIt() {
         val sent = processing(100, tx("root", "awaiting-confirmation", "c1", origin = "wallet"), tx("leaf", "verify-inputs"))
-        assertFalse("the daemon keeps it current, whatever bark's height says", ExitStages.of(exit("Processing", sent), 150).stale)
+        assertFalse("Noah's own progress keeps it current, whatever bark's height says", ExitStages.of(exit("Processing", sent), 150).stale)
         assertTrue(ExitStages.of(exit("Processing", sent), 101, stalled = true).stale)
         assertTrue(ExitStages.of(exit("Start", ExitDetails(kind = "start", tip_height = 100)), 101, stalled = true).stale)
         assertFalse("not behind", ExitStages.of(exit("Processing", sent), 100, stalled = true).stale)
@@ -258,61 +258,51 @@ class ExitStagesTest {
             processing(100, tx("root", "confirmed", block = 99), tx("l2", "awaiting-cpfp-broadcast"), tx("leaf", "verify-inputs"))), next = 1_215)
 
     @Test fun needsFundsWaitsUntilBarkHasTriedAndClearsWhenFundsArrive() {
-        var now = 0L
-        val funding = ExitFunding(75_000) { now }
-        assertTrue("just parked: bark may still pay it", funding.needsFunds(listOf(parked), 310, run = 1).isEmpty())
-        now = 74_999; assertTrue(funding.needsFunds(listOf(parked), 310, 1).isEmpty())
-        now = 75_000; assertEquals("a daemon interval passed in one run", setOf("v1"), funding.needsFunds(listOf(parked), 310, 1))
+        val funding = ExitFunding()
+        assertTrue("just parked: bark may still pay it", funding.needsFunds(listOf(parked), 310).isEmpty())
+        funding.checked(listOf(parked), completed = true)
+        assertEquals("a completed progress tried to pay it", setOf("v1"), funding.needsFunds(listOf(parked), 310))
         assertEquals(ExitStage.Attention.needsFunds, ExitStages.of(parked, 100, needsFunds = true).attention)
-        assertTrue("funds arrived", funding.needsFunds(listOf(parked), 1_215, 1).isEmpty())
-        assertTrue("no package fee known", funding.needsFunds(listOf(parked.copy(nextPackageFee = null)), 0, 1).isEmpty())
-        // Time counts only within one daemon run: reopening the wallet starts it over, and without the daemon it never counts.
-        val reopened = ExitFunding(75_000) { now }
-        now = 0; reopened.needsFunds(listOf(parked), 0, 1)
-        now = 60_000; assertTrue(reopened.needsFunds(listOf(parked), 0, 2).isEmpty())
-        now = 134_999; assertTrue(reopened.needsFunds(listOf(parked), 0, 2).isEmpty())
-        now = 135_000; assertEquals(setOf("v1"), reopened.needsFunds(listOf(parked), 0, 2))
-        val noDaemon = ExitFunding(75_000) { now }
-        now = 0; noDaemon.needsFunds(listOf(parked), 0, null)
-        now = 10_000_000; assertTrue(noDaemon.needsFunds(listOf(parked), 0, null).isEmpty())
-        // A completed Check the chain proves bark tried, whether Noah saw the transaction parked before or after it; a failed one doesn't.
-        val checking = ExitFunding(75_000) { 0 }
+        assertTrue("funds arrived", funding.needsFunds(listOf(parked), 1_215).isEmpty())
+        assertTrue("no package fee known", funding.needsFunds(listOf(parked.copy(nextPackageFee = null)), 0).isEmpty())
+        // A completed progress proves bark tried, whether Noah saw the transaction parked before or after it; a failed one doesn't.
+        val checking = ExitFunding()
         checking.checked(listOf(parked), completed = false)
-        assertTrue(checking.checkFailed); assertTrue(checking.needsFunds(listOf(parked), 0, null).isEmpty())
+        assertTrue(checking.checkFailed); assertTrue(checking.needsFunds(listOf(parked), 0).isEmpty())
         checking.checked(listOf(parked), completed = true)
-        assertFalse(checking.checkFailed); assertEquals(setOf("v1"), checking.needsFunds(listOf(parked), 0, null))
+        assertFalse(checking.checkFailed); assertEquals(setOf("v1"), checking.needsFunds(listOf(parked), 0))
         // Once it gets its child it's forgotten: parked again, it needs bark to try again.
         val sent = parked.copy(details = processing(100, tx("root", "confirmed", block = 99), tx("l2", "awaiting-confirmation", "c2"),
             tx("leaf", "verify-inputs")))
-        assertTrue(checking.needsFunds(listOf(sent), 0, null).isEmpty())
-        assertTrue(checking.needsFunds(listOf(parked), 0, null).isEmpty())
+        assertTrue(checking.needsFunds(listOf(sent), 0).isEmpty())
+        assertTrue(checking.needsFunds(listOf(parked), 0).isEmpty())
         // The same, unseen by Noah: evicted and parked again between two reads. bark's history starts a new episode, so
-        // neither the old check nor the old waiting time counts.
-        val episodes = ExitFunding(75_000) { now }
-        now = 0; episodes.checked(listOf(parked), completed = true)
-        assertEquals(setOf("v1"), episodes.needsFunds(listOf(parked), 0, 1))
+        // the old progress doesn't count; the next completed one does.
+        val episodes = ExitFunding()
+        episodes.checked(listOf(parked), completed = true)
+        assertEquals(setOf("v1"), episodes.needsFunds(listOf(parked), 0))
         val again = parked.copy(details = parked.details.copy(tip_height = 103),
             historyDetails = parked.historyDetails + parked.details + sent.details)
-        assertTrue("a new episode needs its own proof", episodes.needsFunds(listOf(again), 0, 1).isEmpty())
-        now = 75_000; assertEquals(setOf("v1"), episodes.needsFunds(listOf(again), 0, 1))
+        assertTrue("a new episode needs its own proof", episodes.needsFunds(listOf(again), 0).isEmpty())
+        episodes.checked(listOf(again), completed = true); assertEquals(setOf("v1"), episodes.needsFunds(listOf(again), 0))
         assertEquals("only the parked transaction shows it", null,
             ExitStages.of(exit("Processing", processing(100, *path("verify-inputs"))), 100, needsFunds = true).attention)
     }
 
     @Test fun aCheckThatReportsFundsShortIsDirectEvidenceWithWhatBarkNeeds() {
-        val funding = ExitFunding(75_000) { 0 }
-        // No waiting time and no package fee known: bark's own report is enough.
+        val funding = ExitFunding()
+        // No completed progress and no package fee known: bark's own report is enough.
         val unpriced = parked.copy(nextPackageFee = null)
-        assertTrue(funding.needsFunds(listOf(unpriced), 0, 1).isEmpty())
+        assertTrue(funding.needsFunds(listOf(unpriced), 0).isEmpty())
         funding.reported(mapOf("v1" to 4_000))
         assertEquals(4_000L, funding.needed("v1"))
-        assertEquals(setOf("v1"), funding.needsFunds(listOf(unpriced), 3_999, 1))
-        assertTrue("funds arrived", funding.needsFunds(listOf(unpriced), 4_000, 1).isEmpty())
-        assertTrue("not once it's over", funding.needsFunds(listOf(unpriced.copy(state = "Canceled")), 0, 1).isEmpty())
+        assertEquals(setOf("v1"), funding.needsFunds(listOf(unpriced), 3_999))
+        assertTrue("funds arrived", funding.needsFunds(listOf(unpriced), 4_000).isEmpty())
+        assertTrue("not once it's over", funding.needsFunds(listOf(unpriced.copy(state = "Canceled")), 0).isEmpty())
         // A later check replaces it; a start or cancel forgets it.
         funding.reported(emptyMap()); assertNull(funding.needed("v1"))
         funding.reported(mapOf("v1" to 4_000)); funding.forget(listOf("v1"))
-        assertNull(funding.needed("v1")); assertTrue(funding.needsFunds(listOf(unpriced), 0, 1).isEmpty())
+        assertNull(funding.needed("v1")); assertTrue(funding.needsFunds(listOf(unpriced), 0).isEmpty())
     }
 
     private fun vtxo(id: String, amount: Long, state: String = "Spendable") =

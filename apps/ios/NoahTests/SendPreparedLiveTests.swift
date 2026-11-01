@@ -53,7 +53,7 @@ struct SendPreparedLiveTests {
         await #expect(throws: SendFailure.feeChanged) {
             _ = try await session.prepareSend(edited, quote: staleReview)
         }
-        // All close/suspend/delete paths use closeSettled -> close, even while the daemon retains BDK.
+        // All close/suspend/delete paths use closeSettled -> close.
         try await session.closeSettled()
         #expect(await session.sendPreparations.isEmpty)
         try await creator.createOrResume()

@@ -16,7 +16,7 @@ struct RecurringLiveTests {
         let services = AppServices.shared
         let session = services.session
         let mnemonic = try generateMnemonic()
-        try await session.createNew(mnemonic: mnemonic, runDaemon: true, appVersion: "recurring-m7-live")
+        try await session.createNew(mnemonic: mnemonic, appVersion: "recurring-m7-live")
         try services.seed.save(mnemonic)
         try SettingsStorage.shared.setPersistedState(PersistedWalletState(isInitialized: true, isWalletLoaded: true), key: PersistedWalletState.key, version: 0)
         try await fund(session)
@@ -116,7 +116,7 @@ struct RecurringFeeLiveTests {
         let offer = try #require(ProcessInfo.processInfo.environment["NOAH_RECURRING_FEE_OFFER"])
         let services = AppServices.shared, session = services.session
         let mnemonic = try generateMnemonic()
-        try await session.createNew(mnemonic: mnemonic, runDaemon: true, appVersion: "recurring-arkinfo-fee-live")
+        try await session.createNew(mnemonic: mnemonic, appVersion: "recurring-arkinfo-fee-live")
         try services.seed.save(mnemonic)
         try SettingsStorage.shared.setPersistedState(PersistedWalletState(isInitialized: true, isWalletLoaded: true), key: PersistedWalletState.key, version: 0)
         let request = try await session.receiveRequest()

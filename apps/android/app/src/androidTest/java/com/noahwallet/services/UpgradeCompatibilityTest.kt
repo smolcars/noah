@@ -154,12 +154,12 @@ class UpgradeCompatibilityTest {
         val vector = List(11) { StoredMnemonic.wordList[0] }.plus(StoredMnemonic.wordList[3]).joinToString(" ")
         val foreign = if (vector != oldValue) vector else List(23) { StoredMnemonic.wordList[0] }
             .plus(StoredMnemonic.wordList[102]).joinToString(" ")
-        assertTrue("Foreign seed must be rejected before writes", runCatching { session.ensureOpen(foreign, false, "upgrade-test") }.isFailure)
+        assertTrue("Foreign seed must be rejected before writes", runCatching { session.ensureOpen(foreign, "upgrade-test") }.isFailure)
         assertTrue("DB changed after seed fingerprint mismatch", databaseBefore == databaseHashes())
         assertTrue("Fingerprint mismatch must never write seed", seedFile.unchanged())
-        assertTrue("Invalid seed must be rejected before wallet open", runCatching { session.ensureOpen("", false, "upgrade-test") }.isFailure)
+        assertTrue("Invalid seed must be rejected before wallet open", runCatching { session.ensureOpen("", "upgrade-test") }.isFailure)
         assertTrue("Invalid seed changed DB", databaseBefore == databaseHashes())
-        session.ensureOpen(oldValue, true, "upgrade-test")
+        session.ensureOpen(oldValue, "upgrade-test")
         SeedStorage(context, "regtest").save(oldValue)
         assertTrue("Native seed must persist after DB validation", File(context.noBackupFilesDir, "noah-native-seed-regtest.bin").isFile)
     }

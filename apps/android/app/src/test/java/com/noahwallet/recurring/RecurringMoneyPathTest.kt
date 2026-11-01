@@ -12,7 +12,7 @@ class RecurringMoneyPathTest {
         val location = com.noahwallet.services.storage.WalletDataLocation(w.policyDirectory.parentFile!!, "regtest")
         val session = com.noahwallet.services.wallet.WalletSession("regtest", location,
             inspect = { com.noahwallet.services.wallet.WalletDatabase.Properties("regtest", "wallet-a") },
-            opener = { _, _, _, _, _ -> error("unused") })
+            opener = { _, _, _, _ -> error("unused") })
         val lifecycle = com.noahwallet.services.wallet.WalletLifecycle(session, location,
             setSuspended = { w.allowed = !it }, deregister = {},
             readSeed = { com.noahwallet.services.storage.SecretResult.NotFound }, deleteSeed = {}, clearToken = {},

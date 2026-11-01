@@ -61,7 +61,7 @@ struct SendDiscardTests {
         let documents = FileManager.default.temporaryDirectory.appending(path: "send-r7-discard-\(UUID())")
         defer { try? FileManager.default.removeItem(at: documents) }
         let session = WalletSession(variant: .regtest, location: .init(variant: .regtest, documentsDirectory: documents))
-        try await session.createNew(mnemonic: generateMnemonic(), runDaemon: false, appVersion: "test")
+        try await session.createNew(mnemonic: generateMnemonic(), appVersion: "test")
         let fake = ReservedInputs(failures: 3)
         let quote = await SendPreparedTests.quote
         await session.retainSendReview(SendPreparedTests.payment, quote: quote, discard: { try await fake.discard() })
@@ -81,7 +81,7 @@ struct SendDiscardTests {
         let documents = FileManager.default.temporaryDirectory.appending(path: "send-r7-close-\(UUID())")
         defer { try? FileManager.default.removeItem(at: documents) }
         let session = WalletSession(variant: .regtest, location: .init(variant: .regtest, documentsDirectory: documents))
-        try await session.createNew(mnemonic: generateMnemonic(), runDaemon: false, appVersion: "test")
+        try await session.createNew(mnemonic: generateMnemonic(), appVersion: "test")
         let fake = ReservedInputs(failures: 3)
         let quote = await SendPreparedTests.quote
         await session.retainSendReview(SendPreparedTests.payment, quote: quote, discard: { try await fake.discard() })

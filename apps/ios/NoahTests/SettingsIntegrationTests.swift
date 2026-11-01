@@ -16,7 +16,7 @@ struct SettingsIntegrationTests {
             let location = WalletDataLocation(variant: .regtest, documentsDirectory: root)
             let session = WalletSession(variant: .regtest, location: location)
             let phrase = try generateMnemonic()
-            try await session.createNew(mnemonic: phrase, runDaemon: false, appVersion: "settings-it")
+            try await session.createNew(mnemonic: phrase, appVersion: "settings-it")
             do {
                 let memory = BackupIntegrationTests.Memory()
                 let tokens = AuthTokenProvider(dependencies: .init(

@@ -36,7 +36,7 @@ class Ffi060UpgradeLiveTest {
         val marker = File(context.filesDir, "ffi060-upgrade-owned")
         if (stage == "create") return@runBlocking create(seed, marker)
         check(marker.exists())
-        session.ensureOpen((seed.read() as SecretResult.Found).value, false, "ffi060-upgrade")
+        session.ensureOpen((seed.read() as SecretResult.Found).value, "ffi060-upgrade")
         check(session.summary()!!.fingerprint == marker.readText())
         val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
         try {
@@ -53,7 +53,7 @@ class Ffi060UpgradeLiveTest {
         check(!location.hasAnyData && seed.read() == SecretResult.NotFound && !marker.exists())
         val phrase = generateMnemonic()
         check(seed.save(phrase) is SecretResult.Found)
-        session.createNew(phrase, false, "ffi060-upgrade")
+        session.createNew(phrase, "ffi060-upgrade")
         marker.writeText(session.summary()!!.fingerprint)
         SettingsStorage(context).apply {
             setPersistedState(PersistedWalletState(isInitialized = true, isWalletLoaded = true,

@@ -80,10 +80,10 @@ and mine with `just generate <n>`.
 | `progress` | Reviewed manual progress of the open exits (mine past the timelock first) |
 | `claim` | Reviewed claim of claimable exits to a new address in this wallet |
 | `claimed` | Like `status`, and requires every started exit to be claimed |
-| `cancel-cycle`, then `cancel-reopen` | Starts and cancels exits with bark's daemon off, then checks the canceled details after reopening |
+| `cancel-cycle`, then `cancel-reopen` | Starts and cancels exits, then checks the canceled details after reopening |
 
-Only `cancel-cycle` opens the wallet without bark's daemon, so cancellation wins
-before the final broadcast. In every other stage the daemon may broadcast and fee-bump
-started exits. Mutation stages journal before they call the SDK and never clear an
+bark's daemon never runs, and the stages call the session directly, so nothing moves a
+started exit between stages: `progress` broadcasts and fee-bumps, and cancellation in
+`cancel-cycle` wins before the final broadcast. Mutation stages journal before they call the SDK and never clear an
 uncertain attempt. Read each stage's evidence before the next stage. A skipped result
 means the argument was missing; pass means the single test passed.

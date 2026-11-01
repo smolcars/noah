@@ -19,7 +19,7 @@ import Testing
         let documents = FileManager.default.temporaryDirectory.appending(path: "recurring-reservation-\(UUID())")
         defer { try? FileManager.default.removeItem(at: documents) }
         let session = WalletSession(variant: .regtest, location: .init(variant: .regtest, documentsDirectory: documents))
-        try await session.createNew(mnemonic: generateMnemonic(), runDaemon: false, appVersion: "test")
+        try await session.createNew(mnemonic: generateMnemonic(), appVersion: "test")
         let previous = Gate(), critical = Gate()
         let counted = Task { try await session.withOpenWallet { _ in await previous.wait() } }
         try await waitUntil { await previous.entered }
@@ -51,7 +51,7 @@ import Testing
         defer { try? FileManager.default.removeItem(at: h.directory) }
         let location = WalletDataLocation(variant: .regtest, documentsDirectory: h.directory)
         let session = WalletSession(variant: .regtest, location: location)
-        try await session.createNew(mnemonic: generateMnemonic(), runDaemon: false, appVersion: "test")
+        try await session.createNew(mnemonic: generateMnemonic(), appVersion: "test")
         let lifecycle = WalletLifecycle(dependencies: .init(
             session: session, location: location,
             seed: KeychainPassword(service: "recurring-race-\(UUID())", account: "test"),

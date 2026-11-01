@@ -210,7 +210,7 @@ struct WalletRestorerTests {
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
         let replacementSeed = try generateMnemonic()
         let backup = try await makeBackup(mnemonic: replacementSeed)
-        let session = WalletSession(variant: .regtest, location: deviceB) { mnemonic, datadir, _, _, create in
+        let session = WalletSession(variant: .regtest, location: deviceB) { mnemonic, datadir, _, create in
             let config = WalletConfiguration.base(for: .regtest).sdkConfig(userAgent: "send-identity-test")
             let onchain = try await OnchainWallet.default(network: .regtest, mnemonic: mnemonic, config: config, datadir: datadir)
             let wallet = try await Wallet.openWithOnchain(network: .regtest, mnemonicOrSeed: mnemonic, config: config,
@@ -227,7 +227,7 @@ struct WalletRestorerTests {
         let token = KeychainPassword(service: "com.noah.tests.send-token.\(UUID().uuidString)", account: "noah")
         defer { seed.remove(); token.remove() }
         try seed.save(oldSeed)
-        try await session.createNew(mnemonic: oldSeed, runDaemon: false, appVersion: "test")
+        try await session.createNew(mnemonic: oldSeed, appVersion: "test")
         let oldFingerprint = try #require(try await session.summary()?.fingerprint)
         var dependencies = SendPaymentController.Dependencies.live(session: session, variant: .regtest, location: deviceB)
         dependencies.prepare = { _, _ in .init(movementIDs: []) }
@@ -249,7 +249,7 @@ struct WalletRestorerTests {
                                           transport: FakeServer(backupId: "new", encrypted: backup)) },
                                       walletChanged: { await controller.reloadForWalletChange() })
         _ = try await restorer.restore(mnemonic: replacementSeed)
-        try await session.openExisting(mnemonic: replacementSeed, runDaemon: false, appVersion: "test")
+        try await session.openExisting(mnemonic: replacementSeed, appVersion: "test")
         #expect(try await session.summary()?.fingerprint != oldFingerprint)
         #expect(seed.read() == .found(replacementSeed))
         #expect(controller.state == .ready && controller.attempt == nil)
@@ -267,7 +267,7 @@ struct WalletRestorerTests {
                                           Client(serverURL: serverURL, transport: FakeServer(backupId: "b", encrypted: backup))
                                       })
         _ = try await restorer.restore(mnemonic: mnemonic)
-        try await session.openExisting(mnemonic: mnemonic, runDaemon: false, appVersion: "test")
+        try await session.openExisting(mnemonic: mnemonic, appVersion: "test")
         let gate = Gate()
         let submitting = Task { try await session.withSendReservation { await gate.enter() } }
         await gate.waitUntilEntered()
@@ -285,7 +285,7 @@ struct WalletRestorerTests {
     @Test(.regtestStack) func failedOpenPutsThePreviousWalletBack() async throws {
         defer { try? FileManager.default.removeItem(at: root) }
         let seed = FakeSeed(Self.previousSeed)
-        let session = WalletSession(variant: .regtest, location: deviceB) { _, _, _, _, _ in throw OpenRefused() }
+        let session = WalletSession(variant: .regtest, location: deviceB) { _, _, _, _ in throw OpenRefused() }
         let (restorer, mnemonic) = try await setUp(seed: seed, session: session)
 
         await #expect(throws: OpenRefused.self) { try await restorer.restore(mnemonic: mnemonic) }
@@ -296,7 +296,7 @@ struct WalletRestorerTests {
         defer { try? FileManager.default.removeItem(at: root) }
         let seed = FakeSeed(Self.previousSeed)
         let gate = Gate()
-        let session = WalletSession(variant: .regtest, location: deviceB) { _, _, _, _, _ in
+        let session = WalletSession(variant: .regtest, location: deviceB) { _, _, _, _ in
             await gate.enter()
             throw OpenRefused()
         }
@@ -307,7 +307,7 @@ struct WalletRestorerTests {
         // Mid-restore: the new files are in place but nobody else can reach them.
         #expect(deviceBWallet != "previous wallet")
         await #expect(throws: WalletSession.OpenError.busy) {
-            try await session.ensureOpen(mnemonic: Self.previousSeed, runDaemon: false, appVersion: "test")
+            try await session.ensureOpen(mnemonic: Self.previousSeed, appVersion: "test")
         }
         await #expect(throws: WalletSession.OpenError.busy) { try await session.reserve() }
         await #expect(throws: WalletSession.OpenError.busy) { try await session.close() }
@@ -331,7 +331,7 @@ struct WalletRestorerTests {
         // BoltFFI answers a cancelled Swift caller early while Rust goes on. The
         // session runs the opener in its own task, so the opener must never see
         // the caller's cancellation, and the restore must wait for it.
-        let session = WalletSession(variant: .regtest, location: deviceB) { _, _, _, _, _ in
+        let session = WalletSession(variant: .regtest, location: deviceB) { _, _, _, _ in
             await withTaskCancellationHandler {
                 await gate.enter()
             } onCancel: {
@@ -370,7 +370,7 @@ struct WalletRestorerTests {
         defer { try? FileManager.default.removeItem(at: root) }
         let seed = FakeSeed(Self.previousSeed)
         let gate = Gate()
-        let session = WalletSession(variant: .regtest, location: deviceB) { _, _, _, _, _ in
+        let session = WalletSession(variant: .regtest, location: deviceB) { _, _, _, _ in
             await gate.enter()
             throw OpenRefused()
         }
@@ -383,7 +383,7 @@ struct WalletRestorerTests {
         try Data("decrypted".utf8).write(to: transaction.work.appending(path: "db.sqlite"))
 
         // A silent push started opening the wallet before the UI launched.
-        let pushOpen = Task { try await session.ensureOpen(mnemonic: Self.previousSeed, runDaemon: false, appVersion: "test") }
+        let pushOpen = Task { try await session.ensureOpen(mnemonic: Self.previousSeed, appVersion: "test") }
         await gate.waitUntilEntered()
         #expect(try await WalletRestorer.recoverInterruptedRestore(session: session, location: deviceB, seed: seed) == .nothingPending)
         #expect(!FileManager.default.fileExists(atPath: transaction.work.path), "decrypted leftovers are swept anyway")
@@ -394,7 +394,7 @@ struct WalletRestorerTests {
     /// Review finding: UI start and a push job (or two push jobs) recovering
     /// at once must both settle, not fail on each other's reservation.
     @Test func concurrentLaunchRecoveriesWaitForEachOther() async throws {
-        let session = WalletSession(variant: .regtest, location: deviceB) { _, _, _, _, _ in throw OpenRefused() }
+        let session = WalletSession(variant: .regtest, location: deviceB) { _, _, _, _ in throw OpenRefused() }
         let gate = Gate()
         let recovery = RestoreRecovery {
             let hold = try await session.reserve()
@@ -416,7 +416,7 @@ struct WalletRestorerTests {
     @Test(.regtestStack) func recoveryWithoutAJournalNeverBlocksAnOpen() async throws {
         defer { try? FileManager.default.removeItem(at: root) }
         let seed = FakeSeed(Self.previousSeed)
-        let session = WalletSession(variant: .regtest, location: deviceB) { _, _, _, _, _ in throw OpenRefused() }
+        let session = WalletSession(variant: .regtest, location: deviceB) { _, _, _, _ in throw OpenRefused() }
         _ = try await setUp(seed: seed, session: session)
         try makeBarkProperties(at: deviceB)
         let transaction = RestoreTransaction(location: deviceB)
@@ -436,7 +436,7 @@ struct WalletRestorerTests {
             await Task.yield()
         }
         do {
-            try await session.ensureOpen(mnemonic: Self.previousSeed, runDaemon: false, appVersion: "test")
+            try await session.ensureOpen(mnemonic: Self.previousSeed, appVersion: "test")
             Issue.record("the refusing opener should have thrown")
         } catch {
             #expect(error is OpenRefused, "the open must get past the session, not find it busy: \(error)")
@@ -447,7 +447,7 @@ struct WalletRestorerTests {
 
     @Test func launchRecoveryLeavesAnActiveRestoresFilesAlone() async throws {
         defer { try? FileManager.default.removeItem(at: root) }
-        let session = WalletSession(variant: .regtest, location: deviceB) { _, _, _, _, _ in throw OpenRefused() }
+        let session = WalletSession(variant: .regtest, location: deviceB) { _, _, _, _ in throw OpenRefused() }
         let transaction = RestoreTransaction(location: deviceB)
         try transaction.prepare()
         try Data("downloading".utf8).write(to: transaction.work.appending(path: "backup.noahbackup"))
@@ -485,7 +485,7 @@ struct WalletRestorerTests {
         expectNoRestoreLeftovers(settingsPending: true)
         // The open check released the datadir lock.
         #expect(await !session.isOpen)
-        try await session.ensureOpen(mnemonic: mnemonic, runDaemon: false, appVersion: "test")
+        try await session.ensureOpen(mnemonic: mnemonic, appVersion: "test")
         try await session.close()
     }
 
@@ -521,7 +521,7 @@ struct WalletRestorerTests {
         await #expect(throws: WalletRestorer.Failure.seedStateUnknown) { try await restorer.restore(mnemonic: mnemonic) }
         #expect(deviceB.restorePending)
         await #expect(throws: WalletSession.OpenError.restorePending) {
-            try await session.ensureOpen(mnemonic: Self.previousSeed, runDaemon: false, appVersion: "test")
+            try await session.ensureOpen(mnemonic: Self.previousSeed, appVersion: "test")
         }
         // Next launch, still locked: wait. Unlocked, old seed: undo.
         #expect(try await WalletRestorer.recoverInterruptedRestore(session: session, location: deviceB, seed: seed) == .waitingForKeychain)

@@ -29,7 +29,7 @@ class WalletLifecycleTest {
         var sweepScratch: () -> Unit = { events.add("scratch") }
         val events = mutableListOf<String>()
         val session = WalletSession("regtest", location, inspect = { WalletDatabase.Properties("regtest", "abcd") },
-            isSuspended = { suspended }, opener = { _, _, _, _, _ -> error("Open refused") })
+            isSuspended = { suspended }, opener = { _, _, _, _ -> error("Open refused") })
         fun lifecycle(session: WalletSession = this.session, drainTimeoutMillis: Long = 30_000) = WalletLifecycle(session, location,
             setSuspended = { suspended = it; events.add("flag:$it") },
             deregister = { events.add("deregister"); if (deregisterFails) error("Offline") },
@@ -63,8 +63,8 @@ class WalletLifecycleTest {
             world.files()
             val entered = CompletableDeferred<Unit>(); val release = CompletableDeferred<Unit>()
             val session = WalletSession("regtest", world.location, inspect = { WalletDatabase.Properties("regtest", "abcd") },
-                opener = { _, _, _, _, _ -> entered.complete(Unit); release.await(); error("Open failed") })
-            val opening = async { runCatching { session.ensureOpen("unused", false, "test") } }
+                opener = { _, _, _, _ -> entered.complete(Unit); release.await(); error("Open failed") })
+            val opening = async { runCatching { session.ensureOpen("unused", "test") } }
             entered.await()
             val closing = async { world.lifecycle(session).suspend() }
             withTimeout(2000) { while (!world.suspended) yield() }
@@ -621,7 +621,7 @@ class WalletLifecycleTest {
         val world = World()
         try {
             world.files(); world.suspended = true
-            val failure = runCatching { world.session.ensureOpen("unused", false, "test") }.exceptionOrNull()
+            val failure = runCatching { world.session.ensureOpen("unused", "test") }.exceptionOrNull()
             assertEquals(WalletSession.OpenFailure.suspended, (failure as WalletSession.OpenError).reason)
         } finally { world.clean() }
     }

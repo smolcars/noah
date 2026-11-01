@@ -42,7 +42,7 @@ class CrossPlatformBackupTest {
                     WalletOpenArgs(runDaemon = false, datadir = location.directory.path,
                         createWithoutServer = true, skipRecovery = true), chain).use { it.stopDaemonWait() }
             }
-            session.ensureOpen(phrase, false, "cross-backup-fixture")
+            session.ensureOpen(phrase, "cross-backup-fixture")
             val summary = session.summary()!!
             assertEquals(0, summary.movementCount); assertTrue(summary.balance.details.all { it.sats == 0uL })
             ServerClient.make("http://unused").use { client ->
@@ -85,7 +85,7 @@ class CrossPlatformBackupTest {
                 val outcome = restorer.restore(input["mnemonic"]!!.jsonPrimitive.content)
                 assertEquals("ios", outcome.backupId); assertFalse(outcome.cleanupPending)
                 assertTrue(seed.value == input["mnemonic"]!!.jsonPrimitive.content); assertFalse(location.restorePending)
-                session.ensureOpen(seed.value!!, false, "cross-backup")
+                session.ensureOpen(seed.value!!, "cross-backup")
                 val summary = session.summary()!!
                 assertEquals(expected["fingerprint"]!!.jsonPrimitive.content, summary.fingerprint)
                 assertEquals(expected["movements"]!!.jsonPrimitive.int, summary.movementCount)

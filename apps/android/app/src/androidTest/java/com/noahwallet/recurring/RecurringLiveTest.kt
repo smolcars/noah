@@ -49,7 +49,7 @@ class RecurringLiveTest {
         checkStart(context, location, resumeSetup)
         val peerRoot = File(context.filesDir, "recurring-peer-${UUID.randomUUID()}").also { check(it.mkdir()) }
         val peer = WalletSession("regtest", WalletDataLocation(peerRoot, "regtest"))
-        peer.createNew(io.github.niteshbalusu11.bark.generateMnemonic(), false, BuildConfig.VERSION_NAME)
+        peer.createNew(io.github.niteshbalusu11.bark.generateMnemonic(), BuildConfig.VERSION_NAME)
         val ark = peer.receiveRequest().arkAddress
         val offer = args.getString("offerRecipient") ?: error("Fresh regtest BOLT12 offer required")
         val services = AppServices.shared(context)
@@ -119,7 +119,7 @@ class RecurringLiveTest {
         val session = services.session
         if (resumeSetup) {
             val seed = (SeedStorage(context, "regtest").read() as SecretResult.Found).value
-            services.lifecycle.withWalletMutation { session.ensureOpen(seed, true, BuildConfig.VERSION_NAME) }
+            services.lifecycle.withWalletMutation { session.ensureOpen(seed, BuildConfig.VERSION_NAME) }
             assertTrue(session.withOpen { it.history().none { m -> m.subsystemKind == "send" } })
         } else services.lifecycle.withWalletMutation { WalletCreator.live(context, session).createOrResume() }
     }

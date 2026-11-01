@@ -202,7 +202,7 @@ class AppServices private constructor(private val context: Context) {
 
     /** Headless opens only read seeds; pending restore/deletion always waits for foreground recovery. */
     private val walletOpener = StoredWalletOpener(seed,
-        { settings.persistedState<PersistedWalletState>(PersistedWalletState.key) }) { session.ensureOpen(it, true, BuildConfig.VERSION_NAME) }
+        { settings.persistedState<PersistedWalletState>(PersistedWalletState.key) }) { session.ensureOpen(it, BuildConfig.VERSION_NAME) }
 
     suspend fun ensureWalletOpen(walletMutationHeld: Boolean = false) = openWallet(walletMutationHeld, foreground = false)
 
@@ -314,10 +314,21 @@ class AppServices private constructor(private val context: Context) {
     }
 
     private val foregroundSync = com.noahwallet.services.wallet.ForegroundWalletSync { lifecycle.withWalletMutation(it) }
+    private val foregroundWork = com.noahwallet.services.wallet.ForegroundWalletWork(
+        sync = { session.sync(includingLightningClaims = true) },
+        maintenance = session::maintenanceDelegated,
+        refreshes = { session.movements().count(com.noahwallet.history.HistoryMapping::isRefresh) },
+        progressExits = { session.progressPendingExits { AppLog(context, "wallet").w("Foreground exit progress failed: $it") } },
+    )
 
-    /** Foreground only: retain existing session/reservation rules and never open a wallet here. */
+    /**
+     * Foreground only: retain existing session/reservation rules and never open a wallet here. [entering]: the app just
+     * came to the front, so this pass (or the next one that runs) also runs delegated maintenance, as the first pass on
+     * a wallet that has just opened does.
+     */
     @OptIn(InternalCoroutinesApi::class)
-    suspend fun syncInForeground(budget: com.noahwallet.recurring.RecurringBudget) {
+    suspend fun syncInForeground(budget: com.noahwallet.recurring.RecurringBudget, entering: Boolean = false) {
+        if (entering) foregroundWork.entered()
         val cancellation = currentCoroutineContext().job.invokeOnCompletion(onCancelling = true, invokeImmediately = true) { cause ->
             if (cause != null) budget.revoke()
         }
@@ -326,9 +337,7 @@ class AppServices private constructor(private val context: Context) {
                 foregroundSync.run {
                     currentCoroutineContext().ensureActive()
                     if (!budget.available || !foregroundSyncAllowed()) return@run
-                    com.noahwallet.services.wallet.WalletBackgroundActivity.during {
-                        session.sync(includingLightningClaims = true)
-                    }
+                    com.noahwallet.services.wallet.WalletBackgroundActivity.during { foregroundWork.run(session.walletChanges.value) }
                 }
             }
         } catch (cancelled: CancellationException) { throw cancelled }

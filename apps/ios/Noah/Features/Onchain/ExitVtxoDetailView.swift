@@ -168,7 +168,7 @@ struct ExitVtxoDetailView: View {
             }
             .buttonStyle(SettingsActionStyle(wrap: true))
             .accessibilityIdentifier("exit-claim")
-            // If the daemon stops, this is how bark notices the claim confirming or being evicted.
+            // If the app's own exit progress stops, this is how bark notices the claim confirming or being evicted.
             checkAndCancel(progress, primary: false)
         case .needsFunds:
             Button(L10n.text("Add on-chain funds", locale: language)) { sheet = .deposit(text.need) }

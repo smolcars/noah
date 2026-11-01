@@ -30,6 +30,10 @@ extension WalletSession {
     /// One exit progress at `feeRate` (nil: bark's own), recorded as the wallet's last exit check, which the
     /// exit screens read; how many exits failed otherwise.
     nonisolated func progressExits(_ feeRate: UInt64?, access: ExitProgressAccess) async throws -> Int {
+        try await exitProgressGate.withLock { try await self.progressExitsLocked(feeRate, access: access) }
+    }
+
+    private nonisolated func progressExitsLocked(_ feeRate: UInt64?, access: ExitProgressAccess) async throws -> Int {
         let statuses: [ExitProgressStatus]
         do { statuses = try await access.progress(feeRate) }
         catch {
@@ -50,7 +54,7 @@ extension WalletSession {
         return failures
     }
 
-    /// Background jobs' exit progress; their opens run without bark's daemon, which otherwise moves exits.
+    /// Background jobs' exit progress; with the app away nothing else moves exits (bark's daemon never runs).
     /// Skipped once the job's budget is gone. Never throws: a failure's reason, safe to log, goes to `failed`.
     nonisolated func progressPendingExits(failed: @Sendable (String) -> Void) async {
         do { _ = try await withOpenWallet { try await self.progressPendingExits(access: Self.exitProgressAccess($0)) } }
@@ -59,12 +63,16 @@ extension WalletSession {
     }
 
     /// Nothing without a pending exit (Move exit forward's own filter), else one call at bark's own fee rate,
-    /// recorded like a completed Move exit forward, never toasted. True when it called bark.
+    /// recorded like a completed Move exit forward, never toasted. True when it called bark. Admission is checked
+    /// once the gate is held: a Check the chain ahead of it can outlast the app being in front, or the job's budget.
     @discardableResult
     nonisolated func progressPendingExits(access: ExitProgressAccess) async throws -> Bool {
         guard try await access.exits().contains(where: { ExitRules.live(Self.exitState($0.state).0) }) else { return false }
-        try BackgroundExecution.checkActive()
-        _ = try await progressExits(nil, access: access)
+        _ = try await exitProgressGate.withLock {
+            try await ForegroundExecution.checkActive()
+            try BackgroundExecution.checkActive()
+            return try await self.progressExitsLocked(nil, access: access)
+        }
         return true
     }
 
