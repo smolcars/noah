@@ -16,7 +16,7 @@ struct CrossPlatformBackupTests {
     struct Expected: Decodable { let fingerprint: String; let movements: Int; let balance: [WalletBalance.Detail] }
 
     private func session(_ location: WalletDataLocation) -> WalletSession {
-        WalletSession(variant: .regtest, location: location) { mnemonic, datadir, _, _, create in
+        WalletSession(variant: .regtest, location: location) { mnemonic, datadir, _, create in
             let config = WalletConfiguration.base(for: .regtest).sdkConfig(userAgent: "cross-backup-fixture")
             let onchain = create
                 ? try await OnchainWallet.default(network: .regtest, mnemonic: mnemonic, config: config, datadir: datadir)
@@ -35,7 +35,7 @@ struct CrossPlatformBackupTests {
         let location = WalletDataLocation(variant: .regtest, documentsDirectory: root)
         let wallet = session(location)
         do {
-            try await wallet.createNew(mnemonic: Self.phrase, runDaemon: false, appVersion: "cross-backup-fixture")
+            try await wallet.createNew(mnemonic: Self.phrase, appVersion: "cross-backup-fixture")
             let summary = try #require(try await wallet.summary())
             #expect(summary.movementCount == 0)
             #expect(summary.balance.details.allSatisfy { $0.sats == 0 })
@@ -79,7 +79,7 @@ struct CrossPlatformBackupTests {
             #expect(outcome.backupId == "android" && !outcome.cleanupPending)
             #expect(seed.read() == .found(fixture.input.mnemonic))
             #expect(!location.restorePending)
-            try await wallet.ensureOpen(mnemonic: fixture.input.mnemonic, runDaemon: false, appVersion: "cross-backup")
+            try await wallet.ensureOpen(mnemonic: fixture.input.mnemonic, appVersion: "cross-backup")
             let restored = try #require(try await wallet.summary())
             #expect(restored.fingerprint == fixture.expected.fingerprint)
             #expect(restored.movementCount == fixture.expected.movements)

@@ -16,7 +16,7 @@ struct FFI070LiveTests {
         try #require(AppVariant.current == .regtest)
         let stage = try #require(ProcessInfo.processInfo.environment["NOAH_FFI070_STAGE"])
         guard case .found(let mnemonic) = KeychainPassword.mnemonic(for: .regtest).read() else { throw SendFailure.unresolved }
-        try await session.ensureOpen(mnemonic: mnemonic, runDaemon: false, appVersion: "ffi070-live")
+        try await session.ensureOpen(mnemonic: mnemonic, appVersion: "ffi070-live")
         switch stage {
         case "upgrade": try await upgrade()
         case "autoboard": try await autoBoard()

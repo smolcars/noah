@@ -141,7 +141,7 @@ extension BackgroundScheduler {
         if kind == .maintenance { try await stages.backup() }
         try BackgroundExecution.checkActive()
         try await stages.widget()
-        // Last: exits move here even when bark's daemon isn't running.
+        // Last: bark's daemon never runs, so nothing else moves exits while the app is away.
         try BackgroundExecution.checkActive()
         await stages.progressExits()
     }

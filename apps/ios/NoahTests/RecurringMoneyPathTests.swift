@@ -14,7 +14,7 @@ import Testing
         let activeWallet = try #require(h.settings.string(forKey: PersistedWalletState.key))
         let owner = h.owner, settings = h.settings
         let location = WalletDataLocation(variant: .regtest, documentsDirectory: h.directory.deletingLastPathComponent())
-        let session = WalletSession(variant: .regtest, location: location) { _, _, _, _, _ in throw CocoaError(.fileReadUnknown) }
+        let session = WalletSession(variant: .regtest, location: location) { _, _, _, _ in throw CocoaError(.fileReadUnknown) }
         let item = KeychainPassword(service: "review-unused-\(UUID())", account: "noah")
         let lifecycle = WalletLifecycle(dependencies: .init(session: session, location: location, seed: item, authToken: item,
                                                             settings: settings, scratch: ScratchSpace(root: h.directory.appending(path: "scratch")),

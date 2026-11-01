@@ -19,7 +19,7 @@ struct FFI060LiveTests {
         if stage == "create" {
             try #require(!WalletDataLocation(variant: .regtest).hasAnyData)
             let mnemonic = try generateMnemonic()
-            try await session.createNew(mnemonic: mnemonic, runDaemon: false, appVersion: "ffi060-live")
+            try await session.createNew(mnemonic: mnemonic, appVersion: "ffi060-live")
             try seed.save(mnemonic)
             try SettingsStorage.shared.setPersistedState(PersistedWalletState(isInitialized: true),
                                                          key: PersistedWalletState.key, version: PersistedWalletState.version)
@@ -29,7 +29,7 @@ struct FFI060LiveTests {
             return
         }
         guard case .found(let mnemonic) = seed.read() else { throw SendFailure.unresolved }
-        try await session.ensureOpen(mnemonic: mnemonic, runDaemon: false, appVersion: "ffi060-live")
+        try await session.ensureOpen(mnemonic: mnemonic, appVersion: "ffi060-live")
         switch stage {
         case "receive": try await receive()
         case "ark": try await arkRoundTrip()
@@ -190,7 +190,7 @@ struct FFI060LiveTests {
         let before = try #require(try await session.summary())
         let ids = Set(try await history().map(\.id))
         try await session.close()
-        try await session.ensureOpen(mnemonic: mnemonic, runDaemon: false, appVersion: "ffi060-live")
+        try await session.ensureOpen(mnemonic: mnemonic, appVersion: "ffi060-live")
         let after = try #require(try await session.summary())
         #expect(after.fingerprint == before.fingerprint && after.movementCount == before.movementCount)
         #expect(after.balance.ark.spendable == before.balance.ark.spendable)

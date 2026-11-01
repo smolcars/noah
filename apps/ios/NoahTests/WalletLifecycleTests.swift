@@ -71,11 +71,11 @@ struct WalletLifecycleTests {
         let settings = try makeSettings()
         let (seed, token) = items()
         let gate = Gate()
-        let session = WalletSession(variant: .regtest, location: location) { _, _, _, _, _ in
+        let session = WalletSession(variant: .regtest, location: location) { _, _, _, _ in
             await gate.enter()
             throw OpenRefused()
         }
-        let opening = Task { try await session.openExisting(mnemonic: "unused", runDaemon: false, appVersion: "test") }
+        let opening = Task { try await session.openExisting(mnemonic: "unused", appVersion: "test") }
         while await gate.calls == 0 { await Task.yield() }
 
         let suspend = Task { try await lifecycle(session: session, settings: settings, seed: seed, token: token).suspend() }
@@ -97,7 +97,7 @@ struct WalletLifecycleTests {
         defer { try? FileManager.default.removeItem(at: root) }
         let settings = try makeSettings()
         let (seed, token) = items()
-        let session = WalletSession(variant: .regtest, location: location) { _, _, _, _, _ in throw Unreachable() }
+        let session = WalletSession(variant: .regtest, location: location) { _, _, _, _ in throw Unreachable() }
         let restoreHold = try await session.reserve()
         await #expect(throws: WalletSession.OpenError.busy) {
             try await lifecycle(session: session, settings: settings, seed: seed, token: token).suspend()
@@ -116,7 +116,7 @@ struct WalletLifecycleTests {
         try seed.save("seed words")
         try token.save("jwt")
         let deregistered = FakeSeed(nil)
-        let session = WalletSession(variant: .regtest, location: location) { _, _, _, _, _ in throw Unreachable() }
+        let session = WalletSession(variant: .regtest, location: location) { _, _, _, _ in throw Unreachable() }
 
         try await lifecycle(
             session: session, settings: settings, seed: seed, token: token,
@@ -146,7 +146,7 @@ struct WalletLifecycleTests {
         _ = try store.load()
         #expect(FileManager.default.fileExists(atPath: file.path))
         #expect(FileManager.default.fileExists(atPath: file.appendingPathExtension("initialized").path))
-        let session = WalletSession(variant: .regtest, location: location) { _, _, _, _, _ in throw Unreachable() }
+        let session = WalletSession(variant: .regtest, location: location) { _, _, _, _ in throw Unreachable() }
         try await lifecycle(session: session, settings: settings, seed: seed, token: token).delete()
         #expect(!FileManager.default.fileExists(atPath: file.path))
         #expect(!FileManager.default.fileExists(atPath: file.appendingPathExtension("initialized").path))
@@ -174,7 +174,7 @@ struct WalletLifecycleTests {
         try Data("plaintext".utf8).write(to: snapshot)
         try FileManager.default.setAttributes([.posixPermissions: 0o500], ofItemAtPath: folder.path)
         defer { try? FileManager.default.setAttributes([.posixPermissions: 0o700], ofItemAtPath: folder.path) }
-        let session = WalletSession(variant: .regtest, location: location) { _, _, _, _, _ in throw Unreachable() }
+        let session = WalletSession(variant: .regtest, location: location) { _, _, _, _ in throw Unreachable() }
         await #expect(throws: (any Error).self) {
             try await lifecycle(session: session, settings: settings, seed: seed, token: token).delete()
         }
@@ -198,7 +198,7 @@ struct WalletLifecycleTests {
         let (seed, token) = items()
         defer { seed.remove(); token.remove() }
         try seed.save("seed words")
-        let session = WalletSession(variant: .regtest, location: location) { _, _, _, _, _ in throw Unreachable() }
+        let session = WalletSession(variant: .regtest, location: location) { _, _, _, _ in throw Unreachable() }
         let scratch = ScratchSpace(root: root.appending(path: "scratch"))
         let retained = try scratch.makeFolder("share-backup")
         try Data("encrypted".utf8).write(to: retained.appending(path: "wallet.noahbackup"))
@@ -239,7 +239,7 @@ struct WalletLifecycleTests {
             if stage >= 3 { try FileManager.default.removeItem(at: location.deletionDirectory) }
             if stage >= 4 { try seed.deleteWalletSeed() }
             if stage >= 5 { token.remove(); settings.removeAll() }
-            let session = WalletSession(variant: .regtest, location: location) { _, _, _, _, _ in throw Unreachable() }
+            let session = WalletSession(variant: .regtest, location: location) { _, _, _, _ in throw Unreachable() }
             let relaunched = lifecycle(session: session, settings: settings, seed: seed, token: token)
             try await relaunched.recoverDeletion()
             #expect(seed.read() == .notFound)
@@ -258,7 +258,7 @@ struct WalletLifecycleTests {
         let (seed, token) = items()
         defer { seed.remove(); token.remove() }
         try seed.save("current wallet"); try token.save("token")
-        let session = WalletSession(variant: .regtest, location: location) { _, _, _, _, _ in throw Unreachable() }
+        let session = WalletSession(variant: .regtest, location: location) { _, _, _, _ in throw Unreachable() }
         let scratch = ScratchSpace(root: root.appending(path: "scratch"))
         let gate = Gate()
         let exporting = Task { try await scratch.withFolder("export") { folder in
@@ -293,7 +293,7 @@ struct WalletLifecycleTests {
         let mutation = WalletMutationGate()
         let committed = Gate()
         let settlement = Gate()
-        let session = WalletSession(variant: .regtest, location: location) { _, _, _, _, _ in throw Unreachable() }
+        let session = WalletSession(variant: .regtest, location: location) { _, _, _, _ in throw Unreachable() }
         let deleting = lifecycle(session: session, settings: settings, seed: seed, token: token,
                                  mutation: mutation, settleBackground: { await settlement.record() }, deregister: { await committed.enter() })
         let settingsDelete = Task { try await deleting.delete() }

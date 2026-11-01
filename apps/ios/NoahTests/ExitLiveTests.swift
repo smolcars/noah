@@ -19,12 +19,8 @@ struct ExitLiveTests {
         }
         guard case .found(let mnemonic) = seed.read() else { throw OnchainFailure.unavailable }
         let owned = try String(contentsOf: URL.documentsDirectory.appending(path: "m6-live-owned-wallet.txt"), encoding: .utf8)
-        try await session.ensureOpen(mnemonic: mnemonic, runDaemon: false, appVersion: "m6-acceptance")
+        try await session.ensureOpen(mnemonic: mnemonic, appVersion: "m6-acceptance")
         guard try await session.summary()?.fingerprint == owned else { throw OnchainFailure.invalid }
-        if !["estimate", "uncertain-board", "check-uncertain-board", "cancel-cycle", "cancel-reopen", "board-missing-fee", "reconcile-fee"].contains(stage) {
-            try await session.close()
-            try await session.ensureOpen(mnemonic: mnemonic, runDaemon: true, appVersion: "m6-acceptance")
-        }
         switch stage {
         case "board", "board-missing-fee": try await board(session, stage: stage)
         case "reconcile-fee": try await reconcileFee(session)
@@ -43,7 +39,7 @@ struct ExitLiveTests {
             throw OnchainFailure.invalid
         }
         let mnemonic = try generateMnemonic()
-        try await session.createNew(mnemonic: mnemonic, runDaemon: false, appVersion: "m6-acceptance")
+        try await session.createNew(mnemonic: mnemonic, appVersion: "m6-acceptance")
         try seed.save(mnemonic)
         try settings.setPersistedState(
             PersistedWalletState(
@@ -245,8 +241,8 @@ struct ExitLiveTests {
                 to: URL.documentsDirectory.appending(path: "m6-live-max.json"), options: .atomic)
             try await OnchainOperationJournal.shared.acknowledge()
         }
-        // Observe lets the production daemon progress without a manual progressExits call.
-        try await Task.sleep(for: .seconds(20))
+        // The app's own exit progress (its foreground pass and background jobs) moves them, without a reviewed one.
+        await session.progressPendingExits { Issue.record("Exit progress failed: \($0)") }
         let after = try await session.onchainOverview()
         let entries = after.exits.map {
             ["vtxo": $0.id, "amount": "\($0.amount)", "state": $0.state,

@@ -49,7 +49,7 @@ struct PushJobs: Sendable {
             if let result { throw result }
             try BackgroundExecution.checkActive()
             await d.refreshWidget()
-            // Last: exits move here even when bark's daemon isn't running.
+            // Last: bark's daemon never runs, so nothing else moves exits while the app is away.
             try BackgroundExecution.checkActive()
             await d.progressExits()
 

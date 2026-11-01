@@ -69,7 +69,7 @@ final class AppServices: Sendable {
         let mnemonic = try HeadlessWalletGate.mnemonic(
             location: WalletDataLocation(variant: variant), settings: .shared, readSeed: { self.seed.read() })
         try Task.checkCancellation()
-        try await session.ensureOpen(mnemonic: mnemonic, runDaemon: WalletSession.backgroundOwner == nil, appVersion: appVersion)
+        try await session.ensureOpen(mnemonic: mnemonic, appVersion: appVersion)
         try Task.checkCancellation()
     }
 
@@ -157,7 +157,7 @@ final class AppServices: Sendable {
                                 lateCompletion: @escaping @Sendable (Bool) async -> Void) async throws {
         let store = EsploraSettings()
         guard variant != .regtest, let endpoint = try await store.resolve(for: variant), !(await session.isOpen) else {
-            try await session.ensureOpen(mnemonic: mnemonic, runDaemon: true, appVersion: appVersion)
+            try await session.ensureOpen(mnemonic: mnemonic, appVersion: appVersion)
             return
         }
         let selection = EsploraSettings.Selection(endpoint: endpoint, variant: variant.rawValue)

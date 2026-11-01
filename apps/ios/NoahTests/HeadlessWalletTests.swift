@@ -78,7 +78,7 @@ import Testing
         await #expect(throws: WalletSession.OpenError.busy) { _ = try await session.reserve() }
         await #expect(throws: WalletSession.OpenError.busy) { try await session.withBackgroundAccess {} }
         await #expect(throws: WalletSession.OpenError.busy) {
-            try await session.ensureOpen(mnemonic: "unused", runDaemon: true, appVersion: "test")
+            try await session.ensureOpen(mnemonic: "unused", appVersion: "test")
         }
         await workGate.release()
         while !(await settleGate.entered), ContinuousClock.now < limit { await Task.yield() }
@@ -98,13 +98,13 @@ import Testing
         try await session.withBackgroundAccess {
             let reservation = try await session.reserve()
             await #expect(throws: WalletSession.OpenError.busy) {
-                try await session.createNew(reservation, mnemonic: "unused", runDaemon: false, appVersion: "test")
+                try await session.createNew(reservation, mnemonic: "unused", appVersion: "test")
             }
             await session.release(reservation)
         }
     }
 
-    @Test func backgroundOpenNeverCreatesOrStartsDaemonEvenIfCallerRequestsIt() async throws {
+    @Test func backgroundOpenNeverCreates() async throws {
         let directory = FileManager.default.temporaryDirectory.appending(path: "headless-open-\(UUID())")
         defer { try? FileManager.default.removeItem(at: directory) }
         let location = WalletDataLocation(variant: .regtest, documentsDirectory: directory)
@@ -119,13 +119,13 @@ import Testing
             nil) == SQLITE_OK)
         sqlite3_close(database)
         struct Opened: Error {}
-        let session = WalletSession(variant: .regtest, location: location) { _, _, daemon, _, create in
-            #expect(!daemon); #expect(!create)
+        let session = WalletSession(variant: .regtest, location: location) { _, _, _, create in
+            #expect(!create)
             throw Opened()
         }
         await #expect(throws: Opened.self) {
             try await session.withBackgroundAccess {
-                try await session.ensureOpen(mnemonic: "unused", runDaemon: true, appVersion: "test")
+                try await session.ensureOpen(mnemonic: "unused", appVersion: "test")
             }
         }
         #expect(!(await session.isOpen))
@@ -137,8 +137,7 @@ import Testing
         let directory = FileManager.default.temporaryDirectory.appending(path: "headless-real-\(UUID())")
         defer { try? FileManager.default.removeItem(at: directory) }
         let location = WalletDataLocation(variant: .regtest, documentsDirectory: directory)
-        let session = WalletSession(variant: .regtest, location: location) { mnemonic, datadir, daemon, _, create in
-            #expect(!daemon)
+        let session = WalletSession(variant: .regtest, location: location) { mnemonic, datadir, _, create in
             let config = WalletConfiguration.base(for: .regtest).sdkConfig(userAgent: "test")
             let onchain = create
                 ? try await OnchainWallet.default(network: .regtest, mnemonic: mnemonic, config: config, datadir: datadir)
@@ -150,12 +149,12 @@ import Testing
         }
         // Foreground setup only. The tested background branch must open this existing DB.
         let mnemonic = try generateMnemonic()
-        try await session.createNew(mnemonic: mnemonic, runDaemon: false, appVersion: "test")
+        try await session.createNew(mnemonic: mnemonic, appVersion: "test")
         try await session.close()
         let gate = RecurringReservationTests.Gate()
         let work = Task {
             try await session.withBackgroundAccess {
-                try await session.ensureOpen(mnemonic: mnemonic, runDaemon: false, appVersion: "test")
+                try await session.ensureOpen(mnemonic: mnemonic, appVersion: "test")
                 await Task { await gate.wait() }.value
             }
         }
@@ -168,7 +167,7 @@ import Testing
         await gate.release()
         try await work.value
         #expect(!(await session.isOpen))
-        try await session.ensureOpen(mnemonic: mnemonic, runDaemon: false, appVersion: "test")
+        try await session.ensureOpen(mnemonic: mnemonic, appVersion: "test")
         #expect(try await session.summary() != nil)
         try await session.close()
     }
@@ -206,7 +205,7 @@ import Testing
             nil) == SQLITE_OK)
         sqlite3_close(database)
         let recorder = PushJobsTests.Recorder()
-        let session = WalletSession(variant: .regtest, location: location) { _, _, _, _, _ in
+        let session = WalletSession(variant: .regtest, location: location) { _, _, _, _ in
             recorder.add("native open")
             throw OpenedAfterExpiry()
         }
@@ -219,8 +218,8 @@ import Testing
                     try await RecurringExecutionBudget.$deadline.withValue(expiry == "deadline" ? .now - .seconds(1) : nil) {
                         try await Task {
                             if expiry == "cancellation" { withUnsafeCurrentTask { $0?.cancel() } }
-                            if ensure { try await session.ensureOpen(mnemonic: "unused", runDaemon: false, appVersion: "test") }
-                            else { try await session.openExisting(mnemonic: "unused", runDaemon: false, appVersion: "test") }
+                            if ensure { try await session.ensureOpen(mnemonic: "unused", appVersion: "test") }
+                            else { try await session.openExisting(mnemonic: "unused", appVersion: "test") }
                         }.value
                     }
                 }

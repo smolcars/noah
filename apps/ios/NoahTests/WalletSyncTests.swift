@@ -17,7 +17,7 @@ struct WalletSyncTests {
                 authToken: KeychainPassword(service: "sync-token-\(UUID())", account: "test"),
                 settings: settings, scratch: ScratchSpace(root: root.appending(path: "scratch")),
                 appGroup: nil, mutation: WalletMutationGate(), deregister: {}, walletChanged: {}))
-            try await session.createNew(mnemonic: generateMnemonic(), runDaemon: false, appVersion: "test")
+            try await session.createNew(mnemonic: generateMnemonic(), appVersion: "test")
             let gate = RecurringReservationTests.Gate()
             let stages = RecurringExecutorTests.Locked<[Int]>([])
             let closed = RecurringExecutorTests.Locked(false)

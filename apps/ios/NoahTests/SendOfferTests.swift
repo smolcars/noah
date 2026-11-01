@@ -146,14 +146,14 @@ import Testing
         defer { server.stop() }
         let config = Config(serverAddress: "http://127.0.0.1:1", esploraAddress: server.url)
         let session = WalletSession(variant: .regtest, location: WalletDataLocation(variant: .regtest, documentsDirectory: root)) {
-            mnemonic, datadir, _, _, create in
+            mnemonic, datadir, _, create in
             let onchain = try await OnchainWallet.default(network: .regtest, mnemonic: mnemonic, config: config, datadir: datadir)
             let wallet = try await Wallet.openWithOnchain(network: .regtest, mnemonicOrSeed: mnemonic, config: config,
                                                           args: WalletOpenArgs(runDaemon: false, datadir: datadir, createIfNotExists: create,
                                                                                createWithoutServer: true, skipRecovery: true), onchain: onchain)
             return .init(wallet: wallet, onchain: onchain)
         }
-        try await session.createNew(mnemonic: try generateMnemonic(), runDaemon: false, appVersion: "test")
+        try await session.createNew(mnemonic: try generateMnemonic(), appVersion: "test")
         let offer = offer
         let parsed = try await session.withOpenWallet { try await $0.wallet.parsePaymentRequest(input: offer) }
         #expect(parsed.amountSats == 1000)

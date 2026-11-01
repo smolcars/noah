@@ -20,7 +20,7 @@ struct FFI050LiveTests {
             return
         }
         guard case .found(let mnemonic) = seed.read() else { throw OnchainFailure.unavailable }
-        try await session.ensureOpen(mnemonic: mnemonic, runDaemon: false, appVersion: "ffi050-live")
+        try await session.ensureOpen(mnemonic: mnemonic, appVersion: "ffi050-live")
         switch stage {
         case "amount", "max", "auto": try await board(session, stage: stage, documents: documents)
         case "board-status": try await boardStatus(session, documents: documents)
@@ -36,7 +36,7 @@ struct FFI050LiveTests {
     private func create(_ session: WalletSession, stage: String, seed: KeychainPassword, documents: URL) async throws {
         try #require(!WalletDataLocation(variant: .regtest).hasAnyData)
         let mnemonic = try generateMnemonic()
-        try await session.createNew(mnemonic: mnemonic, runDaemon: false, appVersion: "ffi050-live")
+        try await session.createNew(mnemonic: mnemonic, appVersion: "ffi050-live")
         try seed.save(mnemonic)
         try SettingsStorage.shared.setPersistedState(PersistedWalletState(isInitialized: true),
                                                      key: PersistedWalletState.key, version: PersistedWalletState.version)

@@ -74,15 +74,15 @@ later stage refuses a wallet whose fingerprint doesn't match. Fund the address w
 | `refresh` | Refreshes one spendable VTXO |
 | `estimate` | Read-only exit estimate; exit list and transactions unchanged |
 | `start` | Starts an exit for one eligible VTXO of 30,000 sats or less; refuses when exits exist |
-| `observe` | Lets the daemon progress the exits, then records their state |
+| `observe` | Runs the app's own exit progress (as its foreground pass does), then records their state |
 | `progress` | Reviewed manual progress of the open exits (mine 144 blocks first for the timelock) |
 | `claim` | Reviewed claim of claimable exits to a new address in the same wallet |
 | `max` | Boards everything (`boardAll`) and records the actual fee |
-| `cancel-cycle`, then `cancel-reopen` | Starts and cancels an exit with the daemon off, then reopens and checks the canceled detail |
+| `cancel-cycle`, then `cancel-reopen` | Starts and cancels an exit, then reopens and checks the canceled detail |
 
-`estimate`, the fee and uncertain-board stages and the cancel stages open the wallet
-without bark's daemon. The others reopen it with the daemon running, so the daemon
-may broadcast and fee-bump exits that were started. Mutation stages journal before
+Every stage opens the wallet without bark's daemon, as the app does. The exit stages
+end with the app's own exit progress, which may broadcast and fee-bump exits that were
+started. Mutation stages journal before
 they call the SDK and never clear an uncertain attempt. Use them only on a disposable
 simulator, and never repeat a stage without reading its evidence first.
 

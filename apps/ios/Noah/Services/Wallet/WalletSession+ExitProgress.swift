@@ -54,7 +54,7 @@ extension WalletSession {
         return failures
     }
 
-    /// Background jobs' exit progress; their opens run without bark's daemon, which otherwise moves exits.
+    /// Background jobs' exit progress; with the app away nothing else moves exits (bark's daemon never runs).
     /// Skipped once the job's budget is gone. Never throws: a failure's reason, safe to log, goes to `failed`.
     nonisolated func progressPendingExits(failed: @Sendable (String) -> Void) async {
         do { _ = try await withOpenWallet { try await self.progressPendingExits(access: Self.exitProgressAccess($0)) } }

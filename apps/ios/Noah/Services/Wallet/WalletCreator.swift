@@ -165,10 +165,10 @@ extension WalletCreator.Dependencies {
                 }
             },
             generateMnemonic: { try BarkBoltFFI.generateMnemonic() },
-            openExisting: { try await session.ensureOpen(mnemonic: $0, runDaemon: true, appVersion: appVersion) },
+            openExisting: { try await session.ensureOpen(mnemonic: $0, appVersion: appVersion) },
             reserve: { try await session.reserve() },
             release: { await session.release($0) },
-            createNew: { try await session.createNew($0, mnemonic: $1, runDaemon: true, appVersion: appVersion) },
+            createNew: { try await session.createNew($0, mnemonic: $1, appVersion: appVersion) },
             beginOnboarding: { try settings.beginOnboarding(recoveryPhraseBackedUp: false) })
     }
 }

@@ -52,7 +52,7 @@ struct WalletSessionTests {
     private struct OpenerFailed: Error {}
 
     private func session(gate: Gate? = nil) -> WalletSession {
-        WalletSession(variant: .regtest, location: location) { _, _, _, _, _ in
+        WalletSession(variant: .regtest, location: location) { _, _, _, _ in
             if let gate { await gate.enter() }
             throw OpenerFailed()
         }
@@ -60,7 +60,7 @@ struct WalletSessionTests {
 
     @Test func refusesMissingDatabaseWithoutCreatingAnything() async {
         await #expect(throws: WalletSession.OpenError.walletDatabaseMissing) {
-            try await session().openExisting(mnemonic: "unused", runDaemon: false, appVersion: "test")
+            try await session().openExisting(mnemonic: "unused", appVersion: "test")
         }
         #expect(!FileManager.default.fileExists(atPath: documents.path))
     }
@@ -69,7 +69,7 @@ struct WalletSessionTests {
         try FileManager.default.createDirectory(at: location.directory, withIntermediateDirectories: true)
         try Data().write(to: location.database)
         await #expect(throws: WalletSession.OpenError.notABarkWallet) {
-            try await session().openExisting(mnemonic: "unused", runDaemon: false, appVersion: "test")
+            try await session().openExisting(mnemonic: "unused", appVersion: "test")
         }
         let size = try FileManager.default.attributesOfItem(atPath: location.database.path)[.size] as? Int
         #expect(size == 0)
@@ -79,7 +79,7 @@ struct WalletSessionTests {
         try writeBarkProperties(network: "signet")
         let gate = Gate()
         await #expect(throws: WalletSession.OpenError.networkMismatch(found: "signet")) {
-            try await session(gate: gate).openExisting(mnemonic: "unused", runDaemon: false, appVersion: "test")
+            try await session(gate: gate).openExisting(mnemonic: "unused", appVersion: "test")
         }
         #expect(await gate.calls == 0)
     }
@@ -93,7 +93,7 @@ struct WalletSessionTests {
 
         let gate = Gate()
         let session = session(gate: gate)
-        let open = Task { try await session.openExisting(mnemonic: "unused", runDaemon: false, appVersion: "test") }
+        let open = Task { try await session.openExisting(mnemonic: "unused", appVersion: "test") }
         while await gate.calls == 0 { await Task.yield() }
         await gate.release()
         await #expect(throws: OpenerFailed.self) { try await open.value }
@@ -124,11 +124,11 @@ struct WalletSessionTests {
         let gate = Gate()
         let session = session(gate: gate)
 
-        let first = Task { try await session.openExisting(mnemonic: "unused", runDaemon: false, appVersion: "test") }
+        let first = Task { try await session.openExisting(mnemonic: "unused", appVersion: "test") }
         while await gate.calls == 0 { await Task.yield() }
 
         await #expect(throws: WalletSession.OpenError.busy) {
-            try await session.openExisting(mnemonic: "unused", runDaemon: false, appVersion: "test")
+            try await session.openExisting(mnemonic: "unused", appVersion: "test")
         }
         await #expect(throws: WalletSession.OpenError.busy) { try await session.close() }
 
@@ -137,7 +137,7 @@ struct WalletSessionTests {
         #expect(try await session.summary() == nil)
 
         // A failed open returns to closed: the next attempt reaches the opener.
-        let second = Task { try await session.openExisting(mnemonic: "unused", runDaemon: false, appVersion: "test") }
+        let second = Task { try await session.openExisting(mnemonic: "unused", appVersion: "test") }
         while await gate.calls < 2 { await Task.yield() }
         await gate.release()
         await #expect(throws: OpenerFailed.self) { try await second.value }
@@ -145,7 +145,7 @@ struct WalletSessionTests {
 
     /// Real bark wallet, created without a server so the test runs offline.
     private func offlineSession(beforeOpen: @escaping @Sendable () async throws -> Void = {}) -> WalletSession {
-        WalletSession(variant: .regtest, location: location) { mnemonic, datadir, _, _, create in
+        WalletSession(variant: .regtest, location: location) { mnemonic, datadir, _, create in
             try await beforeOpen()
             let config = WalletConfiguration.base(for: .regtest).sdkConfig(userAgent: "test")
             let onchain = try await OnchainWallet.default(network: .regtest, mnemonic: mnemonic, config: config, datadir: datadir)
@@ -159,13 +159,23 @@ struct WalletSessionTests {
         }
     }
 
+    /// No open starts bark's daemon, whose round handler joins rounds interactively: the opener seam has no
+    /// daemon flag, and the production opener's arguments (existing and new wallets) never ask for it.
+    @Test func noOpenStartsTheDaemon() {
+        for create in [false, true] {
+            let args = WalletSession.openArgs(datadir: "/wallet", create: create)
+            #expect(!args.runDaemon)
+            #expect(args.createIfNotExists == create && args.datadir == "/wallet")
+        }
+    }
+
     /// Exits read the foreground pass's clock: every foreground open sets it (a cold launch with a custom
     /// Esplora opens through `reopen`), every close clears it, and a background job's open never sets it.
     @Test(.regtestStack, .timeLimit(.minutes(1))) func theExitProgressClockFollowsEveryForegroundOpenAndClose() async throws {
         defer { try? FileManager.default.removeItem(at: documents) }
         let session = offlineSession()
         let mnemonic = try generateMnemonic()
-        try await session.createNew(mnemonic: mnemonic, runDaemon: false, appVersion: "test")
+        try await session.createNew(mnemonic: mnemonic, appVersion: "test")
         #expect(await session.exitProgressSince != nil)
         let reservation = try await session.reserveForConfigurationChange()
         #expect(await session.exitProgressSince == nil)
@@ -173,7 +183,7 @@ struct WalletSessionTests {
         #expect(await session.exitProgressSince != nil)
         try await session.close()
         #expect(await session.exitProgressSince == nil)
-        try await session.ensureOpen(mnemonic: mnemonic, runDaemon: false, appVersion: "test")
+        try await session.ensureOpen(mnemonic: mnemonic, appVersion: "test")
         let opened = try #require(await session.exitProgressSince)
         // Coming back restarts it; it can't have run while the app was away.
         await session.appBecameActive()
@@ -182,7 +192,7 @@ struct WalletSessionTests {
         await session.appBecameActive()
         #expect(await session.exitProgressSince == nil)
         try await session.withBackgroundAccess {
-            try await session.ensureOpen(mnemonic: mnemonic, runDaemon: false, appVersion: "test")
+            try await session.ensureOpen(mnemonic: mnemonic, appVersion: "test")
             #expect(await session.exitProgressSince == nil)
         }
         // A configuration that fails to commit leaves it cleared.
@@ -200,7 +210,7 @@ struct WalletSessionTests {
         defer { try? FileManager.default.removeItem(at: documents) }
         let session = offlineSession()
         let mnemonic = try generateMnemonic()
-        try await session.createNew(mnemonic: mnemonic, runDaemon: false, appVersion: "test")
+        try await session.createNew(mnemonic: mnemonic, appVersion: "test")
         #expect(await session.takeForegroundMaintenance())
         #expect(await !session.takeForegroundMaintenance())
         await session.appBecameActive()
@@ -212,10 +222,10 @@ struct WalletSessionTests {
         await session.appBecameActive()
         #expect(await !session.takeForegroundMaintenance())
         try await session.withBackgroundAccess {
-            try await session.ensureOpen(mnemonic: mnemonic, runDaemon: false, appVersion: "test")
+            try await session.ensureOpen(mnemonic: mnemonic, appVersion: "test")
             #expect(await !session.takeForegroundMaintenance())
         }
-        try await session.ensureOpen(mnemonic: mnemonic, runDaemon: false, appVersion: "test")
+        try await session.ensureOpen(mnemonic: mnemonic, appVersion: "test")
         #expect(await session.takeForegroundMaintenance())
         let reservation = try await session.reserveForConfigurationChange()
         try await session.reopen(reservation, mnemonic: mnemonic, appVersion: "test", commit: {})
@@ -238,7 +248,7 @@ struct WalletSessionTests {
             }
             let mnemonic = try generateMnemonic()
             // Each iteration uses a fresh wallet directory.
-            try await session.createNew(mnemonic: mnemonic, runDaemon: false, appVersion: "test")
+            try await session.createNew(mnemonic: mnemonic, appVersion: "test")
             let store = EsploraSettings(storage: try SettingsStorage(rootPath: documents.appending(path: "settings").path))
             try store.save(.init(active: previous))
             let prepared = try store.prepare(candidate)
@@ -264,7 +274,7 @@ struct WalletSessionTests {
             #expect(await gate.withLock { true })
             #expect(await session.unlessReserved {} == false)
             await #expect(throws: WalletSession.OpenError.busy) {
-                try await session.ensureOpen(mnemonic: mnemonic, runDaemon: false, appVersion: "test")
+                try await session.ensureOpen(mnemonic: mnemonic, appVersion: "test")
             }
             server.stop()
             #expect(await completion.stream.first(where: { _ in true }) == false)
@@ -284,7 +294,7 @@ struct WalletSessionTests {
             if EsploraOpening.selection == candidate { await native.enter(); throw OpenerFailed() }
         }
         let mnemonic = try generateMnemonic()
-        try await session.createNew(mnemonic: mnemonic, runDaemon: false, appVersion: "test")
+        try await session.createNew(mnemonic: mnemonic, appVersion: "test")
         let fingerprint = try await session.summary()?.fingerprint
         try await session.close()
         let reservation = try await session.reserve()
@@ -325,7 +335,7 @@ struct WalletSessionTests {
     @Test(.regtestStack) func esploraReloadRefusesInFlightMoneyOperations() async throws {
         defer { try? FileManager.default.removeItem(at: documents) }
         let session = offlineSession()
-        try await session.createNew(mnemonic: try generateMnemonic(), runDaemon: false, appVersion: "test")
+        try await session.createNew(mnemonic: try generateMnemonic(), appVersion: "test")
         for operation in ["send", "board", "exit", "recurring"] {
             let gate = Gate()
             let work = Task {
@@ -361,7 +371,7 @@ struct WalletSessionTests {
         defer { try? FileManager.default.removeItem(at: documents) }
         let session = offlineSession()
         let mnemonic = try generateMnemonic()
-        try await session.createNew(mnemonic: mnemonic, runDaemon: false, appVersion: "test")
+        try await session.createNew(mnemonic: mnemonic, appVersion: "test")
         let reservation = try await session.reserveForConfigurationChange()
         let reopening = Task {
             try await session.reopen(reservation, mnemonic: mnemonic, appVersion: "test", commit: {})
@@ -377,7 +387,7 @@ struct WalletSessionTests {
         defer { try? FileManager.default.removeItem(at: documents) }
         let session = offlineSession()
         let mnemonic = try generateMnemonic()
-        try await session.createNew(mnemonic: mnemonic, runDaemon: false, appVersion: "test")
+        try await session.createNew(mnemonic: mnemonic, appVersion: "test")
         let reservation = try await session.reserveForConfigurationChange()
         await #expect(throws: OpenerFailed.self) {
             try await session.reopen(reservation, mnemonic: mnemonic, appVersion: "test") { throw OpenerFailed() }
@@ -392,7 +402,7 @@ struct WalletSessionTests {
     @Test(.regtestStack) func cancelledOrExpiredTasksCannotAdmitWalletCalls() async throws {
         defer { try? FileManager.default.removeItem(at: documents) }
         let session = offlineSession()
-        try await session.createNew(mnemonic: try generateMnemonic(), runDaemon: false, appVersion: "test")
+        try await session.createNew(mnemonic: try generateMnemonic(), appVersion: "test")
         let gate = Gate()
         let cancelled = Task {
             await gate.enter()
@@ -421,7 +431,7 @@ struct WalletSessionTests {
     @Test(.regtestStack) func closeWaitsForWalletCallsStillRunning() async throws {
         defer { try? FileManager.default.removeItem(at: documents) }
         let session = offlineSession()
-        try await session.createNew(mnemonic: try generateMnemonic(), runDaemon: false, appVersion: "test")
+        try await session.createNew(mnemonic: try generateMnemonic(), appVersion: "test")
         let gate = Gate()
         let call = Task { try await session.withOpenWallet { _ in await gate.enter() } }
         while await gate.calls == 0 { await Task.yield() }
@@ -449,7 +459,7 @@ struct WalletSessionTests {
         defer { try? FileManager.default.removeItem(at: documents) }
         for iteration in 0..<25 {
             let session = offlineSession()
-            try await session.createNew(mnemonic: try generateMnemonic(), runDaemon: false, appVersion: "test")
+            try await session.createNew(mnemonic: try generateMnemonic(), appVersion: "test")
             let completions = try await session.receiveCompletions(for:
                 ReceiveRequest(arkAddress: "unused-ark-address", onchainAddress: "unused-onchain-address"))
             let changes = try await session.stateChanges()
@@ -488,7 +498,7 @@ struct WalletSessionTests {
     @Test(.regtestStack, .timeLimit(.minutes(1))) func closeStopsReceiveObserversAndWaitsForThem() async throws {
         defer { try? FileManager.default.removeItem(at: documents) }
         let session = offlineSession()
-        try await session.createNew(mnemonic: try generateMnemonic(), runDaemon: false, appVersion: "test")
+        try await session.createNew(mnemonic: try generateMnemonic(), appVersion: "test")
         // Offline wallet: no server for real addresses, and none are needed to wait.
         let request = ReceiveRequest(arkAddress: "unused-ark-address", onchainAddress: "unused-onchain-address")
         let completions = try await session.receiveCompletions(for: request)
@@ -515,14 +525,14 @@ struct WalletSessionTests {
         let session = session(gate: gate)
         let reservation = try await session.reserve()
         await #expect(throws: WalletSession.OpenError.busy) {
-            try await session.ensureOpen(mnemonic: "unused", runDaemon: false, appVersion: "test")
+            try await session.ensureOpen(mnemonic: "unused", appVersion: "test")
         }
         await #expect(throws: WalletSession.OpenError.busy) { try await session.reserve() }
         await #expect(throws: WalletSession.OpenError.busy) { try await session.close() }
         #expect(await gate.calls == 0)
 
         await session.release(reservation)
-        let open = Task { try await session.ensureOpen(mnemonic: "unused", runDaemon: false, appVersion: "test") }
+        let open = Task { try await session.ensureOpen(mnemonic: "unused", appVersion: "test") }
         while await gate.calls == 0 { await Task.yield() }
         await gate.release()
         await #expect(throws: OpenerFailed.self) { try await open.value }
@@ -532,11 +542,11 @@ struct WalletSessionTests {
         try writeBarkProperties(network: "regtest")
         let gate = Gate()
         let session = session(gate: gate)
-        let first = Task { try await session.openExisting(mnemonic: "unused", runDaemon: false, appVersion: "test") }
+        let first = Task { try await session.openExisting(mnemonic: "unused", appVersion: "test") }
         while await gate.calls == 0 { await Task.yield() }
 
         // Joins the in-flight open (and its failure) instead of reporting busy.
-        let joined = Task { try await session.ensureOpen(mnemonic: "unused", runDaemon: false, appVersion: "test") }
+        let joined = Task { try await session.ensureOpen(mnemonic: "unused", appVersion: "test") }
         for _ in 0..<50 { await Task.yield() }
         await gate.release()
         await #expect(throws: OpenerFailed.self) { try await first.value }

@@ -14,7 +14,7 @@ extension WalletLifecycleTests {
             if !location.databaseExists { try writeBarkDatabase() }
             try seed.save("current wallet")
             try marker.write(to: location.deletionMarker)
-            let session = WalletSession(variant: .regtest, location: location) { _, _, _, _, _ in throw Unreachable() }
+            let session = WalletSession(variant: .regtest, location: location) { _, _, _, _ in throw Unreachable() }
             try await lifecycle(session: session, settings: settings, seed: seed, token: token).recoverDeletion()
             #expect(location.databaseExists)
             #expect(seed.read() == .found("current wallet"))
@@ -24,7 +24,7 @@ extension WalletLifecycleTests {
         try location.writeDeletionIdentity(seed: seed.read())
         try Data(UUID().uuidString.utf8).write(to: location.deletionMarker)
         #expect(try location.deletionStatus(seed: seed.read()) == .mismatched)
-        let session = WalletSession(variant: .regtest, location: location) { _, _, _, _, _ in throw Unreachable() }
+        let session = WalletSession(variant: .regtest, location: location) { _, _, _, _ in throw Unreachable() }
         try await lifecycle(session: session, settings: settings, seed: seed, token: token).recoverDeletion()
         #expect(location.databaseExists)
         #expect(seed.read() == .found("current wallet"))
@@ -62,7 +62,7 @@ extension WalletLifecycleTests {
         if current == "different" { try seed.save("wallet B") }
         let item: any WalletDeletionSeed = current == "unreadable" ? UnreadableSeed() : seed
         let before = item.read()
-        let session = WalletSession(variant: .regtest, location: location) { _, _, _, _, _ in throw Unreachable() }
+        let session = WalletSession(variant: .regtest, location: location) { _, _, _, _ in throw Unreachable() }
         let result = try await lifecycle(session: session, settings: settings, seed: item, token: token).recoverDeletion()
         let waiting = marker == "bound" && current == "unreadable"
         #expect(result == (waiting ? .waitingForKeychain : .nothingPending))
@@ -94,7 +94,7 @@ extension WalletLifecycleTests {
         // Matching both live instance and current seed used to enter deletion and throw
         // restorePending forever, before the journal got a chance to settle.
         try location.writeDeletionIdentity(seed: seed.read())
-        let session = WalletSession(variant: .regtest, location: location) { _, _, _, _, _ in throw Unreachable() }
+        let session = WalletSession(variant: .regtest, location: location) { _, _, _, _ in throw Unreachable() }
         let mutation = WalletMutationGate()
         let lifecycle = lifecycle(session: session, settings: settings, seed: seed, token: token, mutation: mutation)
         let location = location
@@ -144,7 +144,7 @@ extension WalletLifecycleTests {
         try location.writeDeletionIdentity(seed: seed.read())
         let secret = FakeSeed("wallet B")
         secret.makeUnavailable()
-        let session = WalletSession(variant: .regtest, location: location) { _, _, _, _, _ in throw Unreachable() }
+        let session = WalletSession(variant: .regtest, location: location) { _, _, _, _ in throw Unreachable() }
         let mutation = WalletMutationGate()
         let lifecycle = lifecycle(session: session, settings: settings, seed: LockableSeed(item: seed, availability: secret), token: token, mutation: mutation)
         let location = location
@@ -179,7 +179,7 @@ extension WalletLifecycleTests {
         try Data("wallet B data".utf8).write(to: transaction.staged.appending(path: "db.sqlite"))
         try transaction.begin(seed: "wallet B")
         try location.writeDeletionIdentity(seed: seed.read())
-        let session = WalletSession(variant: .regtest, location: location) { _, _, _, _, _ in throw Unreachable() }
+        let session = WalletSession(variant: .regtest, location: location) { _, _, _, _ in throw Unreachable() }
         let mutation = WalletMutationGate()
         let lifecycle = lifecycle(session: session, settings: settings, seed: seed, token: token, mutation: mutation)
         let location = location
@@ -227,7 +227,7 @@ extension WalletLifecycleTests {
         if stage >= 3 { try fm.removeItem(at: location.deletionDirectory) }
         let availability = FakeSeed(nil)
         availability.makeUnavailable()
-        let session = WalletSession(variant: .regtest, location: location) { _, _, _, _, _ in throw Unreachable() }
+        let session = WalletSession(variant: .regtest, location: location) { _, _, _, _ in throw Unreachable() }
         let mutation = WalletMutationGate()
         let current = lifecycle(
             session: session,
@@ -269,7 +269,7 @@ extension WalletLifecycleTests {
         try seed.save("wallet A")
         if next == "old-marker" { try location.writeDeletionIdentity(seed: seed.read()) }
         try FileManager.default.moveItem(at: location.directory, to: location.deletionDirectory)
-        let session = WalletSession(variant: .regtest, location: location) { _, _, _, _, _ in throw Unreachable() }
+        let session = WalletSession(variant: .regtest, location: location) { _, _, _, _ in throw Unreachable() }
         let current = lifecycle(session: session, settings: settings, seed: seed, token: token)
         if next == "restore" {
             var syncs: [URL] = []
@@ -301,7 +301,7 @@ extension WalletLifecycleTests {
         #expect(throws: Unreachable.self) { try location.removeDiscardedDeletionData { _ in throw Unreachable() } }
         #expect(!FileManager.default.fileExists(atPath: location.deletionMarker.path))
         #expect(location.databaseExists); #expect(seed.read() == .found("wallet A"))
-        let session = WalletSession(variant: .regtest, location: location) { _, _, _, _, _ in throw Unreachable() }
+        let session = WalletSession(variant: .regtest, location: location) { _, _, _, _ in throw Unreachable() }
         try await lifecycle(session: session, settings: settings, seed: seed, token: token).delete()
         #expect(seed.read() == .notFound)
     }
@@ -313,7 +313,7 @@ extension WalletLifecycleTests {
         let (seed, token) = items()
         defer { seed.remove(); token.remove() }
         try seed.save("seed words")
-        let session = WalletSession(variant: .regtest, location: location) { _, _, _, _, _ in throw Unreachable() }
+        let session = WalletSession(variant: .regtest, location: location) { _, _, _, _ in throw Unreachable() }
         try await lifecycle(
             session: session, settings: settings, seed: seed, token: token, deregister: { throw Unreachable() }).delete()
         #expect(seed.read() == .notFound)
@@ -328,7 +328,7 @@ extension WalletLifecycleTests {
         try seed.save("seed words")
         try FileManager.default.createDirectory(at: location.restoreDirectory, withIntermediateDirectories: true)
         try Data("{}".utf8).write(to: location.restoreDirectory.appending(path: RestoreTransaction.journalName))
-        let session = WalletSession(variant: .regtest, location: location) { _, _, _, _, _ in throw Unreachable() }
+        let session = WalletSession(variant: .regtest, location: location) { _, _, _, _ in throw Unreachable() }
 
         await #expect(throws: WalletLifecycle.Failure.restorePending) {
             try await lifecycle(session: session, settings: settings, seed: seed, token: token).delete()

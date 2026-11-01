@@ -34,6 +34,8 @@ Team `AT26Z24V2Q`. The app entitlements list all three app groups, as in the RN 
 
 [bark-bolt-ffi](https://github.com/smolcars/bark-bolt-ffi) via Swift Package Manager, pinned with `exactVersion` in `project.yml`.
 
+bark's daemon never runs, as in RN: its round handler joins each round's first attempt interactively for VTXOs due for refresh. Every open (foreground, background, create, restore) uses `WalletSession.openArgs`. With the app open, the foreground pass (`WalletSession.ForegroundPass`: every 60 s tick, on foreground entry and right after a foreground open) does the daemon's remaining work: RN's sync stages, `maintenanceDelegated` in place of the wallet sync on the first pass after each foreground entry (due VTXOs go into a delegated round), and `progressPendingExits` while an exit is live. Incoming Ark payments arrive with the next pass: bark-bolt-ffi exposes no mailbox stream, and `notifications()` only reports what the wallet itself processed.
+
 ## Live server test
 
 With the regtest stack up, `TEST_RUNNER_NOAH_SERVER_IT=1 xcodebuild … -only-testing:NoahTests/ServerIntegrationTests test` logs in with a throwaway mnemonic (k1 signed through bark-bolt-ffi), registers, calls a gated endpoint and checks the one-retry path after a rejected token.
@@ -110,7 +112,7 @@ Settings follows [`docs/native-rewrite/design/settings.md`](../../docs/native-re
 
 ## Emergency exit (2026-10-24)
 
-The emergency exit follows [`docs/native-rewrite/design/exit.md`](../../docs/native-rewrite/design/exit.md). bark drives exits; the app keeps today's calls: the estimate and "Continue without estimate", all or selected VTXOs, the dust rule, the repeat-protection journal and its override, cancel while bark allows it, `listAllExits`, the claim call, and bark's daemon for automatic progress. No new polling, no amount matching.
+The emergency exit follows [`docs/native-rewrite/design/exit.md`](../../docs/native-rewrite/design/exit.md). bark drives exits; the app keeps today's calls: the estimate and "Continue without estimate", all or selected VTXOs, the dust rule, the repeat-protection journal and its override, cancel while bark allows it, `listAllExits`, the claim call, and automatic progress from the app's own `progressExits` calls (the foreground pass and background jobs, at bark's fee rate, while an exit is live; one call at a time). No amount matching.
 
 - **Code:** `Features/Onchain`:
   - `ExitProgress`: bark's states mapped to a phase and a picture; `ExitSightings`, `ExitFunds`, `ExitEconomics`, `ExitClaimSplit` and `ExitSharing`;
@@ -120,11 +122,11 @@ The emergency exit follows [`docs/native-rewrite/design/exit.md`](../../docs/nat
   - `ExitClaimView`: Claim; `ExitListView`: the list and the shared-path picture; `ExitViews`: shared pieces.
 
   The pages are `SettingsPage` routes under `.exit`; on wide windows they take both panes (`ownsPanes`).
-- **Progress evidence:** bark's daemon reports nothing back, and bark keeps a state, height included, until something changes.
+- **Progress evidence:** bark keeps a state, height included, until something changes; each of the app's progress calls records what it tried.
   - Evidence is per episode: a transaction's unbroken run in one status, from the bark record where it began (`ExitModel.episode`). A status change starts a new episode, so earlier evidence stops counting. bark restarts a cancelled exit with an empty history, so the key also carries Noah's run id, new each time Noah starts the exit (`native-exit-runs-v1`).
   - Noah persists, per wallet, the tip and time at which it first saw each episode (`native-exit-sightings-v1`). "Not in a block yet" counts from there; "Fees rose" compares children within the current episode only.
-  - "Needs on-chain funds" requires a confirmed balance below the parked package's own fee: its parent's weight plus bark's canonical 609 WU child, at the rate of bark's estimate. Unpriced, it stays unknown. It also needs evidence within the episode that bark tried: a completed Check the chain (kept per exit, and cleared when that exit is cancelled or started), or 75 s (bark's 60 s daemon interval plus a margin) of a running daemon. The session sets that clock wherever the daemon starts (`reopen` included, as with a custom Esplora) and clears it wherever it stops. It restarts when the app comes back, in the session and on any open page, because the daemon doesn't run while the app is suspended. bark's history is not evidence.
-  - Stale shows only when the last Check the chain failed, or the wallet is open without the daemon. Check the chain stays available beside Add on-chain funds, and on Claimable and Claiming.
+  - "Needs on-chain funds" requires a confirmed balance below the parked package's own fee: its parent's weight plus bark's canonical 609 WU child, at the rate of bark's estimate. Unpriced, it stays unknown. It also needs evidence within the episode that bark tried: a completed Check the chain (kept per exit, and cleared when that exit is cancelled or started), or 75 s (the foreground pass's 60 s tick plus a margin) of a running foreground pass. The session sets that clock on every foreground open (`reopen` included, as with a custom Esplora) and clears it on every close. It restarts when the app comes back, in the session and on any open page, because the pass doesn't run while the app is away. bark's history is not evidence.
+  - Stale shows only when the app's last exit progress failed, or the wallet is open without the foreground pass (opened for background work). Check the chain stays available beside Add on-chain funds, and on Claimable and Claiming.
 - **Claim (Decision 8):** "Another wallet" takes only this network's on-chain addresses. A claim to this phone writes its output into auto-board's ledger before broadcast; the txid comes from the signed transaction (`BitcoinTransaction`). That write adds it to the handled set and to a claims set.
   - Auto-board leaves claimed outputs that are still unspent and confirmed on-chain, for both its threshold and its amount.
   - It discards a preparation that spends one, and submitting re-checks both rules.
@@ -146,7 +148,7 @@ The emergency exit follows [`docs/native-rewrite/design/exit.md`](../../docs/nat
 - **Tests:**
   - `ExitProgressTests`: states to phases and pictures, needs-funds, its episodes and exit runs, sightings, fee rises, stale, every node of a longer path after Start, the fee rule and its All, the Settings row, sharing and its picture's spacing, claim addresses and the batched claim split;
   - `ExitHoldTests` and `ExitRestartTests`: one submission per hold; and, through the real start and claim paths with the durable journal, one wallet mutation across a scene re-activation and a restart, and no success when the estimate at submit fails;
-  - `ExitSceneTests`: coming back restarts an open page's daemon evidence; `WalletSessionTests` checks the daemon clock on every open and close;
+  - `ExitSceneTests`: coming back restarts an open page's progress evidence, and stale follows the app's own progress; `WalletSessionTests` checks the exit progress clock on every open and close;
   - `ExitClaimRecordTests`: the claim's record is written before broadcast, never blocks it, and keeps Done's net amount after acknowledgement;
   - `ExitClaimLedgerTests` and `ExitClaimAutoBoardTests`: the claimed set, held value, the input guard, the retry by amount and the submit re-check.
 - **Live on `noah-bark08`:**
