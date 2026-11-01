@@ -40,11 +40,15 @@ extension WalletSession {
         /// bark's sync never moves an interactive attempt an older version left, so its VTXOs stay locked until
         /// maintenance does. One that failed after creating its refresh (the server down or refusing it) waits for the
         /// next entry: each try would leave another failed renewal in history. Every pass then moves live exits.
+        ///
+        /// The on-chain sync goes last: it holds the on-chain wallet for its whole Esplora round trip, and every read
+        /// of that wallet (Home's balance and history) waits meanwhile. Nothing before it needs it fresh: bark's sync
+        /// and maintenance don't touch it, and exit progress funds fee children from the confirmed coins the last
+        /// pass found, as bark's daemon did, whose exit loop never waited for its on-chain sync.
         var stages: [@Sendable () async throws -> Void] {
             let sync = sync, maintenance = maintenance, takeMaintenance = takeMaintenance, maintenanceFailed = maintenanceFailed
             let refreshes = refreshes
             return [
-                syncOnchain,
                 {
                     guard await takeMaintenance() else { return try await sync() }
                     let created = try? await refreshes()
@@ -56,6 +60,7 @@ extension WalletSession {
                 },
                 claimLightning,
                 progressExits,
+                syncOnchain,
             ]
         }
     }

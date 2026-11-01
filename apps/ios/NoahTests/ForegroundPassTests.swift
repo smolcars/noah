@@ -25,12 +25,22 @@ struct ForegroundPassTests {
         let stages = Self.pass(calls, due: due).stages
         try await WalletSync().run(stages)
         try await WalletSync().run(stages)
-        #expect(calls.withLock { $0 } == ["onchain", "maintenance", "lightning", "exits", "onchain", "sync", "lightning", "exits"])
+        #expect(calls.withLock { $0 } == ["maintenance", "lightning", "exits", "onchain", "sync", "lightning", "exits", "onchain"])
         // The next entry: once more.
         due.withLock { $0 = true }
         calls.withLock { $0 = [] }
         try await WalletSync().run(stages)
-        #expect(calls.withLock { $0 } == ["onchain", "maintenance", "lightning", "exits"])
+        #expect(calls.withLock { $0 } == ["maintenance", "lightning", "exits", "onchain"])
+    }
+
+    /// The on-chain sync holds the on-chain wallet for its whole Esplora round trip, and Home's balance and history wait
+    /// for it: it runs last in every pass, so bark's sync or maintenance, Lightning claims and exit progress don't wait.
+    @Test func theOnchainSyncRunsLastInEveryPass() async throws {
+        let calls = Locked<[String]>([]), due = Locked(true)
+        let stages = Self.pass(calls, due: due).stages
+        try await WalletSync().run(stages)
+        try await WalletSync().run(stages)
+        #expect(calls.withLock { $0 } == ["maintenance", "lightning", "exits", "onchain", "sync", "lightning", "exits", "onchain"])
     }
 
     @Test func aFailingStageDoesNotStopExitProgress() async throws {
@@ -39,7 +49,7 @@ struct ForegroundPassTests {
         var pass = Self.pass(calls, due: due)
         pass.maintenance = { throw Boom() }
         await #expect(throws: Boom.self) { try await WalletSync().run(pass.stages) }
-        #expect(calls.withLock { $0 } == ["onchain", "lightning", "exits"])
+        #expect(calls.withLock { $0 } == ["lightning", "exits", "onchain"])
     }
 
     /// An entry's maintenance that fails (opened offline) runs again on each later pass, one per 60 s tick, until it
@@ -53,12 +63,12 @@ struct ForegroundPassTests {
             if offline.withLock({ $0 }) { throw Offline() }
         }
         for _ in 0..<2 { await #expect(throws: Offline.self) { try await WalletSync().run(pass.stages) } }
-        #expect(calls.withLock { $0 } == Array(repeating: ["onchain", "maintenance", "lightning", "exits"], count: 2).flatMap(\.self))
+        #expect(calls.withLock { $0 } == Array(repeating: ["maintenance", "lightning", "exits", "onchain"], count: 2).flatMap(\.self))
         offline.withLock { $0 = false }
         calls.withLock { $0 = [] }
         try await WalletSync().run(pass.stages)
         try await WalletSync().run(pass.stages)
-        #expect(calls.withLock { $0 } == ["onchain", "maintenance", "lightning", "exits", "onchain", "sync", "lightning", "exits"])
+        #expect(calls.withLock { $0 } == ["maintenance", "lightning", "exits", "onchain", "sync", "lightning", "exits", "onchain"])
     }
 
     /// A maintenance that failed after creating its refresh (the server down or refusing it) left a failed renewal in
@@ -73,7 +83,7 @@ struct ForegroundPassTests {
             throw Refused()
         }
         pass.refreshes = { refreshes.withLock { $0 } }
-        let maintained = ["onchain", "maintenance", "lightning", "exits"], synced = ["onchain", "sync", "lightning", "exits"]
+        let maintained = ["maintenance", "lightning", "exits", "onchain"], synced = ["sync", "lightning", "exits", "onchain"]
         await #expect(throws: Refused.self) { try await WalletSync().run(pass.stages) }
         try await WalletSync().run(pass.stages)
         try await WalletSync().run(pass.stages)

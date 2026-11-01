@@ -436,15 +436,16 @@ extension AppModel {
     }
 
     /// Nothing else syncs a wallet just opened until the first foreground tick: one pass now, which also runs the
-    /// delegated maintenance the open left due.
+    /// delegated maintenance the open left due, after Home's read (`ForegroundCatchUp`).
     private func syncOpenedWallet() {
         Task { [weak self] in
             guard let self else { return }
             await ForegroundExecution.run {
                 guard phase == .wallet, !isWalletSuspended, !pushPermission.blocksWallet(initialized: true) else { return }
-                await AppServices.shared.syncInForeground()
-                guard !Task.isCancelled, phase == .wallet, !isWalletSuspended, await session.isOpen else { return }
-                await refresh()
+                await ForegroundCatchUp(home: refresh, pass: { await AppServices.shared.syncInForeground() }) {
+                    guard !Task.isCancelled, self.phase == .wallet, !self.isWalletSuspended else { return false }
+                    return await self.session.isOpen
+                }.run()
             }
         }
     }
@@ -603,10 +604,11 @@ extension AppModel {
             guard !pushPermission.blocksWallet(initialized: true) else { return }
             if wasBlocked { await startServerServices() }
             try? await server.refreshMailboxIfNeeded()
-            await AppServices.shared.syncInForeground()
-            await RecurringExecutor.shared.execute()
-            synced = summaryRevision
-            await refresh()
+            await ForegroundCatchUp(home: refresh, pass: { await AppServices.shared.syncInForeground() }) {
+                await RecurringExecutor.shared.execute()
+                synced = self.summaryRevision
+                return true
+            }.run()
         }
         catchUp.finish(started, summaryRevision: synced)
         await reconcileBackupTriggers()
