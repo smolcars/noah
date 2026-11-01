@@ -51,7 +51,20 @@ actor WalletSession {
     /// the app comes back (it doesn't run while suspended); nil without it. Set wherever the daemon
     /// starts and cleared wherever it stops. The app can't see its cycles.
     private(set) var daemonSince: Date?
-    func appBecameActive() { daemonSince = daemonSince.map { _ in Date() } }
+    func appBecameActive() {
+        daemonSince = daemonSince.map { _ in Date() }
+        if isOpen { maintenanceDue = true }
+    }
+    /// Set by each foreground entry (a foreground open, the app coming back); the next foreground pass
+    /// takes it and runs bark's delegated maintenance once (`syncInForeground`). Cleared by every close.
+    private var maintenanceDue = false
+    func takeForegroundMaintenance() -> Bool {
+        defer { maintenanceDue = false }
+        return maintenanceDue
+    }
+    /// Serializes the app's own exit progress (foreground pass, background jobs, Check the chain): two
+    /// concurrent `progress_exits_with_cpfp` calls could each build a fee child for the same transaction.
+    let exitProgressGate = WalletMutationGate()
     /// The app's own last exit progress (Check the chain), per wallet: the tip, the parking episode
     /// (`ExitModel.parkedEpisode`) still waiting for a fee child after a completed call tried to fund
     /// it, by exit, what bark said it needed when it reported too few confirmed funds, or that it failed.
@@ -202,6 +215,7 @@ actor WalletSession {
                 let daemon = runDaemon && Self.backgroundOwner == nil
                 let handles = try await opener(mnemonic, datadir, daemon, appVersion, false)
                 daemonSince = daemon ? Date() : nil
+                maintenanceDue = Self.backgroundOwner == nil
                 state = .open(handles)
                 return handles
             } catch {
@@ -263,6 +277,7 @@ actor WalletSession {
                 throw error
             }
             daemonSince = nil
+            maintenanceDue = false
             state = reservation.map { .reserved($0.id) } ?? .closed
         }
     }
@@ -292,6 +307,7 @@ actor WalletSession {
             daemonSince = nil
             throw error
         }
+        maintenanceDue = true
         state = .open(handles)
     }
 
@@ -380,6 +396,7 @@ actor WalletSession {
             throw error
         }
         if self === WalletSession.shared { await SendPaymentController.shared.reloadForWalletChange() }
+        maintenanceDue = true
         state = .open(handles)
     }
 
@@ -665,6 +682,17 @@ extension WalletSession {
         let flight = syncFlight
         try await withOpenWallet { handles in
             try await flight.run(stages.map { stage in { try await self.runSyncStage(stage, handles: handles) } })
+        }
+    }
+
+    /// The foreground tick's pass (`ForegroundPass`), in the same flight as every other sync.
+    func syncInForeground() async throws {
+        guard isOpen else { return }
+        let flight = syncFlight
+        try await withOpenWallet { handles in
+            try await flight.run(ForegroundPass.live(self, handles).stages.map { stage in
+                { try await self.runSyncStage({ _ in try await stage() }, handles: handles) }
+            })
         }
     }
 

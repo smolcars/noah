@@ -185,6 +185,35 @@ struct WalletSessionTests {
         await session.release(failing)
     }
 
+    /// Each foreground entry (a foreground open, the app coming back to an open wallet) leaves delegated maintenance
+    /// due for one foreground pass; background opens, closes and coming back to a closed wallet don't.
+    @Test(.regtestStack, .timeLimit(.minutes(1))) func foregroundEntriesLeaveMaintenanceDueOnce() async throws {
+        defer { try? FileManager.default.removeItem(at: documents) }
+        let session = offlineSession()
+        let mnemonic = try generateMnemonic()
+        try await session.createNew(mnemonic: mnemonic, runDaemon: false, appVersion: "test")
+        #expect(await session.takeForegroundMaintenance())
+        #expect(await !session.takeForegroundMaintenance())
+        await session.appBecameActive()
+        #expect(await session.takeForegroundMaintenance())
+        #expect(await !session.takeForegroundMaintenance())
+        await session.appBecameActive()
+        try await session.close()
+        #expect(await !session.takeForegroundMaintenance())
+        await session.appBecameActive()
+        #expect(await !session.takeForegroundMaintenance())
+        try await session.withBackgroundAccess {
+            try await session.ensureOpen(mnemonic: mnemonic, runDaemon: false, appVersion: "test")
+            #expect(await !session.takeForegroundMaintenance())
+        }
+        try await session.ensureOpen(mnemonic: mnemonic, runDaemon: false, appVersion: "test")
+        #expect(await session.takeForegroundMaintenance())
+        let reservation = try await session.reserveForConfigurationChange()
+        try await session.reopen(reservation, mnemonic: mnemonic, appVersion: "test", commit: {})
+        #expect(await session.takeForegroundMaintenance())
+        try await session.close()
+    }
+
     @Test(.regtestStack, .timeLimit(.minutes(1))) func silentEsploraReleasesUIGateButKeepsReservationUntilRollback() async throws {
         defer { try? FileManager.default.removeItem(at: documents) }
         for lateSuccess in [false, true] {

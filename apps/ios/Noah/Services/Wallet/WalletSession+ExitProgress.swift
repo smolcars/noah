@@ -30,6 +30,10 @@ extension WalletSession {
     /// One exit progress at `feeRate` (nil: bark's own), recorded as the wallet's last exit check, which the
     /// exit screens read; how many exits failed otherwise.
     nonisolated func progressExits(_ feeRate: UInt64?, access: ExitProgressAccess) async throws -> Int {
+        try await exitProgressGate.withLock { try await self.progressExitsLocked(feeRate, access: access) }
+    }
+
+    private nonisolated func progressExitsLocked(_ feeRate: UInt64?, access: ExitProgressAccess) async throws -> Int {
         let statuses: [ExitProgressStatus]
         do { statuses = try await access.progress(feeRate) }
         catch {

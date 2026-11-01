@@ -427,8 +427,23 @@ extension AppModel {
             return
         }
         if phase == .wallet { await pushPermission.refresh() }
+        syncOpenedWallet()
         await reconcileBackupTriggers()
         await startServerServices()
+    }
+
+    /// Nothing else syncs a wallet just opened until the first foreground tick: one pass now, which also runs the
+    /// delegated maintenance the open left due.
+    private func syncOpenedWallet() {
+        Task { [weak self] in
+            guard let self else { return }
+            await ForegroundExecution.run {
+                guard phase == .wallet, !isWalletSuspended, !pushPermission.blocksWallet(initialized: true) else { return }
+                await AppServices.shared.syncInForeground()
+                guard !Task.isCancelled, phase == .wallet, !isWalletSuspended, await session.isOpen else { return }
+                await refresh()
+            }
+        }
     }
 
     // MARK: Danger zone (Settings)
