@@ -186,7 +186,7 @@ internal class OnchainOperationsTest : OnchainOperationsFixture() {
         assertEquals(mapOf("a" to 5_000L), reported)
     } }
     @Test fun backgroundProgressCallsBarkOnlyForPendingExitsAndRecordsLikeACheck() = runBlocking { fixture { wallet, ops, journal, _ ->
-        val funding = ExitFunding(0) { 0 }
+        val funding = ExitFunding()
         // None pending: finished exits only, so no progress call and nothing recorded.
         wallet.active = listOf(ExitVtxo("done", 30_000u, ExitState.Canceled(100u), false),
             ExitVtxo("gone", 30_000u, ExitState.VtxoAlreadySpent(100u), false))

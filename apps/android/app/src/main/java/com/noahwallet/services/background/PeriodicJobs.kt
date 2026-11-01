@@ -54,7 +54,7 @@ class PeriodicJobs(private val d: Dependencies) {
                     checkStage(); d.widgetSummary()
                     checkStage(); d.widgetExpiry()
                     checkStage(); d.publishWidget()
-                    // Last: exits move here even when bark's daemon isn't running.
+                    // Last: exits move only through Noah's own progress (bark's daemon never runs).
                     checkStage(); d.progressExits()
                 }
             }

@@ -489,8 +489,9 @@ class WalletSession internal constructor(
     }
     suspend fun checkOnchainAttempt(id: String): Boolean = withM6 { onchainOperations(it).check(id) }
     /**
-     * Background jobs' exit progress ([OnchainOperations.progressPending]); not [withM6], which refuses while a background
-     * job holds the wallet. Never throws but for cancellation: a failure's reason, safe to log, goes to [failed].
+     * Noah's own exit progress, each foreground pass and background job ([OnchainOperations.progressPending]); not [withM6],
+     * which refuses while either holds the wallet. Never throws but for cancellation: one that failed or couldn't run is
+     * recorded in [ExitFunding] (the exit pages' evidence that exits aren't moving), and its reason, safe to log, goes to [failed].
      */
     suspend fun progressPendingExits(failed: (String) -> Unit) {
         val caller = currentCoroutineContext()
@@ -501,6 +502,7 @@ class WalletSession internal constructor(
         } catch (cancelled: CancellationException) {
             throw cancelled
         } catch (@Suppress("TooGenericExceptionCaught") error: Exception) { // documented: never throws but for cancellation
+            ExitFunding.shared.checked(emptyList(), completed = false)
             failed(com.noahwallet.services.logging.SafeErrorDescription.of(error))
         }
     }

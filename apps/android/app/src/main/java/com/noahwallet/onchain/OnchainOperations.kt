@@ -347,9 +347,9 @@ internal class OnchainOperations(
         return statuses.count { status -> status.error?.let { it.code != BarkErrorCode.EXIT_INSUFFICIENT_CONFIRMED_FUNDS } == true }
     }
     /**
-     * Background jobs' exit progress, apart from bark's daemon: nothing without a pending exit, else one call at bark's
-     * own fee rate, recorded in [funding] like a completed Move exit forward. [admitted] throws once the
-     * job's budget is gone, so a late step never starts the call. True when it called bark.
+     * Noah's own exit progress (each foreground pass and background job; bark's daemon never runs): nothing without a
+     * pending exit, else one call at bark's own fee rate, recorded in [funding] like a completed Move exit forward.
+     * [admitted] throws once the job's budget is gone, so a late step never starts the call. True when it called bark.
      */
     suspend fun progressPending(funding: ExitFunding, admitted: () -> Unit): Boolean {
         if (wallet.exits().all { exitState(it.state).first in ExitTimeline.terminal }) return false

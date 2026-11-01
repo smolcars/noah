@@ -11,8 +11,13 @@ internal class ForegroundWalletWorkTest : WalletSessionFixture() {
     private class Exits(var exits: List<ExitVtxo>) : OnchainWalletAccess {
         override val walletID = "wallet"
         var progressed = 0
+        var error: Exception? = null
         override suspend fun exits() = exits
-        override suspend fun progress(feeRate: Long?): List<ExitProgressStatus> { assertNull(feeRate); progressed++; return emptyList() }
+        override suspend fun progress(feeRate: Long?): List<ExitProgressStatus> {
+            assertNull(feeRate); progressed++
+            error?.let { throw it }
+            return emptyList()
+        }
         override suspend fun allExits() = emptyList<ExitTransactionStatus>()
     }
 
@@ -68,6 +73,29 @@ internal class ForegroundWalletWorkTest : WalletSessionFixture() {
             assertEquals(2, exits.progressed)
             work.entered(); work.run()
             assertEquals(listOf("sync", "sync", "sync", "sync", "sync", "maintenance"), handles.calls)
+            session.close()
+        }
+    }
+
+    /** The exit pages read [ExitFunding.checkFailed] as their evidence that exits aren't moving ([com.noahwallet.onchain.ExitStages.of]). */
+    @Test fun exitsReadAsStalledOnlyWhenNoahsOwnProgressFailsOrCannotRun() = runBlocking {
+        withLocation { location ->
+            val funding = com.noahwallet.onchain.ExitFunding.shared
+            val exits = Exits(listOf(ExitVtxo("a", 30_000u, ExitState.Start(100u), false)))
+            val handles = Handles().apply { exitWallet = exits }
+            val session = WalletSession("regtest", location, opener = { _, _, _, _, _ -> handles })
+            var reasons = 0
+            session.progressPendingExits { reasons++ }
+            assertTrue("couldn't run: the wallet isn't open", funding.checkFailed)
+            session.createNew("unused", false, "test")
+            session.progressPendingExits { fail(it) }
+            assertFalse("a completed progress: exits are moving", funding.checkFailed)
+            exits.error = BarkError("offline", BarkErrorCode.OTHER)
+            session.progressPendingExits { reasons++ }
+            assertTrue("bark's call failed", funding.checkFailed)
+            exits.error = null; session.progressPendingExits { fail(it) }
+            assertFalse(funding.checkFailed)
+            assertEquals("each failure's reason goes to the log", 2, reasons)
             session.close()
         }
     }

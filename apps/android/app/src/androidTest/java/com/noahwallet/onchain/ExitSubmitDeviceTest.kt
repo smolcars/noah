@@ -220,7 +220,7 @@ class ExitSubmitDeviceTest {
         assertFalse("the journal blocks a second start", exists("exit-hold-start"))
         assertEquals(listOf("start"), bark.calls)
         assertEquals(1, journal().count { it.quote.action == OnchainAction.startExit })
-        assertTrue("the earlier run's proof is gone", ExitFunding.shared.needsFunds(listOf(f.nofunds), 0, null).isEmpty())
+        assertTrue("the earlier run's proof is gone", ExitFunding.shared.needsFunds(listOf(f.nofunds), 0).isEmpty())
         ExitFunding.shared.forget(listOf(id))
     }
 

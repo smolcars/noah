@@ -65,8 +65,8 @@ internal object ExitStages {
 
     /**
      * [tip] is the wallet's chain tip; [needsFunds] is [ExitFunding]'s inference for the parked transaction; [seen] is
-     * [ExitSeen]'s first-seen tips; [stalled] is Noah's evidence that nothing progresses exits (its last Check the chain
-     * failed, or the wallet is open without bark's daemon). Fees rising is read from bark's history.
+     * [ExitSeen]'s first-seen tips; [stalled] is Noah's evidence that nothing progresses exits (its last progress, its own
+     * or Check the chain, failed or couldn't run). Fees rising is read from bark's history.
      */
     fun of(exit: ExitModel, tip: Long, needsFunds: Boolean = false, seen: Map<String, Long> = emptyMap(), stalled: Boolean = false): ExitStage {
         val details = exit.details
@@ -75,8 +75,8 @@ internal object ExitStages {
         val known = (exit.historyDetails + details).lastOrNull { !it.transactions.isNullOrEmpty() }?.transactions.orEmpty()
         val total = listOf(txs.size, exit.packages.size, known.size).firstOrNull { it > 0 } ?: 0
         val feesPaid = ExitFees.paid(exit, emptyList()).first
-        // bark keeps a state's tip while nothing changes, so its height can't say whether progress runs; while the daemon
-        // runs it keeps exits current. Only with Noah's evidence that it doesn't is an exit bark last recorded below the tip behind.
+        // bark keeps a state's tip while nothing changes, so its height can't say whether progress runs; while Noah's own
+        // progress runs it keeps exits current. Only with Noah's evidence that it doesn't is an exit bark last recorded below the tip behind.
         val synced = details.tip_height
         val stale = stalled && synced != null && exit.state in setOf("Start", "Processing") && tip > synced
         val base = ExitStage(ExitStage.Phase.lift, total = total, feesPaid = feesPaid, stale = stale)
@@ -169,8 +169,8 @@ internal object ExitClaims {
 
 /**
  * The exit page's actions for a stage (prototype `pFoot`); Cancel exit only while bark allows it. Check the chain stays while
- * the exit is live, also beside a primary Claim or "Add on-chain funds" and while claiming, so a stopped daemon never strands
- * it: bark notices a claim confirming, or falling out, only when it progresses.
+ * the exit is live, also beside a primary Claim or "Add on-chain funds" and while claiming, so an exit whose automatic progress
+ * fails is never stranded: bark notices a claim confirming, or falling out, only when it progresses.
  */
 internal object ExitActions {
     enum class Action { done, claim, addFunds, cancel, check }
@@ -238,33 +238,28 @@ class ExitClaimRecords(private val read: () -> String?, private val write: (Stri
 /**
  * "Needs on-chain funds" is inferred (exit.md, Decision 3): bark 0.8 leaves a transaction it can't pay for in
  * AwaitingCpfpBroadcast and only logs a warning. It shows while the confirmed on-chain balance is below that package's
- * fee, once bark has had a chance to pay, and clears as soon as the balance covers it. Never from error text. When a
- * Check the chain reports it by code (SDK 0.7.0), that's direct evidence, with what bark needs.
+ * fee, once bark has tried to pay (a completed progress: Noah's own, each foreground pass and background job, or Check the
+ * chain), and clears as soon as the balance covers it. Never from error text. When a progress reports it by code
+ * (SDK 0.7.0), that's direct evidence, with what bark needs.
  */
-internal class ExitFunding(private val interval: Long, private val now: () -> Long = { android.os.SystemClock.uptimeMillis() }) {
-    private class Parked(val run: Long?, val since: Long, var tried: Boolean = false)
-    private val parked = mutableMapOf<String, Parked>()
-    /** What bark said each exit needs, from the last Check the chain that reported confirmed funds short. */
+internal class ExitFunding {
+    /** The parked transactions (exit, transaction and episode) bark tried to pay: a completed progress left them parked. */
+    private val tried = mutableSetOf<String>()
+    /** What bark said each exit needs, from the last progress that reported confirmed funds short. */
     private var reported = emptyMap<String, Long>()
-    /** The last Check the chain didn't complete: Noah's evidence that nothing progresses exits. */
+    /** The last progress (Noah's own or Check the chain) didn't complete or couldn't run: Noah's evidence that exits aren't moving. */
     var checkFailed by mutableStateOf(false); private set
 
-    /** [run] is the wallet's current daemon run ([com.noahwallet.services.wallet.WalletSession.daemonRun]), timed from when Noah first saw it parked. */
     @Synchronized
-    fun needsFunds(exits: List<ExitModel>, confirmed: Long, run: Long?): Set<String> {
+    fun needsFunds(exits: List<ExitModel>, confirmed: Long): Set<String> {
         val current = parkedIn(exits)
-        parked.keys.retainAll(current.keys)
-        return current.filter { (key, exit) ->
-            val entry = parked[key]?.takeIf { it.tried || it.run == run } ?: Parked(run, now()).also { parked[key] = it }
-            // The short balance is the proof; a completed check or one daemon interval only stops it flashing before bark has tried.
-            val tried = entry.tried || (run != null && now() - entry.since >= interval)
-            val fee = exit.nextPackageFee
-            tried && fee != null && confirmed < fee
-        }.values.map { it.id }.toSet() +
+        tried.retainAll(current.keys)
+        // The short balance is the proof; a completed progress only stops it flashing before bark has tried.
+        return current.filter { (key, exit) -> key in tried && exit.nextPackageFee?.let { confirmed < it } == true }.values.map { it.id }.toSet() +
             exits.filter { exit -> reported[exit.id]?.let { exit.state !in ExitTimeline.terminal && confirmed < it } == true }.map { it.id }
     }
 
-    /** A Check the chain's statuses short of confirmed funds: what bark needs for each exit ([needed]). */
+    /** A progress's statuses short of confirmed funds: what bark needs for each exit ([needed]). */
     @Synchronized
     fun reported(needed: Map<String, Long>) { reported = needed }
 
@@ -272,20 +267,16 @@ internal class ExitFunding(private val interval: Long, private val now: () -> Lo
     @Synchronized
     fun needed(id: String): Long? = reported[id]
 
-    /** A Check the chain ended: if it [completed], bark tried to pay every transaction parked in [exits], read before or after it. */
+    /** A progress ended: if it [completed], bark tried to pay every transaction parked in [exits], read before or after it. */
     @Synchronized
     fun checked(exits: List<ExitModel>, completed: Boolean) {
         checkFailed = !completed
-        if (completed) for (key in parkedIn(exits).keys) parked.getOrPut(key) { Parked(null, now()) }.tried = true
+        if (completed) tried += parkedIn(exits).keys
     }
 
     /** Started or canceled: the exits' proof is from a run that's over. */
     @Synchronized
-    fun forget(ids: Collection<String>) { parked.keys.removeAll { key -> ids.any { key.startsWith("$it/") } }; reported = reported - ids.toSet() }
-
-    /** Noah went to the background, where bark's daemon may not run: waiting time starts over; a completed check still counts. */
-    @Synchronized
-    fun backgrounded() { parked.values.removeAll { !it.tried } }
+    fun forget(ids: Collection<String>) { tried.removeAll { key -> ids.any { key.startsWith("$it/") } }; reported = reported - ids.toSet() }
 
     private fun parkedIn(exits: List<ExitModel>) = exits.mapNotNull { exit ->
         exit.details.transactions?.firstOrNull { it.status.kind != "confirmed" }
@@ -294,11 +285,7 @@ internal class ExitFunding(private val interval: Long, private val now: () -> Lo
     }.toMap()
 
     companion object {
-        /** bark's daemon interval as Noah configures it, with a margin for the progress itself. */
-        val shared by lazy {
-            val configuration = com.noahwallet.services.wallet.WalletConfiguration.base(com.noahwallet.BuildConfig.APP_VARIANT)
-            ExitFunding(configuration.daemonSyncIntervalSecs.toLong() * 1_000 + 15_000)
-        }
+        val shared = ExitFunding()
     }
 }
 

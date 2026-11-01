@@ -210,7 +210,7 @@ internal fun ExitWarningPage(app: AppModel, nav: SettingsNav) {
     // cancel, claim or start stands in until then, so the card is there at once, as it is now, rather than gone and back.
     val revealed = rememberSaveable { mutableStateOf(false) }
     val overview = model.overview ?: SharedOverview.shared.overview.takeIf { revealed.value }
-    val needsFunds = remember(model.revision) { overview?.let { ExitFunding.shared.needsFunds(it.exits, it.confirmed, app.session.daemonRun) }.orEmpty() }
+    val needsFunds = remember(model.revision) { overview?.let { ExitFunding.shared.needsFunds(it.exits, it.confirmed) }.orEmpty() }
     // The tree's transactions: your biggest VTXO's path (the one the fee fact prices), else a round's usual four.
     val transactions = overview?.let { read -> read.vtxos.filter { it.eligible }.maxByOrNull { it.amount }?.exitDepth?.toInt()?.takeIf { it > 0 } ?: 4 }
     ExitWarningContent(overview?.exits.orEmpty(), overview?.tip ?: 0, rememberExitDelta(app), rememberSampleCost(app, overview?.vtxos.orEmpty())?.broadcast,
