@@ -12,8 +12,11 @@ use serde::Serialize;
 use tokio::{net::lookup_host, time::timeout};
 
 use crate::{
-    AppState, db::push_token_repo::PushTokenRepository, errors::ApiError,
-    types::NotificationRequestData, utils::make_k1,
+    AppState,
+    db::push_token_repo::PushTokenRepository,
+    errors::ApiError,
+    types::{NotificationRequestData, PushProvider},
+    utils::make_k1,
 };
 
 const UNIFIED_PUSH_ENDPOINT_MAX_BYTES: usize = 1_000;
@@ -21,6 +24,10 @@ const UNIFIED_PUSH_DNS_TIMEOUT: Duration = Duration::from_secs(3);
 const UNIFIED_PUSH_CONNECT_TIMEOUT: Duration = Duration::from_secs(5);
 const UNIFIED_PUSH_REQUEST_TIMEOUT: Duration = Duration::from_secs(10);
 const UNIFIED_PUSH_CONCURRENCY_LIMIT: usize = 16;
+const DIRECT_PUSH_CONCURRENCY_LIMIT: usize = 64;
+const FCM_TOKEN_MAX_BYTES: usize = 4_096;
+const APNS_TOKEN_MIN_HEX_DIGITS: usize = 64;
+const APNS_TOKEN_MAX_HEX_DIGITS: usize = 400;
 
 #[derive(Debug)]
 struct ResolvedUnifiedPushEndpoint {
@@ -39,9 +46,42 @@ fn is_expo_token(token: &str) -> bool {
             .is_match(token)
 }
 
-/// Validates a push token before it is persisted. Expo token formats are kept
-/// unchanged; all other tokens must be public HTTPS UnifiedPush endpoints.
-pub async fn validate_push_token(token: &str) -> Result<(), ApiError> {
+/// An APNs token goes into a request path, so only hex is ever accepted. Apple says not
+/// to rely on its current 64 digits.
+fn is_apns_token(token: &str) -> bool {
+    (APNS_TOKEN_MIN_HEX_DIGITS..=APNS_TOKEN_MAX_HEX_DIGITS).contains(&token.len())
+        && token.len().is_multiple_of(2)
+        && token.bytes().all(|byte| byte.is_ascii_hexdigit())
+}
+
+fn is_fcm_token(token: &str) -> bool {
+    !token.is_empty()
+        && token.len() <= FCM_TOKEN_MAX_BYTES
+        && token
+            .bytes()
+            .all(|byte| byte.is_ascii_alphanumeric() || matches!(byte, b'-' | b'_' | b':' | b'.'))
+}
+
+/// Validates a push token before it is persisted. A raw token must fit its provider.
+/// Expo token formats are kept unchanged; all other tokens must be public HTTPS
+/// UnifiedPush endpoints.
+pub async fn validate_push_token(
+    token: &str,
+    provider: Option<PushProvider>,
+) -> Result<(), ApiError> {
+    let valid_raw_token = match provider {
+        Some(PushProvider::Apns) => Some(is_apns_token(token)),
+        Some(PushProvider::Fcm) => Some(is_fcm_token(token)),
+        None => None,
+    };
+    if let Some(valid) = valid_raw_token {
+        return if valid {
+            Ok(())
+        } else {
+            Err(ApiError::InvalidArgument("Invalid push token".to_string()))
+        };
+    }
+
     if is_expo_token(token) {
         return Ok(());
     }
@@ -203,12 +243,6 @@ pub struct PushDispatchReceipt {
     pub notification_k1: String,
 }
 
-#[derive(Debug, Clone)]
-struct PushTarget {
-    pubkey: String,
-    push_token: String,
-}
-
 pub async fn send_push_notification(
     app_state: AppState,
     data: PushNotificationData,
@@ -256,17 +290,13 @@ pub(crate) async fn send_unique_k1_notifications(
     let push_token_repo = PushTokenRepository::new(&app_state.db_pool);
 
     let push_targets = if let Some(pubkey) = pubkey {
-        match push_token_repo.find_by_pubkey(&pubkey).await? {
-            Some(push_token) => vec![PushTarget { pubkey, push_token }],
-            None => vec![],
-        }
-    } else {
         push_token_repo
-            .find_all_with_pubkeys()
+            .find_target_by_pubkey(&pubkey)
             .await?
             .into_iter()
-            .map(|(pubkey, push_token)| PushTarget { pubkey, push_token })
             .collect()
+    } else {
+        push_token_repo.find_all_active().await?
     };
 
     if push_targets.is_empty() {
@@ -317,15 +347,21 @@ pub(crate) async fn send_unique_k1_notifications(
                     }
                 };
 
-                let send_result = if is_expo_token(&target.push_token) {
-                    let push_data = PushNotificationData {
-                        title: None,
-                        body: None,
-                        data: data_string,
-                        priority: Priority::High,
-                        content_available: true,
-                    };
+                let push_data = PushNotificationData {
+                    title: None,
+                    body: None,
+                    data: data_string,
+                    priority: Priority::High,
+                    content_available: true,
+                };
 
+                let send_result = if target.provider.is_some() {
+                    app_state_clone
+                        .direct_push
+                        .send(&target, &push_data, false)
+                        .await
+                        .map_err(|e| e.to_string())
+                } else if is_expo_token(&target.push_token) {
                     let message = match ExpoPushMessage::builder(vec![target.push_token.clone()])
                         .data(&push_data.data)
                         .and_then(|b| {
@@ -354,7 +390,7 @@ pub(crate) async fn send_unique_k1_notifications(
                         Err(e) => Err(e.to_string()),
                     }
                 } else {
-                    send_unified_notification(&target.push_token, &data_string)
+                    send_unified_notification(&target.push_token, &push_data.data)
                         .await
                         .map_err(|e| e.to_string())
                 };
@@ -409,18 +445,19 @@ pub(crate) async fn send_batched_notifications(
 ) -> anyhow::Result<(), ApiError> {
     let push_token_repo = PushTokenRepository::new(&app_state.db_pool);
 
-    let push_tokens = if let Some(pubkey) = &pubkey {
+    let targets = if let Some(pubkey) = &pubkey {
         // A single token might not be found, which is not an error, so we handle the Option.
-        match push_token_repo.find_by_pubkey(pubkey).await? {
-            Some(token) => vec![token],
-            None => vec![],
-        }
+        push_token_repo
+            .find_target_by_pubkey(pubkey)
+            .await?
+            .into_iter()
+            .collect()
     } else {
         push_token_repo.find_all().await?
     };
     let notification_type = notification_type_for_log(&data.data);
 
-    if push_tokens.is_empty() {
+    if targets.is_empty() {
         tracing::warn!(
             notification_type,
             "send_push_notification: no push tokens found for notification"
@@ -431,11 +468,15 @@ pub(crate) async fn send_batched_notifications(
     tracing::info!(
         notification_type,
         "send_push_notification: Sending to {} tokens",
-        push_tokens.len()
+        targets.len()
     );
 
-    let (expo_tokens, unified_tokens): (Vec<_>, Vec<_>) =
-        push_tokens.into_iter().partition(|t| is_expo_token(t));
+    let (direct_targets, other_targets): (Vec<_>, Vec<_>) =
+        targets.into_iter().partition(|t| t.provider.is_some());
+    let (expo_tokens, unified_tokens): (Vec<_>, Vec<_>) = other_targets
+        .into_iter()
+        .map(|t| t.push_token)
+        .partition(|t| is_expo_token(t));
 
     if !allow_unified_push {
         if !unified_tokens.is_empty() {
@@ -446,7 +487,7 @@ pub(crate) async fn send_batched_notifications(
             );
         }
 
-        if expo_tokens.is_empty() {
+        if expo_tokens.is_empty() && direct_targets.is_empty() {
             tracing::warn!(
                 notification_type,
                 "send_push_notification: no Expo push tokens found for Expo-only notification"
@@ -457,8 +498,10 @@ pub(crate) async fn send_batched_notifications(
 
     #[cfg(test)]
     if let Some(deliveries) = &app_state.push_deliveries {
-        for token in expo_tokens
+        for token in direct_targets
             .iter()
+            .map(|t| &t.push_token)
+            .chain(expo_tokens.iter())
             .chain(unified_tokens.iter().filter(|_| allow_unified_push))
         {
             deliveries
@@ -467,6 +510,24 @@ pub(crate) async fn send_batched_notifications(
         }
         return Ok(());
     }
+
+    stream::iter(&direct_targets)
+        .for_each_concurrent(Some(DIRECT_PUSH_CONCURRENCY_LIMIT), |target| {
+            let app_state = &app_state;
+            let data = &data;
+            let notification_type = notification_type.as_str();
+            async move {
+                if let Err(e) = app_state.direct_push.send(target, data, false).await {
+                    tracing::error!(
+                        notification_type,
+                        pubkey = %target.pubkey,
+                        error = %e,
+                        "Failed to send push notification"
+                    );
+                }
+            }
+        })
+        .await;
 
     if !expo_tokens.is_empty() {
         let chunks = expo_tokens
@@ -633,6 +694,50 @@ mod tests {
     }
 
     #[test]
+    fn raw_token_formats_are_enforced() {
+        assert!(is_apns_token(&"aB".repeat(32)));
+        assert!(is_apns_token(&"ab".repeat(200)));
+        assert!(!is_apns_token(&"ab".repeat(31)));
+        assert!(!is_apns_token(&"ab".repeat(201)));
+        assert!(!is_apns_token(&format!("{}a", "ab".repeat(32))));
+        // It goes into a URL path.
+        assert!(!is_apns_token(&format!("../{}", "ab".repeat(32))));
+
+        assert!(is_fcm_token("dGVzdA:APA91b-_.token"));
+        assert!(is_fcm_token(&"a".repeat(FCM_TOKEN_MAX_BYTES)));
+        assert!(!is_fcm_token(""));
+        assert!(!is_fcm_token(&"a".repeat(FCM_TOKEN_MAX_BYTES + 1)));
+        assert!(!is_fcm_token("token with spaces"));
+        assert!(!is_fcm_token("https://push.example.com/up"));
+    }
+
+    #[tokio::test]
+    async fn a_raw_token_only_validates_for_its_own_provider() {
+        let apns = "ab".repeat(32);
+        assert!(
+            validate_push_token(&apns, Some(PushProvider::Apns))
+                .await
+                .is_ok()
+        );
+        assert!(validate_push_token(&apns, None).await.is_err());
+        assert!(
+            validate_push_token("ExpoPushToken[test]", Some(PushProvider::Apns))
+                .await
+                .is_err()
+        );
+        assert!(
+            validate_push_token("https://1.1.1.1/up", Some(PushProvider::Fcm))
+                .await
+                .is_err()
+        );
+        assert!(
+            validate_push_token("ExpoPushToken[test]", None)
+                .await
+                .is_ok()
+        );
+    }
+
+    #[test]
     fn unified_push_gets_background_commands_unchanged() {
         let data = r#"{"notification_type":"maintenance","notification_k1":"k1"}"#;
         let command = PushNotificationData {
@@ -757,7 +862,7 @@ mod tests {
 
     #[tokio::test]
     async fn public_ip_endpoint_resolves_without_external_dns() {
-        validate_push_token("https://1.1.1.1:8443/up/topic?key=value")
+        validate_push_token("https://1.1.1.1:8443/up/topic?key=value", None)
             .await
             .unwrap();
     }
@@ -765,7 +870,7 @@ mod tests {
     #[tokio::test]
     async fn private_ip_endpoint_is_rejected() {
         assert!(
-            validate_push_token("https://127.0.0.1/up/topic")
+            validate_push_token("https://127.0.0.1/up/topic", None)
                 .await
                 .is_err()
         );

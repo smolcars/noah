@@ -10,7 +10,6 @@ import com.noahwallet.api.generated.models.*
 import com.noahwallet.services.AppServices
 import com.noahwallet.services.logging.AppLog
 import com.noahwallet.services.server.*
-import com.noahwallet.services.storage.ExpoInstallationID
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlin.coroutines.resume
@@ -86,7 +85,7 @@ class PushRuntime(private val context: Context, private val services: AppService
             permissionGranted = { PushNotifications.permissionGranted(context) },
             useUnifiedPush = { GoogleApiAvailabilityLight.getInstance().isGooglePlayServicesAvailable(context) != ConnectionResult.SUCCESS },
             unifiedEndpoint = { UnifiedPushRegistration(context).register() },
-            expoToken = {
+            fcmToken = {
                 val messaging = FirebaseMessaging.getInstance()
                 messaging.isAutoInitEnabled = true
                 // FCM 26 deprecates getToken() for register()/onRegistered; migrating token delivery is separate work.
@@ -96,12 +95,12 @@ class PushRuntime(private val context: Context, private val services: AppService
                         .addOnFailureListener { continuation.resumeWithException(it) }
                 }
                 log.i("FCM token obtained")
-                // A separate unauthenticated client prevents Noah's bearer from reaching Expo.
-                ServerClient.make("https://exp.host").use {
-                    ExpoPushToken(it).fetch(ExpoPushToken.request(ExpoInstallationID(context).getOrCreate(), context.packageName, token))
-                }.also { log.i("Expo token obtained") }
+                token
             },
-            registerToken = { V0RegisterPushTokenClient(client).registerPushToken(RegisterPushToken(it)).value(); onToken(it) },
+            registerToken = { token, provider ->
+                V0RegisterPushTokenClient(client).registerPushToken(RegisterPushToken(pushToken = token, provider = provider)).value()
+                onToken(token)
+            },
         ).register()
         if (outcome == PushRegistration.Outcome.registered) log.i("Push token registered with Noah server")
         return outcome

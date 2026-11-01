@@ -113,7 +113,7 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         PushRegistration.shared.deliver(.failure(error))
     }
 
-    /// Silent pushes from the Noah server (via Expo). iOS allows ~30 s; jobs
+    /// Silent pushes from the Noah server. iOS allows ~30 s; jobs
     /// get 25 s and a report under way at the deadline up to 3 s more, so the
     /// completion handler is always called in time.
     func application(

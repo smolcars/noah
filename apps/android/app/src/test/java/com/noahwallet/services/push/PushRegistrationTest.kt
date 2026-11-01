@@ -1,5 +1,6 @@
 package com.noahwallet.services.push
 
+import com.noahwallet.api.generated.models.RegisterPushTokenProvider
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.*
 import org.junit.Test
@@ -10,7 +11,8 @@ class PushRegistrationTest {
             var fetched = 0
             var submitted = 0
             val result = PushRegistration({ onboarded }, { registered }, { permission }, { false }, { error("No UnifiedPush") },
-                { fetched++; "expo" }, { assertEquals("expo", it); submitted++ }).register()
+                { fetched++; "fcm" }, { token, provider ->
+                    assertEquals("fcm", token); assertEquals(RegisterPushTokenProvider.FCM, provider); submitted++ }).register()
             val ready = onboarded && registered && permission
             assertEquals(if (ready) 1 else 0, fetched)
             assertEquals(fetched, submitted)
@@ -23,7 +25,7 @@ class PushRegistrationTest {
         var endpoint: String? = null
         var submitted: String? = null
         val registration = PushRegistration({ true }, { true }, { true }, { true }, { endpoint },
-            { error("Firebase must not run") }, { submitted = it })
+            { error("Firebase must not run") }, { token, provider -> assertNull(provider); submitted = token })
         assertEquals(PushRegistration.Outcome.waitingForDistributor, registration.register())
         endpoint = "https://ntfy.example/endpoint"
         assertEquals(PushRegistration.Outcome.registered, registration.register())
@@ -31,8 +33,8 @@ class PushRegistrationTest {
     }
     @Test fun failedServerSubmissionPropagatesAndCanBeRetried() = runBlocking {
         var attempts = 0
-        val registration = PushRegistration({ true }, { true }, { true }, { false }, { null }, { "expo" },
-            { if (++attempts == 1) error("offline") })
+        val registration = PushRegistration({ true }, { true }, { true }, { false }, { null }, { "fcm" },
+            { _, _ -> if (++attempts == 1) error("offline") })
         assertTrue(runCatching { registration.register() }.isFailure)
         assertEquals(PushRegistration.Outcome.registered, registration.register())
         assertEquals(2, attempts)
@@ -40,7 +42,7 @@ class PushRegistrationTest {
     @Test fun gateIsRecheckedAfterTokenExchange() = runBlocking {
         var onboarded = true
         val registration = PushRegistration({ onboarded }, { true }, { true }, { false }, { null },
-            { onboarded = false; "expo" }, { error("Must not register") })
+            { onboarded = false; "fcm" }, { _, _ -> error("Must not register") })
         assertEquals(PushRegistration.Outcome.notReady, registration.register())
     }
 }

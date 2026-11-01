@@ -3,7 +3,7 @@
 `run.sh` installs the native app over a real RN regtest release (same
 `com.noahwallet.regtest` sandbox and signing certificate, never uninstalled or
 cleared) on a fresh emulator. It then checks the wallet, settings, live RN MMKV
-bytes, notices, server sync, Expo identity, widget and launcher entries.
+bytes, notices, server sync, the move to a raw push token, widget and launcher entries.
 [STORES.md](STORES.md) describes the RN stores and the settings upgrade policy the
 checks expect. [DEVICE.md](DEVICE.md) is the physical-phone procedure.
 
@@ -65,14 +65,15 @@ Run both modes, each on a fresh emulator, for the full acceptance check.
   where the result JSON is copied.
 
 RN skips push registration on emulators, so the runner provisions a real Expo token
-through RN's own runtime (`RNPushBaseline`) and records only its hash. Maestro
+through RN's own runtime (`RNPushBaseline`), and the native app must replace it with
+its raw FCM token. Maestro
 artifacts stay in a private temporary directory that is removed on exit; they may
 contain the recovery screen, so never upload them.
 
 ## Reading the results
 
 The runner stops at the first failed check. On success it prints `Upgrade
-compatibility assertions passed (wallet, settings, notices, MMKV, server sync, Expo
+compatibility assertions passed (wallet, settings, notices, MMKV, server sync, raw push token
 and launcher)` and the elapsed time. It requires:
 
 - matching RN/native signing certificates;
@@ -80,8 +81,8 @@ and launcher)` and the elapsed time. It requires:
 - byte-identical live RN MMKV data/CRC files through native launch, and a matching
   immutable snapshot;
 - `UpgradeCompatibilityTest` reporting `OK (1 test)`: settings match RN, the native
-  recurring store is empty and its notice recorded, and the Expo ID and token hashes
-  are unchanged;
+  recurring store is empty and its notice recorded, and the first native registration
+  replaces the Expo token with a raw FCM token;
 - unchanged placed widget and launcher entries (`check-launcher.py`; its own tests
   are `python3 apps/android/UpgradeTests/test-launcher.py`);
 - for `FUNDED=1`, a successful empty recurring sync in the server log for this

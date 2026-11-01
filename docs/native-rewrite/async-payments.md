@@ -356,7 +356,7 @@ Small changes to bark 0.8, upstream or in a Noah fork; bark-bolt-ffi then pins t
   - The payload is a random id only, so Android's per-payload unique work never merges two pushes. No hash, amount, outcome or preimage: the device checks all its watches.
   - Regenerate the TS and OpenAPI clients.
 
-**Optional (last phase): raw APNs.** A token-auth (.p8) sender for `liveactivity` pushes and per-activity tokens, since Expo has no push-type or topic field ([Expo](https://docs.expo.dev/push-notifications/sending-notifications/)). It only lets the server mark a force-quit app's activity "Finished · open Noah", never "Sent". It builds on the "Raw APNs/FCM token registration" backlog item.
+**Optional (last phase): raw APNs.** `liveactivity` pushes and per-activity tokens on the direct APNs sender ([direct_push.md](../direct_push.md)), since Expo has no push-type or topic field ([Expo](https://docs.expo.dev/push-notifications/sending-notifications/)). It only lets the server mark a force-quit app's activity "Finished · open Noah", never "Sent".
 
 ## Risks
 

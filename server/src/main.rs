@@ -54,6 +54,7 @@ use crate::{
 mod ark_client;
 mod cron;
 pub mod db;
+mod direct_push;
 mod email_client;
 mod errors;
 mod fiat_rates;
@@ -84,6 +85,7 @@ pub struct AppStruct {
     pub push_deliveries:
         Option<tokio::sync::mpsc::UnboundedSender<(String, push::PushNotificationData)>>,
     pub config: Arc<Config>,
+    pub direct_push: Arc<direct_push::DirectPush>,
     pub lnurl_domain: String,
     pub ark_server_pubkey: Arc<tokio::sync::RwLock<Option<String>>>,
     pub db_pool: PgPool,
@@ -226,10 +228,18 @@ async fn start_server(config: Config) -> anyhow::Result<()> {
     tracing::info!("Email client initialized");
     let barkd_invoice_provider = build_forwarding_invoice_provider(&config)?;
 
+    let direct_push = direct_push::DirectPush::from_config(&config)?;
+    tracing::info!(
+        apns_configured = direct_push.apns_configured(),
+        fcm_configured = direct_push.fcm_configured(),
+        "Direct push initialized"
+    );
+
     let app_state = Arc::new(AppStruct {
         #[cfg(test)]
         push_deliveries: None,
         config: Arc::new(config.clone()),
+        direct_push: Arc::new(direct_push),
         lnurl_domain: config.lnurl_domain.clone(),
         ark_server_pubkey: Arc::new(tokio::sync::RwLock::new(None)),
         db_pool: db_pool.clone(),

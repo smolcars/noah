@@ -26,7 +26,9 @@ use crate::{
     AppState,
     errors::ApiError,
     mailbox_auth::validate_authorize_mailbox_payload,
-    types::{AuthenticatedUser, GetUploadUrlPayload, RegisterPushToken, UploadUrlResponse},
+    types::{
+        AuthenticatedUser, GetUploadUrlPayload, PushProvider, RegisterPushToken, UploadUrlResponse,
+    },
 };
 use axum::{Extension, Json, extract::State};
 use base64::Engine;
@@ -123,11 +125,16 @@ pub async fn register_push_token(
         event.add_context("has_push_token", true);
     }
 
-    validate_push_token(&payload.push_token).await?;
+    validate_push_token(&payload.push_token, payload.provider).await?;
 
     let push_token_repo = PushTokenRepository::new(&app_state.db_pool);
     push_token_repo
-        .upsert(&auth_payload.key, &payload.push_token)
+        .upsert_with_provider(
+            &auth_payload.key,
+            &payload.push_token,
+            payload.provider,
+            payload.provider == Some(PushProvider::Apns) && payload.apns_sandbox == Some(true),
+        )
         .await?;
 
     let user_repo = UserRepository::new(&app_state.db_pool);

@@ -1,10 +1,8 @@
 import Foundation
 
-/// The `development` flag expo-notifications sends when asking Expo for a
-/// push token: `aps-environment` from `embedded.mobileprovision`
-/// (`EXProvisioningProfile.notificationServiceEnvironment`), "development"
-/// → true, anything else or no profile (App Store, simulator) → false.
-/// Sending the same value keeps the same Expo token across the update.
+/// Which APNs environment this build's device token belongs to:
+/// `aps-environment` from `embedded.mobileprovision`, "development" → true,
+/// anything else or no profile (App Store, simulator) → false.
 enum ApnsEnvironment {
     static func isDevelopment(profile: Data? = embeddedProfile()) -> Bool {
         guard let profile, let plist = plist(from: profile),
@@ -17,7 +15,7 @@ enum ApnsEnvironment {
         Bundle.main.url(forResource: "embedded", withExtension: "mobileprovision").flatMap { try? Data(contentsOf: $0) }
     }
 
-    /// The profile is a CMS envelope around an XML plist; like Expo, take
+    /// The profile is a CMS envelope around an XML plist; take
     /// the text from the XML prolog to `</plist>`.
     static func plist(from profile: Data) -> [String: Any]? { // swiftlint:disable:this discouraged_optional_collection - nil: no readable profile plist
         // swiftlint:disable:next optional_data_string_conversion - lossy on purpose: the plist sits inside binary CMS data

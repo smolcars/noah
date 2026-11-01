@@ -959,6 +959,14 @@
         ],
         "type": "object"
       },
+      "PushProvider": {
+        "description": "The service that delivers to a raw device token.",
+        "enum": [
+          "apns",
+          "fcm"
+        ],
+        "type": "string"
+      },
       "RecurringPaymentDueNotification": {
         "description": "Silent push asking the device to execute its locally stored recurring\npayments that are due. Carries no amounts or recipients: the device checks\nits own schedules and only pays within the policy the user approved.",
         "properties": {
@@ -1060,8 +1068,27 @@
       "RegisterPushToken": {
         "description": "Defines the payload for registering a push notification token.",
         "properties": {
+          "apns_sandbox": {
+            "description": "Whether an APNs token belongs to the sandbox environment. Defaults to false.",
+            "type": [
+              "boolean",
+              "null"
+            ]
+          },
+          "provider": {
+            "description": "The service that delivers to a raw device token.",
+            "enum": [
+              "apns",
+              "fcm",
+              null
+            ],
+            "type": [
+              "string",
+              "null"
+            ]
+          },
           "push_token": {
-            "description": "The Expo push token for the user's device.",
+            "description": "A raw APNs or FCM device token when `provider` is set. Otherwise an Expo push\ntoken or a UnifiedPush endpoint.",
             "type": "string"
           }
         },

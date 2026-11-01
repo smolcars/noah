@@ -62,7 +62,7 @@ It is intentionally operational: where code lives, how the runtime behaves, and 
 - Rust (edition 2024) + Axum.
 - DB: Postgres (sqlx).
 - Cache/state: Redis/Dragonfly (deadpool-redis).
-- Push: Expo push and UnifiedPush endpoint POST.
+- Push: direct APNs and FCM ([docs/direct_push.md](docs/direct_push.md)), Expo for apps that have not updated, and UnifiedPush endpoint POST.
 - Jobs: `tokio-cron-scheduler`.
 - Storage/Email: AWS S3 + SES.
 - Errors: `anyhow` + typed `ApiError` for HTTP responses.

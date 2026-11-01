@@ -456,8 +456,8 @@ registration retries use WorkManager's exponential backoff and a network constra
 
 The wallet phase requests `POST_NOTIFICATIONS` on Android 13+. Registration requires
 RN `wallet-storage.isInitialized`, successful server registration and permission.
-GMS devices exchange their current FCM token with Expo using the preserved installation
-UUID, application ID, Firebase app and EAS project. `onNewToken` queues registration
+GMS devices register their current FCM token with the Noah server directly
+(`provider: fcm`), which replaces any Expo token RN registered. `onNewToken` queues registration
 with the latest token. No-GMS devices reuse RN's connector database/legacy
 preferences (connector **3.3.5** migrates legacy preferences on a background thread),
 `noah-<variant>` and `noah_unified_push` endpoints. Endpoint changes
@@ -605,8 +605,8 @@ instrumentation concurrently with these tests.
 Still unverified: an actual RN → native upgrade retaining a registered Expo token,
 push before opening that update, physical devices/Doze/token rotation, API 24–30's
 expedited foreground path, and delivery through a real UnifiedPush distributor.
-Expo's SDK-free HTTP exchange is a compatibility endpoint rather than a guaranteed
-public API; keep the existing Expo server credentials configured.
+The server still sends to Expo tokens from apps that haven't updated, so keep its Expo
+credentials configured until those are gone.
 
 ## Activity
 

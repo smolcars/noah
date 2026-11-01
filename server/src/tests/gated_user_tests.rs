@@ -1532,3 +1532,93 @@ async fn test_report_last_login_updates_timestamp() {
 
     assert!(second_login > first_login);
 }
+
+#[tracing_test::traced_test]
+#[tokio::test]
+async fn test_register_push_token_stores_the_provider_and_replaces_it() {
+    use crate::types::PushProvider;
+
+    let (app, app_state, _guard) = setup_test_app().await;
+    let user = TestUser::new();
+    let access_token = user.access_token(&app_state);
+    let pubkey = user.pubkey().to_string();
+    let mut tx = app_state.db_pool.begin().await.unwrap();
+    UserRepository::create(&mut tx, &pubkey, "test@localhost", None)
+        .await
+        .unwrap();
+    tx.commit().await.unwrap();
+
+    let apns_token = "ab".repeat(32);
+    let cases = [
+        (
+            json!({ "push_token": apns_token, "provider": "apns", "apns_sandbox": true }),
+            StatusCode::OK,
+            Some((apns_token.as_str(), Some(PushProvider::Apns), true)),
+        ),
+        // A provider-less registration from an older app replaces the raw token entirely.
+        (
+            json!({ "push_token": "ExpoPushToken[test-token]" }),
+            StatusCode::OK,
+            Some(("ExpoPushToken[test-token]", None, false)),
+        ),
+        // The sandbox flag means nothing outside APNs.
+        (
+            json!({ "push_token": "fcm:token", "provider": "fcm", "apns_sandbox": true }),
+            StatusCode::OK,
+            Some(("fcm:token", Some(PushProvider::Fcm), false)),
+        ),
+        // Rejected tokens leave the last good registration in place.
+        (
+            json!({ "push_token": format!("../{apns_token}"), "provider": "apns" }),
+            StatusCode::BAD_REQUEST,
+            None,
+        ),
+        (
+            json!({ "push_token": "ExpoPushToken[test-token]", "provider": "fcm" }),
+            StatusCode::BAD_REQUEST,
+            None,
+        ),
+        (
+            json!({ "push_token": apns_token }),
+            StatusCode::BAD_REQUEST,
+            None,
+        ),
+    ];
+
+    let repo = PushTokenRepository::new(&app_state.db_pool);
+    for (payload, status, expected) in cases {
+        let before = repo.find_target_by_pubkey(&pubkey).await.unwrap();
+        let response = app
+            .clone()
+            .oneshot(
+                Request::builder()
+                    .method(http::Method::POST)
+                    .uri("/register_push_token")
+                    .header(http::header::CONTENT_TYPE, "application/json")
+                    .header(
+                        http::header::AUTHORIZATION,
+                        format!("Bearer {}", access_token),
+                    )
+                    .body(Body::from(serde_json::to_vec(&payload).unwrap()))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), status, "{payload}");
+
+        let target = repo.find_target_by_pubkey(&pubkey).await.unwrap();
+        let stored = target
+            .as_ref()
+            .map(|t| (t.push_token.as_str(), t.provider, t.apns_sandbox));
+        match expected {
+            Some(expected) => assert_eq!(stored, Some(expected), "{payload}"),
+            None => assert_eq!(
+                stored,
+                before
+                    .as_ref()
+                    .map(|t| (t.push_token.as_str(), t.provider, t.apns_sandbox)),
+                "{payload}"
+            ),
+        }
+    }
+}

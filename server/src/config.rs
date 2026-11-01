@@ -68,6 +68,7 @@ fn validate_barkd_url(network: Network, url: &reqwest::Url) -> Result<()> {
 /// - `HOST`, `PORT`, `PRIVATE_PORT`
 /// - `POSTGRES_URL`, `REDIS_URL`
 /// - `EXPO_ACCESS_TOKEN`, `ARK_SERVER_URL`
+/// - `APNS_KEY_P8`, `APNS_KEY_ID`, `APNS_TEAM_ID`, `APNS_TOPIC`, `FCM_SERVICE_ACCOUNT_JSON`
 /// - `BARKD_FORWARDED_INVOICES_ENABLED`, `BARKD_URL`, `BARKD_AUTH_TOKEN`
 /// - `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION`
 #[derive(Debug, Clone)]
@@ -80,6 +81,11 @@ pub struct Config {
     pub postgres_max_connections: u32,
     pub postgres_min_connections: Option<u32>,
     pub expo_access_token: String,
+    pub apns_key_p8: Option<String>,
+    pub apns_key_id: Option<String>,
+    pub apns_team_id: Option<String>,
+    pub apns_topic: Option<String>,
+    pub fcm_service_account_json: Option<String>,
     pub ark_server_url: String,
     pub server_network: String,
     pub sentry_url: Option<String>,
@@ -142,6 +148,13 @@ impl Config {
                 .ok()
                 .and_then(|v| v.parse().ok()),
             expo_access_token: std::env::var("EXPO_ACCESS_TOKEN").unwrap_or_default(),
+            apns_key_p8: std::env::var("APNS_KEY_P8").ok().filter(|v| !v.is_empty()),
+            apns_key_id: std::env::var("APNS_KEY_ID").ok().filter(|v| !v.is_empty()),
+            apns_team_id: std::env::var("APNS_TEAM_ID").ok().filter(|v| !v.is_empty()),
+            apns_topic: std::env::var("APNS_TOPIC").ok().filter(|v| !v.is_empty()),
+            fcm_service_account_json: std::env::var("FCM_SERVICE_ACCOUNT_JSON")
+                .ok()
+                .filter(|v| !v.is_empty()),
             ark_server_url: std::env::var("ARK_SERVER_URL").unwrap_or_default(),
             server_network: std::env::var("SERVER_NETWORK")
                 .unwrap_or_else(|_| "regtest".to_string()),

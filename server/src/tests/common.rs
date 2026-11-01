@@ -82,6 +82,11 @@ impl TestUser {
             postgres_max_connections: 5,
             postgres_min_connections: Some(1),
             expo_access_token: "test-token".to_string(),
+            apns_key_p8: None,
+            apns_key_id: None,
+            apns_team_id: None,
+            apns_topic: None,
+            fcm_service_account_json: None,
             ark_server_url: "http://localhost:8081".to_string(),
             server_network: "test-network".to_string(),
             sentry_url: Some("http://localhost:8082".to_string()),
@@ -166,6 +171,9 @@ pub async fn setup_test_app() -> (Router, AppState, TestDbGuard) {
 
     let app_state = Arc::new(AppStruct {
         push_deliveries: None,
+        direct_push: Arc::new(
+            crate::direct_push::DirectPush::from_config(&TestUser::get_config()).unwrap(),
+        ),
         lnurl_domain: "localhost".to_string(),
         ark_server_pubkey: Arc::new(tokio::sync::RwLock::new(None)),
         db_pool: db_pool.clone(),
@@ -275,6 +283,9 @@ pub async fn setup_public_test_app_with_push(
 
     let app_state = Arc::new(AppStruct {
         push_deliveries,
+        direct_push: Arc::new(
+            crate::direct_push::DirectPush::from_config(&TestUser::get_config()).unwrap(),
+        ),
         lnurl_domain: "localhost".to_string(),
         ark_server_pubkey: Arc::new(tokio::sync::RwLock::new(None)),
         db_pool: db_pool.clone(),

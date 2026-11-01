@@ -1390,6 +1390,13 @@ extension Components {
                 case notificationType = "notification_type"
             }
         }
+        /// The service that delivers to a raw device token.
+        ///
+        /// - Remark: Generated from `#/components/schemas/PushProvider`.
+        internal enum PushProvider: String, Codable, Hashable, Sendable, CaseIterable {
+            case apns = "apns"
+            case fcm = "fcm"
+        }
         /// Silent push asking the device to execute its locally stored recurring
         /// payments that are due. Carries no amounts or recipients: the device checks
         /// its own schedules and only pays within the policy the user approved.
@@ -1528,18 +1535,45 @@ extension Components {
         ///
         /// - Remark: Generated from `#/components/schemas/RegisterPushToken`.
         internal struct RegisterPushToken: Codable, Hashable, Sendable {
-            /// The Expo push token for the user's device.
+            /// Whether an APNs token belongs to the sandbox environment. Defaults to false.
+            ///
+            /// - Remark: Generated from `#/components/schemas/RegisterPushToken/apns_sandbox`.
+            internal var apnsSandbox: Swift.Bool?
+            /// The service that delivers to a raw device token.
+            ///
+            /// - Remark: Generated from `#/components/schemas/RegisterPushToken/provider`.
+            internal enum ProviderPayload: String, Codable, Hashable, Sendable, CaseIterable {
+                case apns = "apns"
+                case fcm = "fcm"
+                case _empty_ = ""
+            }
+            /// The service that delivers to a raw device token.
+            ///
+            /// - Remark: Generated from `#/components/schemas/RegisterPushToken/provider`.
+            internal var provider: Components.Schemas.RegisterPushToken.ProviderPayload?
+            /// A raw APNs or FCM device token when `provider` is set. Otherwise an Expo push
+            /// token or a UnifiedPush endpoint.
             ///
             /// - Remark: Generated from `#/components/schemas/RegisterPushToken/push_token`.
             internal var pushToken: Swift.String
             /// Creates a new `RegisterPushToken`.
             ///
             /// - Parameters:
-            ///   - pushToken: The Expo push token for the user's device.
-            internal init(pushToken: Swift.String) {
+            ///   - apnsSandbox: Whether an APNs token belongs to the sandbox environment. Defaults to false.
+            ///   - provider: The service that delivers to a raw device token.
+            ///   - pushToken: A raw APNs or FCM device token when `provider` is set. Otherwise an Expo push
+            internal init(
+                apnsSandbox: Swift.Bool? = nil,
+                provider: Components.Schemas.RegisterPushToken.ProviderPayload? = nil,
+                pushToken: Swift.String
+            ) {
+                self.apnsSandbox = apnsSandbox
+                self.provider = provider
                 self.pushToken = pushToken
             }
             internal enum CodingKeys: String, CodingKey {
+                case apnsSandbox = "apns_sandbox"
+                case provider
                 case pushToken = "push_token"
             }
         }

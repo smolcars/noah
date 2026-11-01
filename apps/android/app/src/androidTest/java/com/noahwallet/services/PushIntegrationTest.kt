@@ -4,8 +4,6 @@ import android.content.ContextWrapper
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import androidx.work.WorkManager
-import com.google.android.gms.tasks.Tasks
-import com.google.firebase.messaging.FirebaseMessaging
 import com.google.firebase.messaging.RemoteMessage
 import com.noahwallet.BuildConfig
 import com.noahwallet.api.generated.client.V0RegisterClient
@@ -27,7 +25,6 @@ import org.junit.Test
 import org.junit.runner.RunWith
 import java.io.File
 import java.util.UUID
-import java.util.concurrent.TimeUnit
 
 /** Dedicated, disposable emulator only: -e noahPushIT 1, build with -PnoahRegtestServerURL=... */
 @RunWith(AndroidJUnit4::class)
@@ -64,17 +61,6 @@ class PushIntegrationTest {
             check(PushNotifications.permissionGranted(context))
             stage = "push registration"
             assertEquals(PushRegistration.Outcome.registered, withTimeout(120_000) { PushRuntime(context, services).register() })
-            stage = "Expo identity continuity"
-            val installation = ExpoInstallationID(context).getOrCreate()
-            // The token PushRuntime registers; FCM 26's register() replacement only hands it to onNewToken.
-            @Suppress("DEPRECATION")
-            val fcm = withContext(Dispatchers.IO) { Tasks.await(FirebaseMessaging.getInstance().token, 30, TimeUnit.SECONDS) }
-            ServerClient.make("https://exp.host").use { client ->
-                val request = ExpoPushToken.request(installation, context.packageName, fcm)
-                val first = ExpoPushToken(client).fetch(request)
-                val second = ExpoPushToken(client).fetch(request.copy(deviceId = ExpoInstallationID(context).getOrCreate().lowercase()))
-                check(first == second) { "Expo identity changed" }
-            }
             val seed = SeedStorage(context, "regtest").read() as SecretResult.Found
             val key = derivePublicKeyFromMnemonic(seed.value, WalletConfiguration.base("regtest").network, 0u)
             // Only the public identity is exported, so the host can target this test user's push row.
@@ -109,9 +95,9 @@ class PushIntegrationTest {
                 { services.registration.state.isRegisteredWithServer == true },
                 { PushNotifications.permissionGranted(context) }, { true }, registration::endpoint,
                 { error("UnifiedPush must not fetch FCM") },
-                {
+                { token, provider ->
                     com.noahwallet.api.generated.client.V0RegisterPushTokenClient(services.client)
-                        .registerPushToken(com.noahwallet.api.generated.models.RegisterPushToken(it)).value()
+                        .registerPushToken(com.noahwallet.api.generated.models.RegisterPushToken(pushToken = token, provider = provider)).value()
                 })
             assertEquals(PushRegistration.Outcome.registered, withTimeout(30_000) { submit.register() })
             stage = "mailbox authorization"

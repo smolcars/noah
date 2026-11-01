@@ -1,16 +1,15 @@
 import UIKit
 import UserNotifications
 
-/// Push registration, ported from `registerForPushNotificationsAsync` and
-/// `registerPushTokenWithServer`: notification permission, APNs device
-/// token, Expo token (same installation ID as the RN app, so normally the
-/// same token), then `register_push_token` on the Noah server.
+/// Push registration: notification permission, APNs device token, then
+/// `register_push_token` on the Noah server, which replaces any Expo token the
+/// RN app registered.
 @MainActor
 final class PushRegistration {
     static let shared = PushRegistration()
 
     enum Outcome: Equatable {
-        case registered(expoToken: String)
+        case registered(pushToken: String)
         case permissionDenied
         /// Simulator: no real APNs token, like the RN app's `device_not_supported`.
         case deviceNotSupported
@@ -37,17 +36,17 @@ final class PushRegistration {
             return .deviceNotSupported
         #else
             guard await requestPermission() else { return .permissionDenied }
-            let deviceToken = try await deviceToken()
-            let request = ExpoPushToken.request(
-                installationID: try ExpoInstallationID.getOrCreate(),
-                deviceToken: deviceToken,
-                appID: Bundle.main.bundleIdentifier ?? "",
-                development: ApnsEnvironment.isDevelopment())
-            let expoToken = try await ExpoPushToken().fetch(request)
-            _ = try await services.client.registerPushToken(body: .json(.init(pushToken: expoToken))).ok
+            let body = Self.body(deviceToken: try await deviceToken(), sandbox: ApnsEnvironment.isDevelopment())
+            _ = try await services.client.registerPushToken(body: .json(body)).ok
             log.i("Registered push token with the server")
-            return .registered(expoToken: expoToken)
+            return .registered(pushToken: body.pushToken)
         #endif
+    }
+
+    nonisolated static func body(deviceToken: Data, sandbox: Bool) -> Components.Schemas.RegisterPushToken {
+        .init(
+            apnsSandbox: sandbox, provider: .apns,
+            pushToken: deviceToken.map { String(format: "%02x", $0) }.joined())
     }
 
     private func deviceToken() async throws -> Data {

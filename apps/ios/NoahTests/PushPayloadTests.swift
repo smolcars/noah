@@ -60,19 +60,14 @@ struct PushPayloadTests {
     }
 }
 
-struct ExpoPushTokenTests {
-    @Test func requestMatchesExpoNotifications() throws {
-        let request = ExpoPushToken.request(
-            installationID: "0C2A6F0E-1B8D-4C7A-9E55-3F1D2B4A6C8E",
-            deviceToken: Data([0x0A, 0xFF, 0x01]), appID: "com.noahwallet.regtest", development: true)
-        let json = try #require(
-            try JSONSerialization.jsonObject(with: JSONEncoder().encode(request)) as? [String: Any])
-        #expect(json["type"] as? String == "apns")
-        #expect(json["deviceId"] as? String == "0c2a6f0e-1b8d-4c7a-9e55-3f1d2b4a6c8e")
-        #expect(json["deviceToken"] as? String == "0aff01")
-        #expect(json["appId"] as? String == "com.noahwallet.regtest")
-        #expect(json["development"] as? Bool == true)
-        #expect(json["projectId"] as? String == "6e79dffb-dcd4-4f3d-b596-638b16377eb0")
+struct PushRegistrationBodyTests {
+    @Test func registersTheRawTokenAsHexWithItsEnvironment() {
+        for sandbox in [true, false] {
+            let body = PushRegistration.body(deviceToken: Data([0x0A, 0xFF, 0x01]), sandbox: sandbox)
+            #expect(body.pushToken == "0aff01")
+            #expect(body.provider == .apns)
+            #expect(body.apnsSandbox == sandbox)
+        }
     }
 
     @Test func apnsEnvironmentFromProvisioningProfile() {
