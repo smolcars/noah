@@ -378,7 +378,8 @@ extension AppModel {
     }
 
     private static func describe(_ error: Error) -> String {
-        SafeErrorDescription.forLogging(error)
+        if let open = error as? WalletSession.OpenError { return "OpenError.\(open)" }
+        return SafeErrorDescription.forLogging(error)
     }
 
     func useDefaultEsploraServer() {
@@ -394,7 +395,22 @@ extension AppModel {
         else { walletError = L10n.text("Couldn't open your wallet. Please try again."); phase = .wallet }
     }
 
-    private func openExistingWallet() async {
+    /// Why an existing wallet's open failed. Only `failed` (and `busy` that outlasts background work) tells the user.
+    enum OpenFailure: Equatable {
+        /// Cancelled because the app left the foreground or a newer foreground pass took over.
+        case interrupted
+        /// A push, background task or another lifecycle step holds the wallet.
+        case busy
+        case failed
+    }
+
+    nonisolated static func openFailure(_ error: Error) -> OpenFailure {
+        if error is CancellationError { return .interrupted }
+        if (error as? WalletSession.OpenError) == .busy { return .busy }
+        return .failed
+    }
+
+    private func openExistingWallet(afterBackgroundWork: Bool = false) async {
         guard !isWalletSuspended, !customServerUnresponsive else { return }
         guard case .found(let mnemonic) = KeychainPassword.mnemonic(for: variant).read() else {
             phase = .blocked(.secureStorageUnavailable)
@@ -427,8 +443,19 @@ extension AppModel {
                 phase = .blocked(failure == .invalid ? .invalidSeed : .seedConflict)
                 return
             }
-            log.e("Failed to open wallet: \(Self.describe(error))")
-            walletError = L10n.text("Couldn't open your wallet. Please try again.")
+            switch Self.openFailure(error) {
+            case .interrupted:
+                // The app left the front mid-open; the next foreground pass opens the wallet or reads it.
+                log.i("Wallet open interrupted")
+            case .busy where !afterBackgroundWork:
+                // A push or background task holds the wallet: open once it lets go.
+                log.i("Wallet busy with background work; opening when it finishes")
+                await session.waitForBackgroundAccess()
+                await openExistingWallet(afterBackgroundWork: true)
+            case .busy, .failed:
+                log.e("Failed to open wallet: \(Self.describe(error))")
+                walletError = L10n.text("Couldn't open your wallet. Please try again.")
+            }
             return
         }
         if phase == .wallet { await pushPermission.refresh() }
