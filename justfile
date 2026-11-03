@@ -27,6 +27,10 @@ start:
 bump *args:
     bun scripts/bump_client_version.ts {{ args }}
 
+# Bump native Android and iOS versions and build numbers
+bump-native *args:
+    bun scripts/bump_native_version.ts {{ args }}
+
 # Refresh the BTC Map snapshot bundled with the client
 btcmap-snapshot:
     bun run btcmap:snapshot

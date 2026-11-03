@@ -1,0 +1,42 @@
+name: Native Release Checks
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/**"
+      - "scripts/bump_native_version.ts"
+      - "scripts/check_native_release.ts"
+      - "scripts/native_release.test.ts"
+      - "apps/android/app/build.gradle.kts"
+      - "apps/ios/project.yml"
+      - "justfile"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  release-tooling:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v6
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version: latest
+      - name: Test native version and tag handling
+        run: bun test scripts/native_release.test.ts
+      - name: Check committed native versions
+        run: bun -e 'import { readNativeVersions } from "./scripts/bump_native_version"; readNativeVersions(process.cwd());'
+      - name: Install actionlint
+        env:
+          ACTIONLINT_VERSION: 1.7.12
+          ACTIONLINT_SHA256: 8aca8db96f1b94770f1b0d72b6dddcb1ebb8123cb3712530b08cc387b349a3d8
+        run: |
+          mkdir -p "$RUNNER_TEMP/bin"
+          curl -fsSL -o "$RUNNER_TEMP/actionlint.tar.gz" "https://github.com/rhysd/actionlint/releases/download/v$ACTIONLINT_VERSION/actionlint_${ACTIONLINT_VERSION}_linux_amd64.tar.gz"
+          echo "$ACTIONLINT_SHA256  $RUNNER_TEMP/actionlint.tar.gz" | sha256sum -c -
+          tar -xzf "$RUNNER_TEMP/actionlint.tar.gz" -C "$RUNNER_TEMP/bin" actionlint
+          echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
+      - name: Validate native release workflows
+        run: actionlint .github/workflows/native-release.yml .github/workflows/native-android-artifacts.yml .github/workflows/native-release-checks.yml
