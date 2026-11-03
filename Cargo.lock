@@ -4954,6 +4954,7 @@ dependencies = [
  "tokio",
  "tokio-cron-scheduler",
  "tokio-util",
+ "tonic-prost",
  "tower",
  "tower-http 0.7.0",
  "tower_governor",

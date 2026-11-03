@@ -1196,6 +1196,200 @@ async fn test_claim_runnable_skips_rows_already_leased_by_same_worker() {
 
 #[tracing_test::traced_test]
 #[tokio::test]
+async fn test_count_claimable_without_push_target() {
+    let (_app, app_state, _guard) = setup_test_app().await;
+
+    use crate::db::mailbox_authorization_repo::MailboxAuthorizationRepository;
+    use crate::db::push_token_repo::PushTokenRepository;
+    let mailbox_repo = MailboxAuthorizationRepository::new(&app_state.db_pool);
+    let push_token_repo = PushTokenRepository::new(&app_state.db_pool);
+    let now = Utc::now();
+
+    // (key, push token, authorization lifetime in seconds)
+    let mailboxes = [
+        ([0xa1; 32], Some("ExpoPushToken[test-token]"), 60),
+        ([0xa2; 32], Some("https://push.example.com/up/test"), 60),
+        ([0xa3; 32], None, 60),
+        ([0xa4; 32], None, 60),
+        ([0xa5; 32], None, -60),
+    ];
+    for (index, (key, push_token, lifetime_secs)) in mailboxes.iter().enumerate() {
+        let pubkey = TestUser::new_with_key(key).pubkey().to_string();
+        sqlx::query(
+            "INSERT INTO users (pubkey, lightning_address, ark_address) VALUES ($1, $2, NULL)",
+        )
+        .bind(&pubkey)
+        .bind(format!("no-push-target-{index}@localhost"))
+        .execute(&app_state.db_pool)
+        .await
+        .unwrap();
+        if let Some(push_token) = push_token {
+            push_token_repo.upsert(&pubkey, push_token).await.unwrap();
+        }
+        mailbox_repo
+            .upsert(
+                &pubkey,
+                "deadbeef",
+                "cafebabe",
+                now.timestamp() + lifetime_secs,
+            )
+            .await
+            .unwrap();
+    }
+
+    // A mailbox that another worker is streaming still counts.
+    sqlx::query(
+        "UPDATE mailbox_authorizations
+         SET lease_owner = 'worker-a',
+             lease_expires_at = $2
+         WHERE pubkey = $1",
+    )
+    .bind(TestUser::new_with_key(&[0xa4; 32]).pubkey().to_string())
+    .bind(now + chrono::TimeDelta::seconds(30))
+    .execute(&app_state.db_pool)
+    .await
+    .unwrap();
+
+    let count = mailbox_repo
+        .count_claimable_without_push_target(now.timestamp())
+        .await
+        .unwrap();
+    assert_eq!(count, 2);
+}
+
+#[tracing_test::traced_test]
+#[tokio::test]
+async fn test_release_all_claims_frees_only_that_workers_leases() {
+    let (_app, app_state, _guard) = setup_test_app().await;
+
+    use crate::db::mailbox_authorization_repo::MailboxAuthorizationRepository;
+    let mailbox_repo = MailboxAuthorizationRepository::new(&app_state.db_pool);
+    let pubkeys = [[0xb2; 32], [0xb3; 32], [0xb4; 32]]
+        .map(|key| TestUser::new_with_key(&key).pubkey().to_string());
+    for (index, pubkey) in pubkeys.iter().enumerate() {
+        sqlx::query(
+            "INSERT INTO users (pubkey, lightning_address, ark_address) VALUES ($1, $2, NULL)",
+        )
+        .bind(pubkey)
+        .bind(format!("release-all-{index}@localhost"))
+        .execute(&app_state.db_pool)
+        .await
+        .unwrap();
+        mailbox_repo
+            .upsert(pubkey, "deadbeef", "cafebabe", Utc::now().timestamp() + 60)
+            .await
+            .unwrap();
+    }
+
+    let now = Utc::now();
+    let lease_until = now + chrono::TimeDelta::seconds(120);
+    let claimed = mailbox_repo
+        .claim_runnable(now, "worker-a", lease_until, 10)
+        .await
+        .unwrap();
+    assert_eq!(claimed.len(), 3);
+    sqlx::query("UPDATE mailbox_authorizations SET lease_owner = 'worker-b' WHERE pubkey = $1")
+        .bind(&pubkeys[2])
+        .execute(&app_state.db_pool)
+        .await
+        .unwrap();
+
+    let released = mailbox_repo.release_all_claims("worker-a").await.unwrap();
+    assert_eq!(released, 2);
+
+    // A replacement worker can claim the released rows straight away, while
+    // the row another worker holds stays leased.
+    let mut reclaimed = mailbox_repo
+        .claim_runnable(now, "worker-c", lease_until, 10)
+        .await
+        .unwrap()
+        .into_iter()
+        .map(|mailbox| mailbox.pubkey)
+        .collect::<Vec<_>>();
+    reclaimed.sort();
+    let mut expected = pubkeys[..2].to_vec();
+    expected.sort();
+    assert_eq!(reclaimed, expected);
+}
+
+/// Never finishes and ignores cancellation, like a session stuck in an RPC.
+struct StuckMailboxTransport {
+    started: std::sync::Arc<tokio::sync::Notify>,
+}
+
+#[async_trait::async_trait]
+impl crate::mailbox_worker::MailboxTransport for StuckMailboxTransport {
+    async fn run_session(
+        &self,
+        _app_state: crate::AppState,
+        _mailbox: crate::db::mailbox_authorization_repo::ActiveMailboxAuthorization,
+        _session: crate::mailbox_worker::MailboxSessionContext,
+    ) -> anyhow::Result<crate::mailbox_worker::MailboxSessionOutcome> {
+        self.started.notify_one();
+        std::future::pending().await
+    }
+}
+
+#[tracing_test::traced_test]
+#[tokio::test]
+async fn test_mailbox_worker_shutdown_releases_its_leases() {
+    let (_app, app_state, _guard) = setup_test_app().await;
+    let user = TestUser::new_with_key(&[0xb5; 32]);
+    create_test_user(&app_state, &user, None).await;
+    let pubkey = user.pubkey().to_string();
+
+    use crate::db::mailbox_authorization_repo::MailboxAuthorizationRepository;
+    use crate::mailbox_worker::{MailboxWorker, MailboxWorkerConfig};
+    MailboxAuthorizationRepository::new(&app_state.db_pool)
+        .upsert(
+            &pubkey,
+            "deadbeef",
+            "cafebabe",
+            Utc::now().timestamp() + 3600,
+        )
+        .await
+        .unwrap();
+
+    let started = std::sync::Arc::new(tokio::sync::Notify::new());
+    let worker = MailboxWorker::new(
+        app_state.clone(),
+        std::sync::Arc::new(StuckMailboxTransport {
+            started: started.clone(),
+        }),
+        MailboxWorkerConfig::default(),
+    );
+    let shutdown = tokio_util::sync::CancellationToken::new();
+    let run = tokio::spawn({
+        let shutdown = shutdown.clone();
+        async move { worker.run(shutdown).await }
+    });
+
+    let lease = || async {
+        sqlx::query_as::<_, (Option<String>, Option<chrono::DateTime<Utc>>)>(
+            "SELECT lease_owner, lease_expires_at FROM mailbox_authorizations WHERE pubkey = $1",
+        )
+        .bind(&pubkey)
+        .fetch_one(&app_state.db_pool)
+        .await
+        .unwrap()
+    };
+
+    tokio::time::timeout(std::time::Duration::from_secs(10), started.notified())
+        .await
+        .expect("the worker should start a session");
+    assert!(lease().await.0.is_some());
+
+    shutdown.cancel();
+    tokio::time::timeout(std::time::Duration::from_secs(10), run)
+        .await
+        .expect("shutdown should not wait on the stuck session")
+        .unwrap()
+        .unwrap();
+    assert_eq!(lease().await, (None, None));
+}
+
+#[tracing_test::traced_test]
+#[tokio::test]
 async fn test_reauthorize_with_new_mailbox_resets_checkpoint() {
     let (_app, app_state, _guard) = setup_test_app().await;
     let user = TestUser::new();

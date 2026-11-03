@@ -19,6 +19,7 @@ use sentry::integrations::{
     tracing::EventFilter,
 };
 use std::{net::SocketAddr, sync::Arc};
+use tokio_util::sync::CancellationToken;
 use tower_http::cors::{Any, CorsLayer};
 
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
@@ -293,25 +294,30 @@ async fn start_server(config: Config) -> anyhow::Result<()> {
         .map(|value| !matches!(value.as_str(), "0" | "false" | "FALSE" | "False"))
         .unwrap_or(true);
 
-    if run_mailbox_worker {
+    // Cancelled on SIGTERM or Ctrl-C, or when the HTTP server stops.
+    let shutdown = CancellationToken::new();
+
+    let mailbox_worker = if run_mailbox_worker {
         let mailbox_worker_app_state = app_state.clone();
-        tokio::spawn(async move {
+        let mailbox_worker_shutdown = shutdown.clone();
+        Some(tokio::spawn(async move {
             let mailbox_worker_config = MailboxWorkerConfig::from_env();
             mailbox_worker_config.log();
 
             let worker = MailboxWorker::new(
                 mailbox_worker_app_state,
-                Arc::new(Beta8MailboxTransport),
+                Arc::new(Beta8MailboxTransport::new(&mailbox_worker_config)),
                 mailbox_worker_config,
             );
 
-            if let Err(e) = worker.run().await {
+            if let Err(e) = worker.run(mailbox_worker_shutdown).await {
                 tracing::error!("Mailbox worker exited: {}", e);
             }
-        });
+        }))
     } else {
         tracing::info!("Mailbox worker disabled via RUN_MAILBOX_WORKER");
-    }
+        None
+    };
 
     // Middleware that checks the signature and authenticates the user
     let auth_layer =
@@ -420,12 +426,26 @@ async fn start_server(config: Config) -> anyhow::Result<()> {
     tracing::debug!("server started listening on {}", addr);
     let listener = tokio::net::TcpListener::bind(addr).await?;
 
+    let signal_shutdown = shutdown.clone();
     // Important: Use into_make_service_with_connect_info to provide IP information for rate limiting
-    axum::serve(
+    let served = axum::serve(
         listener,
         app.into_make_service_with_connect_info::<SocketAddr>(),
     )
-    .await?;
+    .with_graceful_shutdown(async move {
+        utils::shutdown_signal().await;
+        signal_shutdown.cancel();
+    })
+    .await;
 
+    // Let the mailbox worker stop its sessions and release its leases before exiting.
+    shutdown.cancel();
+    if let Some(mailbox_worker) = mailbox_worker
+        && let Err(error) = mailbox_worker.await
+    {
+        tracing::error!(error = %error, "mailbox worker task failed");
+    }
+
+    served?;
     Ok(())
 }
