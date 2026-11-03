@@ -1,6 +1,7 @@
 # Mailbox worker separation: research and plan
 
-Date: 2026-11-03. Status: proposal, nothing implemented.
+Date: 2026-11-03. Status: steps 1 to 3 implemented on this branch; the
+service split (step 4) and the push-target filter (step 5) are still open.
 
 ## Question
 
@@ -97,12 +98,15 @@ thousand tokio tasks with one gRPC stream each is a few tens of megabytes.
 Hold a small pool of connected `ServerConnection` values in the transport
 (for example one per 100 sessions, capped and lazily created) and hand
 each session a cloned `mailbox_client` instead of calling `connect()`.
-Reconnect by replacing the pooled channel, not by dialling per session.
+Channels stay in the pool for good: tonic redials a dead connection on
+the channel's next request, so a failed session simply retries on the
+same channel after the scheduler's backoff. Bound each dial with a
+timeout, because bark-server-rpc sets none and sessions queue behind it.
 
 - Cost: small change inside `Beta8MailboxTransport`, no schema or infra.
 - Effect: connections drop from N to about N/100. Handshake and `ArkInfo`
   RPCs drop from N per ten minutes to a handful.
-- Risks: one channel failure now takes out up to 100 sessions at once (they
+- Risks: one connection dropping now ends up to 100 sessions at once (they
   all return `Retryable` and reconnect through the retry schedule, so this
   is self-healing but bursty). Stay under 100 streams per channel to leave
   room for any proxy limit. Head-of-line blocking on one TCP connection is
@@ -172,8 +176,10 @@ Each step is independently shippable and reviewable.
    `Beta8MailboxTransport` keyed by nothing (single Ark URL), with a
    configurable max streams per channel (default 100) and a cap on channels.
    Sessions borrow a clone of `mailbox_client`. On a transport-level error
-   the session returns `Retryable` as today; the pool drops the broken
-   channel and dials a new one on next borrow.
+   the session returns `Retryable` as today and later retries on the same
+   channel, which tonic redials underneath; the pool never evicts a channel.
+   Each dial is bounded by a 30 second timeout, and sessions queued behind
+   a failed or timed-out dial fail together instead of dialling in turn.
    Verify: unit test with a fake transport is unaffected; on signet, open
    connection count to the Ark host drops to a handful (check with
    `ss -tn` or Railway metrics), and incoming payment pushes still arrive.
