@@ -1,0 +1,56 @@
+name: Native Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: read
+
+concurrency:
+  group: native-release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  android:
+    name: Android ${{ matrix.variant }}
+    strategy:
+      fail-fast: false
+      matrix:
+        variant: [signet, mainnet]
+    uses: ./.github/workflows/native-android-artifacts.yml
+    with:
+      variant: ${{ matrix.variant }}
+      git_ref: ${{ github.ref }}
+    secrets: inherit
+
+  release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    needs: android
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v8
+        with:
+          pattern: native-android-*
+          merge-multiple: true
+          path: release-assets
+
+      - name: Publish native APKs
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: ${{ github.ref_name }}
+          GH_REPO: ${{ github.repository }}
+        run: |
+          set -euo pipefail
+          gh release create "$RELEASE_TAG" \
+            release-assets/noah-signet.apk \
+            release-assets/noah-mainnet.apk \
+            --verify-tag --title "Noah ${RELEASE_TAG#v}" --generate-notes
+          {
+            echo "### Android release $RELEASE_TAG"
+            echo 'Signet and Mainnet APKs are attached to the GitHub Release.'
+            echo 'For manual Google Play publishing, download the AABs from **native-android-signet** and **native-android-mainnet** in this run.'
+            echo 'iOS archives and TestFlight distribution run separately in Xcode Cloud.'
+          } >> "$GITHUB_STEP_SUMMARY"

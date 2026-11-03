@@ -1,0 +1,193 @@
+name: Native Android Artifacts
+
+on:
+  workflow_call:
+    inputs:
+      variant:
+        required: true
+        type: string
+      git_ref:
+        required: true
+        type: string
+  workflow_dispatch:
+    inputs:
+      variant:
+        description: Android variant
+        required: true
+        default: mainnet
+        type: choice
+        options: [mainnet, signet]
+      git_ref:
+        description: Master or a release tag to build
+        required: true
+        default: master
+        type: string
+
+permissions:
+  contents: read
+
+jobs:
+  build:
+    runs-on: blacksmith-8vcpu-ubuntu-2404
+    timeout-minutes: 25
+    steps:
+      - name: Validate build inputs
+        id: inputs
+        env:
+          BUILD_VARIANT: ${{ inputs.variant }}
+          BUILD_REF: ${{ inputs.git_ref }}
+        run: |
+          set -euo pipefail
+          case "$BUILD_VARIANT" in
+            mainnet) echo "flavor=Mainnet" >> "$GITHUB_OUTPUT" ;;
+            signet) echo "flavor=Signet" >> "$GITHUB_OUTPUT" ;;
+            *) echo 'Unsupported Android variant' >&2; exit 1 ;;
+          esac
+          case "$BUILD_REF" in
+            master|refs/heads/master) ref=refs/heads/master ;;
+            *)
+              tag="${BUILD_REF#refs/tags/}"
+              if [[ ! "$tag" =~ ^v(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+                echo 'Build ref must be master or a vX.Y.Z release tag' >&2
+                exit 1
+              fi
+              ref="refs/tags/$tag"
+              ;;
+          esac
+          echo "ref=$ref" >> "$GITHUB_OUTPUT"
+
+      - uses: actions/checkout@v6
+        with:
+          ref: ${{ steps.inputs.outputs.ref }}
+
+      - name: Set up Bun
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version: latest
+
+      - name: Validate native release version
+        env:
+          BUILD_REF: ${{ steps.inputs.outputs.ref }}
+        run: |
+          if [[ "$BUILD_REF" == refs/tags/* ]]; then
+            bun scripts/check_native_release.ts "${BUILD_REF#refs/tags/}"
+          else
+            bun -e 'import { readNativeVersions } from "./scripts/bump_native_version"; readNativeVersions(process.cwd());'
+          fi
+
+      # No Nix: Gradle needs only JDK 17, and the Sentry mapping upload needs sentry-cli.
+      - name: Set up JDK 17
+        uses: actions/setup-java@v5
+        with:
+          distribution: temurin
+          java-version: 17
+
+      # Pinned and checksum-checked: it runs with the Sentry token in a job that holds the signing keys.
+      - name: Install sentry-cli
+        env:
+          SENTRY_CLI_VERSION: 3.8.2
+          SENTRY_CLI_SHA256: c958865f9d4000183509ea21b1f04925d5390de6d8d87386b9e69f2b305070c3
+        run: |
+          mkdir -p "$RUNNER_TEMP/bin"
+          curl -fsSL -o "$RUNNER_TEMP/bin/sentry-cli" "https://github.com/getsentry/sentry-cli/releases/download/$SENTRY_CLI_VERSION/sentry-cli-Linux-x86_64"
+          echo "$SENTRY_CLI_SHA256  $RUNNER_TEMP/bin/sentry-cli" | sha256sum -c -
+          chmod +x "$RUNNER_TEMP/bin/sentry-cli"
+          echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
+          "$RUNNER_TEMP/bin/sentry-cli" --version
+
+      # Master writes the Gradle cache that Native Android CI restores on PRs.
+      - name: Cache Gradle
+        uses: gradle/actions/setup-gradle@4c125117fe7c5aed11272ec4213f602f012f89f2 # v5
+        with:
+          cache-read-only: true
+
+      - name: Locate Android SDK
+        id: sdk
+        run: echo "root=$ANDROID_HOME" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Android build SDK
+        id: sdk-cache
+        uses: actions/cache@caa296126883cff596d87d8935842f9db880ef25 # v5
+        with:
+          key: native-android-sdk-${{ runner.os }}-${{ runner.arch }}-37.0-37.0.0
+          path: |
+            ${{ steps.sdk.outputs.root }}/platforms/android-37.0
+            ${{ steps.sdk.outputs.root }}/build-tools/37.0.0
+
+      - name: Install Android build SDK
+        if: steps.sdk-cache.outputs.cache-hit != 'true'
+        timeout-minutes: 3
+        run: '"$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-37.0" "build-tools;37.0.0"'
+
+      # Same keystore, alias and passwords as the RN signet distribution.
+      - name: Prepare release signing
+        env:
+          KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
+          MYAPP_RELEASE_KEY_ALIAS: ${{ secrets.KEY_ALIAS }}
+          MYAPP_RELEASE_STORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          MYAPP_RELEASE_KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
+        run: |
+          set -euo pipefail
+          : "${KEYSTORE_BASE64:?Missing KEYSTORE_BASE64}"
+          : "${MYAPP_RELEASE_KEY_ALIAS:?Missing KEY_ALIAS}"
+          : "${MYAPP_RELEASE_STORE_PASSWORD:?Missing KEYSTORE_PASSWORD}"
+          : "${MYAPP_RELEASE_KEY_PASSWORD:?Missing KEY_PASSWORD}"
+          umask 077
+          signing_dir=$(mktemp -d "$RUNNER_TEMP/noah-native-signing.XXXXXX")
+          echo "SIGNING_DIR=$signing_dir" >> "$GITHUB_ENV"
+          printf '%s' "$KEYSTORE_BASE64" | base64 --decode > "$signing_dir/release.keystore"
+          test -s "$signing_dir/release.keystore"
+          export MYAPP_RELEASE_STORE_FILE="$signing_dir/release.keystore"
+          python3 <<'PY'
+          import os
+          from pathlib import Path
+
+          keys = ("STORE_FILE", "KEY_ALIAS", "STORE_PASSWORD", "KEY_PASSWORD")
+          def escape(value):
+              return value.replace("\\", "\\\\").replace("\r", "\\r").replace("\n", "\\n").replace(" ", "\\ ")
+          Path("apps/android/local.properties").write_text("".join(
+              f"MYAPP_RELEASE_{key}={escape(os.environ[f'MYAPP_RELEASE_{key}'])}\n"
+              for key in keys
+          ), encoding="iso-8859-1")
+          PY
+
+      - name: Build signed APK and AAB
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: dunder-rn
+          SENTRY_PROJECT: react-native
+          CI_DEBUG_SIGNING: "false"
+          FLAVOR: ${{ steps.inputs.outputs.flavor }}
+        working-directory: apps/android
+        run: ./gradlew --build-cache --dependency-verification=strict -PnoahAbis=arm64-v8a ":app:assemble${FLAVOR}Release" ":app:bundle${FLAVOR}Release"
+
+      - name: Collect release artifacts
+        env:
+          VARIANT: ${{ inputs.variant }}
+        run: |
+          mkdir release-artifacts
+          cp "apps/android/app/build/outputs/apk/$VARIANT/release/app-$VARIANT-release.apk" "release-artifacts/noah-$VARIANT.apk"
+          cp "apps/android/app/build/outputs/bundle/${VARIANT}Release/app-$VARIANT-release.aab" "release-artifacts/noah-$VARIANT.aab"
+          {
+            echo "### Native Android $VARIANT"
+            echo "Commit: $(git rev-parse HEAD)"
+            echo "Download **native-android-$VARIANT** from this run's Artifacts section."
+            echo "The APK is for installation; upload the AAB manually to Google Play."
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload APK and AAB
+        uses: actions/upload-artifact@v7
+        with:
+          name: native-android-${{ inputs.variant }}
+          path: release-artifacts/*
+          if-no-files-found: error
+          overwrite: true
+          retention-days: 90
+
+      - name: Remove signing files
+        if: always()
+        run: |
+          rm -f apps/android/local.properties
+          if [[ -n "${SIGNING_DIR:-}" ]]; then
+            rm -rf "$SIGNING_DIR"
+          fi

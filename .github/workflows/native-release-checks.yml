@@ -1,0 +1,36 @@
+name: Native Release Checks
+
+on:
+  pull_request:
+    paths:
+      - ".github/workflows/**"
+      - "scripts/bump_native_version.ts"
+      - "scripts/check_native_release.ts"
+      - "scripts/native_release.test.ts"
+      - "apps/android/app/build.gradle.kts"
+      - "apps/ios/project.yml"
+      - "justfile"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  release-tooling:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v6
+      - uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6 # v2.2.0
+        with:
+          bun-version: latest
+      - name: Test native version and tag handling
+        run: bun test scripts/native_release.test.ts
+      - name: Check committed native versions
+        run: bun -e 'import { readNativeVersions } from "./scripts/bump_native_version"; readNativeVersions(process.cwd());'
+      - name: Install actionlint
+        uses: taiki-e/install-action@5488ac5a951645ce95062214902ac4b6bc1a1037 # v2.87.32
+        with:
+          tool: actionlint
+      - name: Validate native release workflows
+        run: actionlint .github/workflows/native-release.yml .github/workflows/native-android-artifacts.yml .github/workflows/native-release-checks.yml
