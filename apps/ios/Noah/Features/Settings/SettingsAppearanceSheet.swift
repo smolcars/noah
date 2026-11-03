@@ -100,9 +100,9 @@ private struct AppearanceTile: View {
                             .padding(-5)
                             .opacity(selected ? 1 : 0)
                     }
+                // One word in every language: large text shrinks it rather than breaking it mid-word.
                 Text(verbatim: L10n.text(choice.title, locale: locale.identifier)).noahText(NoahTokens.Typography.control)
-                    .multilineTextAlignment(.center)
-                    .fixedSize(horizontal: false, vertical: true)
+                    .lineLimit(1).minimumScaleFactor(0.5)
                 ZStack {
                     Circle().strokeBorder(NoahTokens.Colors.muted, lineWidth: 1.5).opacity(selected ? 0 : 1)
                     Circle().fill(NoahTokens.Colors.foreground).scaleEffect(selected || reduceMotion ? 1 : 0.5).opacity(selected ? 1 : 0)
