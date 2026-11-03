@@ -70,6 +70,7 @@ internal fun WalletModalBottomSheet(onDismissRequest: () -> Unit, modifier: Modi
     // Sheets anchor to the bottom window edge; keep their entire height below a horizontal fold.
     val sheetHeight = with(density) { (windowHeight - (horizontalFold ?: 0)).coerceAtLeast(1).toDp() }
     val verticalFolds = hinges.filter { it.height > it.width }
+    val dark = com.noahwallet.ui.onboarding.noahPalette() === com.noahwallet.ui.design.NoahTokens.Dark
     ModalBottomSheet(onDismissRequest = { if (!privacy.covered) onDismissRequest() },
         modifier = modifier.semantics { testTagsAsResourceId = true }.heightIn(max = sheetHeight),
         sheetMaxWidth = sheetMaxWidth,
@@ -77,6 +78,7 @@ internal fun WalletModalBottomSheet(onDismissRequest: () -> Unit, modifier: Modi
             Box(Modifier.fillMaxWidth().heightIn(max = sheetHeight).avoidHinge(verticalFolds),
                 contentAlignment = Alignment.Center) { handle() }
         } }) {
+        SheetBars(dark)
         Box(Modifier.fillMaxWidth().heightIn(max = (sheetHeight - 56.dp).coerceAtLeast(1.dp)).avoidHinge(verticalFolds)) {
             WalletModalContent(cover = {
                 Column(Modifier.padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
@@ -84,6 +86,22 @@ internal fun WalletModalBottomSheet(onDismissRequest: () -> Unit, modifier: Modi
                     privacy.unlock?.let { NoahButton("Unlock", onClick = it) }
                 }
             }) { Column(content = content) }
+        }
+    }
+}
+
+/** The window of the dialog or sheet [this] is in; null in the activity's own window. */
+internal fun android.view.View.dialogWindow(): android.view.Window? =
+    generateSequence(parent) { it.parent }.filterIsInstance<androidx.compose.ui.window.DialogWindowProvider>().firstOrNull()?.window
+
+/** A sheet's window sets its bars' icons once, as it opens; they follow Noah's theme when that changes underneath (appearance.md). */
+@Composable
+private fun SheetBars(dark: Boolean) {
+    val view = androidx.compose.ui.platform.LocalView.current
+    SideEffect {
+        val window = view.dialogWindow() ?: return@SideEffect
+        androidx.core.view.WindowCompat.getInsetsController(window, window.decorView).run {
+            isAppearanceLightStatusBars = !dark; isAppearanceLightNavigationBars = !dark
         }
     }
 }

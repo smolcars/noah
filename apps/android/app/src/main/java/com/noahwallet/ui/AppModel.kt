@@ -42,6 +42,9 @@ class AppModel(application: Application, val settings: SettingsStorage = Setting
         private set
     var localeIdentifier by mutableStateOf(com.noahwallet.services.storage.LegacyLocale.resolved(application))
         private set
+    /** A phone preference like the language: Delete wallet keeps it (SettingsStorage keeps its key). */
+    var appearance by mutableStateOf(Appearance.parse(settings.string(Appearance.key)))
+        private set
     /** Home offers the backup prompt until this wallet's phrase is confirmed; missing means not backed up. */
     var recoveryPhraseBackedUp by mutableStateOf(RecoveryPhraseBackup.isBackedUp(settings))
         private set
@@ -182,6 +185,13 @@ class AppModel(application: Application, val settings: SettingsStorage = Setting
         .mapNotNull { row -> row.txid?.let { txid -> row.timestamp?.time?.takeIf { it > 0 }?.let { txid to it } } }.toMap()
 
     fun refreshLocale() { localeIdentifier = com.noahwallet.services.storage.LegacyLocale.resolved(getApplication()) }
+
+    /** Saves [value], then re-themes Noah and the platform at once. */
+    fun chooseAppearance(value: Appearance) {
+        settings.set(value.name, Appearance.key)
+        appearance = value
+        value.applyToPlatform(getApplication())
+    }
 
     // KTX edit(commit = true) drops commit()'s result, which is checked here.
     @android.annotation.SuppressLint("UseKtx")

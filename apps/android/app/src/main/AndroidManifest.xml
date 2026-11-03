@@ -51,6 +51,7 @@
             android:name="com.noahwallet.MainActivity"
             android:exported="true"
             android:launchMode="singleTask"
+            android:configChanges="uiMode"
             android:windowSoftInputMode="adjustResize">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

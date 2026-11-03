@@ -37,7 +37,7 @@ internal val LocalPalette = staticCompositionLocalOf { NoahTokens.Light }
 internal val LocalReduceMotion = staticCompositionLocalOf { false }
 
 @Composable
-internal fun noahPalette() = if (isSystemInDarkTheme()) NoahTokens.Dark else NoahTokens.Light
+internal fun noahPalette() = if (com.noahwallet.ui.LocalNoahDark.current ?: isSystemInDarkTheme()) NoahTokens.Dark else NoahTokens.Light
 
 /** Monochrome Material: the redesign tokens drive Material components (sheets, fields, dialogs). */
 @Composable
