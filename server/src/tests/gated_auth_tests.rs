@@ -1196,6 +1196,69 @@ async fn test_claim_runnable_skips_rows_already_leased_by_same_worker() {
 
 #[tracing_test::traced_test]
 #[tokio::test]
+async fn test_count_claimable_without_push_target() {
+    let (_app, app_state, _guard) = setup_test_app().await;
+
+    use crate::db::mailbox_authorization_repo::MailboxAuthorizationRepository;
+    use crate::db::push_token_repo::PushTokenRepository;
+    let mailbox_repo = MailboxAuthorizationRepository::new(&app_state.db_pool);
+    let push_token_repo = PushTokenRepository::new(&app_state.db_pool);
+    let now = Utc::now();
+
+    // (key, push token, authorization lifetime in seconds)
+    let mailboxes = [
+        ([0xa1; 32], Some("ExpoPushToken[test-token]"), 60),
+        ([0xa2; 32], Some("https://push.example.com/up/test"), 60),
+        ([0xa3; 32], None, 60),
+        ([0xa4; 32], None, 60),
+        ([0xa5; 32], None, -60),
+    ];
+    for (index, (key, push_token, lifetime_secs)) in mailboxes.iter().enumerate() {
+        let pubkey = TestUser::new_with_key(key).pubkey().to_string();
+        sqlx::query(
+            "INSERT INTO users (pubkey, lightning_address, ark_address) VALUES ($1, $2, NULL)",
+        )
+        .bind(&pubkey)
+        .bind(format!("no-push-target-{index}@localhost"))
+        .execute(&app_state.db_pool)
+        .await
+        .unwrap();
+        if let Some(push_token) = push_token {
+            push_token_repo.upsert(&pubkey, push_token).await.unwrap();
+        }
+        mailbox_repo
+            .upsert(
+                &pubkey,
+                "deadbeef",
+                "cafebabe",
+                now.timestamp() + lifetime_secs,
+            )
+            .await
+            .unwrap();
+    }
+
+    // A mailbox that another worker is streaming still counts.
+    sqlx::query(
+        "UPDATE mailbox_authorizations
+         SET lease_owner = 'worker-a',
+             lease_expires_at = $2
+         WHERE pubkey = $1",
+    )
+    .bind(TestUser::new_with_key(&[0xa4; 32]).pubkey().to_string())
+    .bind(now + chrono::TimeDelta::seconds(30))
+    .execute(&app_state.db_pool)
+    .await
+    .unwrap();
+
+    let count = mailbox_repo
+        .count_claimable_without_push_target(now.timestamp())
+        .await
+        .unwrap();
+    assert_eq!(count, 2);
+}
+
+#[tracing_test::traced_test]
+#[tokio::test]
 async fn test_reauthorize_with_new_mailbox_resets_checkpoint() {
     let (_app, app_state, _guard) = setup_test_app().await;
     let user = TestUser::new();

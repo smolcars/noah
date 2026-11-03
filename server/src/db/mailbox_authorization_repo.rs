@@ -210,6 +210,31 @@ impl<'a> MailboxAuthorizationRepository<'a> {
         Ok(records)
     }
 
+    /// Counts the mailboxes `claim_runnable` would stream, ignoring leases and
+    /// retry timing, whose user has no row in `push_tokens`. UnifiedPush
+    /// endpoints are stored there too, so these mailboxes can never notify.
+    pub async fn count_claimable_without_push_target(&self, now: i64) -> Result<i64> {
+        let count = sqlx::query_scalar::<_, i64>(
+            "SELECT COUNT(*)
+             FROM mailbox_authorizations ma
+             INNER JOIN users u ON ma.pubkey = u.pubkey
+             WHERE ma.enabled = TRUE
+               AND ma.status = 'active'
+               AND ma.authorization_hex IS NOT NULL
+               AND ma.authorization_expires_at IS NOT NULL
+               AND ma.authorization_expires_at > $1
+               AND u.status = 'active'
+               AND NOT EXISTS (
+                   SELECT 1 FROM push_tokens pt WHERE pt.pubkey = ma.pubkey
+               )",
+        )
+        .bind(now)
+        .fetch_one(self.pool)
+        .await?;
+
+        Ok(count)
+    }
+
     pub async fn find_revoked_by_pubkey(
         &self,
         pubkey: &str,

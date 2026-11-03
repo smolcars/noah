@@ -263,6 +263,7 @@ where
                             "mailbox bulk lease renewal failed"
                         );
                     }
+                    self.log_gauges(active_sessions.len()).await;
                 }
                 _ = sleep(self.config.scan_interval) => {}
             }
@@ -397,6 +398,26 @@ where
         }
 
         Ok(())
+    }
+
+    async fn log_gauges(&self, active_sessions: usize) {
+        let repo = MailboxAuthorizationRepository::new(&self.app_state.db_pool);
+        match repo
+            .count_claimable_without_push_target(Utc::now().timestamp())
+            .await
+        {
+            Ok(claimable_without_push_target) => tracing::info!(
+                service = "mailbox_worker",
+                active_sessions,
+                claimable_without_push_target,
+                "mailbox worker gauges"
+            ),
+            Err(error) => tracing::warn!(
+                service = "mailbox_worker",
+                error = %error,
+                "failed to count mailboxes without a push target"
+            ),
+        }
     }
 
     async fn handle_session_result(
