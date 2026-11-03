@@ -171,10 +171,15 @@ jobs:
           def fit(head, change, footer, limit):
               # Telegram counts UTF-16 code units.
               size = lambda text: len(text.encode("utf-16-le")) // 2
-              text = change
-              while size(head + text + footer) > limit:
-                  text = text[:-2] + "…"
-              return head + text + footer
+              room = limit - size(head + footer)
+              if size(change) > room:
+                  used = 0
+                  for i, char in enumerate(change):
+                      used += size(char)
+                      if used > room - 1:  # leave a unit for "…"
+                          change = change[:i] + "…"
+                          break
+              return head + change + footer
 
           disclaimers = {
               "signet": "🧪 Noah Native · Signet · iOS\nReplaces the React Native Signet app; going back needs a reinstall and restore.",
