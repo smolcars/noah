@@ -1825,6 +1825,78 @@
         }
       }
     },
+    "Always dark": {
+      "comment": "GT gt_ab2b4bb23be7480b; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Always dark"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Always dark"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Always dark"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Always dark"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Always dark"
+          }
+        }
+      }
+    },
+    "Always light": {
+      "comment": "GT gt_ad18650ac813ce3a; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Always light"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Always light"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Always light"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Always light"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Always light"
+          }
+        }
+      }
+    },
     "Amount": {
       "comment": "GT gt_49e96d7cdf58069c; arguments: none",
       "extractionState": "manual",
@@ -2541,6 +2613,42 @@
           "stringUnit": {
             "state": "translated",
             "value": "Applås"
+          }
+        }
+      }
+    },
+    "Appearance": {
+      "comment": "GT gt_3907fa7f80722a6f; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Appearance"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Appearance"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Appearance"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Appearance"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Appearance"
           }
         }
       }
@@ -3585,6 +3693,42 @@
           "stringUnit": {
             "state": "translated",
             "value": "Tröskelvärdet för Auto-board är inte tillgängligt"
+          }
+        }
+      }
+    },
+    "Automatic": {
+      "comment": "GT gt_d461a493a3753877; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Automatic"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Automatic"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Automatic"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Automatic"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Automatic"
           }
         }
       }
@@ -11701,6 +11845,42 @@
         }
       }
     },
+    "Dark": {
+      "comment": "GT gt_60acc53f13a5d1bf; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dark"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dark"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dark"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dark"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Dark"
+          }
+        }
+      }
+    },
     "Date": {
       "comment": "GT gt_99c40ab405926cb5; arguments: none",
       "extractionState": "manual",
@@ -17917,6 +18097,42 @@
         }
       }
     },
+    "Follow your phone, or keep Noah light or dark.": {
+      "comment": "GT gt_afdb8f0bbfa20232; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Follow your phone, or keep Noah light or dark."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Follow your phone, or keep Noah light or dark."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Follow your phone, or keep Noah light or dark."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Follow your phone, or keep Noah light or dark."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Follow your phone, or keep Noah light or dark."
+          }
+        }
+      }
+    },
     "Food & drink": {
       "comment": "GT gt_48f1e8beb4c38745; arguments: none",
       "extractionState": "manual",
@@ -22257,6 +22473,42 @@
           "stringUnit": {
             "state": "translated",
             "value": "Bokstäver och siffror"
+          }
+        }
+      }
+    },
+    "Light": {
+      "comment": "GT gt_dbcd5e7bb7a0f538; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Light"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Light"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Light"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Light"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Light"
           }
         }
       }
@@ -29001,6 +29253,78 @@
           "stringUnit": {
             "state": "translated",
             "value": "Nu"
+          }
+        }
+      }
+    },
+    "Now dark · follows your phone": {
+      "comment": "GT gt_ab509294acf31d21; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Now dark · follows your phone"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Now dark · follows your phone"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Now dark · follows your phone"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Now dark · follows your phone"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Now dark · follows your phone"
+          }
+        }
+      }
+    },
+    "Now light · follows your phone": {
+      "comment": "GT gt_35adf08482d1b4bc; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Now light · follows your phone"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Now light · follows your phone"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Now light · follows your phone"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Now light · follows your phone"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Now light · follows your phone"
           }
         }
       }

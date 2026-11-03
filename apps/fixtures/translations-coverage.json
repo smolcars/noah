@@ -6,8 +6,8 @@
     "ko",
     "sv"
   ],
-  "catalogEntries": 1490,
-  "sourceKeys": 1526,
+  "catalogEntries": 1499,
+  "sourceKeys": 1535,
   "coverage": {
     "ios": {
       "used": [
@@ -57,6 +57,8 @@
         "Already on-chain",
         "Already sent by someone else · {n} of {total}",
         "Already spent",
+        "Always dark",
+        "Always light",
         "Amount",
         "Amount (sats)",
         "Amount after fee",
@@ -76,6 +78,7 @@
         "Anyone with this phone could see your phrase. Set a screen lock in Settings to protect it.",
         "App",
         "App lock",
+        "Appearance",
         "Appears to have gone through — check History",
         "Approve",
         "Approve and resume",
@@ -105,6 +108,7 @@
         "At least {amount}.",
         "Authentication failed. Please try again.",
         "Auto-board threshold unavailable",
+        "Automatic",
         "Automatic backups",
         "Automatic backups off",
         "Automatic payment to {recipient} was skipped. Open the schedule to review its fee and pay manually.",
@@ -298,6 +302,7 @@
         "Custom intervals must be between 1 and 365 days.",
         "Custom server",
         "Daily",
+        "Dark",
         "Date",
         "Dates, amounts, fees, prices, IDs and destinations",
         "Debug",
@@ -453,6 +458,7 @@
         "Finish the current payment before scanning another request.",
         "Finished",
         "First payment",
+        "Follow your phone, or keep Noah light or dark.",
         "Food & drink",
         "For developers. Some actions change your wallet.",
         "For prices next to your bitcoin.",
@@ -562,6 +568,7 @@
         "Left out: {amount}, too small to exit.",
         "Lets Noah wake up for Lightning",
         "Letters and numbers",
+        "Light",
         "Lightning",
         "Lightning Payment Received! ⚡",
         "Lightning Receive",
@@ -722,6 +729,8 @@
         "Notifications let Noah receive payments and renew your bitcoin before it expires.",
         "Noto Sans Regular",
         "Now",
+        "Now dark · follows your phone",
+        "Now light · follows your phone",
         "Number of payments",
         "OK",
         "Off",
@@ -1347,10 +1356,50 @@
         "· shared"
       ],
       "untranslated": {
-        "es": [],
-        "ja": [],
-        "ko": [],
-        "sv": []
+        "es": [
+          "gt_35adf08482d1b4bc",
+          "gt_3907fa7f80722a6f",
+          "gt_60acc53f13a5d1bf",
+          "gt_ab2b4bb23be7480b",
+          "gt_ab509294acf31d21",
+          "gt_ad18650ac813ce3a",
+          "gt_afdb8f0bbfa20232",
+          "gt_d461a493a3753877",
+          "gt_dbcd5e7bb7a0f538"
+        ],
+        "ja": [
+          "gt_35adf08482d1b4bc",
+          "gt_3907fa7f80722a6f",
+          "gt_60acc53f13a5d1bf",
+          "gt_ab2b4bb23be7480b",
+          "gt_ab509294acf31d21",
+          "gt_ad18650ac813ce3a",
+          "gt_afdb8f0bbfa20232",
+          "gt_d461a493a3753877",
+          "gt_dbcd5e7bb7a0f538"
+        ],
+        "ko": [
+          "gt_35adf08482d1b4bc",
+          "gt_3907fa7f80722a6f",
+          "gt_60acc53f13a5d1bf",
+          "gt_ab2b4bb23be7480b",
+          "gt_ab509294acf31d21",
+          "gt_ad18650ac813ce3a",
+          "gt_afdb8f0bbfa20232",
+          "gt_d461a493a3753877",
+          "gt_dbcd5e7bb7a0f538"
+        ],
+        "sv": [
+          "gt_35adf08482d1b4bc",
+          "gt_3907fa7f80722a6f",
+          "gt_60acc53f13a5d1bf",
+          "gt_ab2b4bb23be7480b",
+          "gt_ab509294acf31d21",
+          "gt_ad18650ac813ce3a",
+          "gt_afdb8f0bbfa20232",
+          "gt_d461a493a3753877",
+          "gt_dbcd5e7bb7a0f538"
+        ]
       }
     },
     "android": {
