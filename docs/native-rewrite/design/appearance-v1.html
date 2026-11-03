@@ -1,0 +1,175 @@
+<!doctype html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+.wrap{display:flex;gap:28px;align-items:flex-start;flex-wrap:wrap;justify-content:center;padding:8px 0}
+.col{display:flex;flex-direction:column;align-items:center;gap:12px}
+.sys{display:flex;gap:6px;align-items:center;font:500 12px var(--font-sans);color:var(--muted-foreground)}
+.sys button{font:500 12px var(--font-sans);border:1px solid var(--border);background:var(--card);color:var(--foreground);border-radius:999px;padding:4px 10px;cursor:pointer}
+.sys button.on{background:var(--foreground);color:var(--background)}
+
+/* phone */
+.ph{--bg:#fff;--fg:#000;--mu:#707070;--hl:#0000001f;--soft:#f2f2f2;--sheet:#fff;--or:#F7931A;
+  width:320px;height:660px;border-radius:48px;border:10px solid #111;position:relative;overflow:hidden;background:var(--bg);color:var(--fg);
+  font-family:Inter,system-ui,sans-serif;box-shadow:0 20px 50px #0003;transition:none}
+.ph.dark{--bg:#000;--fg:#fff;--mu:#8f8f8f;--hl:#ffffff29;--soft:#1c1c1e;--sheet:#1c1c1e}
+.island{position:absolute;top:10px;left:50%;transform:translateX(-50%);width:96px;height:28px;background:#000;border-radius:20px;z-index:9}
+.status{height:44px;display:flex;justify-content:space-between;align-items:center;padding:0 26px;font:600 14px Inter}
+.list{padding:0 18px}
+.h1{font:600 30px/36px Inter;letter-spacing:-.02em;margin:6px 0 14px}
+.glabel{font:500 13px Inter;color:var(--mu);margin:14px 4px 6px}
+.group{background:var(--soft);border-radius:16px;overflow:hidden}
+.row{display:flex;align-items:center;gap:12px;padding:12px 14px;font:400 16px Inter;position:relative}
+.row+.row:before{content:"";position:absolute;left:48px;right:0;top:0;height:1px;background:var(--hl)}
+.row .ic{width:22px;text-align:center;font-size:15px}
+.row .v{margin-left:auto;color:var(--mu);font-size:15px}
+.row .chev{color:var(--mu);opacity:.6}
+.row.hot{background:color-mix(in srgb,var(--fg) 6%,transparent)}
+.tog{margin-left:auto;width:44px;height:26px;border-radius:13px;background:var(--hl);position:relative}
+.tog:after{content:"";position:absolute;width:22px;height:22px;border-radius:50%;background:#fff;top:2px;left:2px;box-shadow:0 1px 3px #0003}
+
+.scrim{position:absolute;inset:0;background:#0006;opacity:0;transition:opacity .3s;pointer-events:none}
+.ph.open .scrim{opacity:1;pointer-events:auto}
+.sheet{position:absolute;left:8px;right:8px;bottom:8px;border-radius:40px;padding:10px 18px 22px;
+  background:color-mix(in srgb,var(--sheet) 82%,transparent);backdrop-filter:blur(24px) saturate(1.6);
+  border:1px solid var(--hl);transform:translateY(110%);transition:transform .45s cubic-bezier(.2,.9,.25,1.05)}
+.ph.open .sheet{transform:none}
+.grab{width:36px;height:5px;border-radius:3px;background:var(--hl);margin:0 auto 14px}
+.st{font:600 24px/30px Inter;letter-spacing:-.015em}
+.sl{font:400 15px/20px Inter;color:var(--mu);margin-top:4px}
+.close{position:absolute;right:16px;top:16px;width:32px;height:32px;border-radius:50%;background:var(--soft);display:grid;place-items:center;font-size:14px;color:var(--mu);cursor:pointer}
+.tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:20px}
+.tile{display:flex;flex-direction:column;align-items:center;gap:8px;cursor:pointer;background:none;border:0;padding:0;color:inherit;font:inherit}
+.frame{width:100%;aspect-ratio:9/17;border-radius:16px;position:relative;overflow:hidden;outline:2px solid transparent;outline-offset:3px;
+  transition:outline-color .2s, transform .35s cubic-bezier(.3,1.6,.5,1);box-shadow:0 0 0 1px var(--hl)}
+.tile.sel .frame{outline-color:var(--fg)}
+.tile:active .frame{transform:scale(.95)}
+.tname{font:500 15px Inter}
+.radio{width:22px;height:22px;border-radius:50%;border:1.5px solid var(--mu);display:grid;place-items:center;transition:all .2s}
+.tile.sel .radio{background:var(--fg);border-color:var(--fg)}
+.tile.sel .radio:after{content:"";width:9px;height:5px;border-left:2px solid var(--bg);border-bottom:2px solid var(--bg);transform:rotate(-45deg) translate(1px,-1px)}
+.hint{font:400 13px Inter;color:var(--mu);text-align:center;margin-top:14px;min-height:18px}
+
+/* mini home */
+.mini{position:absolute;inset:0;padding:9px 7px;display:flex;flex-direction:column;gap:4px}
+.mini.l{background:#fff;color:#000;--mh:#0000001a;--ms:#f2f2f2}
+.mini.d{background:#000;color:#fff;--mh:#ffffff26;--ms:#1c1c1e}
+.chip{display:flex;align-items:center;gap:3px}
+.av{width:10px;height:10px;border-radius:50%;border:1.5px solid #F7931A;font:600 5px/7px Inter;text-align:center}
+.bar{height:3px;border-radius:2px;background:var(--mh)}
+.bal{font:600 17px/1 'Space Grotesk';letter-spacing:-.03em;margin-top:12px}
+.fi{width:40%;margin-bottom:8px}
+.mrow{display:flex;align-items:center;gap:4px;padding:3px 0}
+.dot{width:9px;height:9px;border-radius:50%;background:var(--ms)}
+.tab{margin-top:auto;height:14px;border-radius:7px;background:var(--ms);display:flex;justify-content:space-around;align-items:center;padding:0 6px}
+.tab i{width:4px;height:4px;border-radius:50%;background:var(--mh)} .tab i:first-child{background:currentColor}
+.auto .d{clip-path:polygon(100% 0,100% 100%,0 100%)}
+.split{position:absolute;inset:0;background:linear-gradient(to top left,transparent calc(50% - .5px),#8885 50%,transparent calc(50% + .5px))}
+
+/* notes */
+.notes{max-width:340px;font:400 14px/1.5 var(--font-sans);color:var(--foreground)}
+.notes h3{font:600 15px var(--font-sans);margin:14px 0 4px}
+.notes h3:first-child{margin-top:0}
+.notes p,.notes li{color:var(--muted-foreground);margin:0}
+.notes ul{margin:0;padding-left:18px}
+.notes li{margin:3px 0}
+.notes b{color:var(--foreground);font-weight:600}
+
+::view-transition-old(root),::view-transition-new(root){animation:none;mix-blend-mode:normal}
+@media (prefers-reduced-motion:reduce){.sheet,.frame{transition:none}}
+</style></head><body>
+<div class="wrap">
+ <div class="col">
+  <div class="ph" id="ph">
+   <div class="island"></div>
+   <div class="status"><span>9:41</span><span>●●● ▮</span></div>
+   <div class="list">
+    <div class="h1">Settings</div>
+    <div class="glabel">Display</div>
+    <div class="group">
+     <div class="row"><span class="ic">₿</span>Bitcoin unit<span class="v">₿</span></div>
+     <div class="row"><span class="ic">💵</span>Currency<span class="v">USD</span></div>
+     <div class="row"><span class="ic">🌐</span>Language<span class="v">English</span></div>
+     <div class="row hot" id="apprRow" style="cursor:pointer"><span class="ic" id="apprIc">◐</span>Appearance<span class="v" id="apprV">Automatic</span><span class="chev">›</span></div>
+     <div class="row"><span class="ic">👁</span>Hide amounts<span class="tog"></span></div>
+    </div>
+    <div class="glabel">App</div>
+    <div class="group">
+     <div class="row"><span class="ic">🔔</span>Notifications<span class="v">On</span></div>
+     <div class="row"><span class="ic">⚙︎</span>Advanced<span class="chev" style="margin-left:auto">›</span></div>
+    </div>
+   </div>
+   <div class="scrim" id="scrim"></div>
+   <div class="sheet">
+    <div class="grab"></div>
+    <div class="close" id="close">✕</div>
+    <div class="st">Appearance</div>
+    <div class="sl">Follow your phone, or keep Noah light or dark.</div>
+    <div class="tiles" id="tiles"></div>
+    <div class="hint" id="hint"></div>
+   </div>
+  </div>
+  <div class="sys">Phone is set to
+   <button data-s="light">Light</button><button data-s="dark" class="on">Dark</button></div>
+ </div>
+ <div class="notes">
+  <h3>Where it lives</h3>
+  <p>A new <b>Appearance</b> row in Settings → Display, after Language. Its value reads Automatic, Light or Dark. It defaults to <b>Automatic</b>, so nothing changes for people who upgrade.</p>
+  <h3>The sheet</h3>
+  <ul>
+   <li>Three <b>tiny Home screens</b>: your real balance, your initial in the orange ring, Recent rows and the tab bar. If amounts are hidden, the balance shows dots.</li>
+   <li><b>Automatic</b> is cut diagonally, light on one side and dark on the other. The line under it says what your phone is on right now.</li>
+   <li>The selected tile gets the same 2pt outline and check as the Bitcoin unit sheet. Liquid Glass on iOS, Material on Android.</li>
+  </ul>
+  <h3>The moment</h3>
+  <ul>
+   <li>Tap a tile and the <b>whole app re-colours in a circle that grows out of the tile</b>, with a selection haptic. Try it on the left.</li>
+   <li>The sheet stays open so you can compare. The other pickers close on their own after a tap.</li>
+   <li>With Reduce Motion on, it's a plain cross-fade.</li>
+  </ul>
+  <h3>Scope</h3>
+  <ul>
+   <li>Covers every screen, sheet, alert and the keyboard.</li>
+   <li>Widgets, notifications and the launch screen draw outside the app, so they keep following the phone.</li>
+   <li>On the Duo and Fold the sheet sits in the trailing pane, and the tiles grow to fill it.</li>
+  </ul>
+ </div>
+</div>
+<script>
+const ph=document.getElementById('ph'),tiles=document.getElementById('tiles'),hint=document.getElementById('hint');
+let mode='auto',sys='dark';
+const names={auto:'Automatic',light:'Light',dark:'Dark'},icons={auto:'◐',light:'☀︎',dark:'☾'};
+const home=c=>`<div class="mini ${c}"><div class="chip"><div class="av">N</div><div class="bar" style="width:30%"></div></div>
+ <div class="bal">₿12,480</div><div class="bar fi"></div>
+ ${[60,45,52].map(w=>`<div class="mrow"><div class="dot"></div><div class="bar" style="width:${w}%"></div></div>`).join('')}
+ <div class="tab"><i></i><i></i><i></i></div></div>`;
+tiles.innerHTML=['auto','light','dark'].map(m=>`<button class="tile" data-m="${m}" aria-label="${names[m]}">
+ <div class="frame ${m=='auto'?'auto':''}">${m=='auto'?home('l')+home('d')+'<div class="split"></div>':home(m=='light'?'l':'d')}</div>
+ <div class="tname">${names[m]}</div><div class="radio"></div></button>`).join('');
+function eff(){return mode=='auto'?sys:mode}
+function paint(){
+ ph.classList.toggle('dark',eff()=='dark');
+ tiles.querySelectorAll('.tile').forEach(t=>t.classList.toggle('sel',t.dataset.m==mode));
+ document.getElementById('apprV').textContent=names[mode];
+ document.getElementById('apprIc').textContent=icons[mode];
+ hint.textContent=mode=='auto'?`Now ${sys} · follows your phone`:`Always ${mode}, whatever your phone is on`;
+ document.querySelectorAll('.sys button').forEach(b=>b.classList.toggle('on',b.dataset.s==sys));
+}
+function reveal(x,y,fn){
+ const before=eff();fn();const changed=eff()!=before;
+ if(!changed||!document.startViewTransition||matchMedia('(prefers-reduced-motion: reduce)').matches){paint();return}
+ const r=Math.hypot(Math.max(x,innerWidth-x),Math.max(y,innerHeight-y));
+ document.startViewTransition(paint).ready.then(()=>{
+  document.documentElement.animate({clipPath:[`circle(0px at ${x}px ${y}px)`,`circle(${r}px at ${x}px ${y}px)`]},
+   {duration:560,easing:'cubic-bezier(.3,.7,.2,1)',pseudoElement:'::view-transition-new(root)'});
+ });
+}
+tiles.addEventListener('click',e=>{const t=e.target.closest('.tile');if(!t)return;const b=t.querySelector('.frame').getBoundingClientRect();
+ reveal(b.left+b.width/2,b.top+b.height/2,()=>{mode=t.dataset.m})});
+document.querySelectorAll('.sys button').forEach(b=>b.onclick=()=>{const r=b.getBoundingClientRect();reveal(r.left+r.width/2,r.top,()=>{sys=b.dataset.s})});
+const open=v=>ph.classList.toggle('open',v);
+document.getElementById('apprRow').onclick=()=>open(true);
+document.getElementById('scrim').onclick=()=>open(false);
+document.getElementById('close').onclick=()=>open(false);
+paint();open(true);
+</script></body></html>
