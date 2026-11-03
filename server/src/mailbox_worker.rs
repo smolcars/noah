@@ -66,6 +66,10 @@ pub struct MailboxWorkerConfig {
 const DEFAULT_MAX_STREAMS_PER_CHANNEL: usize = 100;
 /// How long shutdown waits for cancelled sessions before aborting them.
 const SHUTDOWN_GRACE: Duration = Duration::from_secs(5);
+/// How long a new connection to the Ark server may take, handshake and
+/// ArkInfo included. bark-server-rpc sets no connect timeout, and sessions
+/// queue behind a dial.
+const ARK_DIAL_TIMEOUT: Duration = Duration::from_secs(30);
 
 impl Default for MailboxWorkerConfig {
     fn default() -> Self {
@@ -653,6 +657,7 @@ type MailboxClient = MailboxServiceClient<InterceptedService<GrpcChannel, ArkSer
 struct ChannelPool<C> {
     max_streams_per_channel: usize,
     max_channels: usize,
+    dial_timeout: Duration,
     channels: Mutex<Vec<Arc<PooledChannel<C>>>>,
     /// Held while dialling, so sessions that start together share one dial.
     /// Remembers when the last dial failed.
@@ -682,10 +687,11 @@ impl<C> Drop for ChannelLease<C> {
 }
 
 impl<C> ChannelPool<C> {
-    fn new(max_streams_per_channel: usize, max_channels: usize) -> Self {
+    fn new(max_streams_per_channel: usize, max_channels: usize, dial_timeout: Duration) -> Self {
         Self {
             max_streams_per_channel,
             max_channels,
+            dial_timeout,
             channels: Mutex::new(Vec::new()),
             dial: tokio::sync::Mutex::new(None),
         }
@@ -740,7 +746,15 @@ impl<C> ChannelPool<C> {
             anyhow::bail!("all {} ark server channels are full", self.max_channels);
         }
 
-        let client = match dial().await {
+        let dialled = tokio::time::timeout(self.dial_timeout, dial())
+            .await
+            .unwrap_or_else(|_| {
+                Err(anyhow::anyhow!(
+                    "ark server dial timed out after {:?}",
+                    self.dial_timeout
+                ))
+            });
+        let client = match dialled {
             Ok(client) => client,
             Err(error) => {
                 *last_dial_failure = Some(Instant::now());
@@ -779,7 +793,11 @@ pub struct Beta8MailboxTransport {
 impl Beta8MailboxTransport {
     pub fn new(config: &MailboxWorkerConfig) -> Self {
         Self {
-            channels: ChannelPool::new(config.max_streams_per_channel, config.max_channels),
+            channels: ChannelPool::new(
+                config.max_streams_per_channel,
+                config.max_channels,
+                ARK_DIAL_TIMEOUT,
+            ),
         }
     }
 }
@@ -1483,7 +1501,7 @@ mod tests {
 
     #[tokio::test]
     async fn channel_pool_frees_slots_and_caps_channels() {
-        let pool = ChannelPool::new(1, 1);
+        let pool = ChannelPool::new(1, 1, ARK_DIAL_TIMEOUT);
         let dials = AtomicUsize::new(0);
         let dial = || async {
             dials.fetch_add(1, Ordering::SeqCst);
@@ -1500,7 +1518,7 @@ mod tests {
 
     #[tokio::test]
     async fn channel_pool_waiters_share_a_failed_dial() {
-        let pool = ChannelPool::<()>::new(100, 10);
+        let pool = ChannelPool::<()>::new(100, 10, ARK_DIAL_TIMEOUT);
         let dials = AtomicUsize::new(0);
         let dial = || async {
             dials.fetch_add(1, Ordering::SeqCst);
@@ -1515,6 +1533,28 @@ mod tests {
         // A session that starts after the failure dials again.
         assert!(pool.borrow(dial).await.is_err());
         assert_eq!(dials.load(Ordering::SeqCst), 2);
+        assert_eq!(pool.open_channels(), 0);
+    }
+
+    #[tokio::test]
+    async fn channel_pool_gives_up_on_a_stalled_dial() {
+        let dial_timeout = Duration::from_millis(50);
+        let pool = ChannelPool::<()>::new(100, 10, dial_timeout);
+        let dials = AtomicUsize::new(0);
+        let dial = || async {
+            dials.fetch_add(1, Ordering::SeqCst);
+            std::future::pending().await
+        };
+
+        // The waiter queued behind the stalled dial fails with it instead of
+        // dialling again.
+        let started = Instant::now();
+        let (first, second) = tokio::join!(pool.borrow(dial), pool.borrow(dial));
+        assert!(started.elapsed() >= dial_timeout);
+        let error = first.err().expect("the stalled dial times out");
+        assert!(error.to_string().contains("timed out"), "{error}");
+        assert!(second.is_err());
+        assert_eq!(dials.load(Ordering::SeqCst), 1);
         assert_eq!(pool.open_channels(), 0);
     }
 }
