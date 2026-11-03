@@ -4,6 +4,86 @@ import LocalAuthentication
 @testable import Noah
 import OpenAPIRuntime
 import Testing
+import UIKit
+
+/// Settings → Display → Appearance (appearance.md, Storage and Tests).
+struct AppAppearanceTests {
+    @Test func parsesMissingUnknownAndEachValue() {
+        #expect(AppAppearance.key == "appearance")
+        #expect(AppAppearance.allCases.map(\.rawValue) == ["automatic", "light", "dark"], "Android stores the same strings")
+        for stored in [nil, "", "Dark", "sepia", "system"] { #expect(AppAppearance(stored: stored) == .automatic) }
+        #expect(AppAppearance(stored: "automatic") == .automatic)
+        #expect(AppAppearance(stored: "light") == .light)
+        #expect(AppAppearance(stored: "dark") == .dark)
+    }
+
+    @Test func resolvesAgainstThePhone() {
+        #expect(AppAppearance.automatic.resolved(system: .dark) == .dark)
+        #expect(AppAppearance.automatic.resolved(system: .light) == .light)
+        #expect(AppAppearance.automatic.resolved(system: .unspecified) == .light)
+        for system in [UIUserInterfaceStyle.light, .dark, .unspecified] {
+            #expect(AppAppearance.light.resolved(system: system) == .light)
+            #expect(AppAppearance.dark.resolved(system: system) == .dark)
+        }
+        #expect(AppAppearance.allCases.map(\.style) == [.unspecified, .light, .dark])
+    }
+
+    @Test func storesItsStringAndReadsBackOnlyKnownValues() throws {
+        let name = "appearance-\(UUID())"
+        let defaults = try #require(UserDefaults(suiteName: name))
+        defer { defaults.removePersistentDomain(forName: name) }
+        #expect(AppAppearance.read(from: defaults) == .automatic)
+        AppAppearance.dark.save(to: defaults)
+        #expect(defaults.string(forKey: "appearance") == "dark")
+        #expect(AppAppearance.read(from: defaults) == .dark)
+        defaults.set(1, forKey: "appearance")
+        #expect(AppAppearance.read(from: defaults) == .automatic)
+    }
+
+    /// RN-migrated and earlier native wallets have no value and open on Automatic. Delete wallet clears the
+    /// settings store, not the choice.
+    @MainActor @Test func opensOnTheStoredChoiceWhichSurvivesDeleteWallet() throws {
+        let root = FileManager.default.temporaryDirectory.appending(path: "appearance-\(UUID())")
+        defer { try? FileManager.default.removeItem(at: root) }
+        let storage = try SettingsStorage(rootPath: root.appending(path: "mmkv").path)
+        let name = "appearance-\(UUID())"
+        let defaults = try #require(UserDefaults(suiteName: name))
+        defer { defaults.removePersistentDomain(forName: name) }
+        #expect(AppModel(settings: storage, defaults: defaults).appearance == .automatic)
+        AppAppearance.dark.save(to: defaults)
+        #expect(AppModel(settings: storage, defaults: defaults).appearance == .dark)
+        try storage.removeAllDurably()
+        #expect(AppModel(settings: storage, defaults: defaults).appearance == .dark)
+    }
+
+    /// A pick saves and overrides every window, including ones that appear later (the lock screen's).
+    @MainActor @Test func pickOverridesEveryWindow() throws {
+        let scene = try #require(UIApplication.shared.connectedScenes.first as? UIWindowScene)
+        let root = FileManager.default.temporaryDirectory.appending(path: "appearance-\(UUID())")
+        defer { try? FileManager.default.removeItem(at: root) }
+        let name = "appearance-\(UUID())"
+        let defaults = try #require(UserDefaults(suiteName: name))
+        defer { defaults.removePersistentDomain(forName: name) }
+        let app = AppModel(settings: try SettingsStorage(rootPath: root.appending(path: "mmkv").path), defaults: defaults)
+        defer { AppearanceWindows.apply(.automatic) }
+        app.setAppearance(.light)
+        #expect(app.appearance == .light && defaults.string(forKey: AppAppearance.key) == "light")
+        #expect(scene.windows.allSatisfy { $0.overrideUserInterfaceStyle == .light })
+        app.setAppearance(.dark)
+        let later = UIWindow(windowScene: scene)
+        later.isHidden = false
+        defer { later.isHidden = true }
+        #expect(later.overrideUserInterfaceStyle == .dark)
+        app.setAppearance(.automatic)
+        #expect(scene.windows.allSatisfy { $0.overrideUserInterfaceStyle == .unspecified })
+    }
+
+    @Test func revealGrowsUntilItCoversTheWindow() {
+        let bounds = CGRect(x: 0, y: 0, width: 400, height: 800)
+        #expect(AppearanceReveal.radius(covering: bounds, from: CGPoint(x: 100, y: 700)) == hypot(300, 700))
+        #expect(AppearanceReveal.radius(covering: bounds, from: CGPoint(x: 200, y: 400)) == hypot(200, 400))
+    }
+}
 
 struct BiometricLockPolicyTests {
     @Test func onlyMissingPasscodeAllowsRecoveryPhraseWarning() {

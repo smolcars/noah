@@ -66,6 +66,7 @@ final class AppModel {
     /// Settings → suspend: nothing opens the wallet until it is resumed.
     private(set) var isWalletSuspended: Bool
     var localeIdentifier = LegacyLocale.resolved()
+    private(set) var appearance: AppAppearance
 
     func updateProfile(_ change: (inout PersistedProfileState) -> Void) throws {
         var profile = settings.persistedState(PersistedProfileState.self, key: PersistedProfileState.key) ?? .init()
@@ -80,6 +81,13 @@ final class AppModel {
         UserDefaults.standard.set(code, forKey: LegacyLocale.key)
         localeIdentifier = LegacyLocale.resolved()
         WidgetDataWriter.publishLanguage(variant: variant)
+    }
+
+    /// Saves the choice and re-themes every window at once.
+    func setAppearance(_ choice: AppAppearance) {
+        choice.save(to: defaults)
+        appearance = choice
+        AppearanceWindows.apply(choice)
     }
 
     /// Closing a session ends its streams, even when its wallet identity stays the same.
@@ -113,6 +121,7 @@ final class AppModel {
     let server: ServerRegistration
     private let log = AppLog("app")
     private let settings: SettingsStorage
+    private let defaults: UserDefaults
     private let appVersion = Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "unknown"
     @ObservationIgnored private let creator: WalletCreator
     @ObservationIgnored private var recurringForeground: RecurringForegroundRunner?
@@ -127,8 +136,10 @@ final class AppModel {
 
     init(settings: SettingsStorage = .shared, readLaunchState: @escaping () -> LaunchState = { .current() },
          settleRestore: @escaping @MainActor () async throws -> RestoreTransaction.Recovery = { try await AppServices.shared.restoreRecovery.settle() },
-         pushPermission: PushPermissionModel = PushPermissionModel()) {
+         pushPermission: PushPermissionModel = PushPermissionModel(), defaults: UserDefaults = .standard) {
         self.settings = settings
+        self.defaults = defaults
+        appearance = .read(from: defaults)
         self.pushPermission = pushPermission
         walletLock = WalletLock(settings: settings)
         self.readLaunchState = readLaunchState
