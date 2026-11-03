@@ -172,21 +172,62 @@ jobs:
           BLIXT_TOPIC_ID: ${{ secrets.BLIXT_TOPIC_ID }}
           COMMIT_SHA: ${{ github.sha }}
           BRANCH: ${{ github.head_ref || github.ref_name }}
+          COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          GH_TOKEN: ${{ github.token }}
         run: |
+          # workflow_dispatch has no head_commit, so look the message up.
+          if [[ -z "$COMMIT_MESSAGE$PR_TITLE" ]]; then
+            COMMIT_MESSAGE=$(gh api "repos/$GITHUB_REPOSITORY/commits/$COMMIT_SHA" --jq .commit.message)
+            export COMMIT_MESSAGE
+          fi
           # Same package and signing key as the RN app, so installing replaces it in place.
-          for flavor in Signet Mainnet; do
-            if [[ "$flavor" == Mainnet ]]; then
-              headline='⚠️ MAINNET · REAL FUNDS · Noah Native preview · not the React Native app'
-              warning='Installing replaces your React Native Noah mainnet app; going back needs a reinstall and wallet restore. Back up your recovery phrase first.'
-            else
-              headline='🧪 Noah Native preview (signet) · not the React Native app'
-              warning='Installing replaces your React Native Noah Signet app; going back needs a reinstall and wallet restore.'
-            fi
-            printf '%s\n%s\n\nAndroid APK\nBranch: %s\nCommit: %s\n' "$headline" "$warning" "$BRANCH" "$COMMIT_SHA" > caption.txt
+          python3 <<'PY'
+          import os
+          import re
+          from pathlib import Path
+
+          def change_summary():
+              pr_title = os.environ["PR_TITLE"].strip()
+              if pr_title:
+                  return f"{pr_title} (#{os.environ['PR_NUMBER']})"
+              message = os.environ["COMMIT_MESSAGE"].strip()
+              first, _, body = message.partition("\n")
+              merge = re.fullmatch(r"Merge pull request #(\d+) from \S+", first)
+              if merge and body.strip():
+                  return f"{body.strip()} (#{merge[1]})"
+              return message or "(no commit message)"
+
+          def fit(head, change, footer, limit):
+              # Telegram counts UTF-16 code units.
+              size = lambda text: len(text.encode("utf-16-le")) // 2
+              room = limit - size(head + footer)
+              if size(change) > room:
+                  used = 0
+                  for i, char in enumerate(change):
+                      used += size(char)
+                      if used > room - 1:  # leave a unit for "…"
+                          change = change[:i] + "…"
+                          break
+              return head + change + footer
+
+          disclaimers = {
+              "signet": "🧪 Noah Native · Signet · Android\nReplaces the React Native Signet app; going back needs a reinstall and restore.",
+              "mainnet": "⚠️ Noah Native · MAINNET, real funds · Android\nReplaces the React Native mainnet app; going back needs a reinstall and restore. Back up your recovery phrase first.",
+          }
+          change = change_summary()
+          footer = f"\n\nCommit {os.environ['COMMIT_SHA'][:7]} on {os.environ['BRANCH']}"
+          for flavor, disclaimer in disclaimers.items():
+              head = f"{disclaimer}\n\nWhat's new:\n"
+              # Telegram captions allow 1024 characters.
+              Path(f"caption-{flavor}.txt").write_text(fit(head, change, footer, 1024), encoding="utf-8")
+          PY
+          for flavor in signet mainnet; do
             curl -fsS -X POST "http://localhost:8081/bot${TELEGRAM_TOKEN}/sendDocument" \
               -F "chat_id=$BLIXT_CHAT_ID" -F "message_thread_id=$BLIXT_TOPIC_ID" \
-              -F "document=@noah-native-$(tr '[:upper:]' '[:lower:]' <<< "$flavor")-${COMMIT_SHA}.apk" \
-              -F 'caption=<caption.txt' -o "$RUNNER_TEMP/telegram.json"
+              -F "document=@noah-native-$flavor-${COMMIT_SHA}.apk" \
+              -F "caption=<caption-$flavor.txt" -o "$RUNNER_TEMP/telegram.json"
             jq -e '.ok == true' "$RUNNER_TEMP/telegram.json" > /dev/null
           done
 
