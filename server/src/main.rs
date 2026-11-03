@@ -301,7 +301,7 @@ async fn start_server(config: Config) -> anyhow::Result<()> {
 
             let worker = MailboxWorker::new(
                 mailbox_worker_app_state,
-                Arc::new(Beta8MailboxTransport),
+                Arc::new(Beta8MailboxTransport::new(&mailbox_worker_config)),
                 mailbox_worker_config,
             );
 

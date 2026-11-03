@@ -21,9 +21,9 @@ async fn main() -> Result<()> {
         .init();
 
     let app_state = build_app_state(config).await?;
-    let transport = Arc::new(Beta8MailboxTransport);
     let mailbox_worker_config = MailboxWorkerConfig::from_env();
     mailbox_worker_config.log();
+    let transport = Arc::new(Beta8MailboxTransport::new(&mailbox_worker_config));
     let worker = MailboxWorker::new(app_state, transport, mailbox_worker_config);
 
     worker.run().await

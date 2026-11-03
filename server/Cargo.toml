@@ -65,6 +65,7 @@ syn = { version = "2", features = ["full", "visit"] }
 tower = { version = "0.5.3", features = ["full"] }
 tracing-test = "0.2.6"
 once_cell = "1.21.4"
+tonic-prost = "0.14.6"
 ark = { package = "ark-lib", git = "https://gitlab.com/ark-bitcoin/bark", tag = "server-0.8.0", features = [
   "test-util",
 ] }

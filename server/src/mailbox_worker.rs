@@ -3,7 +3,11 @@
 use std::{
     cmp,
     collections::{HashMap, HashSet},
-    sync::Arc,
+    future::Future,
+    sync::{
+        Arc, Mutex, MutexGuard,
+        atomic::{AtomicBool, AtomicUsize, Ordering},
+    },
     time::Duration,
 };
 
@@ -16,9 +20,12 @@ use expo_push_notification_client::Priority;
 use futures_util::StreamExt;
 use server_rpc::{
     ServerConnection,
+    client::ArkServiceInterceptor,
     mailbox::MailboxServiceClient,
     protos::mailbox_server::{MailboxMessage, MailboxRequest, mailbox_message::Message},
-    tonic::{Code, Status},
+    tonic::{
+        Code, Status, service::interceptor::InterceptedService, transport::Channel as GrpcChannel,
+    },
 };
 use tokio::{
     sync::Semaphore,
@@ -50,12 +57,19 @@ pub struct MailboxWorkerConfig {
     pub claim_ttl: Duration,
     pub claim_renew_interval: Duration,
     pub stream_idle_reconnect: Duration,
+    /// Mailbox streams that share one connection to the Ark server.
+    pub max_streams_per_channel: usize,
+    /// Connections to the Ark server the worker may hold open at once.
+    pub max_channels: usize,
 }
+
+const DEFAULT_MAX_STREAMS_PER_CHANNEL: usize = 100;
 
 impl Default for MailboxWorkerConfig {
     fn default() -> Self {
+        let concurrency_limit = 250;
         Self {
-            concurrency_limit: 250,
+            concurrency_limit,
             scan_interval: Duration::from_secs(15),
             batch_size: 100,
             base_retry_delay: Duration::from_secs(5),
@@ -63,6 +77,8 @@ impl Default for MailboxWorkerConfig {
             claim_ttl: Duration::from_secs(120),
             claim_renew_interval: Duration::from_secs(30),
             stream_idle_reconnect: Duration::from_secs(600),
+            max_streams_per_channel: DEFAULT_MAX_STREAMS_PER_CHANNEL,
+            max_channels: concurrency_limit.div_ceil(DEFAULT_MAX_STREAMS_PER_CHANNEL),
         }
     }
 }
@@ -70,11 +86,23 @@ impl Default for MailboxWorkerConfig {
 impl MailboxWorkerConfig {
     pub fn from_env() -> Self {
         let default = Self::default();
+        let concurrency_limit = env_usize(
+            "MAILBOX_WORKER_CONCURRENCY_LIMIT",
+            default.concurrency_limit,
+        );
+        let max_streams_per_channel = env_usize(
+            "MAILBOX_WORKER_MAX_STREAMS_PER_CHANNEL",
+            default.max_streams_per_channel,
+        )
+        .max(1);
+        // By default there is room for every session the worker may run.
+        let max_channels = env_usize(
+            "MAILBOX_WORKER_MAX_CHANNELS",
+            concurrency_limit.div_ceil(max_streams_per_channel),
+        )
+        .max(1);
         Self {
-            concurrency_limit: env_usize(
-                "MAILBOX_WORKER_CONCURRENCY_LIMIT",
-                default.concurrency_limit,
-            ),
+            concurrency_limit,
             scan_interval: env_duration_secs(
                 "MAILBOX_WORKER_SCAN_INTERVAL_SECS",
                 default.scan_interval,
@@ -97,6 +125,8 @@ impl MailboxWorkerConfig {
                 "MAILBOX_WORKER_STREAM_IDLE_RECONNECT_SECS",
                 default.stream_idle_reconnect,
             ),
+            max_streams_per_channel,
+            max_channels,
         }
         .with_safe_claim_renew_interval()
     }
@@ -127,6 +157,8 @@ impl MailboxWorkerConfig {
             claim_ttl_secs = self.claim_ttl.as_secs(),
             claim_renew_interval_secs = self.claim_renew_interval.as_secs(),
             stream_idle_reconnect_secs = self.stream_idle_reconnect.as_secs(),
+            max_streams_per_channel = self.max_streams_per_channel,
+            max_channels = self.max_channels,
             "mailbox worker config loaded"
         );
     }
@@ -177,6 +209,11 @@ pub trait MailboxTransport: Send + Sync {
         mailbox: ActiveMailboxAuthorization,
         session: MailboxSessionContext,
     ) -> Result<MailboxSessionOutcome>;
+
+    /// Connections to the Ark server the transport holds open, for the gauges log.
+    fn open_channels(&self) -> usize {
+        0
+    }
 }
 
 pub struct MailboxWorker<T> {
@@ -409,6 +446,7 @@ where
             Ok(claimable_without_push_target) => tracing::info!(
                 service = "mailbox_worker",
                 active_sessions,
+                open_channels = self.transport.open_channels(),
                 claimable_without_push_target,
                 "mailbox worker gauges"
             ),
@@ -543,10 +581,174 @@ impl MailboxTransport for MailboxTransportUnavailable {
     }
 }
 
-pub struct Beta8MailboxTransport;
+type MailboxClient = MailboxServiceClient<InterceptedService<GrpcChannel, ArkServiceInterceptor>>;
+
+/// Shares a few HTTP/2 connections to the Ark server across mailbox sessions.
+///
+/// A session takes a slot on the first channel with room and gives it back
+/// when its lease drops. A new channel is dialled only when every open one is
+/// full. A channel that fails a session leaves the pool, so new sessions dial
+/// a fresh one; sessions already on it keep their clone until they end.
+struct ChannelPool<C> {
+    max_streams_per_channel: usize,
+    max_channels: usize,
+    channels: Mutex<Vec<Arc<PooledChannel<C>>>>,
+    /// Held while dialling, so sessions that start together share one dial.
+    /// Remembers when the last dial failed.
+    dial: tokio::sync::Mutex<Option<Instant>>,
+}
+
+struct PooledChannel<C> {
+    client: C,
+    streams: AtomicUsize,
+    failed: AtomicBool,
+}
+
+/// One session's slot on a pooled channel. Dropping it frees the slot.
+struct ChannelLease<C> {
+    channel: Arc<PooledChannel<C>>,
+}
+
+impl<C> ChannelLease<C> {
+    fn client(&self) -> &C {
+        &self.channel.client
+    }
+
+    /// Passes a transport outcome through. A retryable outcome means the
+    /// connection or the server failed, so the channel leaves the pool.
+    fn report(&self, outcome: MailboxSessionOutcome) -> MailboxSessionOutcome {
+        if let MailboxSessionOutcome::Retryable { reason } = &outcome
+            && !self.channel.failed.swap(true, Ordering::Relaxed)
+        {
+            tracing::warn!(
+                service = "mailbox_worker",
+                reason = %reason,
+                "dropping mailbox channel to ark server after a failed session"
+            );
+        }
+        outcome
+    }
+}
+
+impl<C> Drop for ChannelLease<C> {
+    fn drop(&mut self) {
+        self.channel.streams.fetch_sub(1, Ordering::Relaxed);
+    }
+}
+
+impl<C> ChannelPool<C> {
+    fn new(max_streams_per_channel: usize, max_channels: usize) -> Self {
+        Self {
+            max_streams_per_channel,
+            max_channels,
+            channels: Mutex::new(Vec::new()),
+            dial: tokio::sync::Mutex::new(None),
+        }
+    }
+
+    /// Locks the open channels, first forgetting any that failed.
+    fn open(&self) -> MutexGuard<'_, Vec<Arc<PooledChannel<C>>>> {
+        let mut channels = self.channels.lock().unwrap_or_else(|e| e.into_inner());
+        channels.retain(|channel| !channel.failed.load(Ordering::Relaxed));
+        channels
+    }
+
+    fn open_channels(&self) -> usize {
+        self.open().len()
+    }
+
+    fn try_borrow(&self) -> Option<ChannelLease<C>> {
+        let channels = self.open();
+        let channel = channels.iter().find(|channel| {
+            channel.streams.load(Ordering::Relaxed) < self.max_streams_per_channel
+        })?;
+        channel.streams.fetch_add(1, Ordering::Relaxed);
+        Some(ChannelLease {
+            channel: channel.clone(),
+        })
+    }
+
+    async fn borrow<F, Fut>(&self, dial: F) -> Result<ChannelLease<C>>
+    where
+        F: FnOnce() -> Fut,
+        Fut: Future<Output = Result<C>>,
+    {
+        if let Some(lease) = self.try_borrow() {
+            return Ok(lease);
+        }
+
+        let waiting_since = Instant::now();
+        let mut last_dial_failure = self.dial.lock().await;
+        // Another session may have dialled while this one waited for the lock.
+        if let Some(lease) = self.try_borrow() {
+            return Ok(lease);
+        }
+        // Fail with the dial this session waited on instead of queueing another.
+        if last_dial_failure.is_some_and(|failed_at| failed_at >= waiting_since) {
+            anyhow::bail!("ark server dial failed while this session waited for it");
+        }
+        let open_channels = self.open_channels();
+        if open_channels >= self.max_channels {
+            tracing::warn!(
+                service = "mailbox_worker",
+                max_channels = self.max_channels,
+                max_streams_per_channel = self.max_streams_per_channel,
+                "every mailbox channel to ark server is full"
+            );
+            anyhow::bail!("all {} ark server channels are full", self.max_channels);
+        }
+
+        let client = match dial().await {
+            Ok(client) => client,
+            Err(error) => {
+                *last_dial_failure = Some(Instant::now());
+                return Err(error);
+            }
+        };
+        let channel = Arc::new(PooledChannel {
+            client,
+            streams: AtomicUsize::new(1),
+            failed: AtomicBool::new(false),
+        });
+        self.open().push(channel.clone());
+        tracing::info!(
+            service = "mailbox_worker",
+            open_channels = open_channels + 1,
+            "opened mailbox channel to ark server"
+        );
+        Ok(ChannelLease { channel })
+    }
+}
+
+async fn dial_ark_server(app_state: &AppState) -> Result<MailboxClient> {
+    let network = app_state.config.network()?;
+    let connection = ServerConnection::builder()
+        .address(&app_state.config.ark_server_url)
+        .network(network)
+        .user_agent(ARK_USER_AGENT)
+        .connect()
+        .await?;
+    Ok(connection.mailbox_client)
+}
+
+pub struct Beta8MailboxTransport {
+    channels: ChannelPool<MailboxClient>,
+}
+
+impl Beta8MailboxTransport {
+    pub fn new(config: &MailboxWorkerConfig) -> Self {
+        Self {
+            channels: ChannelPool::new(config.max_streams_per_channel, config.max_channels),
+        }
+    }
+}
 
 #[async_trait]
 impl MailboxTransport for Beta8MailboxTransport {
+    fn open_channels(&self) -> usize {
+        self.channels.open_channels()
+    }
+
     async fn run_session(
         &self,
         app_state: AppState,
@@ -574,14 +776,16 @@ impl MailboxTransport for Beta8MailboxTransport {
             should_suppress_catchup_notifications(mailbox.last_checkpoint);
 
         loop {
-            let network = app_state.config.network()?;
-            let mut client: MailboxServiceClient<_> = ServerConnection::builder()
-                .address(&app_state.config.ark_server_url)
-                .network(network)
-                .user_agent(ARK_USER_AGENT)
-                .connect()
-                .await?
-                .mailbox_client;
+            // The idle reconnect below comes back here, so it borrows from the
+            // pool again instead of dialling. The previous lease was dropped at
+            // the end of the last pass.
+            let channel = tokio::select! {
+                _ = session.cancellation_token.cancelled() => {
+                    return Ok(MailboxSessionOutcome::Completed);
+                }
+                channel = self.channels.borrow(|| dial_ark_server(&app_state)) => channel?,
+            };
+            let mut client = channel.client().clone();
 
             let mut catchup_count = 0u64;
             loop {
@@ -599,7 +803,7 @@ impl MailboxTransport for Beta8MailboxTransport {
 
                 let read_response = match read_response {
                     Ok(response) => response,
-                    Err(status) => return Ok(map_tonic_status(status)),
+                    Err(status) => return Ok(channel.report(map_tonic_status(status))),
                 };
 
                 let messages = read_response.into_inner().messages;
@@ -647,7 +851,7 @@ impl MailboxTransport for Beta8MailboxTransport {
 
             let mut stream = match stream_response {
                 Ok(response) => response.into_inner(),
-                Err(status) => return Ok(map_tonic_status(status)),
+                Err(status) => return Ok(channel.report(map_tonic_status(status))),
             };
 
             tracing::trace!(
@@ -678,14 +882,14 @@ impl MailboxTransport for Beta8MailboxTransport {
                     }
                     next = stream.next() => {
                         let Some(next) = next else {
-                            return Ok(MailboxSessionOutcome::Retryable {
+                            return Ok(channel.report(MailboxSessionOutcome::Retryable {
                                 reason: "mailbox stream ended".to_string(),
-                            });
+                            }));
                         };
 
                         let message = match next {
                             Ok(message) => message,
-                            Err(status) => return Ok(map_tonic_status(status)),
+                            Err(status) => return Ok(channel.report(map_tonic_status(status))),
                         };
 
                         if !process_mailbox_message(&app_state, &mailbox, &session, &message, true).await? {
@@ -1234,5 +1438,42 @@ mod tests {
             !active_sessions.contains_key(&pubkey),
             "failed sessions should still be removed from the active set"
         );
+    }
+
+    #[tokio::test]
+    async fn channel_pool_frees_slots_and_caps_channels() {
+        let pool = ChannelPool::new(1, 1);
+        let dials = AtomicUsize::new(0);
+        let dial = || async {
+            dials.fetch_add(1, Ordering::SeqCst);
+            Ok(())
+        };
+
+        let lease = pool.borrow(dial).await.expect("first borrow dials");
+        assert!(pool.borrow(dial).await.is_err(), "the only channel is full");
+        drop(lease);
+        let _lease = pool.borrow(dial).await.expect("the slot was freed");
+        assert_eq!(dials.load(Ordering::SeqCst), 1);
+        assert_eq!(pool.open_channels(), 1);
+    }
+
+    #[tokio::test]
+    async fn channel_pool_waiters_share_a_failed_dial() {
+        let pool = ChannelPool::<()>::new(100, 10);
+        let dials = AtomicUsize::new(0);
+        let dial = || async {
+            dials.fetch_add(1, Ordering::SeqCst);
+            sleep(Duration::from_millis(50)).await;
+            Err(anyhow!("connection refused"))
+        };
+
+        let (first, second) = tokio::join!(pool.borrow(dial), pool.borrow(dial));
+        assert!(first.is_err() && second.is_err());
+        assert_eq!(dials.load(Ordering::SeqCst), 1);
+
+        // A session that starts after the failure dials again.
+        assert!(pool.borrow(dial).await.is_err());
+        assert_eq!(dials.load(Ordering::SeqCst), 2);
+        assert_eq!(pool.open_channels(), 0);
     }
 }
