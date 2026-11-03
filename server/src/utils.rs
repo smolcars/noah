@@ -40,3 +40,33 @@ pub async fn verify_user_exists(pool: &PgPool, pubkey: &str) -> Result<bool, Api
         ApiError::Database(e)
     })
 }
+
+/// Resolves on SIGTERM (how Railway stops a deploy) or Ctrl-C.
+pub async fn shutdown_signal() {
+    let ctrl_c = async {
+        if let Err(error) = tokio::signal::ctrl_c().await {
+            tracing::error!(error = %error, "failed to listen for Ctrl-C");
+            std::future::pending::<()>().await;
+        }
+    };
+
+    #[cfg(unix)]
+    let terminate = async {
+        match tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate()) {
+            Ok(mut terminate) => {
+                terminate.recv().await;
+            }
+            Err(error) => {
+                tracing::error!(error = %error, "failed to listen for SIGTERM");
+                std::future::pending::<()>().await;
+            }
+        }
+    };
+    #[cfg(not(unix))]
+    let terminate = std::future::pending::<()>();
+
+    tokio::select! {
+        _ = ctrl_c => tracing::info!("received Ctrl-C; shutting down"),
+        _ = terminate => tracing::info!("received SIGTERM; shutting down"),
+    }
+}

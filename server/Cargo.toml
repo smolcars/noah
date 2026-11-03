@@ -8,7 +8,7 @@ default-run = "server"
 axum = { version = "0.8.9", features = ["json"] }
 anyhow = "1.0.103"
 dotenvy = "0.15.7"
-tokio = { version = "1.52.4", features = ["macros", "net", "rt-multi-thread", "time"] }
+tokio = { version = "1.52.4", features = ["macros", "net", "rt-multi-thread", "signal", "time"] }
 tokio-util = "0.7.18"
 tracing = "0.1.44"
 tracing-subscriber = { version = "0.3.23", features = ["env-filter"] }

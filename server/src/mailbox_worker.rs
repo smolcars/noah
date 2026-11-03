@@ -64,6 +64,8 @@ pub struct MailboxWorkerConfig {
 }
 
 const DEFAULT_MAX_STREAMS_PER_CHANNEL: usize = 100;
+/// How long shutdown waits for cancelled sessions before aborting them.
+const SHUTDOWN_GRACE: Duration = Duration::from_secs(5);
 
 impl Default for MailboxWorkerConfig {
     fn default() -> Self {
@@ -245,7 +247,9 @@ where
         }
     }
 
-    pub async fn run(&self) -> Result<()> {
+    /// Runs until `shutdown` is cancelled, then stops every session and
+    /// releases this worker's leases.
+    pub async fn run(&self, shutdown: CancellationToken) -> Result<()> {
         let mut join_set = JoinSet::new();
         let mut active_sessions = HashMap::new();
         let mut claim_renewal = interval_at(
@@ -253,7 +257,7 @@ where
             self.config.claim_renew_interval,
         );
 
-        loop {
+        while !shutdown.is_cancelled() {
             while let Some(result) = join_set.try_join_next() {
                 if let Err(error) = Self::handle_session_result(result, &mut active_sessions).await
                 {
@@ -275,11 +279,15 @@ where
                     retry_delay_secs = self.config.base_retry_delay.as_secs(),
                     "mailbox scheduler failed; retrying"
                 );
-                sleep(self.config.base_retry_delay).await;
+                tokio::select! {
+                    _ = shutdown.cancelled() => {}
+                    _ = sleep(self.config.base_retry_delay) => {}
+                }
                 continue;
             }
 
             tokio::select! {
+                _ = shutdown.cancelled() => {}
                 result = join_set.join_next(), if !join_set.is_empty() => {
                     if let Some(result) = result
                         && let Err(error) = Self::handle_session_result(result, &mut active_sessions).await
@@ -305,6 +313,58 @@ where
                 _ = sleep(self.config.scan_interval) => {}
             }
         }
+
+        self.shut_down(join_set, active_sessions).await
+    }
+
+    /// Cancels every session, gives them a moment to finish, then frees all
+    /// leases this worker still holds so a replacement can claim them at once.
+    async fn shut_down(
+        &self,
+        mut join_set: JoinSet<(String, Result<()>)>,
+        mut active_sessions: HashMap<String, ActiveMailboxSession>,
+    ) -> Result<()> {
+        tracing::info!(
+            service = "mailbox_worker",
+            active_sessions = active_sessions.len(),
+            "mailbox worker shutting down"
+        );
+        for session in active_sessions.values() {
+            session.cancellation_token.cancel();
+        }
+
+        let drained = tokio::time::timeout(SHUTDOWN_GRACE, async {
+            while let Some(result) = join_set.join_next().await {
+                if let Err(error) = Self::handle_session_result(result, &mut active_sessions).await
+                {
+                    tracing::error!(
+                        service = "mailbox_worker",
+                        error = %error,
+                        "mailbox session join failed"
+                    );
+                }
+            }
+        })
+        .await;
+        if drained.is_err() {
+            tracing::warn!(
+                service = "mailbox_worker",
+                remaining_sessions = join_set.len(),
+                grace_secs = SHUTDOWN_GRACE.as_secs(),
+                "mailbox sessions did not stop in time; aborting them"
+            );
+            join_set.shutdown().await;
+        }
+
+        let released = MailboxAuthorizationRepository::new(&self.app_state.db_pool)
+            .release_all_claims(&self.worker_id)
+            .await?;
+        tracing::info!(
+            service = "mailbox_worker",
+            released_leases = released,
+            "mailbox worker stopped"
+        );
+        Ok(())
     }
 
     pub async fn run_once(&self) -> Result<usize> {

@@ -709,6 +709,23 @@ impl<'a> MailboxAuthorizationRepository<'a> {
         Ok(())
     }
 
+    /// Frees every lease a worker holds, so a replacement worker can claim
+    /// those mailboxes on its next scan instead of waiting out the lease TTL.
+    pub async fn release_all_claims(&self, worker_id: &str) -> Result<u64> {
+        let result = sqlx::query(
+            "UPDATE mailbox_authorizations
+             SET lease_owner = NULL,
+                 lease_expires_at = NULL,
+                 updated_at = now()
+             WHERE lease_owner = $1",
+        )
+        .bind(worker_id)
+        .execute(self.pool)
+        .await?;
+
+        Ok(result.rows_affected())
+    }
+
     pub async fn delete_by_pubkey(tx: &mut Transaction<'_, Postgres>, pubkey: &str) -> Result<()> {
         sqlx::query("DELETE FROM mailbox_authorizations WHERE pubkey = $1")
             .bind(pubkey)
