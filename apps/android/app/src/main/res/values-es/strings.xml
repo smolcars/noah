@@ -54,6 +54,8 @@
   <string name="gt_a56781b3d9389819">"Ya en cadena"</string>
   <string name="gt_0463c102e0af14e7">"Ya enviada por otra persona · %1$s de %2$s"</string>
   <string name="gt_35d9cc8868d28953">"Ya gastado"</string>
+  <string name="gt_ab2b4bb23be7480b">"Always dark"</string>
+  <string name="gt_ad18650ac813ce3a">"Always light"</string>
   <string name="gt_49e96d7cdf58069c">"Importe"</string>
   <string name="gt_e744c6ec0ad90fca">"Importe (sats)"</string>
   <string name="gt_0e7a0ce281860320">"Importe tras descontar la comisión"</string>
@@ -74,6 +76,7 @@
   <string name="gt_75ff3fb1ac6ce5d1">"Cualquiera con este teléfono podría ver tu frase. Configura un bloqueo de pantalla en Ajustes para protegerla."</string>
   <string name="gt_0d04bfeb7d64b71c">"Aplicación"</string>
   <string name="gt_b0d015fdadc38e33">"Bloqueo de app"</string>
+  <string name="gt_3907fa7f80722a6f">"Appearance"</string>
   <string name="gt_2b16e2ecee477adb">"Parece que se ha completado. Consulta el historial"</string>
   <string name="gt_6007acbe30b2cd98">"Aprobar"</string>
   <string name="gt_d052399ec796a8de">"Aprobar y reanudar"</string>
@@ -103,6 +106,7 @@
   <string name="gt_0d04eed763c98c70">"Al menos %1$s."</string>
   <string name="gt_4190475b52357e7a">"Error de autenticación. Inténtalo de nuevo."</string>
   <string name="gt_0f0e2d0c4a2ecdcc">"Umbral de transferencia automática a Ark no disponible"</string>
+  <string name="gt_d461a493a3753877">"Automatic"</string>
   <string name="gt_cb8603c8ce918947">"Copias de seguridad automáticas"</string>
   <string name="gt_afbb8dd2c2dc511f">"Copias de seguridad automáticas desactivadas"</string>
   <string name="gt_168ae9aa2da9e959">"Se omitió el pago automático a %1$s. Abre la programación para revisar la comisión y pagar manualmente."</string>
@@ -333,6 +337,7 @@
   <string name="gt_2cf66471929b6b6b">"Los intervalos personalizados deben ser de entre 1 y 365 días."</string>
   <string name="gt_c25f1d1f12dd10e2">"Servidor personalizado"</string>
   <string name="gt_b36c2611dcdfa190">"Diario"</string>
+  <string name="gt_60acc53f13a5d1bf">"Dark"</string>
   <string name="gt_99c40ab405926cb5">"Fecha"</string>
   <string name="gt_01f5e36f742d6610">"Fechas, importes, comisiones, precios, ID y destinos"</string>
   <string name="gt_1a03bd2fd107c453">"Depuración"</string>
@@ -515,6 +520,7 @@
   <string name="gt_b7657804c2b4cf70">"Termina el pago actual antes de escanear otra solicitud."</string>
   <string name="gt_7804f7a79a9eee32">"Terminadas"</string>
   <string name="gt_45650656cfdd8260">"Primer pago"</string>
+  <string name="gt_afdb8f0bbfa20232">"Follow your phone, or keep Noah light or dark."</string>
   <string name="gt_48f1e8beb4c38745">"Comida y bebida"</string>
   <string name="gt_305a93ebd8a6e87e">"Para desarrolladores. Algunas acciones cambian tu billetera."</string>
   <string name="gt_8aa38c1af4a2e0e9">"Para ver precios junto a tu bitcoin."</string>
@@ -638,6 +644,7 @@
   <string name="gt_6e2d65a1c9f1b6a6">"Deja que Noah funcione en segundo plano"</string>
   <string name="gt_e085922bf6346107">"Permite que Noah se active para Lightning"</string>
   <string name="gt_17968e6e1b20c79e">"Letras y números"</string>
+  <string name="gt_dbcd5e7bb7a0f538">"Light"</string>
   <string name="gt_41e68f2cdb3806bb">"Lightning"</string>
   <string name="gt_98da768cabdec246">"¡Pago Lightning recibido! ⚡"</string>
   <string name="gt_ffaae16da528bf85">"Recepción por Lightning"</string>
@@ -830,6 +837,8 @@
   <string name="gt_fce40565eda8090e">"Las notificaciones permiten a Noah recibir pagos y renovar tu bitcoin antes de que caduque."</string>
   <string name="gt_44d87512663a5641">"Noto Sans Regular"</string>
   <string name="gt_fe18013d93d22f4f">"Ahora"</string>
+  <string name="gt_ab509294acf31d21">"Now dark · follows your phone"</string>
+  <string name="gt_35adf08482d1b4bc">"Now light · follows your phone"</string>
   <string name="gt_c28fbd1a8ec4cf5b">"Número de pagos"</string>
   <string name="gt_565339bc4d33d728">"Aceptar"</string>
   <string name="gt_ca7981b46ecf2c17">"Desactivadas"</string>

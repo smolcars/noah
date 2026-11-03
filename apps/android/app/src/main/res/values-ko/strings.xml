@@ -53,6 +53,8 @@
   <string name="gt_a56781b3d9389819">"이미 온체인"</string>
   <string name="gt_0463c102e0af14e7">"다른 사람이 이미 보냄 · %2$s개 중 %1$s"</string>
   <string name="gt_35d9cc8868d28953">"이미 사용됨"</string>
+  <string name="gt_ab2b4bb23be7480b">"Always dark"</string>
+  <string name="gt_ad18650ac813ce3a">"Always light"</string>
   <string name="gt_49e96d7cdf58069c">"금액"</string>
   <string name="gt_e744c6ec0ad90fca">"금액(sats)"</string>
   <string name="gt_0e7a0ce281860320">"수수료 차감 후 금액"</string>
@@ -73,6 +75,7 @@
   <string name="gt_75ff3fb1ac6ce5d1">"이 휴대폰을 가진 사람은 누구나 문구를 볼 수 있어요. 보호하려면 설정에서 화면 잠금을 설정하세요."</string>
   <string name="gt_0d04bfeb7d64b71c">"앱"</string>
   <string name="gt_b0d015fdadc38e33">"앱 잠금"</string>
+  <string name="gt_3907fa7f80722a6f">"Appearance"</string>
   <string name="gt_2b16e2ecee477adb">"처리된 것으로 보입니다. 내역을 확인하세요"</string>
   <string name="gt_6007acbe30b2cd98">"승인하기"</string>
   <string name="gt_d052399ec796a8de">"승인 후 재개"</string>
@@ -102,6 +105,7 @@
   <string name="gt_0d04eed763c98c70">"최소 %1$s."</string>
   <string name="gt_4190475b52357e7a">"인증에 실패했습니다. 다시 시도해 주세요."</string>
   <string name="gt_0f0e2d0c4a2ecdcc">"자동 입금 기준 금액을 확인할 수 없습니다"</string>
+  <string name="gt_d461a493a3753877">"Automatic"</string>
   <string name="gt_cb8603c8ce918947">"자동 백업"</string>
   <string name="gt_afbb8dd2c2dc511f">"자동 백업 꺼짐"</string>
   <string name="gt_168ae9aa2da9e959">"%1$s님에게 보낼 자동 결제를 건너뛰었습니다. 일정을 열어 수수료를 확인하고 직접 결제하세요."</string>
@@ -330,6 +334,7 @@
   <string name="gt_2cf66471929b6b6b">"사용자 지정 간격은 1일에서 365일 사이여야 합니다."</string>
   <string name="gt_c25f1d1f12dd10e2">"사용자 지정 서버"</string>
   <string name="gt_b36c2611dcdfa190">"매일"</string>
+  <string name="gt_60acc53f13a5d1bf">"Dark"</string>
   <string name="gt_99c40ab405926cb5">"날짜"</string>
   <string name="gt_01f5e36f742d6610">"날짜, 금액, 수수료, 가격, ID 및 받는 곳"</string>
   <string name="gt_1a03bd2fd107c453">"디버그"</string>
@@ -508,6 +513,7 @@
   <string name="gt_b7657804c2b4cf70">"다른 요청을 스캔하기 전에 현재 결제를 완료하세요."</string>
   <string name="gt_7804f7a79a9eee32">"완료됨"</string>
   <string name="gt_45650656cfdd8260">"첫 결제"</string>
+  <string name="gt_afdb8f0bbfa20232">"Follow your phone, or keep Noah light or dark."</string>
   <string name="gt_48f1e8beb4c38745">"음식 &amp; 음료"</string>
   <string name="gt_305a93ebd8a6e87e">"개발자용이에요. 일부 작업은 지갑을 변경해요."</string>
   <string name="gt_8aa38c1af4a2e0e9">"비트코인 옆에 표시할 가격의 통화예요."</string>
@@ -630,6 +636,7 @@
   <string name="gt_6e2d65a1c9f1b6a6">"Noah가 백그라운드에서 실행되게 하세요"</string>
   <string name="gt_e085922bf6346107">"라이트닝 결제를 받을 때 Noah가 깨어날 수 있어요"</string>
   <string name="gt_17968e6e1b20c79e">"영문자와 숫자"</string>
+  <string name="gt_dbcd5e7bb7a0f538">"Light"</string>
   <string name="gt_41e68f2cdb3806bb">"Lightning"</string>
   <string name="gt_98da768cabdec246">"Lightning 결제를 받았습니다! ⚡"</string>
   <string name="gt_ffaae16da528bf85">"Lightning 수신"</string>
@@ -820,6 +827,8 @@
   <string name="gt_fce40565eda8090e">"알림을 켜면 Noah가 결제를 받고 비트코인이 만료되기 전에 갱신할 수 있습니다."</string>
   <string name="gt_44d87512663a5641">"Noto Sans Regular"</string>
   <string name="gt_fe18013d93d22f4f">"지금"</string>
+  <string name="gt_ab509294acf31d21">"Now dark · follows your phone"</string>
+  <string name="gt_35adf08482d1b4bc">"Now light · follows your phone"</string>
   <string name="gt_c28fbd1a8ec4cf5b">"결제 횟수"</string>
   <string name="gt_565339bc4d33d728">"확인"</string>
   <string name="gt_ca7981b46ecf2c17">"꺼짐"</string>

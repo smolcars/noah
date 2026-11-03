@@ -53,6 +53,8 @@
   <string name="gt_a56781b3d9389819">"オンチェーン済み"</string>
   <string name="gt_0463c102e0af14e7">"別の人が送信済み · %1$s/%2$s"</string>
   <string name="gt_35d9cc8868d28953">"使用済み"</string>
+  <string name="gt_ab2b4bb23be7480b">"Always dark"</string>
+  <string name="gt_ad18650ac813ce3a">"Always light"</string>
   <string name="gt_49e96d7cdf58069c">"金額"</string>
   <string name="gt_e744c6ec0ad90fca">"金額（sats）"</string>
   <string name="gt_0e7a0ce281860320">"手数料差し引き後の金額"</string>
@@ -73,6 +75,7 @@
   <string name="gt_75ff3fb1ac6ce5d1">"このスマートフォンを手にした人なら誰でもフレーズを見られます。保護するには、設定で画面ロックを設定してください。"</string>
   <string name="gt_0d04bfeb7d64b71c">"アプリ"</string>
   <string name="gt_b0d015fdadc38e33">"アプリのロック"</string>
+  <string name="gt_3907fa7f80722a6f">"Appearance"</string>
   <string name="gt_2b16e2ecee477adb">"支払いが完了したようです。履歴を確認してください"</string>
   <string name="gt_6007acbe30b2cd98">"承認する"</string>
   <string name="gt_d052399ec796a8de">"承認して再開"</string>
@@ -102,6 +105,7 @@
   <string name="gt_0d04eed763c98c70">"最低 %1$s。"</string>
   <string name="gt_4190475b52357e7a">"認証に失敗しました。もう一度お試しください。"</string>
   <string name="gt_0f0e2d0c4a2ecdcc">"Auto-boardのしきい値を取得できません"</string>
+  <string name="gt_d461a493a3753877">"Automatic"</string>
   <string name="gt_cb8603c8ce918947">"自動バックアップ"</string>
   <string name="gt_afbb8dd2c2dc511f">"自動バックアップはオフです"</string>
   <string name="gt_168ae9aa2da9e959">"%1$sへの自動支払いはスキップされました。スケジュールを開いて手数料を確認し、手動で支払ってください。"</string>
@@ -330,6 +334,7 @@
   <string name="gt_2cf66471929b6b6b">"カスタムの間隔は1～365日で指定してください。"</string>
   <string name="gt_c25f1d1f12dd10e2">"カスタムサーバー"</string>
   <string name="gt_b36c2611dcdfa190">"毎日"</string>
+  <string name="gt_60acc53f13a5d1bf">"Dark"</string>
   <string name="gt_99c40ab405926cb5">"日付"</string>
   <string name="gt_01f5e36f742d6610">"日付、金額、手数料、価格、IDと送金先"</string>
   <string name="gt_1a03bd2fd107c453">"デバッグ"</string>
@@ -508,6 +513,7 @@
   <string name="gt_b7657804c2b4cf70">"別のリクエストを読み取る前に、現在の支払いを完了してください。"</string>
   <string name="gt_7804f7a79a9eee32">"完了"</string>
   <string name="gt_45650656cfdd8260">"初回の支払い"</string>
+  <string name="gt_afdb8f0bbfa20232">"Follow your phone, or keep Noah light or dark."</string>
   <string name="gt_48f1e8beb4c38745">"飲食"</string>
   <string name="gt_305a93ebd8a6e87e">"開発者向けです。ウォレットを変更する操作もあります。"</string>
   <string name="gt_8aa38c1af4a2e0e9">"ビットコインの横に表示する価格の通貨です。"</string>
@@ -630,6 +636,7 @@
   <string name="gt_6e2d65a1c9f1b6a6">"Noah をバックグラウンドで動かす"</string>
   <string name="gt_e085922bf6346107">"Lightningの受け取りのためにNoahを起動できます"</string>
   <string name="gt_17968e6e1b20c79e">"英字と数字"</string>
+  <string name="gt_dbcd5e7bb7a0f538">"Light"</string>
   <string name="gt_41e68f2cdb3806bb">"ライトニング"</string>
   <string name="gt_98da768cabdec246">"Lightning支払いを受け取りました！ ⚡"</string>
   <string name="gt_ffaae16da528bf85">"ライトニングで受け取り"</string>
@@ -820,6 +827,8 @@
   <string name="gt_fce40565eda8090e">"通知により、Noah は支払いを受け取り、ビットコインが期限切れになる前に更新できます。"</string>
   <string name="gt_44d87512663a5641">"Noto Sans Regular"</string>
   <string name="gt_fe18013d93d22f4f">"現在"</string>
+  <string name="gt_ab509294acf31d21">"Now dark · follows your phone"</string>
+  <string name="gt_35adf08482d1b4bc">"Now light · follows your phone"</string>
   <string name="gt_c28fbd1a8ec4cf5b">"支払い回数"</string>
   <string name="gt_565339bc4d33d728">"OK"</string>
   <string name="gt_ca7981b46ecf2c17">"オフ"</string>

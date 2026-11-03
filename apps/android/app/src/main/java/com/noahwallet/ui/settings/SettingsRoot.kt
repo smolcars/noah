@@ -49,6 +49,7 @@ import com.noahwallet.localization.tr
 import com.noahwallet.services.storage.PersistedWalletState
 import com.noahwallet.services.storage.SettingsPreferences
 import com.noahwallet.ui.AppModel
+import com.noahwallet.ui.Appearance
 import com.noahwallet.ui.activity.DetailRow
 import com.noahwallet.ui.activity.ValueKind
 import com.noahwallet.ui.design.NoahTokens
@@ -143,6 +144,7 @@ internal fun SettingsRoot(model: AppModel, live: SettingsLive, nav: SettingsNav,
         "unit" -> UnitSheet(model) { state.sheet = null }
         "currency" -> CurrencySheet(model) { state.sheet = null }
         "language" -> LanguageSheet(model) { state.sheet = null }
+        "appearance" -> AppearanceSheet(model, address?.take(1) ?: (name ?: tr("Profile")).take(1)) { state.sheet = null }
         "delete" -> DeleteWalletSheet(model, live, state, onRecovery = { state.sheet = null; open(SettingsDestination.Seed) }) { state.sheet = null }
     }
 }
@@ -165,7 +167,7 @@ internal class SettingsListState(private val shown: MutableState<String?>, val s
 
 @Composable
 internal fun rememberSettingsListState(initialSheet: String?) = SettingsListState(
-    rememberSaveable { mutableStateOf(initialSheet?.takeIf { it in setOf("unit", "currency", "language", "delete") }) },
+    rememberSaveable { mutableStateOf(initialSheet?.takeIf { it in setOf("unit", "currency", "language", "appearance", "delete") }) },
     rememberSaveable(saver = ScrollState.Saver) { ScrollState(0) },
     rememberSaveable { mutableStateOf("") },
 )
@@ -235,6 +237,9 @@ private fun DisplayGroup(model: AppModel, locale: Locale, sheet: (String) -> Uni
             modifier = Modifier.testTag("settings-currency")) { sheet("currency") } },
         { d -> SettingsRow(tr("Language"), SettingsIcons.globe, value = preferenceName(Preference.language, model.localeIdentifier, locale), divider = d,
             modifier = Modifier.testTag("settings-language")) { sheet("language") } },
+        { d -> SettingsRow(tr("Appearance"), SettingsIcons.appearance, value = when (model.appearance) {
+            Appearance.automatic -> tr("Automatic"); Appearance.light -> tr("Light"); Appearance.dark -> tr("Dark")
+        }, divider = d, modifier = Modifier.testTag("settings-appearance")) { sheet("appearance") } },
         { d -> SettingsRow(tr("Hide amounts"), SettingsIcons.eyeOff, divider = d, modifier = Modifier.testTag("settings-hide-amounts"),
             end = RowEnd.Toggle(model.hidden) { model.toggleBalance() }) },
     ))

@@ -83,6 +83,7 @@ internal object SettingsIcons {
     val copy = R.drawable.ic_sr_copy; val check = R.drawable.ic_activity_check; val external = R.drawable.ic_activity_external
     val gear = HomeIcons.settings; val share = R.drawable.ic_activity_share; val more = R.drawable.ic_activity_more
     val lightning = HomeIcons.lightning; val person = HomeIcons.person; val map = R.drawable.ic_set_map
+    val appearance = R.drawable.ic_set_appearance
 }
 
 /** Settings' type (prototype sizes, Android): Roboto words, Space Grotesk amounts and the wordmark. */
