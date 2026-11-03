@@ -65,5 +65,8 @@ struct VtxoListTests {
         #expect(VtxoList.expiresIn(6, locale: "en") == "Expires in 1 hour")
         #expect(VtxoList.expiresIn(4_176, locale: "en") == "Expires in 29 days")
         #expect(VtxoList.span(1_008, locale: "en") == "1 wk")
+        #expect(VtxoList.ticks(3_600) == [0, 1_008, 2_016, 3_024], "25 days: whole weeks, not quarters")
+        #expect(VtxoList.ticks(500) == [0, 144, 288, 432])
+        #expect(VtxoList.ticks(24) == [0, 6, 12, 18, 24])
     }
 }
