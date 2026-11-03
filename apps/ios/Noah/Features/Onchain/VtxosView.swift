@@ -223,6 +223,12 @@ extension VtxoList {
         return L10n.text("{n} wk", blocks / 1_008, locale: locale)
     }
 
+    /// The expiry line's ticks: whole weeks, days or hours (as Android steps them), at most five, none past [span].
+    static func ticks(_ span: Int64) -> [Int64] {
+        let step: Int64 = span >= 1_008 ? 1_008 : span >= 144 ? 144 : max(6, span / 30 * 6)
+        return (0...4).map { $0 * step }.filter { $0 <= span }
+    }
+
     /// The next-expiry line's span, as Android words it: "under an hour", "6 hours", "3 days".
     static func timeLeft(_ blocks: Int64, locale: String) -> String {
         if blocks < 6 { return L10n.text("under an hour", locale: locale) }
@@ -412,12 +418,13 @@ private struct VtxoTimeline: View {
                          with: .color(NoahTokens.Colors.orangeTint))
         }
         context.fill(Path(CGRect(x: x0, y: base + 6, width: x1 - x0, height: 1)), with: .color(NoahTokens.Colors.hairline))
-        for tick in 0...4 {
-            let blocks = span * Int64(tick) / 4, at = x(blocks)
+        for blocks in VtxoList.ticks(span) {
+            let at = x(blocks)
             context.fill(Path(CGRect(x: at - 0.5, y: base + 3, width: 1, height: 6)), with: .color(NoahTokens.Colors.muted))
-            let label = tick == 0 ? L10n.text("Now", locale: locale.identifier) : VtxoList.span(blocks, locale: locale.identifier)
-            context.draw(Text(verbatim: label).font(NoahTokens.Typography.caption.font(size: 11)).foregroundStyle(NoahTokens.Colors.muted),
-                         at: CGPoint(x: at, y: base + 22), anchor: tick == 0 ? .leading : tick == 4 ? .trailing : .center)
+            let label = blocks == 0 ? L10n.text("Now", locale: locale.identifier) : VtxoList.span(blocks, locale: locale.identifier)
+            let text = context.resolve(Text(verbatim: label).font(NoahTokens.Typography.caption.font(size: 11)).foregroundStyle(NoahTokens.Colors.muted))
+            let width = text.measure(in: size).width
+            context.draw(text, at: CGPoint(x: blocks == 0 ? at : min(at - width / 2, size.width - width), y: base + 22), anchor: .leading)
         }
         for placed in VtxoTimelineFrame.stack(amounts: vtxos.map(\.amount), lefts: lefts, span: span, width: size.width).dots {
             let vtxo = vtxos[placed.index], radius = CGFloat(placed.radius)
