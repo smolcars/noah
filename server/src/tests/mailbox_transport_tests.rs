@@ -4,9 +4,9 @@
 
 use std::{
     convert::Infallible,
-    net::SocketAddr,
+    net::{Shutdown, SocketAddr},
     sync::{
-        Arc,
+        Arc, Mutex,
         atomic::{AtomicUsize, Ordering},
     },
     time::Duration,
@@ -25,7 +25,10 @@ use server_rpc::{
         transport::Server,
     },
 };
-use tokio::{net::TcpListener, task::JoinSet};
+use tokio::{
+    net::{TcpListener, TcpStream},
+    task::JoinSet,
+};
 use tokio_util::sync::CancellationToken;
 use tonic_prost::ProstCodec;
 use tower::service_fn;
@@ -46,11 +49,13 @@ const ENDING_MAILBOX_ID: &str = "dead";
 const MAILBOX_ID: &str = "deadbeef";
 
 /// Answers the handshake and ArkInfo, returns empty mailboxes, and keeps
-/// every other subscription open. Counts accepted TCP connections.
+/// every other subscription open. Counts accepted TCP connections and can
+/// close them.
 #[derive(Clone, Default)]
 struct MockArkServer {
     connections: Arc<AtomicUsize>,
     subscriptions: Arc<AtomicUsize>,
+    sockets: Arc<Mutex<Vec<std::net::TcpStream>>>,
 }
 
 impl MockArkServer {
@@ -59,10 +64,17 @@ impl MockArkServer {
         let listener = TcpListener::bind("127.0.0.1:0").await.unwrap();
         let addr = listener.local_addr().unwrap();
         let connections = server.connections.clone();
+        let sockets = server.sockets.clone();
         let incoming = stream::unfold(listener, move |listener| {
             let connections = connections.clone();
+            let sockets = sockets.clone();
             async move {
-                let accepted = listener.accept().await.map(|(socket, _)| socket);
+                // Keeps a second handle on each socket so the test can close it.
+                let accepted = listener.accept().await.and_then(|(socket, _)| {
+                    let socket = socket.into_std()?;
+                    sockets.lock().unwrap().push(socket.try_clone()?);
+                    TcpStream::from_std(socket)
+                });
                 connections.fetch_add(1, Ordering::SeqCst);
                 Some((accepted, listener))
             }
@@ -80,6 +92,13 @@ impl MockArkServer {
 
     fn subscriptions(&self) -> usize {
         self.subscriptions.load(Ordering::SeqCst)
+    }
+
+    /// Drops every open connection, like the Ark server restarting.
+    fn close_connections(&self) {
+        for socket in self.sockets.lock().unwrap().drain(..) {
+            socket.shutdown(Shutdown::Both).unwrap();
+        }
     }
 }
 
@@ -309,8 +328,9 @@ async fn mailbox_sessions_share_ark_server_connections() {
     assert_eq!(server.connections(), 2);
     assert_eq!(transport.open_channels(), 2);
 
-    // A stream that ends is retryable, and its channel (the second one, the
-    // only one with room) leaves the pool.
+    // A stream that ends is retryable. It ran on the second channel, the only
+    // one with room, and that channel stays in the pool: the stream ending
+    // says nothing about the connection under it.
     let outcome = transport
         .run_session(
             app_state.clone(),
@@ -324,9 +344,9 @@ async fn mailbox_sessions_share_ark_server_connections() {
         .await
         .unwrap();
     assert!(matches!(outcome, MailboxSessionOutcome::Retryable { .. }));
-    assert_eq!(transport.open_channels(), 1);
+    assert_eq!(transport.open_channels(), 2);
 
-    // The next session dials a fresh connection instead of joining that one.
+    // The next session joins that channel again, on the same connection.
     spawn_session(
         &mut sessions,
         &transport,
@@ -336,8 +356,60 @@ async fn mailbox_sessions_share_ark_server_connections() {
         &cancel,
     );
     wait_until("six subscriptions", || server.subscriptions() == 6).await;
-    assert_eq!(server.connections(), 3);
+    assert_eq!(server.connections(), 2);
     assert_eq!(transport.open_channels(), 2);
+
+    cancel.cancel();
+    assert_all_completed(&mut sessions).await;
+}
+
+#[tokio::test]
+async fn mailbox_sessions_keep_the_pooled_channel_when_its_connection_closes() {
+    let (_app, app_state, _guard) = setup_test_app().await;
+    let (server, addr) = MockArkServer::start().await;
+    let app_state = mock_ark_state(&app_state, addr);
+    let transport = Arc::new(Beta8MailboxTransport::new(&MailboxWorkerConfig::default()));
+    let cancel = CancellationToken::new();
+    let idle_reconnect = Duration::from_secs(600);
+    let mut sessions = JoinSet::new();
+
+    for _ in 0..2 {
+        spawn_session(
+            &mut sessions,
+            &transport,
+            &app_state,
+            MAILBOX_ID,
+            idle_reconnect,
+            &cancel,
+        );
+    }
+    wait_until("two subscriptions", || server.subscriptions() == 2).await;
+    assert_eq!(server.connections(), 1);
+
+    // Every stream on the connection fails with it, and each session ends
+    // retryable so the scheduler backs off before running it again.
+    server.close_connections();
+    while let Some(result) = sessions.join_next().await {
+        let outcome = result.unwrap().unwrap();
+        assert!(matches!(outcome, MailboxSessionOutcome::Retryable { .. }));
+    }
+    assert_eq!(transport.open_channels(), 1);
+
+    // The next session borrows the same pooled channel. tonic notices its
+    // connection is gone and dials a new one under it on the first request,
+    // so the server sees one more connection and the pool still holds one
+    // channel.
+    spawn_session(
+        &mut sessions,
+        &transport,
+        &app_state,
+        MAILBOX_ID,
+        idle_reconnect,
+        &cancel,
+    );
+    wait_until("a third subscription", || server.subscriptions() == 3).await;
+    assert_eq!(server.connections(), 2);
+    assert_eq!(transport.open_channels(), 1);
 
     cancel.cancel();
     assert_all_completed(&mut sessions).await;

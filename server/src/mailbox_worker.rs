@@ -6,7 +6,7 @@ use std::{
     future::Future,
     sync::{
         Arc, Mutex, MutexGuard,
-        atomic::{AtomicBool, AtomicUsize, Ordering},
+        atomic::{AtomicUsize, Ordering},
     },
     time::Duration,
 };
@@ -647,8 +647,9 @@ type MailboxClient = MailboxServiceClient<InterceptedService<GrpcChannel, ArkSer
 ///
 /// A session takes a slot on the first channel with room and gives it back
 /// when its lease drops. A new channel is dialled only when every open one is
-/// full. A channel that fails a session leaves the pool, so new sessions dial
-/// a fresh one; sessions already on it keep their clone until they end.
+/// full. Channels stay in the pool for good: when a connection dies, tonic
+/// dials it again on the channel's next request, so a session that fails
+/// retries on the same channel after the scheduler's backoff.
 struct ChannelPool<C> {
     max_streams_per_channel: usize,
     max_channels: usize,
@@ -661,7 +662,6 @@ struct ChannelPool<C> {
 struct PooledChannel<C> {
     client: C,
     streams: AtomicUsize,
-    failed: AtomicBool,
 }
 
 /// One session's slot on a pooled channel. Dropping it frees the slot.
@@ -672,21 +672,6 @@ struct ChannelLease<C> {
 impl<C> ChannelLease<C> {
     fn client(&self) -> &C {
         &self.channel.client
-    }
-
-    /// Passes a transport outcome through. A retryable outcome means the
-    /// connection or the server failed, so the channel leaves the pool.
-    fn report(&self, outcome: MailboxSessionOutcome) -> MailboxSessionOutcome {
-        if let MailboxSessionOutcome::Retryable { reason } = &outcome
-            && !self.channel.failed.swap(true, Ordering::Relaxed)
-        {
-            tracing::warn!(
-                service = "mailbox_worker",
-                reason = %reason,
-                "dropping mailbox channel to ark server after a failed session"
-            );
-        }
-        outcome
     }
 }
 
@@ -706,11 +691,8 @@ impl<C> ChannelPool<C> {
         }
     }
 
-    /// Locks the open channels, first forgetting any that failed.
     fn open(&self) -> MutexGuard<'_, Vec<Arc<PooledChannel<C>>>> {
-        let mut channels = self.channels.lock().unwrap_or_else(|e| e.into_inner());
-        channels.retain(|channel| !channel.failed.load(Ordering::Relaxed));
-        channels
+        self.channels.lock().unwrap_or_else(|e| e.into_inner())
     }
 
     fn open_channels(&self) -> usize {
@@ -768,7 +750,6 @@ impl<C> ChannelPool<C> {
         let channel = Arc::new(PooledChannel {
             client,
             streams: AtomicUsize::new(1),
-            failed: AtomicBool::new(false),
         });
         self.open().push(channel.clone());
         tracing::info!(
@@ -863,7 +844,7 @@ impl MailboxTransport for Beta8MailboxTransport {
 
                 let read_response = match read_response {
                     Ok(response) => response,
-                    Err(status) => return Ok(channel.report(map_tonic_status(status))),
+                    Err(status) => return Ok(map_tonic_status(status)),
                 };
 
                 let messages = read_response.into_inner().messages;
@@ -911,7 +892,7 @@ impl MailboxTransport for Beta8MailboxTransport {
 
             let mut stream = match stream_response {
                 Ok(response) => response.into_inner(),
-                Err(status) => return Ok(channel.report(map_tonic_status(status))),
+                Err(status) => return Ok(map_tonic_status(status)),
             };
 
             tracing::trace!(
@@ -942,14 +923,14 @@ impl MailboxTransport for Beta8MailboxTransport {
                     }
                     next = stream.next() => {
                         let Some(next) = next else {
-                            return Ok(channel.report(MailboxSessionOutcome::Retryable {
+                            return Ok(MailboxSessionOutcome::Retryable {
                                 reason: "mailbox stream ended".to_string(),
-                            }));
+                            });
                         };
 
                         let message = match next {
                             Ok(message) => message,
-                            Err(status) => return Ok(channel.report(map_tonic_status(status))),
+                            Err(status) => return Ok(map_tonic_status(status)),
                         };
 
                         if !process_mailbox_message(&app_state, &mailbox, &session, &message, true).await? {
