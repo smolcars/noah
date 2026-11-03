@@ -141,17 +141,50 @@ jobs:
           BRANCH: ${{ github.head_ref || github.ref_name }}
           DIAWI_LINK: ${{ steps.diawi.outputs.link }}
           FLAVOR: ${{ matrix.flavor }}
+          COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
+          PR_TITLE: ${{ github.event.pull_request.title }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          GH_TOKEN: ${{ github.token }}
         run: |
-          # Same bundle ID as the RN app, so installing replaces it in place.
-          if [[ "$FLAVOR" == mainnet ]]; then
-            headline='⚠️ MAINNET · REAL FUNDS · Noah Native preview · not the React Native app'
-            warning='Installing replaces your React Native Noah mainnet app; going back needs a reinstall and wallet restore. Back up your recovery phrase first.'
-          else
-            headline='🧪 Noah Native preview (signet) · not the React Native app'
-            warning='Installing replaces your React Native Noah Signet app; going back needs a reinstall and wallet restore.'
+          # workflow_dispatch has no head_commit, so look the message up.
+          if [[ -z "$COMMIT_MESSAGE$PR_TITLE" ]]; then
+            COMMIT_MESSAGE=$(gh api "repos/$GITHUB_REPOSITORY/commits/$COMMIT_SHA" --jq .commit.message)
+            export COMMIT_MESSAGE
           fi
-          printf '%s\n%s\n\niOS download: %s\nBranch: %s\nCommit: %s\n' \
-            "$headline" "$warning" "$DIAWI_LINK" "$BRANCH" "$COMMIT_SHA" > message.txt
+          # Same bundle ID as the RN app, so installing replaces it in place.
+          python3 <<'PY'
+          import os
+          import re
+          from pathlib import Path
+
+          def change_summary():
+              pr_title = os.environ["PR_TITLE"].strip()
+              if pr_title:
+                  return f"{pr_title} (#{os.environ['PR_NUMBER']})"
+              message = os.environ["COMMIT_MESSAGE"].strip()
+              first, _, body = message.partition("\n")
+              merge = re.fullmatch(r"Merge pull request #(\d+) from \S+", first)
+              if merge and body.strip():
+                  return f"{body.strip()} (#{merge[1]})"
+              return message or "(no commit message)"
+
+          def fit(head, change, footer, limit):
+              # Telegram counts UTF-16 code units.
+              size = lambda text: len(text.encode("utf-16-le")) // 2
+              text = change
+              while size(head + text + footer) > limit:
+                  text = text[:-2] + "…"
+              return head + text + footer
+
+          disclaimers = {
+              "signet": "🧪 Noah Native · Signet · iOS\nReplaces the React Native Signet app; going back needs a reinstall and restore.",
+              "mainnet": "⚠️ Noah Native · MAINNET, real funds · iOS\nReplaces the React Native mainnet app; going back needs a reinstall and restore. Back up your recovery phrase first.",
+          }
+          head = f"{disclaimers[os.environ['FLAVOR']]}\nDownload: {os.environ['DIAWI_LINK']}\n\nWhat's new:\n"
+          footer = f"\n\nCommit {os.environ['COMMIT_SHA'][:7]} on {os.environ['BRANCH']}"
+          # Telegram messages allow 4096 characters.
+          Path("message.txt").write_text(fit(head, change_summary(), footer, 4096), encoding="utf-8")
+          PY
           curl -fsS -X POST "https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage" \
             -F "chat_id=$BLIXT_CHAT_ID" -F "message_thread_id=$BLIXT_TOPIC_ID" \
             -F 'text=<message.txt' -o "$RUNNER_TEMP/telegram.json"
