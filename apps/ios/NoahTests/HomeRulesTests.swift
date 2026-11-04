@@ -218,19 +218,19 @@ struct HomeRulesTests {
         row = HomeActivityRow(Self.row(type: "Bolt11", direction: "outgoing", destination: "lnbcrt1invoice"), ownDomain: own)
         #expect(row.title == "Sent" && !row.titleIsVerbatim && row.kind == .lightning && row.avatar == .lightning)
         row = HomeActivityRow(Self.row(type: "Lnurl", destination: "maya@noahwallet.io"), ownDomain: own)
-        #expect(row.title == "Lightning" && row.avatar == .lightning && row.sign == "+")
+        #expect(row.title == "Received" && row.kind == .lightning && row.avatar == .lightning && row.sign == "+")
         row = HomeActivityRow(Self.row(), ownDomain: own)
-        #expect(row.title == "Ark" && row.avatar == .incoming)
+        #expect(row.title == "Received" && row.kind == .ark && row.avatar == .incoming)
         row = HomeActivityRow(Self.row(direction: "outgoing", destination: "tark1address"), ownDomain: own)
         #expect(row.avatar == .outgoing && row.sign == "−")
 
         // On-chain movements get the link; a board is a transfer between your own balances.
         row = HomeActivityRow(Self.row(type: "Onchain", kind: "onboard"), ownDomain: own)
-        #expect(row.title == "Board" && row.kind == .onchain && row.avatar == .chain && row.sign.isEmpty)
+        #expect(row.title == "Moved to Ark" && row.kind == .onchain && row.avatar == .chain && row.sign.isEmpty)
         var deposit = Self.row("onchain-wallet-tx", type: "Onchain", status: nil, source: "onchain-wallet")
         deposit.hasConfirmation = false
         row = HomeActivityRow(deposit, ownDomain: own)
-        #expect(row.title == "Onchain" && row.kind == nil && row.avatar == .chain && row.status == .confirming)
+        #expect(row.title == "Received" && row.kind == .onchain && row.avatar == .chain && row.status == .confirming)
         deposit.hasConfirmation = true
         #expect(HomeActivityRow(deposit, ownDomain: own).status == .done)
     }
@@ -244,7 +244,7 @@ struct HomeRulesTests {
         #expect(row.status == .confirming)
         row = HomeActivityRow(Self.row(type: "Onchain", direction: "outgoing", status: "failed", kind: "offboard", effective: 0,
                                        offchainFee: 0, onchainFee: 0, balanceChange: 0), ownDomain: own)
-        #expect(row.status == .failed(nothingLeft: true) && row.status.isUnsuccessful && row.title == "Offboard")
+        #expect(row.status == .failed(nothingLeft: true) && row.status.isUnsuccessful && row.title == "Move to on-chain")
         row = HomeActivityRow(Self.row(type: "Bolt11", direction: "outgoing", status: "failed", effective: -4_200), ownDomain: own)
         #expect(row.status == .failed(nothingLeft: false))
         // Canceled keeps the title: the subtitle carries the status.

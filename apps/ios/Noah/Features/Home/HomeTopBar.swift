@@ -177,6 +177,20 @@ struct HomePillStyle: ButtonStyle {
     var height: CGFloat = 36
     var font = HomeText.strong
 
+    private struct Fill: ViewModifier {
+        let prominent: Bool
+        let enabled: Bool
+        func body(content: Content) -> some View {
+            // Disabled, filled or outlined alike: the same opaque soft surface and hairline.
+            if prominent || !enabled {
+                content.pillFill(enabled: enabled, tint: NoahTokens.Colors.foreground)
+            } else {
+                content.glassCompat(in: Capsule(), interactive: enabled)
+                    .overlay { Capsule().strokeBorder(NoahTokens.Colors.hairline, lineWidth: 1) }
+            }
+        }
+    }
+
     func makeBody(configuration: Configuration) -> some View {
         Styled(configuration: configuration, prominent: prominent, height: height, font: font)
     }
@@ -193,13 +207,12 @@ struct HomePillStyle: ButtonStyle {
             configuration.label
                 .noahText(font)
                 .lineLimit(1)
-                .foregroundStyle(prominent ? NoahTokens.Colors.background : NoahTokens.Colors.foreground)
+                .foregroundStyle(isEnabled ? prominent ? NoahTokens.Colors.background : NoahTokens.Colors.foreground : NoahTokens.Colors.muted)
                 .padding(.horizontal, 16)
                 .frame(minHeight: height)
                 .contentShape(Capsule())
-                .glassCompat(in: Capsule(), interactive: isEnabled, tint: prominent ? NoahTokens.Colors.foreground : nil)
-                .overlay { if !prominent { Capsule().strokeBorder(NoahTokens.Colors.hairline, lineWidth: 1) } }
-                .opacity(isEnabled ? 1 : 0.5)
+                // Disabled: a muted label (readable), not a faded pill; filled ones get the soft fill.
+                .modifier(Fill(prominent: prominent, enabled: isEnabled))
                 .scaleEffect(configuration.isPressed && !reduceMotion ? 0.95 : 1)
                 .animation(NoahTokens.Motion.tap, value: configuration.isPressed)
         }
@@ -208,7 +221,7 @@ struct HomePillStyle: ButtonStyle {
 
 // MARK: Balance
 
-/// The big number. Tap for the details; long-press hides it.
+/// The big number. Tap for the details (the chevron says so); the eye or a long press hides it.
 struct HomeBalanceView: View {
     let sats: UInt64?
     let unit: BitcoinAmountUnit
@@ -231,14 +244,20 @@ struct HomeBalanceView: View {
     }
 
     var body: some View {
-        number
-            .noahText(NoahTokens.Typography.balance)
-            .foregroundStyle(NoahTokens.Colors.foreground)
-            .lineLimit(1)
-            .minimumScaleFactor(0.5)
-            .opacity(1 - tuck)
-            .scaleEffect(1 - 0.06 * tuck, anchor: .bottomLeading)
-            .offset(y: -6 * tuck)
+        HStack(spacing: 4) {
+            HStack(spacing: 6) {
+                number
+                    .noahText(NoahTokens.Typography.balance)
+                    .foregroundStyle(NoahTokens.Colors.foreground)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.5)
+                if sats != nil {
+                    Image(systemName: "chevron.right")
+                        .font(.system(size: 17, weight: .semibold))
+                        .foregroundStyle(NoahTokens.Colors.muted)
+                        .accessibilityHidden(true)
+                }
+            }
             .contentShape(Rectangle())
             .onTapGesture(perform: onDetails)
             .onLongPressGesture(minimumDuration: 0.5, perform: onToggleHidden)
@@ -249,6 +268,28 @@ struct HomeBalanceView: View {
             .accessibilityAction(.default, onDetails)
             .accessibilityAction(named: Text(LocalizedStringKey(hidden ? "Show wallet balance" : "Hide wallet balance")), onToggleHidden)
             .accessibilityIdentifier("home-balance")
+            Spacer(minLength: 0)
+            if sats != nil { eye }
+        }
+        .opacity(1 - tuck)
+        .scaleEffect(1 - 0.06 * tuck, anchor: .bottomLeading)
+        .offset(y: -6 * tuck)
+    }
+
+    /// Hides and shows amounts everywhere (the same flag as the long press).
+    private var eye: some View {
+        Button(action: onToggleHidden) {
+            Image(systemName: hidden ? "eye.slash" : "eye")
+                .font(.system(size: 17, weight: .medium))
+                .foregroundStyle(NoahTokens.Colors.muted)
+                .contentTransition(.symbolEffect(.replace))
+                .frame(width: NoahTokens.Size.hitTarget, height: NoahTokens.Size.hitTarget)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .padding(.trailing, -10)
+        .accessibilityLabel(Text(LocalizedStringKey(hidden ? "Show wallet balance" : "Hide wallet balance")))
+        .accessibilityIdentifier("home-balance-visibility")
     }
 
     private var number: some View {
@@ -435,7 +476,7 @@ struct HomeNudgeCard: View {
             Button(action: action) {
                 ZStack {
                     Text(button).opacity(busy ? 0 : 1)
-                    if busy { ProgressView().tint(NoahTokens.Colors.background) }
+                    if busy { ProgressView().tint(NoahTokens.Colors.muted) }
                 }
             }
             .buttonStyle(HomePillStyle())
@@ -474,7 +515,7 @@ struct HomeNudgeCard: View {
             Text(L10n.text("Renew {amount}", WalletBalance.display(renewal.sats, hidden: hidden, unit: unit, locale: locale),
                            locale: locale.identifier))
         case .backupFailed: Text("Backup failed")
-        case .backUp: Text("Back up your wallet")
+        case .backUp: Text("Save your recovery phrase")
         case .email: Text("Add your email")
         case .update: Text("Update available")
         }
@@ -483,9 +524,10 @@ struct HomeNudgeCard: View {
     private var subtitle: Text? {
         switch nudge {
         case .notice: nil
-        case .renew(let renewal): Text(verbatim: renewal.expiryText(locale: locale.identifier))
+        case .renew(let renewal):
+            Text(verbatim: L10n.text("Renew to keep these coins", locale: locale.identifier) + " · " + renewal.expiryText(locale: locale.identifier))
         case .backupFailed(let message): Text(LocalizedStringKey(message))
-        case .backUp: Text("Save your recovery phrase")
+        case .backUp: Text("You need it to restore your wallet")
         case .email: Text("For urgent wallet alerts")
         case .update: Text("Get the latest fixes")
         }
@@ -496,7 +538,7 @@ struct HomeNudgeCard: View {
         case .notice: nil
         case .renew: "Renew"
         case .backupFailed: "Retry"
-        case .backUp: "Back up"
+        case .backUp: "Save"
         case .email: "Add"
         case .update: "Update"
         }
@@ -639,7 +681,7 @@ struct HomeSuspendedView: View {
                 .foregroundStyle(NoahTokens.Colors.failure)
                 .padding(.bottom, NoahTokens.Space.s)
                 .accessibilityHidden(true)
-            Text("Wallet Suspended").noahText(NoahTokens.Typography.title).foregroundStyle(NoahTokens.Colors.foreground)
+            Text("Wallet suspended").noahText(NoahTokens.Typography.title).foregroundStyle(NoahTokens.Colors.foreground)
             Text("All wallet operations are disabled. Resume your wallet in Settings.")
                 .noahText(NoahTokens.Typography.body).foregroundStyle(NoahTokens.Colors.muted)
             Button("Open Settings", action: onOpenSettings)

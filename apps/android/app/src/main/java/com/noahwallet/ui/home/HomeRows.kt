@@ -67,6 +67,7 @@ data class HomeRow(
             // An invoice or offer names no one: its own description, else what happened.
             val invoiceRow = row.type == "Bolt11" || row.offer != null
             val lightning = row.type == "Bolt11" || row.type == "Lnurl"
+            val moved = row.movementStatus != "failed" && row.movementStatus != "canceled"
 
             fun title(): String = when {
                 recurring != null -> recurring.label
@@ -74,12 +75,19 @@ data class HomeRow(
                 address != null -> address
                 row.isRenewal -> "Renewed"
                 invoiceRow -> row.description ?: if (outgoing) "Sent" else "Received"
-                else -> row.displayLabel
+                // Plain words for what happened; the protocol's names (Board, Offboard) stay in Details.
+                row.movementKind == "onboard" -> if (moved) "Moved to Ark" else "Move to Ark"
+                row.movementKind == "offboard" -> if (moved) "Moved to on-chain" else "Move to on-chain"
+                row.exitFeeFor != null || (row.isCanceled && row.movementKind == "exit") -> row.displayLabel
+                row.movementKind == "exit" -> "Emergency exit"
+                else -> if (outgoing) "Sent" else "Received"
             }
             fun kind(): String? = when {
                 recurring != null -> "Recurring"
                 noahUser -> "Noah user"
                 address != null -> "Lightning"
+                // Its state already says where it goes: "Exiting to on-chain".
+                row.movementKind == "exit" && row.movementStatus == "pending" -> null
                 chain -> "On-chain"
                 lightning -> "Lightning"
                 row.type == "Arkoor" -> "Ark"
@@ -98,7 +106,7 @@ data class HomeRow(
         }
 
         private fun pendingState(row: HistoryTransaction) = when (row.movementKind) {
-            "exit" -> "Exiting"
+            "exit" -> "Exiting to on-chain"
             // bark records the offboard transaction once the round signs it; until then it waits for a round.
             "offboard", "send-onchain" -> if (HistoryMetadata.parse(row.metadataJson ?: "").offboardTxid == null) "In a round" else "Confirming"
             else -> null

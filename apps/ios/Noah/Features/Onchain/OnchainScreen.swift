@@ -149,7 +149,7 @@ struct OnchainReviewSheet: View {
             }
             if quote.automatic, let chainFee = quote.chainFee {
                 OnchainAmountRow(
-                    title: "Onchain reserve left",
+                    title: "On-chain reserve left",
                     sats: quote.confirmed - quote.amount - chainFee)
             }
         }
@@ -163,7 +163,7 @@ struct OnchainReviewSheet: View {
         if quote.action == .board || quote.action == .startExit || quote.action == .progress {
             OnchainAmountRow(
                 title: quote.action == .board
-                    ? "Onchain fee" : "Estimated broadcast fees", sats: chainFee)
+                    ? "On-chain fee" : "Estimated broadcast fees", sats: chainFee)
         }
         OnchainAmountRow(
             title: quote.action == .board ? "Ark receives" : "Amount after fee",
@@ -177,7 +177,7 @@ struct OnchainReviewSheet: View {
                     "Fee estimate unavailable. Fees and amount to receive are unknown. Continue without an estimate only if you accept this uncertainty.")
                     .foregroundStyle(NoahColor.destructive)
                 if quote.action == .startExit {
-                    Text("Broadcast funding status is unknown; confirmed onchain funds are required.")
+                    Text("Noah couldn't check whether your on-chain balance can cover the fees. Confirmed on-chain funds are needed.")
                 }
             }
             Text(LocalizedStringKey(explanation))
@@ -197,7 +197,7 @@ struct OnchainReviewSheet: View {
                     ? .destructive : nil) {
                 confirm()
             } label: {
-                Text(LocalizedStringKey(quote.feesUnknown ? (quote.action == .claim ? "Broadcast without estimate" : "Start Selected Exit") : quote
+                Text(LocalizedStringKey(quote.feesUnknown ? (quote.action == .claim ? "Broadcast without estimate" : "Start selected exit") : quote
                         .action.title))
             }
             .accessibilityIdentifier("onchain-confirm")

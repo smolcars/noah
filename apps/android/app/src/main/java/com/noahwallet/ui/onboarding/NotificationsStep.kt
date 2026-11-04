@@ -46,10 +46,10 @@ internal fun NotificationsContent(clock: SceneClock, off: Boolean, busy: Boolean
             val centered = LocalPose.current == OnboardingPose.Compact
             if (required) {
                 Headline(tr("Notifications are required"),
-                    tr("Without them, Noah can’t receive payments or renew your bitcoin before it expires."),
+                    tr("Without them, Noah can’t receive payments or renew your Ark coins before they expire."),
                     centered = centered, modifier = Modifier.fillMaxWidth())
             } else {
-                Headline(tr("Keep Noah awake"), tr("Notifications let Noah receive payments and renew your bitcoin before it expires."),
+                Headline(tr("Keep Noah awake"), tr("Notifications let Noah receive payments and renew your Ark coins before they expire."),
                     centered = centered, modifier = Modifier.fillMaxWidth())
             }
         }

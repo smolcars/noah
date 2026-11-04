@@ -9,6 +9,7 @@ import androidx.compose.animation.core.AnimationVector1D
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -24,6 +25,7 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
@@ -157,21 +159,21 @@ fun ReceiveContent(ui: ReceiveUi, actions: ReceiveActions, toasts: HomeToasts = 
     val paned = pose !is OnboardingPose.Compact
     val cardWidth = if (pose is OnboardingPose.Wide) 310.dp else 300.dp
     val qrSide = if (pose is OnboardingPose.Wide) 228.dp else 226.dp
-    val (line, done) = arrivalLine(ui)
+    val arrival = arrivalLine(ui)
     val openFormats = { haptics.light(); sheet.value = "formats" }
     val card = @Composable { ReceiveCardSlot(ui, face, tilt.value, cardWidth, qrSide, actions, openFormats.takeIf { !paned }) }
     val under = @Composable {
-        PhaseText(line, done, Modifier.padding(top = 14.dp).width(cardWidth))
+        PhaseText(arrival.text, arrival.done, Modifier.padding(top = 14.dp).width(cardWidth), arrival.spoken)
         ReceiveBlockRow(ui.chain, ui.tip, ui.confirmedAt, cardWidth, Modifier.padding(top = 8.dp))
     }
-    val pills = @Composable { modifier: Modifier -> ReceivePills(ui, face.payload != null, modifier, ::amountSheet, ::share) }
+    val pills = @Composable { modifier: Modifier -> ReceivePills(ui, arrival.presenting, face.payload != null, modifier, ::amountSheet, ::share) }
     val list = @Composable { FormatList(ui, rows, onSelect = { select(it, false) }, onCopy = copy) }
     val problem = @Composable { modifier: Modifier -> RequestProblem(ui, actions.retry, modifier) }
     val toast = @Composable { modifier: Modifier -> HomeToast(toasts.current, modifier) }
     when (pose) {
         OnboardingPose.Compact -> CompactReceive(ui, cardWidth, card, under, pills, problem, toast, openFormats)
         is OnboardingPose.Wide -> WideReceive(ui, pose, card, under, pills, list, problem, toast)
-        is OnboardingPose.Tabletop -> TabletopReceive(ui, pose, cardWidth, line, done, card, pills, list, problem, toast)
+        is OnboardingPose.Tabletop -> TabletopReceive(ui, pose, cardWidth, arrival, card, pills, list, problem, toast)
     }
     ReceiveSheets(ui, actions, sheet, paned) { FormatList(ui, rows, onSelect = { select(it, true) }, onCopy = copy) }
 }
@@ -277,22 +279,36 @@ private fun finishAmount(ui: ReceiveUi, actions: ReceiveActions, sats: Long, not
     else -> { actions.saveAmount(sats, note); false }
 }
 
-/** The line under the card: the arrival's phase while it plays, then an on-chain payment's block; and whether it reads as done. */
+/**
+ * The line under the card ([text], what TalkBack reads as [spoken]): the arrival's phase while it plays, then an on-chain
+ * payment's block; whether it reads as [done]; and whether the card is [presenting] the arrival or its receipt.
+ */
+internal class ArrivalLine(val text: String?, val spoken: String?, val done: Boolean, val presenting: Boolean)
+
 @Composable
-private fun arrivalLine(ui: ReceiveUi): Pair<String?, Boolean> {
+private fun arrivalLine(ui: ReceiveUi): ArrivalLine {
     val reduceMotion = LocalReduceMotion.current
-    val now by produceState(0L, ui.arrival?.startedAt) {
-        val started = ui.arrival?.startedAt ?: return@produceState
-        while (true) {
-            value = android.os.SystemClock.elapsedRealtime() - started
-            if (value > 6_000) break
-            delay(100)
-        }
-    }
+    val now by rememberArrivalTime(ui.arrival, reduceMotion)
     val phase = ui.arrival?.let { ReceiveTimeline.phase(it.rail, now, reduceMotion) }
     val chainPhase = ui.chain?.takeIf { phase == null }?.let { _ -> blockLine(ui) }
-    val line = phase?.let { tr(it) } ?: chainPhase
-    return line to (phase == "Received" || (ui.confirmedAt != null && chainPhase != null))
+    val arrival = ui.arrival
+    // The receipt face shows the amount itself; before the flip the line carries it.
+    val receipt = arrival != null && ReceiveTimeline.receiptShown(arrival.rail, now, reduceMotion)
+    val spoken = phase?.let { tr(it) + if (it == "Payment received") " · " + ui.sats(arrival.sats) else "" } ?: chainPhase
+    return ArrivalLine(if (receipt && phase != null) tr(phase) else spoken, spoken,
+        phase == "Payment received" || (ui.confirmedAt != null && chainPhase != null),
+        arrival != null && now < ReceiveTimeline.end(arrival.rail, reduceMotion))
+}
+
+/** Time since [arrival] started, ticking until it has played. */
+@Composable
+private fun rememberArrivalTime(arrival: ReceiveArrival?, reduceMotion: Boolean) = produceState(0L, arrival?.startedAt) {
+    val started = arrival?.startedAt ?: return@produceState
+    while (true) {
+        value = android.os.SystemClock.elapsedRealtime() - started
+        if (value > ReceiveTimeline.end(arrival.rail, reduceMotion) + 200) break
+        delay(100)
+    }
 }
 
 @Composable
@@ -308,9 +324,11 @@ private fun blockLine(ui: ReceiveUi): String? {
 
 /** Add or change the amount, and share what the card shows. */
 @Composable
-private fun ReceivePills(ui: ReceiveUi, canShare: Boolean, modifier: Modifier, amount: () -> Unit, share: () -> Unit) {
+private fun ReceivePills(ui: ReceiveUi, arriving: Boolean, canShare: Boolean, modifier: Modifier, amount: () -> Unit, share: () -> Unit) {
     Row(modifier, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        SendPill(if (ui.amount == null) tr("Add amount") else tr("Change amount"), Modifier.weight(1f).testTag("receive-amount-button"),
+        // While the card shows a payment's arrival or receipt (any rail), the same action sets up the next request, so it says so.
+        SendPill(when { arriving -> tr("New request"); ui.amount == null -> tr("Add amount"); else -> tr("Change amount") },
+            Modifier.weight(1f).testTag("receive-amount-button"),
             enabled = ui.request != null && !ui.saving,
             outlined = true, height = 48.dp, onClick = amount)
         SendPill(tr("Share"), Modifier.weight(1f).testTag("receive-share"), enabled = canShare, height = 48.dp, onClick = share)
@@ -337,7 +355,7 @@ private fun CompactReceive(ui: ReceiveUi, cardWidth: Dp, card: @Composable () ->
         Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).padding(top = 6.dp, bottom = 16.dp),
             horizontalAlignment = Alignment.CenterHorizontally) {
             Row(Modifier.fillMaxWidth().height(44.dp), horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
-                CircleButton(SendIcons.copy, tr("Ways to pay you"), Modifier.testTag("receive-formats"), onClick = formats)
+                WaysToPay(formats)
             }
             Box(Modifier.padding(top = 12.dp)) { card() }
             under()
@@ -375,13 +393,13 @@ private fun WideReceive(ui: ReceiveUi, pose: OnboardingPose.Wide, card: @Composa
 }
 
 @Composable
-private fun TabletopReceive(ui: ReceiveUi, pose: OnboardingPose.Tabletop, cardWidth: Dp, line: String?, done: Boolean, card: @Composable () -> Unit,
+private fun TabletopReceive(ui: ReceiveUi, pose: OnboardingPose.Tabletop, cardWidth: Dp, arrival: ArrivalLine, card: @Composable () -> Unit,
     pills: @Composable (Modifier) -> Unit, list: @Composable () -> Unit, problem: @Composable (Modifier) -> Unit, toast: @Composable (Modifier) -> Unit) {
     Column(Modifier.fillMaxSize()) {
         Box(Modifier.height(pose.top).fillMaxWidth().clipToBounds().padding(vertical = 10.dp), contentAlignment = Alignment.Center) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Box(Modifier.weight(1f, fill = false)) { card() }
-                PhaseText(line, done, Modifier.padding(top = 8.dp).width(cardWidth))
+                PhaseText(arrival.text, arrival.done, Modifier.padding(top = 8.dp).width(cardWidth), arrival.spoken)
             }
             toast(Modifier.align(Alignment.TopCenter))
         }
@@ -475,6 +493,19 @@ private fun FitHeight(content: @Composable () -> Unit) {
     }
 }
 
+/** Opens "Ways to pay you": a labelled control, since a copy glyph would promise a copy. */
+@Composable
+private fun WaysToPay(onClick: () -> Unit) {
+    val palette = LocalPalette.current
+    val haptics = rememberHaptics()
+    Row(Modifier.height(44.dp).clip(CircleShape).border(1.5.dp, palette.hairline, CircleShape)
+        .clickable(role = Role.Button, onClickLabel = tr("Ways to pay you")) { haptics.light(); onClick() }.padding(horizontal = 16.dp)
+        .testTag("receive-formats"), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        Text(tr("Ways to pay"), style = NoahTokens.Typography.control, color = palette.foreground)
+        Icon(painterResource(com.noahwallet.ui.home.HomeIcons.chevron), null, Modifier.size(16.dp).graphicsLayer { rotationZ = 90f }, tint = palette.foreground)
+    }
+}
+
 @Composable
 private fun ErrorCard(error: String, title: String?, width: Dp, retry: () -> Unit) {
     val palette = LocalPalette.current
@@ -495,27 +526,32 @@ private fun FormatList(ui: ReceiveUi, rows: List<FormatRow>, onSelect: (ReceiveF
             val selected = row.format == ui.format
             val dot by animateFloatAsState(if (selected) 1f else 0f, tween(200), label = "radio")
             val copyLabel = tr("Copy {label}", row.name)
-            Row(Modifier.fillMaxWidth().heightIn(min = 66.dp).graphicsLayer { alpha = if (row.enabled ||
-                row.format == ReceiveFormat.invoice) (if (row.enabled) 1f else .35f) else .35f }
+            // Unavailable: the title and controls dim; the reason stays readable.
+            Row(Modifier.fillMaxWidth().heightIn(min = 66.dp)
                 .drawBehind { if (index < rows.lastIndex) drawRect(palette.hairline, Offset(0f, size.height - 1.dp.toPx()), Size(size.width, 1.dp.toPx())) }
                 .clickable(enabled = row.enabled || row.format == ReceiveFormat.invoice, role = Role.RadioButton) { onSelect(row.format) }
                 .semantics { this.selected = selected }.testTag("receive-format-${row.format.name}"),
                 verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 Box(Modifier.size(10.dp).background(androidx.compose.ui.graphics.lerp(palette.background.copy(alpha = 0f), palette.foreground, dot),
                     CircleShape)
-                    .then(if (dot < 1f) Modifier.drawBehind { drawCircle(palette.hairline, size.minDimension / 2 - .75.dp.toPx(),
+                    .then(if (dot < 1f) Modifier.drawBehind { drawCircle(palette.muted, size.minDimension / 2 - .75.dp.toPx(),
                         style = androidx.compose.ui.graphics.drawscope.Stroke(1.5.dp.toPx())) } else Modifier))
                 Column(Modifier.weight(1f).padding(vertical = 10.dp)) {
                     Text(row.name, style = SendType.strong.copy(fontSize = androidx.compose.ui.unit.TextUnit(15f, androidx.compose.ui.unit.TextUnitType.Sp)),
-                        color = palette.foreground)
-                    if (row.value.isNotEmpty()) Text(row.value, Modifier.padding(top = 1.dp), style = SendType.mono, color = palette.foreground, maxLines = 1,
-                        overflow = TextOverflow.Ellipsis)
+                        color = if (row.enabled) palette.foreground else palette.muted)
+                    // A real value in mono; an unavailable one's reason ("Add an amount first") as plain text.
+                    if (row.value.isNotEmpty()) Text(row.value, Modifier.padding(top = 1.dp),
+                        style = if (row.enabled) SendType.mono.copy(fontSize = androidx.compose.ui.unit.TextUnit(14f,
+                            androidx.compose.ui.unit.TextUnitType.Sp)) else SendType.line,
+                        color = if (row.enabled) palette.foreground else palette.muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     Text(row.subtitle, style = SendType.small, color = palette.muted)
                 }
-                Box(Modifier.size(36.dp).tonal(CircleShape, palette.soft).clickable(enabled = row.enabled, role = Role.Button,
+                // The bare glyph in a 48 dp target, as every other copy button.
+                Box(Modifier.offset(x = 12.dp).size(48.dp).clip(CircleShape).clickable(enabled = row.enabled, role = Role.Button,
                     onClickLabel = copyLabel) { onCopy(row.format) }
                     .semantics { contentDescription = copyLabel }.testTag("receive-copy-${row.format.name}"), contentAlignment = Alignment.Center) {
-                    Icon(painterResource(SendIcons.copy), null, Modifier.size(18.dp), tint = palette.foreground)
+                    Icon(painterResource(SendIcons.copy), null, Modifier.size(18.dp).graphicsLayer { alpha = if (row.enabled) 1f else .35f },
+                        tint = palette.foreground)
                 }
             }
         }

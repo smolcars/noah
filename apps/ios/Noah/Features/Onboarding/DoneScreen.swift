@@ -23,7 +23,7 @@ struct DoneScreen: View {
                 Button(action: onOpen) {
                     ZStack {
                         Text("Open wallet").opacity(finishing ? 0 : 1)
-                        if finishing { ProgressView().tint(NoahTokens.Colors.background) }
+                        if finishing { ButtonSpinner() }
                     }
                 }
                 .buttonStyle(OnboardingPrimaryButtonStyle())

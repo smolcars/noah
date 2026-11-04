@@ -225,7 +225,7 @@ struct BackupCoordinatorTests {
         #expect(world.state.lastBackupError == "An unknown error occurred while backing up.")
         var legacy = world.state
         legacy.lastBackupError = "ClientError"
-        #expect(HomeBanner.backup(legacy, now: 0, locale: Locale(identifier: "en"))?.message == "An unknown error occurred while backing up.")
+        #expect(HomeBanner.backup(legacy, now: 0, locale: Locale(identifier: "en"))?.message == "Couldn't reach Noah. Tap to try again.")
         await coordinator.cancelScheduled()
     }
 

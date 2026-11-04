@@ -221,7 +221,7 @@ struct ExitChooseView: View {
 
     var body: some View {
         let money = ExitMoney(app: app, locale: locale)
-        ExitPanes {
+        ExitPanes(line: L10n.text("VTXOs are your bitcoin on Ark. Renew them before they expire to keep them safe.", locale: language)) {
             if settings.wide {
                 ExitHeadline(amount: money(value), line: estimate.map {
                     ExitText.count(vtxos: selection.count, transactions: $0.txsToBroadcast, language)
@@ -326,11 +326,11 @@ struct ExitChooseView: View {
         if short > 0 {
             ExitWarning(text: L10n.text("Add about {amount} on-chain first. Each exit transaction’s fee comes from there.", money(short), locale: language))
             Button(L10n.text("Add on-chain funds", locale: language)) { sheet = .deposit(short) }
-                .buttonStyle(.plain).noahText(NoahTokens.Typography.control).foregroundStyle(NoahTokens.Colors.failure).underline()
-                .padding(.top, 4)
+                .buttonStyle(HomePillStyle(prominent: false, height: NoahTokens.Size.hitTarget))
+                .padding(.top, 10)
                 .accessibilityIdentifier("exit-add-funds")
         } else if let estimate, let confirmed = model.overview?.confirmed {
-            SettingsFine(text: L10n.text(
+            ExitCaveat(text: L10n.text(
                 "Network fees come from your on-chain {amount} at {rate} sat/vB. Transactions your VTXOs share are paid once. Fees may change.",
                 money(confirmed),
                 estimate.feeRateSatPerVb.formatted(),
@@ -367,8 +367,8 @@ struct ExitChooseView: View {
             SettingsFine(text: L10n.plural("Couldn’t check the fees of {n} VTXOs, so All waits. Choose them one by one, or try again.",
                                            count: failed, locale: language), failure: true)
             Button(L10n.text("Try again", locale: language)) { retry += 1 }
-                .buttonStyle(.plain).noahText(NoahTokens.Typography.control).underline()
-                .padding(.top, 4)
+                .buttonStyle(HomePillStyle(prominent: false, height: NoahTokens.Size.hitTarget))
+                .padding(.top, 10)
                 .accessibilityIdentifier("exit-costs-retry")
         }
     }
@@ -452,44 +452,64 @@ struct ExitReviewView: View {
         }
     }
 
+    /// The decision first, right above the hold: two sources of money, each under its own label (the
+    /// on-chain wallet pays the network fees, and only the claim fee comes out of these coins), what you
+    /// get and until when you can cancel. The rate, funding source, timing and how Noah runs it follow.
     @ViewBuilder private func quoteDetails(_ quote: OnchainQuote, money: ExitMoney) -> some View {
-        VStack(spacing: 0) {
-            if let fee = quote.fee, let chainFee = quote.chainFee {
-                ExitDetailRow(label: L10n.text("Network fees", locale: language), value: money.about(chainFee), numeric: true)
-                ExitDetailRow(label: L10n.text("Paid from", locale: language),
-                              value: L10n.text("On-chain · {amount}", money(quote.confirmed), locale: language))
-                ExitDetailRow(label: L10n.text("Claim fee", locale: language), value: money.about(fee), numeric: true)
-                if let delta = model.overview?.exitDelta, let estimate {
-                    // One block per transaction along a path at most, then the timelock.
-                    ExitDetailRow(label: L10n.text("Claimable", locale: language),
-                                  value: L10n.text("In {time}", ExitText.about(delta + UInt32(estimate.txsToBroadcast), language), locale: language))
-                }
-                if let rate = quote.feeRate {
-                    ExitDetailRow(label: L10n.text("Fee rate", locale: language), value: L10n.text("{rate} sat/vB", rate.formatted(), locale: language))
-                }
-                ExitDetailRow(label: L10n.text("You get", locale: language), value: money.about(quote.net), numeric: true, hairline: false)
-            } else {
-                ExitDetailRow(label: L10n.text("Network fees", locale: language), value: L10n.text("Unknown", locale: language))
-                ExitDetailRow(label: L10n.text("Claim fee", locale: language), value: L10n.text("Unknown", locale: language), hairline: false)
-            }
+        let known = quote.fee != nil && quote.chainFee != nil
+        ExitGroupLabel(text: L10n.text("From your on-chain wallet", locale: language)).padding(.top, 22)
+        ExitCaveat(text: L10n.text("Network fees come from your on-chain balance, not from these coins.", locale: language), key: true)
+        if let chainFee = quote.chainFee, known {
+            ExitDetailRow(label: L10n.text("Network fees", locale: language), value: money.about(chainFee), numeric: true, hairline: false)
+        } else {
+            ExitDetailRow(label: L10n.text("Network fees", locale: language), value: L10n.text("Unknown", locale: language), hairline: false)
         }
-        .padding(.top, 22)
+        // The separate on-chain funding, right under the fees it pays.
         if quote.feesUnknown {
             ExitWarning(text: L10n.text(
                 "Fee estimate unavailable. Fees and amount to receive are unknown. Continue without an estimate only if you accept this uncertainty.",
                 locale: language))
-            ExitWarning(text: L10n.text("Broadcast funding status is unknown; confirmed onchain funds are required.", locale: language), muted: true)
+            ExitWarning(
+                text: L10n.text("Noah couldn't check whether your on-chain balance can cover the fees. Confirmed on-chain funds are needed.", locale: language),
+                muted: true)
         } else if !quote.fundable, let chainFee = quote.chainFee {
             ExitWarning(text: L10n.text("Not enough on-chain bitcoin for the fees. The exit starts, then waits until you add about {amount}.",
                                         money(chainFee - min(chainFee, quote.confirmed)), locale: language))
         }
-        if let fee = quote.fee, quote.chainFee != nil,
+        ExitGroupLabel(text: L10n.text("From these coins", locale: language)).padding(.top, 20)
+        VStack(spacing: 0) {
+            if let fee = quote.fee, known {
+                ExitDetailRow(label: L10n.text("Claim fee", locale: language), value: money.about(fee), numeric: true)
+                ExitDetailRow(label: L10n.text("You get", locale: language), value: money.about(quote.net), numeric: true, hairline: false, strong: true)
+            } else {
+                ExitDetailRow(label: L10n.text("Claim fee", locale: language), value: L10n.text("Unknown", locale: language), hairline: false)
+            }
+        }
+        ExitCaveat(text: L10n.text("Only the claim fee is deducted from these coins.", locale: language), key: true)
+        if let fee = quote.fee, known,
            let warning = ExitRules.warning(amount: quote.amount, claimFee: fee, totalFee: quote.totalFee, claimOnly: false) {
             ExitWarning(text: L10n.text(warning, locale: language))
         }
-        SettingsFine(text: L10n.text(
-            // swiftlint:disable:next line_length - one literal: translations.mjs reads copy as a single string
-            "Noah then sends and fee-bumps the exit’s transactions on its own, including in the background when the system lets it, paying from your on-chain bitcoin. Fees are estimates. Only the claim fee comes out of the amount. You can cancel until the last transaction is sent.",
+        ExitCaveat(text: L10n.text("You can cancel until the last transaction is sent.", locale: language), key: true)
+        if known {
+            ExitGroupLabel(text: L10n.text("Details", locale: language)).padding(.top, 26)
+            VStack(spacing: 0) {
+                if let rate = quote.feeRate {
+                    ExitDetailRow(label: L10n.text("Fee rate", locale: language), value: L10n.text("{rate} sat/vB", rate.formatted(), locale: language))
+                }
+                ExitDetailRow(label: L10n.text("Paid from", locale: language),
+                              value: L10n.text("On-chain · {amount}", money(quote.confirmed), locale: language),
+                              hairline: model.overview?.exitDelta != nil && estimate != nil)
+                if let delta = model.overview?.exitDelta, let estimate {
+                    // One block per transaction along a path at most, then the timelock.
+                    ExitDetailRow(label: L10n.text("Claimable", locale: language),
+                                  value: L10n.text("In {time}", ExitText.about(delta + UInt32(estimate.txsToBroadcast), language), locale: language),
+                                  hairline: false)
+                }
+            }
+        }
+        ExitCaveat(text: L10n.text(
+            "Noah sends and fee-bumps the exit’s transactions on its own, including in the background when the system lets it. Fees are estimates.",
             locale: language))
     }
 

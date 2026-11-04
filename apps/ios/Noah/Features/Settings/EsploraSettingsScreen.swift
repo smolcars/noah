@@ -49,7 +49,7 @@ struct EsploraSettingsScreen: View {
                     .accessibilityIdentifier("reset-esplora-endpoint")
                 Button { apply(input) } label: {
                     HStack(spacing: 8) {
-                        if busy { ProgressView().tint(NoahTokens.Colors.background) }
+                        if busy { ButtonSpinner() }
                         Text(L10n.text(busy ? "Testing" : "Test and save", locale: language))
                     }
                 }

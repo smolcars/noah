@@ -190,7 +190,7 @@ private class ReceiveScreenState(
 
     private fun lightningFailed(event: ReceiveCompletion.LightningFailed) {
         request.value = null; format.value = ReceiveFormats.afterAmount(format.value, false)
-        errorTitle.value = if (event.canceled) "Lightning Receive Canceled" else "Lightning Receive Failed"
+        errorTitle.value = if (event.canceled) "Lightning receive canceled" else "Lightning receive failed"
         error.value = "The Lightning payment could not be received. Generate a new payment request and try again."
     }
 

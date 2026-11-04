@@ -53,10 +53,15 @@ struct RestoreWalletScreen: View {
         // keyboard or not, since a 24-word grid fills the pane anyway.
         let column = OnboardingColumn(wide: layout.wide, keyboard: layout.wide || keyboardUp)
         OnboardingPanes(wide: layout.wide, column: .leadingFits, sideInsets: (layout.insets.leading, layout.insets.trailing)) {
-            OnboardingHeadline(title: Text("Welcome back"), subtitle: Text("Enter your recovery phrase."), large: layout.wide)
-                .padding(.top, layout.wide ? column.headlineTop : 56) // 56 keeps 24 words unscrolled on a 393-pt phone.
-                .frame(maxHeight: layout.wide ? .infinity : nil, alignment: column.headlineAlignment)
-                .onboardingPane()
+            OnboardingHeadline(title: Text("Welcome back"), subtitle: Text("Enter your recovery phrase."), large: layout.wide) {
+                // The requirement up front, not only in the no-backup error.
+                Text("To restore, Noah needs this phrase and a wallet backup.")
+                    .noahText(NoahTokens.Typography.sub).foregroundStyle(NoahTokens.Colors.muted)
+                    .onboardingAppear(1)
+            }
+            .padding(.top, layout.wide ? column.headlineTop : 56) // 56 keeps 24 words unscrolled on a 393-pt phone.
+            .frame(maxHeight: layout.wide ? .infinity : nil, alignment: column.headlineAlignment)
+            .onboardingPane()
             VStack(spacing: 0) {
                 FitOrScroll {
                     words(column)
@@ -196,6 +201,15 @@ struct RestoreWalletScreen: View {
 
     @ViewBuilder
     private var message: some View {
+        if let issue, let title = issue.title {
+            RestoreIssueText(title: title, message: issue.message)
+        } else {
+            errorLine
+        }
+    }
+
+    @ViewBuilder
+    private var errorLine: some View {
         let text: String? = if let issue { issue.message }
         else if draft.input.wrongWordCount || draft.pasteRejected { "Paste exactly 12 or 24 words. Your entries haven't been replaced." }
         else if let invalid = draft.firstInvalid { L10n.text("Check word {number}", invalid + 1, locale: locale.identifier) }
@@ -364,13 +378,15 @@ private struct WordCountPicker: View {
                             }
                         }
                         .frame(minHeight: NoahTokens.Size.hitTarget - 6)
-                        .contentShape(Capsule())
+                        // The glass's inset is part of each half, so each target is the full 44 pt.
+                        .padding(.vertical, 3)
+                        .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
                 .accessibilityAddTraits(option == count ? .isSelected : [])
             }
         }
-        .padding(3)
+        .padding(.horizontal, 3)
         .glassCompat(in: Capsule())
         .animation(NoahTokens.Motion.travel(reduceMotion), value: count)
         .accessibilityIdentifier("restore-word-count")
@@ -395,13 +411,17 @@ struct StoredSeedRestoreScreen: View {
             VStack(alignment: .leading, spacing: NoahTokens.Space.l) {
                 Spacer(minLength: 0)
                 if let issue {
-                    Text(LocalizedStringKey(issue.message))
-                        .noahText(NoahTokens.Typography.sub)
-                        .foregroundStyle(NoahTokens.Colors.failure)
-                        .accessibilityIdentifier("restore-error")
+                    if let title = issue.title {
+                        RestoreIssueText(title: title, message: issue.message)
+                    } else {
+                        Text(LocalizedStringKey(issue.message))
+                            .noahText(NoahTokens.Typography.sub)
+                            .foregroundStyle(NoahTokens.Colors.failure)
+                            .accessibilityIdentifier("restore-error")
+                    }
                 }
                 if issue?.requiresRestart != true {
-                    Button("Restore Wallet", action: onRestore)
+                    Button("Restore wallet", action: onRestore)
                         .buttonStyle(OnboardingPrimaryButtonStyle())
                         .accessibilityIdentifier("restore-wallet-submit")
                 }
@@ -410,6 +430,23 @@ struct StoredSeedRestoreScreen: View {
             .padding(.bottom, NoahTokens.Space.l)
             .onboardingPane()
         }
+    }
+}
+
+/// A restore problem as a red headline and a plain body: only the headline is an alarm.
+private struct RestoreIssueText: View {
+    let title: String
+    let message: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(LocalizedStringKey(title)).noahText(NoahTokens.Typography.button).foregroundStyle(NoahTokens.Colors.failure)
+            Text(LocalizedStringKey(message)).noahText(NoahTokens.Typography.sub).foregroundStyle(NoahTokens.Colors.foreground)
+        }
+        .fixedSize(horizontal: false, vertical: true)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .accessibilityElement(children: .combine)
+        .accessibilityIdentifier("restore-error")
     }
 }
 

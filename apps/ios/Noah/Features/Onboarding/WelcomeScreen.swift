@@ -173,7 +173,7 @@ struct BetaSheet: View {
         Button(action: onConfirm) {
             ZStack {
                 Text("Got it").opacity(busy ? 0 : 1)
-                if busy { ProgressView().tint(NoahTokens.Colors.background) }
+                if busy { ButtonSpinner() }
             }
         }
         .buttonStyle(OnboardingPrimaryButtonStyle())

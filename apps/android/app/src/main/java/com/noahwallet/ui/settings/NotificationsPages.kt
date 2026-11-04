@@ -106,7 +106,7 @@ private fun NotificationsStatus(on: Boolean) {
     if (on) StatusHeader(tr("On"), tr("Noah can receive and renew while closed.")) {
         StatusMark(MarkKind.idle, SettingsIcons.bell, palette.foreground, ring = palette.orange)
     }
-    else StatusHeader(tr("Off"), tr("Noah can’t receive payments or renew your bitcoin."), failed = true) {
+    else StatusHeader(tr("Off"), tr("Noah can’t receive payments or renew your Ark coins."), failed = true) {
         StatusMark(MarkKind.failed, SettingsIcons.bellOff, palette.failure)
     }
 }

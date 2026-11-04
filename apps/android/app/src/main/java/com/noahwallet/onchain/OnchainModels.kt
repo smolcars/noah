@@ -7,8 +7,8 @@ import java.util.UUID
 
 @Serializable
 enum class OnchainAction(val title: String) {
-    board("Board to Ark"), refresh("Refresh VTXOs"), startExit("Start Emergency Exit"),
-    progress("Progress Exits"), claim("Claim Exits"), cancel("Cancel Exit"),
+    board("Board to Ark"), refresh("Renew VTXOs"), startExit("Start emergency exit"),
+    progress("Progress exits"), claim("Claim exits"), cancel("Cancel exit"),
 }
 
 @Serializable

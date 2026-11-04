@@ -125,7 +125,7 @@ private val navHeight = 56.dp
 internal fun SettingsFrame(title: String, back: (() -> Unit)?, modifier: Modifier = Modifier, line: String? = null, hero: Boolean = false,
     chip: (@Composable () -> Unit)? = null, actions: @Composable RowScope.() -> Unit = {},
     foot: (@Composable RowScope.() -> Unit)? = null, scroll: ScrollState? = rememberScrollState(),
-    bare: Boolean = false, footFade: Float = .46f, content: @Composable ColumnScope.() -> Unit) {
+    bare: Boolean = false, content: @Composable ColumnScope.() -> Unit) {
     val palette = LocalPalette.current
     val pane = LocalSettingsPane.current
     val wide = pane != SettingsPane.compact
@@ -153,7 +153,7 @@ internal fun SettingsFrame(title: String, back: (() -> Unit)?, modifier: Modifie
             }
         }
         FrameBar(title, back, chip, actions, scroll, bare, hero, start)
-        foot?.let { FrameFoot(start, end, footFade, { height -> footHeight = height }, it) }
+        foot?.let { FrameFoot(start, end, { height -> footHeight = height }, it) }
         HomeToast(LocalSettingsToasts.current.current, Modifier.align(Alignment.TopCenter).padding(top = 64.dp))
     }
 }
@@ -208,14 +208,17 @@ private fun RowScope.TuckedTitle(title: String, tucked: Boolean) {
         style = ActivityType.mini, color = LocalPalette.current.foreground, maxLines = 1, overflow = TextOverflow.Ellipsis)
 }
 
-/** The bottom actions over a fade, reporting their [measured] height so nothing sits under them. */
+/**
+ * The bottom actions on a solid backing with a short fade above, reporting their [measured] height so nothing sits
+ * under them: scrolling copy fades out 20 dp before the actions instead of running beneath them.
+ */
 @Composable
-private fun BoxScope.FrameFoot(start: Dp, end: Dp, footFade: Float, measured: (Int) -> Unit, content: @Composable RowScope.() -> Unit) {
+private fun BoxScope.FrameFoot(start: Dp, end: Dp, measured: (Int) -> Unit, content: @Composable RowScope.() -> Unit) {
     val palette = LocalPalette.current
     val wide = LocalSettingsPane.current != SettingsPane.compact
     Box(Modifier.align(Alignment.BottomCenter).fillMaxWidth().onSizeChanged { measured(it.height) }
-        .background(Brush.verticalGradient(0f to palette.background.copy(alpha = 0f), footFade to palette.background))
-        .padding(start = start, end = if (wide) 24.dp else end, top = 48.dp, bottom = if (wide) 24.dp else 28.dp)) {
+        .drawBehind { drawRect(Brush.verticalGradient(listOf(palette.background.copy(alpha = 0f), palette.background), 0f, 20.dp.toPx())) }
+        .padding(start = start, end = if (wide) 24.dp else end, top = 36.dp, bottom = if (wide) 24.dp else 28.dp)) {
         Row(Modifier.widthIn(max = 640.dp).fillMaxWidth().align(Alignment.Center), horizontalArrangement = Arrangement.spacedBy(10.dp),
             verticalAlignment = Alignment.CenterVertically, content = content)
     }
@@ -484,22 +487,34 @@ internal fun FinePrint(text: String, modifier: Modifier = Modifier, failed: Bool
     Text(text, modifier.padding(top = 18.dp), style = HomeType.small, color = if (failed) palette.failure else palette.muted)
 }
 
+/** A decision-critical line next to what it qualifies: body-sized, in the foreground when it's the [key] consequence. */
+@Composable
+internal fun Caveat(text: String, modifier: Modifier = Modifier, key: Boolean = false) {
+    val palette = LocalPalette.current
+    Text(text, modifier.padding(top = 12.dp), style = HomeType.line, color = if (key) palette.foreground else palette.muted)
+}
+
 /** A warning with its icon (prototype `.warn`). */
 @SuppressLint("ModifierParameter") // Exit's warnings pass the icon positionally, second after the text
 @Composable
-internal fun Warning(text: String, icon: Int = SettingsIcons.shield, failed: Boolean = false, modifier: Modifier = Modifier) {
+internal fun Warning(text: String, icon: Int = SettingsIcons.shield, failed: Boolean = false, modifier: Modifier = Modifier, top: Dp = 22.dp,
+    detail: String? = null) {
     val palette = LocalPalette.current
-    Row(modifier.padding(top = 22.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+    Row(modifier.padding(top = top), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         Icon(painterResource(icon), null, Modifier.size(20.dp), tint = if (failed) palette.failure else palette.foreground)
-        Text(text, style = HomeType.line, color = if (failed) palette.failure else palette.muted)
+        Column {
+            Text(text, style = HomeType.line, color = if (failed) palette.failure else palette.muted)
+            // A [detail] explains the warning in the same callout.
+            detail?.let { Text(it, Modifier.padding(top = 4.dp), style = HomeType.line, color = palette.foreground) }
+        }
     }
 }
 
 /** A section label inside a page (prototype `.sec`). */
 @Composable
-internal fun SectionLabel(text: String, modifier: Modifier = Modifier) {
+internal fun SectionLabel(text: String, modifier: Modifier = Modifier, top: Dp = 22.dp) {
     val palette = LocalPalette.current
-    Text(text, modifier.padding(top = 22.dp).semantics { heading() }, style = HomeType.header, color = palette.muted)
+    Text(text, modifier.padding(top = top).semantics { heading() }, style = HomeType.header, color = palette.muted)
 }
 
 /** A field label (prototype `.flabel`). */

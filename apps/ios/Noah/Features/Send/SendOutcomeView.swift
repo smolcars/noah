@@ -7,6 +7,7 @@ import SwiftUI
 struct SendOutcomeView: View {
     @Environment(\.locale) private var locale
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Environment(\.sendReceiveFixture) private var fixture
     @Bindable var controller: SendPaymentController
     var btcPrice: Double?
@@ -25,6 +26,8 @@ struct SendOutcomeView: View {
     var reviewed: SendPayment?
     /// The chain tip, read by Send with each receipt check.
     var chainTip: UInt32?
+    /// Hosted by Send, whose `done` returns to its first step: a not-sent result says "Back to Send".
+    var backToSend = false
     @State private var ownClock = SendMotionClock()
     @State private var history: [HistoryTransaction] = []
     @State private var refund: SendRefund?
@@ -32,6 +35,8 @@ struct SendOutcomeView: View {
     @State private var confirmOverride = false
     @State private var resultShown = false
     @State private var slow = false
+    /// Sending has run past about 8 s: a quiet "Still working" line under the phase.
+    @State private var longWait = false
     @State private var window = OnboardingLayout(size: .zero, insets: EdgeInsets())
     @State private var haptics = OnboardingHaptics()
 
@@ -64,7 +69,7 @@ struct SendOutcomeView: View {
         recipient ?? payment.map { .of(destination: $0.destination, ownDomain: LightningIdentity.domain(for: .current), payment: $0) }
             ?? SendRecipientLabel(name: "", nameIsVerbatim: true, avatar: .lightning)
     }
-    private var recipientName: String { label.nameIsVerbatim ? label.name : L10n.text(label.name, locale: locale.identifier) }
+    private var recipientName: String { label.nameIsVerbatim ? label.name : L10n.text(label.identity, locale: locale.identifier) }
     private func format(_ sats: UInt64) -> String { BitcoinAmount.format(sats: Int64(clamping: sats), unit: unit, locale: locale) }
     private var sendingAmount: UInt64 { attempt?.quote?.amount ?? payment?.amount ?? 0 }
 
@@ -93,6 +98,12 @@ struct SendOutcomeView: View {
         .task(id: refundKey) { await readRefund() }
         .task(id: resultKey) { await revealResult() }
         .task(id: hapticKey) { await playHaptics() }
+        .task(id: kind == .sending) {
+            longWait = false
+            guard kind == .sending else { return }
+            do { try await Task.sleep(for: .seconds(8)) } catch { return }
+            longWait = true
+        }
         .alert(SendOverrideAudit.titleText, isPresented: $confirmOverride) {
             Button("Keep checking", role: .cancel) {}
             Button(LocalizedStringKey(SendOverrideAudit.confirmationText), role: .destructive) {
@@ -169,19 +180,26 @@ struct SendOutcomeView: View {
             VStack(alignment: .leading, spacing: 6) {
                 Text(verbatim: title)
                     .noahText(SendText.big).foregroundStyle(NoahTokens.Colors.foreground)
-                    .lineLimit(isShort ? 1 : 2).minimumScaleFactor(0.5)
+                    // Accessibility sizes reflow at the size asked for; the stage gives up its room instead.
+                    .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : isShort ? 1 : 2)
+                    .minimumScaleFactor(dynamicTypeSize.isAccessibilitySize ? 1 : 0.5)
+                    .fixedSize(horizontal: false, vertical: dynamicTypeSize.isAccessibilitySize)
                     .contentTransition(.opacity)
                     .animation(NoahTokens.Motion.travel(reduceMotion, NoahTokens.Motion.bouncy), value: title)
                     .accessibilityIdentifier(kind == .sent ? "send-success" : "send-outcome-title")
-                if !recipientName.isEmpty {
+                // Once the result shows, its To block below names them in full.
+                if !recipientName.isEmpty && toPayment == nil {
                     Text(verbatim: L10n.text("to {recipient}", recipientName, locale: locale.identifier))
                         .noahText(NoahTokens.Typography.body).foregroundStyle(NoahTokens.Colors.muted)
                         .lineLimit(1).truncationMode(.middle)
                 }
+                // The outcome, who, and why sit together at the top.
+                resultLine
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            // Without a saved payment (status unavailable) there's nothing to draw.
-            if payment != nil {
+            // Without a saved payment (status unavailable) there's nothing to draw; a payment that was
+            // never sent settles without its scene.
+            if payment != nil && kind != .failed {
                 GeometryReader { proxy in
                     SendStageView(rail: rail, clock: motion, recipient: label, tip: tip, nextLabel: L10n.text("next", locale: locale.identifier))
                         .frame(width: proxy.size.width, height: proxy.size.height)
@@ -190,7 +208,37 @@ struct SendOutcomeView: View {
                 .animation(NoahTokens.Motion.travel(reduceMotion, NoahTokens.Motion.soft), value: stageHeight)
                 .padding(.top, isWide ? 40 : 8)
                 phaseLine.padding(.top, 4)
+                stillWorking
             }
+        }
+    }
+
+    @ViewBuilder private var resultLine: some View {
+        // "Payment not sent" says so plainly first; its reason follows, quieter.
+        let leads = kind == .failed && refund != .untied
+        if showsResult && leads {
+            Text(verbatim: L10n.text("That payment didn’t go through.", locale: locale.identifier))
+                .noahText(NoahTokens.Typography.body).foregroundStyle(NoahTokens.Colors.foreground)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.top, 6)
+                .transition(.opacity)
+        }
+        if showsResult, let line {
+            Text(verbatim: line).noahText(NoahTokens.Typography.body)
+                .foregroundStyle(kind == .sent || leads ? NoahTokens.Colors.muted : NoahTokens.Colors.foreground)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.top, 6)
+                .transition(.opacity)
+                .accessibilityIdentifier("send-result-line")
+        }
+    }
+
+    /// Lightning has its own "Still paying" step; the others get this after about 8 s.
+    @ViewBuilder private var stillWorking: some View {
+        if longWait && kind == .sending && rail != .lightning {
+            Text("Still working… this can take a minute.").noahText(NoahTokens.Typography.sub).foregroundStyle(NoahTokens.Colors.muted)
+                .multilineTextAlignment(.center).frame(maxWidth: .infinity).padding(.top, 6)
+                .transition(.opacity)
         }
     }
 
@@ -199,7 +247,9 @@ struct SendOutcomeView: View {
     private var stageHeight: CGFloat {
         if isWide { return 330 }
         let height = window.size.height > 0 ? window.size.height : 852
-        // Short windows (the Duo closed) make room for the result once it shows.
+        // The result's To block and rows get the room once they show (and short windows, the Duo closed, always);
+        // at accessibility sizes the title and its lines get it from the start.
+        if toPayment != nil || dynamicTypeSize.isAccessibilitySize { return min(100, max(88, height * 0.11)) }
         return min(270, max(150, height * (resultShown && height < 760 ? 0.22 : 0.32)))
     }
 
@@ -279,17 +329,19 @@ struct SendOutcomeView: View {
 
     private var resultSection: some View {
         VStack(alignment: .leading, spacing: 0) {
-            if resultShown || ![.sent, .refunded, .stillSending, .sending].contains(kind) { result }
+            if let toPayment { SendToBlock(label: label, payment: toPayment).padding(.top, kind == .failed ? 6 : 18) }
+            if showsResult { result }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .transition(reduceMotion ? .opacity : .opacity.combined(with: .offset(y: 16)))
         .animation(NoahTokens.Motion.travel(reduceMotion), value: resultShown)
     }
 
+    private var showsResult: Bool { resultShown || ![.sent, .refunded, .stillSending, .sending].contains(kind) }
+    /// The result's To block: the same destination as review, whole.
+    private var toPayment: SendPayment? { showsResult && kind != .sending ? payment : nil }
+
     @ViewBuilder private var result: some View {
-        if let line { Text(verbatim: line).noahText(NoahTokens.Typography.sub).foregroundStyle(NoahTokens.Colors.muted)
-            .fixedSize(horizontal: false, vertical: true).accessibilityIdentifier("send-result-line")
-        }
         switch kind {
         case .sending: EmptyView()
         case .stillSending:
@@ -321,7 +373,8 @@ struct SendOutcomeView: View {
                 SendDetailRow("Via", text: Self.railName(rail), glyph: Self.railGlyph(rail))
                 SendDetailRow("Fee", text: "None", last: true)
             }
-        case .failed: EmptyView()
+        case .failed:
+            if payment != nil { rows { SendDetailRow("Via", text: Self.railName(rail), glyph: Self.railGlyph(rail), last: true) } }
         case .alreadyPaid:
             if case .alreadyPaid(let receipt) = controller.state {
                 Text("No new payment was made for the amount you reviewed.").noahText(NoahTokens.Typography.sub)
@@ -342,7 +395,8 @@ struct SendOutcomeView: View {
                 }
             }
         }
-        if let message = controller.message {
+        // Shown once: a failure's message is often the result line itself.
+        if let message = controller.message, L10n.text(message, locale: locale.identifier) != line {
             fine(L10n.text(message, locale: locale.identifier))
         }
     }
@@ -364,7 +418,9 @@ extension SendOutcomeView {
                 return (receipt.fee ?? attempt?.quote?.fee ?? 0) == 0
                     ? L10n.text("It arrived instantly. Ark sends are free.", locale: language)
                     : L10n.text("It arrived instantly.", locale: language)
-            case .lightning: return L10n.text("Paid over Lightning. Their secret is your proof of payment.", locale: language)
+            case .lightning:
+                return proof(receipt) == nil ? L10n.text("Paid over Lightning.", locale: language)
+                    : L10n.text("Paid over Lightning. The proof below shows this payment was made.", locale: language)
             case .onchainSwap, .onchainWallet:
                 return Self.onchainLine(confirmed: motion.confirmedHeight != nil).map { L10n.text($0, locale: language) }
             }
@@ -459,7 +515,7 @@ extension SendOutcomeView {
                 locale: locale.identifier))
             if let status = receipt.chainStatus { fine(L10n.text(status.message, locale: locale.identifier)) }
             if let txid = receipt.txid {
-                Text(verbatim: txid).noahText(SendText.mono).foregroundStyle(NoahTokens.Colors.foreground).textSelection(.enabled).padding(.top, 8)
+                IdentifierText(value: txid, size: 13, style: .footnote).padding(.top, 8)
             }
         }
         if let candidates = attempt?.candidates {
@@ -487,22 +543,43 @@ extension SendOutcomeView {
                 switch action {
                 case .check: checkButton
                 case .acknowledge: pill("Done", id: "send-success-done", action: acknowledge)
-                case .newPayment: pill("Done", id: "send-new-payment", action: acknowledge)
-                case .retry: pill("Retry", id: "send-retry") { Task { await controller.checkStatus() } }
+                // Send's Done starts Send over; another host (Recurring) just closes.
+                case .newPayment: pill(backToSend ? "Back to Send" : "Done", id: "send-new-payment", action: acknowledge)
+                case .retry:
+                    // checkStatus only reloads the saved payment, so say it can't pay twice.
+                    Text("The outcome isn't known yet. This checks the payment. It won't send it again.")
+                        .noahText(HomeText.footnote)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    pill("Check status again", id: "send-retry") { Task { await controller.checkStatus() } }
                 // Leaving keeps the attempt and the send lock exactly as they are.
                 case .leave: pill("Done", id: "send-success-done") { onLeave() }
-                case .close: pill("Close", id: "send-leave", prominent: false) { onLeave() }
+                case .close: pill("Done", id: "send-leave", prominent: false) { onLeave() }
                 }
             }
-            if controller.canOverride {
-                Button("Start a new payment after checking history", role: .destructive) { confirmOverride = true }
-                    .noahText(HomeText.strong)
-                    .foregroundStyle(NoahTokens.Colors.failure)
-                    .frame(minHeight: NoahTokens.Size.hitTarget)
-                    .accessibilityIdentifier("send-override")
-            }
+            if controller.canOverride { overrideAction }
         }
         .animation(NoahTokens.Motion.travel(reduceMotion), value: resultShown)
+    }
+
+    /// Paying again, quiet on purpose under its warning: it's the risky path, and it still asks first.
+    @ViewBuilder private var overrideAction: some View {
+        Label {
+            Text("Don't pay again until you've checked Activity. Paying again could pay the recipient twice.")
+        } icon: {
+            Image(systemName: "exclamationmark.triangle").accessibilityHidden(true)
+        }
+        .noahText(HomeText.footnote)
+        .foregroundStyle(NoahTokens.Colors.muted)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .fixedSize(horizontal: false, vertical: true)
+        .padding(.top, 8)
+        Button("Pay again anyway") { confirmOverride = true }
+            .buttonStyle(.plain)
+            .noahText(HomeText.strong)
+            .foregroundStyle(NoahTokens.Colors.muted)
+            .frame(maxWidth: .infinity, minHeight: NoahTokens.Size.hitTarget)
+            .contentShape(Rectangle())
+            .accessibilityIdentifier("send-override")
     }
 
     private var checkButton: some View {
@@ -511,11 +588,12 @@ extension SendOutcomeView {
         } label: {
             ZStack {
                 Text("Check status").opacity(controller.checking ? 0 : 1)
-                if controller.checking { ProgressView().tint(NoahTokens.Colors.foreground) }
+                // Checking disables the pill, so the spinner sits on the soft disabled fill.
+                if controller.checking { ProgressView().tint(NoahTokens.Colors.muted) }
             }
             .frame(maxWidth: .infinity)
         }
-        .buttonStyle(HomePillStyle(prominent: false, height: 52, font: NoahTokens.Typography.button))
+        .buttonStyle(HomePillStyle(height: 52, font: NoahTokens.Typography.button))
         .disabled(controller.checking)
         .accessibilityIdentifier("send-check-status")
     }
@@ -561,7 +639,7 @@ extension SendOutcomeView {
     /// An on-chain send's line: none once confirmed, when the block row's phase line already says
     /// "Confirmed in block N" (send-receive.md, the block row).
     static func onchainLine(confirmed: Bool) -> String? {
-        confirmed ? nil : "It confirms in about 20 minutes. Activity shows when."
+        confirmed ? nil : "It confirms in about 20 minutes. You'll see it in Activity."
     }
 
     /// A proof shortened to its ends, as the prototype shows it ("9f2c…a41e").

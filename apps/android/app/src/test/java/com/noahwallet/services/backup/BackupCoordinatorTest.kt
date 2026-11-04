@@ -103,7 +103,7 @@ class BackupCoordinatorTest {
         assertTrue(runCatching { w.coordinator.flush(BackupCoordinator.Reason.manual) }.isFailure)
         assertEquals("An unknown error occurred while backing up.", w.state.lastBackupError)
         val legacy = w.state.copy(lastBackupError = "ClientError")
-        assertEquals("An unknown error occurred while backing up.",
+        assertEquals("Couldn't reach Noah. Tap to try again.",
             com.noahwallet.ui.home.HomeRules.backup(legacy, 0, java.util.Locale.US)?.message)
         w.coordinator.cancelScheduled()
     }

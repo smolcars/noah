@@ -77,11 +77,11 @@ class RestoreShieldDeviceTest {
             activity = first
             val model = withContext(Dispatchers.Main) { loadAppModel(first) }
             waitFor("Stored phrase without wallet data") { model.launchState == LaunchState.seedWithoutWalletData }
-            waitFor("Restore offered") { model.canRestoreWallet && button("Restore Wallet") != null }
+            waitFor("Restore offered") { model.canRestoreWallet && button("Restore wallet") != null }
             assertFalse("App lock is off, so only the restore shield secures the window", model.walletLock.enabled)
             assertTrue("Recovery phrase found is secure", secure(first))
             SecureWindowSampler(instrumentation).use { sampler ->
-                assertTrue(checkNotNull(button("Restore Wallet")).performAction(AccessibilityNodeInfo.ACTION_CLICK))
+                assertTrue(checkNotNull(button("Restore wallet")).performAction(AccessibilityNodeInfo.ACTION_CLICK))
                 waitFor("Restoring shown") { model.restore.running && text("Restoring your wallet") != null }
                 // Well past the screen's exit animation, which used to take FLAG_SECURE with it.
                 Thread.sleep(2_000)
@@ -92,7 +92,7 @@ class RestoreShieldDeviceTest {
                 Thread.sleep(2_000)
                 assertTrue("Still restoring after recreation", model.restore.running)
                 waitFor("The silent server fails the restore", 120_000) { model.restore.issue != null && !model.busy }
-                waitFor("Back on Recovery phrase found") { text("Recovery phrase found") != null && button("Restore Wallet") != null }
+                waitFor("Back on Recovery phrase found") { text("Recovery phrase found") != null && button("Restore wallet") != null }
                 assertTrue("Never unshielded: ${sampler.gaps.get()} of ${sampler.samples.get()} samples", sampler.gaps.get() == 0)
                 // A loaded emulator's main thread answers slowly; this floor only proves sampling ran the whole way.
                 assertTrue("Sampled throughout: ${sampler.samples.get()}", sampler.samples.get() > 100)

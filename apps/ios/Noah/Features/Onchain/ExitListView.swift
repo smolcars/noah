@@ -65,7 +65,8 @@ struct ExitListView: View {
             OnchainStatusSection(model: model).settingsReceipts().padding(.top, 18)
         } footer: {
             if !ready.isEmpty {
-                Button(L10n.text("Claim {amount}", money(ready.reduce(0) { $0 + $1.amount }), locale: language)) {
+                // The ready rows show the gross; the claim review shows what arrives after its fee.
+                Button(L10n.text("Claim", locale: language)) {
                     haptics.play(.light)
                     settings.open(.exitClaim)
                 }
@@ -73,8 +74,7 @@ struct ExitListView: View {
                 .accessibilityIdentifier("exit-list-claim")
             }
             Button(L10n.text("Exit more VTXOs", locale: language)) { settings.open(.exitChoose) }
-                .buttonStyle(.plain).noahText(NoahTokens.Typography.control).underline()
-                .frame(minHeight: NoahTokens.Size.hitTarget)
+                .buttonStyle(HomePillStyle(prominent: false, height: NoahTokens.Size.hitTarget))
                 .accessibilityIdentifier("exit-list-more")
         }
         .settingsChrome("Exits") {

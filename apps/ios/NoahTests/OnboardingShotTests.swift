@@ -176,14 +176,14 @@ struct OnboardingShotTests {
                 RestoreBinding(draft: RestoreDraft()) { binding in
                     RestoreWalletScreen(layout: layout,
                                         draft: binding,
-                                        issue: RestoreIssue(
-                                            message: "No backup was found for this recovery phrase. Check the words and make sure this wallet had backups "
-                                                + "enabled."),
+                                        issue: .noBackup,
                                         haptics: haptics, onPaste: { _, _ in }, onRestore: {}, onBack: {})
                 }
             })
         case "stored-seed":
             return AnyView(ShotHost { layout in StoredSeedRestoreScreen(layout: layout, issue: nil) {} })
+        case "stored-seed-error":
+            return AnyView(ShotHost { layout in StoredSeedRestoreScreen(layout: layout, issue: .from(URLError(.notConnectedToInternet))) {} })
         default: return nil
         }
     }

@@ -141,8 +141,10 @@ internal fun BackupPage(model: AppModel, nav: SettingsNav, live: SettingsLive, i
     val backedUp = tr("Backed up")
     val exported = tr("Exported")
     val share = rememberFileShare(model, tr("Export file"), "application/octet-stream") { toasts.show(exported) }
-    SettingsFrame(tr("Backup"), nav.back) {
+    SettingsFrame(tr("Wallet backup"), nav.back) {
         BackupStatus(kind, state, backupTime(state.lastBackupAt, locale), check.value)
+        // Home's nudge is the recovery phrase; this is the encrypted wallet file, which needs it too.
+        Warning(tr("Restoring a wallet backup also needs your recovery phrase."), SettingsIcons.key)
         SettingsGroup(rows = listOf(
             { d -> SettingsRow(if (kind == SettingsRules.Backup.failed) tr("Try again") else tr("Back up now"), SettingsIcons.refresh, bold = true,
                 end = RowEnd.None, enabled = kind != SettingsRules.Backup.running && !model.busy && !model.isWalletSuspended, divider = d,
@@ -192,14 +194,14 @@ private fun BackupStatus(kind: SettingsRules.Backup, state: PersistedBackupState
     val never = state.lastBackupAt == null
     when (kind) {
         SettingsRules.Backup.running -> StatusHeader(tr("Backing up…"), tr("Encrypting and uploading")) { StatusMark(MarkKind.running) }
-        SettingsRules.Backup.failed -> StatusHeader(tr("Backup failed"),
-            last?.let { tr("Last good backup {date}", it) } ?: tr("Not backed up yet"), failed = true) { StatusMark(MarkKind.failed) }
+        SettingsRules.Backup.failed -> StatusHeader(tr("Wallet backup failed"),
+            last?.let { tr("Last good backup {date}", it) } ?: tr("Try again"), failed = true) { StatusMark(MarkKind.failed) }
         SettingsRules.Backup.off -> StatusHeader(
-            if (never) tr("Not backed up yet") else tr("Automatic backups off"),
+            if (never) tr("No wallet backup yet") else tr("Automatic backups off"),
             if (never) tr("Turn it on or back up now") else tr("Last backup {date}", last!!)) { StatusMark(MarkKind.idle, SettingsIcons.cloud) }
-        SettingsRules.Backup.on -> if (never) StatusHeader(tr("Not backed up yet"),
-            if (state.backupPending) tr("Backup pending") else tr("Backs up when your wallet changes")) { StatusMark(MarkKind.idle, SettingsIcons.cloud) }
-        else StatusHeader(tr("Backed up"), if (state.backupPending) tr("Backup pending") else last) { StatusMark(MarkKind.ok, check = check) }
+        SettingsRules.Backup.on -> if (never) StatusHeader(if (state.backupPending) tr("Wallet backup pending") else tr("No wallet backup yet"),
+            tr("Backs up when your wallet changes")) { StatusMark(MarkKind.idle, SettingsIcons.cloud) }
+        else StatusHeader(if (state.backupPending) tr("Wallet backup pending") else tr("Wallet backed up"), last) { StatusMark(MarkKind.ok, check = check) }
     }
 }
 

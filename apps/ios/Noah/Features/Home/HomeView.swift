@@ -165,6 +165,7 @@ struct HomeView: View {
             .onboardingPane()
         }
         .modifier(HomeScrollKeeper(area: .compact, memory: scrollMemory) { scrollY = $0 })
+        .tabBarScrollEdge()
         .refreshable { await pullToRefresh() }
         .modifier(HomeTopBarInset(scrolled: scrollY > 2) {
             topBar(tucked: true).padding(.horizontal, 16).padding(.top, 4).padding(.bottom, 6).modifier(appear(0))
@@ -236,6 +237,11 @@ struct HomeView: View {
 
     /// Balance, fiat, the status line and the nudge.
     @ViewBuilder private func balanceBlock(tuck: CGFloat) -> some View {
+        // While the balance can't load, the number shown is the last one read.
+        if walletError != nil, summary != nil {
+            Text("Last known balance").noahText(NoahTokens.Typography.sub).foregroundStyle(NoahTokens.Colors.muted)
+                .opacity(1 - tuck).padding(.top, 8).accessibilityIdentifier("home-last-known-balance")
+        }
         HomeBalanceView(sats: summary?.balance.totalSats, unit: model.amountUnit, hidden: model.isBalanceHidden,
                         tuck: tuck, onDetails: openBalance, onToggleHidden: toggleHidden)
             .padding(.top, 8).modifier(appear(1))

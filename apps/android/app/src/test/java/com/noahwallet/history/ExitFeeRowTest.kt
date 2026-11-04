@@ -33,7 +33,7 @@ class ExitFeeRowTest {
         assertTrue(HistoryCSV.content(listOf(fee), "USD").lines()[1].contains(",Exit fee,"))
         // Same amount, another txid: an ordinary on-chain send.
         val send = HistoryMapping.transaction(chain("other", -1_234), exitFeeFor = fees["other"])
-        assertEquals("Onchain", HomeRow.of(send, null).title)
+        assertEquals("Sent", HomeRow.of(send, null).title)
         assertEquals(HomeRow.Avatar.Chain, HomeRow.of(send, null).avatar)
     }
 }

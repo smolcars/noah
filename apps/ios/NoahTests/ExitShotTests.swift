@@ -384,7 +384,8 @@ struct ExitShotTests {
                                           "claim-phone": "phone",
                                           "claim-invalid": "1BoatSLRHtKNngkdXEeobR76b53LETtpyT",
                                       ][state])
-        let view = ExitShotHost(page: page, stack: stack)
+        stack.pages = [page]
+        let view = ExitShotHost(stack: stack)
             .environment(app)
             .environment(app.walletLock)
             .environment(summary)
@@ -397,14 +398,14 @@ struct ExitShotTests {
 
 /// The exit page in Settings' stack, with Home's navigator for the window's width.
 private struct ExitShotHost: View {
-    let page: SettingsPage
     @Bindable var stack: ExitShotTests.Stack
     @State private var window = OnboardingLayout(size: .zero, insets: EdgeInsets())
 
     var body: some View {
-        // Pages open over the fixture's page and Back pops them, as in Home's stack.
+        // The fixture's page opens over an empty base, so it shows the system Back it has over Settings in
+        // Home's stack; pages open over it and Back pops them.
         NavigationStack(path: $stack.pages) {
-            SettingsHost(page: page).navigationDestination(for: SettingsPage.self) { SettingsHost(page: $0) }
+            Color.clear.navigationDestination(for: SettingsPage.self) { SettingsHost(page: $0) }
         }
         .environment(\.settings, SettingsNavigator(live: true, wide: window.wide,
                                                    leadingWidth: max(0, window.size.width / 2 - window.insets.leading),

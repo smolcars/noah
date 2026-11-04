@@ -459,6 +459,8 @@ private struct SettingsSheetModifier<Item: Identifiable & Equatable, Sheet: View
                 }
                 .scrollBounceBehavior(.basedOnSize)
                 .presentationDetents([.height(min(max(height, 200), 720))])
+                // Solid, as Ways to pay: dense rows and fields never sit over blurred highlights.
+                .presentationBackground(NoahTokens.Colors.sheet)
                 .presentationDragIndicator(.visible)
                 .interactiveDismissDisabled(locked)
             }
@@ -505,6 +507,15 @@ struct SettingsSheetButtons: View {
     }
 }
 
+/// A busy spinner inside a black pill: white on the pill, muted on the soft fill a disabled pill has.
+struct ButtonSpinner: View {
+    @Environment(\.isEnabled) private var isEnabled
+
+    var body: some View {
+        ProgressView().tint(isEnabled ? NoahTokens.Colors.background : NoahTokens.Colors.muted)
+    }
+}
+
 /// The black pill, or red for destructive actions once they're enabled (prototype `.pill.bad`).
 struct SettingsActionStyle: ButtonStyle {
     var destructive = false
@@ -522,20 +533,21 @@ struct SettingsActionStyle: ButtonStyle {
         let wrap: Bool
         @Environment(\.isEnabled) private var isEnabled
         @Environment(\.accessibilityReduceMotion) private var reduceMotion
+        static let destructiveFill = Color(red: 0xD0 / 255, green: 0x31 / 255, blue: 0x2D / 255)
 
         var body: some View {
             let red = destructive && isEnabled
             configuration.label
                 .noahText(NoahTokens.Typography.button)
-                .foregroundStyle(red ? Color.white : NoahTokens.Colors.background)
+                .foregroundStyle(red ? Color.white : isEnabled ? NoahTokens.Colors.background : NoahTokens.Colors.muted)
                 .lineLimit(wrap ? nil : 1)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, NoahTokens.Space.xl)
                 .padding(.vertical, wrap ? 10 : 0)
                 .frame(maxWidth: .infinity, minHeight: NoahTokens.Size.button)
                 .contentShape(Capsule())
-                .glassCompat(in: Capsule(), interactive: isEnabled,
-                             tint: red ? NoahTokens.Colors.failure : isEnabled ? NoahTokens.Colors.foreground : NoahTokens.Colors.foreground.opacity(0.2))
+                // The light failure red in both themes: white on the dark token's brighter red is only ~3.4:1.
+                .pillFill(enabled: isEnabled, tint: red ? Self.destructiveFill : NoahTokens.Colors.foreground)
                 .scaleEffect(configuration.isPressed && !reduceMotion ? 0.97 : 1)
                 .animation(NoahTokens.Motion.tap, value: configuration.isPressed)
                 .animation(NoahTokens.Motion.travel(reduceMotion, NoahTokens.Motion.bouncy), value: red)

@@ -314,10 +314,9 @@ struct ReceiveFormatTests {
         let start = Date()
         let lightning = ReceiveArrival(rail: .lightning, sats: 1_500, start: start)
         let english = Locale(identifier: "en")
-        #expect(lightning.phase(at: 0.1, tip: nil, locale: english).text == "Incoming over Lightning")
-        #expect(lightning.phase(at: 1.0, tip: nil, locale: english).text == "Ark holds it for you")
-        #expect(lightning.phase(at: 2.0, tip: nil, locale: english).text == "Claiming with your key")
-        #expect(lightning.phase(at: 2.6, tip: nil, locale: english) == ("Received", true))
+        // Already claimed when it starts: it says so from the first frame.
+        #expect(lightning.phase(at: 0.1, tip: nil, locale: english) == ("Payment received", true))
+        #expect(lightning.phase(at: 2.6, tip: nil, locale: english) == ("Payment received", true))
         #expect(lightning.angle(at: 2.7) == 0 && lightning.angle(at: 3.5) > 90 && lightning.angle(at: 20) == 0)
         #expect(Set(lightning.haptics.map(\.key)).count == lightning.haptics.count)
         var onchain = ReceiveArrival(rail: .onchain, sats: 100_000, start: start, txid: "tx")

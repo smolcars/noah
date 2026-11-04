@@ -312,10 +312,10 @@ struct ExitStagePainter {
     private func caption(_ ys: [Double]) -> CaptionPlacement? {
         let g = geometry, L = g.scale
         func Y(_ level: Int) -> Double { ys[safe: level] ?? g.coinY }
-        if let lines = g.caption(tr("Other people’s coins in this round"), ys, width: { ExitStageText.width($0, size: 10 * L) }) {
+        if let lines = g.caption(tr("Other people’s coins in this round"), ys, width: { ExitStageText.width($0, size: 11.5 * L) }) {
             let lineHeight = 12.5 * L, top = Y(1) + 9, room = (g.ground - g.roundSide - 5) - top
             let y0 = top + (room - Double(lines.count) * lineHeight) / 2 + lineHeight / 2, right = g.trunk - g.roundSide / 2 - 9
-            let width = lines.map { ExitStageText.width($0, size: 10 * L) }.max() ?? 0
+            let width = lines.map { ExitStageText.width($0, size: 11.5 * L) }.max() ?? 0
             let shape = ExitStageShape.box(
                 .caption,
                 "caption",

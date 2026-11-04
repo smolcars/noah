@@ -23,7 +23,7 @@ struct VtxosView: View {
     private var due: [VtxoModel] { VtxoList.due(vtxos) }
 
     var body: some View {
-        SettingsScroll {
+        SettingsScroll(line: L10n.text("VTXOs are your bitcoin on Ark. Renew them before they expire to keep them safe.", locale: language)) {
             if filter != .all {
                 VtxoFilterChip(title: L10n.text(filter.title, locale: language)) {
                     haptics.play(.selection)

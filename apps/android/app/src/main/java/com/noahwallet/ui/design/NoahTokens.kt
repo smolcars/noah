@@ -33,7 +33,7 @@ object NoahTokens {
     val Light = Palette(
         background = Color(0xFFFFFFFF),
         foreground = Color(0xFF000000),
-        muted = Color(0xFF707070),
+        muted = Color(0xFF6B6B6B),
         hairline = Color(0x1F000000),
         soft = Color(0xFFF2F2F2),
         sheet = Color(0xFFFFFFFF),

@@ -275,12 +275,15 @@ class ExitTreeSweepTest {
         val w = words("en")
         val layout = check(path(4, 1, others = listOf(ExitScene.Other(1, 24_500), ExitScene.Other(3, 21_000))), phone, w, "four transactions, two others")
         assertTrue("stubs", layout.stubs.size >= 6)
-        assertNotNull("the caption", layout.caption)
+        assertTrue("the caption: two lines at most, else left out", layout.caption.let { it == null || it.size <= 2 })
         assertEquals("both other exits, with their amounts", listOf(true, true), layout.siblings.map { it.amount != null })
         assertTrue("the round, the latest block, the pill and your coin", layout.labels.size >= 4)
         val explainer = check(ExitScene.sample(4), phone.copy(height = 268f), w, "explainer")
         assertEquals("${explainer.labels.map { it.key }} ${explainer.stubs.size} stubs", 3, explainer.labels.size)
-        assertNotNull("${explainer.stubs}", explainer.caption)
+        // The caption keeps the caption size (13) and two lines at most: where that doesn't fit it's left out rather than shrunk.
+        assertTrue("${explainer.stubs}", check(ExitScene.sample(4), phone, w, "explainer, full height").caption.let { it == null || it.size <= 2 })
+        // A wider frame (a tablet's pane) has the room, so it shows there.
+        assertNotNull(check(ExitScene.sample(4), phone.copy(width = phone.width * 1.6f), w, "explainer, wide").caption)
     }
 
     @Test fun theSwedishFeeWrapsInsideItsColumnAtTwiceTheText() {

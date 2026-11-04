@@ -58,7 +58,8 @@ struct ActivityMappingTests {
         #expect(rows.map(\.isRefunded) == [false, true, false])
         let statuses = rows.map { HomeActivityRow($0, ownDomain: "noahwallet.io").status }
         #expect(statuses == [.failed(nothingLeft: true), .refunded, .failed(nothingLeft: false)])
-        #expect(statuses.allSatisfy { $0.isFailure && $0.isUnsuccessful && !$0.isPending })
+        #expect(statuses.allSatisfy { $0.isUnsuccessful && !$0.isPending })
+        #expect(statuses.map(\.isFailure) == [true, false, true], "a refund is neutral")
 
         // A failed board stays exported, as today; failed sends never were.
         let board = HistoryMapping.transaction(Self.movement("bark.board", "board", status: "failed", intended: 50_000, effective: 0))
@@ -106,7 +107,7 @@ struct ActivityMappingTests {
         let missed = HistoryMapping.joinRecurring([ark, lightning], links: [.init(schedule: schedule, movementID: 99, paymentHash: "ff")])
         #expect(missed.allSatisfy { $0.recurring == nil })
         #expect(HistoryMapping.joinRecurring([ark], links: []) == [ark])
-        #expect(HomeActivityRow(missed[0], ownDomain: "noahwallet.io").title == "Ark")
+        #expect(HomeActivityRow(missed[0], ownDomain: "noahwallet.io").title == "Sent")
     }
 
     @Test func invoiceAndOfferDescriptionsTitleTheirRows() {
@@ -157,7 +158,7 @@ struct ActivityMappingTests {
         #expect(row.type == "Arkoor" && row.amount == 7_000)
         let json = try #require(String(data: JSONEncoder().encode(row), encoding: .utf8))
         #expect(!json.contains("paymentHash") && !json.contains("paymentDescription") && !json.contains("recurring"))
-        #expect(HomeActivityRow(row, ownDomain: "x").title == "Ark")
+        #expect(HomeActivityRow(row, ownDomain: "x").title == "Sent")
     }
 
     /// An exit's fee children are named by the txids bark recorded in its states, history included,
@@ -183,7 +184,7 @@ struct ActivityMappingTests {
         let detail = ActivityDetail(fee, ownDomain: "")
         #expect(detail.status == "Sent" && detail.rail == .onchain && detail.fee == nil && detail.chainTxid == "child-2")
         let other = HomeActivityRow(plain, ownDomain: "")
-        #expect(plain.exitFeeFor == nil && other.title == "Onchain" && other.avatar == .chain)
+        #expect(plain.exitFeeFor == nil && other.title == "Sent" && other.avatar == .chain)
     }
 }
 

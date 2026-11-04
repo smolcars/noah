@@ -160,7 +160,7 @@ fun rememberHomeScroll(): HomeScroll {
     return remember(compact, leading, list, card, anchor) { HomeScroll(compact, leading, list, card, anchor) }
 }
 
-internal object Recent { const val rows = 5 }
+internal object Recent { const val rows = 8 }
 
 /**
  * The activity list's items in order: its title, an empty message when there are no rows, then per day a header and

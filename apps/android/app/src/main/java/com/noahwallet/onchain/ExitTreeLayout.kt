@@ -225,7 +225,7 @@ internal class TreeLayout(val scene: ExitScene, val words: TreeStrings, val geo:
          * keeps 8 dp inside it. A label that shrinks rather than wraps gets its [TreeLabels.Item.size].
          */
         fun fit(item: TreeLabels.Item, geo: TreeGeometry, measure: TreeMeasure, server: Boolean): TreeLabels.Item {
-            val fallbacks = item.fallbacks.map { fit(it, geo, measure, server) }.filter { !it.shrinks || it.size >= .75f }
+            val fallbacks = item.fallbacks.map { fit(it, geo, measure, server) }.filter { !it.shrinks || it.size >= 1f }
             if (item.shrinks) {
                 val line = item.lines.first()
                 val top = item.y - geo.lineHeight / 2
@@ -288,14 +288,13 @@ internal class TreeLayout(val scene: ExitScene, val words: TreeStrings, val geo:
             if (!s.wallet && !s.claiming) return emptyList()
             val (first, second) = walletText(s, w, balance, received)
             val grow = if (s.claiming) 1.1f else 1f; val k = geo.scale
-            val sizes = 10.5f * k * grow to 11f * k * grow
+            val sizes = 12f * k * grow to 12.5f * k * grow
             // Both inside the picture, however large the text.
             val y2 = min(geo.ground + 24 * k * grow, geo.height - textHeight(sizes.second) / 2 - 1)
             val y1 = min(geo.ground + 11 * k, y2 - (textHeight(sizes.first) + textHeight(sizes.second)) / 2)
-            val needsFee = ExitScene.Mark.needsFee in s.marks
+            // The balance stays in the foreground when it's short: the badge's red dot and the fee callout say so.
             return listOfNotNull(WalletLine(first, y1, sizes.first, s.claiming, if (s.claiming) TreeLabels.Tone.strong else TreeLabels.Tone.muted),
-                second?.let { WalletLine(it, y2, sizes.second, true,
-                    when { needsFee -> TreeLabels.Tone.failure; s.claiming -> TreeLabels.Tone.muted; else -> TreeLabels.Tone.strong }) })
+                second?.let { WalletLine(it, y2, sizes.second, true, if (s.claiming) TreeLabels.Tone.muted else TreeLabels.Tone.strong) })
         }
 
         /**
@@ -339,7 +338,7 @@ internal class TreeLayout(val scene: ExitScene, val words: TreeStrings, val geo:
                 if (s.claiming) geo.claimNode.let { (x, y) -> shapes += TreeShape.box(TreeShape.Kind.claim, "claim", x - 6.5f, y - 6.5f, x + 6.5f, y + 6.5f) }
                 val lines = walletLines(s, geo, w, balance, received)
                 if (s.wallet || s.claiming) badge(lines)
-                shapes += text(w.tr("Bitcoin"), 14f, geo.ground + 12 * k, 10.5f * k, false, false, TreeShape.Kind.text, "bitcoin")
+                shapes += text(w.tr("Bitcoin"), 14f, geo.ground + 12 * k, 12f * k, false, false, TreeShape.Kind.text, "bitcoin")
                 if (server) {
                     shapes += text(w.tr("Ark"), 14f, geo.coinY - 10, 11f * k, false, false, TreeShape.Kind.text, "ark")
                     shapes += TreeShape.circle(TreeShape.Kind.server, "server", geo.width - 30, geo.coinY, 14f)
@@ -476,16 +475,16 @@ internal class TreeLayout(val scene: ExitScene, val words: TreeStrings, val geo:
 
             fun caption(stubs: List<Stub>): Pair<List<String>?, Float> {
                 // The caption, under the lowest stubs, while there are stubs to explain: centred above the round's block, else
-                // reaching down beside it to the ground; left out when neither fits.
+                // reaching down beside it to the ground; left out when neither fits or it would take more than two lines (it's decoration).
                 var caption: List<String>? = null; var captionY = 0f
                 if (n > 1 && stubs.isNotEmpty()) {
-                    val size = 10f * k; val lh = 12.5f * k; val right = tx - geo.block / 2 - 9
+                    val size = 13f * k; val lh = 16f * k; val right = tx - geo.block / 2 - 9
                     val wrapped = TreeLabels.wrap(w.tr("Other people’s coins in this round"), right - 14) { measure.width(it, size, false) }
                     val width = wrapped.maxOf { measure.width(it, size, false) }
                     val top = ys[1] + 9; val height = wrapped.size * lh
                     val above = (geo.ground - geo.block - 5) - top
                     val spots = listOfNotNull(if (height <= above) top + (above - height) / 2 else null, if (height <= geo.ground - 3 - top) top else null)
-                    if (width <= right - 14) spots.map { TreeShape.box(TreeShape.Kind.caption, "caption", right - width, it, right,
+                    if (wrapped.size <= 2 && width <= right - 14) spots.map { TreeShape.box(TreeShape.Kind.caption, "caption", right - width, it, right,
                         it + height) }.firstOrNull(::clear)?.let { shape ->
                         caption = wrapped; captionY = shape.t + lh / 2 - ys[1]; shapes += shape
                     }

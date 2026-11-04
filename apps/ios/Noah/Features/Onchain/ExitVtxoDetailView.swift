@@ -14,6 +14,7 @@ struct ExitVtxoDetailView: View {
     @Environment(\.settings) private var settings
     @Environment(\.locale) private var locale
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Environment(\.exitPaneHeight) private var paneHeight
     @State private var window = OnboardingLayout(size: .zero, insets: EdgeInsets())
 
@@ -81,9 +82,8 @@ struct ExitVtxoDetailView: View {
             ExitStatusLine(text: text.status, kind: text.statusKind)
         }
         if progress.picture != .blank {
-            // 300 pt; 236 on the iPhone SE.
             ExitStageView(scene: text.scene, wide: settings.wide, accessibilityText: text.pictureLabel)
-                .frame(height: settings.wide ? max(280, paneHeight - 110) : window.size.height > 0 && window.size.height < 700 ? 236 : 300)
+                .frame(height: settings.wide ? max(280, paneHeight - 110) : stageHeight)
                 .padding(.top, 8)
                 .padding(.horizontal, settings.wide ? -12 : -NoahTokens.Space.screen)
         }
@@ -94,10 +94,17 @@ struct ExitVtxoDetailView: View {
             .id(text.phase).transition(.homeRise(reduceMotion, 6))
             .accessibilityAddTraits(.updatesFrequently)
             .accessibilityIdentifier("exit-phase")
-        if settings.wide {
-            Text(verbatim: text.explanation).noahText(NoahTokens.Typography.sub).foregroundStyle(NoahTokens.Colors.muted)
-                .multilineTextAlignment(.center).frame(maxWidth: .infinity).padding(.top, 4)
-        }
+        // Outside the picture, so it scales with Dynamic Type on phones too.
+        Text(verbatim: text.explanation).noahText(NoahTokens.Typography.sub).foregroundStyle(NoahTokens.Colors.muted)
+            .multilineTextAlignment(.center).fixedSize(horizontal: false, vertical: true).frame(maxWidth: .infinity).padding(.top, 4)
+    }
+
+    /// The explanation and the rows below it come first: 252 pt on most phones, 236 on the iPhone SE or at
+    /// accessibility sizes, 300 only where a tall phone has room for both.
+    private var stageHeight: CGFloat {
+        let height = window.size.height
+        if dynamicTypeSize.isAccessibilitySize || (height > 0 && height < 700) { return 236 }
+        return height >= 900 ? 300 : 252
     }
 
     @ViewBuilder private func trailingPane(_ exit: ExitModel, _ progress: ExitProgress, _ text: ExitText, money: ExitMoney) -> some View {
@@ -162,7 +169,9 @@ struct ExitVtxoDetailView: View {
     @ViewBuilder private func footer(_: ExitModel, _ progress: ExitProgress, _ text: ExitText) -> some View {
         switch progress.phase {
         case .claimable:
-            Button(L10n.text("Claim {amount}", ExitMoney(app: app, locale: locale)(text.claimable), locale: language)) {
+            // Claim prices every ready exit together on its own review; this screen has no net to promise (as Android
+            // without its estimate).
+            Button(L10n.text("Claim", locale: language)) {
                 haptics.play(.light)
                 settings.open(.exitClaim)
             }
@@ -201,8 +210,7 @@ struct ExitVtxoDetailView: View {
                 haptics.play(.warning)
                 Task { await model.review(.cancel, ids: [id]) }
             }
-            .buttonStyle(.plain).noahText(NoahTokens.Typography.control).underline()
-            .frame(minHeight: NoahTokens.Size.hitTarget)
+            .buttonStyle(HomePillStyle(prominent: false, height: NoahTokens.Size.hitTarget))
             .disabled(model.locked)
             .accessibilityIdentifier("exit-cancel")
         }
@@ -353,8 +361,6 @@ struct ExitStatusLine: View {
     var claimFee: UInt64? {
         batchFee.map { ExitClaimSplit.fees(Dictionary(batch.map { ($0.id, $0.amount) }, uniquingKeysWith: { a, _ in a }), fee: $0)[exit.id] ?? 0 }
     }
-    /// What the Claim button names for this exit; Claim itself prices every ready exit together.
-    var claimable: UInt64 { exit.amount }
     var amount: UInt64 { progress.phase == .claimed ? claimFee.map { exit.amount - min(exit.amount, $0) } ?? exit.amount : exit.amount }
 
     /// One claim for several exits: the total received and the fee once.
@@ -366,10 +372,11 @@ struct ExitStatusLine: View {
 
     /// What this exit's whole path cost in this wallet's fee children, and the part shared with its other exits.
     var fees: (total: UInt64, shared: UInt64) { ExitFees.paid(exit, among: overview?.exits ?? [], childFees: overview?.childFees ?? [:]) }
-    /// The Network fees row: the amount, and a note when your other exits share part of it.
+    /// The Network fees row: the amount, and a note when your other exits share part of it. Until the exit is
+    /// claimed it's what's been paid so far.
     private var feesRow: Row {
         let fees = fees
-        return Row(label: tr("Network fees"), value: money(fees.total), numeric: true,
+        return Row(label: progress.phase == .claimed ? tr("Network fees") : tr("Network fees paid"), value: money(fees.total), numeric: true,
                    note: fees.shared > 0 ? tr("Includes {shared} for transactions your other exits share. Each is paid once.", money(fees.shared)) : nil)
     }
     /// What's missing for the parked package.
@@ -414,7 +421,7 @@ struct ExitStatusLine: View {
             if progress.bumped { return tr("Fees rose. Paying more · waiting for block {height}", block(tip + 1)) }
             if progress.stuck > 0 { return L10n.plural("Not in a block yet · {n} blocks", count: Int(progress.stuck), locale: language) }
             if let child = current?.status.child_txid, let fee = overview?.childFees[child] {
-                return tr("Anchor + {fee} fee · {n} of {total}", money(fee), n, total)
+                return tr("Fee {fee} · {n} of {total}", money(fee), n, total)
             }
             return tr("Waiting for block {height} · {n} of {total}", block(tip + 1), n, total)
         case .shared: return tr("Already sent by someone else · {n} of {total}", n, total)
@@ -435,7 +442,7 @@ struct ExitStatusLine: View {
         }
     }
 
-    /// One sentence per phase for the wide layout's leading pane.
+    /// One sentence per phase, under the phase line.
     var explanation: String {
         if progress.stale { return tr("Noah hasn’t checked on this exit in a while. Moving it forward can also send its next step or raise a fee.") }
         switch progress.phase {
@@ -449,7 +456,7 @@ struct ExitStatusLine: View {
         case .mempool:
             if progress.bumped { return tr("A block came without it. Noah pays more when the fee rate rises, so it gets into the next one.") }
             if progress.stuck > 0 { return tr("Blocks are full right now. Noah raises the fee when rates rise. Move your exit forward to try again now.") }
-            return tr("Every exit transaction has a fee anchor. Noah attaches a fee to it, paid from your on-chain bitcoin.")
+            return tr("Each exit transaction needs a network fee, paid from your on-chain balance.")
         case .shared: return tr("Someone else exiting from your round already sent this one, with their own fee. You don’t pay for it.")
         case .confirmed: return tr("One transaction per block: about ten minutes each.")
         case .onchain, .waiting:
@@ -487,7 +494,7 @@ struct ExitStatusLine: View {
             if total > 0 { rows.append(.init(label: tr("Transactions"), value: tr("{n} of {total} in blocks", progress.confirmed, total))) }
             if progress.phase == .needsFunds {
                 let left = money(overview?.confirmed ?? 0), package = overview?.packageFees[exit.id]
-                rows.append(.init(label: tr("Network fees"), value: money(fees.total), numeric: true, failure: true,
+                rows.append(.init(label: tr("Network fees paid"), value: money(fees.total), numeric: true, failure: true,
                                   note: package.map { tr("{left} left on-chain. The next fee needs about {need}.", left, money($0)) }))
             } else {
                 rows.append(feesRow)
@@ -507,7 +514,10 @@ struct ExitStatusLine: View {
 
     /// "about 16 h", or "under an hour" for a few blocks.
     static func about(_ blocks: UInt32, _ language: String) -> String {
-        blocks < 6 ? L10n.text("under an hour", locale: language) : L10n.text("about {time}", VtxoList.span(Int64(blocks), locale: language), locale: language)
+        blocks < 6 ? L10n.text("under an hour", locale: language) : L10n.text(
+            "about {time}",
+            VtxoList.timeLeft(Int64(blocks), locale: language),
+            locale: language)
     }
 
     /// "1 VTXO · 4 transactions".

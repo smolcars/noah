@@ -94,21 +94,18 @@ private fun StoredSeedRestoreScreen(model: AppModel) {
     FormLayout(headline = { large ->
         Headline(tr("Recovery phrase found"),
             tr("Your recovery phrase is still securely stored on this device. Use it to restore your wallet from its backup."), large = large)
-    }, form = {}, actions = {
+    }, form = { HeadlineGlyph(com.noahwallet.ui.settings.SettingsIcons.key) }, actions = {
         // As on iOS, the error sits just above the button.
         Column(verticalArrangement = Arrangement.spacedBy(NoahTokens.Space.l)) {
-            flow.issue?.let {
-                Text(tr(it.message), Modifier.testTag("restore-error").semantics { liveRegion = LiveRegionMode.Assertive },
-                    style = NoahTokens.Typography.sub, color = palette.failure)
-            }
+            flow.issue?.let { RestoreIssueText(it, Modifier.testTag("restore-error")) }
             if (model.isWalletSuspended) {
                 Text(tr("Your wallet is suspended. Resume recovery to restore its backup, or delete this wallet from your device."),
                     style = NoahTokens.Typography.sub, color = palette.muted)
-                PillButton(tr("Resume Recovery"), Modifier.fillMaxWidth(), enabled = !blocked, outlined = true) {
+                PillButton(tr("Resume recovery"), Modifier.fillMaxWidth(), enabled = !blocked, outlined = true) {
                     model.action("Couldn't resume recovery. Restart Noah and try again.") { model.resumeRestoreRecovery() }
                 }
             }
-            if (flow.issue?.requiresRestart != true) PillButton(tr("Restore Wallet"), Modifier.fillMaxWidth(), enabled = model.canRestoreWallet) {
+            if (flow.issue?.requiresRestart != true) PillButton(tr("Restore wallet"), Modifier.fillMaxWidth(), enabled = model.canRestoreWallet) {
                 // Restoring has no way back until a restore fails, so never enter it for a request restoreWallet would drop.
                 if (!model.canRestoreWallet) return@PillButton
                 haptics.medium()
@@ -159,17 +156,20 @@ private fun PhraseRestoreScreen(model: AppModel, clipboard: RestoreClipboard) {
     val complete = words.all { it in RecoveryPhraseInput.wordList } && !input.wrongWordCount
     val keyboard = WindowInsets.isImeVisible && entry.focused != null
     FormLayout(leadingTop = {
-        val label = tr("Back")
-        IconButton({ if (!blocked) leave() }, Modifier.semantics { contentDescription = label }) { BackIcon(palette.foreground) }
+        // Android's plain 48 dp back arrow, as Send and Settings use; its arrow lines up with the content's edge.
+        com.noahwallet.ui.activity.BarButton(com.noahwallet.R.drawable.ic_activity_back, tr("Back"), Modifier.offset(x = (-12).dp)) {
+            if (!blocked) leave()
+        }
     }, headline = { large ->
-        Headline(tr("Welcome back"), tr("Enter your recovery phrase."), large = large, modifier = Modifier.entrance(0, play))
+        // What restoring needs, up front: it fails with "No backup found" without a wallet backup.
+        Headline(tr("Welcome back"), tr("Enter your recovery phrase.") + " " + tr("To restore, Noah needs this phrase and a wallet backup."), large = large,
+            modifier = Modifier.entrance(0, play))
     }, form = {
         WordCountControl(words.size, enabled = !blocked, modifier = Modifier.padding(top = formGap(22.dp)).entrance(2, play), select = entry::selectCount)
         key(entry.clearGeneration, words.size) {
             WordGrid(entry, words, !blocked, Modifier.padding(top = 18.dp).graphicsLayer { translationX = shake.value * density }.entrance(3, play))
         }
-        Text(restoreMessage(entry, firstBad, flow).orEmpty(), Modifier.padding(top = 14.dp).heightIn(min = 20.dp).testTag("restore-error")
-            .semantics { liveRegion = LiveRegionMode.Assertive }, style = NoahTokens.Typography.sub, color = palette.failure)
+        PhraseMessage(entry, firstBad, flow)
     }, accessory = true, actions = {
         if (keyboard) Suggestions(entry, entry.focused ?: 0)
         else Row(Modifier.fillMaxWidth().padding(top = NoahTokens.Space.s), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -287,7 +287,29 @@ private fun restoreMessage(entry: PhraseEntry, firstBad: Int?, flow: RestoreFlow
     entry.wrongWordCount || entry.pasteRejected -> tr("Paste exactly 12 or 24 words. Your entries haven't been replaced.")
     entry.checksumFailed -> tr("These words don’t form a valid phrase.")
     firstBad != null -> tr("Check word {number}", firstBad + 1)
-    else -> flow.issue?.message?.let { tr(it) }
+    else -> flow.issue?.takeIf { it.title == null }?.message?.let { tr(it) }
+}
+
+/** Under the words: the entry's problem, or the restore's (a titled one as headline and body). */
+@Composable
+private fun PhraseMessage(entry: PhraseEntry, firstBad: Int?, flow: RestoreFlow) {
+    val message = restoreMessage(entry, firstBad, flow)
+    val titled = flow.issue?.takeIf { message == null && it.title != null }
+    if (titled != null) RestoreIssueText(titled, Modifier.padding(top = 14.dp).testTag("restore-error"))
+    else Text(message.orEmpty(), Modifier.padding(top = 14.dp).heightIn(min = 20.dp).testTag("restore-error")
+        .semantics { liveRegion = LiveRegionMode.Assertive }, style = NoahTokens.Typography.sub, color = LocalPalette.current.failure)
+}
+
+/** A restore problem: a red headline over a plain body when it has a title (only the headline is an alarm), else one red line. */
+@Composable
+internal fun RestoreIssueText(issue: RestoreIssue, modifier: Modifier = Modifier, textAlign: androidx.compose.ui.text.style.TextAlign? = null) {
+    val palette = LocalPalette.current
+    Column(modifier.semantics(mergeDescendants = issue.title != null) { liveRegion = LiveRegionMode.Assertive },
+        verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        issue.title?.let { Text(tr(it), Modifier.fillMaxWidth(), style = NoahTokens.Typography.button, color = palette.failure, textAlign = textAlign) }
+        Text(tr(issue.message), Modifier.fillMaxWidth(), style = NoahTokens.Typography.sub,
+            color = if (issue.title != null) palette.foreground else palette.failure, textAlign = textAlign)
+    }
 }
 
 /** The keyboard accessory: suggestions reveal the private prefix, so they expose no semantics. */
@@ -343,19 +365,20 @@ private fun WordCell(word: String, index: Int, count: Int, bad: Boolean, focused
         delay(index * 28L)
         if (reduceMotion) appear.animateTo(1f, tween(NoahTokens.Motion.REDUCE_MOTION_FADE_MS)) else appear.animateTo(1f, NoahTokens.Motion.snappy())
     }
-    Row(modifier.heightIn(min = 44.dp).graphicsLayer {
+    // Each word's field is itself a 48 dp target.
+    Row(modifier.heightIn(min = 48.dp).graphicsLayer {
         alpha = appear.value.coerceIn(0f, 1f)
         if (!reduceMotion) translationY = (1 - appear.value) * 8 * density
     }, verticalAlignment = Alignment.CenterVertically) {
         Text("${index + 1}", Modifier.widthIn(min = 18.dp).clearAndSetSemantics { }, textAlign = TextAlign.End,
             style = TextStyleNumber, color = palette.muted, maxLines = 1, softWrap = false)
         Spacer(Modifier.width(8.dp))
-        Box(Modifier.weight(1f).heightIn(min = 44.dp), contentAlignment = Alignment.CenterStart) {
+        Box(Modifier.weight(1f).heightIn(min = 48.dp), contentAlignment = Alignment.CenterStart) {
             RecoveryWordField(word, index, onChange, onFocus = onFocus, onNext = onNext, wordCount = count,
                 textColor = if (bad) palette.failure else palette.foreground, cursorColor = palette.orange,
                 textSize = if (count == 24) 16f else 17f, enabled = enabled,
-                modifier = Modifier.fillMaxWidth().heightIn(min = 34.dp).focusRequester(requester).testTag("restore-word-${index + 1}"))
-            Underline(focused, failed = bad, modifier = Modifier.align(Alignment.BottomStart).padding(bottom = 5.dp), thickness = 1.dp)
+                modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).focusRequester(requester).testTag("restore-word-${index + 1}"))
+            Underline(focused, failed = bad, modifier = Modifier.align(Alignment.BottomStart).padding(bottom = 7.dp), thickness = 1.dp)
         }
     }
 }

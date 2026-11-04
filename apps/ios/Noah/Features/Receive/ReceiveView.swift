@@ -12,6 +12,7 @@ struct ReceiveView: View {
     @Environment(\.locale) private var locale
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Environment(\.sendReceiveFixture) private var fixture
     let isActive: Bool
     @State private var model: ReceiveModel
@@ -175,6 +176,8 @@ struct ReceiveView: View {
                                      if select(picked) { Task { try? await Task.sleep(for: .milliseconds(250)); self.sheet = nil } }
                                  }, onCopy: copy)
                     .presentationDetents([.fraction(0.66), .large])
+                    // Solid, so the QR behind never shows through the dense rows.
+                    .presentationBackground(NoahTokens.Colors.sheet)
             }
         }
         .navigationDestination(isPresented: $profile) { SettingsHost(page: .profile) }
@@ -187,10 +190,7 @@ struct ReceiveView: View {
             if !wide {
                 HStack {
                     Spacer()
-                    SendIconButton(systemName: "doc.on.doc", label: "Show payment details", id: "receive-copy-button") {
-                        haptics.play(.light)
-                        sheet = .formats
-                    }
+                    waysToPay
                 }
                 .frame(height: NoahTokens.Size.hitTarget)
                 .padding(.top, 4)
@@ -218,6 +218,21 @@ struct ReceiveView: View {
         .frame(maxWidth: .infinity, maxHeight: wide ? .infinity : nil)
     }
 
+    /// Opens "Ways to pay you": labeled, so it doesn't read as Copy.
+    private var waysToPay: some View {
+        Button {
+            haptics.play(.light)
+            sheet = .formats
+        } label: {
+            HStack(spacing: 6) {
+                Text("Ways to pay")
+                Image(systemName: "chevron.down").font(.system(size: 13, weight: .semibold)).accessibilityHidden(true)
+            }
+        }
+        .buttonStyle(HomePillStyle(prominent: false, height: NoahTokens.Size.hitTarget, font: NoahTokens.Typography.control))
+        .accessibilityIdentifier("receive-copy-button")
+    }
+
     private var card: some View {
         let shown = shown
         return ReceiveCard(payload: shown.payload, title: shown.title, caption: shown.caption,
@@ -237,21 +252,26 @@ struct ReceiveView: View {
         } ?? []
         return TimelineView(.explicit([now] + boundaries)) { timeline in
             let phase: (text: String, done: Bool) = arrival.map { $0.phase(at: $0.elapsed(timeline.date), tip: tip, locale: locale) } ?? ("", false)
-            Text(verbatim: phase.text)
+            // A Lightning arrival names what actually arrived, not the request's amount on the card.
+            let received = arrival.flatMap { $0.rail == .lightning && !phase.text.isEmpty ? $0.sats : nil }
+            let text = received.map { phase.text + " · " + BitcoinAmount.format(sats: $0, unit: app.amountUnit, locale: locale) } ?? phase.text
+            Text(verbatim: text)
                 .noahText(NoahTokens.Typography.control)
                 .foregroundStyle(phase.done ? NoahTokens.Colors.foreground : NoahTokens.Colors.muted)
                 .frame(maxWidth: .infinity, minHeight: 20)
-                .id(phase.text)
+                .id(text)
                 .transition(.asymmetric(insertion: reduceMotion ? .opacity : .opacity.combined(with: .offset(y: 6)), removal: .identity))
-                .animation(NoahTokens.Motion.travel(reduceMotion), value: phase.text)
-                .accessibilityHidden(phase.text.isEmpty)
+                .animation(NoahTokens.Motion.travel(reduceMotion), value: text)
+                .accessibilityHidden(text.isEmpty)
                 .accessibilityIdentifier("receive-phase")
         }
     }
 
     private var pills: some View {
-        GlassGroup(spacing: 10) {
-            HStack(spacing: 10) {
+        // Accessibility sizes stack the two, so neither label truncates.
+        let layout = dynamicTypeSize.isAccessibilitySize ? AnyLayout(VStackLayout(spacing: 10)) : AnyLayout(HStackLayout(spacing: 10))
+        return GlassGroup(spacing: 10) {
+            layout {
                 Button {
                     openAmount()
                 } label: {
@@ -462,7 +482,8 @@ struct ReceiveView: View {
     }
 
     private func loadRate() async {
-        btcPrice = nil
+        btcPrice = fixture?.btcPrice
+        guard fixture?.btcPrice == nil else { return }
         do {
             let response = try await AppServices.shared.client.fiatPrices(.init(body: .json(.init())))
             let rate = try response.ok.body.json.rates.additionalProperties[app.preferredCurrency]

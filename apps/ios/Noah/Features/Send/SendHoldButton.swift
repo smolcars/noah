@@ -39,9 +39,10 @@ struct SendHoldButton: View {
             // Large text wraps the words inside a taller pill rather than cutting them off.
             .multilineTextAlignment(.center)
             .padding(.horizontal, 20).padding(.vertical, 10)
-            .foregroundStyle(NoahTokens.Colors.background)
+            .foregroundStyle(enabled ? NoahTokens.Colors.background : NoahTokens.Colors.muted)
             .frame(maxWidth: .infinity, minHeight: 58)
-            .background(NoahTokens.Colors.foreground, in: Capsule())
+            .background(enabled ? NoahTokens.Colors.foreground : NoahTokens.Colors.soft, in: Capsule())
+            .overlay { if !enabled { Capsule().strokeBorder(NoahTokens.Colors.hairline, lineWidth: 1) } }
             // Your finger signs: the stroke traces the pill from its top-left.
             .overlay {
                 PillOutline()
@@ -51,7 +52,6 @@ struct SendHoldButton: View {
             }
             .scaleEffect(pressing && !reduceMotion ? 0.97 : 1)
             .animation(NoahTokens.Motion.tap, value: pressing)
-            .opacity(enabled ? 1 : 0.28)
             .contentShape(Capsule())
             .onLongPressGesture(minimumDuration: Self.duration, maximumDistance: 40, perform: complete) { down in
                 down ? begin() : release()

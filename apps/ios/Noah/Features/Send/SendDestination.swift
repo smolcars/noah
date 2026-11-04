@@ -271,6 +271,19 @@ indirect enum SendDestinationError: LocalizedError, Equatable, Sendable {
     case lnurlAuth
 
     var errorDescription: String? { message() }
+    /// Send's line: a wrong network says so plainly; the parser's wording ("expected regtest, got mainnet") stays in `message`.
+    func screenMessage(locale: String) -> String {
+        isWrongNetwork ? L10n.text("This address is for a different Bitcoin network.", locale: locale) : message(locale: locale)
+    }
+
+    var isWrongNetwork: Bool {
+        switch self {
+        case .networkMismatch: true
+        case .invalidMethods(let errors): errors.allSatisfy(\.isWrongNetwork)
+        default: false
+        }
+    }
+
     func message(locale: String = LegacyLocale.resolved()) -> String {
         switch self {
         case .networkMismatch(let expected, let actual):

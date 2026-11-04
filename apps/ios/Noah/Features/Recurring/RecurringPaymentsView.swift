@@ -23,10 +23,13 @@ struct RecurringPaymentsView: View {
                 SettingsFine(text: L10n.text("Wake-up schedule hasn't synced yet. Noah will retry when opened.", locale: language))
             }
             if let error = executor.error { SettingsFine(text: L10n.text(error, locale: language), failure: true) }
-            SettingsFine(text: L10n.text(
+            // The approval limit decides whether a payment goes out on its own: body size, not fine print.
+            Text(verbatim: L10n.text(
                 "Lightning fee limits use Ark’s published fees, up to 2% or 200 sats, whichever is higher. Payments above the limit need manual approval.",
-                locale: language)
-                + " " + L10n.text("Keep notifications on so payments can go through while Noah is closed.", locale: language))
+                locale: language))
+                .noahText(NoahTokens.Typography.sub).foregroundStyle(NoahTokens.Colors.foreground)
+                .fixedSize(horizontal: false, vertical: true).padding(.top, 18)
+            SettingsFine(text: L10n.text("Keep notifications on so payments can go through while Noah is closed.", locale: language))
         }
         .settingsChrome("Recurring payments") {
             Button { open(.editor(nil)) } label: {
@@ -74,12 +77,11 @@ struct RecurringPaymentsView: View {
                     Text(L10n.text("Run due payments now", locale: language))
                     if executor.running { ProgressView() }
                 }
-                .noahText(HomeText.strong)
-                .frame(minHeight: NoahTokens.Size.hitTarget)
             }
-            .buttonStyle(.plain)
+            // An outlined pill like the app's other secondary money actions, not a bare line that reads as a heading.
+            .buttonStyle(HomePillStyle(prominent: false, height: NoahTokens.Size.hitTarget))
             .disabled(executor.running)
-            .padding(.top, 10)
+            .padding(.top, 14).padding(.bottom, 6)
             .accessibilityIdentifier("recurring-run-now-button")
         }
     }
@@ -109,6 +111,19 @@ extension RecurringPayment {
         case "paused": return "Paused"
         case "needs_approval": return "Needs approval"
         case "completed": return "Completed"
+        default: return attentionReason
+        }
+    }
+
+    /// needs_attention's own reason, short enough for a row; the page shows the full message.
+    private var attentionReason: String {
+        if requiresPolicyApproval { return "Approval needed" }
+        switch issue?.code {
+        case .automationStopped: return "Wallet suspended"
+        case .interrupted, .uncertain: return "Check status"
+        case .alreadyPaid: return "Already paid"
+        case .retryableFailure: return "Couldn't prepare payment"
+        case .quoteExceedsCap, .scheduleExceedsCap, .arkFee: return "Over fee limit"
         default: return "Needs attention"
         }
     }
@@ -158,6 +173,8 @@ private struct RecurringRow: View {
                 Text(verbatim: app.isBalanceHidden ? "••••" : schedule.formattedAmount(unit: app.amountUnit, locale: locale))
                     .noahText(HomeText.amount).monospacedDigit()
                     .foregroundStyle(schedule.status == "paused" ? NoahTokens.Colors.muted : NoahTokens.Colors.foreground)
+                Image(systemName: "chevron.right").font(.system(size: 14, weight: .semibold))
+                    .foregroundStyle(NoahTokens.Colors.muted).accessibilityHidden(true)
             }
             .frame(height: 66)
             .contentShape(Rectangle())

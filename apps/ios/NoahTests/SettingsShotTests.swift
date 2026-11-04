@@ -132,10 +132,12 @@ struct SettingsShotTests {
 
         let recurring = try RecurringExecutorTests.Harness()
         try recurring.store.bind(recurring.owner.withLock { $0 })
-        let now = Date().timeIntervalSince1970 * 1000
+        // Whole milliseconds (the store rejects other times as unreadable), and today on the executor's clock too.
+        let now = RecurringPayment.now
+        recurring.clock.withLock { $0 = now }
         for (index, item) in [("Savings", "tark1" + ActivityShotTests.hex("rosa", 60), "ark", UInt64(10_000), "active"),
-                              ("Allowance", "lucas@ln.tips", "lnurl", UInt64(2_500), "active"),
-                              ("VPN", "lno1qgsq" + ActivityShotTests.hex("vpn", 60), "offer", UInt64(5_000), "active")].enumerated() {
+                              ("Allowance", "lucas@ln.tips", "lnurl", UInt64(2_500), "needs_attention"),
+                              ("VPN", "lno1qgsq" + ActivityShotTests.hex("vpn", 60), "offer", UInt64(5_000), "paused")].enumerated() {
             var schedule = RecurringScheduleTests.schedule(start: now + Double(index + 1) * 2 * 86_400_000)
             schedule.id = "s\(index + 1)"
             schedule.label = item.0
@@ -144,6 +146,8 @@ struct SettingsShotTests {
             schedule.amountSat = item.3
             schedule.interval = .init(unit: index == 1 ? "week" : "month", every: 1)
             schedule.status = item.4
+            // Two specific reasons on the list: over the fee limit, and paused.
+            if item.4 == "needs_attention" { schedule.issue = RecurringIssue(code: .quoteExceedsCap, arguments: ["120", "100"]) }
             schedule.occurrencesPaid = [2, 7, 6][index]
             try recurring.store.upsert(schedule)
         }
@@ -195,7 +199,8 @@ private struct SettingsShotHost: View {
     @State private var window = OnboardingLayout(size: .zero, insets: EdgeInsets())
 
     var body: some View {
-        NavigationStack { SettingsHost(page: page) }
+        // Settings opens over Home in the app: an empty base gives the shot the system Back it has there.
+        NavigationStack(path: .constant([0])) { Color.clear.navigationDestination(for: Int.self) { _ in SettingsHost(page: page) } }
             .environment(\.settings, SettingsNavigator(live: true, wide: window.wide,
                                                        leadingWidth: max(0, window.size.width / 2 - window.insets.leading)))
             .onboardingWindow($window)

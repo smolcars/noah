@@ -283,7 +283,7 @@ internal fun DetailRow(label: String, value: String, kind: ValueKind = ValueKind
 
 /** A long technical value under its label, in full, so it can still be selected; copy beside the label. */
 @Composable
-internal fun DetailBlock(label: String, value: String, toasts: HomeToasts, copy: Boolean = true) {
+internal fun DetailBlock(label: String, value: String, toasts: HomeToasts, copy: Boolean = true, caption: String? = null) {
     val palette = LocalPalette.current
     Column(Modifier.fillMaxWidth().drawBehind { drawRect(palette.hairline, Offset(0f, size.height - 1.dp.toPx()), Size(size.width, 1.dp.toPx())) }
         .padding(vertical = 10.dp)) {
@@ -291,7 +291,8 @@ internal fun DetailBlock(label: String, value: String, toasts: HomeToasts, copy:
             Text(tr(label), Modifier.weight(1f), style = ActivityType.label.copy(fontSize = 15.sp), color = palette.muted)
             if (copy) CopyIcon(label, value, toasts)
         }
-        SelectionContainer { Text(value, Modifier.padding(top = 4.dp), style = ActivityType.mono.copy(fontSize = 13.5.sp), color = palette.foreground) }
+        SelectionContainer { Text(value, Modifier.padding(top = 4.dp), style = ActivityType.mono.copy(fontSize = 15.sp), color = palette.foreground) }
+        caption?.let { Text(it, Modifier.padding(top = 4.dp), style = HomeType.line, color = palette.muted) }
     }
 }
 
@@ -307,7 +308,8 @@ internal fun CopyIcon(label: String, value: String, toasts: HomeToasts) {
     LaunchedEffect(copied) { if (copied) { delay(1_200); copied = false } }
     val description = tr("Copy {label}", tr(label))
     val done = tr("Copied")
-    Box(Modifier.offset(x = 4.dp).size(30.dp).clip(CircleShape).clickable(onClickLabel = description, role = Role.Button) {
+    // A 48 dp target around the 30 dp mark, its glyph where it was.
+    Box(Modifier.offset(x = 13.dp).size(48.dp).clip(CircleShape).clickable(onClickLabel = description, role = Role.Button) {
         (context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(ClipData.newPlainText(label, value))
         haptics.success(); toasts.show(done); copied = true
     }.semantics { contentDescription = description }, contentAlignment = Alignment.Center) {
@@ -375,7 +377,7 @@ private fun whenRows(ui: ActivityUi, row: ActivityRules.Row, toasts: HomeToasts)
     }
     record.repeatPayment?.takeIf { it.amountMode == "FIAT" && it.fiatCurrency != null }?.let { repeat ->
         repeat.amountInput.toDoubleOrNull()?.let { value ->
-            rows += { last -> DetailRow("Entered as", if (ui.hidden) "••••" else FiatCurrency.format(value, repeat.fiatCurrency!!, ui.locale), toasts = toasts,
+            rows += { last -> DetailRow("You entered", if (ui.hidden) "••••" else FiatCurrency.format(value, repeat.fiatCurrency!!, ui.locale), toasts = toasts,
                 last = last) }
         }
     }
@@ -459,34 +461,36 @@ private fun TechnicalRows(ui: ActivityUi, record: HistoryTransaction, actions: A
     fun money(sats: Long) = if (ui.hidden) "₿••••" else BitcoinAmount.format(sats, ui.unit, ui.locale)
     fun signed(sats: Long) = if (ui.hidden) "₿••••" else (if (sats > 0) "+" else if (sats < 0) "−" else "") + BitcoinAmount.format(kotlin.math.abs(sats),
         ui.unit, ui.locale)
-    LightningBlocks(record, toasts)
-    DetailBlock("Payment ID", record.id, toasts)
+    LightningBlocks(record, toasts, ui.debug)
     if (record.source == "onchain-wallet" || record.balanceChangeSat != null) ChainRows(ui, record, toasts, ::signed)
-    MovementRows(record, toasts, ::signed)
+    MovementRows(record, toasts, ::signed, ui.debug)
     // As in React Native: the anchor only when it isn't the transaction already shown.
     record.chainAnchor?.takeIf { it.substringBefore(':') != record.txid?.substringBefore(':') }?.let { DetailBlock("Chain anchor", it, toasts) }
     listOf("Sent to" to record.sentTo, "Received on" to record.receivedOn).forEach { (label, values) ->
-        if (!values.isNullOrEmpty()) DetailBlock(label, values.joinToString("\n") { "${it.destination} · ${money(it.amountSat)}" }, toasts,
-            copy = values.size == 1)
+        // The bare identifier (what Copy copies), its amount on a line of its own.
+        values?.forEach { DetailBlock(label, it.destination, toasts, caption = money(it.amountSat)) }
     }
     CoinSections(record, actions, toasts)
     record.metadataJson?.takeIf { it.isNotEmpty() && it != "{}" }?.let { Section("Metadata"); DetailBlock("JSON", it, toasts) }
 }
 
-/** The Lightning record: its hash, a receive's preimage and invoice, and any offer. */
+/** The Lightning record: its hash, a receive's preimage and invoice, and any offer; then the payment's ID in [debug] mode. */
 @Composable
-private fun LightningBlocks(record: HistoryTransaction, toasts: HomeToasts) {
+private fun LightningBlocks(record: HistoryTransaction, toasts: HomeToasts, debug: Boolean) {
     val incoming = record.direction == "incoming"
     record.paymentHash?.let { DetailBlock("Payment hash", it, toasts) }
     record.preimage?.takeIf { incoming }?.let { DetailBlock("Preimage", it, toasts) }
     (record.receivedOn?.singleOrNull()?.destination?.takeIf { it.isNotEmpty() && incoming } ?: record.invoice?.takeIf { incoming })
         ?.let { DetailBlock("Invoice", it, toasts) }
     record.offer?.let { DetailBlock("Offer", it, toasts) }
+    // Internal IDs and bark's bookkeeping show only in debug mode.
+    if (debug) DetailBlock("Payment ID", record.id, toasts)
 }
 
-/** bark's movement: its type, ID, subsystem and intended and effective changes. */
+/** bark's movement, in Debug mode only: its type, ID, subsystem and intended and effective changes. */
 @Composable
-private fun MovementRows(record: HistoryTransaction, toasts: HomeToasts, signed: (Long) -> String) {
+private fun MovementRows(record: HistoryTransaction, toasts: HomeToasts, signed: (Long) -> String, debug: Boolean) {
+    if (!debug) return
     record.movementKindLabel?.let { DetailRow("Movement type", tr(it), small = true, toasts = toasts) }
     record.movementId?.let { DetailRow("Movement ID", it.toString(), copy = it.toString(), small = true, toasts = toasts) }
     record.subsystemName?.let { DetailRow("Subsystem", "$it (${record.subsystemKind.orEmpty()})", small = true, toasts = toasts) }
@@ -523,7 +527,7 @@ private fun CoinSections(record: HistoryTransaction, actions: ActivityActions, t
 
 private fun valueStyle(kind: ValueKind, small: Boolean) = when (kind) {
     ValueKind.text -> ActivityType.value; ValueKind.number -> ActivityType.number; ValueKind.mono -> ActivityType.mono
-}.let { if (small) it.copy(fontSize = if (kind == ValueKind.mono) 13.5.sp else 15.sp) else it }
+}.let { if (small) it.copy(fontSize = 15.sp) else it }
 
 /** A detail row's tap (one merged button when it has one) and its hairline unless it's [last]. */
 private fun Modifier.detailRow(hairline: androidx.compose.ui.graphics.Color, last: Boolean, onClick: (() -> Unit)?) =
@@ -541,7 +545,8 @@ private fun OkMark() {
 @Composable
 private fun ExplorerButton(open: () -> Unit) {
     val view = tr("View in explorer")
-    Box(Modifier.offset(x = 4.dp).size(30.dp).clip(CircleShape).clickable(onClickLabel = view, role = Role.Button, onClick = open)
+    // A 48 dp target, as Copy's beside it.
+    Box(Modifier.offset(x = 13.dp).size(48.dp).clip(CircleShape).clickable(onClickLabel = view, role = Role.Button, onClick = open)
         .semantics { contentDescription = view }, contentAlignment = Alignment.Center) {
         Icon(painterResource(R.drawable.ic_activity_external), null, Modifier.size(17.dp), tint = LocalPalette.current.muted)
     }

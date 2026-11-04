@@ -4,10 +4,13 @@ import OpenAPIRuntime
 
 /// Fixed user-facing copy only: server and FFI errors may contain secrets.
 struct RestoreIssue: Equatable {
+    /// A short red headline over a calm body; without one the message is the error line.
+    var title: String?
     let message: String
     var requiresRestart = false
 
     static let newerBackup = Self(message: "This backup was created by a newer version of Noah. Update the app, then try restoring again.")
+    static let noBackup = Self(title: "No backup found", message: "Check the words. Noah can only restore a wallet that had backups turned on.")
     static let invalidPhrase = Self(message: "Check your recovery phrase. Enter all 12 or 24 words in the correct order.")
     static let committed = Self(
         message: "Your backup was restored, but setup couldn't finish. Do not restore again. Close and restart Noah to continue.",
@@ -32,12 +35,12 @@ struct RestoreIssue: Equatable {
             return Self(message: "This phrase couldn't unlock the backup, or the backup is damaged. Check all 12 or 24 words and their order.")
         }
         if let server = error as? ServerFailure, server.statusCode == 404 || server.code == "USER_NOT_FOUND" {
-            return Self(message: "No backup was found for this recovery phrase. Check the words and make sure this wallet had backups enabled.")
+            return noBackup
         }
         if error is URLError {
-            return Self(message: "Noah couldn't download your backup. Check your internet connection and try again.")
+            return Self(title: "Couldn't restore", message: "Check your connection and try again.")
         }
-        return Self(message: "Noah couldn't restore your wallet. Please try again later.")
+        return Self(title: "Couldn't restore", message: "Please try again later.")
     }
 
     private static func from(_ failure: WalletRestorer.Failure) -> Self {

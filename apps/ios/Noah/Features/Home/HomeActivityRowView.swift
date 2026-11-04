@@ -14,7 +14,8 @@ struct HomeActivityRowView: View {
     var body: some View {
         let row = HomeActivityRow(transaction, ownDomain: ownDomain)
         HStack(spacing: 14) {
-            HomeAvatar(avatar: row.avatar, pending: row.status.isPending, failed: row.status.isFailure, isNew: isNew)
+            HomeAvatar(avatar: row.avatar, pending: row.status.isPending, failed: row.status.isFailure,
+                       refunded: row.status == .refunded, isNew: isNew)
             VStack(alignment: .leading, spacing: 0) {
                 Group {
                     if row.titleIsVerbatim { Text(verbatim: row.title) } else { Text(LocalizedStringKey(row.title)) }
@@ -24,7 +25,7 @@ struct HomeActivityRowView: View {
                 .lineLimit(1).truncationMode(.middle)
                 Text(verbatim: subtitle(row))
                     .noahText(HomeText.footnote)
-                    .foregroundStyle(row.status.isUnsuccessful ? NoahTokens.Colors.failure : NoahTokens.Colors.muted)
+                    .foregroundStyle(row.status.isFailure ? NoahTokens.Colors.failure : NoahTokens.Colors.muted)
                     .lineLimit(1)
             }
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -60,7 +61,7 @@ struct HomeActivityRowView: View {
         case .sending: return joined(L10n.text("Sending", locale: language), kind)
         case .confirming: return joined(L10n.text("Confirming", locale: language), kind)
         case .inRound: return L10n.text("In a round", locale: language)
-        case .exiting: return L10n.text("Exiting", locale: language)
+        case .exiting: return L10n.text("Exiting to on-chain", locale: language)
         case .done: return joined(kind, time)
         }
     }
@@ -81,6 +82,8 @@ struct HomeAvatar: View {
     let avatar: HomeActivityRow.Avatar
     let pending: Bool
     let failed: Bool
+    /// A refund that came back: a neutral return arrow, not the red badge.
+    var refunded = false
     let isNew: Bool
     var size: CGFloat = 42
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
@@ -117,13 +120,21 @@ struct HomeAvatar: View {
             }
         }
         .overlay(alignment: .bottomTrailing) {
+            let badge: CGFloat = size > 42 ? 22 : 17
             if failed {
-                let badge: CGFloat = size > 42 ? 22 : 17
                 Text(verbatim: "!")
                     .font(.system(size: size > 42 ? 13 : 11, weight: .bold))
                     .foregroundStyle(.white)
                     .frame(width: badge, height: badge)
                     .background(NoahTokens.Colors.failure, in: Circle())
+                    .background(Circle().stroke(NoahTokens.Colors.background, lineWidth: 4))
+                    .offset(x: size > 42 ? 2 : 3, y: size > 42 ? 2 : 3)
+            } else if refunded {
+                Image(systemName: "arrow.uturn.backward").accessibilityHidden(true)
+                    .font(.system(size: size > 42 ? 11 : 9, weight: .bold))
+                    .foregroundStyle(NoahTokens.Colors.background)
+                    .frame(width: badge, height: badge)
+                    .background(NoahTokens.Colors.foreground, in: Circle())
                     .background(Circle().stroke(NoahTokens.Colors.background, lineWidth: 4))
                     .offset(x: size > 42 ? 2 : 3, y: size > 42 ? 2 : 3)
             }
@@ -161,7 +172,7 @@ private struct HomeNewDot: View {
     }
 }
 
-/// Compact Home's latest five, with "See all".
+/// Compact Home's latest eight, with "See all".
 struct HomeRecentList: View {
     let history: HistoryModel
     let ownDomain: String
@@ -179,7 +190,7 @@ struct HomeRecentList: View {
             header
             content
         }
-        .animation(NoahTokens.Motion.travel(reduceMotion), value: history.transactions.prefix(5).map(\.id))
+        .animation(NoahTokens.Motion.travel(reduceMotion), value: history.transactions.prefix(8).map(\.id))
     }
 
     private var header: some View {
@@ -187,11 +198,15 @@ struct HomeRecentList: View {
             Text("Recent").noahText(HomeText.section).foregroundStyle(NoahTokens.Colors.muted)
                 .accessibilityAddTraits(.isHeader)
             Spacer()
-            Button("See all", action: onSeeAll)
-                .noahText(HomeText.strong)
-                .foregroundStyle(NoahTokens.Colors.foreground)
-                .frame(minHeight: NoahTokens.Size.hitTarget)
-                .accessibilityIdentifier("home-see-all")
+            Button(action: onSeeAll) {
+                Text("See all")
+                    .padding(.leading, 12)
+                    .frame(minHeight: NoahTokens.Size.hitTarget)
+                    .contentShape(Rectangle())
+            }
+            .noahText(HomeText.strong)
+            .foregroundStyle(NoahTokens.Colors.foreground)
+            .accessibilityIdentifier("home-see-all")
         }
         .padding(.bottom, -10)
     }
@@ -206,7 +221,7 @@ struct HomeRecentList: View {
             }
             .padding(.vertical, NoahTokens.Space.l)
         } else {
-            let rows = Array(history.transactions.prefix(5))
+            let rows = Array(history.transactions.prefix(8))
             ForEach(Array(rows.enumerated()), id: \.element.id) { index, transaction in
                 Button { onSelect(transaction) } label: {
                     HomeActivityRowView(transaction: transaction, ownDomain: ownDomain, unit: unit, hidden: hidden,
@@ -303,6 +318,10 @@ struct HomeBalanceSheet: View {
             VStack(alignment: .leading, spacing: 0) {
                 Text("Balance").noahText(NoahTokens.Typography.sheetTitle)
                     .accessibilityAddTraits(.isHeader)
+                if unit == .bip177 {
+                    Text("₿1 = 1 sat").noahText(NoahTokens.Typography.sub).foregroundStyle(NoahTokens.Colors.muted)
+                        .padding(.top, 2)
+                }
                 Text(verbatim: hidden ? HomeBalanceView.hiddenText(unit: unit)
                     : BitcoinAmount.format(sats: Int64(clamping: balance.totalSats), unit: unit, locale: locale))
                     .noahText(NoahTokens.Typography.amount)
@@ -310,7 +329,7 @@ struct HomeBalanceSheet: View {
                     .padding(.top, 6).padding(.bottom, 16)
                 ForEach(Array(balance.details.enumerated()), id: \.offset) { index, row in
                     HStack {
-                        Text(LocalizedStringKey(row.label)).noahText(NoahTokens.Typography.body)
+                        Text(LocalizedStringKey(Self.plainLabel(row.label))).noahText(NoahTokens.Typography.body)
                             .foregroundStyle(NoahTokens.Colors.muted)
                         Spacer(minLength: NoahTokens.Space.m)
                         Text(verbatim: WalletBalance.display(row.sats, hidden: hidden, unit: unit, locale: locale))
@@ -326,5 +345,24 @@ struct HomeBalanceSheet: View {
             .padding(.top, 8).padding(.bottom, 28)
         }
         .scrollBounceBehavior(.basedOnSize)
+    }
+
+    /// Plain names for the balance rows; the shared detail labels stay as they are for backups and parity.
+    static func plainLabel(_ label: String) -> String {
+        switch label {
+        case "Onchain": "On-chain"
+        case "Pending": "Confirming"
+        case "Immature": "Not yet spendable"
+        case "Offchain": "In Ark"
+        case "Needs Refresh": "Needs renewal"
+        case "Pending Send": "Sending"
+        case "Claimable Lightning Receive": "Lightning to claim"
+        case "Pending In Round": "Waiting for a round"
+        case "Pending Exit": "Exiting"
+        case "Pending Board": "Moving to Ark"
+        case "Pending Arkoor Send": "Sending in Ark"
+        case "Pending Offboard": "Moving to on-chain"
+        default: label
+        }
     }
 }

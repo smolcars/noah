@@ -1,6 +1,6 @@
 import SwiftUI
 
-/// Security → Backup: the status mark, Back up now, the automatic switch, your backups (each
+/// Security → Wallet backup: the status mark, Back up now, the automatic switch, your backups (each
 /// deletable after a confirmation), Export file, and how to restore. Behaviour is today's.
 struct BackupSettingsView: View {
     private enum Sheet: Identifiable, Equatable {
@@ -41,6 +41,8 @@ struct BackupSettingsView: View {
         SettingsScroll {
             SettingsStatusHeader(mark: mark, title: L10n.text(status.title, locale: language), detail: detail, failure: status.mark == .failed)
                 .animation(NoahTokens.Motion.travel(reduceMotion, NoahTokens.Motion.soft), value: status.mark)
+            // Home's nudge is the recovery phrase; this is the encrypted wallet file, which needs it too.
+            SettingsWarning(text: L10n.text("Restoring a wallet backup also needs your recovery phrase.", locale: language), systemImage: "key")
             SettingsGroup {
                 SettingsRow(icon: "arrow.clockwise", title: L10n.text(status.mark == .failed ? "Try again" : "Back up now", locale: language),
                             bold: true, trailing: .empty, id: "backup-now", action: backUp)
@@ -66,7 +68,7 @@ struct BackupSettingsView: View {
                 "Encrypted with your recovery phrase before it leaves this phone. To restore, enter your recovery phrase when you set up Noah on a phone.",
                 locale: language))
         }
-        .settingsChrome("Backup")
+        .settingsChrome("Wallet backup")
         .onboardingHaptics(haptics)
         .settingsSheet(item: $sheet, locked: busy) { sheet in
             switch sheet {
@@ -108,7 +110,7 @@ struct BackupSettingsView: View {
         case .done: return last ?? ""
         case .running: return L10n.text("Encrypting and uploading", locale: language)
         case .failed: return last.map { L10n.text("Last good backup {date}", $0, locale: language) } ?? L10n.text("Try again", locale: language)
-        case .pending: return L10n.text("Backup pending", locale: language)
+        case .pending: return last.map { L10n.text("Last backup {date}", $0, locale: language) } ?? ""
         case .off: return last.map { L10n.text("Last backup {date}", $0, locale: language) } ?? ""
         case .never: return L10n.text(enabled ? "Backs up when your wallet changes" : "Turn it on or back up now", locale: language)
         }

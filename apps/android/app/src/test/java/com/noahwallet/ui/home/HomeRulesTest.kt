@@ -42,7 +42,7 @@ class HomeRulesTest {
     @Test fun backupFailuresAreRetryableAndPendingSuccessIsHidden() {
         val failed = HomeRules.backup(PersistedBackupState(lastBackupStatus = "failed"), 0, Locale.US)!!
         assertTrue(failed.retry); assertTrue(failed.failed)
-        assertEquals("An unknown error occurred while backing up.", failed.message)
+        assertEquals("Couldn't reach Noah. Tap to try again.", failed.message)
     }
     @Test fun boardingSuccessIsTransientAndAlwaysInSatsLikeRN() {
         assertEquals("20,000 sats available in Ark", HomeRules.boarding(20_000, 1000, 5999, Locale.US)?.message)

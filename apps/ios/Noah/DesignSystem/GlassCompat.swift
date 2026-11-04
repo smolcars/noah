@@ -53,6 +53,18 @@ extension View {
         modifier(GlassCompat(shape: shape, interactive: interactive, tint: tint))
     }
 
+    /// A filled pill: prominent glass in `tint` while enabled. Disabled, an opaque soft fill with a hairline
+    /// edge and no glass, so it still reads as a button on white (glass washes the soft tint out).
+    @ViewBuilder
+    func pillFill(enabled: Bool, tint: Color) -> some View {
+        if enabled {
+            glassCompat(in: Capsule(), interactive: true, tint: tint)
+        } else {
+            background(NoahTokens.Colors.soft, in: Capsule())
+                .overlay { Capsule().strokeBorder(NoahTokens.Colors.hairline, lineWidth: 1) }
+        }
+    }
+
     /// Glass morph identity inside a `GlassGroup` on iOS 26+; nothing before.
     /// Apply after `glassCompat`.
     @ViewBuilder

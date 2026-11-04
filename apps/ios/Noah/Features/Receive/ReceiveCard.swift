@@ -37,10 +37,8 @@ struct ReceiveArrival: Equatable, Identifiable {
         switch rail {
         case .ark: return ("", false)
         case .lightning:
-            if t < 0.85 { return (L10n.text("Incoming over Lightning", locale: language), false) }
-            if t < 1.65 { return (L10n.text("Ark holds it for you", locale: language), false) }
-            if t < 2.5 { return (L10n.text("Claiming with your key", locale: language), false) }
-            return t < flipAt + 1.6 ? (L10n.text("Received", locale: language), true) : ("", false)
+            // It's already claimed (a successful movement starts the arrival): it says so from the start while the motion retells it.
+            return t < flipAt + 1.6 ? (L10n.text("Payment received", locale: language), true) : ("", false)
         case .onchain:
             if t < 0.9 { return (L10n.text("Seen on the network", locale: language), false) }
             if let confirmedHeight, let confirmedAt, Date(timeInterval: t, since: start) >= confirmedAt {
@@ -54,7 +52,7 @@ struct ReceiveArrival: Equatable, Identifiable {
     var phaseBoundaries: [Double] {
         switch rail {
         case .ark: []
-        case .lightning: [0.85, 1.65, 2.5, flipAt + 1.6]
+        case .lightning: [flipAt + 1.6]
         case .onchain: [0.9] + (confirmedAt.map { [elapsed($0)] } ?? [])
         }
     }
@@ -432,7 +430,7 @@ private struct ArrivalOverlay: View {
                     canvas.stroke(path, canvas.colors.orange, 3.2, dash: [240, 240], phase: CGFloat(offset < 0 ? offset + 480 : offset))
                 }
             }
-            // "Ark holds it for you": a locked coin drops into the card; your key opens it.
+            // The coin drops into the card (no padlock: it has already arrived); your key still turns.
             let drop = time.p(0.85, .bouncy)
             let coinOpacity = time.o(0.85, .bouncy) * (1 - time.o(arrival.flipAt, .snappy))
             canvas.layer(
@@ -441,10 +439,6 @@ private struct ArrivalOverlay: View {
                 offset: CGSize(width: 0, height: Time.mix(sy - cy, 0, drop)),
                 scale: Time.mix(0.4, 1, drop)) { canvas in
                     canvas.payCoin(cx, cy, 26, fill: NoahTokens.Colors.qrInk, ink: .white)
-                    var lock = canvas
-                    lock.context.opacity *= 1 - time.o(2.5, .snappy)
-                    lock.shackle(cx, cy - 25, open: time.p(2.07, .bouncy), ink: NoahTokens.Colors.qrInk)
-                    lock.padlockBody(cx, cy - 25, ink: NoahTokens.Colors.qrInk, paper: .white)
                 }
             if t >= 1.65 && t < 2.07 {
                 let rise = time.p(1.65, .snappy)

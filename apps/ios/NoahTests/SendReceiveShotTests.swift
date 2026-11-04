@@ -8,7 +8,7 @@ import UIKit
 /// payment controller, a fake receive model and stand-ins for wallet reads (no wallet,
 /// server writes or recovery phrase). Write a state name to Documents/sr-shot; "stop" ends
 /// the session. Send: amount, amount-typed, amount-over, amount-recipient, to, to-typing, to-error, to-nomatch,
-/// method, source, review-ark, review-lightning, review-onchain, review-note, review-max, sending-ark, sent-ark,
+/// method, source, review-ark, review-lightning, review-lightning-expanded, review-onchain, review-note, review-max, sending-ark, sent-ark,
 /// sent-lightning, slow-lightning, pending-lightning, refunded, failed, sent-swap,
 /// confirm-swap, sent-wallet, uncertain, already-paid, unavailable, broadcast-pending.
 /// Receive: receive, receive-noaddress, receive-amount, receive-invoice, receive-ark,
@@ -158,7 +158,7 @@ struct SendReceiveShotTests {
         }, quotePayment: { payment in SendQuote(amount: payment.amount, fee: 0, total: payment.amount) }, discardQuote: { _ in })
 
         let fixture = SendReceiveFixture(summary: Self.summary(), tip: Self.tip, refunded: state == "refunded" ? true : nil,
-                                         history: [], fees: [.ark: 0, .lightning: 12, .onchain: 420])
+                                         history: [], fees: [.ark: 0, .lightning: 12, .onchain: 420], btcPrice: 112_000)
         var staging = Staging(send: send, script: script, receive: receiveModel(state), fixture: fixture)
         try await Self.stage(state, &staging)
         let view = WalletTabs(history: history, home: home, send: send, receive: staging.receive, tab: staging.tab)
@@ -255,8 +255,10 @@ struct SendReceiveShotTests {
                     ? .success(SendReceipt(amount: 2_500, fee: 0, proof: .submitReturnedArkSuccess)) : nil)
                 staging.after = staging.submit()
             }
-        case "review-lightning", "sent-lightning", "slow-lightning", "pending-lightning", "refunded":
+        case "review-lightning", "review-lightning-expanded", "sent-lightning", "slow-lightning", "pending-lightning", "refunded":
             await stageLightning(state, &staging)
+            // The invoice card opened ("Show full invoice").
+            if state == "review-lightning-expanded" { staging.fixture.invoiceExpanded = true }
         case "review-onchain", "sent-wallet", "broadcast-pending":
             var quote = SendQuote(amount: 50_000, fee: 420, total: 50_420, feeRate: 2)
             quote.prepared = try JSONDecoder().decode(SendPreparedTransaction.self, from: Data(
@@ -274,7 +276,7 @@ struct SendReceiveShotTests {
             staging.review(SendPayment(destination: "maya@localhost.com", method: "lightning", amount: 1_500, comment: "Coffee and a croissant, thanks!"),
                            SendQuote(amount: 1_500, fee: 12, total: 1_512), destination: "maya@localhost.com")
         case "review-max":
-            // An Ark-funded on-chain Max send: the longest labels (From, Estimated fee, Total (reviewed coins)).
+            // An Ark-funded on-chain Max send: the longest labels (From, Estimated fee, Total).
             staging.review(SendPayment(destination: bitcoin, method: "onchain", amount: 152_100, source: .offchain, max: true),
                            SendQuote(amount: 152_100, fee: 642, total: 152_742, vtxoIDs: ["fixture:0"]), destination: bitcoin)
         default: return false

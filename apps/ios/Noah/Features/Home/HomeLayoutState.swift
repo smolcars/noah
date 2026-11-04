@@ -192,10 +192,10 @@ struct HomeActivityRow: Equatable {
             default: false
             }
         }
-        /// The red badge: failed and refunded, not canceled.
+        /// The red badge and text: failed only. A refund came back and a cancel was chosen: both stay neutral.
         var isFailure: Bool {
             switch self {
-            case .failed, .refunded: true
+            case .failed: true
             default: false
             }
         }
@@ -248,10 +248,18 @@ struct HomeActivityRow: Equatable {
             kind = .lightning
             avatar = .lightning
         } else {
-            title = transaction.baseLabel
+            // Plain words for the operation ("Board" and "Offboard" stay in the details); otherwise what happened, and the
+            // subtitle says how it moved.
+            let moved = !["failed", "canceled"].contains(transaction.movementStatus)
+            title = switch transaction.movementKind {
+            case "onboard": moved ? "Moved to Ark" : "Move to Ark"
+            case "offboard": moved ? "Moved to on-chain" : "Move to on-chain"
+            case "exit": "Emergency exit"
+            default: transaction.exitFeeFor != nil ? transaction.baseLabel : outgoing ? "Sent" : "Received"
+            }
             titleIsVerbatim = false
-            // Board, Offboard, Ark Exit and Exit fee name the operation, so the subtitle says how it moved.
-            kind = ["onboard", "offboard", "exit"].contains(transaction.movementKind) || transaction.exitFeeFor != nil ? kindLabel : nil
+            // A pending exit's state already says where it goes: "Exiting to on-chain".
+            kind = transaction.movementKind == "exit" && transaction.movementStatus == "pending" ? nil : kindLabel
             avatar = transaction.exitFeeFor != nil ? .exit : lightning ? .lightning : onchain ? .chain : outgoing ? .outgoing : .incoming
         }
 

@@ -3,6 +3,7 @@ package com.noahwallet.onchain
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -46,7 +47,8 @@ class ExitMovieTest {
         val scenario = ActivityScenario.launch(ComponentActivity::class.java)
         scenario.onActivity {
             it.enableEdgeToEdge()
-            it.setContent { com.noahwallet.ui.NoahTheme { Box(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing)) { ExitPreviewHost {
+            it.setContent { com.noahwallet.ui.NoahTheme { Box(Modifier.fillMaxSize().background(galleryBackground())
+                .windowInsetsPadding(WindowInsets.safeDrawing)) { ExitPreviewHost {
                 if (movie == "list") ExitListContent(f.list, f.tip + 2, setOf(f.list[5].id), true, false, false, f.money, {}, {}, {}, {})
                 else frames.getOrNull(step)?.let { (exit, context) ->
                     ExitProgressContent(exit, f.stage(exit, context.tip), context, false, false, f.money, {}, {}, {}, {}, {}, {},

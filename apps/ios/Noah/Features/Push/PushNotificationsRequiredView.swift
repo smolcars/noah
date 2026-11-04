@@ -53,12 +53,12 @@ struct NotificationsScreen: View {
         ZStack {
             if required {
                 OnboardingHeadline(title: Text("Notifications are required"),
-                                   subtitle: Text("Without them, Noah can’t receive payments or renew your bitcoin before it expires."),
+                                   subtitle: Text("Without them, Noah can’t receive payments or renew your Ark coins before they expire."),
                                    large: layout.wide, centered: true)
                     .transition(.opacity)
             } else {
                 OnboardingHeadline(title: Text("Keep Noah awake"),
-                                   subtitle: Text("Notifications let Noah receive payments and renew your bitcoin before it expires."),
+                                   subtitle: Text("Notifications let Noah receive payments and renew your Ark coins before they expire."),
                                    large: layout.wide, centered: true)
                     .transition(.opacity)
             }
@@ -70,7 +70,7 @@ struct NotificationsScreen: View {
         Button(action: action) {
             ZStack {
                 Text(required ? "Open Settings" : "Turn on notifications").opacity(busy ? 0 : 1)
-                if busy { ProgressView().tint(NoahTokens.Colors.background) }
+                if busy { ButtonSpinner() }
             }
         }
         .buttonStyle(OnboardingPrimaryButtonStyle())

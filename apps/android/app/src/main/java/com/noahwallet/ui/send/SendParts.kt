@@ -19,6 +19,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.BlurredEdgeTreatment
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
@@ -99,7 +100,6 @@ internal object SendType {
 }
 
 internal object SendIcons {
-    val back = R.drawable.ic_sr_back
     val copy = R.drawable.ic_sr_copy
     val swap = R.drawable.ic_sr_swap
     val delete = R.drawable.ic_sr_delete
@@ -259,18 +259,20 @@ internal fun RailCard(icon: Int?, name: String, line: String, best: Boolean, ena
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
     val scale by animateFloatAsState(if (pressed && !LocalReduceMotion.current) .98f else 1f, NoahTokens.Motion.tap(), label = "rail")
-    Row(modifier.fillMaxWidth().graphicsLayer { scaleX = scale; scaleY = scale; alpha = if (enabled) 1f else .4f }
+    // Unavailable: the icon and name dim, the reason stays readable (no fade on the whole card).
+    val dim = Modifier.alpha(if (enabled) 1f else .4f)
+    Row(modifier.fillMaxWidth().graphicsLayer { scaleX = scale; scaleY = scale }
         .tonal(RoundedCornerShape(22.dp), palette.soft)
         .then(if (selected) Modifier.border(1.5.dp, palette.foreground, RoundedCornerShape(22.dp)) else Modifier)
         .clickable(interaction, indication = null, enabled = enabled, role = Role.Button, onClick = onClick).padding(horizontal = 16.dp, vertical = 14.dp)
         .semantics(mergeDescendants = true) { this.selected = selected },
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-        if (icon != null) Box(Modifier.size(40.dp).background(palette.background, CircleShape), contentAlignment = Alignment.Center) {
+        if (icon != null) Box(dim.size(40.dp).background(palette.background, CircleShape), contentAlignment = Alignment.Center) {
             Icon(painterResource(icon), null, Modifier.size(20.dp), tint = palette.foreground)
         }
         Column(Modifier.weight(1f)) {
-            Text(name, style = SendType.strong, color = palette.foreground)
-            Text(line, style = SendType.small, color = palette.muted)
+            Text(name, dim, style = SendType.strong, color = palette.foreground)
+            Text(line, style = if (enabled) SendType.small else SendType.line, color = palette.muted)
         }
         if (best) Text(tr("Best"), Modifier.background(palette.orangeTint, CircleShape).padding(horizontal = 8.dp, vertical = 3.dp), style = SendType.tag,
             color = palette.orangeText)
@@ -278,38 +280,31 @@ internal fun RailCard(icon: Int?, name: String, line: String, best: Boolean, ena
 }
 
 /**
- * A review or result row (48 dp): muted label, value on the right; amounts in Space Grotesk. A [wraps] row too long for
- * one line puts its label above its value and both wrap rather than ellipsize (Review's rows, as on iOS).
+ * A review or result row (48 dp): muted label, value on the right; amounts in Space Grotesk. A row too long for one line
+ * puts its label above its value and both wrap rather than ellipsize (as on iOS), so no amount is ever cut off.
  */
 @Composable
 internal fun ValueRow(label: String, value: String, modifier: Modifier = Modifier, number: Boolean = false, icon: Int? = null, divider: Boolean = true,
-    copy: (() -> Unit)? = null, wraps: Boolean = false) {
+    copy: (() -> Unit)? = null) {
     val palette = LocalPalette.current
     val row = modifier.fillMaxWidth().heightIn(min = 48.dp)
         .drawBehind { if (divider) drawRect(palette.hairline, Offset(0f, size.height - 1.dp.toPx()), Size(size.width, 1.dp.toPx())) }
         .semantics(mergeDescendants = true) { }
     val copyButton = @Composable {
         val copyLabel = tr("Copy")
-        if (copy != null) Box(Modifier.padding(start = 8.dp).size(36.dp).tonal(CircleShape, palette.soft)
+        // The bare glyph in a 48 dp target, as every other copy button.
+        if (copy != null) Box(Modifier.padding(start = 2.dp).offset(x = 12.dp).size(48.dp).clip(CircleShape)
             .clickable(role = Role.Button, onClickLabel = copyLabel, onClick = copy).semantics { contentDescription = copyLabel },
             contentAlignment = Alignment.Center) {
             Icon(painterResource(SendIcons.copy), null, Modifier.size(18.dp), tint = palette.foreground)
         }
     }
-    if (wraps) LineOrStack(row, label = { Text(label, style = SendType.body, color = palette.muted) }) {
+    LineOrStack(row, label = { Text(label, style = SendType.body, color = palette.muted) }) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             if (icon != null) Icon(painterResource(icon), null, Modifier.padding(end = 6.dp).size(16.dp), tint = palette.foreground)
             Text(value, Modifier.weight(1f, fill = false), style = if (number) SendType.number else SendType.value, color = palette.foreground)
             copyButton()
         }
-    } else Row(row, verticalAlignment = Alignment.CenterVertically) {
-        Text(label, Modifier.padding(end = 12.dp), style = SendType.body, color = palette.muted, maxLines = 1)
-        Row(Modifier.weight(1f), horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
-            if (icon != null) Icon(painterResource(icon), null, Modifier.padding(end = 6.dp).size(16.dp), tint = palette.foreground)
-            Text(value, Modifier.weight(1f, fill = false), style = if (number) SendType.number else SendType.value, color = palette.foreground,
-                maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.End)
-        }
-        copyButton()
     }
 }
 
@@ -320,7 +315,8 @@ private fun LineOrStack(modifier: Modifier, label: @Composable () -> Unit, value
         val title = labels.single()
         val content = values.single()
         val width = constraints.maxWidth
-        val gap = 12.dp.roundToPx()
+        // Side by side only with a clear 24 dp between them, so a long value never reads as part of its label.
+        val gap = 24.dp.roundToPx()
         if (title.maxIntrinsicWidth(Constraints.Infinity) + gap + content.maxIntrinsicWidth(Constraints.Infinity) <= width) {
             val t = title.measure(Constraints(maxWidth = width))
             val v = content.measure(Constraints(maxWidth = width - t.width - gap))
@@ -382,18 +378,21 @@ internal fun HoldToConfirm(hold: String, busyLabel: String, action: String, conf
     val currentEnabled by rememberUpdatedState(enabled)
     val label = if (sending) busyLabel else hold
     val gesture = HoldGesture(scope, progress, press, haptics, reduceMotion)
+    // Disabled keeps its shape, as a disabled pill does: a soft fill and a muted label (never a faded black pill).
+    val off = !enabled && !sending
+    val ink = if (off) palette.muted else palette.background
     // [wrap]: a long label takes a second line and the pill grows (exit pages at large text), rather than shrinking.
     Box(modifier.fillMaxWidth().then(if (wrap) Modifier.heightIn(min = 58.dp) else Modifier.height(58.dp))
-        .graphicsLayer { scaleX = press.value; scaleY = press.value; alpha = if (enabled || sending) 1f else .4f }
+        .graphicsLayer { scaleX = press.value; scaleY = press.value }
         .holdStroke(progress, palette.orange)
-        .background(palette.foreground, RoundedCornerShape(29.dp))
+        .background(if (off) palette.soft else palette.foreground, RoundedCornerShape(29.dp))
         .testTag(tag)
         // A pose change moves the pill under the finger, so it restarts the gesture: hold again in the new pose.
         .pointerInput(LocalPose.current) { with(gesture) { detect({ currentEnabled }, { currentConfirm() }) } }
         .holdSemantics(label, action, enabled) { currentEnabled.also { if (it) confirming = true } }, contentAlignment = Alignment.Center) {
-        if (wrap) WrappingLabel(label, SendType.pill.copy(color = palette.background, textAlign = TextAlign.Center),
+        if (wrap) WrappingLabel(label, SendType.pill.copy(color = ink, textAlign = TextAlign.Center),
             Modifier.padding(horizontal = 16.dp, vertical = 6.dp))
-        else androidx.compose.foundation.text.BasicText(label, Modifier.padding(horizontal = 16.dp), style = SendType.pill.copy(color = palette.background),
+        else androidx.compose.foundation.text.BasicText(label, Modifier.padding(horizontal = 16.dp), style = SendType.pill.copy(color = ink),
             maxLines = 1, autoSize = androidx.compose.foundation.text.TextAutoSize.StepBased(minFontSize = 11.sp, maxFontSize = SendType.pill.fontSize))
     }
     LaunchedEffect(sending) { if (!sending && progress.value >= 1f) progress.snapTo(0f) }
@@ -524,16 +523,17 @@ internal fun SwapTitle(text: String, style: TextStyle, modifier: Modifier = Modi
 
 /** The muted line under the stage: fades and rises in on each change; done phases read in the foreground. */
 @Composable
-internal fun PhaseText(text: String?, done: Boolean, modifier: Modifier = Modifier) {
+internal fun PhaseText(text: String?, done: Boolean, modifier: Modifier = Modifier, spoken: String? = null) {
     val palette = LocalPalette.current
     val reduceMotion = LocalReduceMotion.current
     val enter = remember { Animatable(1f) }
     LaunchedEffect(text) { if (text != null) { enter.snapTo(0f); enter.animateTo(1f, if (reduceMotion) tween(180) else NoahTokens.Motion.snappy()) } }
-    Box(modifier.fillMaxWidth().height(20.dp), contentAlignment = Alignment.Center) {
+    // Its own height (two lines at most), so large text never clips it.
+    Box(modifier.fillMaxWidth().heightIn(min = 20.dp), contentAlignment = Alignment.Center) {
         if (text != null) Text(text, Modifier.graphicsLayer {
             alpha = enter.value.coerceIn(0f, 1f); if (!reduceMotion) translationY = 6 * (1 - enter.value) * density
-        }.semantics { liveRegion = LiveRegionMode.Polite }, style = SendType.phase, color = if (done) palette.foreground else palette.muted,
-            textAlign = TextAlign.Center, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }.semantics { liveRegion = LiveRegionMode.Polite; if (spoken != null) contentDescription = spoken }, style = SendType.phase,
+            color = if (done) palette.foreground else palette.muted, textAlign = TextAlign.Center, maxLines = 2, overflow = TextOverflow.Ellipsis)
     }
 }
 
@@ -551,17 +551,25 @@ internal fun SendPill(title: String, modifier: Modifier = Modifier, enabled: Boo
     val scale by animateFloatAsState(if (pressed && !LocalReduceMotion.current) .97f else 1f, NoahTokens.Motion.tap(), label = "pill")
     val shape = RoundedCornerShape(height / 2)
     val style = if (height < 52.dp) SendType.pill.copy(fontSize = 16.sp, lineHeight = 20.sp) else SendType.pill
-    // Red only while it can act (prototype `.pill.bad:disabled`): a disabled destructive pill looks like any other.
-    val red = danger && enabled
-    val ink = if (outlined) palette.foreground else if (red) Color.White else palette.background
-    Box(modifier.then(if (wrap) Modifier.heightIn(min = height) else Modifier.height(height)).graphicsLayer { scaleX = scale; scaleY = scale
-        alpha = if (enabled || loading) 1f else .28f }
-        .then(if (outlined) Modifier.border(1.5.dp, palette.hairline, shape).clip(shape) else Modifier.tonal(shape,
-            if (red) palette.failure else palette.foreground))
+    val (fill, ink) = pillColors(off = !enabled && !loading, outlined = outlined, red = danger && enabled, palette = palette)
+    Box(modifier.then(if (wrap) Modifier.heightIn(min = height) else Modifier.height(height)).graphicsLayer { scaleX = scale; scaleY = scale }
+        .then(if (outlined) Modifier.border(1.5.dp, palette.hairline, shape).clip(shape) else Modifier.tonal(shape, fill))
         .clickable(interaction, indication = androidx.compose.material3.ripple(), enabled = enabled && !loading, role = Role.Button, onClick = onClick)
         .padding(horizontal = 14.dp, vertical = if (wrap) 6.dp else 0.dp), contentAlignment = Alignment.Center) {
         PillLabel(title, style.copy(color = ink, textAlign = TextAlign.Center), loading, icon, wrap)
     }
+}
+
+/**
+ * A pill's fill and ink. Disabled ([off]) keeps its shape: a soft fill and muted label that stay readable (never a faded black
+ * pill). Red only while it can act (prototype `.pill.bad:disabled`): a disabled destructive pill looks like any other.
+ */
+private fun pillColors(off: Boolean, outlined: Boolean, red: Boolean, palette: NoahTokens.Palette): Pair<Color, Color> = when {
+    off -> palette.soft to palette.muted
+    outlined -> Color.Transparent to palette.foreground
+    // The light theme's deeper red in both themes: white on dark mode's brighter red is under 4.5:1.
+    red -> NoahTokens.Light.failure to Color.White
+    else -> palette.foreground to palette.background
 }
 
 /** The pill's spinner or icon, then its title: on one line that shrinks to fit, or wrapping with [wrap]. */

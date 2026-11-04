@@ -130,7 +130,7 @@ class HistoryMappingTest {
         // No metadata at all: no hash, description, recurring or refund; today's label and rail.
         val bare = row(movement("bark.arkoor:send", intended = -500, sentTo = listOf("ark" to "tark1x"), metadata = ""))
         assertNull(bare.paymentHash); assertNull(bare.description); assertNull(bare.recurring); assertFalse(bare.isRefunded)
-        assertEquals("Ark", HomeRow.of(bare, null).title)
+        assertEquals("Sent", HomeRow.of(bare, null).title)
         // An RN-era repeat payment keeps its Lightning-address reading and Pay again.
         val repeat = row(movement("bark.arkoor:send", intended = -1_000, sentTo = listOf("ark" to "tark1maya"),
             metadata = """{"noah":{"repeat_payment":{"version":1,"destination":"maya@noahwallet.io","comment":"","amount_mode":"sats",""" +
@@ -143,7 +143,7 @@ class HistoryMappingTest {
     }
 
     @Test fun pendingRowsSayWhatTheyAreWaitingFor() {
-        assertEquals("Exiting", home(movement("bark.exit:start", "pending", intended = -20_000, sentTo = listOf("bitcoin" to "bcrt1qexit"))).state)
+        assertEquals("Exiting to on-chain", home(movement("bark.exit:start", "pending", intended = -20_000, sentTo = listOf("bitcoin" to "bcrt1qexit"))).state)
         val offboard = movement("bark.offboard:send_onchain", "pending", intended = -40_000, effective = -40_420, sentTo = listOf("bitcoin" to "bcrt1qx"))
         assertEquals("In a round", home(offboard).state)
         val signed = movement("bark.offboard:send_onchain", "pending", intended = -40_000, effective = -40_420, sentTo = listOf("bitcoin" to "bcrt1qx"),

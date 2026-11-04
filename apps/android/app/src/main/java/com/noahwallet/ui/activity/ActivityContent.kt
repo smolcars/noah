@@ -119,6 +119,8 @@ data class ActivityUi(
     /** Moves on every completed history read, so an open block row re-reads its chain status then too. */
     val revision: Long = 0,
     val now: Date = Date(),
+    /** Settings' debug mode: internal IDs and bark's bookkeeping show in Details only then. */
+    val debug: Boolean = false,
 )
 
 /** What Activity's controls do. Every action is today's: refresh, export, Pay again, the explorer and Settings' screens. */
@@ -628,31 +630,14 @@ private fun ErrorState(message: String, retry: () -> Unit) {
     }
 }
 
-/** Ghost rows of the three avatar kinds, "No activity yet" and a Receive pill. */
+/** A still mark, "No activity yet" and a Receive pill. */
 @Composable
 private fun EmptyState(receive: () -> Unit) {
     val palette = LocalPalette.current
-    val initial = "a" // a person's initial, the first of the three avatar kinds; not copy
-    Column(Modifier.fillMaxWidth().padding(top = 44.dp, start = 24.dp, end = 24.dp).testTag("activity-empty"),
+    Column(Modifier.fillMaxWidth().padding(top = 120.dp, start = 24.dp, end = 24.dp).testTag("activity-empty"),
         horizontalAlignment = Alignment.CenterHorizontally) {
-        Column(Modifier.widthIn(max = 300.dp).fillMaxWidth().clearAndSetSemantics { }) {
-            listOf<@Composable () -> Unit>(
-                { Text(initial, style = HomeType.avatar, color = palette.muted) },
-                { Icon(painterResource(HomeIcons.lightning), null, Modifier.size(20.dp), tint = palette.muted) },
-                { Icon(painterResource(HomeIcons.chain), null, Modifier.size(20.dp), tint = palette.muted) },
-            ).forEachIndexed { i, glyph ->
-                Row(Modifier.fillMaxWidth().height(60.dp).graphicsLayer { alpha = 1 - i * .28f }, verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                    Box(Modifier.size(42.dp).border(1.5.dp, palette.hairline, CircleShape), contentAlignment = Alignment.Center) { glyph() }
-                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(7.dp)) {
-                        Box(Modifier.fillMaxWidth(listOf(.62f, .48f, .56f)[i]).height(10.dp).background(palette.soft, RoundedCornerShape(5.dp)))
-                        Box(Modifier.fillMaxWidth(listOf(.34f, .40f, .28f)[i]).height(10.dp).background(palette.soft, RoundedCornerShape(5.dp)))
-                    }
-                    Box(Modifier.size(54.dp, 12.dp).background(palette.soft, RoundedCornerShape(6.dp)))
-                }
-            }
-        }
-        Text(tr("No activity yet"), Modifier.padding(top = 30.dp, bottom = 18.dp), style = HomeType.listTitle, color = palette.foreground)
-        Pill(tr("Receive"), height = 40.dp, style = ActivityType.link, onClick = receive)
+        com.noahwallet.ui.home.EmptyMark { Icon(painterResource(HomeIcons.activity), null, Modifier.size(26.dp), tint = palette.muted) }
+        Text(tr("No activity yet"), Modifier.padding(top = 20.dp, bottom = 18.dp), style = HomeType.listTitle, color = palette.foreground)
+        Pill(tr("Receive"), height = 44.dp, style = ActivityType.link, onClick = receive)
     }
 }

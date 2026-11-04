@@ -19,6 +19,9 @@ struct SendRecipientLabel: Equatable {
         }
     }
 
+    /// The review's and result's name: an invoice says it doesn't identify who it pays.
+    var identity: String { !nameIsVerbatim && name == "Lightning invoice" ? "Lightning invoice · recipient not named" : name }
+
     /// Long addresses read as their ends: "bc1qxy…0h7r3".
     static func short(_ value: String) -> String {
         value.count > 16 ? String(value.prefix(6)) + "…" + String(value.suffix(4)) : value

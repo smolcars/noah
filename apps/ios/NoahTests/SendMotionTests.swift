@@ -409,7 +409,7 @@ struct SendMotionTests {
         let invoiceNote = "The invoice sets the amount to ₿1,500"
         for (payment, quote, note) in [(max, maxQuote, nil), (max, SendQuote(amount: 1_500, fee: 300, total: 1_800), invoiceNote)] {
             #expect(SendMotion.Rail(payment) == .onchainSwap)
-            #expect(SendConfirmation.arrives(.init(payment), required: 2, locale: "en") == "After 2 confirmations")
+            #expect(SendConfirmation.arrives(.init(payment), required: 2, locale: "en") == "About 20 min · 2 Bitcoin blocks")
             // The fine print keeps its own note.
             #expect(SendConfirmation.fine(invoiceNote: note, quote: quote, locale: "en")
                 == note ?? SendQuote.recipientEstimateExplanation)
@@ -473,7 +473,7 @@ struct SendMotionTests {
             let rows = [SendMotion.Rail.ark, .lightning, .onchainSwap].map { text("Via", SendOutcomeView.railName($0), glyph: SendOutcomeView.railGlyph($0)) }
                 + SendSource.allCases.map { text("From", $0.label) }
                 + ["Fee", "Estimated fee"].map { text($0, "Free") }
-                + ["Fee", "Estimated fee", "Total", "Estimated total", "Total (reviewed coins)"].map(number)
+                + ["Fee", "Estimated fee", "Total", "Estimated total"].map(number)
                 + [text("Note", "Coffee and a croissant, thanks!", verbatim: true)]
             for type in Self.textSizes {
                 for item in rows {

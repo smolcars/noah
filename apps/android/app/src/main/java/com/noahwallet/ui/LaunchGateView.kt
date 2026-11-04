@@ -335,11 +335,11 @@ internal fun DeleteWalletFallback(model: AppModel, color: androidx.compose.ui.gr
     val enabled = model.canDeleteRecoveryWallet
     androidx.compose.material3.TextButton({ showingDelete = true }, enabled = enabled,
         colors = androidx.compose.material3.ButtonDefaults.textButtonColors(contentColor = color)) {
-        Text(tr("Delete Wallet"), style = style ?: androidx.compose.material3.LocalTextStyle.current)
+        Text(tr("Delete wallet"), style = style ?: androidx.compose.material3.LocalTextStyle.current)
     }
     if (showingDelete) WalletAlertDialog(
         onDismissRequest = { if (enabled) showingDelete = false },
-        title = { Text(tr("Delete Wallet")) },
+        title = { Text(tr("Delete wallet")) },
         text = { Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
             Text(tr("This removes your wallet and recovery phrase from this device. Make sure you have saved your recovery phrase. Type delete to confirm."))
             androidx.compose.material3.OutlinedTextField(confirmation, { confirmation = it },
@@ -350,6 +350,6 @@ internal fun DeleteWalletFallback(model: AppModel, color: androidx.compose.ui.gr
             model.action("Couldn't delete wallet. Restart Noah and try again.") {
                 model.deleteWallet(); showingDelete = false
             }
-        }, enabled = enabled && com.noahwallet.ui.settings.SettingsRules.deleteConfirmed(confirmation)) { Text(tr("Delete Wallet")) } },
+        }, enabled = enabled && com.noahwallet.ui.settings.SettingsRules.deleteConfirmed(confirmation)) { Text(tr("Delete wallet")) } },
     )
 }

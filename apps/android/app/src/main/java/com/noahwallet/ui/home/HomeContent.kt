@@ -14,6 +14,7 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.material3.pulltorefresh.PullToRefreshBox
 import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
@@ -25,17 +26,21 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.BlurredEdgeTreatment
 import androidx.compose.ui.draw.blur
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.*
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
@@ -146,7 +151,11 @@ fun HomeContent(ui: HomeUi, actions: HomeActions, memory: HomeMemory, toasts: Ho
     val toggle = { haptics.medium(); actions.toggleHidden() }
     // The prototype's entrance: top bar, balance, fiat, status (when shown), nudge, card or Recent; 40 ms apart.
     val after = if (ui.status != null) 40L else 0L
-    val leading = @Composable { tuck: Float -> HomeLeading(ui, state, shownTotal, tuck, entered, after, actions, openSheet, toggle) }
+    // Where the big balance (with its fiat line) ends in the column, so it fades only as it passes under the top bar.
+    var heroBottom by remember { mutableIntStateOf(0) }
+    val leading = @Composable { tuck: Float -> HomeLeading(ui, state, shownTotal, tuck, entered, after, actions, openSheet, toggle) { fiat ->
+        bottomIn(homeScroll.content, fiat) { heroBottom = it }
+    } }
     val primary = @Composable { wide: Boolean ->
         when (state) {
             HomeRules.State.fresh -> GetPaidCard(ui, payment, paymentElapsed, wide, onCopy = copy, onShare = share, onProfile = actions.profile,
@@ -163,7 +172,7 @@ fun HomeContent(ui: HomeUi, actions: HomeActions, memory: HomeMemory, toasts: Ho
     HomeScrollAnchor(ui, state, homeScroll, pose !is OnboardingPose.Compact)
     val refresh = @Composable { content: @Composable BoxScope.() -> Unit -> HomeRefreshBox(refreshing, actions.refresh, content) }
     when (pose) {
-        OnboardingPose.Compact -> CompactHome(state, homeScroll, refresh, leading, primary, topBar, toast)
+        OnboardingPose.Compact -> CompactHome(state, homeScroll, { heroBottom }, refresh, leading, primary, topBar, toast)
         is OnboardingPose.Wide -> Row(Modifier.fillMaxSize()) {
             Box(Modifier.width(pose.start).fillMaxHeight()) {
                 refresh {
@@ -237,13 +246,18 @@ private fun rememberAddressActions(toasts: HomeToasts): Pair<(String) -> Unit, (
 /** The leading content: the balance, fiat, status and nudge, rising in turn; the suspended note instead while suspended. */
 @Composable
 private fun HomeLeading(ui: HomeUi, state: HomeRules.State, shownTotal: ULong?, tuck: Float, entered: Long, after: Long, actions: HomeActions,
-    openSheet: () -> Unit, toggle: () -> Unit) {
+    openSheet: () -> Unit, toggle: () -> Unit, onHero: (LayoutCoordinates) -> Unit = {}) {
     val palette = LocalPalette.current
     val reduceMotion = LocalReduceMotion.current
     val haptics = rememberHaptics()
     if (state == HomeRules.State.suspended) { Box(Modifier.rise(entered, 100, 14f, reduceMotion)) { Suspended(actions.suspended) }; return }
+    // While the balance can't load, the number shown is the last one read.
+    if (ui.status is HomeRules.Status.Error && shownTotal != null) Text(tr("Last known balance"),
+        Modifier.padding(top = 8.dp).graphicsLayer { alpha = 1 - tuck }.testTag("home-last-known-balance"), style = HomeType.line, color = palette.muted)
     BalanceBlock(ui, shownTotal, tuck, entered, onTap = openSheet, onToggle = toggle)
-    Box(Modifier.padding(top = 10.dp).height(20.dp).rise(entered, 140, 14f, reduceMotion)) {
+    // Fades with the big balance it belongs to, so it never sits alone under the top bar.
+    Box(Modifier.padding(top = 10.dp).height(20.dp).onGloballyPositioned(onHero)
+        .rise(entered, 140, 14f, reduceMotion).graphicsLayer { alpha = (1 - tuck / .7f).coerceAtLeast(0f) }) {
         ui.fiat?.let { Text(it, style = HomeType.line, color = palette.muted, maxLines = 1) }
     }
     Box(Modifier.rise(entered, 180, 14f, reduceMotion)) {
@@ -295,19 +309,29 @@ private fun HomeRefreshBox(refreshing: Boolean, refresh: () -> Unit, content: @C
     }, content = content)
 }
 
+/** Reports where [child] ends inside [content] (the scrolled column), whatever the scroll. */
+private fun bottomIn(content: LayoutCoordinates?, child: LayoutCoordinates, report: (Int) -> Unit) {
+    content?.takeIf { it.isAttached }?.let { report((it.localPositionOf(child, Offset.Zero).y + child.size.height).toInt()) }
+}
+
 /** One column: the top bar tucks the balance as it scrolls, and the content fades under it. */
 @Composable
-private fun CompactHome(state: HomeRules.State, homeScroll: HomeScroll, refresh: @Composable (@Composable BoxScope.() -> Unit) -> Unit,
+private fun CompactHome(state: HomeRules.State, homeScroll: HomeScroll, heroBottom: () -> Int, refresh: @Composable (@Composable BoxScope.() -> Unit) -> Unit,
     leading: @Composable (Float) -> Unit, primary: @Composable (Boolean) -> Unit, topBar: @Composable BoxScope.(Float, Modifier) -> Unit,
     toast: @Composable (Modifier) -> Unit) {
     val scroll = homeScroll.compact
     val density = androidx.compose.ui.platform.LocalDensity.current
     val tuck by remember(scroll, density) { derivedStateOf { ((with(density) { scroll.value.toDp().value } - 4f) / 52f).coerceIn(0f, 1f) } }
+    // Short content can still scroll the faded balance all the way under the top bar, so it never leaves a blank band.
+    var viewport by remember { mutableIntStateOf(0) }
+    val room = if (state != HomeRules.State.everyday) 0.dp
+    else with(density) { (viewport + heroBottom() - compactTop.roundToPx()).coerceAtLeast(0).toDp() }
     val scrolled by remember(scroll) { derivedStateOf { scroll.value > 2 } }
     refresh {
-        Column(Modifier.fillMaxSize().verticalScroll(scroll).onGloballyPositioned { homeScroll.content = it }.testTag("home-scroll"),
-            horizontalAlignment = Alignment.CenterHorizontally) {
-            Column(Modifier.widthIn(max = 640.dp).fillMaxWidth().padding(start = 24.dp, end = 24.dp, top = compactTop, bottom = 32.dp)) {
+        Column(Modifier.fillMaxSize().onSizeChanged { viewport = it.height }.verticalScroll(scroll).onGloballyPositioned { homeScroll.content = it }
+            .testTag("home-scroll"), horizontalAlignment = Alignment.CenterHorizontally) {
+            Column(Modifier.widthIn(max = 640.dp).fillMaxWidth().heightIn(min = room)
+                .padding(start = 24.dp, end = 24.dp, top = compactTop, bottom = 32.dp)) {
                 leading(tuck)
                 if (state != HomeRules.State.suspended) primary(false)
             }
@@ -427,26 +451,51 @@ private fun BalanceBlock(ui: HomeUi, total: ULong?, tuck: Float, entered: Long, 
     val label = tr("Balance")
     val toggleLabel = tr(if (ui.hidden) "Show wallet balance" else "Hide wallet balance")
     val description = text ?: tr("Loading…")
-    Box(Modifier.padding(top = 8.dp).rise(entered, 100, 14f, reduceMotion)
-        .graphicsLayer {
-            alpha = (1 - tuck) * morph.value.coerceIn(0f, 1f)
-            translationY = -6 * tuck * density
-            val s = (1 - .06f * tuck) * scale.value
-            scaleX = s; scaleY = s
-            transformOrigin = TransformOrigin(0f, 1f)
+    // The eye hides or shows amounts (long-press still does too); the chevron says a tap opens the details.
+    // Gone by the time the top bar's balance fades in (at 0.7), so the two never show at once.
+    Row(Modifier.fillMaxWidth().rise(entered, 100, 14f, reduceMotion).graphicsLayer { alpha = (1 - tuck / .7f).coerceAtLeast(0f)
+        translationY = -6 * tuck * density },
+        verticalAlignment = Alignment.CenterVertically) {
+        // Takes the width (the eye keeps its own), so the figures fit as large as before.
+        Row(Modifier.weight(1f).padding(top = 8.dp)
+            .graphicsLayer {
+                alpha = morph.value.coerceIn(0f, 1f)
+                val s = (1 - .06f * tuck) * scale.value
+                scaleX = s; scaleY = s
+                transformOrigin = TransformOrigin(0f, 1f)
+            }
+            .then(if (Build.VERSION.SDK_INT >= 31 && morph.value < .99f && !reduceMotion) Modifier.blur((4 * (1 - morph.value.coerceIn(0f, 1f))).dp,
+                BlurredEdgeTreatment.Unbounded) else Modifier)
+            .combinedClickable(interactionSource = null, indication = null, hapticFeedbackEnabled = false, onClick = onTap, onLongClick = onToggle)
+            .clearAndSetSemantics {
+                contentDescription = description
+                role = Role.Button
+                onClick(label) { onTap(); true }
+                onLongClick(toggleLabel) { onToggle(); true }
+                customActions = listOf(CustomAccessibilityAction(toggleLabel) { onToggle(); true })
+                testTag = "home-balance"
+            }, verticalAlignment = Alignment.CenterVertically) {
+            BalanceFigures(text, hidden, rollFromZero = entered < 1_600, startDelay = if (entered < 1_600) 160 else 0, Modifier.weight(1f, fill = false))
+            DetailsChevron(total != null)
         }
-        .then(if (Build.VERSION.SDK_INT >= 31 && morph.value < .99f && !reduceMotion) Modifier.blur((4 * (1 - morph.value.coerceIn(0f, 1f))).dp,
-            BlurredEdgeTreatment.Unbounded) else Modifier)
-        .combinedClickable(interactionSource = null, indication = null, hapticFeedbackEnabled = false, onClick = onTap, onLongClick = onToggle)
-        .clearAndSetSemantics {
-            contentDescription = description
-            role = Role.Button
-            onClick(label) { onTap(); true }
-            onLongClick(toggleLabel) { onToggle(); true }
-            customActions = listOf(CustomAccessibilityAction(toggleLabel) { onToggle(); true })
-            testTag = "home-balance"
-        }) {
-        BalanceFigures(text, hidden, rollFromZero = entered < 1_600, startDelay = if (entered < 1_600) 160 else 0)
+        HideToggle(total != null, ui.hidden, toggleLabel, onToggle)
+    }
+}
+
+/** Says a tap on the [shown] balance opens its details. */
+@Composable
+private fun DetailsChevron(shown: Boolean) {
+    if (shown) Icon(painterResource(HomeIcons.chevron), null, Modifier.padding(start = 6.dp, top = 6.dp).size(20.dp), tint = LocalPalette.current.muted)
+}
+
+/** The eye beside a [shown] balance: Home's existing hide flag, a 48 dp target. */
+@Composable
+private fun HideToggle(shown: Boolean, hidden: Boolean, label: String, onToggle: () -> Unit) {
+    if (!shown) return
+    Box(Modifier.offset(x = 12.dp).padding(top = 8.dp).size(48.dp).clip(CircleShape).clickable(role = Role.Button, onClick = onToggle)
+        .semantics { contentDescription = label; testTag = "home-balance-visibility" }, contentAlignment = Alignment.Center) {
+        Icon(painterResource(if (hidden) com.noahwallet.R.drawable.ic_set_eyeoff else com.noahwallet.R.drawable.ic_set_eye), null,
+            Modifier.size(22.dp), tint = LocalPalette.current.muted)
     }
 }
 
@@ -462,7 +511,7 @@ internal fun BalanceFigures(text: String?, hidden: Boolean, rollFromZero: Boolea
     val palette = LocalPalette.current
     val density = androidx.compose.ui.platform.LocalDensity.current
     val measurer = androidx.compose.ui.text.rememberTextMeasurer()
-    // BIP-177's ₿ sits 3 dp from the digits at this size (prototype `.bal .b`), not a full no-break space.
+    // BIP-177's ₿ sits 8 dp from the digits at this size, so it reads like the rows' "₿ 152,742", not one glyph.
     val symbol = text?.startsWith("₿\u00a0") == true
     val digits = if (symbol) text.removePrefix("₿\u00a0") else text
     val base = HomeType.balance
@@ -476,7 +525,7 @@ internal fun BalanceFigures(text: String?, hidden: Boolean, rollFromZero: Boolea
         val style = base.copy(fontSize = base.fontSize * scale, lineHeight = base.lineHeight * scale)
         val line = with(density) { style.lineHeight.toDp() }
         Row(verticalAlignment = Alignment.Bottom) {
-            if (symbol || text == null) Text("₿", Modifier.padding(end = 3.dp * scale).height(line).testTag("home-balance-char"), style = style,
+            if (symbol || text == null) Text("₿", Modifier.padding(end = 8.dp * scale).height(line).testTag("home-balance-char"), style = style,
                 color = if (text == null) palette.hairline else palette.foreground, overflow = TextOverflow.Visible)
             if (digits != null) {
                 // The same line box as the digits, so hiding never moves what's below.
@@ -508,7 +557,7 @@ private fun androidx.compose.ui.unit.Density.figuresWidth(measurer: androidx.com
     hidden: Boolean, withSymbol: Boolean): Int {
     val base = HomeType.balance
     val style = base.copy(fontSize = base.fontSize * scale, lineHeight = base.lineHeight * scale)
-    val head = if (withSymbol) measurer.measure("₿", style).size.width + (3.dp * scale).roundToPx() else 0
+    val head = if (withSymbol) measurer.measure("₿", style).size.width + (8.dp * scale).roundToPx() else 0
     return head + when {
         digits == null -> 0
         hidden -> measurer.measure(digits, style.copy(letterSpacing = .06.em)).size.width
@@ -612,9 +661,10 @@ private fun rememberNudgeMotion(nudge: HomeRules.Nudge?, reduceMotion: Boolean):
 @Composable
 private fun nudgeWords(nudge: HomeRules.Nudge, ui: HomeUi): Triple<Int, String, String?> = when (nudge) {
     is HomeRules.Nudge.Notice -> Triple(HomeIcons.notice, tr(nudge.message), null)
-    is HomeRules.Nudge.Renewal -> Triple(HomeIcons.renew, renewTitle(nudge.renew, ui.unit, ui.locale, ui.hidden), renewSubtitle(nudge.renew))
+    is HomeRules.Nudge.Renewal -> Triple(HomeIcons.renew, renewTitle(nudge.renew, ui.unit, ui.locale, ui.hidden),
+        tr("Renew to keep these coins") + " · " + renewSubtitle(nudge.renew))
     is HomeRules.Nudge.BackupFailed -> Triple(HomeIcons.backupFailed, tr(nudge.banner.title), tr(nudge.banner.message))
-    HomeRules.Nudge.BackUp -> Triple(HomeIcons.backup, tr("Back up your wallet"), tr("Save your recovery phrase"))
+    HomeRules.Nudge.BackUp -> Triple(HomeIcons.backup, tr("Save your recovery phrase"), tr("You need it to restore your wallet"))
     HomeRules.Nudge.Email -> Triple(HomeIcons.email, tr("Add your email"), tr("For urgent wallet alerts"))
     HomeRules.Nudge.Update -> Triple(HomeIcons.update, tr("Update available"), tr("Get the latest fixes"))
 }
@@ -624,7 +674,7 @@ private fun nudgeAction(nudge: HomeRules.Nudge, retrying: Boolean): String? = wh
     is HomeRules.Nudge.Notice -> null
     is HomeRules.Nudge.Renewal -> tr("Renew")
     is HomeRules.Nudge.BackupFailed -> tr(if (retrying) "Working" else "Retry")
-    HomeRules.Nudge.BackUp -> tr("Back up")
+    HomeRules.Nudge.BackUp -> tr("Save")
     HomeRules.Nudge.Email -> tr("Add")
     HomeRules.Nudge.Update -> tr("Update")
 }
@@ -642,7 +692,7 @@ private fun Suspended(settings: () -> Unit) {
     val palette = LocalPalette.current
     Column(Modifier.padding(top = 8.dp).fillMaxWidth().tonal(RoundedCornerShape(22.dp), palette.soft).padding(20.dp),
         verticalArrangement = Arrangement.spacedBy(8.dp)) {
-        Text(tr("Wallet Suspended"), style = NoahTokens.Typography.sheetTitle, color = palette.foreground)
+        Text(tr("Wallet suspended"), style = NoahTokens.Typography.sheetTitle, color = palette.foreground)
         Text(tr("All wallet operations are disabled. Resume your wallet in Settings."), style = HomeType.line, color = palette.muted)
         Spacer(Modifier.height(4.dp))
         Pill(tr("Open Settings"), height = 44.dp, onClick = settings)
@@ -700,18 +750,21 @@ private fun ActivityList(ui: HomeUi, entered: Long, memory: HomeMemory, actions:
     }
 }
 
-/** Compact Everyday: the five latest rows; "See all" opens Activity. */
+/** Compact Everyday: the latest rows (eight fill a phone); "See all" opens Activity. */
 @Composable
 private fun Recent(ui: HomeUi, entered: Long, memory: HomeMemory, actions: HomeActions, onFirstRow: (androidx.compose.ui.layout.LayoutCoordinates) -> Unit) {
     val palette = LocalPalette.current
     val reduceMotion = LocalReduceMotion.current
     val haptics = rememberHaptics()
-    val rows = remember(ui.rows, ui.domain) { ui.rows.take(5).map { HomeRow.of(it, ui.domain) } }
+    val rows = remember(ui.rows, ui.domain) { ui.rows.take(Recent.rows).map { HomeRow.of(it, ui.domain) } }
     Column(Modifier.padding(top = 30.dp).fillMaxWidth().testTag("home-recent")) {
-        Row(Modifier.fillMaxWidth().padding(bottom = 2.dp)) {
-            Text(tr("Recent"), Modifier.weight(1f).alignByBaseline().semantics { heading() }, style = HomeType.header, color = palette.muted)
-            Text(tr("See all"), Modifier.alignByBaseline().clickable(role = Role.Button) { haptics.selection(); actions.seeAll() },
-                style = HomeType.strong, color = palette.foreground)
+        Row(Modifier.fillMaxWidth().padding(bottom = 2.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(tr("Recent"), Modifier.weight(1f).semantics { heading() }, style = HomeType.header, color = palette.muted)
+            // A 48 dp target around the words, without moving them.
+            Box(Modifier.offset(x = 12.dp).heightIn(min = 48.dp).clickable(role = Role.Button) { haptics.selection(); actions.seeAll() }
+                .padding(horizontal = 12.dp), contentAlignment = Alignment.Center) {
+                Text(tr("See all"), style = HomeType.strong, color = palette.foreground)
+            }
         }
         if (rows.isEmpty()) Text(tr(ui.historyError ?: "No activity yet"), Modifier.padding(top = 12.dp), style = HomeType.line, color = palette.muted)
         rows.forEachIndexed { i, row ->
@@ -847,19 +900,38 @@ private fun BalanceSheet(ui: HomeUi, onDismiss: () -> Unit) {
         surfaceContainer = palette.soft, surfaceContainerHigh = palette.soft)) {
         OnboardingSheet(onDismiss, rememberModalBottomSheetState(skipPartiallyExpanded = false)) {
             Text(tr("Balance"), Modifier.semantics { heading() }, style = NoahTokens.Typography.sheetTitle, color = palette.foreground)
+            if (ui.unit == BitcoinAmountUnit.bip177) Text(tr("₿1 = 1 sat"), Modifier.padding(top = 2.dp), style = HomeType.line, color = palette.muted)
             Text(if (balance == null) "" else if (ui.hidden) BitcoinAmount.format(0, ui.unit, ui.locale).replace("0",
                 "••••••") else BitcoinAmount.format(balance.totalSats.toLong(), ui.unit, ui.locale),
                 Modifier.padding(top = 12.dp, bottom = 16.dp), style = HomeType.total, color = palette.foreground)
-            balance?.details?.forEachIndexed { index, row ->
-                val hairline = if (index < balance.details.lastIndex) Modifier.drawBehindHairline(palette.hairline) else Modifier
-                Row(Modifier.fillMaxWidth().height(46.dp).then(hairline),
+            val rows = balance?.details.orEmpty()
+            rows.forEachIndexed { index, row ->
+                val hairline = if (index < rows.lastIndex) Modifier.drawBehindHairline(palette.hairline) else Modifier
+                Row(Modifier.fillMaxWidth().heightIn(min = 46.dp).then(hairline),
                     verticalAlignment = Alignment.CenterVertically) {
-                    Text(tr(row.label), Modifier.weight(1f), style = HomeType.rowTitle, color = palette.muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                    Text(tr(balanceLabel(row.label)), Modifier.weight(1f).padding(vertical = 8.dp), style = HomeType.rowTitle, color = palette.muted)
                     Text(ui.amount(row.sats), style = HomeType.amount, color = palette.foreground)
                 }
             }
         }
     }
+}
+
+/** The sheet's plain words for the balance's shared row names (WalletBalance.details, a cross-platform contract). */
+internal fun balanceLabel(label: String): String = when (label) {
+    "Onchain" -> "On-chain"
+    "Pending" -> "Confirming"
+    "Immature" -> "Not yet spendable"
+    "Offchain" -> "In Ark"
+    "Needs Refresh" -> "Needs renewal"
+    "Pending Send" -> "Sending"
+    "Claimable Lightning Receive" -> "Lightning to claim"
+    "Pending In Round" -> "Waiting for a round"
+    "Pending Exit" -> "Exiting"
+    "Pending Board" -> "Moving to Ark"
+    "Pending Arkoor Send" -> "Sending in Ark"
+    "Pending Offboard" -> "Moving to on-chain"
+    else -> label
 }
 
 private fun Modifier.drawBehindHairline(color: Color) = drawBehind {

@@ -44,12 +44,12 @@ struct BackupStatus: Equatable {
         lastBackup = state.lastBackupAt.map { Date(timeIntervalSince1970: $0 / 1000) }
         switch state.lastBackupStatus {
         case .inProgress: mark = .running; title = "Backing up…"
-        case .failed: mark = .failed; title = "Backup failed"
+        case .failed: mark = .failed; title = "Wallet backup failed"
         case .idle, .success:
             // Changes (or a deleted backup) wait for an upload: never "Backed up" until one succeeds.
-            if state.backupPending { mark = .pending; title = "Backup pending" }
-            else if lastBackup == nil { mark = .never; title = "Not backed up yet" }
-            else if enabled { mark = .done; title = "Backed up" }
+            if state.backupPending { mark = .pending; title = "Wallet backup pending" }
+            else if lastBackup == nil { mark = .never; title = "No wallet backup yet" }
+            else if enabled { mark = .done; title = "Wallet backed up" }
             else { mark = .off; title = "Automatic backups off" }
         }
     }

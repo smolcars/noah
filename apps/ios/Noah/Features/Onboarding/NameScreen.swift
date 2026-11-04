@@ -138,7 +138,7 @@ struct NameHandleField: View {
                     .padding(.trailing, 3)
                     .hidden()
                     .overlay(alignment: .leading) {
-                        TextField("name", text: $name.text)
+                        TextField(text: $name.text, prompt: Text("name").foregroundStyle(NoahTokens.Colors.muted)) { Text("name") }
                             .noahText(NoahTokens.Typography.handle)
                             .foregroundStyle(NoahTokens.Colors.foreground)
                             .tint(NoahTokens.Colors.orange)

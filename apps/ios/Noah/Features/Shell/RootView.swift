@@ -41,7 +41,7 @@ struct RootView: View {
                     .padding()
             }
             if model.phase == .blocked(.seedWithoutWalletData) || model.phase == .blocked(.walletDataWithoutSeed) {
-                Button("Delete Wallet", role: .destructive) { showingDelete = true }
+                Button("Delete wallet", role: .destructive) { showingDelete = true }
                     .padding()
             }
         }
@@ -342,11 +342,13 @@ private struct WideTabBar: View {
     @Namespace private var lens
     @State private var haptics = OnboardingHaptics()
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.locale) private var locale
 
     var body: some View {
+        let tabs = WalletTabs.Tab.allCases
         GlassGroup {
             HStack(spacing: 0) {
-                ForEach(WalletTabs.Tab.allCases, id: \.self) { tab in
+                ForEach(Array(tabs.enumerated()), id: \.element) { index, tab in
                     Button {
                         guard selection != tab else { return }
                         haptics.play(.selection)
@@ -368,6 +370,8 @@ private struct WideTabBar: View {
                     }
                     .buttonStyle(.plain)
                     .accessibilityAddTraits(selection == tab ? .isSelected : [])
+                    // The position a system tab bar announces ("2 of 4").
+                    .accessibilityValue(Text(verbatim: L10n.text("{n} of {total}", index + 1, tabs.count, locale: locale.identifier)))
                     .accessibilityIdentifier("wide-tab-\(tab)")
                 }
             }
@@ -377,6 +381,29 @@ private struct WideTabBar: View {
         }
         .onboardingHaptics(haptics)
         .accessibilityElement(children: .contain)
+        .accessibilityAddTraits(.isTabBar)
+    }
+}
+
+extension View {
+    /// Rows scrolling under the floating tab bar fade out over 24 pt above it, then meet a backing that's opaque
+    /// across the bar's whole footprint (the bottom safe area), so its glass never samples or slices text.
+    /// The scroll content's own bottom padding (32 pt) lets the last row rise clear of the fade.
+    func tabBarScrollEdge() -> some View {
+        overlay {
+            GeometryReader { proxy in
+                VStack(spacing: 0) {
+                    Spacer(minLength: 0)
+                    LinearGradient(colors: [NoahTokens.Colors.background.opacity(0), NoahTokens.Colors.background],
+                                   startPoint: .top, endPoint: .bottom)
+                        .frame(height: 24)
+                    NoahTokens.Colors.background.frame(height: proxy.safeAreaInsets.bottom)
+                }
+                .ignoresSafeArea(edges: .bottom)
+            }
+            .allowsHitTesting(false)
+            .accessibilityHidden(true)
+        }
     }
 }
 

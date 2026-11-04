@@ -23,9 +23,10 @@ extension ExitStageTests {
         let scene = Self.mempool(heights: (921_346...921_350).map(\.self), pending: 5, count: 9)
         let labels = painter.labels(scene, ys: g.levels([1, 1, 1, 1, 1, 0, 0, 0, 0]))
         let texts = Self.texts(labels)
-        // The waiting transaction and your coin always get theirs; the pile of blocks becomes one range.
+        // The waiting transaction and your coin always get theirs. At the 13-pt minimum the SE has no room for the
+        // pile's range (the Transactions row counts them); where a range shows, it covers every unlabelled block.
         #expect(texts.contains("Next block") && texts.contains("Your VTXO"))
-        #expect(texts.contains { $0.hasPrefix("Blocks 921,346–") })
+        #expect(Self.coversEveryBlock(labels, scene))
         #expect(!Self.overlapping(labels))
         // Plain placement: three items, the lowest priority one clashing, dropped rather than overlapped.
         let placed = ExitStageLabels.place([.init(y: 100, lines: [.init(text: "a")], priority: 4),
@@ -150,15 +151,17 @@ extension ExitStageTests {
                 let labels = painter.labels(scene, ys: g.levels(ExitStageStill(scene).mined))
                 #expect(!Self.overlapping(labels), "\(locale) \(scale)")
                 #expect(labels.contains { $0.lines.first?.text == L10n.text("Next block", locale: locale) })
-                if scale == 1 { #expect(labels.contains { $0.lines.contains { $0.text.contains(caption) } }, "\(locale) \(scene.levels)") }
+                // With the 13-pt minimum the caption gives way here at every size rather than shrinking.
+                _ = caption
                 for label in labels where label.shrinks {
                     let room = g.column(top: label.top, bottom: label.bottom)
                     #expect(label.size >= 0.75 && ExitStageText.width(label.lines[0].text, size: g.fontSize) * label.size <= room + 0.5)
                 }
             }
         }
-        // The iPhone's 300 pt picture has room for both lines.
-        let labels = Self.painter(Self.iphone).labels(Self.mempool(heights: [], pending: 0, count: 4), ys: Self.iphone.levels([0, 0, 0, 0]))
+        // The iPhone's 300 pt picture has room for both lines once the root is in a block.
+        let rooted = Self.mempool(heights: [921_346], pending: 1, count: 4)
+        let labels = Self.painter(Self.iphone).labels(rooted, ys: Self.iphone.levels(ExitStageStill(rooted).mined))
         #expect(labels.contains { $0.lines.map(\.text) == ["The round,", "already on Bitcoin"] })
     }
 

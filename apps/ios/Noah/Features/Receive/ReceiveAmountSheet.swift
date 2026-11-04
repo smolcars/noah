@@ -61,7 +61,11 @@ struct ReceiveAmountSheet: View {
 
     private var fiatLine: String {
         if useFiat { return BitcoinAmount.format(sats: sats, unit: app.amountUnit, locale: locale) }
-        guard let btcPrice else { return L10n.text("{currency} rate unavailable", app.preferredCurrency, locale: locale.identifier) }
+        guard let btcPrice else {
+            // No price: "₿1,500" reads as 1,500 sats, as on Send.
+            if app.amountUnit == .bip177 { return BitcoinAmount.satsLine(sats, locale: locale) }
+            return L10n.text("{currency} rate unavailable", app.preferredCurrency, locale: locale.identifier)
+        }
         return FiatCurrency.display(sats: sats, btcPrice: btcPrice, currency: app.preferredCurrency, locale: locale)
     }
 
@@ -114,8 +118,10 @@ struct ReceiveAmountSheet: View {
             }
             .foregroundStyle(NoahTokens.Colors.muted)
             .frame(minHeight: NoahTokens.Size.hitTarget)
+            .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        // Not .plain: disabled (no rate) must keep the "rate unavailable" line readable.
+        .buttonStyle(HomePressStyle(scale: 0.97))
         .disabled(btcPrice == nil || model.isSaving)
         .accessibilityLabel(useFiat ? Text("Switch to sats") : Text(L10n.text("Switch to {value1}", app.preferredCurrency, locale: locale.identifier)))
         .accessibilityIdentifier("receive-currency-toggle")
@@ -125,7 +131,8 @@ struct ReceiveAmountSheet: View {
         Button(action: done) {
             ZStack {
                 Text("Done").opacity(model.isSaving ? 0 : 1)
-                if model.isSaving { ProgressView().tint(NoahTokens.Colors.background) }
+                // Saving disables the pill, so the spinner sits on the soft disabled fill.
+                if model.isSaving { ProgressView().tint(NoahTokens.Colors.muted) }
             }
             .frame(maxWidth: .infinity)
         }
@@ -138,7 +145,7 @@ struct ReceiveAmountSheet: View {
     /// "Add a note": a chip that opens into today's description field.
     @ViewBuilder private var note: some View {
         if draft.noteOpen {
-            TextField("Add a note", text: $draft.description, axis: .vertical)
+            TextField(text: $draft.description, prompt: Text("Add a note").foregroundStyle(NoahTokens.Colors.muted), axis: .vertical) { Text("Add a note") }
                 .noahText(NoahTokens.Typography.body)
                 .lineLimit(1...3)
                 .focused($noteFocused)

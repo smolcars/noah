@@ -154,5 +154,9 @@
   "Your VTXO is a leaf of the round’s tree. To reach it, the {n} transactions on your branch go to the chain, root first.": {
     "one": "Your VTXO is a leaf of the round’s tree. To reach it, the one transaction on your branch goes to the chain.",
     "other": "Your VTXO is a leaf of the round’s tree. To reach it, the {n} transactions on your branch go to the chain, root first."
+  },
+  "{n} sats": {
+    "one": "{n} sat",
+    "other": "{n} sats"
   }
 }

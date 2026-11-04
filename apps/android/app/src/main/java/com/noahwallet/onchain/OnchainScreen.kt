@@ -264,7 +264,7 @@ internal fun OnchainReview(app: AppModel, quote: OnchainQuote, onDismiss: () -> 
             if (!current) Text(tr(OnchainFailure.changed.text), color = MaterialTheme.colorScheme.error)
             Button(confirm,
                 enabled = current && !app.isWalletSuspended) {
-                val unestimated = if (quote.action == OnchainAction.claim) "Broadcast without estimate" else "Start Selected Exit"
+                val unestimated = if (quote.action == OnchainAction.claim) "Broadcast without estimate" else "Start selected exit"
                 Text(tr(if (quote.feesUnknown) unestimated else quote.action.title))
             }
             TextButton(cancel) { Text(tr(cancelTitle)) }
@@ -279,7 +279,7 @@ private fun ReviewAmounts(app: AppModel, quote: OnchainQuote) {
         AmountRow(app, when (quote.action) { OnchainAction.board -> "Ark fee"; OnchainAction.refresh -> "Refresh fee"; else -> "Estimated claim fee" },
             quote.fee)
         if (quote.action in setOf(OnchainAction.board, OnchainAction.startExit, OnchainAction.progress))
-            AmountRow(app, if (quote.action == OnchainAction.board) "Onchain fee" else "Estimated broadcast fees", quote.chainFee)
+            AmountRow(app, if (quote.action == OnchainAction.board) "On-chain fee" else "Estimated broadcast fees", quote.chainFee)
         AmountRow(app, if (quote.action == OnchainAction.board) "Ark receives" else "Amount after fee", quote.net)
     }
 }
@@ -291,7 +291,7 @@ private fun ReviewDetails(app: AppModel, quote: OnchainQuote) {
         DetailRow("Signed transaction size", "${prepared.vsize} vB")
         DetailRow("Funding inputs", "${prepared.inputs.size}")
     }
-    if (quote.automatic) AmountRow(app, "Onchain reserve left", quote.confirmed - quote.amount - checkNotNull(quote.chainFee))
+    if (quote.automatic) AmountRow(app, "On-chain reserve left", quote.confirmed - quote.amount - checkNotNull(quote.chainFee))
     quote.destination?.let { DetailRow("Destination", it) }
     quote.externalDestinationWarning?.let { Text(tr(it), color = MaterialTheme.colorScheme.error) }
 }
@@ -301,7 +301,8 @@ private fun ReviewWarnings(quote: OnchainQuote) {
     if (quote.feesUnknown) {
         Text(tr("Fee estimate unavailable. Fees and amount to receive are unknown. Continue without an estimate only if you accept this uncertainty."),
             color = MaterialTheme.colorScheme.error)
-        if (quote.action == OnchainAction.startExit) Text(tr("Broadcast funding status is unknown; confirmed onchain funds are required."))
+        @Suppress("MaxLineLength") // one translation source string
+        if (quote.action == OnchainAction.startExit) Text(tr("Noah couldn't check whether your on-chain balance can cover the fees. Confirmed on-chain funds are needed."))
     }
     Text(reviewText(quote))
     if (quote.action in setOf(OnchainAction.startExit, OnchainAction.progress, OnchainAction.claim)) {

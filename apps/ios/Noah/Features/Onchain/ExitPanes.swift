@@ -7,6 +7,8 @@ import SwiftUI
 /// landscape) put the explanation and picture in the leading pane and the details and actions
 /// in the trailing one; nothing crosses the fold. The page keeps its state across a pose change.
 struct ExitPanes<Leading: View, Trailing: View, Footer: View>: View {
+    /// A definition under the page title, above the details (Choose VTXOs says what a VTXO is).
+    var line: String?
     @ViewBuilder var leading: Leading
     @ViewBuilder var trailing: Trailing
     @ViewBuilder var footer: Footer
@@ -25,11 +27,11 @@ struct ExitPanes<Leading: View, Trailing: View, Footer: View>: View {
                     .environment(\.exitPaneHeight, proxy.size.height)
                 }
                 .frame(width: settings.leadingWidth)
-                SettingsScroll { trailing }
+                SettingsScroll(line: line) { trailing }
                     .modifier(ExitFooter(buttons: footer))
             }
         } else {
-            SettingsScroll {
+            SettingsScroll(line: line) {
                 leading
                 trailing
             }
@@ -51,7 +53,8 @@ struct ExitFooter<Buttons: View>: ViewModifier {
 
     func body(content: Content) -> some View {
         content.safeAreaInset(edge: .bottom, spacing: 0) {
-            GlassGroup(spacing: 10) { VStack(spacing: 6) { buttons } }
+            // 12 pt apart, and never one merged glass shape: separate actions read as separate buttons.
+            GlassGroup(spacing: 0) { VStack(spacing: 12) { buttons } }
                 .padding(.leading, settings.wide ? 36 : NoahTokens.Space.screen)
                 .padding(.trailing, settings.wide ? 24 : NoahTokens.Space.screen)
                 .padding(.top, 10).padding(.bottom, settings.wide ? 16 : 8)
@@ -115,6 +118,8 @@ struct ExitDetailRow: View {
     var numeric = false
     var failure = false
     var hairline = true
+    /// The total the decision rests on ("You get"): label in foreground weight too.
+    var strong = false
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     var body: some View {
@@ -154,12 +159,14 @@ struct ExitDetailRow: View {
     }
 
     private var labelText: some View {
-        Text(verbatim: label).noahText(NoahTokens.Typography.body).foregroundStyle(NoahTokens.Colors.muted)
+        Text(verbatim: label).noahText(NoahTokens.Typography.body).fontWeight(strong ? .semibold : nil)
+            .foregroundStyle(strong ? NoahTokens.Colors.foreground : NoahTokens.Colors.muted)
             .fixedSize(horizontal: false, vertical: true)
     }
 
     private var valueText: some View {
         Text(verbatim: value).noahText(numeric ? HomeText.amount : NoahTokens.Typography.label).monospacedDigit()
+            .fontWeight(strong ? .semibold : nil)
             .foregroundStyle(failure ? NoahTokens.Colors.failure : NoahTokens.Colors.foreground)
             .fixedSize(horizontal: false, vertical: true)
     }
@@ -174,20 +181,24 @@ struct ExitPathRail: View {
     var delta: UInt32 = 144
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.locale) private var locale
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     private var language: String { locale.identifier }
 
     var body: some View {
+        // Accessibility sizes stack the three captions, so no word breaks inside a third of the width.
+        let stacked = dynamicTypeSize.isAccessibilitySize
+        let layout = stacked ? AnyLayout(VStackLayout(alignment: .leading, spacing: 8)) : AnyLayout(HStackLayout(alignment: .top, spacing: 10))
         VStack(spacing: 6) {
             Canvas { context, size in draw(context, size) }
                 .frame(height: 58)
                 .accessibilityHidden(true)
-            HStack(alignment: .top, spacing: 10) {
+            layout {
                 caption(L10n.plural("{n} transactions", count: transactions, locale: language),
                         several ? L10n.text("shared ones once", locale: language) : L10n.text("one block each", locale: language), .leading)
                 caption(L10n.plural("{n} blocks", count: Int(delta), locale: language),
-                        L10n.text("about {time}", VtxoList.timeLeft(Int64(delta), locale: language), locale: language), .center)
-                caption(L10n.text("Claim", locale: language), L10n.text("to another wallet", locale: language), .trailing)
+                        L10n.text("about {time}", VtxoList.timeLeft(Int64(delta), locale: language), locale: language), stacked ? .leading : .center)
+                caption(L10n.text("Claim", locale: language), L10n.text("to another wallet", locale: language), stacked ? .leading : .trailing)
             }
         }
         .padding(.top, 18)
@@ -300,6 +311,31 @@ struct ExitSegment: View {
 }
 
 /// A warning line with the shield (prototype `.warn`): red, or muted for notes.
+/// A label over a group of exit rows ("From these coins").
+struct ExitGroupLabel: View {
+    let text: String
+
+    var body: some View {
+        Text(verbatim: text).noahText(HomeText.section).foregroundStyle(NoahTokens.Colors.muted)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .accessibilityAddTraits(.isHeader)
+    }
+}
+
+/// A decision-critical line next to what it qualifies: body size, foreground for the key consequence.
+struct ExitCaveat: View {
+    let text: String
+    var key = false
+
+    var body: some View {
+        Text(verbatim: text).noahText(NoahTokens.Typography.sub)
+            .foregroundStyle(key ? NoahTokens.Colors.foreground : NoahTokens.Colors.muted)
+            .fixedSize(horizontal: false, vertical: true)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.top, 12)
+    }
+}
+
 struct ExitWarning: View {
     let text: String
     var symbol = "exclamationmark.shield"
@@ -443,8 +479,7 @@ struct ExitDepositSheet: View {
                     .padding(12).background(.white, in: RoundedRectangle(cornerRadius: 20))
                     .frame(maxWidth: .infinity).padding(.top, 18)
                     .accessibilityLabel("Bitcoin deposit address QR code")
-                Text(verbatim: address).font(SettingsText.mono).textSelection(.enabled).padding(.top, 14)
-                    .fixedSize(horizontal: false, vertical: true)
+                IdentifierText(value: address, size: 12, style: .caption1).padding(.top, 14)
                     .accessibilityIdentifier("exit-deposit-address")
             } else if let error {
                 SettingsFine(text: L10n.text(error, locale: language), failure: true)

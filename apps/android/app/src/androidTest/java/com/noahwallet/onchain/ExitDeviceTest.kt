@@ -123,7 +123,8 @@ class ExitDeviceTest {
         } } }
         compose.mainClock.advanceTimeBy(2_000)
         compose.onNodeWithTag("exit-claim").assertIsEnabled()
-        compose.onNodeWithTag("exit-check").performScrollTo().performClick()
+        // Beside Claim it's the foot's outlined pill (fixed, not scrolled to).
+        compose.onNodeWithTag("exit-check").assertIsEnabled().performClick()
         compose.runOnUiThread { exit = f.claiming }
         compose.mainClock.advanceTimeBy(2_000)
         compose.onNodeWithTag("exit-claim").assertDoesNotExist()
@@ -311,7 +312,8 @@ class ExitDeviceTest {
         compose.mainClock.advanceTimeBy(2_000)
         compose.onNodeWithTag("exit-add-funds").assertIsEnabled()
         compose.onNodeWithTag("exit-cancel").assertIsEnabled()
-        compose.onNodeWithTag("exit-check").performScrollTo().assertIsEnabled().performClick()
+        // In the foot, under Cancel exit and Add on-chain funds.
+        compose.onNodeWithTag("exit-check").assertIsEnabled().performClick()
         compose.runOnIdle { assertEquals(1, checks) }
     }
 

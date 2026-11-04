@@ -20,6 +20,7 @@ import com.noahwallet.services.server.value
 import com.noahwallet.services.storage.PersistedWalletState
 import com.noahwallet.ui.*
 import com.noahwallet.ui.WalletAlertDialog
+import com.noahwallet.ui.onboarding.HeadlineGlyph
 import kotlinx.coroutines.*
 
 /** The launch gate's notifications screen: the onboarding Notifications step, frozen in its required state. */
@@ -73,7 +74,7 @@ fun BatteryOptimizationScreen(model: AppModel, onBack: (() -> Unit)? = null, onC
     }, headline = { large ->
         com.noahwallet.ui.onboarding.Headline(tr("Let Noah run in the background"),
             tr("Otherwise Android may pause Noah, and payments could stop arriving."), large = large)
-    }, form = {}, actions = {
+    }, form = { HeadlineGlyph(com.noahwallet.ui.settings.SettingsIcons.battery) }, actions = {
         com.noahwallet.ui.onboarding.PillButton(tr("Open battery settings"), androidx.compose.ui.Modifier.fillMaxWidth()) {
             failed = !PlatformAccess.openBattery(context)
         }
@@ -179,7 +180,7 @@ fun UnifiedPushScreen(fromOnboarding: Boolean, onContinue: () -> Unit) {
     BackHandler(enabled = !fromOnboarding) { onContinue() }
     NoahForm(if (fromOnboarding) "UnifiedPush Setup" else "UnifiedPush") {
         Text(tr("Google Play Services is not available. To receive notifications, please use a UnifiedPush distributor (like ntfy)."))
-        Text(tr("Select Distributor"), style = MaterialTheme.typography.titleMedium)
+        Text(tr("Select distributor"), style = MaterialTheme.typography.titleMedium)
         if (loading) Text(tr("Loading distributors…"))
         else if (distributors.isEmpty()) Text(tr("No distributors detected. Install ntfy or another UnifiedPush distributor."))
         distributors.forEach { distributor ->

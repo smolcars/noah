@@ -65,13 +65,13 @@ import kotlinx.coroutines.withContext
  */
 @Composable
 internal fun ExitFrame(title: String, back: (() -> Unit)?, hero: Boolean = false, foot: (@Composable RowScope.() -> Unit)? = null,
-    scroll: ScrollState = rememberScrollState(), actions: @Composable RowScope.() -> Unit = {}, footFade: Float = .46f,
+    scroll: ScrollState = rememberScrollState(), actions: @Composable RowScope.() -> Unit = {},
     pictureLeads: Boolean = false, chip: (@Composable () -> Unit)? = null,
     leading: @Composable ColumnScope.() -> Unit, trailing: @Composable ColumnScope.() -> Unit) {
     when (val pose = LocalPose.current) {
         is OnboardingPose.Wide, is OnboardingPose.Tabletop ->
-            ExitSplitFrame(pose, title, back, hero, foot, scroll, actions, footFade, pictureLeads, chip, leading, trailing)
-        else -> SettingsFrame(title, back, hero = hero, foot = foot, scroll = scroll, actions = actions, footFade = footFade,
+            ExitSplitFrame(pose, title, back, hero, foot, scroll, actions, pictureLeads, chip, leading, trailing)
+        else -> SettingsFrame(title, back, hero = hero, foot = foot, scroll = scroll, actions = actions,
             chip = chip) { leading(); trailing() }
     }
 }
@@ -79,7 +79,7 @@ internal fun ExitFrame(title: String, back: (() -> Unit)?, hero: Boolean = false
 /** [ExitFrame] on a wide or tabletop window: the two panes and the bar across both. */
 @Composable
 private fun ExitSplitFrame(pose: OnboardingPose, title: String, back: (() -> Unit)?, hero: Boolean, foot: (@Composable RowScope.() -> Unit)?,
-    scroll: ScrollState, actions: @Composable RowScope.() -> Unit, footFade: Float, pictureLeads: Boolean, chip: (@Composable () -> Unit)?,
+    scroll: ScrollState, actions: @Composable RowScope.() -> Unit, pictureLeads: Boolean, chip: (@Composable () -> Unit)?,
     leading: @Composable ColumnScope.() -> Unit, trailing: @Composable ColumnScope.() -> Unit) {
     val palette = LocalPalette.current
     val haptics = rememberHaptics()
@@ -103,7 +103,7 @@ private fun ExitSplitFrame(pose: OnboardingPose, title: String, back: (() -> Uni
             else -> Modifier.padding(top = (pose as OnboardingPose.Tabletop).bottom)
         }.fillMaxSize().testTag("exit-trailing")) {
             CompositionLocalProvider(LocalSettingsPane provides SettingsPane.trailing) {
-                SettingsFrame(title, null, hero = true, foot = foot, scroll = scroll, footFade = footFade, content = trailing)
+                SettingsFrame(title, null, hero = true, foot = foot, scroll = scroll, content = trailing)
             }
         }
         // The bar across the top, above both panes: Back leads, ⋯ trails.
@@ -155,7 +155,7 @@ internal fun ExitBig(text: String, modifier: Modifier = Modifier) {
  */
 @Composable
 internal fun ExitValueRow(label: String, value: String, modifier: Modifier = Modifier, kind: ValueKind = ValueKind.text, note: String? = null,
-    failed: Boolean = false, small: Boolean = false, last: Boolean = false, content: (@Composable RowScope.() -> Unit)? = null) {
+    failed: Boolean = false, small: Boolean = false, last: Boolean = false, quiet: Boolean = false, content: (@Composable RowScope.() -> Unit)? = null) {
     val palette = LocalPalette.current
     val stacked = androidx.compose.ui.platform.LocalDensity.current.fontScale >= 1.5f
     val style = valueStyle(kind, small)
@@ -166,7 +166,8 @@ internal fun ExitValueRow(label: String, value: String, modifier: Modifier = Mod
         androidx.compose.ui.layout.Layout({
             Text(label, style = ActivityType.label.let { if (small) it.copy(fontSize = 15.sp) else it }, color = palette.muted)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text(value, Modifier.weight(1f, fill = false), style = style, color = if (failed) palette.failure else palette.foreground, textAlign = end)
+                Text(value, Modifier.weight(1f, fill = false), style = style,
+                    color = when { failed -> palette.failure; quiet -> palette.muted; else -> palette.foreground }, textAlign = end)
                 content?.invoke(this)
             }
         }, measurePolicy = valueRowLayout(stacked))
@@ -242,7 +243,8 @@ internal fun ExitWarningContent(exits: List<ExitModel>, tip: Long, delta: Long?,
         Text(tr("Emergency use only. It takes your bitcoin out of Ark without Ark’s server."), Modifier.padding(top = 8.dp),
             style = HomeType.line.copy(fontSize = 17.sp, lineHeight = 22.sp), color = palette.muted)
         val stages = exits.associate { it.id to ExitStages.of(it, tip, it.id in needsFunds) }
-        val area = Modifier.padding(top = 14.dp).fillMaxWidth().height(268.dp)
+        // Short enough on a phone that the facts and the never-broadcasts note sit whole above Choose VTXOs.
+        val area = Modifier.padding(top = 14.dp).fillMaxWidth().height(if (LocalPose.current is OnboardingPose.Compact) 224.dp else 268.dp)
         val path = transactions ?: count.value
         if (path == null) Spacer(area)
         else {
@@ -354,17 +356,6 @@ private fun Fact(icon: Int, title: String, line: String, divider: Boolean = true
     }
 }
 
-/** Your coin as a list avatar (prototype `.av.coin`): a soft circle in an orange ring. */
-@Composable
-internal fun ExitCoin(size: androidx.compose.ui.unit.Dp) {
-    val palette = LocalPalette.current
-    Box {
-        SettingsAvatar(size)
-        Box(Modifier.size(size).drawBehind { drawCircle(palette.orange, this.size.minDimension / 2 - 1.25.dp.toPx(),
-            style = androidx.compose.ui.graphics.drawscope.Stroke(2.5.dp.toPx())) })
-    }
-}
-
 /** The one status word under an exit's amount (prototype `STATUS`). */
 @Composable
 internal fun exitStatusWord(stage: ExitStage): String = when {
@@ -459,9 +450,12 @@ internal fun ExitChooseContent(all: List<VtxoModel>, costs: Map<String, ExitCost
     val short = shortForFees(fees, confirmed)
     // A summary above the pill: the fade turns solid sooner so rows never show through it (prototype `.foot:has(.fsum)`).
     val reviewable = selection.reviewable && !busy && !suspended
-    ExitFrame(tr("Choose VTXOs"), back, footFade = if (everything) .46f else .3f, foot = {
+    ExitFrame(tr("Choose VTXOs"), back, foot = {
         ChooseFoot(if (everything) null else chooseSummary(chosen, fees, value, money), reviewable) { haptics.light(); review(ids) }
     }, leading = {
+        // The term's definition, as Settings → VTXOs gives it: Emergency exit can open this page first.
+        Text(tr("VTXOs are your bitcoin on Ark. Renew them before they expire to keep them safe."), Modifier.padding(bottom = 4.dp),
+            style = HomeType.line, color = palette.muted)
         Segmented(listOf(true to tr("All"), false to tr("Choose")), everything, Modifier.padding(top = 10.dp).testTag("exit-mode")) { everything = it }
         val note = chooseNote(suspended, ready, loading, vtxos.isEmpty())
         if (note != null) FinePrint(note)
@@ -574,13 +568,13 @@ private fun AllLeftOut(vtxos: List<VtxoModel>, costs: Map<String, ExitCosts.Cost
 
 /** A total row (prototype `.br.tot`): a line above, the label in the foreground; the value goes under it when both don't fit. */
 @Composable
-internal fun TotalRow(label: String, value: String) {
+internal fun TotalRow(label: String, value: String, quiet: Boolean = false) {
     val palette = LocalPalette.current
     Box(Modifier.fillMaxWidth().heightIn(min = 48.dp).drawBehind { drawRect(palette.foreground, Offset.Zero, Size(size.width, 1.dp.toPx())) }
         .semantics(mergeDescendants = true) {}, contentAlignment = Alignment.CenterStart) {
         FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             Text(label, Modifier.padding(end = 12.dp), style = ActivityType.value, color = palette.foreground)
-            Text(value, style = ActivityType.number, color = palette.foreground)
+            Text(value, style = ActivityType.number, color = if (quiet) palette.muted else palette.foreground)
         }
     }
 }
@@ -602,13 +596,14 @@ private fun ChooseRow(vtxo: VtxoModel, cost: ExitCosts.Cost?, checked: Boolean?,
         if (divider) drawRect(palette.hairline, Offset(54.dp.toPx(), size.height - 1.dp.toPx()), Size(size.width - 54.dp.toPx(), 1.dp.toPx()))
     }.then(if (picking) Modifier.clickable(enabled = exitable, role = Role.Checkbox, onClick = toggle) else Modifier)
         .semantics(mergeDescendants = true) { if (picking) toggleableState = androidx.compose.ui.state.ToggleableState(checked == true && exitable) }
-        .graphicsLayer { alpha = if (exitable) 1f else .45f }.testTag("exit-vtxo-${vtxo.id.take(12)}"),
+        .testTag("exit-vtxo-${vtxo.id.take(12)}"),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-        ChooseMark(checked, exitable)
-        Column(Modifier.weight(1f)) {
-            WrappingLabel(money(vtxo.amount), HomeType.amount.copy(color = palette.foreground))
-            Text(sub, style = HomeType.small, color = if (exitable && uneconomic) palette.failure else palette.muted)
-            if (barred == ExitCosts.Barred.renew) Text(tr("Renew this VTXO in Settings → VTXOs before exiting it."), style = HomeType.small,
+        // Only the mark and amount dim for a VTXO that can't exit; the reason and its fix stay readable.
+        Box(Modifier.graphicsLayer { alpha = if (exitable) 1f else .45f }) { ChooseMark(checked, exitable, inAll = exitable && !uneconomic) }
+        Column(Modifier.weight(1f).padding(vertical = 8.dp)) {
+            WrappingLabel(money(vtxo.amount), HomeType.amount.copy(color = if (exitable) palette.foreground else palette.muted))
+            Text(sub, style = HomeType.line, color = if (exitable && uneconomic) palette.failure else palette.muted)
+            if (barred == ExitCosts.Barred.renew) Text(tr("Renew this VTXO in Settings → VTXOs before exiting it."), style = HomeType.line,
                 color = palette.muted)
         }
     }
@@ -625,13 +620,23 @@ private fun chooseSub(vtxo: VtxoModel, barred: ExitCosts.Barred?, uneconomic: Bo
         null -> if (uneconomic) tr("Fees more than it’s worth") else expiresText(vtxo)
     }
 
-/** The coin in All (null [checked]); in Choose a checkbox, or a dash for a VTXO that can't exit. */
+/**
+ * A checkbox, or a dash for a VTXO that can't exit. All (null [checked]) shows the same boxes, fixed: checked for every VTXO
+ * All takes ([inAll]), muted because All picks them, so both modes speak one control.
+ */
 @Composable
-private fun ChooseMark(checked: Boolean?, exitable: Boolean) {
+private fun ChooseMark(checked: Boolean?, exitable: Boolean, inAll: Boolean) {
     val palette = LocalPalette.current
     Box(Modifier.size(40.dp), contentAlignment = Alignment.Center) {
-        if (checked == null) ExitCoin(32.dp)
-        else if (exitable) Box(Modifier.size(20.dp).background(if (checked) palette.foreground else palette.background, RoundedCornerShape(6.dp))
+        if (checked == null && inAll) Box(Modifier.size(20.dp).background(palette.muted, RoundedCornerShape(6.dp)), contentAlignment = Alignment.Center) {
+            Icon(painterResource(SettingsIcons.check), null, Modifier.size(15.dp), tint = palette.background)
+        }
+        else if (checked == null && exitable) Box(Modifier.size(20.dp).drawBehind {
+            drawRoundRect(palette.hairline, style = androidx.compose.ui.graphics.drawscope.Stroke(2.dp.toPx()),
+                cornerRadius = androidx.compose.ui.geometry.CornerRadius(6.dp.toPx()))
+        })
+        else if (checked != null && exitable) Box(Modifier.size(20.dp)
+            .background(if (checked) palette.foreground else palette.background, RoundedCornerShape(6.dp))
             .then(if (checked) Modifier else Modifier.drawBehind {
                 drawRoundRect(palette.muted, style = androidx.compose.ui.graphics.drawscope.Stroke(2.dp.toPx()),
                     cornerRadius = androidx.compose.ui.geometry.CornerRadius(6.dp.toPx()))

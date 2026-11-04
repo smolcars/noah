@@ -46,6 +46,7 @@ internal fun CreatingStep(model: AppModel, presentation: OnboardingPresentation)
     }
     SceneLayout(clock, SceneMode.create, welcomeGhost = model.localeIdentifier, below = {
         PhaseText(listOf(tr("Creating your keys"), tr("Joining the Ark"), tr("Ready"))[phase])
+        StillWorking()
     }, bottom = {})
 }
 
@@ -139,6 +140,17 @@ private fun RestoreProgressEffects(model: AppModel, presentation: OnboardingPres
     }
 }
 
+/** Past ~8 s on a progress screen, a quiet line says it's still going; nothing else changes. */
+@Composable
+private fun StillWorking() {
+    var slow by remember { mutableStateOf(false) }
+    LaunchedEffect(Unit) { delay(8_000); slow = true }
+    AnimatedVisibility(slow, enter = fadeIn(), exit = fadeOut()) {
+        Text(tr("Still working… this can take a minute."), Modifier.fillMaxWidth().padding(top = NoahTokens.Space.s), style = NoahTokens.Typography.sub,
+            color = LocalPalette.current.muted, textAlign = TextAlign.Center)
+    }
+}
+
 /** Under the tree: the phase, the restored balance counting up once ready, and a phrase restore's [issue]. */
 @Composable
 private fun RestoreProgress(model: AppModel, presentation: OnboardingPresentation, issue: com.noahwallet.ui.RestoreIssue?) {
@@ -150,10 +162,8 @@ private fun RestoreProgress(model: AppModel, presentation: OnboardingPresentatio
         else -> 0
     }
     PhaseText(listOf(tr("Restoring your wallet"), tr("Finding your bitcoin"), tr("Ready"))[phase], Modifier.testTag("restore-progress"))
+    if (!flow.completed && issue == null) StillWorking()
     val total = model.summary?.balance?.totalSats?.toLong()
     if (flow.completed && total != null && !model.hidden) CountUp(total, model, presentation)
-    issue?.let {
-        Text(tr(it.message), Modifier.fillMaxWidth().padding(top = NoahTokens.Space.m).semantics { liveRegion = LiveRegionMode.Assertive },
-            style = NoahTokens.Typography.sub, color = LocalPalette.current.failure, textAlign = TextAlign.Center)
-    }
+    issue?.let { com.noahwallet.ui.RestoreIssueText(it, Modifier.fillMaxWidth().padding(top = NoahTokens.Space.m), TextAlign.Center) }
 }

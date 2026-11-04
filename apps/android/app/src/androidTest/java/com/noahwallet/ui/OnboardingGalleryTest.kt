@@ -83,7 +83,6 @@ class OnboardingGalleryTest {
             screen("email-code-keyboard"); keyboardDown("email-code")
             ui { presentation.emailStage = com.noahwallet.ui.onboarding.EmailStage.entry }
             step("notifications"); screen("notifications", 3000)
-            ui { presentation.notificationStage = com.noahwallet.ui.onboarding.NotificationStage.off }; screen("notifications-required")
             ui { presentation.notificationStage = com.noahwallet.ui.onboarding.NotificationStage.distributor }; screen("notifications-unifiedpush")
             step("battery"); screen("battery")
             step("done"); screen("done", 3000)
@@ -102,6 +101,18 @@ class OnboardingGalleryTest {
             ui { input.update(List(23) { "abandon" }.plus("art").joinToString(" "), 0) }
             step("restore"); secure("restore-24"); scrollToEnd(); secure("restore-24-end", 600)
             step("restoring"); secure("restoring", 2600)
+            // Required, as the step and the launch gate show it: here the permission is granted, so the step itself would move on.
+            ui {
+                activity.setContent { NoahTheme { androidx.compose.material3.Surface(color = com.noahwallet.ui.onboarding.noahPalette().background) {
+                    androidx.compose.foundation.layout.Box(androidx.compose.ui.Modifier.fillMaxSize()
+                        .windowInsetsPadding(androidx.compose.foundation.layout.WindowInsets.safeDrawing)) {
+                        val clock = androidx.lifecycle.viewmodel.compose.viewModel<com.noahwallet.ui.onboarding.GateScene>().clock
+                        androidx.compose.runtime.LaunchedEffect(Unit) { clock.show(com.noahwallet.ui.onboarding.SceneMode.conveyor) }
+                        com.noahwallet.ui.onboarding.OnboardingFrame(clock) { com.noahwallet.ui.onboarding.NotificationsContent(clock, off = true) { } }
+                    }
+                } } }
+            }
+            screen("notifications-required", 3000)
         }
     }
 }

@@ -22,6 +22,14 @@ enum SendScreen: Int, Comparable {
 extension SendModel {
     /// Phones hide the tab bar on every step after Amount; it returns on Done.
     var hidesTabBar: Bool { SendScreen.of(self) != .amount }
+
+    /// Today's review dismissal: the quote is discarded and the flow returns to the recipient.
+    func cancelReview() {
+        guard !controller.locked, showReview || stage == .review else { return }
+        showReview = false
+        discardReview()
+        if stage == .review { stage = isMax ? .source : .recipient }
+    }
 }
 
 extension SendView {
@@ -31,6 +39,15 @@ extension SendView {
         Text(verbatim: text).noahText(HomeText.footnote).foregroundStyle(NoahTokens.Colors.failure)
             .fixedSize(horizontal: false, vertical: true)
             .accessibilityIdentifier("send-error")
+    }
+
+    /// A wrong-network address, under the field: what's wrong, then what to do.
+    func wrongNetwork(locale: String) -> some View {
+        VStack(alignment: .leading, spacing: 2) {
+            error(L10n.text("This address is for a different Bitcoin network.", locale: locale))
+            Text("Use an address for this network.").noahText(HomeText.footnote).foregroundStyle(NoahTokens.Colors.foreground)
+                .fixedSize(horizontal: false, vertical: true)
+        }
     }
 
     static func typeName(_ type: String?, destination: String, ownDomain: String) -> String? {

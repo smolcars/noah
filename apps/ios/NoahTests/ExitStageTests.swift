@@ -26,6 +26,8 @@ struct ExitStageTests {
     }
 
     static func texts(_ labels: [ExitStageLabel]) -> [String] { labels.flatMap { $0.lines.map(\.text) } }
+    /// Each label's lines as one string, however it wrapped.
+    static func labelTexts(_ labels: [ExitStageLabel]) -> [String] { labels.map { $0.lines.map(\.text).joined(separator: " ") } }
 
     static func mempool(heights: [UInt32], pending: Int, count: Int, fee: String? = "₿1,215") -> ExitStageScene {
         var scene = ExitStageScene(picture: .path, levels: (0..<count).map { index in
@@ -77,7 +79,9 @@ struct ExitStageTests {
 
     @Test func theCaptionShowsOnlyWhereItFits() {
         let words = "Other people's coins in this round"
-        let lines = Self.iphone.caption(words, Self.iphone.levels([0, 0, 0, 0])) { Double($0.count) * 4.6 }
+        // A taller picture than `iphone`: at the 13-pt minimum its 300 pt has no room left for two lines.
+        let tall = ExitStageGeometry(size: CGSize(width: 393, height: 340), count: 4)
+        let lines = tall.caption(words, tall.levels([0, 0, 0, 0])) { Double($0.count) * 4.6 }
         #expect(lines?.joined(separator: " ") == words && (lines?.count ?? 0) <= 2)
         // Too wide for the room left of the trunk, or no room under the lowest stubs (a deep tree on the SE): hidden.
         #expect(Self.iphone.caption(words, Self.iphone.levels([0, 0, 0, 0])) { Double($0.count) * 12 } == nil)
@@ -218,7 +222,8 @@ struct ExitStageTests {
         let (p, phone) = ExitStageGeometry.fitting(scene, size: CGSize(width: 393, height: 300), scale: 1)
         let phoneTexts = Self.texts(ExitStagePainter(geometry: p, colors: .theme(.light), reduceMotion: false, locale: english)
             .labels(phone, ys: p.levels(ExitStageStill(phone).mined)))
-        #expect(!phone.folds.isEmpty && phoneTexts.contains("14 more to send") && phoneTexts
+        #expect(!phone.folds.isEmpty && phoneTexts.contains("14 more to send") && Self.labelTexts(ExitStagePainter(
+            geometry: p, colors: .theme(.light), reduceMotion: false, locale: english).labels(phone, ys: p.levels(ExitStageStill(phone).mined)))
             .contains { $0.hasPrefix("Blocks 921,346–") || $0.hasPrefix("Block ") })
         // A hundred, all in blocks and locked: the oldest stacked with their range, the coin's dial clear.
         var locked = ExitStageScene(picture: .lock, levels: (0..<100).map { .mined(921_000 + UInt32($0)) })
@@ -254,7 +259,8 @@ struct ExitStageTests {
             let (g, drawn) = ExitStageGeometry.fitting(scene, size: CGSize(width: 375, height: 236), scale: scale)
             let labels = Self.painter(g).labels(drawn, ys: g.levels(ExitStageStill(drawn).mined))
             #expect(Self.coversEveryBlock(labels, scene), "\(scale)")
-            if scale == 1 { #expect(Self.texts(labels).contains("Blocks 921,346–921,350")) }
+            // The range may wrap onto a second line at the 13-pt minimum.
+            if scale == 1 { #expect(Self.labelTexts(labels).contains("Blocks 921,346–921,350")) }
         }
         // Placement on its own: a stack's range takes in the blocks that lost their labels, or no range shows.
         let placed = ExitStageLabels.place([.init(y: 100, lines: [.init(text: "next")], priority: 4),

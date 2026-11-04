@@ -86,7 +86,7 @@ internal fun ExitListContent(exits: List<ExitModel>, tip: Long, needsFunds: Set<
                 if (it != filter) haptics.selection()
                 filter = it
             }
-        }, foot = { ExitListFoot(claimable, suspended, money, more, claim) }, leading = { ExitListLeading(exits, stages, money) }) {
+        }, foot = { ExitListFoot(claimable, suspended, more, claim) }, leading = { ExitListLeading(exits, stages, money) }) {
         when {
             !ready -> FinePrint(if (loading) tr("Loading…") else tr("Couldn't read wallet status. Pull to refresh."))
             exits.isEmpty() -> FinePrint(tr("No exits have been started."))
@@ -108,9 +108,10 @@ internal fun ExitListContent(exits: List<ExitModel>, tip: Long, needsFunds: Set<
 }
 
 @Composable
-private fun RowScope.ExitListFoot(claimable: List<ExitModel>, suspended: Boolean, money: (Long) -> String, more: () -> Unit, claim: () -> Unit) {
+private fun RowScope.ExitListFoot(claimable: List<ExitModel>, suspended: Boolean, more: () -> Unit, claim: () -> Unit) {
     FootPill(tr("Exit more VTXOs"), Modifier.testTag("exit-more"), wrap = true, outlined = claimable.isNotEmpty(), enabled = !suspended, onClick = more)
-    if (claimable.isNotEmpty()) FootPill(tr("Claim {amount}", money(claimable.sumOf { it.amount })), Modifier.testTag("exit-list-claim"), wrap = true,
+    // Claim prices every ready exit on its own review; their gross amount isn't what arrives.
+    if (claimable.isNotEmpty()) FootPill(tr("Claim"), Modifier.testTag("exit-list-claim"), wrap = true,
         enabled = !suspended, onClick = claim)
 }
 

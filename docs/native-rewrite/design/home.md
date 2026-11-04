@@ -16,7 +16,7 @@ Home has one layout whose content depends on the wallet:
 | State | When | Content |
 | --- | --- | --- |
 | **Fresh** | Balance is zero and history is empty (and loaded) | Balance (₿0), fiat, nudge, the **get-paid card**. No "No activity yet" list: the card is the empty state. |
-| **Everyday** | Anything else | Balance, fiat, any status line, nudge, **Recent** (up to five rows, "See all" opens Activity). |
+| **Everyday** | Anything else | Balance, fiat, any status line, nudge, **Recent** (up to eight rows, "See all" opens Activity). |
 | **Suspended** | `isWalletSuspended` | Today's suspended state only, restyled. No balance, nudge or list. |
 
 **Busy** in the prototype is Everyday with a pending line, pending and failed rows, and the renew nudge.
@@ -86,9 +86,9 @@ There is one nudge card at a time, in this order:
 | Nudge | Shows when | Copy | Action |
 | --- | --- | --- | --- |
 | Upgrade notice | today's one-time Home notices (lost settings, RN recurring not imported) | today's notice text | × dismisses it, as today |
-| **Renew** | the wallet holds refreshable VTXOs that `getExpiringVtxos(thresholdBlocks: vtxoRefreshExpiryThreshold)` reports. That threshold is 144 blocks (about 24 h) on mainnet, which is the maintenance window: the nudge appears only when automatic renewal hasn't happened in time. No earlier warning. | "Renew {amount}" (the sum of those VTXOs) / "Expires in {n} hours" from the soonest expiry at 10 min a block, or "Expires in under an hour" | "Renew" opens today's VTXO refresh review for exactly those VTXOs, with fees shown and explicit confirmation. Never refresh in one tap. Expired or locked VTXOs are excluded. |
+| **Renew** | the wallet holds refreshable VTXOs that `getExpiringVtxos(thresholdBlocks: vtxoRefreshExpiryThreshold)` reports. That threshold is 144 blocks (about 24 h) on mainnet, which is the maintenance window: the nudge appears only when automatic renewal hasn't happened in time. No earlier warning. | "Renew {amount}" (the sum of those VTXOs) / "Renew to keep these coins · Expires in {n} hours" from the soonest expiry at 10 min a block, or "Expires in under an hour" | "Renew" opens today's VTXO refresh review for exactly those VTXOs, with fees shown and explicit confirmation. Never refresh in one tap. Expired or locked VTXOs are excluded. |
 | Backup failed | today's failed cloud-backup status | "Backup failed" / today's message | "Retry", as today |
-| **Back up** | `needsRecoveryPhraseBackup` | "Back up your wallet" / "Save your recovery phrase" | "Back up" opens today's phrase view; it clears only on the existing confirmation |
+| **Back up** | `needsRecoveryPhraseBackup` | "Save your recovery phrase" / "You need it to restore your wallet" | "Save" opens today's phrase view; it clears only on the existing confirmation |
 | **Email** | email not verified and the prompt not dismissed (today's server state) | "Add your email" / "For urgent wallet alerts" | "Add" opens today's email flow; × dismisses it with today's `dismissEmailPrompt` |
 | Update | today's `updateRequired` | "Update available" / "Get the latest fixes" | "Update" opens today's update link |
 
@@ -154,7 +154,7 @@ Add every new string to `apps/i18n/en/native.json`, hand-translate it into es, j
 
 New strings:
 - "Renew {amount}", "Expires in {n} hours" (plural), "Expires in under an hour", "Renew";
-- "Save your recovery phrase", "Back up", "Backed up";
+- "Save your recovery phrase", "You need it to restore your wallet", "Save", "Backed up";
 - "Add your email", "For urgent wallet alerts", "Add", "Email added";
 - "Update available", "Get the latest fixes", "Update";
 - "{amount} arriving";

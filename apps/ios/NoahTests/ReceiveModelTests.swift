@@ -73,7 +73,7 @@ struct ReceiveModelTests {
         while model.baseError == nil { await Task.yield() }
         #expect(model.request == nil)
         #expect(model.receivedSats == nil)
-        #expect(model.baseErrorTitle == String(localized: "Lightning Receive Canceled"))
+        #expect(model.baseErrorTitle == String(localized: "Lightning receive canceled"))
     }
 
     @Test func unavailableWalletShowsRetryError() async {
