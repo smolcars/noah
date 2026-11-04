@@ -70,6 +70,7 @@ internal fun AppearanceSheet(model: AppModel, initial: String, dismiss: () -> Un
     val reveal = remember { AppearanceReveal() }
     DisposableEffect(reveal) { onDispose { reveal.cancel() } }
     SideEffect { reveal.shown(dark) }
+    val frameHeight = tileFrameHeight()
     val locale = Locale.forLanguageTag(model.localeIdentifier)
     val balance = if (model.hidden) BitcoinAmount.format(0, model.amountUnit, locale).replace("0", "••••")
     else BitcoinAmount.format(model.summary?.balance?.totalSats?.toLong() ?: 0L, model.amountUnit, locale)
@@ -93,7 +94,8 @@ internal fun AppearanceSheet(model: AppModel, initial: String, dismiss: () -> Un
         }
         Row(Modifier.fillMaxWidth().padding(top = 16.dp), horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally)) {
             for (choice in Appearance.entries) {
-                AppearanceTile(choice, model.appearance == choice, initial, balance, Modifier.weight(1f).widthIn(max = 160.dp)) { pick(choice, it) }
+                AppearanceTile(choice, model.appearance == choice, initial, balance, frameHeight,
+                    Modifier.weight(1f).widthIn(max = 160.dp)) { pick(choice, it) }
             }
         }
         AppearanceHint(model.appearance, dark)
@@ -128,7 +130,8 @@ private fun phoneDark(context: Context, current: Appearance, shownDark: Boolean)
  * sheet's 2 dp foreground stroke, 3 dp outside the picture. One radio button for screen readers, which skip the picture.
  */
 @Composable
-private fun AppearanceTile(choice: Appearance, selected: Boolean, initial: String, balance: String, modifier: Modifier, onPick: (Offset) -> Unit) {
+private fun AppearanceTile(choice: Appearance, selected: Boolean, initial: String, balance: String, frameHeight: Dp, modifier: Modifier,
+    onPick: (Offset) -> Unit) {
     val palette = LocalPalette.current
     var centre by remember { mutableStateOf(Offset.Zero) }
     val interaction = remember { MutableInteractionSource() }
@@ -138,7 +141,7 @@ private fun AppearanceTile(choice: Appearance, selected: Boolean, initial: Strin
     val shape = RoundedCornerShape(16.dp)
     Column(modifier.selectable(selected, interaction, null, role = Role.RadioButton) { onPick(centre) }.testTag("appearance-${choice.name}"),
         horizontalAlignment = Alignment.CenterHorizontally) {
-        Box(Modifier.fillMaxWidth().padding(5.dp).aspectRatio(9f / 17f)
+        Box(Modifier.padding(5.dp).heightIn(max = frameHeight).aspectRatio(9f / 17f)
             .onGloballyPositioned { centre = it.boundsInWindow().center }
             .graphicsLayer { scaleX = scale; scaleY = scale }
             .drawBehind {
@@ -164,6 +167,19 @@ private fun AppearanceTile(choice: Appearance, selected: Boolean, initial: Strin
             if (selected) Icon(painterResource(SettingsIcons.check), null, Modifier.size(14.dp), tint = palette.background)
         }
     }
+}
+
+/**
+ * The tallest a tile's picture can be with its name, check and the hint still in the sheet: tabletop gives the sheet
+ * only the half below the fold, and a phone on its side is short too. The rest of the sheet takes about 300 dp.
+ */
+@Composable
+private fun tileFrameHeight(): Dp {
+    val density = LocalDensity.current
+    val fold = com.noahwallet.ui.LocalFoldingFeatures.current.filter { it.width > it.height }.maxOfOrNull { it.bottom }
+        ?.takeIf { com.noahwallet.ui.onboarding.LocalPose.current is com.noahwallet.ui.onboarding.OnboardingPose.Tabletop }
+    val sheet = with(density) { (androidx.compose.ui.platform.LocalWindowInfo.current.containerSize.height - (fold ?: 0)).toDp() }
+    return (sheet - 300.dp).coerceAtLeast(120.dp)
 }
 
 /** The Automatic tile's dark half, below the diagonal from the top-right corner. */
