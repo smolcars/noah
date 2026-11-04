@@ -91,7 +91,7 @@ internal fun WalletModalBottomSheet(onDismissRequest: () -> Unit, modifier: Modi
 }
 
 /** The window of the dialog or sheet [this] is in; null in the activity's own window. */
-internal fun android.view.View.dialogWindow(): android.view.Window? =
+private fun android.view.View.dialogWindow(): android.view.Window? =
     generateSequence(parent) { it.parent }.filterIsInstance<androidx.compose.ui.window.DialogWindowProvider>().firstOrNull()?.window
 
 /** A sheet's window sets its bars' icons once, as it opens; they follow Noah's theme when that changes underneath (appearance.md). */

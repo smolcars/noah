@@ -65,7 +65,6 @@ internal fun AppearanceSheet(model: AppModel, initial: String, dismiss: () -> Un
     val palette = LocalPalette.current
     val dark = palette === NoahTokens.Dark
     val context = LocalContext.current
-    val window = androidx.activity.compose.LocalActivity.current?.window
     val haptics = rememberHaptics()
     val reduceMotion = LocalReduceMotion.current
     val reveal = remember { AppearanceReveal() }
@@ -82,21 +81,34 @@ internal fun AppearanceSheet(model: AppModel, initial: String, dismiss: () -> Un
             if (choice == current || reveal.running) return
             haptics.selection()
             val turns = Appearance.turns(current, choice, phoneDark(context, current, dark))
-            if (turns == false || reduceMotion || window == null) model.chooseAppearance(choice)
-            else reveal.start(view, window, origin, dark) { model.chooseAppearance(choice) }
+            if (turns == false || reduceMotion) model.chooseAppearance(choice)
+            else {
+                // Light and Dark give the platform its mode once the circle is done: its uiMode change recomposes
+                // everything and would stall the circle. Automatic can't wait; it needs the phone's own mode back.
+                val later = choice != Appearance.automatic
+                reveal.start(view, origin, dark, change = { model.chooseAppearance(choice, platform = !later) }) {
+                    if (later) choice.applyToPlatform(context)
+                }
+            }
         }
         Row(Modifier.fillMaxWidth().padding(top = 16.dp), horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.CenterHorizontally)) {
             for (choice in Appearance.entries) {
                 AppearanceTile(choice, model.appearance == choice, initial, balance, Modifier.weight(1f).widthIn(max = 160.dp)) { pick(choice, it) }
             }
         }
-        Text(when (model.appearance) {
-            Appearance.automatic -> if (dark) tr("Now dark · follows your phone") else tr("Now light · follows your phone")
-            Appearance.light -> tr("Always light")
-            Appearance.dark -> tr("Always dark")
-        }, Modifier.fillMaxWidth().padding(top = 12.dp).testTag("appearance-hint"), style = HomeType.small, color = palette.muted,
-            textAlign = TextAlign.Center)
+        AppearanceHint(model.appearance, dark)
     }
+}
+
+/** What the choice means now; Automatic's follows the phone live. */
+@Composable
+private fun AppearanceHint(appearance: Appearance, dark: Boolean) {
+    Text(when (appearance) {
+        Appearance.automatic -> if (dark) tr("Now dark · follows your phone") else tr("Now light · follows your phone")
+        Appearance.light -> tr("Always light")
+        Appearance.dark -> tr("Always dark")
+    }, Modifier.fillMaxWidth().padding(top = 12.dp).testTag("appearance-hint"), style = HomeType.small, color = LocalPalette.current.muted,
+        textAlign = TextAlign.Center)
 }
 
 /**

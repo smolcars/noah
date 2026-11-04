@@ -3,6 +3,9 @@ package com.noahwallet.ui.settings
 import android.animation.Animator
 import android.animation.AnimatorListenerAdapter
 import android.animation.ValueAnimator
+import android.app.Activity
+import android.content.Context
+import android.content.ContextWrapper
 import android.graphics.Bitmap
 import android.graphics.BitmapShader
 import android.graphics.Canvas
@@ -23,20 +26,23 @@ import android.view.Window
 import android.view.animation.PathInterpolator
 import androidx.annotation.RequiresApi
 import androidx.compose.ui.geometry.Offset
-import com.noahwallet.ui.dialogWindow
+import androidx.compose.ui.window.DialogWindowProvider
 import kotlin.math.hypot
 
 /**
  * The Appearance sheet's circle reveal (appearance.md, Picking). A picture of Noah as it is (the activity's window and
  * the sheet's window above it) covers the screen, the theme changes underneath, and once the new theme shows, a circle
- * growing from the tile uncovers it. The picture is a view overlay on the top window, so it takes no touches and the app
- * underneath stays usable. One reveal at a time; a pick while one runs is ignored.
+ * growing from the tile uncovers it. The picture is a view overlay on the sheet's own layout (an overlay on its window's
+ * decor would draw under that elevated layout), so it takes no touches and the app underneath stays usable. One reveal
+ * at a time; a pick while one runs is ignored.
  */
 internal class AppearanceReveal {
     private var cover: Cover? = null
     private var animator: ValueAnimator? = null
     /** The change to make once the picture is up; cancelling makes it at once rather than lose the pick. */
     private var pending: (() -> Unit)? = null
+    /** What runs once the reveal is over, however it ends. */
+    private var done: (() -> Unit)? = null
     /** Waiting for Noah to show the other theme ([shown]); dark at the start. */
     private var waitingFrom: Boolean? = null
     /** Where the circle grows from and whether Noah was dark, for the reveal being set up. */
@@ -47,20 +53,23 @@ internal class AppearanceReveal {
     val running get() = cover != null || pending != null
 
     /**
-     * Covers the screen with a picture of [view]'s window over [activity]'s, makes [change], then reveals the result from
-     * [origin] (in [view]'s window) once [shown] reports the other theme. Without a picture, [change] happens at once.
+     * Covers the screen with a picture of [view]'s window over its activity's, makes [change], then reveals the result
+     * from [origin] (in [view]'s window) once [shown] reports the other theme, then runs [done]. Without a picture,
+     * [change] and [done] happen at once.
      */
-    fun start(view: View, activity: Window, origin: Offset, shownDark: Boolean, change: () -> Unit) {
+    fun start(view: View, origin: Offset, shownDark: Boolean, change: () -> Unit, done: () -> Unit) {
         if (running) return
-        if (Build.VERSION.SDK_INT < 26) { change(); return }
-        pending = change; this.origin = origin; fromDark = shownDark
-        capture(view.dialogWindow() ?: activity, activity)
+        val activity = view.context.activity()?.window
+        if (Build.VERSION.SDK_INT < 26 || activity == null) { change(); done(); return }
+        pending = change; this.done = done; this.origin = origin; fromDark = shownDark
+        val sheet = generateSequence(view.parent) { it.parent }.filterIsInstance<DialogWindowProvider>().firstOrNull()
+        capture(sheet?.window ?: activity, sheet as? View ?: activity.decorView, activity)
     }
 
     @RequiresApi(26)
-    private fun capture(top: Window, activity: Window) = copy(activity) { below ->
-        if (top === activity) cover(activity, top, below, null)
-        else copy(top) { above -> cover(activity, top, below, above) }
+    private fun capture(top: Window, layout: View, activity: Window) = copy(activity) { below ->
+        if (top === activity) cover(activity, top, layout, below, null)
+        else copy(top) { above -> cover(activity, top, layout, below, above) }
     }
 
     /** Noah now shows [dark]: starts the circle if that's the turn a reveal is waiting for. */
@@ -90,6 +99,7 @@ internal class AppearanceReveal {
         host = null
         cover?.picture?.recycle()
         cover = null
+        done?.let { done = null; it() }
     }
 
     @RequiresApi(26)
@@ -102,28 +112,34 @@ internal class AppearanceReveal {
         }, Handler(Looper.getMainLooper()))
     }
 
-    /** Puts [below] (with [above] drawn over it) on [top]'s window, gives it a frame to reach the screen, then makes the change. */
-    private fun cover(activity: Window, top: Window, below: Bitmap?, above: Bitmap?) {
+    /**
+     * Puts [below] (with [above], [top]'s window, drawn over it) over [layout], the top window's content, gives it a frame
+     * to reach the screen, then makes the change.
+     */
+    private fun cover(activity: Window, top: Window, layout: View, below: Bitmap?, above: Bitmap?) {
         // Cancelled meanwhile (the change is already made).
         val change = pending ?: run { below?.recycle(); above?.recycle(); return }
-        val decor = top.decorView
         val sheetMissing = top !== activity && above == null
-        if (below == null || sheetMissing || !decor.isAttachedToWindow) { below?.recycle(); above?.recycle(); finish(); return }
-        val topAt = IntArray(2).also(decor::getLocationOnScreen)
+        if (below == null || sheetMissing || !layout.isAttachedToWindow) { below?.recycle(); above?.recycle(); finish(); return }
+        val topAt = IntArray(2).also(top.decorView::getLocationOnScreen)
         val belowAt = IntArray(2).also(activity.decorView::getLocationOnScreen)
+        val layoutAt = IntArray(2).also(layout::getLocationOnScreen)
         above?.let { Canvas(below).drawBitmap(it, (topAt[0] - belowAt[0]).toFloat(), (topAt[1] - belowAt[1]).toFloat(), null); it.recycle() }
-        val cover = Cover(below, (belowAt[0] - topAt[0]).toFloat(), (belowAt[1] - topAt[1]).toFloat(), origin)
-        cover.setBounds(0, 0, decor.width, decor.height)
-        decor.overlay.add(cover)
-        this.cover = cover; host = decor
-        decor.postOnAnimation { decor.postOnAnimation {
+        val cover = Cover(below, (belowAt[0] - layoutAt[0]).toFloat(), (belowAt[1] - layoutAt[1]).toFloat(),
+            origin + Offset((topAt[0] - layoutAt[0]).toFloat(), (topAt[1] - layoutAt[1]).toFloat()))
+        cover.setBounds(0, 0, layout.width, layout.height)
+        layout.overlay.add(cover)
+        this.cover = cover; host = layout
+        layout.postOnAnimation { layout.postOnAnimation {
             if (this.cover !== cover || pending == null) return@postOnAnimation
             pending = null; waitingFrom = fromDark
             change()
             // A turn that never shows (the phone was already there): the picture just goes.
-            decor.postDelayed(timeout, 600)
+            layout.postDelayed(timeout, 1_000)
         } }
     }
+
+    private tailrec fun Context.activity(): Activity? = this as? Activity ?: (this as? ContextWrapper)?.baseContext?.activity()
 
     /** The picture with a circular hole of [radius] at [origin], in the top window's coordinates. */
     private class Cover(val picture: Bitmap, private val left: Float, private val top: Float, private val origin: Offset) : Drawable() {
@@ -136,10 +152,12 @@ internal class AppearanceReveal {
                 setLocalMatrix(Matrix().apply { setTranslate(left, top) })
             }
         }
-        private val path = Path().apply { fillType = Path.FillType.EVEN_ODD }
+        private val path = Path()
 
         override fun draw(canvas: Canvas) {
+            // rewind() also resets the fill type (to winding, which would fill the circle in).
             path.rewind()
+            path.fillType = Path.FillType.EVEN_ODD
             path.addRect(left, top, left + picture.width, top + picture.height, Path.Direction.CW)
             if (radius > 0f) path.addCircle(origin.x, origin.y, radius, Path.Direction.CW)
             canvas.drawPath(path, paint)

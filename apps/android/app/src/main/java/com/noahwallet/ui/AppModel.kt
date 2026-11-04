@@ -186,11 +186,11 @@ class AppModel(application: Application, val settings: SettingsStorage = Setting
 
     fun refreshLocale() { localeIdentifier = com.noahwallet.services.storage.LegacyLocale.resolved(getApplication()) }
 
-    /** Saves [value], then re-themes Noah and the platform at once. */
-    fun chooseAppearance(value: Appearance) {
+    /** Saves [value], then re-themes Noah and, unless [platform] is false (the caller applies it later), the platform. */
+    fun chooseAppearance(value: Appearance, platform: Boolean = true) {
         settings.set(value.name, Appearance.key)
         appearance = value
-        value.applyToPlatform(getApplication())
+        if (platform) value.applyToPlatform(getApplication())
     }
 
     // KTX edit(commit = true) drops commit()'s result, which is checked here.
