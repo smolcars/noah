@@ -7,7 +7,7 @@ enum NoahTokens {
     enum Colors {
         static let background = dynamic(light: 0xFFFF_FFFF, dark: 0x0000_00FF)
         static let foreground = dynamic(light: 0x0000_00FF, dark: 0xFFFF_FFFF)
-        static let muted = dynamic(light: 0x7070_70FF, dark: 0x8F8F_8FFF)
+        static let muted = dynamic(light: 0x6B6B_6BFF, dark: 0x8F8F_8FFF)
         static let hairline = dynamic(light: 0x0000_001F, dark: 0xFFFF_FF29)
         static let soft = dynamic(light: 0xF2F2_F2FF, dark: 0x1C1C_1EFF)
         static let sheet = dynamic(light: 0xFFFF_FFFF, dark: 0x1C1C_1EFF)

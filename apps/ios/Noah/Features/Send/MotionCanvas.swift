@@ -61,7 +61,7 @@ struct MotionColors {
         let dark = scheme == .dark
         return Self(foreground: dark ? .white : .black, background: dark ? .black : .white,
                     soft: dark ? Color(hex: 0x1C1C1E) : Color(hex: 0xF2F2F2),
-                    muted: dark ? Color(hex: 0x8F8F8F) : Color(hex: 0x707070),
+                    muted: dark ? Color(hex: 0x8F8F8F) : Color(hex: 0x6B6B6B),
                     hairline: dark ? .white.opacity(0.16) : .black.opacity(0.12))
     }
 
