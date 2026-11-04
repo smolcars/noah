@@ -253,7 +253,7 @@ struct SendToBlock: View {
                         VStack(alignment: .leading, spacing: 0) {
                             identifier(full, lines: 2)
                             identifier("…", selectable: false)
-                            identifier(String(full.suffix(12)))
+                            identifier(String(full.suffix(12)), selectable: false)
                         }
                         .accessibilityElement(children: .ignore)
                         .accessibilityLabel(Text(verbatim: full))

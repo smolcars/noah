@@ -859,7 +859,8 @@ private fun DestinationCard(full: String, collapses: Boolean, modifier: Modifier
                     Text(full, Modifier.fillMaxWidth(), style = SendType.mono, color = ink,
                         maxLines = if (collapsed) 2 else Int.MAX_VALUE, overflow = TextOverflow.Clip,
                         onTextLayout = { if (collapsed) overflows = it.hasVisualOverflow })
-                    if (collapsed && overflows) {
+                    // Display-only: kept out of selection so a copied range is never a corrupted invoice.
+                    if (collapsed && overflows) androidx.compose.foundation.text.selection.DisableSelection {
                         Text("…", style = SendType.mono, color = ink)
                         Text(full.takeLast(12), style = SendType.mono, color = ink)
                     }
