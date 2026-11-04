@@ -374,25 +374,25 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "About 20 min · %1$@ Bitcoin blocks"
+            "value": "Unos 20 min · %1$@ bloques de Bitcoin"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "About 20 min · %1$@ Bitcoin blocks"
+            "value": "約20分 · Bitcoinの%1$@ブロック分"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "About 20 min · %1$@ Bitcoin blocks"
+            "value": "약 20분 · Bitcoin 블록 %1$@개"
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "About 20 min · %1$@ Bitcoin blocks"
+            "value": "Ungefär 20 min · %1$@ Bitcoin-block"
           }
         }
       }
@@ -1418,25 +1418,25 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "After one Bitcoin block"
+            "value": "Tras un bloque de Bitcoin"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "After one Bitcoin block"
+            "value": "Bitcoinで1ブロック生成された後"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "After one Bitcoin block"
+            "value": "Bitcoin 블록 1개 생성 후"
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "After one Bitcoin block"
+            "value": "Efter ett Bitcoin-block"
           }
         }
       }
@@ -1766,25 +1766,25 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Already paid"
+            "value": "Ya pagado"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Already paid"
+            "value": "支払い済み"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "Already paid"
+            "value": "이미 결제됨"
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Already paid"
+            "value": "Redan betalt"
           }
         }
       }
@@ -1874,25 +1874,25 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Always dark"
+            "value": "Siempre oscuro"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Always dark"
+            "value": "常にダーク"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "Always dark"
+            "value": "항상 어둡게"
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Always dark"
+            "value": "Alltid mörkt"
           }
         }
       }
@@ -1910,25 +1910,25 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Always light"
+            "value": "Siempre claro"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Always light"
+            "value": "常にライト"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "Always light"
+            "value": "항상 밝게"
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Always light"
+            "value": "Alltid ljust"
           }
         }
       }
@@ -2594,25 +2594,25 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Appearance"
+            "value": "Apariencia"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Appearance"
+            "value": "外観"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "Appearance"
+            "value": "화면 모드"
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Appearance"
+            "value": "Utseende"
           }
         }
       }
@@ -2666,25 +2666,25 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Approval needed"
+            "value": "Se requiere aprobación"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Approval needed"
+            "value": "承認が必要"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "Approval needed"
+            "value": "승인 필요"
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Approval needed"
+            "value": "Godkännande krävs"
           }
         }
       }
@@ -3674,25 +3674,25 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Automatic"
+            "value": "Automático"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Automatic"
+            "value": "自動"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "Automatic"
+            "value": "자동"
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Automatic"
+            "value": "Automatiskt"
           }
         }
       }
@@ -4106,25 +4106,25 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Back to Send"
+            "value": "Volver a Enviar"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Back to Send"
+            "value": "送金に戻る"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "Back to Send"
+            "value": "보내기로 돌아가기"
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Back to Send"
+            "value": "Tillbaka till Skicka"
           }
         }
       }
@@ -6914,25 +6914,25 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Check status again"
+            "value": "Volver a comprobar el estado"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Check status again"
+            "value": "状況を再確認"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "Check status again"
+            "value": "상태 다시 확인"
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Check status again"
+            "value": "Kontrollera status igen"
           }
         }
       }
@@ -7022,25 +7022,25 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Check the words. Noah can only restore a wallet that had backups turned on."
+            "value": "Revisa las palabras. Noah solo puede restaurar una billetera que tuviera activadas las copias de seguridad."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Check the words. Noah can only restore a wallet that had backups turned on."
+            "value": "単語を確認してください。Noahで復元できるのは、バックアップを有効にしていたウォレットのみです。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "Check the words. Noah can only restore a wallet that had backups turned on."
+            "value": "단어를 확인하세요. Noah에서는 백업 기능이 켜져 있던 지갑만 복원할 수 있습니다."
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Check the words. Noah can only restore a wallet that had backups turned on."
+            "value": "Kontrollera orden. Noah kan bara återställa en plånbok som hade säkerhetskopiering aktiverad."
           }
         }
       }
@@ -7166,25 +7166,25 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Check your connection and try again."
+            "value": "Comprueba tu conexión y vuelve a intentarlo."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Check your connection and try again."
+            "value": "接続を確認して、もう一度お試しください。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "Check your connection and try again."
+            "value": "연결 상태를 확인하고 다시 시도하세요."
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Check your connection and try again."
+            "value": "Kontrollera din anslutning och försök igen."
           }
         }
       }
@@ -7706,25 +7706,25 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Claim exits"
+            "value": "Reclamar salidas"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Claim exits"
+            "value": "出金資金を受け取る"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "Claim exits"
+            "value": "출금 자금 청구"
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Claim exits"
+            "value": "Begär utträdesmedel"
           }
         }
       }
@@ -10502,25 +10502,25 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Couldn't prepare payment"
+            "value": "No se pudo preparar el pago"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Couldn't prepare payment"
+            "value": "支払いを準備できませんでした"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "Couldn't prepare payment"
+            "value": "결제 준비 실패"
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Couldn't prepare payment"
+            "value": "Kunde inte förbereda betalningen"
           }
         }
       }
@@ -10610,25 +10610,25 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Couldn't reach Noah. Tap to try again."
+            "value": "No se pudo conectar con Noah. Toca para volver a intentarlo."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Couldn't reach Noah. Tap to try again."
+            "value": "Noahに接続できませんでした。タップして再試行してください。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "Couldn't reach Noah. Tap to try again."
+            "value": "Noah에 연결하지 못했습니다. 눌러서 다시 시도하세요."
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Couldn't reach Noah. Tap to try again."
+            "value": "Kunde inte nå Noah. Tryck för att försöka igen."
           }
         }
       }
@@ -10862,25 +10862,25 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Couldn't restore"
+            "value": "No se pudo restaurar"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Couldn't restore"
+            "value": "復元できませんでした"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "Couldn't restore"
+            "value": "복원 실패"
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Couldn't restore"
+            "value": "Kunde inte återställa"
           }
         }
       }
@@ -11534,25 +11534,25 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Crop screenshot"
+            "value": "Recortar captura de pantalla"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Crop screenshot"
+            "value": "スクリーンショットを切り抜く"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "Crop screenshot"
+            "value": "스크린샷 자르기"
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Crop screenshot"
+            "value": "Beskär skärmbild"
           }
         }
       }
@@ -11822,25 +11822,25 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Dark"
+            "value": "Oscuro"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Dark"
+            "value": "ダーク"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "Dark"
+            "value": "어둡게"
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Dark"
+            "value": "Mörkt"
           }
         }
       }
@@ -12902,25 +12902,25 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Don't pay again until you've checked Activity. Paying again could pay the recipient twice."
+            "value": "No vuelvas a pagar hasta revisar Actividad. Si pagas de nuevo, el destinatario podría recibir el pago dos veces."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Don't pay again until you've checked Activity. Paying again could pay the recipient twice."
+            "value": "履歴を確認するまでは、再度支払わないでください。受取人に二重に支払ってしまう可能性があります。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "Don't pay again until you've checked Activity. Paying again could pay the recipient twice."
+            "value": "활동 내역을 확인하기 전에는 다시 결제하지 마세요. 받는 사람에게 중복으로 지급될 수 있습니다."
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Don't pay again until you've checked Activity. Paying again could pay the recipient twice."
+            "value": "Betala inte igen förrän du har kontrollerat Aktivitet. Om du betalar igen kan mottagaren få betalt två gånger."
           }
         }
       }
@@ -13046,25 +13046,25 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Each exit transaction needs a network fee, paid from your on-chain balance."
+            "value": "Cada transacción de salida requiere una comisión de red, que se paga con tu saldo en la cadena."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Each exit transaction needs a network fee, paid from your on-chain balance."
+            "value": "退出に必要な各トランザクションにはネットワーク手数料がかかり、オンチェーン残高から支払われます。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "Each exit transaction needs a network fee, paid from your on-chain balance."
+            "value": "각 출금 거래에는 네트워크 수수료가 필요하며, 온체인 잔액에서 차감됩니다."
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Each exit transaction needs a network fee, paid from your on-chain balance."
+            "value": "Varje transaktion i ett nöduttag kräver en nätverksavgift som betalas från ditt saldo på kedjan."
           }
         }
       }
@@ -13406,25 +13406,25 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Email address"
+            "value": "Dirección de correo electrónico"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Email address"
+            "value": "メールアドレス"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "Email address"
+            "value": "이메일 주소"
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Email address"
+            "value": "E-postadress"
           }
         }
       }
@@ -16118,25 +16118,25 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Exiting to on-chain"
+            "value": "Salida a la cadena en curso"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Exiting to on-chain"
+            "value": "オンチェーンへ退出中"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "Exiting to on-chain"
+            "value": "온체인으로 출금 중"
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Exiting to on-chain"
+            "value": "Nöduttag till kedjan pågår"
           }
         }
       }
@@ -17462,25 +17462,25 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Fee is an estimate set when sent. It can rise if more coins are needed."
+            "value": "La comisión es una estimación que se calcula al enviar el pago. Puede aumentar si se necesitan más monedas."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Fee is an estimate set when sent. It can rise if more coins are needed."
+            "value": "手数料は送信時に算出される見積額です。必要なコインが増えると、手数料が上がる場合があります。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "Fee is an estimate set when sent. It can rise if more coins are needed."
+            "value": "수수료는 전송 시 정해지는 예상 금액입니다. 더 많은 코인이 필요하면 수수료가 오를 수 있습니다."
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Fee is an estimate set when sent. It can rise if more coins are needed."
+            "value": "Avgiften är en uppskattning som fastställs när betalningen skickas. Den kan öka om fler mynt behövs."
           }
         }
       }
@@ -17498,25 +17498,25 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Fee is an estimate set when sent. It comes out of this total."
+            "value": "La comisión es una estimación que se calcula al enviar el pago. Se descuenta de este total."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Fee is an estimate set when sent. It comes out of this total."
+            "value": "手数料は送信時に算出される見積額で、この合計額から差し引かれます。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "Fee is an estimate set when sent. It comes out of this total."
+            "value": "수수료는 전송 시 정해지는 예상 금액이며, 이 총액에서 차감됩니다."
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Fee is an estimate set when sent. It comes out of this total."
+            "value": "Avgiften är en uppskattning som fastställs när betalningen skickas. Den dras från totalbeloppet."
           }
         }
       }
@@ -17570,25 +17570,25 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Fee %1$@ · %2$@ of %3$@"
+            "value": "Comisión %1$@ · %2$@ de %3$@"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Fee %1$@ · %2$@ of %3$@"
+            "value": "手数料 %1$@ · %3$@件中%2$@件目"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "Fee %1$@ · %2$@ of %3$@"
+            "value": "수수료 %1$@ · %3$@개 중 %2$@개"
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Fee %1$@ · %2$@ of %3$@"
+            "value": "Avgift %1$@ · %2$@ av %3$@"
           }
         }
       }
@@ -18182,25 +18182,25 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Follow your phone, or keep Noah light or dark."
+            "value": "Usa el modo de tu teléfono o mantén Noah en modo claro u oscuro."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Follow your phone, or keep Noah light or dark."
+            "value": "端末の設定に合わせるか、Noahをライトモードまたはダークモードに固定できます。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "Follow your phone, or keep Noah light or dark."
+            "value": "휴대전화 설정을 따르거나 Noah 화면을 항상 밝게 또는 어둡게 유지하세요."
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Follow your phone, or keep Noah light or dark."
+            "value": "Följ telefonens inställning eller använd alltid ljust eller mörkt läge i Noah."
           }
         }
       }
@@ -18578,25 +18578,25 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "From these coins"
+            "value": "De estas monedas"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "From these coins"
+            "value": "これらのコインから"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "From these coins"
+            "value": "이 코인에서 차감"
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "From these coins"
+            "value": "Från dessa mynt"
           }
         }
       }
@@ -18650,25 +18650,25 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "From your on-chain wallet"
+            "value": "De tu billetera en la cadena"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "From your on-chain wallet"
+            "value": "オンチェーンウォレットから"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "From your on-chain wallet"
+            "value": "온체인 지갑에서 차감"
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "From your on-chain wallet"
+            "value": "Från din plånbok på kedjan"
           }
         }
       }
@@ -20126,25 +20126,25 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "In Ark"
+            "value": "En Ark"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "In Ark"
+            "value": "Ark内"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "In Ark"
+            "value": "Ark에 보관 중"
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "In Ark"
+            "value": "I Ark"
           }
         }
       }
@@ -21338,25 +21338,25 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "It confirms in about 20 minutes. You'll see it in Activity."
+            "value": "Se confirmará en unos 20 minutos. Lo verás en Actividad."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "It confirms in about 20 minutes. You'll see it in Activity."
+            "value": "約20分で確認済みになり、履歴に表示されます。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "It confirms in about 20 minutes. You'll see it in Activity."
+            "value": "약 20분 후에 확정됩니다. 활동 내역에서 확인할 수 있습니다."
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "It confirms in about 20 minutes. You'll see it in Activity."
+            "value": "Den bekräftas om ungefär 20 minuter. Du ser den i Aktivitet."
           }
         }
       }
@@ -22310,25 +22310,25 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Last known balance"
+            "value": "Último saldo conocido"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Last known balance"
+            "value": "最後に確認した残高"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "Last known balance"
+            "value": "마지막으로 확인된 잔액"
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Last known balance"
+            "value": "Senast kända saldo"
           }
         }
       }
@@ -22634,25 +22634,25 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Light"
+            "value": "Claro"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Light"
+            "value": "ライト"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "Light"
+            "value": "밝게"
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Light"
+            "value": "Ljust"
           }
         }
       }
@@ -22922,25 +22922,25 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Lightning invoice · recipient not named"
+            "value": "Factura Lightning · destinatario no indicado"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Lightning invoice · recipient not named"
+            "value": "ライトニング請求書 · 受取人名なし"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "Lightning invoice · recipient not named"
+            "value": "라이트닝 인보이스 · 받는 사람 이름 없음"
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Lightning invoice · recipient not named"
+            "value": "Lightning-faktura · mottagare inte angiven"
           }
         }
       }
@@ -23066,25 +23066,25 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Lightning receive canceled"
+            "value": "Recepción por Lightning cancelada"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Lightning receive canceled"
+            "value": "ライトニングでの受け取りがキャンセルされました"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "Lightning receive canceled"
+            "value": "Lightning 수령 취소됨"
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Lightning receive canceled"
+            "value": "Mottagning via Lightning avbruten"
           }
         }
       }
@@ -23102,25 +23102,25 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Lightning receive failed"
+            "value": "No se pudo recibir el pago por Lightning"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Lightning receive failed"
+            "value": "ライトニングでの受け取りに失敗しました"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "Lightning receive failed"
+            "value": "Lightning 수령 실패"
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Lightning receive failed"
+            "value": "Mottagning via Lightning misslyckades"
           }
         }
       }
@@ -23174,25 +23174,25 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Lightning to claim"
+            "value": "Lightning pendiente de reclamar"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Lightning to claim"
+            "value": "受け取り待ちのライトニング資金"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "Lightning to claim"
+            "value": "청구할 Lightning 자금"
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Lightning to claim"
+            "value": "Lightning-medel att lösa in"
           }
         }
       }
@@ -24782,25 +24782,25 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Move to on-chain"
+            "value": "Transferir a la cadena"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Move to on-chain"
+            "value": "オンチェーンに移動"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "Move to on-chain"
+            "value": "온체인으로 이동"
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Move to on-chain"
+            "value": "Flytta till kedjan"
           }
         }
       }
@@ -24890,25 +24890,25 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Moved to on-chain"
+            "value": "Transferido a la cadena"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Moved to on-chain"
+            "value": "オンチェーンに移動済み"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "Moved to on-chain"
+            "value": "온체인으로 이동 완료"
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Moved to on-chain"
+            "value": "Flyttat till kedjan"
           }
         }
       }
@@ -25034,25 +25034,25 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Moving to on-chain"
+            "value": "Transfiriendo a la cadena"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Moving to on-chain"
+            "value": "オンチェーンに移動中"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "Moving to on-chain"
+            "value": "온체인으로 이동 중"
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Moving to on-chain"
+            "value": "Flyttas till kedjan"
           }
         }
       }
@@ -25610,25 +25610,25 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Needs renewal"
+            "value": "Requiere renovación"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Needs renewal"
+            "value": "更新が必要"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "Needs renewal"
+            "value": "갱신 필요"
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Needs renewal"
+            "value": "Behöver förnyas"
           }
         }
       }
@@ -25754,25 +25754,25 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Network fees come from your on-chain balance, not from these coins."
+            "value": "Las comisiones de red se descuentan de tu saldo en la cadena, no de estas monedas."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Network fees come from your on-chain balance, not from these coins."
+            "value": "ネットワーク手数料は、これらのコインではなくオンチェーン残高から支払われます。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "Network fees come from your on-chain balance, not from these coins."
+            "value": "네트워크 수수료는 이 코인이 아닌 온체인 잔액에서 차감됩니다."
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Network fees come from your on-chain balance, not from these coins."
+            "value": "Nätverksavgifterna dras från ditt saldo på kedjan, inte från dessa mynt."
           }
         }
       }
@@ -25826,25 +25826,25 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Network fees paid"
+            "value": "Comisiones de red pagadas"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Network fees paid"
+            "value": "支払い済みのネットワーク手数料"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "Network fees paid"
+            "value": "지불한 네트워크 수수료"
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Network fees paid"
+            "value": "Betalda nätverksavgifter"
           }
         }
       }
@@ -26150,25 +26150,25 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "New request"
+            "value": "Nueva solicitud"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "New request"
+            "value": "新しい請求"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "New request"
+            "value": "새 요청"
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "New request"
+            "value": "Ny begäran"
           }
         }
       }
@@ -26618,25 +26618,25 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "No backup found"
+            "value": "No se encontró ninguna copia de seguridad"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "No backup found"
+            "value": "バックアップが見つかりません"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "No backup found"
+            "value": "백업을 찾을 수 없음"
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "No backup found"
+            "value": "Ingen säkerhetskopia hittades"
           }
         }
       }
@@ -27626,25 +27626,25 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "No wallet backup yet"
+            "value": "Aún no hay una copia de seguridad de la billetera"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "No wallet backup yet"
+            "value": "ウォレットのバックアップはまだありません"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "No wallet backup yet"
+            "value": "아직 지갑 백업 없음"
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "No wallet backup yet"
+            "value": "Ingen säkerhetskopia av plånboken ännu"
           }
         }
       }
@@ -27986,25 +27986,25 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Noah can’t receive payments or renew your Ark coins."
+            "value": "Noah no puede recibir pagos ni renovar tus monedas de Ark."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Noah can’t receive payments or renew your Ark coins."
+            "value": "Noahが支払いを受け取ったり、Arkのコインを更新したりできません。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "Noah can’t receive payments or renew your Ark coins."
+            "value": "Noah가 결제 금액을 받거나 Ark 코인을 갱신할 수 없습니다."
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Noah can’t receive payments or renew your Ark coins."
+            "value": "Noah kan inte ta emot betalningar eller förnya dina Ark-mynt."
           }
         }
       }
@@ -28202,25 +28202,25 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Noah couldn't check whether your on-chain balance can cover the fees. Confirmed on-chain funds are needed."
+            "value": "Noah no pudo comprobar si tu saldo en la cadena es suficiente para cubrir las comisiones. Se necesitan fondos confirmados en la cadena."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Noah couldn't check whether your on-chain balance can cover the fees. Confirmed on-chain funds are needed."
+            "value": "オンチェーン残高で手数料をまかなえるかどうか、Noahで確認できませんでした。確認済みのオンチェーン資金が必要です。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "Noah couldn't check whether your on-chain balance can cover the fees. Confirmed on-chain funds are needed."
+            "value": "Noah가 온체인 잔액으로 수수료를 충당할 수 있는지 확인하지 못했습니다. 확정된 온체인 자금이 필요합니다."
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Noah couldn't check whether your on-chain balance can cover the fees. Confirmed on-chain funds are needed."
+            "value": "Noah kunde inte kontrollera om ditt saldo på kedjan räcker till avgifterna. Det krävs bekräftade medel på kedjan."
           }
         }
       }
@@ -28706,25 +28706,25 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Noah sends and fee-bumps the exit’s transactions on its own, including in the background when the system lets it. Fees are estimates."
+            "value": "Noah envía las transacciones de la salida y aumenta sus comisiones automáticamente, incluso en segundo plano cuando el sistema lo permite. Las comisiones son estimaciones."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Noah sends and fee-bumps the exit’s transactions on its own, including in the background when the system lets it. Fees are estimates."
+            "value": "Noahは退出に必要なトランザクションの送信と手数料の引き上げを自動で行います。システムが許可する場合は、バックグラウンドでも処理を続けます。手数料は見積額です。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "Noah sends and fee-bumps the exit’s transactions on its own, including in the background when the system lets it. Fees are estimates."
+            "value": "Noah는 출금 거래를 자동으로 전송하고 수수료를 인상합니다. 시스템이 허용하는 경우 백그라운드에서도 처리합니다. 수수료는 예상 금액입니다."
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Noah sends and fee-bumps the exit’s transactions on its own, including in the background when the system lets it. Fees are estimates."
+            "value": "Noah skickar nöduttagets transaktioner och höjer deras avgifter automatiskt, även i bakgrunden när systemet tillåter det. Avgifterna är uppskattningar."
           }
         }
       }
@@ -29378,25 +29378,25 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Not yet spendable"
+            "value": "Aún no se puede gastar"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Not yet spendable"
+            "value": "まだ使用できません"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "Not yet spendable"
+            "value": "아직 사용 불가"
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Not yet spendable"
+            "value": "Kan inte användas ännu"
           }
         }
       }
@@ -29630,25 +29630,25 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Notifications let Noah receive payments and renew your Ark coins before they expire."
+            "value": "Las notificaciones permiten que Noah reciba pagos y renueve tus monedas de Ark antes de que caduquen."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Notifications let Noah receive payments and renew your Ark coins before they expire."
+            "value": "通知を許可すると、Noahが支払いを受け取り、Arkのコインを有効期限前に更新できるようになります。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "Notifications let Noah receive payments and renew your Ark coins before they expire."
+            "value": "알림을 허용하면 Noah가 결제 금액을 받고 Ark 코인을 만료 전에 갱신할 수 있습니다."
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Notifications let Noah receive payments and renew your Ark coins before they expire."
+            "value": "Med aviseringar kan Noah ta emot betalningar och förnya dina Ark-mynt innan de löper ut."
           }
         }
       }
@@ -29738,25 +29738,25 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Now dark · follows your phone"
+            "value": "Modo oscuro · según tu teléfono"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Now dark · follows your phone"
+            "value": "現在はダーク · 端末の設定に合わせる"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "Now dark · follows your phone"
+            "value": "현재 어두운 모드 · 휴대전화 설정에 따름"
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Now dark · follows your phone"
+            "value": "Mörkt just nu · följer telefonens inställning"
           }
         }
       }
@@ -29774,25 +29774,25 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Now light · follows your phone"
+            "value": "Modo claro · según tu teléfono"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Now light · follows your phone"
+            "value": "現在はライト · 端末の設定に合わせる"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "Now light · follows your phone"
+            "value": "현재 밝은 모드 · 휴대전화 설정에 따름"
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Now light · follows your phone"
+            "value": "Ljust just nu · följer telefonens inställning"
           }
         }
       }
@@ -30314,25 +30314,25 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "On-chain fee"
+            "value": "Comisión en la cadena"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "On-chain fee"
+            "value": "オンチェーン手数料"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "On-chain fee"
+            "value": "온체인 수수료"
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "On-chain fee"
+            "value": "Avgift på kedjan"
           }
         }
       }
@@ -30386,25 +30386,25 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "On-chain reserve left"
+            "value": "Reserva restante en la cadena"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "On-chain reserve left"
+            "value": "オンチェーン予備資金の残額"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "On-chain reserve left"
+            "value": "남은 온체인 예비금"
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "On-chain reserve left"
+            "value": "Kvarvarande reserv på kedjan"
           }
         }
       }
@@ -30914,25 +30914,25 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Only the claim fee is deducted from these coins."
+            "value": "De estas monedas solo se descuenta la comisión de reclamación."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Only the claim fee is deducted from these coins."
+            "value": "これらのコインから差し引かれるのは、受け取り手数料のみです。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "Only the claim fee is deducted from these coins."
+            "value": "이 코인에서는 청구 수수료만 차감됩니다."
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Only the claim fee is deducted from these coins."
+            "value": "Endast inlösenavgiften dras från dessa mynt."
           }
         }
       }
@@ -31562,25 +31562,25 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Over fee limit"
+            "value": "Supera el límite de comisión"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Over fee limit"
+            "value": "手数料の上限超過"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "Over fee limit"
+            "value": "수수료 한도 초과"
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Over fee limit"
+            "value": "Över avgiftsgränsen"
           }
         }
       }
@@ -31886,25 +31886,25 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Paid over Lightning."
+            "value": "Pagado por Lightning."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Paid over Lightning."
+            "value": "ライトニングで支払い済みです。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "Paid over Lightning."
+            "value": "Lightning으로 결제했습니다."
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Paid over Lightning."
+            "value": "Betalt via Lightning."
           }
         }
       }
@@ -31922,25 +31922,25 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Paid over Lightning. The proof below shows this payment was made."
+            "value": "Pagado por Lightning. El comprobante que aparece a continuación demuestra que se realizó este pago."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Paid over Lightning. The proof below shows this payment was made."
+            "value": "ライトニングで支払い済みです。以下の証明で、この支払いが行われたことを確認できます。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "Paid over Lightning. The proof below shows this payment was made."
+            "value": "Lightning으로 결제했습니다. 아래 증빙에서 결제 사실을 확인할 수 있습니다."
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Paid over Lightning. The proof below shows this payment was made."
+            "value": "Betalt via Lightning. Beviset nedan visar att betalningen har genomförts."
           }
         }
       }
@@ -32246,25 +32246,25 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Pay again anyway"
+            "value": "Volver a pagar de todos modos"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Pay again anyway"
+            "value": "それでも再度支払う"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "Pay again anyway"
+            "value": "그래도 다시 결제"
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Pay again anyway"
+            "value": "Betala igen ändå"
           }
         }
       }
@@ -32642,25 +32642,25 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Payment received"
+            "value": "Pago recibido"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Payment received"
+            "value": "支払いを受け取りました"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "Payment received"
+            "value": "결제 금액 수령 완료"
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Payment received"
+            "value": "Betalning mottagen"
           }
         }
       }
@@ -33506,25 +33506,25 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Please try again later."
+            "value": "Inténtalo de nuevo más tarde."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Please try again later."
+            "value": "しばらくしてからもう一度お試しください。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "Please try again later."
+            "value": "나중에 다시 시도해 주세요."
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Please try again later."
+            "value": "Försök igen senare."
           }
         }
       }
@@ -33938,25 +33938,25 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Progress exits"
+            "value": "Avanzar salidas"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Progress exits"
+            "value": "出金処理を進める"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "Progress exits"
+            "value": "출금 진행하기"
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Progress exits"
+            "value": "Gå vidare med nöduttag"
           }
         }
       }
@@ -36458,25 +36458,25 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Renew VTXOs"
+            "value": "Renovar VTXOs"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Renew VTXOs"
+            "value": "VTXOを更新"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "Renew VTXOs"
+            "value": "VTXO 갱신"
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Renew VTXOs"
+            "value": "Förnya VTXO:er"
           }
         }
       }
@@ -36638,25 +36638,25 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Renew to keep these coins"
+            "value": "Renovar para conservar estas monedas"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Renew to keep these coins"
+            "value": "コインを保持するために更新"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "Renew to keep these coins"
+            "value": "이 코인을 계속 보유하려면 갱신하세요"
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Renew to keep these coins"
+            "value": "Förnya för att behålla dessa mynt"
           }
         }
       }
@@ -37478,25 +37478,25 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Restore wallet"
+            "value": "Restaurar billetera"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Restore wallet"
+            "value": "ウォレットを復元"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "Restore wallet"
+            "value": "지갑 복원"
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Restore wallet"
+            "value": "Återställ plånbok"
           }
         }
       }
@@ -37550,25 +37550,25 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Restoring a wallet backup also needs your recovery phrase."
+            "value": "Para restaurar una copia de seguridad de la billetera también necesitas tu frase de recuperación."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Restoring a wallet backup also needs your recovery phrase."
+            "value": "ウォレットをバックアップから復元する際も、復元フレーズが必要です。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "Restoring a wallet backup also needs your recovery phrase."
+            "value": "지갑 백업을 복원할 때도 복구 문구가 필요합니다."
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Restoring a wallet backup also needs your recovery phrase."
+            "value": "Du behöver även din återställningsfras för att återställa plånboken från en säkerhetskopia."
           }
         }
       }
@@ -37802,25 +37802,25 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Resume recovery"
+            "value": "Reanudar recuperación"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Resume recovery"
+            "value": "復旧を再開"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "Resume recovery"
+            "value": "복구 재개"
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Resume recovery"
+            "value": "Återuppta återställningen"
           }
         }
       }
@@ -39638,25 +39638,25 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Select distributor"
+            "value": "Seleccionar distribuidor"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Select distributor"
+            "value": "配布者を選択"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "Select distributor"
+            "value": "배포자 선택"
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Select distributor"
+            "value": "Välj distributör"
           }
         }
       }
@@ -39962,25 +39962,25 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Sending in Ark"
+            "value": "Enviando en Ark"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Sending in Ark"
+            "value": "Arkで送金中"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "Sending in Ark"
+            "value": "Ark에서 보내는 중"
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Sending in Ark"
+            "value": "Skickar via Ark"
           }
         }
       }
@@ -40970,25 +40970,25 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Show full invoice"
+            "value": "Mostrar solicitud de pago completa"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Show full invoice"
+            "value": "請求書全体を表示"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "Show full invoice"
+            "value": "전체 결제 요청서 보기"
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Show full invoice"
+            "value": "Visa hela betalningsbegäran"
           }
         }
       }
@@ -41006,25 +41006,25 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Show less"
+            "value": "Mostrar menos"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Show less"
+            "value": "表示を減らす"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "Show less"
+            "value": "간략히 보기"
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Show less"
+            "value": "Visa mindre"
           }
         }
       }
@@ -41726,25 +41726,25 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Start emergency exit"
+            "value": "Iniciar salida de emergencia"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Start emergency exit"
+            "value": "緊急退出を開始"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "Start emergency exit"
+            "value": "긴급 출금 시작"
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Start emergency exit"
+            "value": "Starta nöduttag"
           }
         }
       }
@@ -41834,25 +41834,25 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Start selected exit"
+            "value": "Iniciar salida seleccionada"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Start selected exit"
+            "value": "選択した退出を開始"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "Start selected exit"
+            "value": "선택한 출금 시작"
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Start selected exit"
+            "value": "Starta valt nöduttag"
           }
         }
       }
@@ -42194,25 +42194,25 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Still working… this can take a minute."
+            "value": "Aún en proceso… puede tardar un minuto."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Still working… this can take a minute."
+            "value": "まだ処理中です…1分ほどかかる場合があります。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "Still working… this can take a minute."
+            "value": "아직 처리 중입니다… 1분 정도 걸릴 수 있습니다."
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Still working… this can take a minute."
+            "value": "Arbetar fortfarande … det kan ta en minut."
           }
         }
       }
@@ -44390,25 +44390,25 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "The outcome isn't known yet. This checks the payment. It won't send it again."
+            "value": "Aún no se conoce el resultado. Esta acción comprueba el estado del pago sin volver a enviarlo."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "The outcome isn't known yet. This checks the payment. It won't send it again."
+            "value": "支払いの結果はまだ不明です。この操作では支払い状況の確認のみを行い、再送信はしません。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "The outcome isn't known yet. This checks the payment. It won't send it again."
+            "value": "아직 결제 결과를 알 수 없습니다. 상태만 확인하며, 결제를 다시 보내지는 않습니다."
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "The outcome isn't known yet. This checks the payment. It won't send it again."
+            "value": "Det är ännu oklart om betalningen har gått igenom. Detta kontrollerar bara betalningen – den skickas inte igen."
           }
         }
       }
@@ -45398,25 +45398,25 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "This address is for a different Bitcoin network."
+            "value": "Esta dirección pertenece a otra red de Bitcoin."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "This address is for a different Bitcoin network."
+            "value": "このアドレスは別のBitcoinネットワーク用です。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "This address is for a different Bitcoin network."
+            "value": "다른 Bitcoin 네트워크의 주소입니다."
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "This address is for a different Bitcoin network."
+            "value": "Den här adressen gäller ett annat Bitcoin-nätverk."
           }
         }
       }
@@ -46934,25 +46934,25 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "To restore, Noah needs this phrase and a wallet backup."
+            "value": "Para restaurar la billetera, Noah necesita esta frase y una copia de seguridad."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "To restore, Noah needs this phrase and a wallet backup."
+            "value": "Noahでウォレットを復元するには、このフレーズとウォレットのバックアップが必要です。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "To restore, Noah needs this phrase and a wallet backup."
+            "value": "Noah에서 지갑을 복원하려면 이 문구와 지갑 백업이 필요합니다."
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "To restore, Noah needs this phrase and a wallet backup."
+            "value": "För att återställa plånboken behöver Noah den här frasen och en säkerhetskopia av plånboken."
           }
         }
       }
@@ -49058,25 +49058,25 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Use an address for this network."
+            "value": "Usa una dirección de esta red."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Use an address for this network."
+            "value": "このネットワークに対応するアドレスを使用してください。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "Use an address for this network."
+            "value": "이 네트워크에 맞는 주소를 사용하세요."
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Use an address for this network."
+            "value": "Använd en adress för det här nätverket."
           }
         }
       }
@@ -49310,25 +49310,25 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Usually in seconds"
+            "value": "Normalmente en unos segundos"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Usually in seconds"
+            "value": "通常は数秒"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "Usually in seconds"
+            "value": "보통 몇 초 이내"
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Usually in seconds"
+            "value": "Vanligtvis inom några sekunder"
           }
         }
       }
@@ -49634,25 +49634,25 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "VTXOs are your bitcoin on Ark. Renew them before they expire to keep them safe."
+            "value": "Los VTXOs son tus bitcoin en Ark. Renuévalos antes de que caduquen para mantenerlos seguros."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "VTXOs are your bitcoin on Ark. Renew them before they expire to keep them safe."
+            "value": "VTXOは、Ark上で保有するBitcoinです。安全に保つため、有効期限前に更新してください。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "VTXOs are your bitcoin on Ark. Renew them before they expire to keep them safe."
+            "value": "VTXO는 Ark에 보관된 Bitcoin입니다. 안전하게 보관하려면 만료되기 전에 갱신하세요."
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "VTXOs are your bitcoin on Ark. Renew them before they expire to keep them safe."
+            "value": "VTXO:er är dina bitcoin på Ark. Förnya dem innan de löper ut så att de förblir säkra."
           }
         }
       }
@@ -50246,25 +50246,25 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Waiting for a round"
+            "value": "Esperando una ronda"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Waiting for a round"
+            "value": "ラウンド待ち"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "Waiting for a round"
+            "value": "라운드 대기 중"
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Waiting for a round"
+            "value": "Väntar på en omgång"
           }
         }
       }
@@ -50702,25 +50702,25 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Wallet backed up"
+            "value": "Copia de seguridad de la billetera guardada"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Wallet backed up"
+            "value": "ウォレットをバックアップしました"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "Wallet backed up"
+            "value": "지갑 백업 완료"
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Wallet backed up"
+            "value": "Plånboken har säkerhetskopierats"
           }
         }
       }
@@ -50738,25 +50738,25 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Wallet backup"
+            "value": "Copia de seguridad de la billetera"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Wallet backup"
+            "value": "ウォレットのバックアップ"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "Wallet backup"
+            "value": "지갑 백업"
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Wallet backup"
+            "value": "Säkerhetskopia av plånboken"
           }
         }
       }
@@ -50774,25 +50774,25 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Wallet backup failed"
+            "value": "No se pudo crear la copia de seguridad de la billetera"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Wallet backup failed"
+            "value": "ウォレットのバックアップに失敗しました"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "Wallet backup failed"
+            "value": "지갑 백업 실패"
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Wallet backup failed"
+            "value": "Säkerhetskopiering av plånboken misslyckades"
           }
         }
       }
@@ -50810,25 +50810,25 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Wallet backup pending"
+            "value": "Copia de seguridad de la billetera pendiente"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Wallet backup pending"
+            "value": "ウォレットのバックアップ待ち"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "Wallet backup pending"
+            "value": "지갑 백업 대기 중"
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Wallet backup pending"
+            "value": "Säkerhetskopiering av plånboken väntar"
           }
         }
       }
@@ -51278,25 +51278,25 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ways to pay"
+            "value": "Formas de pagar"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ways to pay"
+            "value": "支払い方法"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ways to pay"
+            "value": "결제 방법"
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Ways to pay"
+            "value": "Betalningssätt"
           }
         }
       }
@@ -51566,25 +51566,25 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Without them, Noah can’t receive payments or renew your Ark coins before they expire."
+            "value": "Sin ellas, Noah no puede recibir pagos ni renovar tus monedas de Ark antes de que caduquen."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Without them, Noah can’t receive payments or renew your Ark coins before they expire."
+            "value": "通知を許可しないと、Noahが支払いを受け取ったり、Arkのコインを有効期限前に更新したりできません。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "Without them, Noah can’t receive payments or renew your Ark coins before they expire."
+            "value": "알림을 허용하지 않으면 Noah가 결제 금액을 받거나 Ark 코인을 만료 전에 갱신할 수 없습니다."
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Without them, Noah can’t receive payments or renew your Ark coins before they expire."
+            "value": "Utan dem kan Noah inte ta emot betalningar eller förnya dina Ark-mynt innan de löper ut."
           }
         }
       }
@@ -51782,25 +51782,25 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "You can cancel until the last transaction is sent."
+            "value": "Puedes cancelar hasta que se envíe la última transacción."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "You can cancel until the last transaction is sent."
+            "value": "最後のトランザクションが送信されるまではキャンセルできます。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "You can cancel until the last transaction is sent."
+            "value": "마지막 거래가 전송되기 전까지 취소할 수 있습니다."
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "You can cancel until the last transaction is sent."
+            "value": "Du kan avbryta fram till att den sista transaktionen skickas."
           }
         }
       }
@@ -51926,25 +51926,25 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "You entered"
+            "value": "Introdujiste"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "You entered"
+            "value": "入力内容"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "You entered"
+            "value": "입력한 내용"
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "You entered"
+            "value": "Du angav"
           }
         }
       }
@@ -52034,25 +52034,25 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "You need it to restore your wallet"
+            "value": "La necesitas para restaurar tu billetera"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "You need it to restore your wallet"
+            "value": "ウォレットの復元に必要です"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "You need it to restore your wallet"
+            "value": "지갑을 복원하는 데 필요합니다"
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "You need it to restore your wallet"
+            "value": "Du behöver den för att återställa din plånbok"
           }
         }
       }

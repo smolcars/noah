@@ -4,23 +4,23 @@
   "entries": [
     {
       "fileId": "fae2231582f991296afb301145218c8e383d824654ccef8d09e78a2219ee6902",
-      "versionId": "53e48df26f39101e55d508a0dc8ff832e138a87e4f76dec143a5f132a25597f3",
+      "versionId": "b1c573e65f53ba195bbd5dcfbf102140cc0ae5677724c7d76d2f56f945f109ac",
       "translations": {
         "es": {
-          "updatedAt": "2026-10-21T11:59:24.255Z",
-          "postProcessHash": "d4a83a14676401320699d629e0b70b29da95e947b8550a0c50b9c77d34f7f0b7"
+          "updatedAt": "2026-11-04T14:21:36.290Z",
+          "postProcessHash": "e9ff5de97b0cf1910fd29ea760e4a1571abc9ddb3c4e49fe0794e10c44eb2338"
         },
         "ja": {
-          "updatedAt": "2026-10-21T11:59:24.255Z",
-          "postProcessHash": "283ab2e5d95824e085f81e4353d3ca257dad7e919ff6ccc471810d3a65d79d12"
+          "updatedAt": "2026-11-04T14:21:36.290Z",
+          "postProcessHash": "b5fcb869a6a55b633323dc89b668e3d9846de452939e33f369694a33e47f0eb2"
         },
         "ko": {
-          "updatedAt": "2026-10-21T11:59:24.255Z",
-          "postProcessHash": "c0fd16af19016e1f9d556c35e6fe54821022096e53814dd36e6c581a4702e0be"
+          "updatedAt": "2026-11-04T14:21:36.290Z",
+          "postProcessHash": "fb7d4368fba6b2fc5e0329d1280b6c3ad40b108de859d4dc0638aabfd1e0129e"
         },
         "sv": {
-          "updatedAt": "2026-10-21T11:59:24.255Z",
-          "postProcessHash": "29a6d0941de0d5a7bbd63da953efbd7657300ce18286eb35f9891e01dec69ccf"
+          "updatedAt": "2026-11-04T14:21:36.290Z",
+          "postProcessHash": "eb2f1a972b74e7d57f02d585ce8c40cebde479225182172ec0e29c26786a0750"
         }
       }
     }
