@@ -27,6 +27,7 @@ import android.view.animation.PathInterpolator
 import androidx.annotation.RequiresApi
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.window.DialogWindowProvider
+import androidx.core.graphics.createBitmap
 import kotlin.math.hypot
 
 /**
@@ -97,7 +98,7 @@ internal class AppearanceReveal {
         animator?.let { animator = null; it.removeAllListeners(); it.cancel() }
         host?.let { it.removeCallbacks(timeout); cover?.let(it.overlay::remove) }
         host = null
-        cover?.picture?.recycle()
+        // Not recycled: a frame the render thread already recorded may still draw it. The collector frees it.
         cover = null
         done?.let { done = null; it() }
     }
@@ -106,7 +107,7 @@ internal class AppearanceReveal {
     private fun copy(window: Window, done: (Bitmap?) -> Unit) {
         val decor = window.decorView
         if (decor.width == 0 || decor.height == 0 || !decor.isAttachedToWindow) return done(null)
-        val bitmap = Bitmap.createBitmap(decor.width, decor.height, Bitmap.Config.ARGB_8888)
+        val bitmap = createBitmap(decor.width, decor.height)
         PixelCopy.request(window, Rect(0, 0, decor.width, decor.height), bitmap, { result ->
             if (result == PixelCopy.SUCCESS) done(bitmap) else { bitmap.recycle(); done(null) }
         }, Handler(Looper.getMainLooper()))
@@ -142,7 +143,7 @@ internal class AppearanceReveal {
     private tailrec fun Context.activity(): Activity? = this as? Activity ?: (this as? ContextWrapper)?.baseContext?.activity()
 
     /** The picture with a circular hole of [radius] at [origin], in the top window's coordinates. */
-    private class Cover(val picture: Bitmap, private val left: Float, private val top: Float, private val origin: Offset) : Drawable() {
+    private class Cover(private val picture: Bitmap, private val left: Float, private val top: Float, private val origin: Offset) : Drawable() {
         val farthest = listOf(left to top, left + picture.width to top, left to top + picture.height,
             left + picture.width to top + picture.height).maxOf { (x, y) -> hypot(x - origin.x, y - origin.y) }
         var radius = 0f

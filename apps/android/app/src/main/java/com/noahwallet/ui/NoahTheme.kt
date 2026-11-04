@@ -22,6 +22,7 @@ import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.*
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.core.graphics.drawable.toDrawable
 import com.noahwallet.R
 import com.noahwallet.localization.tr
 import com.noahwallet.ui.design.NoahTokens
@@ -62,7 +63,7 @@ internal fun WindowFollowsTheme() {
         // enableEdgeToEdge()'s own styles and scrims, deciding light or dark by Noah's theme instead of the phone's.
         activity.enableEdgeToEdge(SystemBarStyle.auto(android.graphics.Color.TRANSPARENT, android.graphics.Color.TRANSPARENT) { dark },
             SystemBarStyle.auto(android.graphics.Color.argb(0xe6, 0xFF, 0xFF, 0xFF), android.graphics.Color.argb(0x80, 0x1b, 0x1b, 0x1b)) { dark })
-        activity.window.setBackgroundDrawable(android.graphics.drawable.ColorDrawable(background))
+        activity.window.setBackgroundDrawable(background.toDrawable())
     }
 }
 
