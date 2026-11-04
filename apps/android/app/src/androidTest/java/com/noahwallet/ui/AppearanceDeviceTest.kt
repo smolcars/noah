@@ -104,6 +104,26 @@ class AppearanceDeviceTest {
         assertEquals(listOf(activity), resumed())
     }
 
+    @Test fun lightOnADarkPhoneDrawsAlertsLight() {
+        phone(dark = true)
+        stage.dialog = true
+        launch()
+        fun dialogColour(): Int {
+            compose.waitUntil(5_000) { compose.onAllNodesWithText("Please try again").fetchSemanticsNodes().isNotEmpty() }
+            Thread.sleep(800)
+            // Just inside the dialog, left of its title, on screen (the alert has its own window).
+            val title = compose.onNodeWithText("Please try again").fetchSemanticsNode()
+            val at = title.positionOnScreen
+            val shot = checkNotNull(instrumentation.uiAutomation.takeScreenshot())
+            return shot.getPixel((at.x - 12).toInt(), (at.y + title.size.height / 2).toInt()).also { shot.recycle() }
+        }
+        fun light(colour: Int) = listOf(16, 8, 0).all { (colour shr it and 0xFF) > 0xD0 }
+        assertFalse("dark alert on a dark phone", light(dialogColour()))
+        instrumentation.runOnMainSync { model.chooseAppearance(Appearance.light) }
+        compose.waitForIdle()
+        assertTrue("light alert under Light", light(dialogColour()))
+    }
+
     @Test fun automaticFollowsThePhoneWithoutRecreating() {
         phone(dark = false)
         launch()

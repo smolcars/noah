@@ -17,7 +17,8 @@ class AppearanceGalleryTest {
     private val args get() = InstrumentationRegistry.getArguments()
     private val stage = AppearanceStage(instrumentation)
 
-    @After fun reset() = stage.reset()
+    /** `-e noahAppearanceKeep true` leaves the choice as the hold ended it (for a relaunch). */
+    @After fun reset() { if (args.getString("noahAppearanceKeep") != "true") stage.reset() }
 
     /**
      * `-e noahAppearanceShots <label>`: the sheet under a light and a dark phone with each choice selected, then Home
@@ -46,14 +47,26 @@ class AppearanceGalleryTest {
             }
             instrumentation.runOnMainSync { stage.activity.finish() }
         }
+        // The app's alert under each choice on a dark phone.
+        stage.home = false; stage.sheet = null; stage.dialog = true
+        stage.launch()
+        stage.phone(dark = true)
+        for (choice in Appearance.entries) {
+            instrumentation.runOnMainSync { stage.model.chooseAppearance(choice) }
+            save("alert-phone-dark-${choice.name}")
+        }
     }
 
-    /** `-e noahAppearanceHold <seconds>` (and `-e noahAppearanceHome true` for Home): stays on screen for adb or a person. */
+    /**
+     * `-e noahAppearanceHold <seconds>`: stays on screen for adb or a person, and hosts again after a fold or unfold
+     * recreates MainActivity. `-e noahAppearanceHome true` shows Home.
+     */
     @Test fun hold() {
         val seconds = args.getString("noahAppearanceHold")?.toLongOrNull()
         assumeTrue(seconds != null)
         stage.home = args.getString("noahAppearanceHome") == "true"
         stage.launch()
+        stage.followRecreation()
         Thread.sleep(seconds!! * 1_000)
     }
 }

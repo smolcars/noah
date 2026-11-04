@@ -1,9 +1,11 @@
 package com.noahwallet.ui
 
 import android.app.Activity
+import android.app.Application
 import android.app.Instrumentation
 import android.content.Intent
 import android.content.res.Configuration
+import android.os.Bundle
 import android.os.ParcelFileDescriptor
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.layout.Box
@@ -13,10 +15,13 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.safeDrawing
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.*
 import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.ComposeView
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.testTagsAsResourceId
 import androidx.compose.ui.unit.Dp
@@ -33,6 +38,7 @@ import com.noahwallet.ui.home.HomePreviewHost
 import com.noahwallet.ui.settings.SettingsDestination
 import com.noahwallet.ui.settings.SettingsHost
 import com.noahwallet.ui.settings.SettingsPreview
+import kotlin.concurrent.thread
 
 /**
  * The real MainActivity with Settings (or Home from public fixtures) in place of its own content, themed by its model's
@@ -46,11 +52,14 @@ internal class AppearanceStage(private val instrumentation: Instrumentation) {
     lateinit var stack: NavBackStack<NavKey>
     val started get() = ::model.isInitialized
     var home by mutableStateOf(false)
+    /** A synthetic fold (in window pixels) in place of the device's. */
     var fold by mutableStateOf<WindowRegion?>(null)
     /** A narrow window (compact Settings) on a wide device; null fills the window. */
     var width by mutableStateOf<Dp?>(null)
     /** The root sheet Settings opens with. */
     var sheet: String? = null
+    /** The app's own alert over Settings, as launch errors show it. */
+    var dialog by mutableStateOf(false)
 
     fun shell(command: String) = instrumentation.uiAutomation.executeShellCommand(command).let { descriptor ->
         ParcelFileDescriptor.AutoCloseInputStream(descriptor).use { it.readBytes().decodeToString() }
@@ -63,10 +72,33 @@ internal class AppearanceStage(private val instrumentation: Instrumentation) {
         activity = start()
         model = loadedModel(activity)
         instrumentation.runOnMainSync { model.chooseAppearance(Appearance.automatic) }
+        host()
+    }
+
+    /**
+     * Hosts again in every new MainActivity (folding or unfolding recreates it), keeping the stored choice, so a
+     * recording can show what a recreation keeps. Call after [launch], off the main thread.
+     */
+    fun followRecreation() {
+        (context.applicationContext as Application).registerActivityLifecycleCallbacks(object : Application.ActivityLifecycleCallbacks {
+            override fun onActivityCreated(created: Activity, state: Bundle?) {
+                if (created is MainActivity) thread { activity = created; model = loadedModel(created); host() }
+            }
+            override fun onActivityStarted(activity: Activity) = Unit
+            override fun onActivityResumed(activity: Activity) = Unit
+            override fun onActivityPaused(activity: Activity) = Unit
+            override fun onActivityStopped(activity: Activity) = Unit
+            override fun onActivitySaveInstanceState(activity: Activity, state: Bundle) = Unit
+            override fun onActivityDestroyed(activity: Activity) = Unit
+        })
+    }
+
+    private fun host() {
         instrumentation.runOnMainSync {
             activity.setContent { LocalizedContent(model.localeIdentifier) { NoahTheme(model.appearance) {
                 WindowFollowsTheme()
-                CompositionLocalProvider(LocalFoldingFeatures provides listOfNotNull(fold)) {
+                // A synthetic fold replaces the device's; without one, the real hinge applies.
+                CompositionLocalProvider(LocalFoldingFeatures provides (fold?.let(::listOf) ?: LocalFoldingFeatures.current)) {
                     Box(Modifier.semantics { testTagsAsResourceId = true }.then(width?.let { Modifier.fillMaxHeight().width(it) } ?: Modifier.fillMaxSize())) {
                         if (home) HomePreviewHost(HomeFixtures.ui("everyday"))
                         else Box(Modifier.windowInsetsPadding(WindowInsets.safeDrawing)) {
@@ -75,6 +107,9 @@ internal class AppearanceStage(private val instrumentation: Instrumentation) {
                         }
                     }
                 }
+                if (dialog) WalletAlertDialog(onDismissRequest = { dialog = false }, title = { Text("Please try again") },
+                    text = { Text("Couldn't load your balance. Pull down to try again.") },
+                    confirmButton = { TextButton({ dialog = false }, Modifier.testTag("appearance-dialog-ok")) { Text("OK") } })
             } } }
         }
     }
