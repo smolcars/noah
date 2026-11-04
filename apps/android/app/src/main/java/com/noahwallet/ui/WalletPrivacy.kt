@@ -40,17 +40,20 @@ internal fun WalletAlertDialog(onDismissRequest: () -> Unit, confirmButton: @Com
     modifier: Modifier = Modifier, dismissButton: (@Composable () -> Unit)? = null,
     icon: (@Composable () -> Unit)? = null, title: (@Composable () -> Unit)? = null, text: (@Composable () -> Unit)? = null) {
     val privacy = LocalWalletPrivacy.current
-    AlertDialog(onDismissRequest = { if (!privacy.covered) onDismissRequest() },
-        modifier = modifier.semantics { testTagsAsResourceId = true }.windowInsetsPadding(WindowInsets.safeDrawing).avoidHinge(reserveWindow = true),
-        properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false),
-        confirmButton = { WalletModalContent(cover = {
-            privacy.unlock?.let { TextButton(it) { Text(tr("Unlock")) } }
-        }, content = confirmButton) },
-        dismissButton = dismissButton?.let { { WalletModalContent(cover = {}, content = it) } },
-        icon = icon?.let { { WalletModalContent(cover = {}, content = it) } },
-        title = title?.let { { WalletModalContent(cover = { Text(tr("Noah is locked")) }, content = it) } },
-        text = text?.let { { WalletModalContent(cover = { Text(tr("Unlock to see your wallet.")) },
-            content = { Box(Modifier.verticalScroll(rememberScrollState())) { it() } }) } })
+    // Dialogs shown outside a redesigned screen still get the redesign's monochrome Material (readable text actions).
+    com.noahwallet.ui.onboarding.OnboardingTheme {
+        AlertDialog(onDismissRequest = { if (!privacy.covered) onDismissRequest() },
+            modifier = modifier.semantics { testTagsAsResourceId = true }.windowInsetsPadding(WindowInsets.safeDrawing).avoidHinge(reserveWindow = true),
+            properties = androidx.compose.ui.window.DialogProperties(usePlatformDefaultWidth = false, decorFitsSystemWindows = false),
+            confirmButton = { WalletModalContent(cover = {
+                privacy.unlock?.let { TextButton(it) { Text(tr("Unlock")) } }
+            }, content = confirmButton) },
+            dismissButton = dismissButton?.let { { WalletModalContent(cover = {}, content = it) } },
+            icon = icon?.let { { WalletModalContent(cover = {}, content = it) } },
+            title = title?.let { { WalletModalContent(cover = { Text(tr("Noah is locked")) }, content = it) } },
+            text = text?.let { { WalletModalContent(cover = { Text(tr("Unlock to see your wallet.")) },
+                content = { Box(Modifier.verticalScroll(rememberScrollState())) { it() } }) } })
+    }
 }
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalComposeUiApi::class)

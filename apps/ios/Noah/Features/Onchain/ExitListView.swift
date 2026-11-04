@@ -65,7 +65,8 @@ struct ExitListView: View {
             OnchainStatusSection(model: model).settingsReceipts().padding(.top, 18)
         } footer: {
             if !ready.isEmpty {
-                Button(L10n.text("Claim {amount}", money(ready.reduce(0) { $0 + $1.amount }), locale: language)) {
+                // The ready rows show the gross; the claim review shows what arrives after its fee.
+                Button(L10n.text("Claim", locale: language)) {
                     haptics.play(.light)
                     settings.open(.exitClaim)
                 }
