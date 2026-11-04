@@ -280,41 +280,31 @@ internal fun RailCard(icon: Int?, name: String, line: String, best: Boolean, ena
 }
 
 /**
- * A review or result row (48 dp): muted label, value on the right; amounts in Space Grotesk. A [wraps] row too long for
- * one line puts its label above its value and both wrap rather than ellipsize (Review's rows, as on iOS).
+ * A review or result row (48 dp): muted label, value on the right; amounts in Space Grotesk. A row too long for one line
+ * puts its label above its value and both wrap rather than ellipsize (as on iOS), so no amount is ever cut off.
  */
 @Composable
 internal fun ValueRow(label: String, value: String, modifier: Modifier = Modifier, number: Boolean = false, icon: Int? = null, divider: Boolean = true,
-    copy: (() -> Unit)? = null, wraps: Boolean = false) {
+    copy: (() -> Unit)? = null) {
     val palette = LocalPalette.current
     val row = modifier.fillMaxWidth().heightIn(min = 48.dp)
         .drawBehind { if (divider) drawRect(palette.hairline, Offset(0f, size.height - 1.dp.toPx()), Size(size.width, 1.dp.toPx())) }
         .semantics(mergeDescendants = true) { }
     val copyButton = @Composable {
         val copyLabel = tr("Copy")
-        // A 48 dp target around the 36 dp button.
-        if (copy != null) Box(Modifier.padding(start = 2.dp).offset(x = 6.dp).size(48.dp).clip(CircleShape)
+        // The bare glyph in a 48 dp target, as every other copy button.
+        if (copy != null) Box(Modifier.padding(start = 2.dp).offset(x = 12.dp).size(48.dp).clip(CircleShape)
             .clickable(role = Role.Button, onClickLabel = copyLabel, onClick = copy).semantics { contentDescription = copyLabel },
             contentAlignment = Alignment.Center) {
-            Box(Modifier.size(36.dp).tonal(CircleShape, palette.soft), contentAlignment = Alignment.Center) {
-                Icon(painterResource(SendIcons.copy), null, Modifier.size(18.dp), tint = palette.foreground)
-            }
+            Icon(painterResource(SendIcons.copy), null, Modifier.size(18.dp), tint = palette.foreground)
         }
     }
-    if (wraps) LineOrStack(row, label = { Text(label, style = SendType.body, color = palette.muted) }) {
+    LineOrStack(row, label = { Text(label, style = SendType.body, color = palette.muted) }) {
         Row(verticalAlignment = Alignment.CenterVertically) {
             if (icon != null) Icon(painterResource(icon), null, Modifier.padding(end = 6.dp).size(16.dp), tint = palette.foreground)
             Text(value, Modifier.weight(1f, fill = false), style = if (number) SendType.number else SendType.value, color = palette.foreground)
             copyButton()
         }
-    } else Row(row, verticalAlignment = Alignment.CenterVertically) {
-        Text(label, Modifier.padding(end = 12.dp), style = SendType.body, color = palette.muted, maxLines = 1)
-        Row(Modifier.weight(1f), horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
-            if (icon != null) Icon(painterResource(icon), null, Modifier.padding(end = 6.dp).size(16.dp), tint = palette.foreground)
-            Text(value, Modifier.weight(1f, fill = false), style = if (number) SendType.number else SendType.value, color = palette.foreground,
-                maxLines = 1, overflow = TextOverflow.Ellipsis, textAlign = TextAlign.End)
-        }
-        copyButton()
     }
 }
 
@@ -325,7 +315,8 @@ private fun LineOrStack(modifier: Modifier, label: @Composable () -> Unit, value
         val title = labels.single()
         val content = values.single()
         val width = constraints.maxWidth
-        val gap = 12.dp.roundToPx()
+        // Side by side only with a clear 24 dp between them, so a long value never reads as part of its label.
+        val gap = 24.dp.roundToPx()
         if (title.maxIntrinsicWidth(Constraints.Infinity) + gap + content.maxIntrinsicWidth(Constraints.Infinity) <= width) {
             val t = title.measure(Constraints(maxWidth = width))
             val v = content.measure(Constraints(maxWidth = width - t.width - gap))
@@ -532,16 +523,17 @@ internal fun SwapTitle(text: String, style: TextStyle, modifier: Modifier = Modi
 
 /** The muted line under the stage: fades and rises in on each change; done phases read in the foreground. */
 @Composable
-internal fun PhaseText(text: String?, done: Boolean, modifier: Modifier = Modifier) {
+internal fun PhaseText(text: String?, done: Boolean, modifier: Modifier = Modifier, spoken: String? = null) {
     val palette = LocalPalette.current
     val reduceMotion = LocalReduceMotion.current
     val enter = remember { Animatable(1f) }
     LaunchedEffect(text) { if (text != null) { enter.snapTo(0f); enter.animateTo(1f, if (reduceMotion) tween(180) else NoahTokens.Motion.snappy()) } }
-    Box(modifier.fillMaxWidth().height(20.dp), contentAlignment = Alignment.Center) {
+    // Its own height (two lines at most), so large text never clips it.
+    Box(modifier.fillMaxWidth().heightIn(min = 20.dp), contentAlignment = Alignment.Center) {
         if (text != null) Text(text, Modifier.graphicsLayer {
             alpha = enter.value.coerceIn(0f, 1f); if (!reduceMotion) translationY = 6 * (1 - enter.value) * density
-        }.semantics { liveRegion = LiveRegionMode.Polite }, style = SendType.phase, color = if (done) palette.foreground else palette.muted,
-            textAlign = TextAlign.Center, maxLines = 1, overflow = TextOverflow.Ellipsis)
+        }.semantics { liveRegion = LiveRegionMode.Polite; if (spoken != null) contentDescription = spoken }, style = SendType.phase,
+            color = if (done) palette.foreground else palette.muted, textAlign = TextAlign.Center, maxLines = 2, overflow = TextOverflow.Ellipsis)
     }
 }
 

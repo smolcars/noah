@@ -24,6 +24,7 @@ struct SendConfirmation: View {
     var clock: SendMotionClock?
     var gate: SendHoldGate?
     var chainTip: UInt32?
+    var backToSend = false
     @State private var ownGate = SendHoldGate()
     @State private var window = OnboardingLayout(size: .zero, insets: EdgeInsets())
     @Environment(\.locale) private var locale
@@ -39,7 +40,8 @@ struct SendConfirmation: View {
         Group {
             if controller.locked {
                 SendOutcomeView(controller: controller, btcPrice: btcPrice, fiatCurrency: fiatCurrency, done: done, clock: clock,
-                                unit: unit, recipient: label, wide: wide, sideInsets: sideInsets, onLeave: onLeave, reviewed: payment, chainTip: chainTip)
+                                unit: unit, recipient: label, wide: wide, sideInsets: sideInsets, onLeave: onLeave, reviewed: payment, chainTip: chainTip,
+                                backToSend: backToSend)
             } else {
                 review
             }
@@ -239,17 +241,28 @@ struct SendToBlock: View {
         .onAppear { if fixture?.invoiceExpanded == true { expanded = true } }
     }
 
-    /// Addresses are short enough to show whole; an invoice starts collapsed to its first three lines and
-    /// toggles between them and the whole. The copy button copies the whole string either way.
+    /// Addresses are short enough to show whole; an invoice starts collapsed to its first two lines and last
+    /// characters and toggles between them and the whole. The copy button copies the whole string either way.
     private func card(_ full: String) -> some View {
         let collapsible = SendMotion.Rail(payment) == .lightning
         return VStack(alignment: .leading, spacing: 10) {
             HStack(alignment: .top, spacing: 4) {
-                // Quieter than the name above, still 4.5:1 on the soft card (the muted token isn't, in light).
-                IdentifierText(value: full, size: 13, style: .footnote, opacity: 0.62,
-                               lines: collapsible && !expanded ? 3 : 0)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .accessibilityIdentifier("send-review-destination")
+                Group {
+                    if collapsible && !expanded {
+                        // Its start, then its end, so both can be compared without expanding.
+                        VStack(alignment: .leading, spacing: 0) {
+                            identifier(full, lines: 2)
+                            identifier("…", selectable: false)
+                            identifier(String(full.suffix(12)))
+                        }
+                        .accessibilityElement(children: .ignore)
+                        .accessibilityLabel(Text(verbatim: full))
+                    } else {
+                        identifier(full)
+                    }
+                }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .accessibilityIdentifier("send-review-destination")
                 copyButton(full)
             }
             if collapsible { disclosure }
@@ -258,6 +271,11 @@ struct SendToBlock: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(NoahTokens.Colors.soft, in: RoundedRectangle(cornerRadius: NoahTokens.Radius.m, style: .continuous))
         .padding(.top, 4)
+    }
+
+    /// Quieter than the name above, still 4.5:1 on the soft card (the muted token isn't, in light).
+    private func identifier(_ value: String, lines: Int = 0, selectable: Bool = true) -> some View {
+        IdentifierText(value: value, size: 13, style: .footnote, opacity: 0.62, lines: lines, clipped: true, selectable: selectable)
     }
 
     private func copyButton(_ full: String) -> some View {

@@ -117,6 +117,7 @@
   <string name="gt_76900f1bfd16c8d4">"Volver"</string>
   <string name="gt_db99836fa338e87b">"De vuelta en Ark"</string>
   <string name="gt_ad5879b1f394ff83">"De vuelta en tu billetera"</string>
+  <string name="gt_f5ae6584d6b94d04">"Back to Send"</string>
   <string name="gt_02a2840b598b6b1c">"Respaldar ahora"</string>
   <string name="gt_2f2ccea17e5795d8">"Copia de seguridad lista"</string>
   <string name="gt_b77fead35a79fc03">"Tarea en segundo plano en curso..."</string>
@@ -365,7 +366,7 @@
   <string name="gt_4c5e9e2b90ab535d">"Desactivar la autenticación de la billetera"</string>
   <string name="gt_de55d749452d746b">"Cerrar la solicitud de correo de emergencia"</string>
   <string name="gt_34e108c0896d0158">"Visualización"</string>
-  <string name="gt_642e64c280b11d10">"Don\'t pay again until you\'ve checked Activity."</string>
+  <string name="gt_01fd5ca52181653e">"Don\'t pay again until you\'ve checked Activity. Paying again could pay the recipient twice."</string>
   <string name="gt_11a6767d5674c7e4">"Listo"</string>
   <string name="gt_5655e4c5f2e921a8">"Eliminar VTXO"</string>
   <string name="gt_57d4846cecee3fdd">"EUR"</string>
@@ -501,7 +502,8 @@
   <string name="gt_90f5c163f7becb8c">"Estimación de comisiones no disponible"</string>
   <string name="gt_66e1aeba4a28b81e">"No hay una estimación de comisiones disponible. Se desconocen las comisiones y el importe que recibirás. Continúa sin estimación solo si aceptas esta incertidumbre."</string>
   <string name="gt_26290dab5e50b113">"Comisión del pago existente: %1$s sats"</string>
-  <string name="gt_78ab175434313451">"Fee is an estimate. It can rise if more coins are needed."</string>
+  <string name="gt_c758154faf4a5856">"Fee is an estimate set when sent. It can rise if more coins are needed."</string>
+  <string name="gt_13d6e4e56f1b15de">"Fee is an estimate set when sent. It comes out of this total."</string>
   <string name="gt_6c6cc6eb80efa410">"Tasa de comisión"</string>
   <string name="gt_8211ff15a947c7cd">"Fee %1$s · %2$s of %3$s"</string>
   <string name="gt_aac77df347205252">"Comentarios"</string>
@@ -737,6 +739,7 @@
   <string name="gt_598ce3ccc02e5890">"Comisiones de red"</string>
   <string name="gt_99b6dfcd12886f76">"Network fees come from your on-chain balance, not from these coins."</string>
   <string name="gt_6c79c5d1bd98b91d">"Las comisiones de red salen de tus %1$s en cadena a %2$s sat/vB. Las transacciones que comparten tus VTXOs se pagan una vez. Las comisiones pueden cambiar."</string>
+  <string name="gt_843c1604c49e7abb">"Network fees paid"</string>
   <string name="gt_e5cff1be1c0e3c93">"La red no coincide: se esperaba %1$s, pero se obtuvo %2$s"</string>
   <string name="gt_6300ef800bb88429">"Nunca"</string>
   <string name="gt_0d559c8d4e9ab250">"Nunca pegues una clave privada de Nostr. Introduce una clave pública npub."</string>
@@ -1260,7 +1263,6 @@
   <string name="gt_03401b1fd160f1c8">"La factura fija el importe en %1$s"</string>
   <string name="gt_c7954684c87d96cd">"El bloqueo está abierto. Reclámalo a otra billetera o a la billetera en cadena de este teléfono."</string>
   <string name="gt_708398a18d2f5dfe">"No se pudo guardar la posición del mapa."</string>
-  <string name="gt_35a7d1e62f8a6b9d">"The network fee is set when sent and comes out of this total."</string>
   <string name="gt_bc71b743861782dc">"Es posible que la operación se haya iniciado. Comprueba su estado antes de repetirla. Las demás operaciones de recuperación siguen disponibles."</string>
   <string name="gt_58031d0ba8c82f55">"The outcome isn\'t known yet. This checks the payment. It won\'t send it again."</string>
   <string name="gt_b0186376f1dac3ea">"El destinatario ya no acepta este importe. Actualiza o cancela el pago recurrente."</string>

@@ -157,21 +157,21 @@ fun ReceiveContent(ui: ReceiveUi, actions: ReceiveActions, toasts: HomeToasts = 
     val paned = pose !is OnboardingPose.Compact
     val cardWidth = if (pose is OnboardingPose.Wide) 310.dp else 300.dp
     val qrSide = if (pose is OnboardingPose.Wide) 228.dp else 226.dp
-    val (line, done, arriving) = arrivalLine(ui)
+    val arrival = arrivalLine(ui)
     val openFormats = { haptics.light(); sheet.value = "formats" }
     val card = @Composable { ReceiveCardSlot(ui, face, tilt.value, cardWidth, qrSide, actions, openFormats.takeIf { !paned }) }
     val under = @Composable {
-        PhaseText(line, done, Modifier.padding(top = 14.dp).width(cardWidth))
+        PhaseText(arrival.text, arrival.done, Modifier.padding(top = 14.dp).width(cardWidth), arrival.spoken)
         ReceiveBlockRow(ui.chain, ui.tip, ui.confirmedAt, cardWidth, Modifier.padding(top = 8.dp))
     }
-    val pills = @Composable { modifier: Modifier -> ReceivePills(ui, arriving, face.payload != null, modifier, ::amountSheet, ::share) }
+    val pills = @Composable { modifier: Modifier -> ReceivePills(ui, arrival.presenting, face.payload != null, modifier, ::amountSheet, ::share) }
     val list = @Composable { FormatList(ui, rows, onSelect = { select(it, false) }, onCopy = copy) }
     val problem = @Composable { modifier: Modifier -> RequestProblem(ui, actions.retry, modifier) }
     val toast = @Composable { modifier: Modifier -> HomeToast(toasts.current, modifier) }
     when (pose) {
         OnboardingPose.Compact -> CompactReceive(ui, cardWidth, card, under, pills, problem, toast, openFormats)
         is OnboardingPose.Wide -> WideReceive(ui, pose, card, under, pills, list, problem, toast)
-        is OnboardingPose.Tabletop -> TabletopReceive(ui, pose, cardWidth, line, done, card, pills, list, problem, toast)
+        is OnboardingPose.Tabletop -> TabletopReceive(ui, pose, cardWidth, arrival, card, pills, list, problem, toast)
     }
     ReceiveSheets(ui, actions, sheet, paned) { FormatList(ui, rows, onSelect = { select(it, true) }, onCopy = copy) }
 }
@@ -278,25 +278,35 @@ private fun finishAmount(ui: ReceiveUi, actions: ReceiveActions, sats: Long, not
 }
 
 /**
- * The line under the card: the arrival's phase while it plays, then an on-chain payment's block; whether it reads as done;
- * and whether the arrival is still playing.
+ * The line under the card ([text], what TalkBack reads as [spoken]): the arrival's phase while it plays, then an on-chain
+ * payment's block; whether it reads as [done]; and whether the card is [presenting] the arrival or its receipt.
  */
+internal class ArrivalLine(val text: String?, val spoken: String?, val done: Boolean, val presenting: Boolean)
+
 @Composable
-private fun arrivalLine(ui: ReceiveUi): Triple<String?, Boolean, Boolean> {
+private fun arrivalLine(ui: ReceiveUi): ArrivalLine {
     val reduceMotion = LocalReduceMotion.current
-    val now by produceState(0L, ui.arrival?.startedAt) {
-        val started = ui.arrival?.startedAt ?: return@produceState
-        while (true) {
-            value = android.os.SystemClock.elapsedRealtime() - started
-            if (value > 6_000) break
-            delay(100)
-        }
-    }
+    val now by rememberArrivalTime(ui.arrival, reduceMotion)
     val phase = ui.arrival?.let { ReceiveTimeline.phase(it.rail, now, reduceMotion) }
     val chainPhase = ui.chain?.takeIf { phase == null }?.let { _ -> blockLine(ui) }
-    // The amount from the start: the card only flips to it later.
-    val line = phase?.let { tr(it) + if (it == "Payment received") " · " + ui.sats(ui.arrival.sats) else "" } ?: chainPhase
-    return Triple(line, phase == "Payment received" || (ui.confirmedAt != null && chainPhase != null), phase != null)
+    val arrival = ui.arrival
+    // The receipt face shows the amount itself; before the flip the line carries it.
+    val receipt = arrival != null && ReceiveTimeline.receiptShown(arrival.rail, now, reduceMotion)
+    val spoken = phase?.let { tr(it) + if (it == "Payment received") " · " + ui.sats(arrival.sats) else "" } ?: chainPhase
+    return ArrivalLine(if (receipt && phase != null) tr(phase) else spoken, spoken,
+        phase == "Payment received" || (ui.confirmedAt != null && chainPhase != null),
+        arrival != null && now < ReceiveTimeline.end(arrival.rail, reduceMotion))
+}
+
+/** Time since [arrival] started, ticking until it has played. */
+@Composable
+private fun rememberArrivalTime(arrival: ReceiveArrival?, reduceMotion: Boolean) = produceState(0L, arrival?.startedAt) {
+    val started = arrival?.startedAt ?: return@produceState
+    while (true) {
+        value = android.os.SystemClock.elapsedRealtime() - started
+        if (value > ReceiveTimeline.end(arrival.rail, reduceMotion) + 200) break
+        delay(100)
+    }
 }
 
 @Composable
@@ -314,7 +324,7 @@ private fun blockLine(ui: ReceiveUi): String? {
 @Composable
 private fun ReceivePills(ui: ReceiveUi, arriving: Boolean, canShare: Boolean, modifier: Modifier, amount: () -> Unit, share: () -> Unit) {
     Row(modifier, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        // While a payment's arrival plays, the same action sets up the next request, so it says so.
+        // While the card shows a payment's arrival or receipt (any rail), the same action sets up the next request, so it says so.
         SendPill(when { arriving -> tr("New request"); ui.amount == null -> tr("Add amount"); else -> tr("Change amount") },
             Modifier.weight(1f).testTag("receive-amount-button"),
             enabled = ui.request != null && !ui.saving,
@@ -381,13 +391,13 @@ private fun WideReceive(ui: ReceiveUi, pose: OnboardingPose.Wide, card: @Composa
 }
 
 @Composable
-private fun TabletopReceive(ui: ReceiveUi, pose: OnboardingPose.Tabletop, cardWidth: Dp, line: String?, done: Boolean, card: @Composable () -> Unit,
+private fun TabletopReceive(ui: ReceiveUi, pose: OnboardingPose.Tabletop, cardWidth: Dp, arrival: ArrivalLine, card: @Composable () -> Unit,
     pills: @Composable (Modifier) -> Unit, list: @Composable () -> Unit, problem: @Composable (Modifier) -> Unit, toast: @Composable (Modifier) -> Unit) {
     Column(Modifier.fillMaxSize()) {
         Box(Modifier.height(pose.top).fillMaxWidth().clipToBounds().padding(vertical = 10.dp), contentAlignment = Alignment.Center) {
             Column(horizontalAlignment = Alignment.CenterHorizontally) {
                 Box(Modifier.weight(1f, fill = false)) { card() }
-                PhaseText(line, done, Modifier.padding(top = 8.dp).width(cardWidth))
+                PhaseText(arrival.text, arrival.done, Modifier.padding(top = 8.dp).width(cardWidth), arrival.spoken)
             }
             toast(Modifier.align(Alignment.TopCenter))
         }
@@ -534,14 +544,12 @@ private fun FormatList(ui: ReceiveUi, rows: List<FormatRow>, onSelect: (ReceiveF
                         color = if (row.enabled) palette.foreground else palette.muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     Text(row.subtitle, style = SendType.small, color = palette.muted)
                 }
-                // A 48 dp target around the 36 dp button.
-                Box(Modifier.offset(x = 6.dp).size(48.dp).clip(CircleShape).clickable(enabled = row.enabled, role = Role.Button,
+                // The bare glyph in a 48 dp target, as every other copy button.
+                Box(Modifier.offset(x = 12.dp).size(48.dp).clip(CircleShape).clickable(enabled = row.enabled, role = Role.Button,
                     onClickLabel = copyLabel) { onCopy(row.format) }
                     .semantics { contentDescription = copyLabel }.testTag("receive-copy-${row.format.name}"), contentAlignment = Alignment.Center) {
-                    Box(Modifier.size(36.dp).tonal(CircleShape, palette.soft).graphicsLayer { alpha = if (row.enabled) 1f else .35f },
-                        contentAlignment = Alignment.Center) {
-                        Icon(painterResource(SendIcons.copy), null, Modifier.size(18.dp), tint = palette.foreground)
-                    }
+                    Icon(painterResource(SendIcons.copy), null, Modifier.size(18.dp).graphicsLayer { alpha = if (row.enabled) 1f else .35f },
+                        tint = palette.foreground)
                 }
             }
         }

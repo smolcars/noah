@@ -734,7 +734,7 @@ extension SendView {
                 controller: model.controller, cancel: cancelReview, done: finish, onLeave: onLeave,
                 unit: unit, recipient: .of(destination: model.destination, ownDomain: ownDomain, payment: payment),
                 invoiceNote: invoiceNote, wide: wide, sideInsets: (window.insets.leading, window.insets.trailing), clock: clock,
-                gate: holdGate, chainTip: chainTip)
+                gate: holdGate, chainTip: chainTip, backToSend: true)
         } else {
             // Today's quote is being prepared.
             panes {
@@ -762,7 +762,7 @@ extension SendView {
                             ownDomain: ownDomain,
                             payment: $0) },
                         wide: wide, sideInsets: (window.insets.leading, window.insets.trailing), onLeave: onLeave,
-                        reviewed: model.payment, chainTip: chainTip)
+                        reviewed: model.payment, chainTip: chainTip, backToSend: true)
     }
 
     // MARK: Navigation

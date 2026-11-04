@@ -40,16 +40,17 @@ class ReviewRowsWrapTest {
     private val rows = listOf(
         Triple("Via", "Lightning", false), Triple("Arrives", "After 2 confirmations", false), Triple("Estimated fee", "₿ 420", true),
         Triple("From", "Ark balance", false), Triple("Note", "Coffee and a croissant, thanks!", false),
-        Triple("Total (reviewed coins)", "₿ 152,742", true),
+        Triple("Total (reviewed coins)", "₿ 152,742", true), Triple("Arrives soon", "About 20 min · 2 Bitcoin blocks", false),
+        Triple("Estimated total", "₿ 50,420", true),
     )
 
-    private fun show(fontScale: Float, wraps: Boolean) = compose.setContent {
+    private fun show(fontScale: Float) = compose.setContent {
         NoahTheme {
             CompositionLocalProvider(LocalDensity provides Density(LocalDensity.current.density, fontScale)) {
                 // A 360 dp phone less Review's 20 dp margins.
                 Column(Modifier.width(320.dp)) {
                     rows.forEachIndexed { index, (label, value, number) ->
-                        ValueRow(label, value, number = number, icon = if (index == 0) HomeIcons.lightning else null, wraps = wraps,
+                        ValueRow(label, value, number = number, icon = if (index == 0) HomeIcons.lightning else null,
                             modifier = Modifier.testTag("row-$index"))
                     }
                 }
@@ -66,23 +67,29 @@ class ReviewRowsWrapTest {
     private fun cut(text: String) = layout(text).let { it.didOverflowHeight || it.isLineEllipsized(it.lineCount - 1) }
     private fun bounds(text: String) = compose.onNodeWithText(text, useUnmergedTree = true).fetchSemanticsNode().boundsInRoot
 
-    @Test fun twiceTheFontScaleStacksLongRowsAndCutsNothingOff() {
-        show(2f, wraps = true)
+    @Test fun twiceTheFontScaleStacksLongRowsAndCutsNothingOff() = largeFontCutsNothingOff(2f) { assertTrue("$it", it >= 2) }
+
+    @Test fun oneThirdLargerFontCutsNothingOff() = largeFontCutsNothingOff(1.3f) { }
+
+    /** Every label and value whole and inside its row; side by side only with at least 12 dp between them. */
+    private fun largeFontCutsNothingOff(scale: Float, stackedRows: (Int) -> Unit) {
+        show(scale)
+        val gap = with(compose.density) { 12.dp.toPx() }
         var stacked = 0
         rows.forEachIndexed { index, (label, value) ->
             assertFalse(label, cut(label)); assertFalse(value, cut(value))
             val row = compose.onNodeWithTag("row-$index").fetchSemanticsNode().boundsInRoot
             val (title, content) = bounds(label) to bounds(value)
             assertTrue(label, row.contains(title.topLeft) && row.contains(content.bottomRight - Offset(1f, 1f)))
-            if (content.top >= title.bottom) stacked++ else assertTrue(label, content.left >= title.right)
+            if (content.top >= title.bottom) stacked++ else assertTrue(label, content.left - title.right >= gap)
         }
-        // Total (reviewed coins) and the note at least.
-        assertTrue("$stacked", stacked >= 2)
+        // At 2×, Total (reviewed coins) and the note at least.
+        stackedRows(stacked)
     }
 
     @Test fun rowsThatFitKeepOneLine() {
-        show(1f, wraps = true)
-        rows.dropLast(2).forEach { (label, value) ->
+        show(1f)
+        rows.take(4).forEach { (label, value) ->
             val (title, content) = bounds(label) to bounds(value)
             assertEquals(label, title.center.y, content.center.y, 1f)
             assertTrue(label, content.left >= title.right)

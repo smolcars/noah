@@ -33,6 +33,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
@@ -834,7 +835,10 @@ private fun RecipientBlock(destination: String, method: String?, env: SendEnv, m
     }
 }
 
-/** The whole destination, mono and muted on a soft card; [collapses] (an invoice) shows three lines until "Show full invoice" expands it in place. */
+/**
+ * The whole destination, mono and muted on a soft card; [collapses] (an invoice) shows its first two lines and its last
+ * characters until "Show full invoice" expands it in place.
+ */
 @Composable
 private fun DestinationCard(full: String, collapses: Boolean, modifier: Modifier = Modifier) {
     val palette = LocalPalette.current
@@ -849,9 +853,17 @@ private fun DestinationCard(full: String, collapses: Boolean, modifier: Modifier
         .testTag("send-destination")) {
         Row(verticalAlignment = Alignment.Top) {
             androidx.compose.foundation.text.selection.SelectionContainer(Modifier.weight(1f).padding(end = 4.dp)) {
-                Text(full, Modifier.fillMaxWidth().animateContentSize(), style = SendType.mono, color = ink,
-                    maxLines = if (collapsed) 3 else Int.MAX_VALUE, overflow = TextOverflow.Ellipsis,
-                    onTextLayout = { if (collapsed) overflows = it.hasVisualOverflow })
+                // Collapsed: its start, then its end, so both can be compared without expanding; TalkBack reads it whole.
+                Column(Modifier.fillMaxWidth().animateContentSize()
+                    .then(if (collapsed && overflows) Modifier.clearAndSetSemantics { contentDescription = full } else Modifier)) {
+                    Text(full, Modifier.fillMaxWidth(), style = SendType.mono, color = ink,
+                        maxLines = if (collapsed) 2 else Int.MAX_VALUE, overflow = TextOverflow.Clip,
+                        onTextLayout = { if (collapsed) overflows = it.hasVisualOverflow })
+                    if (collapsed && overflows) {
+                        Text("…", style = SendType.mono, color = ink)
+                        Text(full.takeLast(12), style = SendType.mono, color = ink)
+                    }
+                }
             }
             val copyLabel = tr("Copy")
             Box(Modifier.offset(y = (-12).dp).size(48.dp).clip(androidx.compose.foundation.shape.CircleShape)
@@ -873,19 +885,17 @@ private fun DestinationCard(full: String, collapses: Boolean, modifier: Modifier
 
 @Composable
 private fun ReviewRows(source: SendSource?, quote: SendQuote?, payment: SendPayment?, rail: SendRail?, env: SendEnv, top: Dp) {
-    // Every row puts its label above its value at large text sizes rather than cutting either off.
     Column(Modifier.padding(top = top)) {
-        if (rail != null) ValueRow(tr("Via"), tr(rail.label), icon = railIcon(rail), wraps = true)
+        if (rail != null) ValueRow(tr("Via"), tr(rail.label), icon = railIcon(rail))
         if (rail != null) ValueRow(tr("Arrives"),
-            arrives(rail, source, env.chainNeeded).let { (words, count) -> if (count == null) tr(words) else tr(words, count) }, wraps = true)
+            arrives(rail, source, env.chainNeeded).let { (words, count) -> if (count == null) tr(words) else tr(words, count) })
         if (quote != null) {
             ValueRow(tr(if (quote.approximate) "Estimated fee" else "Fee"),
-                if (quote.fee == 0L && rail == SendRail.ark) tr("Free") else formatted(quote.fee, env), number = quote.fee != 0L || rail != SendRail.ark,
-                wraps = true)
-            payment?.source?.let { ValueRow(tr("From"), tr(it.label), wraps = true) }
-            if (!payment?.comment.isNullOrEmpty()) ValueRow(tr("Note"), payment.comment, wraps = true)
+                if (quote.fee == 0L && rail == SendRail.ark) tr("Free") else formatted(quote.fee, env), number = quote.fee != 0L || rail != SendRail.ark)
+            payment?.source?.let { ValueRow(tr("From"), tr(it.label)) }
+            if (!payment?.comment.isNullOrEmpty()) ValueRow(tr("Note"), payment.comment)
             ValueRow(tr(if (quote.approximate && quote.vtxoIDs.isNullOrEmpty()) "Estimated total" else "Total"),
-                formatted(quote.total, env), number = true, divider = false, wraps = true)
+                formatted(quote.total, env), number = true, divider = false)
         }
     }
 }
@@ -907,8 +917,8 @@ private fun reviewNote(model: SendModel?, quote: SendQuote?, env: SendEnv, typed
     quote?.checkpoint != null -> tr("An existing Lightning payment will be checked. No new payment will be created.")
     model?.parsed?.amount != null && typedBefore != null && typedBefore > 0 && typedBefore != quote?.amount ->
         tr("The invoice sets the amount to {amount}", formatted(model.parsed.amount!!.toLong(), env))
-    !quote?.vtxoIDs.isNullOrEmpty() -> tr("The network fee is set when sent and comes out of this total.")
-    quote?.approximate == true -> tr("Fee is an estimate. It can rise if more coins are needed.")
+    !quote?.vtxoIDs.isNullOrEmpty() -> tr("Fee is an estimate set when sent. It comes out of this total.")
+    quote?.approximate == true -> tr("Fee is an estimate set when sent. It can rise if more coins are needed.")
     else -> null
 }
 
@@ -1129,8 +1139,10 @@ private fun SendingFoot(ending: SendEnding?, receipt: SendReceipt?, controller: 
             haptics.light(); actions.leave()
         }
     } else if (doneShown) {
-        SendPill(tr("Done"), Modifier.fillMaxWidth().padding(bottom = 6.dp).testTag("send-success-done").then(fade), enabled = !controller.checking,
-            outlined = secondary) {
+        // Send's Done starts Send over, so a payment that wasn't sent says where it goes; another host (Recurring) just closes.
+        val backToSend = !actions.leaveUnresolved && ending in setOf(SendEnding.failed, SendEnding.notSent)
+        SendPill(tr(if (backToSend) "Back to Send" else "Done"), Modifier.fillMaxWidth().padding(bottom = 6.dp).testTag("send-success-done").then(fade),
+            enabled = !controller.checking, outlined = secondary) {
             haptics.light(); if (ending == SendEnding.pending) actions.leave() else actions.done()
         }
     }
@@ -1251,7 +1263,7 @@ private fun receiptRows(ending: SendEnding, r: SendReceipt, attempt: SendAttempt
             add { d ->
                 ValueRow(tr(if (p.label == "Payment preimage") "Proof of payment" else p.label),
                     SendSuccessDetails.truncate(p.value).let { if (it.length > 18) it.take(8) + "…" + it.takeLast(6) else it }, divider = d,
-                    copy = { copy(p.label, p.value) }, modifier = Modifier.testTag("send-success-copy-proof"), wraps = true)
+                    copy = { copy(p.label, p.value) }, modifier = Modifier.testTag("send-success-copy-proof"))
             }
         }
     }
@@ -1321,8 +1333,12 @@ private fun OverrideAction(controller: SendController, actions: SendActions) {
     val scope = rememberCoroutineScope()
     var overrideStep by remember { mutableIntStateOf(0) }
     val palette = LocalPalette.current
-    Text(tr("Don't pay again until you've checked Activity."), Modifier.fillMaxWidth().padding(top = 20.dp), style = SendType.line,
-        color = palette.muted, textAlign = TextAlign.Center)
+    Row(Modifier.fillMaxWidth().padding(top = 20.dp).semantics(mergeDescendants = true) { }, horizontalArrangement = Arrangement.Center) {
+        Icon(painterResource(com.noahwallet.ui.settings.SettingsIcons.shield), null, Modifier.padding(top = 1.dp, end = 8.dp).size(16.dp),
+            tint = palette.muted)
+        Text(tr("Don't pay again until you've checked Activity. Paying again could pay the recipient twice."), style = SendType.line,
+            color = palette.muted)
+    }
     TextButton({ overrideStep = 1 }, Modifier.fillMaxWidth().heightIn(min = 48.dp).testTag("send-override")) {
         Text(tr("Pay again anyway"), style = SendType.line.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Medium), color = palette.foreground)
     }

@@ -94,7 +94,7 @@ private fun StoredSeedRestoreScreen(model: AppModel) {
     FormLayout(headline = { large ->
         Headline(tr("Recovery phrase found"),
             tr("Your recovery phrase is still securely stored on this device. Use it to restore your wallet from its backup."), large = large)
-    }, form = {}, actions = {
+    }, form = { HeadlineGlyph(com.noahwallet.ui.settings.SettingsIcons.key) }, actions = {
         // As on iOS, the error sits just above the button.
         Column(verticalArrangement = Arrangement.spacedBy(NoahTokens.Space.l)) {
             flow.issue?.let { RestoreIssueText(it, Modifier.testTag("restore-error")) }
@@ -365,19 +365,20 @@ private fun WordCell(word: String, index: Int, count: Int, bad: Boolean, focused
         delay(index * 28L)
         if (reduceMotion) appear.animateTo(1f, tween(NoahTokens.Motion.REDUCE_MOTION_FADE_MS)) else appear.animateTo(1f, NoahTokens.Motion.snappy())
     }
-    Row(modifier.heightIn(min = 44.dp).graphicsLayer {
+    // Each word's field is itself a 48 dp target.
+    Row(modifier.heightIn(min = 48.dp).graphicsLayer {
         alpha = appear.value.coerceIn(0f, 1f)
         if (!reduceMotion) translationY = (1 - appear.value) * 8 * density
     }, verticalAlignment = Alignment.CenterVertically) {
         Text("${index + 1}", Modifier.widthIn(min = 18.dp).clearAndSetSemantics { }, textAlign = TextAlign.End,
             style = TextStyleNumber, color = palette.muted, maxLines = 1, softWrap = false)
         Spacer(Modifier.width(8.dp))
-        Box(Modifier.weight(1f).heightIn(min = 44.dp), contentAlignment = Alignment.CenterStart) {
+        Box(Modifier.weight(1f).heightIn(min = 48.dp), contentAlignment = Alignment.CenterStart) {
             RecoveryWordField(word, index, onChange, onFocus = onFocus, onNext = onNext, wordCount = count,
                 textColor = if (bad) palette.failure else palette.foreground, cursorColor = palette.orange,
                 textSize = if (count == 24) 16f else 17f, enabled = enabled,
-                modifier = Modifier.fillMaxWidth().heightIn(min = 34.dp).focusRequester(requester).testTag("restore-word-${index + 1}"))
-            Underline(focused, failed = bad, modifier = Modifier.align(Alignment.BottomStart).padding(bottom = 5.dp), thickness = 1.dp)
+                modifier = Modifier.fillMaxWidth().heightIn(min = 48.dp).focusRequester(requester).testTag("restore-word-${index + 1}"))
+            Underline(focused, failed = bad, modifier = Modifier.align(Alignment.BottomStart).padding(bottom = 7.dp), thickness = 1.dp)
         }
     }
 }

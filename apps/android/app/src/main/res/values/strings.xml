@@ -116,6 +116,7 @@
   <string name="gt_76900f1bfd16c8d4">"Back"</string>
   <string name="gt_db99836fa338e87b">"Back in Ark"</string>
   <string name="gt_ad5879b1f394ff83">"Back in your wallet"</string>
+  <string name="gt_f5ae6584d6b94d04">"Back to Send"</string>
   <string name="gt_02a2840b598b6b1c">"Back up now"</string>
   <string name="gt_2f2ccea17e5795d8">"Backed up"</string>
   <string name="gt_b77fead35a79fc03">"Background task in progress..."</string>
@@ -362,7 +363,7 @@
   <string name="gt_4c5e9e2b90ab535d">"Disable wallet authentication"</string>
   <string name="gt_de55d749452d746b">"Dismiss emergency email prompt"</string>
   <string name="gt_34e108c0896d0158">"Display"</string>
-  <string name="gt_642e64c280b11d10">"Don\'t pay again until you\'ve checked Activity."</string>
+  <string name="gt_01fd5ca52181653e">"Don\'t pay again until you\'ve checked Activity. Paying again could pay the recipient twice."</string>
   <string name="gt_11a6767d5674c7e4">"Done"</string>
   <string name="gt_5655e4c5f2e921a8">"Drop VTXO"</string>
   <string name="gt_57d4846cecee3fdd">"EUR"</string>
@@ -494,7 +495,8 @@
   <string name="gt_90f5c163f7becb8c">"Fee estimate unavailable"</string>
   <string name="gt_66e1aeba4a28b81e">"Fee estimate unavailable. Fees and amount to receive are unknown. Continue without an estimate only if you accept this uncertainty."</string>
   <string name="gt_26290dab5e50b113">"Fee for the existing payment: %1$s sats"</string>
-  <string name="gt_78ab175434313451">"Fee is an estimate. It can rise if more coins are needed."</string>
+  <string name="gt_c758154faf4a5856">"Fee is an estimate set when sent. It can rise if more coins are needed."</string>
+  <string name="gt_13d6e4e56f1b15de">"Fee is an estimate set when sent. It comes out of this total."</string>
   <string name="gt_6c6cc6eb80efa410">"Fee rate"</string>
   <string name="gt_8211ff15a947c7cd">"Fee %1$s · %2$s of %3$s"</string>
   <string name="gt_aac77df347205252">"Feedback"</string>
@@ -728,6 +730,7 @@
   <string name="gt_598ce3ccc02e5890">"Network fees"</string>
   <string name="gt_99b6dfcd12886f76">"Network fees come from your on-chain balance, not from these coins."</string>
   <string name="gt_6c79c5d1bd98b91d">"Network fees come from your on-chain %1$s at %2$s sat/vB. Transactions your VTXOs share are paid once. Fees may change."</string>
+  <string name="gt_843c1604c49e7abb">"Network fees paid"</string>
   <string name="gt_e5cff1be1c0e3c93">"Network mismatch: expected %1$s, got %2$s"</string>
   <string name="gt_6300ef800bb88429">"Never"</string>
   <string name="gt_0d559c8d4e9ab250">"Never paste a Nostr private key. Enter an npub public key."</string>
@@ -1247,7 +1250,6 @@
   <string name="gt_03401b1fd160f1c8">"The invoice sets the amount to %1$s"</string>
   <string name="gt_c7954684c87d96cd">"The lock is open. Claim it to another wallet or to this phone’s on-chain wallet."</string>
   <string name="gt_708398a18d2f5dfe">"The map position could not be saved."</string>
-  <string name="gt_35a7d1e62f8a6b9d">"The network fee is set when sent and comes out of this total."</string>
   <string name="gt_bc71b743861782dc">"The operation may have been submitted. Check its status before repeating it. Other recovery operations remain available."</string>
   <string name="gt_58031d0ba8c82f55">"The outcome isn\'t known yet. This checks the payment. It won\'t send it again."</string>
   <string name="gt_b0186376f1dac3ea">"The recipient no longer accepts this amount. Update or cancel the recurring payment."</string>

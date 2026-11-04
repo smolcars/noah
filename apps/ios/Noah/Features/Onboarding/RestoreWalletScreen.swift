@@ -378,13 +378,15 @@ private struct WordCountPicker: View {
                             }
                         }
                         .frame(minHeight: NoahTokens.Size.hitTarget - 6)
-                        .contentShape(Capsule())
+                        // The glass's inset is part of each half, so each target is the full 44 pt.
+                        .padding(.vertical, 3)
+                        .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
                 .accessibilityAddTraits(option == count ? .isSelected : [])
             }
         }
-        .padding(3)
+        .padding(.horizontal, 3)
         .glassCompat(in: Capsule())
         .animation(NoahTokens.Motion.travel(reduceMotion), value: count)
         .accessibilityIdentifier("restore-word-count")

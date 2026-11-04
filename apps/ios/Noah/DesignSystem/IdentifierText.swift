@@ -13,6 +13,8 @@ struct IdentifierText: UIViewRepresentable {
     /// Ends lines at the trailing edge, as a value beside its label.
     var trailing = false
     var lines = 0
+    /// Cuts the last line without an ellipsis, when the caller shows its own.
+    var clipped = false
     /// Off inside a row that opens on a tap, so the tap reaches the row.
     var selectable = true
 
@@ -41,7 +43,7 @@ struct IdentifierText: UIViewRepresentable {
             attributes: [.font: font, .foregroundColor: UIColor(color).withAlphaComponent(opacity), .paragraphStyle: paragraph])
         view.isUserInteractionEnabled = selectable
         view.textContainer.maximumNumberOfLines = lines
-        view.textContainer.lineBreakMode = lines > 0 ? .byTruncatingTail : .byCharWrapping
+        view.textContainer.lineBreakMode = lines > 0 && !clipped ? .byTruncatingTail : .byCharWrapping
     }
 
     func sizeThatFits(_ proposal: ProposedViewSize, uiView view: UITextView, context _: Context) -> CGSize? {

@@ -277,13 +277,11 @@ struct TransactionDetailView: View {
         if debug {
             small("Payment ID", transaction.id, mono: true, copy: transaction.id)
             if let id = transaction.movementId { small("Movement ID", String(id), copy: String(id)) }
-        }
-        if let kind = transaction.movementKindLabel { small("Movement type", L10n.text(kind, locale: language)) }
-        if debug {
+            if let kind = transaction.movementKindLabel { small("Movement type", L10n.text(kind, locale: language)) }
             if let name = transaction.subsystemName { small("Subsystem", "\(name) (\(transaction.subsystemKind ?? ""))", mono: true) }
             if let intended = transaction.intendedBalanceSat { small("Intended change", signed(intended), numeric: true) }
+            if let effective = transaction.effectiveBalanceSat { small("Effective change", signed(effective), numeric: true) }
         }
-        if let effective = transaction.effectiveBalanceSat { small("Effective change", signed(effective), numeric: true) }
         if let anchor = transaction.chainAnchor, anchor != transaction.txid, anchor.split(separator: ":").first.map(String.init) != transaction.txid {
             small("Chain anchor", anchor, mono: true, copy: anchor)
         }

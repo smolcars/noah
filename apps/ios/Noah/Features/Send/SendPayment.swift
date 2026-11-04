@@ -33,8 +33,8 @@ struct SendQuote: Codable, Sendable, Equatable {
     var prepared: SendPreparedTransaction?
     var recipientIsEstimated: Bool { vtxoIDs?.isEmpty == false }
     var recipientDescription: String { recipientIsEstimated ? "Recipient receives about \(amount) sats" : "\(amount) sats" }
-    static let recipientEstimateExplanation = "The network fee is set when sent and comes out of this total."
-    static let feeEstimateExplanation = "Fee is an estimate. It can rise if more coins are needed."
+    static let recipientEstimateExplanation = "Fee is an estimate set when sent. It comes out of this total."
+    static let feeEstimateExplanation = "Fee is an estimate set when sent. It can rise if more coins are needed."
 }
 struct SendReceipt: Codable, Equatable, Sendable {
     static let broadcastPendingMessage = "Submitted, awaiting broadcast. Noah will keep retrying the broadcast. Do not send this payment again."

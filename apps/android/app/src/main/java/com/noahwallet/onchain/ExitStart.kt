@@ -87,7 +87,7 @@ internal fun ExitStartContent(quote: OnchainQuote?, fallback: OnchainQuote?, con
     }, leading = { StartLeading(review, known, money, depth, delta) }) {
         // What stands in the way first, then the decision together: what each source pays, what you get and when you can still
         // cancel, right above the hold; the details and how Noah runs the exit after.
-        StartWarnings(review, known, quote != null && !current)
+        StartWarnings(known, quote != null && !current)
         StartTotals(review, known, money)
         Caveat(tr("You can cancel until the last transaction is sent."), key = true)
         SectionLabel(tr("Details"))
@@ -113,7 +113,8 @@ private fun ColumnScope.StartLeading(review: OnchainQuote?, known: OnchainQuote?
     // One branch, the deepest selected VTXO's (a batch's total isn't one path); a round's usual four until it's known.
     val path = depth ?: known?.transactions?.takeIf { review?.ids?.size == 1 }?.toInt() ?: 4
     if (wide) ExitPicture(ExitScene.sample(path), tr("Your VTXO’s path to the chain"), exitPicture().padding(top = 14.dp))
-    else if (review != null) ExitPath(path, review.ids.size > 1, known?.transactions?.toInt(), delta)
+    // Without an estimate the rail stays but its captions go, so the unknowns and the cancel line stay above the hold.
+    else if (review != null) ExitPath(path, review.ids.size > 1, known?.transactions?.toInt(), delta, captions = !review.feesUnknown)
 }
 
 /**
@@ -123,26 +124,27 @@ private fun ColumnScope.StartLeading(review: OnchainQuote?, known: OnchainQuote?
 @Composable
 private fun StartTotals(review: OnchainQuote?, known: OnchainQuote?, money: (Long) -> String) {
     SectionLabel(tr("From your on-chain wallet"), top = 16.dp)
-    ExitValueRow(tr("Network fees"), known?.chainFee?.let { "~" + money(it) } ?: tr("Unknown"), kind = ValueKind.number, last = true)
+    ExitValueRow(tr("Network fees"), known?.chainFee?.let { "~" + money(it) } ?: tr("Unknown"), kind = ValueKind.number, last = true,
+        quiet = known?.chainFee == null)
     Caveat(tr("Network fees come from your on-chain balance, not from these coins."), key = true)
     if (known != null && !known.fundable) Warning(tr("Not enough on-chain bitcoin for the fees. The exit starts, then waits until you add about {amount}.",
         money(checkNotNull(known.chainFee) - known.confirmed)), failed = true, top = 12.dp)
-    if (review?.feesUnknown == true) Warning(tr("Noah couldn't check whether your on-chain balance can cover the fees. Confirmed on-chain funds are needed."),
-        failed = true, top = 12.dp)
+    // No estimate: one callout with both facts, the consequence in red and why in the foreground.
+    if (review?.feesUnknown == true) Warning(
+        tr("Fee estimate unavailable. Fees and amount to receive are unknown. Continue without an estimate only if you accept this uncertainty."),
+        failed = true, top = 12.dp,
+        detail = tr("Noah couldn't check whether your on-chain balance can cover the fees. Confirmed on-chain funds are needed."))
     SectionLabel(tr("From these coins"), top = 16.dp)
-    ExitValueRow(tr("Claim fee"), known?.fee?.let { "~" + money(it) } ?: tr("Unknown"), kind = ValueKind.number, last = true)
-    TotalRow(tr("You get"), known?.fee?.let { "~" + money(ExitRules.received(known.amount, it)) } ?: tr("Unknown"))
+    ExitValueRow(tr("Claim fee"), known?.fee?.let { "~" + money(it) } ?: tr("Unknown"), kind = ValueKind.number, last = true, quiet = known?.fee == null)
+    TotalRow(tr("You get"), known?.fee?.let { "~" + money(ExitRules.received(known.amount, it)) } ?: tr("Unknown"), quiet = known?.fee == null)
     Caveat(tr("Only the claim fee is deducted from these coins."), key = true)
 }
 
 @Composable
-private fun StartWarnings(review: OnchainQuote?, known: OnchainQuote?, changed: Boolean) {
+private fun StartWarnings(known: OnchainQuote?, changed: Boolean) {
     if (known != null) ExitRules.warning(known.amount, checkNotNull(known.fee), known.totalFee, claimOnly = false)?.let {
         Warning(tr(it), failed = true, top = 16.dp)
     }
-    if (review?.feesUnknown == true) Warning(
-        tr("Fee estimate unavailable. Fees and amount to receive are unknown. Continue without an estimate only if you accept this uncertainty."),
-        failed = true, top = 16.dp)
     if (changed) Warning(tr(OnchainFailure.changed.text), failed = true, top = 16.dp)
 }
 
@@ -153,7 +155,7 @@ private fun StartWarnings(review: OnchainQuote?, known: OnchainQuote?, changed: 
  * what's known: the estimate's [count] and the server's [delta].
  */
 @Composable
-private fun ExitPath(path: Int, batch: Boolean, count: Int?, delta: Long?) {
+private fun ExitPath(path: Int, batch: Boolean, count: Int?, delta: Long?, captions: Boolean) {
     val palette = LocalPalette.current
     val measurer = androidx.compose.ui.text.rememberTextMeasurer()
     val local = androidx.compose.ui.platform.LocalDensity.current
@@ -190,7 +192,7 @@ private fun ExitPath(path: Int, batch: Boolean, count: Int?, delta: Long?) {
             exitWalletBadge(Offset(x1 - 20, y), palette)
         }
     }
-    ExitPathCaptions(count, batch, delta)
+    if (captions) ExitPathCaptions(count, batch, delta)
 }
 
 /** The timelock dial's ticks around ([cx], [y]), the major ones longer. */

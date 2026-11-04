@@ -4093,6 +4093,42 @@
         }
       }
     },
+    "Back to Send": {
+      "comment": "GT gt_f5ae6584d6b94d04; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Back to Send"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Back to Send"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Back to Send"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Back to Send"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Back to Send"
+          }
+        }
+      }
+    },
     "Back up now": {
       "comment": "GT gt_02a2840b598b6b1c; arguments: none",
       "extractionState": "manual",
@@ -12853,38 +12889,38 @@
         }
       }
     },
-    "Don't pay again until you've checked Activity.": {
-      "comment": "GT gt_642e64c280b11d10; arguments: none",
+    "Don't pay again until you've checked Activity. Paying again could pay the recipient twice.": {
+      "comment": "GT gt_01fd5ca52181653e; arguments: none",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Don't pay again until you've checked Activity."
+            "value": "Don't pay again until you've checked Activity. Paying again could pay the recipient twice."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Don't pay again until you've checked Activity."
+            "value": "Don't pay again until you've checked Activity. Paying again could pay the recipient twice."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Don't pay again until you've checked Activity."
+            "value": "Don't pay again until you've checked Activity. Paying again could pay the recipient twice."
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "Don't pay again until you've checked Activity."
+            "value": "Don't pay again until you've checked Activity. Paying again could pay the recipient twice."
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Don't pay again until you've checked Activity."
+            "value": "Don't pay again until you've checked Activity. Paying again could pay the recipient twice."
           }
         }
       }
@@ -17413,38 +17449,74 @@
         }
       }
     },
-    "Fee is an estimate. It can rise if more coins are needed.": {
-      "comment": "GT gt_78ab175434313451; arguments: none",
+    "Fee is an estimate set when sent. It can rise if more coins are needed.": {
+      "comment": "GT gt_c758154faf4a5856; arguments: none",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Fee is an estimate. It can rise if more coins are needed."
+            "value": "Fee is an estimate set when sent. It can rise if more coins are needed."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Fee is an estimate. It can rise if more coins are needed."
+            "value": "Fee is an estimate set when sent. It can rise if more coins are needed."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Fee is an estimate. It can rise if more coins are needed."
+            "value": "Fee is an estimate set when sent. It can rise if more coins are needed."
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "Fee is an estimate. It can rise if more coins are needed."
+            "value": "Fee is an estimate set when sent. It can rise if more coins are needed."
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Fee is an estimate. It can rise if more coins are needed."
+            "value": "Fee is an estimate set when sent. It can rise if more coins are needed."
+          }
+        }
+      }
+    },
+    "Fee is an estimate set when sent. It comes out of this total.": {
+      "comment": "GT gt_13d6e4e56f1b15de; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fee is an estimate set when sent. It comes out of this total."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fee is an estimate set when sent. It comes out of this total."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fee is an estimate set when sent. It comes out of this total."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fee is an estimate set when sent. It comes out of this total."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fee is an estimate set when sent. It comes out of this total."
           }
         }
       }
@@ -25737,6 +25809,42 @@
           "stringUnit": {
             "state": "translated",
             "value": "Nätverksavgifterna tas från dina %1$@ på blockkedjan till %2$@ sat/vB. Transaktioner som dina VTXO:er delar betalas en gång. Avgifterna kan ändras."
+          }
+        }
+      }
+    },
+    "Network fees paid": {
+      "comment": "GT gt_843c1604c49e7abb; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Network fees paid"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Network fees paid"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Network fees paid"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Network fees paid"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Network fees paid"
           }
         }
       }
@@ -44229,42 +44337,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Kartpositionen kunde inte sparas."
-          }
-        }
-      }
-    },
-    "The network fee is set when sent and comes out of this total.": {
-      "comment": "GT gt_35a7d1e62f8a6b9d; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "The network fee is set when sent and comes out of this total."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "The network fee is set when sent and comes out of this total."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "The network fee is set when sent and comes out of this total."
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "The network fee is set when sent and comes out of this total."
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "The network fee is set when sent and comes out of this total."
           }
         }
       }

@@ -12,6 +12,7 @@ struct ReceiveView: View {
     @Environment(\.locale) private var locale
     @Environment(\.scenePhase) private var scenePhase
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Environment(\.sendReceiveFixture) private var fixture
     let isActive: Bool
     @State private var model: ReceiveModel
@@ -267,8 +268,10 @@ struct ReceiveView: View {
     }
 
     private var pills: some View {
-        GlassGroup(spacing: 10) {
-            HStack(spacing: 10) {
+        // Accessibility sizes stack the two, so neither label truncates.
+        let layout = dynamicTypeSize.isAccessibilitySize ? AnyLayout(VStackLayout(spacing: 10)) : AnyLayout(HStackLayout(spacing: 10))
+        return GlassGroup(spacing: 10) {
+            layout {
                 Button {
                     openAmount()
                 } label: {
@@ -479,7 +482,8 @@ struct ReceiveView: View {
     }
 
     private func loadRate() async {
-        btcPrice = nil
+        btcPrice = fixture?.btcPrice
+        guard fixture?.btcPrice == nil else { return }
         do {
             let response = try await AppServices.shared.client.fiatPrices(.init(body: .json(.init())))
             let rate = try response.ok.body.json.rates.additionalProperties[app.preferredCurrency]

@@ -155,7 +155,7 @@ internal fun ExitBig(text: String, modifier: Modifier = Modifier) {
  */
 @Composable
 internal fun ExitValueRow(label: String, value: String, modifier: Modifier = Modifier, kind: ValueKind = ValueKind.text, note: String? = null,
-    failed: Boolean = false, small: Boolean = false, last: Boolean = false, content: (@Composable RowScope.() -> Unit)? = null) {
+    failed: Boolean = false, small: Boolean = false, last: Boolean = false, quiet: Boolean = false, content: (@Composable RowScope.() -> Unit)? = null) {
     val palette = LocalPalette.current
     val stacked = androidx.compose.ui.platform.LocalDensity.current.fontScale >= 1.5f
     val style = valueStyle(kind, small)
@@ -166,7 +166,8 @@ internal fun ExitValueRow(label: String, value: String, modifier: Modifier = Mod
         androidx.compose.ui.layout.Layout({
             Text(label, style = ActivityType.label.let { if (small) it.copy(fontSize = 15.sp) else it }, color = palette.muted)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                Text(value, Modifier.weight(1f, fill = false), style = style, color = if (failed) palette.failure else palette.foreground, textAlign = end)
+                Text(value, Modifier.weight(1f, fill = false), style = style,
+                    color = when { failed -> palette.failure; quiet -> palette.muted; else -> palette.foreground }, textAlign = end)
                 content?.invoke(this)
             }
         }, measurePolicy = valueRowLayout(stacked))
@@ -567,13 +568,13 @@ private fun AllLeftOut(vtxos: List<VtxoModel>, costs: Map<String, ExitCosts.Cost
 
 /** A total row (prototype `.br.tot`): a line above, the label in the foreground; the value goes under it when both don't fit. */
 @Composable
-internal fun TotalRow(label: String, value: String) {
+internal fun TotalRow(label: String, value: String, quiet: Boolean = false) {
     val palette = LocalPalette.current
     Box(Modifier.fillMaxWidth().heightIn(min = 48.dp).drawBehind { drawRect(palette.foreground, Offset.Zero, Size(size.width, 1.dp.toPx())) }
         .semantics(mergeDescendants = true) {}, contentAlignment = Alignment.CenterStart) {
         FlowRow(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
             Text(label, Modifier.padding(end = 12.dp), style = ActivityType.value, color = palette.foreground)
-            Text(value, style = ActivityType.number, color = palette.foreground)
+            Text(value, style = ActivityType.number, color = if (quiet) palette.muted else palette.foreground)
         }
     }
 }

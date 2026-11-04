@@ -15,6 +15,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
@@ -186,6 +187,20 @@ internal fun Headline(title: String, subtitle: String?, modifier: Modifier = Mod
         Text(title, style = if (large) NoahTokens.Typography.handle else NoahTokens.Typography.title, color = palette.foreground,
             textAlign = align, modifier = Modifier.semantics { heading() })
         subtitle?.let { Text(it, Modifier.padding(top = NoahTokens.Space.s), style = NoahTokens.Typography.body, color = palette.muted, textAlign = align) }
+    }
+}
+
+/**
+ * A page's one glyph in a soft circle (decorative), for a form with nothing else between its headline and actions: centred
+ * in the room left (a form's scroll still fills the screen), and pushed down to scroll when there's none.
+ */
+@Composable
+internal fun ColumnScope.HeadlineGlyph(icon: Int) {
+    val palette = LocalPalette.current
+    Box(Modifier.weight(1f).fillMaxWidth().clipToBounds().padding(vertical = NoahTokens.Space.xxl), contentAlignment = Alignment.Center) {
+        Box(Modifier.size(88.dp).background(palette.soft, CircleShape), contentAlignment = Alignment.Center) {
+            androidx.compose.material3.Icon(androidx.compose.ui.res.painterResource(icon), null, Modifier.size(36.dp), tint = palette.foreground)
+        }
     }
 }
 

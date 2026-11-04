@@ -116,6 +116,7 @@
   <string name="gt_76900f1bfd16c8d4">"뒤로"</string>
   <string name="gt_db99836fa338e87b">"Ark로 돌아옴"</string>
   <string name="gt_ad5879b1f394ff83">"지갑으로 돌아왔어요"</string>
+  <string name="gt_f5ae6584d6b94d04">"Back to Send"</string>
   <string name="gt_02a2840b598b6b1c">"지금 백업"</string>
   <string name="gt_2f2ccea17e5795d8">"백업됨"</string>
   <string name="gt_b77fead35a79fc03">"백그라운드 작업 진행 중..."</string>
@@ -362,7 +363,7 @@
   <string name="gt_4c5e9e2b90ab535d">"지갑 인증 비활성화"</string>
   <string name="gt_de55d749452d746b">"긴급 연락용 이메일 안내 닫기"</string>
   <string name="gt_34e108c0896d0158">"표시"</string>
-  <string name="gt_642e64c280b11d10">"Don\'t pay again until you\'ve checked Activity."</string>
+  <string name="gt_01fd5ca52181653e">"Don\'t pay again until you\'ve checked Activity. Paying again could pay the recipient twice."</string>
   <string name="gt_11a6767d5674c7e4">"완료"</string>
   <string name="gt_5655e4c5f2e921a8">"VTXO 삭제"</string>
   <string name="gt_57d4846cecee3fdd">"EUR"</string>
@@ -494,7 +495,8 @@
   <string name="gt_90f5c163f7becb8c">"예상 수수료를 확인할 수 없습니다"</string>
   <string name="gt_66e1aeba4a28b81e">"예상 수수료를 확인할 수 없어 수수료와 수령액을 알 수 없습니다. 이러한 불확실성을 감수할 수 있는 경우에만 계속하세요."</string>
   <string name="gt_26290dab5e50b113">"기존 결제 수수료: %1$s sats"</string>
-  <string name="gt_78ab175434313451">"Fee is an estimate. It can rise if more coins are needed."</string>
+  <string name="gt_c758154faf4a5856">"Fee is an estimate set when sent. It can rise if more coins are needed."</string>
+  <string name="gt_13d6e4e56f1b15de">"Fee is an estimate set when sent. It comes out of this total."</string>
   <string name="gt_6c6cc6eb80efa410">"수수료율"</string>
   <string name="gt_8211ff15a947c7cd">"Fee %1$s · %2$s of %3$s"</string>
   <string name="gt_aac77df347205252">"의견 보내기"</string>
@@ -728,6 +730,7 @@
   <string name="gt_598ce3ccc02e5890">"네트워크 수수료"</string>
   <string name="gt_99b6dfcd12886f76">"Network fees come from your on-chain balance, not from these coins."</string>
   <string name="gt_6c79c5d1bd98b91d">"네트워크 수수료는 온체인 %1$s에서 %2$s sat/vB로 나가요. VTXO들이 공유하는 트랜잭션은 한 번만 지불해요. 수수료는 바뀔 수 있어요."</string>
+  <string name="gt_843c1604c49e7abb">"Network fees paid"</string>
   <string name="gt_e5cff1be1c0e3c93">"네트워크 불일치: 예상값 %1$s, 실제값 %2$s"</string>
   <string name="gt_6300ef800bb88429">"종료 없음"</string>
   <string name="gt_0d559c8d4e9ab250">"Nostr 개인 키를 절대 붙여넣지 마세요. npub 공개 키를 입력해 주세요."</string>
@@ -1247,7 +1250,6 @@
   <string name="gt_03401b1fd160f1c8">"인보이스에 따라 금액은 %1$s이에요"</string>
   <string name="gt_c7954684c87d96cd">"잠금이 풀렸어요. 다른 지갑이나 이 휴대폰의 온체인 지갑으로 청구하세요."</string>
   <string name="gt_708398a18d2f5dfe">"지도 위치를 저장하지 못했습니다."</string>
-  <string name="gt_35a7d1e62f8a6b9d">"The network fee is set when sent and comes out of this total."</string>
   <string name="gt_bc71b743861782dc">"작업이 이미 제출되었을 수 있습니다. 다시 실행하기 전에 상태를 확인하세요. 다른 복구 작업은 계속 사용할 수 있습니다."</string>
   <string name="gt_58031d0ba8c82f55">"The outcome isn\'t known yet. This checks the payment. It won\'t send it again."</string>
   <string name="gt_b0186376f1dac3ea">"수신자가 더 이상 이 금액을 받지 않습니다. 정기 결제를 수정하거나 취소해 주세요."</string>

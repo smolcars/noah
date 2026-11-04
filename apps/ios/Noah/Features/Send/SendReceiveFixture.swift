@@ -15,6 +15,8 @@ struct SendReceiveFixture {
     var receiveSheet: String?
     /// Send's To card opens with the whole invoice shown.
     var invoiceExpanded = false
+    /// Receive's fiat rate, in place of the server's.
+    var btcPrice: Double?
 }
 
 extension EnvironmentValues {

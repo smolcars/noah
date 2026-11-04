@@ -158,7 +158,7 @@ struct SendReceiveShotTests {
         }, quotePayment: { payment in SendQuote(amount: payment.amount, fee: 0, total: payment.amount) }, discardQuote: { _ in })
 
         let fixture = SendReceiveFixture(summary: Self.summary(), tip: Self.tip, refunded: state == "refunded" ? true : nil,
-                                         history: [], fees: [.ark: 0, .lightning: 12, .onchain: 420])
+                                         history: [], fees: [.ark: 0, .lightning: 12, .onchain: 420], btcPrice: 112_000)
         var staging = Staging(send: send, script: script, receive: receiveModel(state), fixture: fixture)
         try await Self.stage(state, &staging)
         let view = WalletTabs(history: history, home: home, send: send, receive: staging.receive, tab: staging.tab)

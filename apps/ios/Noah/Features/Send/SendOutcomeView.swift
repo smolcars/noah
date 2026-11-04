@@ -7,6 +7,7 @@ import SwiftUI
 struct SendOutcomeView: View {
     @Environment(\.locale) private var locale
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Environment(\.sendReceiveFixture) private var fixture
     @Bindable var controller: SendPaymentController
     var btcPrice: Double?
@@ -25,6 +26,8 @@ struct SendOutcomeView: View {
     var reviewed: SendPayment?
     /// The chain tip, read by Send with each receipt check.
     var chainTip: UInt32?
+    /// Hosted by Send, whose `done` returns to its first step: a not-sent result says "Back to Send".
+    var backToSend = false
     @State private var ownClock = SendMotionClock()
     @State private var history: [HistoryTransaction] = []
     @State private var refund: SendRefund?
@@ -177,7 +180,10 @@ struct SendOutcomeView: View {
             VStack(alignment: .leading, spacing: 6) {
                 Text(verbatim: title)
                     .noahText(SendText.big).foregroundStyle(NoahTokens.Colors.foreground)
-                    .lineLimit(isShort ? 1 : 2).minimumScaleFactor(0.5)
+                    // Accessibility sizes reflow at the size asked for; the stage gives up its room instead.
+                    .lineLimit(dynamicTypeSize.isAccessibilitySize ? nil : isShort ? 1 : 2)
+                    .minimumScaleFactor(dynamicTypeSize.isAccessibilitySize ? 1 : 0.5)
+                    .fixedSize(horizontal: false, vertical: dynamicTypeSize.isAccessibilitySize)
                     .contentTransition(.opacity)
                     .animation(NoahTokens.Motion.travel(reduceMotion, NoahTokens.Motion.bouncy), value: title)
                     .accessibilityIdentifier(kind == .sent ? "send-success" : "send-outcome-title")
@@ -241,8 +247,9 @@ struct SendOutcomeView: View {
     private var stageHeight: CGFloat {
         if isWide { return 330 }
         let height = window.size.height > 0 ? window.size.height : 852
-        // The result's To block and rows get the room once they show (and short windows, the Duo closed, always).
-        if toPayment != nil && resultShown { return min(100, max(88, height * 0.11)) }
+        // The result's To block and rows get the room once they show (and short windows, the Duo closed, always);
+        // at accessibility sizes the title and its lines get it from the start.
+        if toPayment != nil || dynamicTypeSize.isAccessibilitySize { return min(100, max(88, height * 0.11)) }
         return min(270, max(150, height * (resultShown && height < 760 ? 0.22 : 0.32)))
     }
 
@@ -536,7 +543,8 @@ extension SendOutcomeView {
                 switch action {
                 case .check: checkButton
                 case .acknowledge: pill("Done", id: "send-success-done", action: acknowledge)
-                case .newPayment: pill("Done", id: "send-new-payment", action: acknowledge)
+                // Send's Done starts Send over; another host (Recurring) just closes.
+                case .newPayment: pill(backToSend ? "Back to Send" : "Done", id: "send-new-payment", action: acknowledge)
                 case .retry:
                     // checkStatus only reloads the saved payment, so say it can't pay twice.
                     Text("The outcome isn't known yet. This checks the payment. It won't send it again.")
@@ -548,24 +556,30 @@ extension SendOutcomeView {
                 case .close: pill("Done", id: "send-leave", prominent: false) { onLeave() }
                 }
             }
-            if controller.canOverride {
-                Text("Don't pay again until you've checked Activity.")
-                    .noahText(HomeText.footnote)
-                    .foregroundStyle(NoahTokens.Colors.muted)
-                    .multilineTextAlignment(.center)
-                    .frame(maxWidth: .infinity)
-                    .padding(.top, 8)
-                // Quiet on purpose: paying again is the risky path, and it still asks first.
-                Button("Pay again anyway") { confirmOverride = true }
-                    .buttonStyle(.plain)
-                    .noahText(HomeText.strong)
-                    .foregroundStyle(NoahTokens.Colors.muted)
-                    .frame(maxWidth: .infinity, minHeight: NoahTokens.Size.hitTarget)
-                    .contentShape(Rectangle())
-                    .accessibilityIdentifier("send-override")
-            }
+            if controller.canOverride { overrideAction }
         }
         .animation(NoahTokens.Motion.travel(reduceMotion), value: resultShown)
+    }
+
+    /// Paying again, quiet on purpose under its warning: it's the risky path, and it still asks first.
+    @ViewBuilder private var overrideAction: some View {
+        Label {
+            Text("Don't pay again until you've checked Activity. Paying again could pay the recipient twice.")
+        } icon: {
+            Image(systemName: "exclamationmark.triangle").accessibilityHidden(true)
+        }
+        .noahText(HomeText.footnote)
+        .foregroundStyle(NoahTokens.Colors.muted)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .fixedSize(horizontal: false, vertical: true)
+        .padding(.top, 8)
+        Button("Pay again anyway") { confirmOverride = true }
+            .buttonStyle(.plain)
+            .noahText(HomeText.strong)
+            .foregroundStyle(NoahTokens.Colors.muted)
+            .frame(maxWidth: .infinity, minHeight: NoahTokens.Size.hitTarget)
+            .contentShape(Rectangle())
+            .accessibilityIdentifier("send-override")
     }
 
     private var checkButton: some View {

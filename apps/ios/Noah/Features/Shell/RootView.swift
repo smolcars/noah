@@ -342,11 +342,13 @@ private struct WideTabBar: View {
     @Namespace private var lens
     @State private var haptics = OnboardingHaptics()
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.locale) private var locale
 
     var body: some View {
+        let tabs = WalletTabs.Tab.allCases
         GlassGroup {
             HStack(spacing: 0) {
-                ForEach(WalletTabs.Tab.allCases, id: \.self) { tab in
+                ForEach(Array(tabs.enumerated()), id: \.element) { index, tab in
                     Button {
                         guard selection != tab else { return }
                         haptics.play(.selection)
@@ -368,6 +370,8 @@ private struct WideTabBar: View {
                     }
                     .buttonStyle(.plain)
                     .accessibilityAddTraits(selection == tab ? .isSelected : [])
+                    // The position a system tab bar announces ("2 of 4").
+                    .accessibilityValue(Text(verbatim: L10n.text("{n} of {total}", index + 1, tabs.count, locale: locale.identifier)))
                     .accessibilityIdentifier("wide-tab-\(tab)")
                 }
             }

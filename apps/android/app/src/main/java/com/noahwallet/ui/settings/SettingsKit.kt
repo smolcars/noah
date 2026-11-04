@@ -497,11 +497,16 @@ internal fun Caveat(text: String, modifier: Modifier = Modifier, key: Boolean = 
 /** A warning with its icon (prototype `.warn`). */
 @SuppressLint("ModifierParameter") // Exit's warnings pass the icon positionally, second after the text
 @Composable
-internal fun Warning(text: String, icon: Int = SettingsIcons.shield, failed: Boolean = false, modifier: Modifier = Modifier, top: Dp = 22.dp) {
+internal fun Warning(text: String, icon: Int = SettingsIcons.shield, failed: Boolean = false, modifier: Modifier = Modifier, top: Dp = 22.dp,
+    detail: String? = null) {
     val palette = LocalPalette.current
     Row(modifier.padding(top = top), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         Icon(painterResource(icon), null, Modifier.size(20.dp), tint = if (failed) palette.failure else palette.foreground)
-        Text(text, style = HomeType.line, color = if (failed) palette.failure else palette.muted)
+        Column {
+            Text(text, style = HomeType.line, color = if (failed) palette.failure else palette.muted)
+            // A [detail] explains the warning in the same callout.
+            detail?.let { Text(it, Modifier.padding(top = 4.dp), style = HomeType.line, color = palette.foreground) }
+        }
     }
 }
 

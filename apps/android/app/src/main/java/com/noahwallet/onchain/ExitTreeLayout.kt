@@ -475,7 +475,7 @@ internal class TreeLayout(val scene: ExitScene, val words: TreeStrings, val geo:
 
             fun caption(stubs: List<Stub>): Pair<List<String>?, Float> {
                 // The caption, under the lowest stubs, while there are stubs to explain: centred above the round's block, else
-                // reaching down beside it to the ground; left out when neither fits.
+                // reaching down beside it to the ground; left out when neither fits or it would take more than two lines (it's decoration).
                 var caption: List<String>? = null; var captionY = 0f
                 if (n > 1 && stubs.isNotEmpty()) {
                     val size = 13f * k; val lh = 16f * k; val right = tx - geo.block / 2 - 9
@@ -484,7 +484,7 @@ internal class TreeLayout(val scene: ExitScene, val words: TreeStrings, val geo:
                     val top = ys[1] + 9; val height = wrapped.size * lh
                     val above = (geo.ground - geo.block - 5) - top
                     val spots = listOfNotNull(if (height <= above) top + (above - height) / 2 else null, if (height <= geo.ground - 3 - top) top else null)
-                    if (width <= right - 14) spots.map { TreeShape.box(TreeShape.Kind.caption, "caption", right - width, it, right,
+                    if (wrapped.size <= 2 && width <= right - 14) spots.map { TreeShape.box(TreeShape.Kind.caption, "caption", right - width, it, right,
                         it + height) }.firstOrNull(::clear)?.let { shape ->
                         caption = wrapped; captionY = shape.t + lh / 2 - ys[1]; shapes += shape
                     }

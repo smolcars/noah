@@ -20,6 +20,7 @@ import com.noahwallet.services.server.value
 import com.noahwallet.services.storage.PersistedWalletState
 import com.noahwallet.ui.*
 import com.noahwallet.ui.WalletAlertDialog
+import com.noahwallet.ui.onboarding.HeadlineGlyph
 import kotlinx.coroutines.*
 
 /** The launch gate's notifications screen: the onboarding Notifications step, frozen in its required state. */
@@ -73,7 +74,7 @@ fun BatteryOptimizationScreen(model: AppModel, onBack: (() -> Unit)? = null, onC
     }, headline = { large ->
         com.noahwallet.ui.onboarding.Headline(tr("Let Noah run in the background"),
             tr("Otherwise Android may pause Noah, and payments could stop arriving."), large = large)
-    }, form = {}, actions = {
+    }, form = { HeadlineGlyph(com.noahwallet.ui.settings.SettingsIcons.battery) }, actions = {
         com.noahwallet.ui.onboarding.PillButton(tr("Open battery settings"), androidx.compose.ui.Modifier.fillMaxWidth()) {
             failed = !PlatformAccess.openBattery(context)
         }

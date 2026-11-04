@@ -181,20 +181,24 @@ struct ExitPathRail: View {
     var delta: UInt32 = 144
     @Environment(\.colorScheme) private var colorScheme
     @Environment(\.locale) private var locale
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     private var language: String { locale.identifier }
 
     var body: some View {
+        // Accessibility sizes stack the three captions, so no word breaks inside a third of the width.
+        let stacked = dynamicTypeSize.isAccessibilitySize
+        let layout = stacked ? AnyLayout(VStackLayout(alignment: .leading, spacing: 8)) : AnyLayout(HStackLayout(alignment: .top, spacing: 10))
         VStack(spacing: 6) {
             Canvas { context, size in draw(context, size) }
                 .frame(height: 58)
                 .accessibilityHidden(true)
-            HStack(alignment: .top, spacing: 10) {
+            layout {
                 caption(L10n.plural("{n} transactions", count: transactions, locale: language),
                         several ? L10n.text("shared ones once", locale: language) : L10n.text("one block each", locale: language), .leading)
                 caption(L10n.plural("{n} blocks", count: Int(delta), locale: language),
-                        L10n.text("about {time}", VtxoList.timeLeft(Int64(delta), locale: language), locale: language), .center)
-                caption(L10n.text("Claim", locale: language), L10n.text("to another wallet", locale: language), .trailing)
+                        L10n.text("about {time}", VtxoList.timeLeft(Int64(delta), locale: language), locale: language), stacked ? .leading : .center)
+                caption(L10n.text("Claim", locale: language), L10n.text("to another wallet", locale: language), stacked ? .leading : .trailing)
             }
         }
         .padding(.top, 18)

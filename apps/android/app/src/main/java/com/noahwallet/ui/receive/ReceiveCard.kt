@@ -72,6 +72,8 @@ internal object ReceiveTimeline {
     fun backAt(rail: ReceiveArrival.Rail, reduceMotion: Boolean) = flipAt(rail, reduceMotion) + pace(2_900, reduceMotion)
     /** When the card is itself again and (for Ark and Lightning) the request can be renewed. */
     fun end(rail: ReceiveArrival.Rail, reduceMotion: Boolean) = backAt(rail, reduceMotion) + if (reduceMotion) 200 else 700
+    /** The card shows its receipt (the amount) at [t]. */
+    fun receiptShown(rail: ReceiveArrival.Rail, t: Long, reduceMotion: Boolean) = t >= flipAt(rail, reduceMotion) && t < backAt(rail, reduceMotion)
 
     /** The line under the card. On-chain hands over to the block row once its wait begins. */
     fun phase(rail: ReceiveArrival.Rail, t: Long, reduceMotion: Boolean): String? {

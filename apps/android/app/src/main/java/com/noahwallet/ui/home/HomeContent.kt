@@ -33,9 +33,11 @@ import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.layout.LayoutCoordinates
 import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
@@ -149,7 +151,11 @@ fun HomeContent(ui: HomeUi, actions: HomeActions, memory: HomeMemory, toasts: Ho
     val toggle = { haptics.medium(); actions.toggleHidden() }
     // The prototype's entrance: top bar, balance, fiat, status (when shown), nudge, card or Recent; 40 ms apart.
     val after = if (ui.status != null) 40L else 0L
-    val leading = @Composable { tuck: Float -> HomeLeading(ui, state, shownTotal, tuck, entered, after, actions, openSheet, toggle) }
+    // Where the big balance (with its fiat line) ends in the column, so it fades only as it passes under the top bar.
+    var heroBottom by remember { mutableIntStateOf(0) }
+    val leading = @Composable { tuck: Float -> HomeLeading(ui, state, shownTotal, tuck, entered, after, actions, openSheet, toggle) { fiat ->
+        bottomIn(homeScroll.content, fiat) { heroBottom = it }
+    } }
     val primary = @Composable { wide: Boolean ->
         when (state) {
             HomeRules.State.fresh -> GetPaidCard(ui, payment, paymentElapsed, wide, onCopy = copy, onShare = share, onProfile = actions.profile,
@@ -166,7 +172,7 @@ fun HomeContent(ui: HomeUi, actions: HomeActions, memory: HomeMemory, toasts: Ho
     HomeScrollAnchor(ui, state, homeScroll, pose !is OnboardingPose.Compact)
     val refresh = @Composable { content: @Composable BoxScope.() -> Unit -> HomeRefreshBox(refreshing, actions.refresh, content) }
     when (pose) {
-        OnboardingPose.Compact -> CompactHome(state, homeScroll, refresh, leading, primary, topBar, toast)
+        OnboardingPose.Compact -> CompactHome(state, homeScroll, { heroBottom }, refresh, leading, primary, topBar, toast)
         is OnboardingPose.Wide -> Row(Modifier.fillMaxSize()) {
             Box(Modifier.width(pose.start).fillMaxHeight()) {
                 refresh {
@@ -240,7 +246,7 @@ private fun rememberAddressActions(toasts: HomeToasts): Pair<(String) -> Unit, (
 /** The leading content: the balance, fiat, status and nudge, rising in turn; the suspended note instead while suspended. */
 @Composable
 private fun HomeLeading(ui: HomeUi, state: HomeRules.State, shownTotal: ULong?, tuck: Float, entered: Long, after: Long, actions: HomeActions,
-    openSheet: () -> Unit, toggle: () -> Unit) {
+    openSheet: () -> Unit, toggle: () -> Unit, onHero: (LayoutCoordinates) -> Unit = {}) {
     val palette = LocalPalette.current
     val reduceMotion = LocalReduceMotion.current
     val haptics = rememberHaptics()
@@ -250,7 +256,8 @@ private fun HomeLeading(ui: HomeUi, state: HomeRules.State, shownTotal: ULong?, 
         Modifier.padding(top = 8.dp).graphicsLayer { alpha = 1 - tuck }.testTag("home-last-known-balance"), style = HomeType.line, color = palette.muted)
     BalanceBlock(ui, shownTotal, tuck, entered, onTap = openSheet, onToggle = toggle)
     // Fades with the big balance it belongs to, so it never sits alone under the top bar.
-    Box(Modifier.padding(top = 10.dp).height(20.dp).rise(entered, 140, 14f, reduceMotion).graphicsLayer { alpha = (1 - tuck / .7f).coerceAtLeast(0f) }) {
+    Box(Modifier.padding(top = 10.dp).height(20.dp).onGloballyPositioned(onHero)
+        .rise(entered, 140, 14f, reduceMotion).graphicsLayer { alpha = (1 - tuck / .7f).coerceAtLeast(0f) }) {
         ui.fiat?.let { Text(it, style = HomeType.line, color = palette.muted, maxLines = 1) }
     }
     Box(Modifier.rise(entered, 180, 14f, reduceMotion)) {
@@ -302,19 +309,29 @@ private fun HomeRefreshBox(refreshing: Boolean, refresh: () -> Unit, content: @C
     }, content = content)
 }
 
+/** Reports where [child] ends inside [content] (the scrolled column), whatever the scroll. */
+private fun bottomIn(content: LayoutCoordinates?, child: LayoutCoordinates, report: (Int) -> Unit) {
+    content?.takeIf { it.isAttached }?.let { report((it.localPositionOf(child, Offset.Zero).y + child.size.height).toInt()) }
+}
+
 /** One column: the top bar tucks the balance as it scrolls, and the content fades under it. */
 @Composable
-private fun CompactHome(state: HomeRules.State, homeScroll: HomeScroll, refresh: @Composable (@Composable BoxScope.() -> Unit) -> Unit,
+private fun CompactHome(state: HomeRules.State, homeScroll: HomeScroll, heroBottom: () -> Int, refresh: @Composable (@Composable BoxScope.() -> Unit) -> Unit,
     leading: @Composable (Float) -> Unit, primary: @Composable (Boolean) -> Unit, topBar: @Composable BoxScope.(Float, Modifier) -> Unit,
     toast: @Composable (Modifier) -> Unit) {
     val scroll = homeScroll.compact
     val density = androidx.compose.ui.platform.LocalDensity.current
     val tuck by remember(scroll, density) { derivedStateOf { ((with(density) { scroll.value.toDp().value } - 4f) / 52f).coerceIn(0f, 1f) } }
+    // Short content can still scroll the faded balance all the way under the top bar, so it never leaves a blank band.
+    var viewport by remember { mutableIntStateOf(0) }
+    val room = if (state != HomeRules.State.everyday) 0.dp
+    else with(density) { (viewport + heroBottom() - compactTop.roundToPx()).coerceAtLeast(0).toDp() }
     val scrolled by remember(scroll) { derivedStateOf { scroll.value > 2 } }
     refresh {
-        Column(Modifier.fillMaxSize().verticalScroll(scroll).onGloballyPositioned { homeScroll.content = it }.testTag("home-scroll"),
-            horizontalAlignment = Alignment.CenterHorizontally) {
-            Column(Modifier.widthIn(max = 640.dp).fillMaxWidth().padding(start = 24.dp, end = 24.dp, top = compactTop, bottom = 32.dp)) {
+        Column(Modifier.fillMaxSize().onSizeChanged { viewport = it.height }.verticalScroll(scroll).onGloballyPositioned { homeScroll.content = it }
+            .testTag("home-scroll"), horizontalAlignment = Alignment.CenterHorizontally) {
+            Column(Modifier.widthIn(max = 640.dp).fillMaxWidth().heightIn(min = room)
+                .padding(start = 24.dp, end = 24.dp, top = compactTop, bottom = 32.dp)) {
                 leading(tuck)
                 if (state != HomeRules.State.suspended) primary(false)
             }
