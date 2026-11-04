@@ -88,7 +88,7 @@ internal fun AppearanceSheet(model: AppModel, initial: String, dismiss: () -> Un
                 // everything and would stall the circle. Automatic can't wait; it needs the phone's own mode back.
                 val later = choice != Appearance.automatic
                 reveal.start(view, origin, dark, change = { model.chooseAppearance(choice, platform = !later) }) {
-                    if (later) choice.applyToPlatform(context)
+                    if (later && model.appearance == choice) choice.applyToPlatform(context)
                 }
             }
         }
