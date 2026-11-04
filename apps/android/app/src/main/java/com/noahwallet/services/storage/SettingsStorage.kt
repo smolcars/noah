@@ -123,7 +123,7 @@ class SettingsStorage(context: Context, private val sync: (File) -> Unit = ::syn
     }
     fun removeAll() = synchronized(openLock) {
         val state = load(verify = true)
-        persistOrFallBack(state, NativeSettingsFile.State(values = EsploraSettings.retainingLogPrivacy(state.values), cleanupPending = true))
+        persistOrFallBack(state, NativeSettingsFile.State(values = retained(state.values), cleanupPending = true))
         finishCleanup()
     }
     private fun finishCleanup() {
@@ -132,8 +132,11 @@ class SettingsStorage(context: Context, private val sync: (File) -> Unit = ::syn
         sync(root.parentFile!!)
         MMKVUpgradeBackup(root, instanceID, backupRoot = backupRoot, sync = sync).deleteSnapshot()
         // Keep log protection through re-onboarding.
-        persist(NativeSettingsFile.State(values = EsploraSettings.retainingLogPrivacy(load(verify = true).values)))
+        persist(NativeSettingsFile.State(values = retained(load(verify = true).values)))
     }
+    /** What a reset keeps: log protection, and Appearance, a phone preference that survives Delete wallet (appearance.md). */
+    private fun retained(values: Map<String, String>) =
+        EsploraSettings.retainingLogPrivacy(values) + values.filterKeys { it == com.noahwallet.ui.Appearance.key }
     /** Committed wallet recovery may publish flags in memory; durable completion retries later. */
     fun completeRestore(): Boolean = synchronized(openLock) {
         val state = load(verify = true)

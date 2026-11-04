@@ -74,9 +74,9 @@ final class SettingsSummary {
     }
 }
 
-/// Root sheets: Display's three pickers and Delete wallet.
+/// Root sheets: Display's pickers and Delete wallet.
 enum SettingsRootSheet: String, Identifiable, Equatable {
-    case unit, currency, language, delete
+    case unit, currency, language, appearance, delete
     var id: Self { self }
 }
 
@@ -315,6 +315,8 @@ struct SettingsList: View {
                         id: "settings-currency") { open(.currency) }
             SettingsRow(icon: "globe", title: L10n.text("Language", locale: language), value: SettingsLanguageSheet.name(app.localeIdentifier),
                         id: "settings-language") { open(.language) }
+            SettingsRow(icon: "circle.lefthalf.filled", title: L10n.text("Appearance", locale: language),
+                        value: L10n.text(app.appearance.title, locale: language), id: "settings-appearance") { open(.appearance) }
             SettingsToggleRow(icon: "eye.slash", title: L10n.text("Hide amounts", locale: language),
                               isOn: Binding(get: { app.isBalanceHidden }, set: { hidden in
                                   haptics.play(.medium)
@@ -443,6 +445,7 @@ struct SettingsRootSheetView: View {
         case .unit: SettingsUnitSheet(close: close)
         case .currency: SettingsCurrencySheet(close: close)
         case .language: SettingsLanguageSheet(close: close)
+        case .appearance: SettingsAppearanceSheet()
         case .delete: DeleteWalletSheet(deletion: deletion, close: close)
         }
     }
@@ -597,11 +600,12 @@ struct SettingsOption: View {
 
 struct SettingsCheck: View {
     let on: Bool
+    var tint = NoahTokens.Colors.foreground
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var body: some View {
         Image(systemName: "checkmark").font(.system(size: 16, weight: .semibold))
-            .foregroundStyle(NoahTokens.Colors.foreground)
+            .foregroundStyle(tint)
             .scaleEffect(on || reduceMotion ? 1 : 0.5)
             .opacity(on ? 1 : 0)
             .animation(NoahTokens.Motion.travel(reduceMotion, NoahTokens.Motion.bouncy), value: on)

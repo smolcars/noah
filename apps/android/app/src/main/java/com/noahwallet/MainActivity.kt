@@ -20,6 +20,7 @@ import androidx.lifecycle.lifecycleScope
 import com.noahwallet.ui.AppModel
 import com.noahwallet.ui.LaunchGateView
 import com.noahwallet.ui.NoahTheme
+import com.noahwallet.ui.WindowFollowsTheme
 import com.noahwallet.ui.loadAppModel
 import kotlinx.coroutines.*
 
@@ -118,9 +119,14 @@ class MainActivity : FragmentActivity() {
             val recurring = withContext(Dispatchers.IO) { com.noahwallet.recurring.RecurringRuntime.shared(this@MainActivity) }
             lifecycle.addObserver(recurring.syncForegroundAdmission)
             lifecycle.addObserver(recurring.foregroundRunner { current.refresh() })
+            // Normally Android already has it from the last launch; this keeps the two in step (uiMode changes in place).
+            current.appearance.applyToPlatform(this@MainActivity)
             setContent {
                 com.noahwallet.localization.LocalizedContent(current.localeIdentifier) {
-                    NoahTheme { Box(Modifier.semantics { testTagsAsResourceId = true }) { LaunchGateView(current) } }
+                    NoahTheme(current.appearance) {
+                        WindowFollowsTheme()
+                        Box(Modifier.semantics { testTagsAsResourceId = true }) { LaunchGateView(current) }
+                    }
                 }
             }
         }

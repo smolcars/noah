@@ -42,6 +42,9 @@ class AppModel(application: Application, val settings: SettingsStorage = Setting
         private set
     var localeIdentifier by mutableStateOf(com.noahwallet.services.storage.LegacyLocale.resolved(application))
         private set
+    /** A phone preference like the language: Delete wallet keeps it (SettingsStorage keeps its key). */
+    var appearance by mutableStateOf(Appearance.parse(settings.string(Appearance.key)))
+        private set
     /** Home offers the backup prompt until this wallet's phrase is confirmed; missing means not backed up. */
     var recoveryPhraseBackedUp by mutableStateOf(RecoveryPhraseBackup.isBackedUp(settings))
         private set
@@ -182,6 +185,18 @@ class AppModel(application: Application, val settings: SettingsStorage = Setting
         .mapNotNull { row -> row.txid?.let { txid -> row.timestamp?.time?.takeIf { it > 0 }?.let { txid to it } } }.toMap()
 
     fun refreshLocale() { localeIdentifier = com.noahwallet.services.storage.LegacyLocale.resolved(getApplication()) }
+
+    /**
+     * Saves [value], then re-themes Noah and, unless [platform] is false (the caller applies it later), the platform.
+     * A failed save keeps the current appearance and shows the preference error, as the other Display pickers do.
+     */
+    @Suppress("TooGenericExceptionCaught") // a full or unwritable disk must not take the app down from a tap
+    fun chooseAppearance(value: Appearance, platform: Boolean = true) {
+        try { settings.set(value.name, Appearance.key) }
+        catch (_: Exception) { error = "Couldn't save your preference."; return }
+        appearance = value
+        if (platform) value.applyToPlatform(getApplication())
+    }
 
     // KTX edit(commit = true) drops commit()'s result, which is checked here.
     @android.annotation.SuppressLint("UseKtx")

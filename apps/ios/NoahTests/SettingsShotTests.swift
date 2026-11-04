@@ -10,7 +10,8 @@ import UIKit
 /// a wide window (the Duo open) shows the panes.
 /// States: root, profile, lightning-address, email, backup, recovery-gated, recovery-shown, vtxos, vtxos-stacked,
 /// vtxo, onchain, recurring, schedule, editor, notifications, advanced, ark-server, esplora, logs, debug,
-/// feedback, about, delete, unit, currency, language.
+/// feedback, about, delete, unit, currency, language, appearance, appearance-light, appearance-dark (the Appearance
+/// sheet with that choice selected and applied to the window, as at launch).
 @MainActor
 @Suite(.enabled(if: ProcessInfo.processInfo.environment["NOAH_SET_SHOTS"] == "1"))
 struct SettingsShotTests {
@@ -31,6 +32,7 @@ struct SettingsShotTests {
         var roots: [URL] = []
         defer {
             window.rootViewController = original
+            window.overrideUserInterfaceStyle = .unspecified
             try? FileManager.default.removeItem(at: ready)
             try? FileManager.default.removeItem(at: request)
             for root in roots { try? FileManager.default.removeItem(at: root) }
@@ -45,6 +47,7 @@ struct SettingsShotTests {
                 try await Task.sleep(for: .milliseconds(150))
                 let (view, root) = try fixture(state)
                 roots.append(root)
+                window.overrideUserInterfaceStyle = Self.appearance(state).style
                 host.rootView = view
                 try await Task.sleep(for: .milliseconds(1_400))
                 try state.write(to: ready, atomically: true, encoding: .utf8)
@@ -97,6 +100,11 @@ struct SettingsShotTests {
                                                 execute: { _ in throw OnchainFailure.unavailable }, attempt: { [] }, acknowledge: { _ in }))
     }
 
+    /// `appearance-light` and `appearance-dark` select Light and Dark; every other state is Automatic.
+    static func appearance(_ state: String) -> AppAppearance {
+        AppAppearance(stored: state.hasPrefix("appearance-") ? String(state.dropFirst("appearance-".count)) : nil)
+    }
+
     private func fixture(_ state: String) throws -> (AnyView, URL) {
         let root = FileManager.default.temporaryDirectory.appending(path: "set-shot-\(UUID())")
         let storage = try SettingsStorage(rootPath: root.appending(path: "mmkv").path)
@@ -117,7 +125,10 @@ struct SettingsShotTests {
         var wallet = PersistedWalletState(isInitialized: true, isWalletLoaded: true)
         wallet.isDebugModeEnabled = state == "debug" || state == "advanced"
         try storage.setPersistedState(wallet, key: PersistedWalletState.key, version: PersistedWalletState.version)
-        let app = AppModel(settings: storage)
+        // Its own defaults, so the fixture's choice never becomes the app's.
+        let defaults = try #require(UserDefaults(suiteName: "set-shot"))
+        Self.appearance(state).save(to: defaults)
+        let app = AppModel(settings: storage, defaults: defaults)
 
         let recurring = try RecurringExecutorTests.Harness()
         try recurring.store.bind(recurring.owner.withLock { $0 })
@@ -156,7 +167,7 @@ struct SettingsShotTests {
                     formatVersion: 2)
             },
             vtxoLifetime: 4_320, boardingMinimum: 20_000,
-            sheet: ["delete": .delete, "unit": .unit, "currency": .currency, "language": .language][state])
+            sheet: state.hasPrefix("appearance") ? .appearance : ["delete": .delete, "unit": .unit, "currency": .currency, "language": .language][state])
         let pages: [String: SettingsPage] = [
             "profile": .profile, "lightning-address": .lightningAddress, "email": .email, "backup": .backup,
             "recovery-gated": .recovery, "recovery-shown": .recovery, "vtxos": .vtxos, "vtxos-stacked": .vtxos, "vtxo": .vtxo(Self.vtxos[9].id),

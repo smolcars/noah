@@ -27,6 +27,9 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         BarkLog.install()
         AppTelemetry.start()
         SettingsStorage.bootstrap()
+        AppearanceWindows.start()
+        NotificationCenter.default.addObserver(self, selector: #selector(windowBecameVisible),
+                                               name: UIWindow.didBecomeVisibleNotification, object: nil)
         BackgroundScheduler.shared.register()
         NoahAppShortcuts.updateAppShortcutParameters()
         Task { await BackgroundScheduler.shared.schedule() }
@@ -48,6 +51,10 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
 
     @objc func sceneWillConnect(_ notification: Notification) {
         if let scene = notification.object as? UIWindowScene { _ = SceneCapture.of(scene) }
+    }
+
+    @objc func windowBecameVisible(_ notification: Notification) {
+        if let window = notification.object as? UIWindow { AppearanceWindows.adopt(window) }
     }
 
     @objc func drainLifecycleLogs() {
