@@ -114,10 +114,10 @@ internal data class CardFace(val payload: String?, val title: String, val captio
 
 /**
  * The Receive card: always white, the styled QR of the shown format, its name and a caption, the inverted
- * amount band, the arrival overlay and the flip to "+₿X".
+ * amount band, the orbiting listening light, the arrival overlay and the flip to "+₿X".
  */
 @Composable
-internal fun ReceiveCard(face: CardFace, arrival: ReceiveArrival?, amount: String?, tilt: Float, width: Dp, qrSide: Dp,
+internal fun ReceiveCard(face: CardFace, arrival: ReceiveArrival?, amount: String?, listening: Boolean, tilt: Float, width: Dp, qrSide: Dp,
     onProfile: () -> Unit, onTap: (() -> Unit)?, modifier: Modifier = Modifier) {
     val reduceMotion = LocalReduceMotion.current
     val elapsed by rememberArrivalClock(arrival, reduceMotion)
@@ -140,6 +140,7 @@ internal fun ReceiveCard(face: CardFace, arrival: ReceiveArrival?, amount: Strin
             if (arrival != null && arrival.rail != ReceiveArrival.Rail.onchain && !showBack) ArrivalOverlay(arrival.rail, elapsed, qrSide,
                 Modifier.matchParentSize())
         }
+        if (listening && !reduceMotion && played(arrival, elapsed)) ListeningLight(Modifier.matchParentSize())
     }
 }
 
@@ -171,6 +172,9 @@ private fun rememberArrivalClock(arrival: ReceiveArrival?, reduceMotion: Boolean
 /** The card's turn to its back and round again while an arrival plays; none under Reduce Motion. */
 private fun cardTurn(arrival: ReceiveArrival?, elapsed: Long, reduceMotion: Boolean): Float =
     if (reduceMotion) 0f else arrival?.let { ReceiveTimeline.turn(it.rail, elapsed, false) } ?: 0f
+
+/** Listening again once an arrival has played (an on-chain one stays for its block row). */
+private fun played(arrival: ReceiveArrival?, elapsed: Long) = arrival == null || elapsed > ReceiveTimeline.end(arrival.rail, false)
 
 /** Reduce Motion: no turn; the back fades in for 180 ms and out again. */
 private fun backFade(arrival: ReceiveArrival?, elapsed: Long, reduceMotion: Boolean): Float {
@@ -360,6 +364,23 @@ private class ArrivalFrame(val rail: ReceiveArrival.Rail, val t: Long, val reduc
 private fun androidx.compose.ui.graphics.drawscope.DrawScope.drawText(text: androidx.compose.ui.text.TextLayoutResult, color: Color, topLeft: Offset,
     alpha: Float) =
     drawText(text, color = color, topLeft = topLeft, alpha = alpha.coerceIn(0f, 1f))
+
+/** A thin orange segment slowly circling the card while it can be paid (7 s a lap). */
+@Composable
+private fun ListeningLight(modifier: Modifier) {
+    val transition = rememberInfiniteTransition(label = "listening")
+    val lap by transition.animateFloat(0f, 1f, infiniteRepeatable(tween(7_000, easing = LinearEasing)), label = "lap")
+    val orange = LocalPalette.current.orange
+    Canvas(modifier) {
+        val inset = -3.dp.toPx() + 1.25.dp.toPx()
+        val path = Path().apply { addRoundRect(RoundRect(inset, inset, size.width - inset, size.height - inset, CornerRadius(31.dp.toPx()))) }
+        val length = PathMeasure().apply { setPath(path, false) }.length
+        val segment = 46.dp.toPx()
+        val from = lap * length
+        drawPath(StageArt.segment(path, from, from + segment), orange, style = Stroke(2.5.dp.toPx(), cap = StrokeCap.Round))
+        if (from + segment > length) drawPath(StageArt.segment(path, 0f, from + segment - length), orange, style = Stroke(2.5.dp.toPx(), cap = StrokeCap.Round))
+    }
+}
 
 /** The block row under the card for an on-chain arrival: your transaction in the next block, then its block. */
 @Composable

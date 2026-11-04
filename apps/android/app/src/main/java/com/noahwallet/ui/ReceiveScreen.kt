@@ -104,7 +104,7 @@ fun ReceiveScreen(app: AppModel, onProfile: () -> Unit = {}) {
     }
 }
 
-/** What the screen shows: the request, its format and arrival, and the chain's block row. */
+/** What the screen shows: the request, its format and arrival, the chain's block row, and whether it's listening. */
 @Composable
 private fun receiveUi(app: AppModel, state: ReceiveScreenState, chain: ReceiveArrival?, tip: Long?, price: Double?, currency: String): ReceiveUi {
     val rows = app.history.transactions
@@ -117,7 +117,9 @@ private fun receiveUi(app: AppModel, state: ReceiveScreenState, chain: ReceiveAr
     return ReceiveUi(request, address, format, app.amountUnit, java.util.Locale.forLanguageTag(app.localeIdentifier), price, currency, error = error,
         errorTitle = state.errorTitle.value, saving = state.saving.value, invoiceError = state.invoiceError.value,
         arrival = state.arrival.value, chain = chain, tip = tip?.let { current -> confirmedAt?.let { maxOf(current, it) } ?: current },
-        confirmedAt = confirmedAt)
+        confirmedAt = confirmedAt,
+        listening = app.session.isOpen && !app.isWalletSuspended && error == null &&
+            ((format == ReceiveFormat.lightningAddress && address != null) || request != null))
 }
 
 /**

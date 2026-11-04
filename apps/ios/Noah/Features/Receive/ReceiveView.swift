@@ -237,7 +237,7 @@ struct ReceiveView: View {
         let shown = shown
         return ReceiveCard(payload: shown.payload, title: shown.title, caption: shown.caption,
                            band: shown.bandAmount.map { ($0, shown.bandFiat) }, qrSide: qrSide,
-                           arrival: arrival,
+                           listening: model.request != nil && scenePhase == .active, arrival: arrival,
                            unit: app.amountUnit, tilt: tilt, unavailable: shown.unavailable) {
             profile = true
         }

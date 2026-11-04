@@ -81,6 +81,8 @@ data class ReceiveUi(
     val chain: ReceiveArrival? = arrival?.takeIf { it.rail == ReceiveArrival.Rail.onchain },
     val tip: Long? = null,
     val confirmedAt: Long? = null,
+    /** The wallet can receive here: the listening light circles the card. */
+    val listening: Boolean = false,
 ) {
     val amount get() = request?.amountSat
     fun sats(value: Long) = BitcoinAmount.format(value, unit, locale)
@@ -217,7 +219,7 @@ private fun rememberFormatSelect(ui: ReceiveUi, actions: ReceiveActions, sheet: 
 private fun ReceiveCardSlot(ui: ReceiveUi, face: CardFace, tilt: Float, cardWidth: Dp, qrSide: Dp, actions: ReceiveActions, openFormats: (() -> Unit)?) {
     if (ui.error != null && ui.request == null && ui.format != ReceiveFormat.lightningAddress) ErrorCard(ui.error, ui.errorTitle, cardWidth, actions.retry)
     else FitHeight {
-        ReceiveCard(face, ui.arrival, ui.arrival?.let { ui.sats(it.sats) }, tilt, cardWidth, qrSide,
+        ReceiveCard(face, ui.arrival, ui.arrival?.let { ui.sats(it.sats) }, ui.listening && ui.error == null, tilt, cardWidth, qrSide,
             actions.profile, openFormats)
     }
 }
