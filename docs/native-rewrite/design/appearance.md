@@ -2,7 +2,7 @@
 
 Approved by the user on 2026-11-03 ("Approved"). Today Noah always follows the phone's light or dark mode. This adds a choice in Settings → Display: **Automatic** (the default, today's behaviour), **Light** or **Dark**.
 
-The principles, tokens, springs, haptics and copy rules are the ones in [`onboarding.md`](onboarding.md#principles). The interactive prototype is [`appearance-v1.html`](appearance-v1.html) (open it in a browser and tap the tiles); where this spec and the prototype differ, the spec wins.
+The principles, tokens, springs, haptics and copy rules are the ones in [`onboarding.md`](onboarding.md#principles). The interactive prototype, `appearance-v1.html`, was removed once built; `git log --diff-filter=D -- docs/native-rewrite/design/appearance-v1.html` finds it. Where this spec and the prototype differ, the spec wins.
 
 ## Row
 
