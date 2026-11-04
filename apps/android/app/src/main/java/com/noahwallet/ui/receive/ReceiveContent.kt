@@ -157,14 +157,14 @@ fun ReceiveContent(ui: ReceiveUi, actions: ReceiveActions, toasts: HomeToasts = 
     val paned = pose !is OnboardingPose.Compact
     val cardWidth = if (pose is OnboardingPose.Wide) 310.dp else 300.dp
     val qrSide = if (pose is OnboardingPose.Wide) 228.dp else 226.dp
-    val (line, done) = arrivalLine(ui)
+    val (line, done, arriving) = arrivalLine(ui)
     val openFormats = { haptics.light(); sheet.value = "formats" }
     val card = @Composable { ReceiveCardSlot(ui, face, tilt.value, cardWidth, qrSide, actions, openFormats.takeIf { !paned }) }
     val under = @Composable {
         PhaseText(line, done, Modifier.padding(top = 14.dp).width(cardWidth))
         ReceiveBlockRow(ui.chain, ui.tip, ui.confirmedAt, cardWidth, Modifier.padding(top = 8.dp))
     }
-    val pills = @Composable { modifier: Modifier -> ReceivePills(ui, face.payload != null, modifier, ::amountSheet, ::share) }
+    val pills = @Composable { modifier: Modifier -> ReceivePills(ui, arriving, face.payload != null, modifier, ::amountSheet, ::share) }
     val list = @Composable { FormatList(ui, rows, onSelect = { select(it, false) }, onCopy = copy) }
     val problem = @Composable { modifier: Modifier -> RequestProblem(ui, actions.retry, modifier) }
     val toast = @Composable { modifier: Modifier -> HomeToast(toasts.current, modifier) }
@@ -277,9 +277,12 @@ private fun finishAmount(ui: ReceiveUi, actions: ReceiveActions, sats: Long, not
     else -> { actions.saveAmount(sats, note); false }
 }
 
-/** The line under the card: the arrival's phase while it plays, then an on-chain payment's block; and whether it reads as done. */
+/**
+ * The line under the card: the arrival's phase while it plays, then an on-chain payment's block; whether it reads as done;
+ * and whether the arrival is still playing.
+ */
 @Composable
-private fun arrivalLine(ui: ReceiveUi): Pair<String?, Boolean> {
+private fun arrivalLine(ui: ReceiveUi): Triple<String?, Boolean, Boolean> {
     val reduceMotion = LocalReduceMotion.current
     val now by produceState(0L, ui.arrival?.startedAt) {
         val started = ui.arrival?.startedAt ?: return@produceState
@@ -293,7 +296,7 @@ private fun arrivalLine(ui: ReceiveUi): Pair<String?, Boolean> {
     val chainPhase = ui.chain?.takeIf { phase == null }?.let { _ -> blockLine(ui) }
     // The amount from the start: the card only flips to it later.
     val line = phase?.let { tr(it) + if (it == "Payment received") " · " + ui.sats(ui.arrival.sats) else "" } ?: chainPhase
-    return line to (phase == "Payment received" || (ui.confirmedAt != null && chainPhase != null))
+    return Triple(line, phase == "Payment received" || (ui.confirmedAt != null && chainPhase != null), phase != null)
 }
 
 @Composable
@@ -309,9 +312,11 @@ private fun blockLine(ui: ReceiveUi): String? {
 
 /** Add or change the amount, and share what the card shows. */
 @Composable
-private fun ReceivePills(ui: ReceiveUi, canShare: Boolean, modifier: Modifier, amount: () -> Unit, share: () -> Unit) {
+private fun ReceivePills(ui: ReceiveUi, arriving: Boolean, canShare: Boolean, modifier: Modifier, amount: () -> Unit, share: () -> Unit) {
     Row(modifier, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        SendPill(if (ui.amount == null) tr("Add amount") else tr("Change amount"), Modifier.weight(1f).testTag("receive-amount-button"),
+        // While a payment's arrival plays, the same action sets up the next request, so it says so.
+        SendPill(when { arriving -> tr("New request"); ui.amount == null -> tr("Add amount"); else -> tr("Change amount") },
+            Modifier.weight(1f).testTag("receive-amount-button"),
             enabled = ui.request != null && !ui.saving,
             outlined = true, height = 48.dp, onClick = amount)
         SendPill(tr("Share"), Modifier.weight(1f).testTag("receive-share"), enabled = canShare, height = 48.dp, onClick = share)

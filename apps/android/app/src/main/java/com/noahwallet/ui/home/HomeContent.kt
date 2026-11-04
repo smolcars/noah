@@ -249,7 +249,8 @@ private fun HomeLeading(ui: HomeUi, state: HomeRules.State, shownTotal: ULong?, 
     if (ui.status is HomeRules.Status.Error && shownTotal != null) Text(tr("Last known balance"),
         Modifier.padding(top = 8.dp).graphicsLayer { alpha = 1 - tuck }.testTag("home-last-known-balance"), style = HomeType.line, color = palette.muted)
     BalanceBlock(ui, shownTotal, tuck, entered, onTap = openSheet, onToggle = toggle)
-    Box(Modifier.padding(top = 10.dp).height(20.dp).rise(entered, 140, 14f, reduceMotion)) {
+    // Fades with the big balance it belongs to, so it never sits alone under the top bar.
+    Box(Modifier.padding(top = 10.dp).height(20.dp).rise(entered, 140, 14f, reduceMotion).graphicsLayer { alpha = (1 - tuck / .7f).coerceAtLeast(0f) }) {
         ui.fiat?.let { Text(it, style = HomeType.line, color = palette.muted, maxLines = 1) }
     }
     Box(Modifier.rise(entered, 180, 14f, reduceMotion)) {
@@ -434,7 +435,9 @@ private fun BalanceBlock(ui: HomeUi, total: ULong?, tuck: Float, entered: Long, 
     val toggleLabel = tr(if (ui.hidden) "Show wallet balance" else "Hide wallet balance")
     val description = text ?: tr("Loading…")
     // The eye hides or shows amounts (long-press still does too); the chevron says a tap opens the details.
-    Row(Modifier.fillMaxWidth().rise(entered, 100, 14f, reduceMotion).graphicsLayer { alpha = 1 - tuck; translationY = -6 * tuck * density },
+    // Gone by the time the top bar's balance fades in (at 0.7), so the two never show at once.
+    Row(Modifier.fillMaxWidth().rise(entered, 100, 14f, reduceMotion).graphicsLayer { alpha = (1 - tuck / .7f).coerceAtLeast(0f)
+        translationY = -6 * tuck * density },
         verticalAlignment = Alignment.CenterVertically) {
         // Takes the width (the eye keeps its own), so the figures fit as large as before.
         Row(Modifier.weight(1f).padding(top = 8.dp)

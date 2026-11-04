@@ -377,17 +377,28 @@ private struct WideTabBar: View {
         }
         .onboardingHaptics(haptics)
         .accessibilityElement(children: .contain)
+        .accessibilityAddTraits(.isTabBar)
     }
 }
 
 extension View {
-    /// Rows scrolling under the floating tab bar fade behind a uniform backing instead of refracting through its glass.
-    @ViewBuilder
+    /// Rows scrolling under the floating tab bar fade out over 24 pt above it, then meet a backing that's opaque
+    /// across the bar's whole footprint (the bottom safe area), so its glass never samples or slices text.
+    /// The scroll content's own bottom padding (32 pt) lets the last row rise clear of the fade.
     func tabBarScrollEdge() -> some View {
-        if #available(iOS 26, *) {
-            scrollEdgeEffectStyle(.hard, for: .bottom)
-        } else {
-            self
+        overlay {
+            GeometryReader { proxy in
+                VStack(spacing: 0) {
+                    Spacer(minLength: 0)
+                    LinearGradient(colors: [NoahTokens.Colors.background.opacity(0), NoahTokens.Colors.background],
+                                   startPoint: .top, endPoint: .bottom)
+                        .frame(height: 24)
+                    NoahTokens.Colors.background.frame(height: proxy.safeAreaInsets.bottom)
+                }
+                .ignoresSafeArea(edges: .bottom)
+            }
+            .allowsHitTesting(false)
+            .accessibilityHidden(true)
         }
     }
 }

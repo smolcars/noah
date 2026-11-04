@@ -221,7 +221,7 @@ struct ExitChooseView: View {
 
     var body: some View {
         let money = ExitMoney(app: app, locale: locale)
-        ExitPanes {
+        ExitPanes(line: L10n.text("VTXOs are your bitcoin on Ark. Renew them before they expire to keep them safe.", locale: language)) {
             if settings.wide {
                 ExitHeadline(amount: money(value), line: estimate.map {
                     ExitText.count(vtxos: selection.count, transactions: $0.txsToBroadcast, language)
@@ -452,22 +452,17 @@ struct ExitReviewView: View {
         }
     }
 
-    /// Two sources of money, each under its own label: the on-chain wallet pays the network fees, and only
-    /// the claim fee comes out of these coins.
+    /// The decision first, right above the hold: two sources of money, each under its own label (the
+    /// on-chain wallet pays the network fees, and only the claim fee comes out of these coins), what you
+    /// get and until when you can cancel. The rate, funding source, timing and how Noah runs it follow.
     @ViewBuilder private func quoteDetails(_ quote: OnchainQuote, money: ExitMoney) -> some View {
+        let known = quote.fee != nil && quote.chainFee != nil
         ExitGroupLabel(text: L10n.text("From your on-chain wallet", locale: language)).padding(.top, 22)
         ExitCaveat(text: L10n.text("Network fees come from your on-chain balance, not from these coins.", locale: language), key: true)
-        VStack(spacing: 0) {
-            if let chainFee = quote.chainFee, quote.fee != nil {
-                ExitDetailRow(label: L10n.text("Network fees", locale: language), value: money.about(chainFee), numeric: true)
-                if let rate = quote.feeRate {
-                    ExitDetailRow(label: L10n.text("Fee rate", locale: language), value: L10n.text("{rate} sat/vB", rate.formatted(), locale: language))
-                }
-                ExitDetailRow(label: L10n.text("Paid from", locale: language),
-                              value: L10n.text("On-chain · {amount}", money(quote.confirmed), locale: language), hairline: false)
-            } else {
-                ExitDetailRow(label: L10n.text("Network fees", locale: language), value: L10n.text("Unknown", locale: language), hairline: false)
-            }
+        if let chainFee = quote.chainFee, known {
+            ExitDetailRow(label: L10n.text("Network fees", locale: language), value: money.about(chainFee), numeric: true, hairline: false)
+        } else {
+            ExitDetailRow(label: L10n.text("Network fees", locale: language), value: L10n.text("Unknown", locale: language), hairline: false)
         }
         // The separate on-chain funding, right under the fees it pays.
         if quote.feesUnknown {
@@ -481,29 +476,41 @@ struct ExitReviewView: View {
             ExitWarning(text: L10n.text("Not enough on-chain bitcoin for the fees. The exit starts, then waits until you add about {amount}.",
                                         money(chainFee - min(chainFee, quote.confirmed)), locale: language))
         }
-        ExitCaveat(text: L10n.text(
-            "Noah sends and fee-bumps the exit’s transactions on its own, including in the background when the system lets it. Fees are estimates.",
-            locale: language))
-        ExitGroupLabel(text: L10n.text("From these coins", locale: language)).padding(.top, 26)
+        ExitGroupLabel(text: L10n.text("From these coins", locale: language)).padding(.top, 20)
         VStack(spacing: 0) {
-            if let fee = quote.fee, quote.chainFee != nil {
-                if let delta = model.overview?.exitDelta, let estimate {
-                    // One block per transaction along a path at most, then the timelock.
-                    ExitDetailRow(label: L10n.text("Claimable", locale: language),
-                                  value: L10n.text("In {time}", ExitText.about(delta + UInt32(estimate.txsToBroadcast), language), locale: language))
-                }
+            if let fee = quote.fee, known {
                 ExitDetailRow(label: L10n.text("Claim fee", locale: language), value: money.about(fee), numeric: true)
-                ExitDetailRow(label: L10n.text("You get", locale: language), value: money.about(quote.net), numeric: true, hairline: false)
+                ExitDetailRow(label: L10n.text("You get", locale: language), value: money.about(quote.net), numeric: true, hairline: false, strong: true)
             } else {
                 ExitDetailRow(label: L10n.text("Claim fee", locale: language), value: L10n.text("Unknown", locale: language), hairline: false)
             }
         }
         ExitCaveat(text: L10n.text("Only the claim fee is deducted from these coins.", locale: language), key: true)
-        if let fee = quote.fee, quote.chainFee != nil,
+        if let fee = quote.fee, known,
            let warning = ExitRules.warning(amount: quote.amount, claimFee: fee, totalFee: quote.totalFee, claimOnly: false) {
             ExitWarning(text: L10n.text(warning, locale: language))
         }
         ExitCaveat(text: L10n.text("You can cancel until the last transaction is sent.", locale: language), key: true)
+        if known {
+            ExitGroupLabel(text: L10n.text("Details", locale: language)).padding(.top, 26)
+            VStack(spacing: 0) {
+                if let rate = quote.feeRate {
+                    ExitDetailRow(label: L10n.text("Fee rate", locale: language), value: L10n.text("{rate} sat/vB", rate.formatted(), locale: language))
+                }
+                ExitDetailRow(label: L10n.text("Paid from", locale: language),
+                              value: L10n.text("On-chain · {amount}", money(quote.confirmed), locale: language),
+                              hairline: model.overview?.exitDelta != nil && estimate != nil)
+                if let delta = model.overview?.exitDelta, let estimate {
+                    // One block per transaction along a path at most, then the timelock.
+                    ExitDetailRow(label: L10n.text("Claimable", locale: language),
+                                  value: L10n.text("In {time}", ExitText.about(delta + UInt32(estimate.txsToBroadcast), language), locale: language),
+                                  hairline: false)
+                }
+            }
+        }
+        ExitCaveat(text: L10n.text(
+            "Noah sends and fee-bumps the exit’s transactions on its own, including in the background when the system lets it. Fees are estimates.",
+            locale: language))
     }
 
     /// Today's start review, after the page's first read and any running review: a review invalidates

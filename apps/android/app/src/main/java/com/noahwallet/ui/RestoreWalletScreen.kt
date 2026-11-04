@@ -156,8 +156,10 @@ private fun PhraseRestoreScreen(model: AppModel, clipboard: RestoreClipboard) {
     val complete = words.all { it in RecoveryPhraseInput.wordList } && !input.wrongWordCount
     val keyboard = WindowInsets.isImeVisible && entry.focused != null
     FormLayout(leadingTop = {
-        val label = tr("Back")
-        IconButton({ if (!blocked) leave() }, Modifier.semantics { contentDescription = label }) { BackIcon(palette.foreground) }
+        // Android's plain 48 dp back arrow, as Send and Settings use; its arrow lines up with the content's edge.
+        com.noahwallet.ui.activity.BarButton(com.noahwallet.R.drawable.ic_activity_back, tr("Back"), Modifier.offset(x = (-12).dp)) {
+            if (!blocked) leave()
+        }
     }, headline = { large ->
         // What restoring needs, up front: it fails with "No backup found" without a wallet backup.
         Headline(tr("Welcome back"), tr("Enter your recovery phrase.") + " " + tr("To restore, Noah needs this phrase and a wallet backup."), large = large,

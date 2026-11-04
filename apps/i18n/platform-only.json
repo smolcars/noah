@@ -185,6 +185,7 @@
     "Locked until block {height}": "parity-gap (layout): Android's wide progress page has a second line under the status (prototype `sub`); iOS's doesn't",
     "Mainnet": "parity-gap: iOS's Ark server page has no network chip (prototype has one)",
     "Native settings write failed": "diagnostic (can reach the recurring screens, which show e.message); iOS reports these cases with other errors",
+    "New request": "by design: while an arrival shows, Android keeps the amount action enabled and relabels it for the next request; iOS disables it there",
     "No Google Play here, so another app delivers notifications.": "platform: UnifiedPush and distributors replace Google Play's push where it's missing",
     "No VTXOs in this view.": "parity-gap: iOS shows nothing when a VTXO filter matches none",
     "No app is available to share this place.": "platform: Android intents can be refused with a SecurityException, have a chooser title and can find no app to share with",

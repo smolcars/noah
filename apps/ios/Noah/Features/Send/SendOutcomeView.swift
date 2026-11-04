@@ -208,9 +208,18 @@ struct SendOutcomeView: View {
     }
 
     @ViewBuilder private var resultLine: some View {
+        // "Payment not sent" says so plainly first; its reason follows, quieter.
+        let leads = kind == .failed && refund != .untied
+        if showsResult && leads {
+            Text(verbatim: L10n.text("That payment didn’t go through.", locale: locale.identifier))
+                .noahText(NoahTokens.Typography.body).foregroundStyle(NoahTokens.Colors.foreground)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.top, 6)
+                .transition(.opacity)
+        }
         if showsResult, let line {
             Text(verbatim: line).noahText(NoahTokens.Typography.body)
-                .foregroundStyle(kind == .sent ? NoahTokens.Colors.muted : NoahTokens.Colors.foreground)
+                .foregroundStyle(kind == .sent || leads ? NoahTokens.Colors.muted : NoahTokens.Colors.foreground)
                 .fixedSize(horizontal: false, vertical: true)
                 .padding(.top, 6)
                 .transition(.opacity)
@@ -233,7 +242,7 @@ struct SendOutcomeView: View {
         if isWide { return 330 }
         let height = window.size.height > 0 ? window.size.height : 852
         // The result's To block and rows get the room once they show (and short windows, the Duo closed, always).
-        if toPayment != nil && resultShown { return min(170, max(120, height * 0.18)) }
+        if toPayment != nil && resultShown { return min(100, max(88, height * 0.11)) }
         return min(270, max(150, height * (resultShown && height < 760 ? 0.22 : 0.32)))
     }
 

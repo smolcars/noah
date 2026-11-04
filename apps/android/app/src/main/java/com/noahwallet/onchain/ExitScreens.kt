@@ -242,7 +242,8 @@ internal fun ExitWarningContent(exits: List<ExitModel>, tip: Long, delta: Long?,
         Text(tr("Emergency use only. It takes your bitcoin out of Ark without Ark’s server."), Modifier.padding(top = 8.dp),
             style = HomeType.line.copy(fontSize = 17.sp, lineHeight = 22.sp), color = palette.muted)
         val stages = exits.associate { it.id to ExitStages.of(it, tip, it.id in needsFunds) }
-        val area = Modifier.padding(top = 14.dp).fillMaxWidth().height(268.dp)
+        // Short enough on a phone that the facts and the never-broadcasts note sit whole above Choose VTXOs.
+        val area = Modifier.padding(top = 14.dp).fillMaxWidth().height(if (LocalPose.current is OnboardingPose.Compact) 224.dp else 268.dp)
         val path = transactions ?: count.value
         if (path == null) Spacer(area)
         else {
@@ -451,6 +452,9 @@ internal fun ExitChooseContent(all: List<VtxoModel>, costs: Map<String, ExitCost
     ExitFrame(tr("Choose VTXOs"), back, foot = {
         ChooseFoot(if (everything) null else chooseSummary(chosen, fees, value, money), reviewable) { haptics.light(); review(ids) }
     }, leading = {
+        // The term's definition, as Settings → VTXOs gives it: Emergency exit can open this page first.
+        Text(tr("VTXOs are your bitcoin on Ark. Renew them before they expire to keep them safe."), Modifier.padding(bottom = 4.dp),
+            style = HomeType.line, color = palette.muted)
         Segmented(listOf(true to tr("All"), false to tr("Choose")), everything, Modifier.padding(top = 10.dp).testTag("exit-mode")) { everything = it }
         val note = chooseNote(suspended, ready, loading, vtxos.isEmpty())
         if (note != null) FinePrint(note)

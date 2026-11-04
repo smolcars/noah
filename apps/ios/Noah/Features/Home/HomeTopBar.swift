@@ -181,7 +181,8 @@ struct HomePillStyle: ButtonStyle {
         let prominent: Bool
         let enabled: Bool
         func body(content: Content) -> some View {
-            if prominent {
+            // Disabled, filled or outlined alike: the same opaque soft surface and hairline.
+            if prominent || !enabled {
                 content.pillFill(enabled: enabled, tint: NoahTokens.Colors.foreground)
             } else {
                 content.glassCompat(in: Capsule(), interactive: enabled)

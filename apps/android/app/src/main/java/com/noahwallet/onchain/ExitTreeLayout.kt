@@ -292,10 +292,9 @@ internal class TreeLayout(val scene: ExitScene, val words: TreeStrings, val geo:
             // Both inside the picture, however large the text.
             val y2 = min(geo.ground + 24 * k * grow, geo.height - textHeight(sizes.second) / 2 - 1)
             val y1 = min(geo.ground + 11 * k, y2 - (textHeight(sizes.first) + textHeight(sizes.second)) / 2)
-            val needsFee = ExitScene.Mark.needsFee in s.marks
+            // The balance stays in the foreground when it's short: the badge's red dot and the fee callout say so.
             return listOfNotNull(WalletLine(first, y1, sizes.first, s.claiming, if (s.claiming) TreeLabels.Tone.strong else TreeLabels.Tone.muted),
-                second?.let { WalletLine(it, y2, sizes.second, true,
-                    when { needsFee -> TreeLabels.Tone.failure; s.claiming -> TreeLabels.Tone.muted; else -> TreeLabels.Tone.strong }) })
+                second?.let { WalletLine(it, y2, sizes.second, true, if (s.claiming) TreeLabels.Tone.muted else TreeLabels.Tone.strong) })
         }
 
         /**

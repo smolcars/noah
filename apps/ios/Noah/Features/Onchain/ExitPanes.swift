@@ -7,6 +7,8 @@ import SwiftUI
 /// landscape) put the explanation and picture in the leading pane and the details and actions
 /// in the trailing one; nothing crosses the fold. The page keeps its state across a pose change.
 struct ExitPanes<Leading: View, Trailing: View, Footer: View>: View {
+    /// A definition under the page title, above the details (Choose VTXOs says what a VTXO is).
+    var line: String?
     @ViewBuilder var leading: Leading
     @ViewBuilder var trailing: Trailing
     @ViewBuilder var footer: Footer
@@ -25,11 +27,11 @@ struct ExitPanes<Leading: View, Trailing: View, Footer: View>: View {
                     .environment(\.exitPaneHeight, proxy.size.height)
                 }
                 .frame(width: settings.leadingWidth)
-                SettingsScroll { trailing }
+                SettingsScroll(line: line) { trailing }
                     .modifier(ExitFooter(buttons: footer))
             }
         } else {
-            SettingsScroll {
+            SettingsScroll(line: line) {
                 leading
                 trailing
             }
@@ -116,6 +118,8 @@ struct ExitDetailRow: View {
     var numeric = false
     var failure = false
     var hairline = true
+    /// The total the decision rests on ("You get"): label in foreground weight too.
+    var strong = false
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     var body: some View {
@@ -155,12 +159,14 @@ struct ExitDetailRow: View {
     }
 
     private var labelText: some View {
-        Text(verbatim: label).noahText(NoahTokens.Typography.body).foregroundStyle(NoahTokens.Colors.muted)
+        Text(verbatim: label).noahText(NoahTokens.Typography.body).fontWeight(strong ? .semibold : nil)
+            .foregroundStyle(strong ? NoahTokens.Colors.foreground : NoahTokens.Colors.muted)
             .fixedSize(horizontal: false, vertical: true)
     }
 
     private var valueText: some View {
         Text(verbatim: value).noahText(numeric ? HomeText.amount : NoahTokens.Typography.label).monospacedDigit()
+            .fontWeight(strong ? .semibold : nil)
             .foregroundStyle(failure ? NoahTokens.Colors.failure : NoahTokens.Colors.foreground)
             .fixedSize(horizontal: false, vertical: true)
     }

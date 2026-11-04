@@ -11,6 +11,7 @@
   <string name="gt_36d7ac7edaf6eeeb">"前日にお知らせします。逃した支払いはスキップされ、二重に支払われることはありません。"</string>
   <string name="gt_ffc027edcc0ef3f2">"ATM"</string>
   <string name="gt_5e75885111cddfc6">"AUD"</string>
+  <string name="gt_4d55e4568a69892b">"About 20 min · %1$s Bitcoin blocks"</string>
   <string name="gt_388e5f8e82667507">"約20分 · 手数料 %1$s"</string>
   <string name="gt_962a08a8878d9a42">"Noahについて"</string>
   <string name="gt_16b406f63254167c">"ブロック %1$s ごろ"</string>
@@ -39,9 +40,8 @@
   <string name="gt_04eb3a8bed8492d0">"同じアドレスにNIP-05 IDを追加します。nsecは絶対に貼り付けないでください。"</string>
   <string name="gt_9f088dbebd6c3c70">"詳細設定"</string>
   <string name="gt_7b68fe5510851da3">"指定回数後"</string>
-  <string name="gt_1ab182592ebf923e">"1回の承認後"</string>
+  <string name="gt_8e12d5d7a65860af">"After one Bitcoin block"</string>
   <string name="gt_19e0adbfc9cad76d">"タイムロックの後"</string>
-  <string name="gt_e95ee301e98c2f56">"After %1$s confirmations (Bitcoin blocks)"</string>
   <plurals name="gt_d7e9ece445e2d5a3">
     <item quantity="one">"%1$s回の支払い後"</item>
     <item quantity="other">"%1$s回の支払い後"</item>
@@ -366,6 +366,7 @@
   <string name="gt_11a6767d5674c7e4">"完了"</string>
   <string name="gt_5655e4c5f2e921a8">"VTXOを削除"</string>
   <string name="gt_57d4846cecee3fdd">"EUR"</string>
+  <string name="gt_fe5131b6ce9ebad8">"Each exit transaction needs a network fee, paid from your on-chain balance."</string>
   <string name="gt_a8652bad1788fdd8">"各トランザクションは、前のものがブロックに入ってから送信されます。"</string>
   <string name="gt_985a8feacc07a757">"各トランザクションの手数料は、承認済みのオンチェーンのビットコインから支払われます。入金が承認されると、Noahが次のトランザクションを送信します。"</string>
   <string name="gt_464c4ffd019e1e96">"編集"</string>
@@ -415,7 +416,6 @@
   <string name="gt_d9f3d2f604dad97a">"手数料の見積総額が回収額以上です。"</string>
   <string name="gt_c4e42b974c335dc5">"毎日"</string>
   <string name="gt_b938e292a4f7d14e">"受け取り可能なすべての出金が、この1つのトランザクションにまとめられます。以前のネットワーク手数料が再び差し引かれることはありません。"</string>
-  <string name="gt_70271ecc4f808d06">"各出金トランザクションには手数料用のアンカーがあります。Noahがそこに手数料を付け、オンチェーンのビットコインから支払います。"</string>
   <string name="gt_24859dc0201bd88a">"毎月"</string>
   <string name="gt_1b7e18513af4abe9">"毎週"</string>
   <string name="gt_2100659a7aa87d93">"%1$s %2$sごと"</string>
@@ -736,6 +736,7 @@
   <string name="gt_87d5d56d886e2a24">"新しいコイン"</string>
   <string name="gt_0d25c8b1db6122fe">"新しいメールアドレス"</string>
   <string name="gt_b8f18b3a55f56c76">"新しい支払い"</string>
+  <string name="gt_5977ded363b21808">"New request"</string>
   <string name="gt_1ff57a29d7c9d11b">"次へ"</string>
   <string name="gt_8e0856e3b40da050">"次のブロック"</string>
   <string name="gt_bd26eee14731169d">"次の期限切れまで%1$s · 自動で更新されます"</string>
@@ -1153,6 +1154,7 @@
   <string name="gt_2150d8df37e48957">"すべて表示"</string>
   <string name="gt_3175b05f8140f78b">"それでも表示する"</string>
   <string name="gt_e664b825fcdcf93e">"Show full invoice"</string>
+  <string name="gt_94ea9b1d33a02975">"Show less"</string>
   <string name="gt_4aa5f4cd7ecfd4da">"支払いの詳細を表示"</string>
   <string name="gt_93749012e2444865">"復元フレーズを表示"</string>
   <string name="gt_d8425d416f6d496d">"ウォレットの残高を表示"</string>

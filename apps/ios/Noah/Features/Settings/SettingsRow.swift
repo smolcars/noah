@@ -533,6 +533,7 @@ struct SettingsActionStyle: ButtonStyle {
         let wrap: Bool
         @Environment(\.isEnabled) private var isEnabled
         @Environment(\.accessibilityReduceMotion) private var reduceMotion
+        static let destructiveFill = Color(red: 0xD0 / 255, green: 0x31 / 255, blue: 0x2D / 255)
 
         var body: some View {
             let red = destructive && isEnabled
@@ -545,7 +546,8 @@ struct SettingsActionStyle: ButtonStyle {
                 .padding(.vertical, wrap ? 10 : 0)
                 .frame(maxWidth: .infinity, minHeight: NoahTokens.Size.button)
                 .contentShape(Capsule())
-                .pillFill(enabled: isEnabled, tint: red ? NoahTokens.Colors.failure : NoahTokens.Colors.foreground)
+                // The light failure red in both themes: white on the dark token's brighter red is only ~3.4:1.
+                .pillFill(enabled: isEnabled, tint: red ? Self.destructiveFill : NoahTokens.Colors.foreground)
                 .scaleEffect(configuration.isPressed && !reduceMotion ? 0.97 : 1)
                 .animation(NoahTokens.Motion.tap, value: configuration.isPressed)
                 .animation(NoahTokens.Motion.travel(reduceMotion, NoahTokens.Motion.bouncy), value: red)

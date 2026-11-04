@@ -251,14 +251,17 @@ struct ReceiveView: View {
         } ?? []
         return TimelineView(.explicit([now] + boundaries)) { timeline in
             let phase: (text: String, done: Bool) = arrival.map { $0.phase(at: $0.elapsed(timeline.date), tip: tip, locale: locale) } ?? ("", false)
-            Text(verbatim: phase.text)
+            // A Lightning arrival names what actually arrived, not the request's amount on the card.
+            let received = arrival.flatMap { $0.rail == .lightning && !phase.text.isEmpty ? $0.sats : nil }
+            let text = received.map { phase.text + " · " + BitcoinAmount.format(sats: $0, unit: app.amountUnit, locale: locale) } ?? phase.text
+            Text(verbatim: text)
                 .noahText(NoahTokens.Typography.control)
                 .foregroundStyle(phase.done ? NoahTokens.Colors.foreground : NoahTokens.Colors.muted)
                 .frame(maxWidth: .infinity, minHeight: 20)
-                .id(phase.text)
+                .id(text)
                 .transition(.asymmetric(insertion: reduceMotion ? .opacity : .opacity.combined(with: .offset(y: 6)), removal: .identity))
-                .animation(NoahTokens.Motion.travel(reduceMotion), value: phase.text)
-                .accessibilityHidden(phase.text.isEmpty)
+                .animation(NoahTokens.Motion.travel(reduceMotion), value: text)
+                .accessibilityHidden(text.isEmpty)
                 .accessibilityIdentifier("receive-phase")
         }
     }

@@ -27,6 +27,7 @@ struct SendConfirmation: View {
     @State private var ownGate = SendHoldGate()
     @State private var window = OnboardingLayout(size: .zero, insets: EdgeInsets())
     @Environment(\.locale) private var locale
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
 
     private var isWide: Bool { wide ?? window.wide }
     private var label: SendRecipientLabel {
@@ -73,7 +74,10 @@ struct SendConfirmation: View {
             .padding(.top, isWide ? 14 : 4)
             Text(verbatim: L10n.text("Send {amount}", format(quote.amount), locale: locale.identifier))
                 .noahText(SendText.big).foregroundStyle(NoahTokens.Colors.foreground)
-                .lineLimit(1).minimumScaleFactor(0.5)
+                // Accessibility sizes wrap "Send" and the amount rather than shrinking what was asked to grow.
+                .lineLimit(dynamicTypeSize.isAccessibilitySize ? 3 : 1)
+                .minimumScaleFactor(dynamicTypeSize.isAccessibilitySize ? 0.85 : 0.5)
+                .fixedSize(horizontal: false, vertical: dynamicTypeSize.isAccessibilitySize)
                 .padding(.top, 18)
                 .accessibilityIdentifier("send-review-title")
             if let btcPrice {
@@ -196,20 +200,22 @@ struct SendConfirmation: View {
         case .ark, .lightning: L10n.text("Usually in seconds", locale: locale)
         case .onchainWallet: L10n.text("In about 20 minutes", locale: locale)
         case .onchainSwap:
-            if required <= 1 { L10n.text("After one confirmation", locale: locale) }
-            else { L10n.text("After {count} confirmations (Bitcoin blocks)", Int(required), locale: locale) }
+            // The method sheet's "About 20 min" for on-chain, with the blocks it waits for; one block isn't 20 minutes.
+            if required <= 1 { L10n.text("After one Bitcoin block", locale: locale) }
+            else { L10n.text("About 20 min · {count} Bitcoin blocks", Int(required), locale: locale) }
         }
     }
 }
 
 /// "To" on review and on the result: who it goes to, the invoice's own description, then the full address
 /// or invoice in a soft card, selectable, so it can be compared before holding. An invoice never names its
-/// payee; its card shows the start and expands in place, once ("Show full invoice").
+/// payee; its card shows the start and expands in place ("Show full invoice" / "Show less").
 struct SendToBlock: View {
     let label: SendRecipientLabel
     let payment: SendPayment
     @Environment(\.sendReceiveFixture) private var fixture
     @State private var expanded = false
+    @State private var copied = false
 
     var body: some View {
         let full = SendConfirmation.fullDestination(payment.destination, shown: label.name)
@@ -233,34 +239,65 @@ struct SendToBlock: View {
         .onAppear { if fixture?.invoiceExpanded == true { expanded = true } }
     }
 
-    /// Addresses are short enough to show whole; an invoice starts collapsed to its first three lines.
+    /// Addresses are short enough to show whole; an invoice starts collapsed to its first three lines and
+    /// toggles between them and the whole. The copy button copies the whole string either way.
     private func card(_ full: String) -> some View {
         let collapsible = SendMotion.Rail(payment) == .lightning
         return VStack(alignment: .leading, spacing: 10) {
-            // Quieter than the name above, still 4.5:1 on the soft card (the muted token isn't, in light).
-            IdentifierText(value: full, size: 13, style: .footnote, opacity: 0.62,
-                           lines: collapsible && !expanded ? 3 : 0)
-                .accessibilityIdentifier("send-review-destination")
-            if collapsible && !expanded {
-                Button {
-                    withAnimation(NoahTokens.Motion.soft) { expanded = true }
-                } label: {
-                    HStack(spacing: 4) {
-                        Text("Show full invoice")
-                        Image(systemName: "chevron.down").accessibilityHidden(true)
-                    }
-                    .noahText(NoahTokens.Typography.sub).foregroundStyle(NoahTokens.Colors.foreground)
-                    .frame(minHeight: NoahTokens.Size.hitTarget, alignment: .leading)
-                    .contentShape(Rectangle())
-                }
-                .buttonStyle(.plain)
-                .padding(.vertical, -10)
-                .accessibilityIdentifier("send-destination-disclosure")
+            HStack(alignment: .top, spacing: 4) {
+                // Quieter than the name above, still 4.5:1 on the soft card (the muted token isn't, in light).
+                IdentifierText(value: full, size: 13, style: .footnote, opacity: 0.62,
+                               lines: collapsible && !expanded ? 3 : 0)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .accessibilityIdentifier("send-review-destination")
+                copyButton(full)
             }
+            if collapsible { disclosure }
         }
         .padding(16)
         .frame(maxWidth: .infinity, alignment: .leading)
         .background(NoahTokens.Colors.soft, in: RoundedRectangle(cornerRadius: NoahTokens.Radius.m, style: .continuous))
         .padding(.top, 4)
+    }
+
+    private func copyButton(_ full: String) -> some View {
+        Button {
+            UIPasteboard.general.setItems([[UIPasteboard.typeAutomatic: full]],
+                                          options: [.localOnly: true, .expirationDate: Date().addingTimeInterval(120)])
+            withAnimation(NoahTokens.Motion.soft) { copied = true }
+            Task {
+                try? await Task.sleep(for: .seconds(1.2))
+                withAnimation(NoahTokens.Motion.soft) { copied = false }
+            }
+        } label: {
+            Image(systemName: copied ? "checkmark" : "doc.on.doc")
+                .font(.system(size: 15, weight: copied ? .semibold : .regular))
+                .contentTransition(.symbolEffect(.replace))
+                .frame(width: NoahTokens.Size.hitTarget, height: NoahTokens.Size.hitTarget)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .foregroundStyle(NoahTokens.Colors.muted)
+        .padding(.vertical, -12).padding(.trailing, -12)
+        .sensoryFeedback(.success, trigger: copied) { _, now in now }
+        .accessibilityLabel(copied ? Text("Copied") : Text("Copy"))
+        .accessibilityIdentifier("send-destination-copy")
+    }
+
+    private var disclosure: some View {
+        Button {
+            withAnimation(NoahTokens.Motion.soft) { expanded.toggle() }
+        } label: {
+            HStack(spacing: 4) {
+                if expanded { Text("Show less") } else { Text("Show full invoice") }
+                Image(systemName: expanded ? "chevron.up" : "chevron.down").accessibilityHidden(true)
+            }
+            .noahText(NoahTokens.Typography.sub).foregroundStyle(NoahTokens.Colors.foreground)
+            .frame(minHeight: NoahTokens.Size.hitTarget, alignment: .leading)
+            .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .padding(.vertical, -10)
+        .accessibilityIdentifier("send-destination-disclosure")
     }
 }

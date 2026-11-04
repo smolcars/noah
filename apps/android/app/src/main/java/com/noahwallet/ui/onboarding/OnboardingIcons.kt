@@ -48,11 +48,6 @@ internal fun EmailCheckIcon(color: Color, progress: Float, size: Dp = 24.dp) = I
 }
 
 @Composable
-internal fun BackIcon(color: Color, size: Dp = 24.dp) = Icon24(size, 2f) { stroke ->
-    drawPath(Path().apply { moveTo(15f, 18f); lineTo(9f, 12f); lineTo(15f, 6f) }, color, style = stroke)
-}
-
-@Composable
 internal fun PasteIcon(color: Color, size: Dp = 18.dp) = Icon24(size, 1.8f) { stroke ->
     drawRoundRect(color, Offset(8f, 2f), Size(8f, 4f), androidx.compose.ui.geometry.CornerRadius(1f), style = stroke)
     drawPath(Path().apply {

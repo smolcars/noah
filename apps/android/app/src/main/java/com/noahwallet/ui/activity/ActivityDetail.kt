@@ -283,7 +283,7 @@ internal fun DetailRow(label: String, value: String, kind: ValueKind = ValueKind
 
 /** A long technical value under its label, in full, so it can still be selected; copy beside the label. */
 @Composable
-internal fun DetailBlock(label: String, value: String, toasts: HomeToasts, copy: Boolean = true) {
+internal fun DetailBlock(label: String, value: String, toasts: HomeToasts, copy: Boolean = true, caption: String? = null) {
     val palette = LocalPalette.current
     Column(Modifier.fillMaxWidth().drawBehind { drawRect(palette.hairline, Offset(0f, size.height - 1.dp.toPx()), Size(size.width, 1.dp.toPx())) }
         .padding(vertical = 10.dp)) {
@@ -292,6 +292,7 @@ internal fun DetailBlock(label: String, value: String, toasts: HomeToasts, copy:
             if (copy) CopyIcon(label, value, toasts)
         }
         SelectionContainer { Text(value, Modifier.padding(top = 4.dp), style = ActivityType.mono.copy(fontSize = 15.sp), color = palette.foreground) }
+        caption?.let { Text(it, Modifier.padding(top = 4.dp), style = HomeType.line, color = palette.muted) }
     }
 }
 
@@ -466,8 +467,8 @@ private fun TechnicalRows(ui: ActivityUi, record: HistoryTransaction, actions: A
     // As in React Native: the anchor only when it isn't the transaction already shown.
     record.chainAnchor?.takeIf { it.substringBefore(':') != record.txid?.substringBefore(':') }?.let { DetailBlock("Chain anchor", it, toasts) }
     listOf("Sent to" to record.sentTo, "Received on" to record.receivedOn).forEach { (label, values) ->
-        if (!values.isNullOrEmpty()) DetailBlock(label, values.joinToString("\n") { "${it.destination} · ${money(it.amountSat)}" }, toasts,
-            copy = values.size == 1)
+        // The bare identifier (what Copy copies), its amount on a line of its own.
+        values?.forEach { DetailBlock(label, it.destination, toasts, caption = money(it.amountSat)) }
     }
     CoinSections(record, actions, toasts)
     record.metadataJson?.takeIf { it.isNotEmpty() && it != "{}" }?.let { Section("Metadata"); DetailBlock("JSON", it, toasts) }

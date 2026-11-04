@@ -11,6 +11,7 @@
   <string name="gt_36d7ac7edaf6eeeb">"Du får en påminnelse dagen innan. En missad betalning hoppas över och betalas aldrig två gånger."</string>
   <string name="gt_ffc027edcc0ef3f2">"Bankomat"</string>
   <string name="gt_5e75885111cddfc6">"AUD"</string>
+  <string name="gt_4d55e4568a69892b">"About 20 min · %1$s Bitcoin blocks"</string>
   <string name="gt_388e5f8e82667507">"Cirka 20 min · %1$s i avgift"</string>
   <string name="gt_962a08a8878d9a42">"Om Noah"</string>
   <string name="gt_16b406f63254167c">"Omkring block %1$s"</string>
@@ -39,9 +40,8 @@
   <string name="gt_04eb3a8bed8492d0">"Lägger till en NIP-05-identitet på samma adress. Klistra aldrig in en nsec."</string>
   <string name="gt_9f088dbebd6c3c70">"Avancerat"</string>
   <string name="gt_7b68fe5510851da3">"Efter"</string>
-  <string name="gt_1ab182592ebf923e">"Efter en bekräftelse"</string>
+  <string name="gt_8e12d5d7a65860af">"After one Bitcoin block"</string>
   <string name="gt_19e0adbfc9cad76d">"Efter tidslåset"</string>
-  <string name="gt_e95ee301e98c2f56">"After %1$s confirmations (Bitcoin blocks)"</string>
   <plurals name="gt_d7e9ece445e2d5a3">
     <item quantity="one">"Efter %1$s betalning"</item>
     <item quantity="other">"Efter %1$s betalningar"</item>
@@ -366,6 +366,7 @@
   <string name="gt_11a6767d5674c7e4">"Klart"</string>
   <string name="gt_5655e4c5f2e921a8">"Ta bort VTXO"</string>
   <string name="gt_57d4846cecee3fdd">"EUR"</string>
+  <string name="gt_fe5131b6ce9ebad8">"Each exit transaction needs a network fee, paid from your on-chain balance."</string>
   <string name="gt_a8652bad1788fdd8">"Var och en skickas först när den före är med i ett block."</string>
   <string name="gt_985a8feacc07a757">"Varje transaktions avgift tas från dina bekräftade bitcoin på blockkedjan. Noah skickar nästa när en insättning har bekräftats."</string>
   <string name="gt_464c4ffd019e1e96">"Ändra"</string>
@@ -415,7 +416,6 @@
   <string name="gt_d9f3d2f604dad97a">"De beräknade totala avgifterna är lika stora som eller överstiger beloppet som återförs."</string>
   <string name="gt_c4e42b974c335dc5">"Varje dag"</string>
   <string name="gt_b938e292a4f7d14e">"Alla uttag som är klara ingår i den här enda transaktionen. Tidigare nätverksavgifter dras inte igen."</string>
-  <string name="gt_70271ecc4f808d06">"Varje uttagstransaktion har ett avgiftsankare. Noah lägger till en avgift där, betald med dina bitcoin på blockkedjan."</string>
   <string name="gt_24859dc0201bd88a">"Varje månad"</string>
   <string name="gt_1b7e18513af4abe9">"Varje vecka"</string>
   <string name="gt_2100659a7aa87d93">"Med %1$s %2$s mellanrum"</string>
@@ -736,6 +736,7 @@
   <string name="gt_87d5d56d886e2a24">"Nya mynt"</string>
   <string name="gt_0d25c8b1db6122fe">"Ny e-post"</string>
   <string name="gt_b8f18b3a55f56c76">"Ny betalning"</string>
+  <string name="gt_5977ded363b21808">"New request"</string>
   <string name="gt_1ff57a29d7c9d11b">"Nästa"</string>
   <string name="gt_8e0856e3b40da050">"Nästa block"</string>
   <string name="gt_bd26eee14731169d">"Nästa utgång om %1$s · förnyas automatiskt"</string>
@@ -1153,6 +1154,7 @@
   <string name="gt_2150d8df37e48957">"Visa alla"</string>
   <string name="gt_3175b05f8140f78b">"Visa ändå"</string>
   <string name="gt_e664b825fcdcf93e">"Show full invoice"</string>
+  <string name="gt_94ea9b1d33a02975">"Show less"</string>
   <string name="gt_4aa5f4cd7ecfd4da">"Visa betalningsuppgifter"</string>
   <string name="gt_93749012e2444865">"Visa återställningsfras"</string>
   <string name="gt_d8425d416f6d496d">"Visa plånbokens saldo"</string>

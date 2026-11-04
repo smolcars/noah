@@ -497,9 +497,9 @@ internal fun Caveat(text: String, modifier: Modifier = Modifier, key: Boolean = 
 /** A warning with its icon (prototype `.warn`). */
 @SuppressLint("ModifierParameter") // Exit's warnings pass the icon positionally, second after the text
 @Composable
-internal fun Warning(text: String, icon: Int = SettingsIcons.shield, failed: Boolean = false, modifier: Modifier = Modifier) {
+internal fun Warning(text: String, icon: Int = SettingsIcons.shield, failed: Boolean = false, modifier: Modifier = Modifier, top: Dp = 22.dp) {
     val palette = LocalPalette.current
-    Row(modifier.padding(top = 22.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+    Row(modifier.padding(top = top), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         Icon(painterResource(icon), null, Modifier.size(20.dp), tint = if (failed) palette.failure else palette.foreground)
         Text(text, style = HomeType.line, color = if (failed) palette.failure else palette.muted)
     }
@@ -507,9 +507,9 @@ internal fun Warning(text: String, icon: Int = SettingsIcons.shield, failed: Boo
 
 /** A section label inside a page (prototype `.sec`). */
 @Composable
-internal fun SectionLabel(text: String, modifier: Modifier = Modifier) {
+internal fun SectionLabel(text: String, modifier: Modifier = Modifier, top: Dp = 22.dp) {
     val palette = LocalPalette.current
-    Text(text, modifier.padding(top = 22.dp).semantics { heading() }, style = HomeType.header, color = palette.muted)
+    Text(text, modifier.padding(top = top).semantics { heading() }, style = HomeType.header, color = palette.muted)
 }
 
 /** A field label (prototype `.flabel`). */

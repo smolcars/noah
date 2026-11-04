@@ -312,7 +312,8 @@ class ExitDeviceTest {
         compose.mainClock.advanceTimeBy(2_000)
         compose.onNodeWithTag("exit-add-funds").assertIsEnabled()
         compose.onNodeWithTag("exit-cancel").assertIsEnabled()
-        compose.onNodeWithTag("exit-check").performScrollTo().assertIsEnabled().performClick()
+        // In the foot, under Cancel exit and Add on-chain funds.
+        compose.onNodeWithTag("exit-check").assertIsEnabled().performClick()
         compose.runOnIdle { assertEquals(1, checks) }
     }
 

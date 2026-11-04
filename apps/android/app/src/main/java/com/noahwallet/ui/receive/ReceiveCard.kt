@@ -246,17 +246,17 @@ private fun Band(sats: String, fiat: String?) {
 private fun Back(arrival: ReceiveArrival, amount: String, t: Long, modifier: Modifier) {
     val reduceMotion = LocalReduceMotion.current
     val ink = NoahTokens.Light.qrInk
-    val ring = if (reduceMotion) 1f else step(t, 250, SpringCurve.soft, 650)
-    val check = if (reduceMotion) 1f else step(t, 650, SpringCurve.soft, 380)
+    // The payment has arrived when the card flips: the ring is whole at once and only the check pops in.
+    val check = if (reduceMotion) 1f else step(t, 250, SpringCurve.soft, 380)
     Column(modifier.semantics(mergeDescendants = true) { liveRegion = LiveRegionMode.Polite }, horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(10.dp, Alignment.CenterVertically)) {
         Canvas(Modifier.size(76.dp)) {
             val unit = size.width / 84f
-            drawArc(NoahTokens.Light.orange, -90f, 360f * ring.coerceIn(0f, 1f), false, Offset(2 * unit, 2 * unit), Size(80 * unit, 80 * unit),
-                style = Stroke(2.5f * unit))
+            drawCircle(NoahTokens.Light.orange, 40 * unit, center, style = Stroke(2.5f * unit))
             val path = Path().apply { moveTo(27 * unit, 43 * unit); relativeLineTo(10 * unit, 10 * unit); relativeLineTo(21 * unit, -22 * unit) }
-            drawPath(StageArt.segment(path, 0f, PathMeasure().apply { setPath(path, false) }.length * check.coerceIn(0f, 1f)), ink,
-                style = Stroke(3.2f * unit, cap = StrokeCap.Round, join = StrokeJoin.Round))
+            scale(check.coerceAtLeast(0f), center) {
+                drawPath(path, ink, style = Stroke(3.2f * unit, cap = StrokeCap.Round, join = StrokeJoin.Round))
+            }
         }
         Text("+$amount", style = SendType.big.copy(fontSize = 44.sp, lineHeight = 46.sp), color = ink, maxLines = 1)
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {

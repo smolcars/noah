@@ -361,6 +361,42 @@
         }
       }
     },
+    "About 20 min · {count} Bitcoin blocks": {
+      "comment": "GT gt_4d55e4568a69892b; arguments: count",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "About 20 min · %1$@ Bitcoin blocks"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "About 20 min · %1$@ Bitcoin blocks"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "About 20 min · %1$@ Bitcoin blocks"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "About 20 min · %1$@ Bitcoin blocks"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "About 20 min · %1$@ Bitcoin blocks"
+          }
+        }
+      }
+    },
     "About 20 min · {fee} fee": {
       "comment": "GT gt_388e5f8e82667507; arguments: fee",
       "extractionState": "manual",
@@ -1369,38 +1405,38 @@
         }
       }
     },
-    "After one confirmation": {
-      "comment": "GT gt_1ab182592ebf923e; arguments: none",
+    "After one Bitcoin block": {
+      "comment": "GT gt_8e12d5d7a65860af; arguments: none",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "After one confirmation"
+            "value": "After one Bitcoin block"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Tras una confirmación"
+            "value": "After one Bitcoin block"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "1回の承認後"
+            "value": "After one Bitcoin block"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "1회 확인 후"
+            "value": "After one Bitcoin block"
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Efter en bekräftelse"
+            "value": "After one Bitcoin block"
           }
         }
       }
@@ -1437,42 +1473,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Efter tidslåset"
-          }
-        }
-      }
-    },
-    "After {count} confirmations (Bitcoin blocks)": {
-      "comment": "GT gt_e95ee301e98c2f56; arguments: count",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "After %1$@ confirmations (Bitcoin blocks)"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "After %1$@ confirmations (Bitcoin blocks)"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "After %1$@ confirmations (Bitcoin blocks)"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "After %1$@ confirmations (Bitcoin blocks)"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "After %1$@ confirmations (Bitcoin blocks)"
           }
         }
       }
@@ -12997,6 +12997,42 @@
         }
       }
     },
+    "Each exit transaction needs a network fee, paid from your on-chain balance.": {
+      "comment": "GT gt_fe5131b6ce9ebad8; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Each exit transaction needs a network fee, paid from your on-chain balance."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Each exit transaction needs a network fee, paid from your on-chain balance."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Each exit transaction needs a network fee, paid from your on-chain balance."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Each exit transaction needs a network fee, paid from your on-chain balance."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Each exit transaction needs a network fee, paid from your on-chain balance."
+          }
+        }
+      }
+    },
     "Each one is sent only after the one before it is in a block.": {
       "comment": "GT gt_a8652bad1788fdd8; arguments: none",
       "extractionState": "manual",
@@ -14757,42 +14793,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Alla uttag som är klara ingår i den här enda transaktionen. Tidigare nätverksavgifter dras inte igen."
-          }
-        }
-      }
-    },
-    "Every exit transaction has a fee anchor. Noah attaches a fee to it, paid from your on-chain bitcoin.": {
-      "comment": "GT gt_70271ecc4f808d06; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Every exit transaction has a fee anchor. Noah attaches a fee to it, paid from your on-chain bitcoin."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Cada transacción de salida tiene un ancla para la comisión. Noah le añade una comisión, pagada con tus bitcoins en cadena."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "各出金トランザクションには手数料用のアンカーがあります。Noahがそこに手数料を付け、オンチェーンのビットコインから支払います。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "모든 출금 트랜잭션에는 수수료 앵커가 있어요. Noah가 여기에 수수료를 붙이고 온체인 비트코인에서 지불해요."
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Varje uttagstransaktion har ett avgiftsankare. Noah lägger till en avgift där, betald med dina bitcoin på blockkedjan."
           }
         }
       }
@@ -26025,6 +26025,42 @@
           "stringUnit": {
             "state": "translated",
             "value": "Ny betalning"
+          }
+        }
+      }
+    },
+    "New request": {
+      "comment": "GT gt_5977ded363b21808; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "New request"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "New request"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "New request"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "New request"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "New request"
           }
         }
       }
@@ -40845,6 +40881,42 @@
           "stringUnit": {
             "state": "translated",
             "value": "Show full invoice"
+          }
+        }
+      }
+    },
+    "Show less": {
+      "comment": "GT gt_94ea9b1d33a02975; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Show less"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Show less"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Show less"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Show less"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Show less"
           }
         }
       }

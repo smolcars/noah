@@ -61,7 +61,11 @@ struct ReceiveAmountSheet: View {
 
     private var fiatLine: String {
         if useFiat { return BitcoinAmount.format(sats: sats, unit: app.amountUnit, locale: locale) }
-        guard let btcPrice else { return L10n.text("{currency} rate unavailable", app.preferredCurrency, locale: locale.identifier) }
+        guard let btcPrice else {
+            // No price: "₿1,500" reads as 1,500 sats, as on Send.
+            if app.amountUnit == .bip177 { return BitcoinAmount.satsLine(sats, locale: locale) }
+            return L10n.text("{currency} rate unavailable", app.preferredCurrency, locale: locale.identifier)
+        }
         return FiatCurrency.display(sats: sats, btcPrice: btcPrice, currency: app.preferredCurrency, locale: locale)
     }
 

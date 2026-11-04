@@ -77,12 +77,11 @@ struct RecurringPaymentsView: View {
                     Text(L10n.text("Run due payments now", locale: language))
                     if executor.running { ProgressView() }
                 }
-                .noahText(HomeText.strong)
-                .frame(minHeight: NoahTokens.Size.hitTarget)
             }
-            .buttonStyle(.plain)
+            // An outlined pill like the app's other secondary money actions, not a bare line that reads as a heading.
+            .buttonStyle(HomePillStyle(prominent: false, height: NoahTokens.Size.hitTarget))
             .disabled(executor.running)
-            .padding(.top, 10)
+            .padding(.top, 14).padding(.bottom, 6)
             .accessibilityIdentifier("recurring-run-now-button")
         }
     }

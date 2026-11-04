@@ -194,7 +194,7 @@ internal fun EmailEntry(presentation: OnboardingPresentation, play: Boolean, ena
                 decorationBox = { inner ->
                     Box {
                         if (email.isEmpty()) Text(tr("you@example.com"), Modifier.clearAndSetSemantics { },
-                            style = NoahTokens.Typography.field, color = palette.muted.copy(alpha = .45f))
+                            style = NoahTokens.Typography.field, color = palette.muted)
                         inner()
                     }
                 })

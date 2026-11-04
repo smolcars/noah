@@ -11,6 +11,7 @@
   <string name="gt_36d7ac7edaf6eeeb">"Recibirás un recordatorio el día anterior. Un pago perdido se omite, nunca se paga dos veces."</string>
   <string name="gt_ffc027edcc0ef3f2">"Cajero automático"</string>
   <string name="gt_5e75885111cddfc6">"AUD"</string>
+  <string name="gt_4d55e4568a69892b">"About 20 min · %1$s Bitcoin blocks"</string>
   <string name="gt_388e5f8e82667507">"Unos 20 min · %1$s de comisión"</string>
   <string name="gt_962a08a8878d9a42">"Acerca de Noah"</string>
   <string name="gt_16b406f63254167c">"Hacia el bloque %1$s"</string>
@@ -39,9 +40,8 @@
   <string name="gt_04eb3a8bed8492d0">"Añade una identidad NIP-05 a la misma dirección. Nunca pegues una nsec."</string>
   <string name="gt_9f088dbebd6c3c70">"Avanzado"</string>
   <string name="gt_7b68fe5510851da3">"Después de"</string>
-  <string name="gt_1ab182592ebf923e">"Tras una confirmación"</string>
+  <string name="gt_8e12d5d7a65860af">"After one Bitcoin block"</string>
   <string name="gt_19e0adbfc9cad76d">"Tras el bloqueo de tiempo"</string>
-  <string name="gt_e95ee301e98c2f56">"After %1$s confirmations (Bitcoin blocks)"</string>
   <plurals name="gt_d7e9ece445e2d5a3">
     <item quantity="one">"Tras %1$s pago"</item>
     <item quantity="many">"Tras %1$s pagos"</item>
@@ -369,6 +369,7 @@
   <string name="gt_11a6767d5674c7e4">"Listo"</string>
   <string name="gt_5655e4c5f2e921a8">"Eliminar VTXO"</string>
   <string name="gt_57d4846cecee3fdd">"EUR"</string>
+  <string name="gt_fe5131b6ce9ebad8">"Each exit transaction needs a network fee, paid from your on-chain balance."</string>
   <string name="gt_a8652bad1788fdd8">"Cada una se envía solo cuando la anterior está en un bloque."</string>
   <string name="gt_985a8feacc07a757">"La comisión de cada transacción sale de tus bitcoins en cadena confirmados. Noah envía la siguiente cuando se confirme un depósito."</string>
   <string name="gt_464c4ffd019e1e96">"Editar"</string>
@@ -418,7 +419,6 @@
   <string name="gt_d9f3d2f604dad97a">"Las comisiones totales estimadas igualan o superan el importe que se recuperará."</string>
   <string name="gt_c4e42b974c335dc5">"Cada día"</string>
   <string name="gt_b938e292a4f7d14e">"Todas las salidas listas van en esta única transacción. Las comisiones de red anteriores no se cobran otra vez."</string>
-  <string name="gt_70271ecc4f808d06">"Cada transacción de salida tiene un ancla para la comisión. Noah le añade una comisión, pagada con tus bitcoins en cadena."</string>
   <string name="gt_24859dc0201bd88a">"Cada mes"</string>
   <string name="gt_1b7e18513af4abe9">"Cada semana"</string>
   <string name="gt_2100659a7aa87d93">"Cada %1$s %2$ss"</string>
@@ -745,6 +745,7 @@
   <string name="gt_87d5d56d886e2a24">"Monedas nuevas"</string>
   <string name="gt_0d25c8b1db6122fe">"Correo nuevo"</string>
   <string name="gt_b8f18b3a55f56c76">"Nuevo pago"</string>
+  <string name="gt_5977ded363b21808">"New request"</string>
   <string name="gt_1ff57a29d7c9d11b">"Siguiente"</string>
   <string name="gt_8e0856e3b40da050">"Próximo bloque"</string>
   <string name="gt_bd26eee14731169d">"Próximo vencimiento en %1$s · se renueva automáticamente"</string>
@@ -1166,6 +1167,7 @@
   <string name="gt_2150d8df37e48957">"Mostrar todo"</string>
   <string name="gt_3175b05f8140f78b">"Mostrar de todos modos"</string>
   <string name="gt_e664b825fcdcf93e">"Show full invoice"</string>
+  <string name="gt_94ea9b1d33a02975">"Show less"</string>
   <string name="gt_4aa5f4cd7ecfd4da">"Mostrar detalles del pago"</string>
   <string name="gt_93749012e2444865">"Mostrar frase de recuperación"</string>
   <string name="gt_d8425d416f6d496d">"Mostrar saldo de la billetera"</string>

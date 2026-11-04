@@ -19,6 +19,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.BlurredEdgeTreatment
+import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
@@ -258,18 +259,20 @@ internal fun RailCard(icon: Int?, name: String, line: String, best: Boolean, ena
     val interaction = remember { MutableInteractionSource() }
     val pressed by interaction.collectIsPressedAsState()
     val scale by animateFloatAsState(if (pressed && !LocalReduceMotion.current) .98f else 1f, NoahTokens.Motion.tap(), label = "rail")
-    Row(modifier.fillMaxWidth().graphicsLayer { scaleX = scale; scaleY = scale; alpha = if (enabled) 1f else .4f }
+    // Unavailable: the icon and name dim, the reason stays readable (no fade on the whole card).
+    val dim = Modifier.alpha(if (enabled) 1f else .4f)
+    Row(modifier.fillMaxWidth().graphicsLayer { scaleX = scale; scaleY = scale }
         .tonal(RoundedCornerShape(22.dp), palette.soft)
         .then(if (selected) Modifier.border(1.5.dp, palette.foreground, RoundedCornerShape(22.dp)) else Modifier)
         .clickable(interaction, indication = null, enabled = enabled, role = Role.Button, onClick = onClick).padding(horizontal = 16.dp, vertical = 14.dp)
         .semantics(mergeDescendants = true) { this.selected = selected },
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-        if (icon != null) Box(Modifier.size(40.dp).background(palette.background, CircleShape), contentAlignment = Alignment.Center) {
+        if (icon != null) Box(dim.size(40.dp).background(palette.background, CircleShape), contentAlignment = Alignment.Center) {
             Icon(painterResource(icon), null, Modifier.size(20.dp), tint = palette.foreground)
         }
         Column(Modifier.weight(1f)) {
-            Text(name, style = SendType.strong, color = palette.foreground)
-            Text(line, style = SendType.small, color = palette.muted)
+            Text(name, dim, style = SendType.strong, color = palette.foreground)
+            Text(line, style = if (enabled) SendType.small else SendType.line, color = palette.muted)
         }
         if (best) Text(tr("Best"), Modifier.background(palette.orangeTint, CircleShape).padding(horizontal = 8.dp, vertical = 3.dp), style = SendType.tag,
             color = palette.orangeText)
@@ -572,7 +575,8 @@ internal fun SendPill(title: String, modifier: Modifier = Modifier, enabled: Boo
 private fun pillColors(off: Boolean, outlined: Boolean, red: Boolean, palette: NoahTokens.Palette): Pair<Color, Color> = when {
     off -> palette.soft to palette.muted
     outlined -> Color.Transparent to palette.foreground
-    red -> palette.failure to Color.White
+    // The light theme's deeper red in both themes: white on dark mode's brighter red is under 4.5:1.
+    red -> NoahTokens.Light.failure to Color.White
     else -> palette.foreground to palette.background
 }
 

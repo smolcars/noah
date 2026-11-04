@@ -94,10 +94,9 @@ struct ExitVtxoDetailView: View {
             .id(text.phase).transition(.homeRise(reduceMotion, 6))
             .accessibilityAddTraits(.updatesFrequently)
             .accessibilityIdentifier("exit-phase")
-        if settings.wide {
-            Text(verbatim: text.explanation).noahText(NoahTokens.Typography.sub).foregroundStyle(NoahTokens.Colors.muted)
-                .multilineTextAlignment(.center).frame(maxWidth: .infinity).padding(.top, 4)
-        }
+        // Outside the picture, so it scales with Dynamic Type on phones too.
+        Text(verbatim: text.explanation).noahText(NoahTokens.Typography.sub).foregroundStyle(NoahTokens.Colors.muted)
+            .multilineTextAlignment(.center).fixedSize(horizontal: false, vertical: true).frame(maxWidth: .infinity).padding(.top, 4)
     }
 
     @ViewBuilder private func trailingPane(_ exit: ExitModel, _ progress: ExitProgress, _ text: ExitText, money: ExitMoney) -> some View {
@@ -434,7 +433,7 @@ struct ExitStatusLine: View {
         }
     }
 
-    /// One sentence per phase for the wide layout's leading pane.
+    /// One sentence per phase, under the phase line.
     var explanation: String {
         if progress.stale { return tr("Noah hasn’t checked on this exit in a while. Moving it forward can also send its next step or raise a fee.") }
         switch progress.phase {
@@ -448,7 +447,7 @@ struct ExitStatusLine: View {
         case .mempool:
             if progress.bumped { return tr("A block came without it. Noah pays more when the fee rate rises, so it gets into the next one.") }
             if progress.stuck > 0 { return tr("Blocks are full right now. Noah raises the fee when rates rise. Move your exit forward to try again now.") }
-            return tr("Every exit transaction has a fee anchor. Noah attaches a fee to it, paid from your on-chain bitcoin.")
+            return tr("Each exit transaction needs a network fee, paid from your on-chain balance.")
         case .shared: return tr("Someone else exiting from your round already sent this one, with their own fee. You don’t pay for it.")
         case .confirmed: return tr("One transaction per block: about ten minutes each.")
         case .onchain, .waiting:

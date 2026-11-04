@@ -21,13 +21,19 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.style.TextAlign
@@ -330,8 +336,10 @@ private fun ColumnScope.CompactPanes(leading: @Composable ColumnScope.() -> Unit
     val column = Modifier.fillMaxWidth().widthIn(max = 520.dp).align(Alignment.CenterHorizontally)
     // A step with an action at the foot (Hold to send, Done) keeps it pinned and whole: the content above scrolls
     // when it doesn't fit (a short window or large text), and the foot's own top spacing keeps them apart.
+    val room = LocalPaneRoom.current
     if (bottom != null) Column(column.weight(1f)) {
-        Column(Modifier.fillMaxWidth().weight(1f).verticalScroll(rememberScrollState())) {
+        Column(Modifier.fillMaxWidth().weight(1f).onSizeChanged { room?.viewport = it.height }.verticalScroll(rememberScrollState())
+            .onSizeChanged { room?.content = it.height }) {
             Column(Modifier.fillMaxWidth(), content = leading)
             Column(Modifier.fillMaxWidth(), content = trailing)
         }
@@ -341,6 +349,13 @@ private fun ColumnScope.CompactPanes(leading: @Composable ColumnScope.() -> Unit
         stacked(column.weight(1f))
     }
 }
+
+/** A compact step's scroll viewport and content heights (px), so a decorative stage can give up room before content does. */
+internal class PaneRoom {
+    var viewport by mutableIntStateOf(0)
+    var content by mutableIntStateOf(0)
+}
+internal val LocalPaneRoom = staticCompositionLocalOf<PaneRoom?> { null }
 
 private fun arrangement(at: Alignment.Vertical) = when (at) {
     Alignment.Bottom -> Arrangement.Bottom
@@ -823,17 +838,34 @@ private fun RecipientBlock(destination: String, method: String?, env: SendEnv, m
 @Composable
 private fun DestinationCard(full: String, collapses: Boolean, modifier: Modifier = Modifier) {
     val palette = LocalPalette.current
+    val context = LocalContext.current
+    val haptics = rememberHaptics()
     var expanded by rememberSaveable(full) { mutableStateOf(false) }
     var overflows by remember(full) { mutableStateOf(false) }
     val collapsed = collapses && !expanded
-    Column(modifier.fillMaxWidth().tonal(RoundedCornerShape(16.dp), palette.soft).padding(16.dp).testTag("send-destination")) {
-        androidx.compose.foundation.text.selection.SelectionContainer {
-            Text(full, Modifier.fillMaxWidth().animateContentSize(), style = SendType.mono, color = palette.muted,
-                maxLines = if (collapsed) 3 else Int.MAX_VALUE, overflow = TextOverflow.Ellipsis,
-                onTextLayout = { if (collapsed) overflows = it.hasVisualOverflow })
+    // Light theme: darker than muted, so the identifier clears 4.5:1 on the soft card.
+    val ink = if (palette.background.luminance() > .5f) Color(0xFF666666) else palette.muted
+    Column(modifier.fillMaxWidth().tonal(RoundedCornerShape(16.dp), palette.soft).padding(start = 16.dp, top = 16.dp, bottom = 16.dp, end = 4.dp)
+        .testTag("send-destination")) {
+        Row(verticalAlignment = Alignment.Top) {
+            androidx.compose.foundation.text.selection.SelectionContainer(Modifier.weight(1f).padding(end = 4.dp)) {
+                Text(full, Modifier.fillMaxWidth().animateContentSize(), style = SendType.mono, color = ink,
+                    maxLines = if (collapsed) 3 else Int.MAX_VALUE, overflow = TextOverflow.Ellipsis,
+                    onTextLayout = { if (collapsed) overflows = it.hasVisualOverflow })
+            }
+            val copyLabel = tr("Copy")
+            Box(Modifier.offset(y = (-12).dp).size(48.dp).clip(androidx.compose.foundation.shape.CircleShape)
+                .clickable(role = Role.Button, onClickLabel = copyLabel) {
+                    (context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(ClipData.newPlainText(copyLabel, full))
+                    haptics.success()
+                }.semantics { contentDescription = copyLabel }.testTag("send-destination-copy"), contentAlignment = Alignment.Center) {
+                Icon(painterResource(SendIcons.copy), null, Modifier.size(18.dp), tint = palette.foreground)
+            }
         }
-        if (collapsed && overflows) TextButton({ expanded = true }, Modifier.heightIn(min = 48.dp).offset(x = (-12).dp).testTag("send-destination-expand")) {
-            Text(tr("Show full invoice"),
+        // Reversible: the full invoice can fold back to its first lines.
+        if (collapses && (expanded || overflows)) TextButton({ expanded = !expanded },
+            Modifier.heightIn(min = 48.dp).offset(x = (-12).dp).testTag("send-destination-expand")) {
+            Text(tr(if (expanded) "Show less" else "Show full invoice"),
                 style = SendType.line.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Medium), color = palette.foreground)
         }
     }
@@ -863,8 +895,9 @@ internal fun arrives(rail: SendRail, source: SendSource?, needed: Long): Pair<St
     SendRail.ark, SendRail.lightning -> "Usually in seconds" to null
     SendRail.onchain -> when {
         source == SendSource.onchain -> "In about 20 minutes" to null
-        needed <= 1 -> "After one confirmation" to null
-        else -> "After {count} confirmations (Bitcoin blocks)" to needed
+        // The method sheet's "About 20 min" for on-chain, with the blocks it waits for; one block isn't 20 minutes.
+        needed <= 1 -> "After one Bitcoin block" to null
+        else -> "About 20 min · {count} Bitcoin blocks" to needed
     }
 }
 
@@ -912,31 +945,47 @@ private fun SendingStep(presentation: SendPresentation, env: SendEnv, actions: S
     val resultShown = live == null || SendTimeline.resultShown(motion, elapsed, reduceMotion)
     val show = rememberResultReveal(resultShown, reduceMotion)
     val shown = ending.takeIf { resultShown }
-    StepPanes(nav = { }, leadingCentred = false, trailingAt = Alignment.CenterVertically, leading = {
-        val sent = shown in setOf(SendEnding.arkSent, SendEnding.lightningSent, SendEnding.chainSent)
-        SwapTitle(sendingTitle(shown, amount, receipt, env), SendType.big, Modifier.padding(top = 6.dp).testTag(if (sent) "send-success" else "send-title"))
-        val height by stageHeight(resultShown, motion, elapsed, reduceMotion, pose)
-        SendingPicture(who, payment, env, motion, elapsed, tip, confirmedAt, line, height, explanation = {
-            // The outcome, who and why sit together at the top.
-            ResultLine(shown, attempt, receipt, formatted(amount, env), who, env, controller.message, show)
+    val room = remember { PaneRoom() }
+    var stagePx by remember { mutableIntStateOf(0) }
+    val fit = stageFit(room, stagePx, pose)
+    CompositionLocalProvider(LocalPaneRoom provides room) {
+        StepPanes(nav = { }, leadingCentred = false, trailingAt = Alignment.CenterVertically, leading = {
+            val sent = shown in setOf(SendEnding.arkSent, SendEnding.lightningSent, SendEnding.chainSent)
+            SwapTitle(sendingTitle(shown, amount, receipt, env), SendType.big, Modifier.padding(top = 6.dp).testTag(if (sent) "send-success" else "send-title"))
+            val height by stageHeight(resultShown, motion, elapsed, reduceMotion, pose, fit)
+            SendingPicture(who, payment, env, motion, elapsed, tip, confirmedAt, line, height, { stagePx = it }, explanation = {
+                // The outcome, who and why sit together at the top.
+                ResultLine(shown, attempt, receipt, formatted(amount, env), who, env, controller.message, show)
+            })
+            LongWait(live, shown, route)
+        }, trailing = {
+            Column(Modifier.fillMaxWidth().padding(top = 18.dp).graphicsLayer { alpha = show.value.coerceIn(0f, 1f)
+                if (!reduceMotion) translationY = 16 * (1 - show.value) * density }) {
+                shown?.takeIf { it != SendEnding.sending }?.let { ResultArea(it, controller, attempt, receipt, env, actions) }
+            }
+        }, bottom = {
+            Spacer(Modifier.height(16.dp))
+            SendingFoot(shown, receipt, controller, actions, show)
         })
-        LongWait(live, shown, route)
-    }, trailing = {
-        Column(Modifier.fillMaxWidth().padding(top = 18.dp).graphicsLayer { alpha = show.value.coerceIn(0f, 1f)
-            if (!reduceMotion) translationY = 16 * (1 - show.value) * density }) {
-            shown?.takeIf { it != SendEnding.sending }?.let { ResultArea(it, controller, attempt, receipt, env, actions) }
-        }
-    }, bottom = {
-        Spacer(Modifier.height(16.dp))
-        SendingFoot(shown, receipt, controller, actions, show)
-    })
+    }
+}
+
+/**
+ * On a phone the stage takes only the room the rest of the step leaves ([stagePx]: its height now), so every row and action
+ * stays in view; with too little it folds away. Null elsewhere, or until measured.
+ */
+@Composable
+private fun stageFit(room: PaneRoom, stagePx: Int, pose: OnboardingPose): Dp? {
+    if (pose != OnboardingPose.Compact || room.viewport <= 0) return null
+    val fit = with(LocalDensity.current) { (room.viewport - (room.content - stagePx)).toDp() } - 8.dp // less the stage's top padding
+    return if (fit < 120.dp) 0.dp else fit
 }
 
 /** The stage's height: a stopped stage has faded to nothing, so its room goes to the result instead of an empty gap. */
 @Composable
-private fun stageHeight(resultShown: Boolean, motion: SendMotion, elapsed: Long, reduceMotion: Boolean, pose: OnboardingPose): State<Dp> {
+private fun stageHeight(resultShown: Boolean, motion: SendMotion, elapsed: Long, reduceMotion: Boolean, pose: OnboardingPose, fit: Dp?): State<Dp> {
     val blank = resultShown && SendTimeline.started(motion, elapsed, reduceMotion).any { it.phase == SendPhase.stop }
-    return androidx.compose.animation.core.animateDpAsState(if (blank) 0.dp else stageHeight(pose),
+    return androidx.compose.animation.core.animateDpAsState(if (blank) 0.dp else minOf(stageHeight(pose), fit ?: stageHeight(pose)),
         if (reduceMotion) tween(0) else NoahTokens.Motion.snappy(), label = "stage-height")
 }
 
@@ -994,13 +1043,15 @@ private fun stageHeight(pose: OnboardingPose): Dp = when (pose) {
 /** Who it's to, the stage and its phase line. */
 @Composable
 private fun SendingPicture(who: SendWho, payment: SendPayment?, env: SendEnv, motion: SendMotion, elapsed: Long, tip: Long?, confirmedAt: Long?,
-    line: PhaseLine?, stageHeight: Dp, explanation: @Composable () -> Unit) {
+    line: PhaseLine?, stageHeight: Dp, measured: (Int) -> Unit, explanation: @Composable () -> Unit) {
     // The same To block the review showed: the name, an invoice's description and the whole destination.
     payment?.let { RecipientBlock(it.destination, it.method, env, Modifier.padding(top = 16.dp)) }
     explanation()
-    if (stageHeight > 0.dp) SendStage(motion, elapsed, who.copy(name = tr(who.name)), tip, confirmedAt,
-        Modifier.fillMaxWidth().padding(top = 8.dp).height(stageHeight).testTag("send-stage"))
-    PhaseText(line?.let { phaseText(it) }, line?.done == true, Modifier.padding(top = 4.dp))
+    Box(Modifier.fillMaxWidth().onSizeChanged { measured(it.height) }) {
+        if (stageHeight > 0.dp) SendStage(motion, elapsed, who.copy(name = tr(who.name)), tip, confirmedAt,
+            Modifier.fillMaxWidth().padding(top = 8.dp).height(stageHeight).testTag("send-stage"))
+    }
+    PhaseText(line?.let { phaseText(it) }, line?.done == true, Modifier.padding(top = if (stageHeight > 0.dp) 4.dp else 12.dp))
 }
 
 /** Haptics fire once per moment, only while the motion is [live]; checked every 100 ms, so moments inside a phase land on time. */
@@ -1071,6 +1122,8 @@ private fun SendingFoot(ending: SendEnding?, receipt: SendReceipt?, controller: 
     val fade = Modifier.graphicsLayer { alpha = show.value.coerceIn(0f, 1f) }
     // While the outcome is unresolved, Check status is the primary action and Done steps back.
     val secondary = unresolved || ending == SendEnding.pending || receipt?.broadcastRetryPending == true
+    // Every result action sits here, whole above the navigation bar: the status check first, then Done.
+    ending?.takeIf { it != SendEnding.sending }?.let { CheckStatusPill(it, controller, receipt, actions, Modifier.padding(bottom = 12.dp).then(fade)) }
     if ((doneShown && receipt?.broadcastRetryPending == true) || unresolved) {
         SendPill(tr("Done"), Modifier.fillMaxWidth().padding(bottom = 6.dp).testTag("send-leave").then(fade), outlined = secondary) {
             haptics.light(); actions.leave()
@@ -1198,7 +1251,7 @@ private fun receiptRows(ending: SendEnding, r: SendReceipt, attempt: SendAttempt
             add { d ->
                 ValueRow(tr(if (p.label == "Payment preimage") "Proof of payment" else p.label),
                     SendSuccessDetails.truncate(p.value).let { if (it.length > 18) it.take(8) + "…" + it.takeLast(6) else it }, divider = d,
-                    copy = { copy(p.label, p.value) }, modifier = Modifier.testTag("send-success-copy-proof"))
+                    copy = { copy(p.label, p.value) }, modifier = Modifier.testTag("send-success-copy-proof"), wraps = true)
             }
         }
     }
@@ -1229,20 +1282,10 @@ private fun resultNotes(ending: SendEnding, controller: SendController, attempt:
 private fun ResultActions(ending: SendEnding, controller: SendController, receipt: SendReceipt?, env: SendEnv, actions: SendActions) {
     val palette = LocalPalette.current
     val context = LocalContext.current
-    if (ending in setOf(SendEnding.unknown, SendEnding.unavailable, SendEnding.pending) || receipt?.txid != null) {
-        val label = when {
-            controller.checking -> "Checking…"
-            controller.state == SendController.State.storageBlocked -> "Check status again"
-            controller.state == SendController.State.succeeded -> "Refresh payment status"
-            else -> "Check status"
-        }
-        // Unresolved (a broadcast still retrying too): checking is the next step, so it's the filled action; otherwise a secondary refresh.
-        val unresolved = ending in setOf(SendEnding.unknown, SendEnding.unavailable, SendEnding.pending) || receipt?.broadcastRetryPending == true
-        // It only reloads the saved payment (SendController.checkStatus), so say it can't pay twice.
-        if (controller.state == SendController.State.storageBlocked) Text(tr("The outcome isn't known yet. This checks the payment. It won't send it again."),
+    // It only reloads the saved payment (SendController.checkStatus), so say it can't pay twice; the check itself is in the footer.
+    if (checksStatus(ending, receipt) && controller.state == SendController.State.storageBlocked) {
+        Text(tr("The outcome isn't known yet. This checks the payment. It won't send it again."),
             Modifier.padding(top = 10.dp), style = SendType.line, color = palette.foreground)
-        SendPill(tr(label), Modifier.fillMaxWidth().padding(top = 16.dp).testTag("send-check-status"), enabled = !controller.checking,
-            outlined = !unresolved, onClick = actions.checkStatus)
     }
     receipt?.txid?.takeIf { it.isNotEmpty() && env.variant != "regtest" && ending == SendEnding.chainSent }?.let { txid ->
         val explorer = "https://mempool.space/${if (env.variant == "mainnet") "" else "signet/"}tx/$txid"
@@ -1252,6 +1295,24 @@ private fun ResultActions(ending: SendEnding, controller: SendController, receip
         }
     }
     if (controller.canOverride) OverrideAction(controller, actions)
+}
+
+private fun checksStatus(ending: SendEnding, receipt: SendReceipt?) =
+    ending in setOf(SendEnding.unknown, SendEnding.unavailable, SendEnding.pending) || receipt?.txid != null
+
+/** Check status (never submits): the filled next step while unresolved (a broadcast still retrying too); otherwise a secondary refresh. */
+@Composable
+private fun CheckStatusPill(ending: SendEnding, controller: SendController, receipt: SendReceipt?, actions: SendActions, modifier: Modifier) {
+    if (!checksStatus(ending, receipt)) return
+    val label = when {
+        controller.checking -> "Checking…"
+        controller.state == SendController.State.storageBlocked -> "Check status again"
+        controller.state == SendController.State.succeeded -> "Refresh payment status"
+        else -> "Check status"
+    }
+    val unresolved = ending in setOf(SendEnding.unknown, SendEnding.unavailable, SendEnding.pending) || receipt?.broadcastRetryPending == true
+    SendPill(tr(label), Modifier.fillMaxWidth().then(modifier).testTag("send-check-status"), enabled = !controller.checking,
+        outlined = !unresolved, onClick = actions.checkStatus)
 }
 
 /** "Pay again anyway", a quiet action under its caution: two confirmations, then the audited override. */
