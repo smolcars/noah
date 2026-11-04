@@ -35,6 +35,7 @@ import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.takeOrElse
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
@@ -399,7 +400,7 @@ internal fun RadioRow(title: String, selected: Boolean, modifier: Modifier = Mod
 }
 
 /** A field's fill when it sits on a sheet: dark sheets are `soft` themselves, so their fields are raised a step. */
-private val LocalFieldFill = staticCompositionLocalOf<Color?> { null }
+private val LocalFieldFill = staticCompositionLocalOf { Color.Unspecified }
 
 /** A Material sheet in Settings' look: the title, one line, then [content]; [locked] can't be dismissed (deleting). */
 @OptIn(ExperimentalMaterial3Api::class)
@@ -541,7 +542,8 @@ internal fun SettingsField(value: String, onValue: (String) -> Unit, placeholder
     val focused by interaction.collectIsFocusedAsState()
     label?.let { FieldLabel(it) }
     val shape = RoundedCornerShape(14.dp)
-    Row(modifier.padding(top = 8.dp).fillMaxWidth().heightIn(min = if (lines > 1) 124.dp else 54.dp).tonal(shape, LocalFieldFill.current ?: palette.soft)
+    val fill = LocalFieldFill.current.takeOrElse { palette.soft }
+    Row(modifier.padding(top = 8.dp).fillMaxWidth().heightIn(min = if (lines > 1) 124.dp else 54.dp).tonal(shape, fill)
         .then(if (failed) Modifier.border(1.5.dp, palette.failure, shape) else if (focused) Modifier.border(1.5.dp, palette.orange, shape) else Modifier)
         .padding(start = 16.dp, end = 8.dp, top = if (lines > 1) 14.dp else 0.dp, bottom = if (lines > 1) 14.dp else 0.dp),
         verticalAlignment = if (lines > 1) Alignment.Top else Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
