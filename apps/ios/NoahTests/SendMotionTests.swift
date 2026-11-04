@@ -409,7 +409,7 @@ struct SendMotionTests {
         let invoiceNote = "The invoice sets the amount to ₿1,500"
         for (payment, quote, note) in [(max, maxQuote, nil), (max, SendQuote(amount: 1_500, fee: 300, total: 1_800), invoiceNote)] {
             #expect(SendMotion.Rail(payment) == .onchainSwap)
-            #expect(SendConfirmation.arrives(.init(payment), required: 2, locale: "en") == "After 2 confirmations")
+            #expect(SendConfirmation.arrives(.init(payment), required: 2, locale: "en") == "After 2 confirmations (Bitcoin blocks)")
             // The fine print keeps its own note.
             #expect(SendConfirmation.fine(invoiceNote: note, quote: quote, locale: "en")
                 == note ?? SendQuote.recipientEstimateExplanation)

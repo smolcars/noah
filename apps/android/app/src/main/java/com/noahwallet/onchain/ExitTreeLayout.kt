@@ -225,7 +225,7 @@ internal class TreeLayout(val scene: ExitScene, val words: TreeStrings, val geo:
          * keeps 8 dp inside it. A label that shrinks rather than wraps gets its [TreeLabels.Item.size].
          */
         fun fit(item: TreeLabels.Item, geo: TreeGeometry, measure: TreeMeasure, server: Boolean): TreeLabels.Item {
-            val fallbacks = item.fallbacks.map { fit(it, geo, measure, server) }.filter { !it.shrinks || it.size >= .75f }
+            val fallbacks = item.fallbacks.map { fit(it, geo, measure, server) }.filter { !it.shrinks || it.size >= 1f }
             if (item.shrinks) {
                 val line = item.lines.first()
                 val top = item.y - geo.lineHeight / 2
@@ -479,7 +479,7 @@ internal class TreeLayout(val scene: ExitScene, val words: TreeStrings, val geo:
                 // reaching down beside it to the ground; left out when neither fits.
                 var caption: List<String>? = null; var captionY = 0f
                 if (n > 1 && stubs.isNotEmpty()) {
-                    val size = 12f * k; val lh = 14.5f * k; val right = tx - geo.block / 2 - 9
+                    val size = 13f * k; val lh = 16f * k; val right = tx - geo.block / 2 - 9
                     val wrapped = TreeLabels.wrap(w.tr("Other people’s coins in this round"), right - 14) { measure.width(it, size, false) }
                     val width = wrapped.maxOf { measure.width(it, size, false) }
                     val top = ys[1] + 9; val height = wrapped.size * lh

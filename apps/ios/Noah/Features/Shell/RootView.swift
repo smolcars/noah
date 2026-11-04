@@ -380,6 +380,18 @@ private struct WideTabBar: View {
     }
 }
 
+extension View {
+    /// Rows scrolling under the floating tab bar fade behind a uniform backing instead of refracting through its glass.
+    @ViewBuilder
+    func tabBarScrollEdge() -> some View {
+        if #available(iOS 26, *) {
+            scrollEdgeEffectStyle(.hard, for: .bottom)
+        } else {
+            self
+        }
+    }
+}
+
 private extension View {
     @ViewBuilder
     func tabBarMinimizeOnScrollIfAvailable() -> some View {

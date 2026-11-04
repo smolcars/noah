@@ -69,9 +69,20 @@ class SettingsGalleryTest {
             Scene("delete", SettingsDestination.Settings, SettingsPreview("delete")),
         ).filter { only == null || it.name in only }
         try {
-            for (scene in scenes) capture(activity, model, scene, folder)
+            for (scene in scenes) captureScene(activity, model, scene, folder)
         } finally { instrumentation.runOnMainSync { activity.finish() } }
     }
+
+    /** Debug's page only opens with Debug mode on (otherwise a blank frame): on for its scene only. */
+    private fun captureScene(activity: MainActivity, model: AppModel, scene: Scene, folder: File) {
+        val debug = scene.page == SettingsDestination.Debug
+        if (debug) debugMode(model, true)
+        try { capture(activity, model, scene, folder) } finally { if (debug) debugMode(model, false) }
+    }
+
+    private fun debugMode(model: AppModel, on: Boolean) = model.settings.setPersistedState((model.settings
+        .persistedState<com.noahwallet.services.storage.PersistedWalletState>(com.noahwallet.services.storage.PersistedWalletState.key)
+        ?: com.noahwallet.services.storage.PersistedWalletState()).copy(isDebugModeEnabled = on), com.noahwallet.services.storage.PersistedWalletState.key, 0)
 
     /** The activity's model once it has launched and opened the disposable wallet. */
     private fun openedModel(activity: MainActivity): AppModel {

@@ -142,8 +142,8 @@ internal fun ExitProgressContent(exit: ExitModel?, stage: ExitStage?, context: E
     val failed = stage.attention == ExitStage.Attention.needsFunds
     ExitHaptics(stage, failed)
     val actions = ExitActions.of(stage, context.cancelable)
-    // Beside a primary Claim or "Add on-chain funds", Move exit forward is a link at the top of the details, not a pill.
-    val checkLink = ExitActions.Action.check in actions && (ExitActions.Action.claim in actions || ExitActions.Action.addFunds in actions)
+    // Beside "Add on-chain funds" (and Cancel exit), Move exit forward is an outlined pill at the top of the details, not a third foot pill.
+    val checkLink = ExitActions.Action.check in actions && ExitActions.Action.addFunds in actions
     val received = receivedBy(exit, stage, context)
     val need = fundsNeeded(exit, context)
     ExitFrame(tr("Exit"), back, hero = true, scroll = scroll, pictureLeads = true, foot = if (actions.isEmpty()) null else ({
@@ -162,7 +162,8 @@ private fun ExitProgressBody(exit: ExitModel, stage: ExitStage, context: ExitCon
     val failed = stage.attention == ExitStage.Attention.needsFunds
     if (wide) ExitHeader(stage, received, money, exitSubLine(stage, context))
     if (failed) Warning(tr("Add about {amount} on-chain. Noah sends the next transaction once it confirms.", money(need)), failed = true)
-    if (checkLink) SettingsLink(tr("Move exit forward"), Modifier.testTag("exit-check"), enabled = !busy && !suspended, onClick = check)
+    if (checkLink) com.noahwallet.ui.send.SendPill(tr("Move exit forward"), Modifier.fillMaxWidth().padding(top = 16.dp).testTag("exit-check"),
+        enabled = !busy && !suspended, outlined = true, loading = busy, wrap = true, onClick = check)
     @Suppress("MaxLineLength") // one translation source string
     if (stage.stale && stage.live) Warning(trPlural("This exit is behind the current chain height: last checked {n} blocks ago, at block {height}. Moving it forward can also send exit transactions.",
         context.tip - (exit.details.tip_height ?: context.tip), number(exit.details.tip_height ?: 0)), SettingsIcons.clock)
@@ -228,8 +229,9 @@ private fun ColumnScope.ExitProgressPicture(scene: ExitScene, stage: ExitStage, 
     ExitPicture(scene,
         listOfNotNull(phase.first, tr("{n} of {total} in blocks", stage.inBlocks.toString(), stage.total.toString()), destination).joinToString(". "),
         exitPicture().testTag("exit-picture"), money, balance = context.confirmed, received = received)
-    ExitPhaseLine(phase.first, if (failed) palette.failure else if (phase.second) palette.foreground else palette.muted, Modifier.testTag("exit-phase"))
-    if (wide) Text(exitExplanation(stage, context.delta), Modifier.fillMaxWidth().padding(top = 4.dp).heightIn(min = 40.dp),
+    ExitPhaseLine(phase.first, if (failed || phase.second) palette.foreground else palette.muted, Modifier.testTag("exit-phase"))
+    // What the picture shows, as scalable text: the phase, who pays its fees and what it waits for (on phones too).
+    Text(exitExplanation(stage, context.delta), Modifier.fillMaxWidth().padding(top = 4.dp).then(if (wide) Modifier.heightIn(min = 40.dp) else Modifier),
         style = HomeType.line, color = palette.muted, textAlign = TextAlign.Center)
 }
 
@@ -269,13 +271,9 @@ private fun ExitPhaseLine(text: String, color: Color, modifier: Modifier = Modif
         color = color, textAlign = TextAlign.Center)
 }
 
-/** "about 16 h", or "under an hour" for a few blocks (iOS `ExitText.about`). */
+/** "about 16 hours", "about 1 day", or "under an hour" for a few blocks (iOS `ExitText.about`); spelled out, never "1 d". */
 @Composable
-internal fun exitAbout(blocks: Long): String = if (blocks < 6) tr("under an hour") else tr("about {time}", when {
-    blocks < 144 -> tr("{n} h", (blocks / 6).toString())
-    blocks < 1_008 -> tr("{n} d", (blocks / 144).toString())
-    else -> tr("{n} wk", (blocks / 1_008).toString())
-})
+internal fun exitAbout(blocks: Long): String = if (blocks < 6) tr("under an hour") else tr("about {time}", timeLeft(blocks))
 
 @Composable
 internal fun number(value: Long) = java.text.NumberFormat.getIntegerInstance(androidx.compose.ui.platform.LocalConfiguration.current.locales[0]).format(value)
@@ -295,7 +293,7 @@ internal fun exitPhaseLine(stage: ExitStage, tip: Long, money: (Long) -> String)
         ExitStage.Attention.feesRose -> stage.rate?.let { tr("Paying {rate} sat/vB · waiting for block {height}", it.toString(),
             number(tip + 1)) } ?: tr("Fees rose. Paying more")
         ExitStage.Attention.stuck -> trPlural("Not in a block yet · {n} blocks", stage.waited)
-        else -> stage.fee?.let { tr("Anchor + {fee} fee · {n} of {total}", money(it), stage.step, stage.total.toString()) }
+        else -> stage.fee?.let { tr("Fee {fee} · {n} of {total}", money(it), stage.step, stage.total.toString()) }
             ?: tr("Waiting for block {height} · {n} of {total}", number(tip + 1), stage.step, stage.total.toString())
     } to false
     ExitStage.Phase.confirm ->
@@ -391,7 +389,7 @@ private fun ClaimedRows(exit: ExitModel, stage: ExitStage, context: ExitContext,
 private fun LiveRows(exit: ExitModel, stage: ExitStage, context: ExitContext, money: (Long) -> String) {
     ExitValueRow(tr("Transactions"), tr("{n} of {total} in blocks", stage.inBlocks.toString(), stage.total.toString()))
     val left = context.confirmed?.takeIf { stage.attention == ExitStage.Attention.needsFunds }
-    ExitValueRow(tr("Network fees"), money(stage.feesPaid), kind = ValueKind.number, failed = left != null,
+    ExitValueRow(tr("Network fees"), money(stage.feesPaid), kind = ValueKind.number,
         note = left?.let { l -> exit.nextPackageFee?.let { tr("{left} left on-chain. The next fee needs about {need}.", money(l),
             money(it)) } } ?: feesNote(context, money))
     val claimable = stage.claimableHeight?.let { tr("Block {height}", number(it)) }

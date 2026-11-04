@@ -53,10 +53,15 @@ struct RestoreWalletScreen: View {
         // keyboard or not, since a 24-word grid fills the pane anyway.
         let column = OnboardingColumn(wide: layout.wide, keyboard: layout.wide || keyboardUp)
         OnboardingPanes(wide: layout.wide, column: .leadingFits, sideInsets: (layout.insets.leading, layout.insets.trailing)) {
-            OnboardingHeadline(title: Text("Welcome back"), subtitle: Text("Enter your recovery phrase."), large: layout.wide)
-                .padding(.top, layout.wide ? column.headlineTop : 56) // 56 keeps 24 words unscrolled on a 393-pt phone.
-                .frame(maxHeight: layout.wide ? .infinity : nil, alignment: column.headlineAlignment)
-                .onboardingPane()
+            OnboardingHeadline(title: Text("Welcome back"), subtitle: Text("Enter your recovery phrase."), large: layout.wide) {
+                // The requirement up front, not only in the no-backup error.
+                Text("To restore, Noah needs this phrase and a wallet backup.")
+                    .noahText(NoahTokens.Typography.sub).foregroundStyle(NoahTokens.Colors.muted)
+                    .onboardingAppear(1)
+            }
+            .padding(.top, layout.wide ? column.headlineTop : 56) // 56 keeps 24 words unscrolled on a 393-pt phone.
+            .frame(maxHeight: layout.wide ? .infinity : nil, alignment: column.headlineAlignment)
+            .onboardingPane()
             VStack(spacing: 0) {
                 FitOrScroll {
                     words(column)

@@ -81,6 +81,11 @@ struct SendConfirmation: View {
                     .noahText(NoahTokens.Typography.body).foregroundStyle(NoahTokens.Colors.muted)
                     .padding(.top, 4)
                     .accessibilityIdentifier("send-review-fiat")
+            } else if unit == .bip177 {
+                Text(verbatim: BitcoinAmount.satsLine(Int64(clamping: quote.amount), locale: locale))
+                    .noahText(NoahTokens.Typography.body).foregroundStyle(NoahTokens.Colors.muted)
+                    .padding(.top, 4)
+                    .accessibilityIdentifier("send-review-sats")
             }
         }
         .padding(.horizontal, isWide ? 34 : 20)
@@ -126,35 +131,11 @@ struct SendConfirmation: View {
 
     private var rail: SendMotion.Rail { SendMotion.Rail(payment) }
 
-    /// "To": who it goes to, then the full address or invoice, selectable, so it can be compared before
-    /// holding. An invoice adds its own description when it has one; it never names its payee.
     private var recipientBlock: some View {
-        let full = Self.fullDestination(payment.destination, shown: label.name)
-        return VStack(alignment: .leading, spacing: 8) {
-            Text("To").noahText(NoahTokens.Typography.sub).foregroundStyle(NoahTokens.Colors.muted)
-                .accessibilityAddTraits(.isHeader)
-            HStack(spacing: 12) {
-                SendAvatar(label: label, size: 36)
-                Group { if label.nameIsVerbatim { Text(verbatim: label.name) } else { Text(LocalizedStringKey(label.identity)) } }
-                    .noahText(NoahTokens.Typography.label).foregroundStyle(NoahTokens.Colors.foreground)
-                    .lineLimit(2).truncationMode(.middle)
-            }
-            if let note = Self.invoiceDescription(payment) {
-                Text(verbatim: "“\(note)”").noahText(NoahTokens.Typography.body).foregroundStyle(NoahTokens.Colors.foreground)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-            if let full {
-                Text(verbatim: full).font(.system(.subheadline, design: .monospaced)).foregroundStyle(NoahTokens.Colors.foreground)
-                    .fixedSize(horizontal: false, vertical: true)
-                    .textSelection(.enabled)
-                    .accessibilityIdentifier("send-review-destination")
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.bottom, 16)
-        .overlay(alignment: .bottom) { Rectangle().fill(NoahTokens.Colors.hairline).frame(height: 1) }
-        .accessibilityElement(children: .contain)
-        .accessibilityIdentifier("send-review-recipient")
+        SendToBlock(label: label, payment: payment)
+            .padding(.bottom, 16)
+            .overlay(alignment: .bottom) { Rectangle().fill(NoahTokens.Colors.hairline).frame(height: 1) }
+            .accessibilityIdentifier("send-review-recipient")
     }
 
     /// The reviewed destination in full, unless the name above already is it.
@@ -216,7 +197,70 @@ struct SendConfirmation: View {
         case .onchainWallet: L10n.text("In about 20 minutes", locale: locale)
         case .onchainSwap:
             if required <= 1 { L10n.text("After one confirmation", locale: locale) }
-            else { L10n.text("After {count} confirmations", Int(required), locale: locale) }
+            else { L10n.text("After {count} confirmations (Bitcoin blocks)", Int(required), locale: locale) }
         }
+    }
+}
+
+/// "To" on review and on the result: who it goes to, the invoice's own description, then the full address
+/// or invoice in a soft card, selectable, so it can be compared before holding. An invoice never names its
+/// payee; its card shows the start and expands in place, once ("Show full invoice").
+struct SendToBlock: View {
+    let label: SendRecipientLabel
+    let payment: SendPayment
+    @Environment(\.sendReceiveFixture) private var fixture
+    @State private var expanded = false
+
+    var body: some View {
+        let full = SendConfirmation.fullDestination(payment.destination, shown: label.name)
+        VStack(alignment: .leading, spacing: 8) {
+            Text("To").noahText(NoahTokens.Typography.sub).foregroundStyle(NoahTokens.Colors.muted)
+                .accessibilityAddTraits(.isHeader)
+            HStack(spacing: 12) {
+                SendAvatar(label: label, size: 36)
+                Group { if label.nameIsVerbatim { Text(verbatim: label.name) } else { Text(LocalizedStringKey(label.identity)) } }
+                    .noahText(NoahTokens.Typography.label).foregroundStyle(NoahTokens.Colors.foreground)
+                    .lineLimit(2).truncationMode(.middle)
+            }
+            if let note = SendConfirmation.invoiceDescription(payment) {
+                Text(verbatim: "“\(note)”").noahText(NoahTokens.Typography.body).foregroundStyle(NoahTokens.Colors.foreground)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            if let full { card(full) }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .accessibilityElement(children: .contain)
+        .onAppear { if fixture?.invoiceExpanded == true { expanded = true } }
+    }
+
+    /// Addresses are short enough to show whole; an invoice starts collapsed to its first three lines.
+    private func card(_ full: String) -> some View {
+        let collapsible = SendMotion.Rail(payment) == .lightning
+        return VStack(alignment: .leading, spacing: 10) {
+            // Quieter than the name above, still 4.5:1 on the soft card (the muted token isn't, in light).
+            IdentifierText(value: full, size: 13, style: .footnote, opacity: 0.62,
+                           lines: collapsible && !expanded ? 3 : 0)
+                .accessibilityIdentifier("send-review-destination")
+            if collapsible && !expanded {
+                Button {
+                    withAnimation(NoahTokens.Motion.soft) { expanded = true }
+                } label: {
+                    HStack(spacing: 4) {
+                        Text("Show full invoice")
+                        Image(systemName: "chevron.down").accessibilityHidden(true)
+                    }
+                    .noahText(NoahTokens.Typography.sub).foregroundStyle(NoahTokens.Colors.foreground)
+                    .frame(minHeight: NoahTokens.Size.hitTarget, alignment: .leading)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .padding(.vertical, -10)
+                .accessibilityIdentifier("send-destination-disclosure")
+            }
+        }
+        .padding(16)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(NoahTokens.Colors.soft, in: RoundedRectangle(cornerRadius: NoahTokens.Radius.m, style: .continuous))
+        .padding(.top, 4)
     }
 }

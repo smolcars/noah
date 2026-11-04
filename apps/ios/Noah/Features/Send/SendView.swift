@@ -206,6 +206,8 @@ struct SendView: View {
     private var fiatLine: String {
         if model.useFiat { return format(model.sats) }
         guard let price = model.btcPrice else {
+            // No price: "₿1,500" reads as 1,500 sats.
+            if unit == .bip177 { return BitcoinAmount.satsLine(Int64(clamping: model.sats), locale: locale) }
             return L10n.text("{currency} rate unavailable", model.fiatCurrency, locale: locale.identifier)
         }
         return FiatCurrency.display(sats: Int64(clamping: model.sats), btcPrice: price, currency: model.fiatCurrency, locale: locale)
@@ -343,7 +345,9 @@ extension SendView {
                         .accessibilityIdentifier("send-summary-amount")
                 }
                 toField.padding(.top, 18)
-                if let message = parsedLive.error?.message(locale: locale.identifier) ?? errorText {
+                if (parsedLive.error ?? model.destinationError)?.isWrongNetwork == true {
+                    wrongNetwork(locale: locale.identifier).padding(.top, 10)
+                } else if let message = parsedLive.error?.message(locale: locale.identifier) ?? errorText {
                     error(message).padding(.top, 10)
                 }
                 if let route = model.matchingRoute, route.commentAllowed > 0 { noteField(route).padding(.top, 12) }
@@ -376,13 +380,15 @@ extension SendView {
     private var toField: some View {
         HStack(spacing: 10) {
             Text("To").noahText(NoahTokens.Typography.label).foregroundStyle(NoahTokens.Colors.muted)
-            TextField("Name, address or invoice", text: $model.destination)
-                .noahText(NoahTokens.Typography.body)
-                .textInputAutocapitalization(.never).autocorrectionDisabled()
-                .submitLabel(.next)
-                .onSubmit(acceptRecipient)
-                .focused($focus, equals: .recipient)
-                .accessibilityIdentifier("send-recipient")
+            TextField(text: $model.destination, prompt: Text("Name, address or invoice").foregroundStyle(NoahTokens.Colors.muted)) {
+                Text("Name, address or invoice")
+            }
+            .noahText(NoahTokens.Typography.body)
+            .textInputAutocapitalization(.never).autocorrectionDisabled()
+            .submitLabel(.next)
+            .onSubmit(acceptRecipient)
+            .focused($focus, equals: .recipient)
+            .accessibilityIdentifier("send-recipient")
             if !model.destination.isEmpty {
                 Button { model.destination = "" } label: {
                     Image(systemName: "xmark.circle.fill").font(.system(size: 17)).foregroundStyle(NoahTokens.Colors.muted)
@@ -413,7 +419,7 @@ extension SendView {
     private func noteField(_ route: SendRecipientRoute) -> some View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(spacing: 10) {
-                TextField("Add a note", text: $model.comment, axis: .vertical)
+                TextField(text: $model.comment, prompt: Text("Add a note").foregroundStyle(NoahTokens.Colors.muted), axis: .vertical) { Text("Add a note") }
                     .noahText(NoahTokens.Typography.body)
                     .lineLimit(1...3)
                     .focused($focus, equals: .note)
@@ -777,13 +783,7 @@ extension SendView {
         }
     }
 
-    /// Today's review dismissal: the quote is discarded and the flow returns to the recipient.
-    private func cancelReview() {
-        guard !model.controller.locked, model.showReview || model.stage == .review else { return }
-        model.showReview = false
-        model.discardReview()
-        if model.stage == .review { model.stage = model.isMax ? .source : .recipient }
-    }
+    private func cancelReview() { model.cancelReview() }
 
     /// Done: back to Amount, with the tab bar.
     private func finish() {

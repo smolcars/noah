@@ -254,11 +254,12 @@ struct HomeActivityRow: Equatable {
             title = switch transaction.movementKind {
             case "onboard": moved ? "Moved to Ark" : "Move to Ark"
             case "offboard": moved ? "Moved to on-chain" : "Move to on-chain"
-            case "exit": transaction.baseLabel
+            case "exit": "Emergency exit"
             default: transaction.exitFeeFor != nil ? transaction.baseLabel : outgoing ? "Sent" : "Received"
             }
             titleIsVerbatim = false
-            kind = kindLabel
+            // A pending exit's state already says where it goes: "Exiting to on-chain".
+            kind = transaction.movementKind == "exit" && transaction.movementStatus == "pending" ? nil : kindLabel
             avatar = transaction.exitFeeFor != nil ? .exit : lightning ? .lightning : onchain ? .chain : outgoing ? .outgoing : .incoming
         }
 

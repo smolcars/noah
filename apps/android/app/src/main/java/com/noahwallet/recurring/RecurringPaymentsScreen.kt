@@ -80,13 +80,14 @@ private fun scheduleLine(s: RecurringPayment, running: Boolean, locale: java.uti
 }
 
 /** needs_attention's own reason, short enough for a row; the page shows the full message. */
-private fun attentionReason(s: RecurringPayment): String = when {
+internal fun attentionReason(s: RecurringPayment): String = when {
     s.requiresPolicyApproval -> "Approval needed"
     else -> when (s.issue?.code) {
         RecurringIssue.Code.automationStopped -> "Wallet suspended"
         RecurringIssue.Code.interrupted, RecurringIssue.Code.uncertain -> "Check status"
         RecurringIssue.Code.alreadyPaid -> "Already paid"
         RecurringIssue.Code.retryableFailure -> "Couldn't prepare payment"
+        RecurringIssue.Code.quoteExceedsCap, RecurringIssue.Code.scheduleExceedsCap, RecurringIssue.Code.arkFee -> "Over fee limit"
         else -> "Needs attention"
     }
 }

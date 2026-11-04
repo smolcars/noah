@@ -41,8 +41,10 @@ internal object BlockRow {
         val s = frame.slide.coerceIn(0f, 1f)
         val shift = gap * (1 - s)
         fun x(slot: Int) = at.x + slot * gap + shift
+        // Heights too wide to sit side by side (large text, a narrow row): only the newest keeps its label, beside "next".
+        val crowded = labels.height(frame.tip).size.width > gap - 4
         // Mined blocks, the one that just left on the left during a slide.
-        for (slot in -1..2) minedBlock(Rect(Offset(x(slot), at.y), Size(size, size)), slot, frame, palette, labels)
+        for (slot in -1..2) minedBlock(Rect(Offset(x(slot), at.y), Size(size, size)), slot, frame, palette, labels.takeIf { !crowded || slot == 2 })
         // The next block, waiting for your transaction.
         val left = x(3)
         val y = at.y
@@ -58,7 +60,7 @@ internal object BlockRow {
     }
 
     /** The mined block in [slot] (−1 is the one leaving during a slide, 2 the newest) at [box], its height and any confirmed dot. */
-    private fun DrawScope.minedBlock(box: Rect, slot: Int, frame: Frame, palette: NoahTokens.Palette, labels: Labels) {
+    private fun DrawScope.minedBlock(box: Rect, slot: Int, frame: Frame, palette: NoahTokens.Palette, labels: Labels?) {
         val s = frame.slide.coerceIn(0f, 1f)
         val height = frame.tip - 2 + slot
         val settled = if (slot < 0) 0f else .55f + .15f * slot
@@ -72,9 +74,10 @@ internal object BlockRow {
         scale(scale, scale, Offset(left + size / 2, y + size / 2)) {
             drawRoundRect(palette.foreground, Offset(left, y), Size(size, size), CornerRadius(7f), alpha = shade)
         }
-        val text = labels.height(height)
-        drawText(text, color = if (slot == 2 && s < 1f) palette.foreground else palette.muted, alpha = (if (slot < 0) 1 - s else 1f) * frame.alpha,
-            topLeft = Offset(left + size / 2 - text.size.width / 2f, y + size + 14 - text.size.height / 2f))
+        labels?.height(height)?.let { text ->
+            drawText(text, color = if (slot == 2 && s < 1f) palette.foreground else palette.muted, alpha = (if (slot < 0) 1 - s else 1f) * frame.alpha,
+                topLeft = Offset(left + size / 2 - text.size.width / 2f, y + size + 14 - text.size.height / 2f))
+        }
         if (frame.confirmedAt == height && frame.dot > 0f) {
             drawCircle(palette.background, 6f, Offset(left + size / 2, y + size / 2), alpha = frame.dot.coerceIn(0f, 1f) * frame.alpha)
         }

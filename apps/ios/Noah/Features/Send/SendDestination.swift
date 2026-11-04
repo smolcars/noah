@@ -276,7 +276,7 @@ indirect enum SendDestinationError: LocalizedError, Equatable, Sendable {
         isWrongNetwork ? L10n.text("This address is for a different Bitcoin network.", locale: locale) : message(locale: locale)
     }
 
-    private var isWrongNetwork: Bool {
+    var isWrongNetwork: Bool {
         switch self {
         case .networkMismatch: true
         case .invalidMethods(let errors): errors.allSatisfy(\.isWrongNetwork)

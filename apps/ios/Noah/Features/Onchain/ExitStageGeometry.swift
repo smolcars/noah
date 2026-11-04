@@ -20,7 +20,8 @@ struct ExitStageGeometry: Equatable {
     init(size: CGSize, scale: Double = 1, wide: Bool = false, count: Int = 4) {
         width = size.width
         height = size.height
-        self.scale = min(1.25, max(1, scale))
+        // Never below 13/10.5: the smallest text it draws (10.5 × scale) stays at 13 pt at least.
+        self.scale = min(1.25, max(13 / 10.5, scale))
         self.wide = wide
         self.count = max(1, count)
         var side = room / Double(self.count) < 22 ? 11.0 : 14.0

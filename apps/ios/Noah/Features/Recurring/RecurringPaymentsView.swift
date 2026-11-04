@@ -124,6 +124,7 @@ extension RecurringPayment {
         case .interrupted, .uncertain: return "Check status"
         case .alreadyPaid: return "Already paid"
         case .retryableFailure: return "Couldn't prepare payment"
+        case .quoteExceedsCap, .scheduleExceedsCap, .arkFee: return "Over fee limit"
         default: return "Needs attention"
         }
     }

@@ -182,6 +182,8 @@ struct OnboardingShotTests {
             })
         case "stored-seed":
             return AnyView(ShotHost { layout in StoredSeedRestoreScreen(layout: layout, issue: nil) {} })
+        case "stored-seed-error":
+            return AnyView(ShotHost { layout in StoredSeedRestoreScreen(layout: layout, issue: .from(URLError(.notConnectedToInternet))) {} })
         default: return nil
         }
     }

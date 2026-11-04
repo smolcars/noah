@@ -118,7 +118,7 @@ struct EmailScreen: View {
 
     private var addressField: some View {
         HStack(spacing: 10) {
-            TextField("you@example.com", text: $email.text)
+            TextField(text: $email.text, prompt: Text("you@example.com").foregroundStyle(NoahTokens.Colors.muted)) { Text("you@example.com") }
                 .noahText(NoahTokens.Typography.field)
                 .foregroundStyle(NoahTokens.Colors.foreground)
                 .tint(NoahTokens.Colors.orange)

@@ -51,7 +51,8 @@ struct ExitFooter<Buttons: View>: ViewModifier {
 
     func body(content: Content) -> some View {
         content.safeAreaInset(edge: .bottom, spacing: 0) {
-            GlassGroup(spacing: 10) { VStack(spacing: 6) { buttons } }
+            // 12 pt apart, and never one merged glass shape: separate actions read as separate buttons.
+            GlassGroup(spacing: 0) { VStack(spacing: 12) { buttons } }
                 .padding(.leading, settings.wide ? 36 : NoahTokens.Space.screen)
                 .padding(.trailing, settings.wide ? 24 : NoahTokens.Space.screen)
                 .padding(.top, 10).padding(.bottom, settings.wide ? 16 : 8)
@@ -468,8 +469,7 @@ struct ExitDepositSheet: View {
                     .padding(12).background(.white, in: RoundedRectangle(cornerRadius: 20))
                     .frame(maxWidth: .infinity).padding(.top, 18)
                     .accessibilityLabel("Bitcoin deposit address QR code")
-                Text(verbatim: address).font(SettingsText.mono).textSelection(.enabled).padding(.top, 14)
-                    .fixedSize(horizontal: false, vertical: true)
+                IdentifierText(value: address, size: 12, style: .caption1).padding(.top, 14)
                     .accessibilityIdentifier("exit-deposit-address")
             } else if let error {
                 SettingsFine(text: L10n.text(error, locale: language), failure: true)

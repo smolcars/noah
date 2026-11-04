@@ -280,7 +280,8 @@ class ExitTreeSweepTest {
         assertTrue("the round, the latest block, the pill and your coin", layout.labels.size >= 4)
         val explainer = check(ExitScene.sample(4), phone.copy(height = 268f), w, "explainer")
         assertEquals("${explainer.labels.map { it.key }} ${explainer.stubs.size} stubs", 3, explainer.labels.size)
-        assertNotNull("${explainer.stubs}", explainer.caption)
+        // The caption keeps the caption size (13): in the explainer's short frame it's left out rather than shrunk; at full height it shows.
+        assertNotNull("${explainer.stubs}", check(ExitScene.sample(4), phone, w, "explainer, full height").caption)
     }
 
     @Test fun theSwedishFeeWrapsInsideItsColumnAtTwiceTheText() {

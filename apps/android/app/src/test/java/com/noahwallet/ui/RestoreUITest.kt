@@ -118,7 +118,7 @@ class RestoreIssueTest {
             RestoreIssue.from(BackupCrypto.Failure(BackupCrypto.Reason.authenticationFailed)).message)
         assertEquals("The downloaded backup is incomplete or damaged. Check your connection and try again.",
             RestoreIssue.from(WalletRestorer.Failure(WalletRestorer.Reason.downloadMismatch)).message)
-        val generic = "Noah couldn't restore your wallet. Please try again later."
+        val generic = "Please try again later."
         for (error in listOf(BackupCrypto.Failure(BackupCrypto.Reason.unexpectedVersion),
             BackupArchive.Failure(BackupArchive.Reason.invalidManifest),
             io.github.niteshbalusu11.bark.BarkError("snapshot is damaged"),
@@ -144,7 +144,7 @@ class RestoreIssueTest {
         assertEquals("No backup found", missing.title); assertTrue(missing.message.contains("backups turned on"))
         assertEquals(missing, RestoreIssue.from(ServerFailure(raw, 401, "USER_NOT_FOUND")))
         assertTrue(RestoreIssue.from(BackupCrypto.Failure(BackupCrypto.Reason.authenticationFailed)).message.contains("unlock the backup"))
-        assertTrue(RestoreIssue.from(IOException(raw)).message.contains("internet connection"))
+        assertTrue(RestoreIssue.from(IOException(raw)).message.contains("Check your connection"))
         listOf(ServerFailure(raw, 500), IOException(raw), Exception(raw)).forEach { assertFalse(RestoreIssue.from(it).message.contains(raw)) }
     }
     @Test fun offlineLoginAndBackupListKeepConnectivityThroughRealConversion() = runBlocking {
@@ -160,7 +160,7 @@ class RestoreIssueTest {
             for (error in listOf(listError, loginError)) {
                 assertEquals(ServerFailure.Kind.connectivity, (error as ServerFailure).kind)
                 assertNull(error.cause)
-                assertTrue(RestoreIssue.from(error).message.contains("internet connection"))
+                assertTrue(RestoreIssue.from(error).message.contains("Check your connection"))
                 assertFalse(error.message.orEmpty().contains("sensitive"))
             }
         }

@@ -18,13 +18,13 @@ class SendArrivesTest {
         val max = model(this).apply { arkBalance = 10_000 }
         max.maxSend(); max.source = SendSource.offchain; max.continueStage(); max.setRecipient(address); max.continueStage()
         assertEquals(SendStage.review, max.stage); assertTrue(max.payment!!.max)
-        assertEquals("After {count} confirmations" to 2L, max.arrives())
+        assertEquals("After {count} confirmations (Bitcoin blocks)" to 2L, max.arrives())
         // A request whose own amount replaces the typed one: the review also shows the invoice-amount note.
         val invoice = model(this).apply { arkBalance = 10_000 }
         invoice.amount = "700"; invoice.importRecipient("bitcoin:$address?amount=0.000015", stay = true)
         assertEquals(SendStage.review, invoice.stage); assertEquals(1_500L, invoice.payment!!.amount); assertNotNull(invoice.parsed.amount)
         assertEquals(SendSource.offchain, invoice.payment!!.source)
-        assertEquals("After {count} confirmations" to 2L, invoice.arrives())
+        assertEquals("After {count} confirmations (Bitcoin blocks)" to 2L, invoice.arrives())
         // Regtest's setting is one.
         assertEquals("After one confirmation" to null, invoice.arrives(needed = 1))
     }

@@ -291,8 +291,9 @@ private fun arrivalLine(ui: ReceiveUi): Pair<String?, Boolean> {
     }
     val phase = ui.arrival?.let { ReceiveTimeline.phase(it.rail, now, reduceMotion) }
     val chainPhase = ui.chain?.takeIf { phase == null }?.let { _ -> blockLine(ui) }
-    val line = phase?.let { tr(it) } ?: chainPhase
-    return line to (phase == "Received" || (ui.confirmedAt != null && chainPhase != null))
+    // The amount from the start: the card only flips to it later.
+    val line = phase?.let { tr(it) + if (it == "Payment received") " · " + ui.sats(ui.arrival.sats) else "" } ?: chainPhase
+    return line to (phase == "Payment received" || (ui.confirmedAt != null && chainPhase != null))
 }
 
 @Composable

@@ -159,7 +159,9 @@ private fun PhraseRestoreScreen(model: AppModel, clipboard: RestoreClipboard) {
         val label = tr("Back")
         IconButton({ if (!blocked) leave() }, Modifier.semantics { contentDescription = label }) { BackIcon(palette.foreground) }
     }, headline = { large ->
-        Headline(tr("Welcome back"), tr("Enter your recovery phrase."), large = large, modifier = Modifier.entrance(0, play))
+        // What restoring needs, up front: it fails with "No backup found" without a wallet backup.
+        Headline(tr("Welcome back"), tr("Enter your recovery phrase.") + " " + tr("To restore, Noah needs this phrase and a wallet backup."), large = large,
+            modifier = Modifier.entrance(0, play))
     }, form = {
         WordCountControl(words.size, enabled = !blocked, modifier = Modifier.padding(top = formGap(22.dp)).entrance(2, play), select = entry::selectCount)
         key(entry.clearGeneration, words.size) {

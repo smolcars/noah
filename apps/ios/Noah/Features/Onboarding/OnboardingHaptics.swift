@@ -103,9 +103,8 @@ struct OnboardingPrimaryButtonStyle: ButtonStyle {
                 .padding(.horizontal, NoahTokens.Space.xl)
                 .frame(maxWidth: .infinity, minHeight: NoahTokens.Size.button)
                 .contentShape(Capsule())
-                // Disabled is a soft tint with a muted label (readable, ≥4.5:1), not view opacity: grouped glass ignores opacity.
-                .glassCompat(in: Capsule(), interactive: isEnabled,
-                             tint: isEnabled ? NoahTokens.Colors.foreground : NoahTokens.Colors.soft)
+                // Disabled is a soft fill with a muted label (readable, ≥4.5:1), not view opacity: grouped glass ignores opacity.
+                .pillFill(enabled: isEnabled, tint: NoahTokens.Colors.foreground)
                 .glassCompatID(glassID ?? "", in: glassID == nil ? nil : namespace)
                 .scaleEffect(configuration.isPressed && !reduceMotion ? 0.97 : 1)
                 .animation(NoahTokens.Motion.tap, value: configuration.isPressed)
@@ -130,13 +129,14 @@ struct OnboardingSecondaryButtonStyle: ButtonStyle {
         var body: some View {
             configuration.label
                 .noahText(NoahTokens.Typography.label)
-                .foregroundStyle(NoahTokens.Colors.foreground)
+                .foregroundStyle(isEnabled ? NoahTokens.Colors.foreground : NoahTokens.Colors.muted)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, NoahTokens.Space.xl)
                 .frame(maxWidth: .infinity, minHeight: height)
                 .contentShape(Capsule())
                 .glassCompat(in: Capsule(), interactive: isEnabled)
-                .opacity(isEnabled ? 1 : 0.35)
+                // Its edge on white, so it never reads as part of a neighbouring button.
+                .overlay { Capsule().strokeBorder(NoahTokens.Colors.hairline, lineWidth: 1) }
                 .scaleEffect(configuration.isPressed && !reduceMotion ? 0.97 : 1)
                 .animation(NoahTokens.Motion.tap, value: configuration.isPressed)
         }

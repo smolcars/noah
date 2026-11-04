@@ -41,7 +41,7 @@
   <string name="gt_7b68fe5510851da3">"After"</string>
   <string name="gt_1ab182592ebf923e">"After one confirmation"</string>
   <string name="gt_19e0adbfc9cad76d">"After the timelock"</string>
-  <string name="gt_c99b0d023c7ff010">"After %1$s confirmations"</string>
+  <string name="gt_e95ee301e98c2f56">"After %1$s confirmations (Bitcoin blocks)"</string>
   <plurals name="gt_d7e9ece445e2d5a3">
     <item quantity="one">"After %1$s payment"</item>
     <item quantity="other">"After %1$s payments"</item>
@@ -69,7 +69,6 @@
   <string name="gt_9bb0c676a3c4146c">"An existing Lightning payment will be checked. No new payment will be created."</string>
   <string name="gt_3841549f59f967ba">"An output this exit needs was spent on-chain, so it can’t finish."</string>
   <string name="gt_a4ae750b610e875e">"Anchor"</string>
-  <string name="gt_94c45bc285c9613e">"Anchor + %1$s fee · %2$s of %3$s"</string>
   <string name="gt_15ea390b9d935697">"Another Lightning payment is still in progress. Try again once it completes."</string>
   <string name="gt_c4e9b3d10877c72c">"Another wallet"</string>
   <string name="gt_75ff3fb1ac6ce5d1">"Anyone with this phone could see your phrase. Set a screen lock in Settings to protect it."</string>
@@ -165,7 +164,6 @@
   <string name="gt_01c437c9f900b81f">"Boarding submitted. Funds become spendable after the board completes."</string>
   <string name="gt_8fed00ef8e09c48a">"Boarding was not submitted. Review again when the wallet is ready."</string>
   <string name="gt_479ad21ac9096236">"Bottom"</string>
-  <string name="gt_4f8d20d681709634">"Broadcast funding status is unknown; confirmed onchain funds are required."</string>
   <string name="gt_a27a4742cc2eca3e">"Broadcast without estimate"</string>
   <string name="gt_b2c48022f83bafa7">"CAD"</string>
   <string name="gt_c46701fbec1318d7">"CC BY 4.0"</string>
@@ -195,12 +193,14 @@
   <string name="gt_fb7099ad8e818d42">"Check again"</string>
   <string name="gt_c52a96b66db5c212">"Check operation status"</string>
   <string name="gt_69cd3590300a68c6">"Check status"</string>
+  <string name="gt_84baa61bd34d1b8e">"Check status again"</string>
   <string name="gt_44cb983669c9d0a9">"Check the address. This can’t be undone."</string>
   <string name="gt_c31be569a492274b">"Check the amount, selected VTXOs, and destination. There may not be enough confirmed funds."</string>
   <string name="gt_4282111188a1f2bd">"Check the words. Noah can only restore a wallet that had backups turned on."</string>
   <string name="gt_ff65032d5e881811">"Check this payment\'s outcome before approving it again."</string>
   <string name="gt_6f113ce35347ffe6">"Check this payment\'s outcome before editing it."</string>
   <string name="gt_710d52f182321f4a">"Check word %1$s"</string>
+  <string name="gt_481859b689b0d0d9">"Check your connection and try again."</string>
   <string name="gt_7732287944e204a9">"Check your email"</string>
   <string name="gt_4ac7dc7e4285ca5d">"Check your history and confirm with the recipient. This payment may already have been sent."</string>
   <string name="gt_9b69d23b16f9a10b">"Check your recovery phrase. Enter all 12 or 24 words in the correct order."</string>
@@ -232,7 +232,6 @@
   <string name="gt_ddcd2779294a61f0">"Claimed"</string>
   <string name="gt_a0db5cf3b152db7a">"Claimed in"</string>
   <string name="gt_1b9a6f007e618766">"Claimed in block %1$s"</string>
-  <string name="gt_3de215817971a2de">"Claimed with your key"</string>
   <string name="gt_6ff55162d8a9bb5e">"Claimed · block %1$s"</string>
   <string name="gt_9928373127bf808f">"Claiming"</string>
   <string name="gt_0075dff6ca828fc1">"Claiming · waiting for block %1$s"</string>
@@ -305,6 +304,7 @@
   <string name="gt_b8e043dbc53a4a4c">"Couldn\'t refresh your profile. Please try again."</string>
   <string name="gt_d08dea249a1c48bb">"Couldn\'t register again. Please retry."</string>
   <string name="gt_b8f165e6a90e3092">"Couldn\'t register with UnifiedPush. Please try again."</string>
+  <string name="gt_ac9efb9ac1b7ec50">"Couldn\'t restore"</string>
   <string name="gt_0d5423d40addc1a4">"Couldn\'t resume recovery. Restart Noah and try again."</string>
   <string name="gt_9f01ece862c96f1d">"Couldn\'t save authentication preference."</string>
   <string name="gt_83462be19140c53a">"Couldn\'t save auto-board preference."</string>
@@ -454,6 +454,7 @@
   <string name="gt_85fc46c17cd71d1d">"Exited"</string>
   <string name="gt_7c2f8a4625fab18d">"Exited coins"</string>
   <string name="gt_4a366d77739e7414">"Exiting"</string>
+  <string name="gt_a53103e6484bda92">"Exiting to on-chain"</string>
   <string name="gt_5e561017c8169c76">"Exits"</string>
   <string name="gt_db5f066a21225f71">"Exits progressed. Transactions may have been broadcast or fee-bumped."</string>
   <string name="gt_26377ba9c6b97926">"Exits use it once it confirms."</string>
@@ -495,6 +496,7 @@
   <string name="gt_26290dab5e50b113">"Fee for the existing payment: %1$s sats"</string>
   <string name="gt_78ab175434313451">"Fee is an estimate. It can rise if more coins are needed."</string>
   <string name="gt_6c6cc6eb80efa410">"Fee rate"</string>
+  <string name="gt_8211ff15a947c7cd">"Fee %1$s · %2$s of %3$s"</string>
   <string name="gt_aac77df347205252">"Feedback"</string>
   <string name="gt_779ff4584d72f733">"Fees are more than these VTXOs are worth."</string>
   <string name="gt_e45e304fea7e1b7b">"Fees more than it’s worth"</string>
@@ -600,7 +602,7 @@
   <string name="gt_bfd57e13f17196fe">"Invoices need an amount"</string>
   <string name="gt_6ada3d7f67a75b5e">"It arrived instantly."</string>
   <string name="gt_047f932e6c3ea4f2">"It arrived instantly. Ark sends are free."</string>
-  <string name="gt_f89a30c95c2897b8">"It confirms in about 20 minutes. Activity shows when."</string>
+  <string name="gt_0d8736a156811f27">"It confirms in about 20 minutes. You\'ll see it in Activity."</string>
   <string name="gt_5002fe6fff33796d">"It needs %1$s confirmations to arrive."</string>
   <string name="gt_12ad7bf0e646c2d9">"It’s ordinary bitcoin now."</string>
   <string name="gt_5cc37a0a3b8a1e82">"It’s with the Noah team."</string>
@@ -724,6 +726,7 @@
   <string name="gt_1744b96470b51bf3">"Network"</string>
   <string name="gt_82c5067df6801187">"Network fee"</string>
   <string name="gt_598ce3ccc02e5890">"Network fees"</string>
+  <string name="gt_99b6dfcd12886f76">"Network fees come from your on-chain balance, not from these coins."</string>
   <string name="gt_6c79c5d1bd98b91d">"Network fees come from your on-chain %1$s at %2$s sat/vB. Transactions your VTXOs share are paid once. Fees may change."</string>
   <string name="gt_e5cff1be1c0e3c93">"Network mismatch: expected %1$s, got %2$s"</string>
   <string name="gt_6300ef800bb88429">"Never"</string>
@@ -789,12 +792,11 @@
   <string name="gt_5a00f75927a33884">"Noah closes the wallet and stops payments until you turn this off."</string>
   <string name="gt_c1f6e702ec74583d">"Noah could not read or save the payment attempt. Sending is disabled until its status can be recovered."</string>
   <string name="gt_34c9cafb61bbac7d">"Noah couldn\'t access secure storage. Unlock your device and try again."</string>
+  <string name="gt_98831782a07d2a12">"Noah couldn\'t check whether your on-chain balance can cover the fees. Confirmed on-chain funds are needed."</string>
   <string name="gt_e107aa3075b29c81">"Noah couldn\'t confirm that your recovery phrase was saved. Do not retry. Unlock your device, then close and restart Noah to recover safely."</string>
-  <string name="gt_3c1e8037a80178df">"Noah couldn\'t download your backup. Check your internet connection and try again."</string>
   <string name="gt_e92407ae0cc29539">"Noah couldn\'t finish or undo an interrupted restore. Your wallet files were left as they are. Restart Noah to try again."</string>
   <string name="gt_8ad019accd01ac95">"Noah couldn\'t open the restored wallet safely. Close and restart Noah to continue."</string>
   <string name="gt_55037f1fddcada0f">"Noah couldn\'t remove temporary wallet files. Restart Noah and try again."</string>
-  <string name="gt_62ee841196b41940">"Noah couldn\'t restore your wallet. Please try again later."</string>
   <string name="gt_db92e3e2f6075f8b">"Noah couldn\'t safely undo the restore. Do not retry. Close and restart Noah so it can recover your wallet."</string>
   <string name="gt_822918727e4f828f">"Noah default"</string>
   <string name="gt_9bbbe9d436c3e3e3">"Noah has not confirmed the final outcome. Do not pay again. Checking status will never submit another payment."</string>
@@ -868,7 +870,7 @@
   <string name="gt_d6e3df34a55bbeb3">"One last transaction. Its fee comes out of the amount."</string>
   <string name="gt_51795cf8f3fe4c84">"One transaction per block: about ten minutes each."</string>
   <string name="gt_4831cbdad7ad0bb6">"Only for urgent alerts about your wallet."</string>
-  <string name="gt_5cf022fe135beed2">"Only the claim fee comes out of the amount."</string>
+  <string name="gt_1c307fc3ba1249c9">"Only the claim fee is deducted from these coins."</string>
   <string name="gt_4de503f8d4f0bcbc">"Only %1$s available"</string>
   <string name="gt_e2abf2ae09785e85">"Open Noah to send %1$s to %2$s."</string>
   <string name="gt_f9d77f6cb2f252e8">"Open Profile"</string>
@@ -886,6 +888,7 @@
   <string name="gt_6201f81787adfaf8">"Other people’s coins in this round"</string>
   <string name="gt_f893fab7e39f5540">"Otherwise Android may pause Noah, and payments could stop arriving."</string>
   <string name="gt_3619cf0b90923a4b">"Outgoing"</string>
+  <string name="gt_dc8cfda6600dba8e">"Over fee limit"</string>
   <string name="gt_84c9bc73297ace6e">"Overridden attempt"</string>
   <string name="gt_b896460456edd89b">"Override confirmation"</string>
   <string name="gt_33a067f2594b14e7">"Override repeat protection?"</string>
@@ -915,6 +918,7 @@
   <string name="gt_9b618cb731269ec8">"Payment may have been sent"</string>
   <string name="gt_9244b7af07845b9d">"Payment not sent"</string>
   <string name="gt_5f984c8b843f3399">"Payment preimage"</string>
+  <string name="gt_2fef7951de07b776">"Payment received"</string>
   <string name="gt_0cd5e62f85e54229">"Payment request"</string>
   <string name="gt_2bc4ef41a5775e8d">"Payment sent"</string>
   <string name="gt_f643e0c5a72874d3">"Payment status could not be saved. Check status again after restarting Noah."</string>
@@ -938,6 +942,7 @@
   <string name="gt_c12ff673ae9836ca">"Playback position"</string>
   <string name="gt_813f0164d8d31cd2">"Please open your device settings and allow Noah to run in the background, then continue."</string>
   <string name="gt_de5aa7c10f561635">"Please try again"</string>
+  <string name="gt_386b9144ee224202">"Please try again later."</string>
   <string name="gt_2fc0c524431a9236">"Point"</string>
   <string name="gt_89ff281050e4797e">"Point your camera at a payment QR code."</string>
   <string name="gt_5e4e164840885a18">"Possible related payment in History"</string>
@@ -1147,6 +1152,7 @@
   <string name="gt_0df6f1cad36c49da">"Show"</string>
   <string name="gt_2150d8df37e48957">"Show all"</string>
   <string name="gt_3175b05f8140f78b">"Show anyway"</string>
+  <string name="gt_e664b825fcdcf93e">"Show full invoice"</string>
   <string name="gt_4aa5f4cd7ecfd4da">"Show payment details"</string>
   <string name="gt_93749012e2444865">"Show recovery phrase"</string>
   <string name="gt_d8425d416f6d496d">"Show wallet balance"</string>
@@ -1241,6 +1247,7 @@
   <string name="gt_708398a18d2f5dfe">"The map position could not be saved."</string>
   <string name="gt_35a7d1e62f8a6b9d">"The network fee is set when sent and comes out of this total."</string>
   <string name="gt_bc71b743861782dc">"The operation may have been submitted. Check its status before repeating it. Other recovery operations remain available."</string>
+  <string name="gt_58031d0ba8c82f55">"The outcome isn\'t known yet. This checks the payment. It won\'t send it again."</string>
   <string name="gt_b0186376f1dac3ea">"The recipient no longer accepts this amount. Update or cancel the recurring payment."</string>
   <string name="gt_0d09cc372ee7f6aa">"The recorded transaction was found. Review its network status."</string>
   <string name="gt_75b3d8381b514e22">"The round,"</string>
@@ -1312,6 +1319,7 @@
   <string name="gt_9dcff98e275f0cb9">"Timeline"</string>
   <string name="gt_e12a2ce4d26b2017">"Timelock"</string>
   <string name="gt_f4b06ef6d3c81436">"To"</string>
+  <string name="gt_31a0a151c58cdcdf">"To restore, Noah needs this phrase and a wallet backup."</string>
   <string name="gt_2b065c7c9ce466e5">"Today"</string>
   <string name="gt_8e5d375aee547cf8">"Too small to exit · under %1$s"</string>
   <string name="gt_168d36c2d331807e">"Took"</string>
@@ -1370,6 +1378,7 @@
   <string name="gt_9f725ecf91f1aaf9">"Updated at %1$s"</string>
   <string name="gt_a7a68b529b93080a">"Updating Noah wallet"</string>
   <string name="gt_77a11d005b310667">"Updating wallet"</string>
+  <string name="gt_2e1b88a4431148d2">"Use an address for this network."</string>
   <string name="gt_a769cedc799260e8">"Use default"</string>
   <string name="gt_330cc4388c5218a4">"Use default server"</string>
   <string name="gt_28ef268f1e77dc1b">"Use the recovery phrase stored on this device to restore your backup."</string>
@@ -1612,6 +1621,10 @@
   <plurals name="gt_8d28334022517918">
     <item quantity="one">"%1$s ready to claim"</item>
     <item quantity="other">"%1$s ready to claim"</item>
+  </plurals>
+  <plurals name="gt_cfa4f6070c71d557">
+    <item quantity="one">"%1$s sat"</item>
+    <item quantity="other">"%1$s sats"</item>
   </plurals>
   <string name="gt_996a4adc403eb54c">"%1$s seconds"</string>
   <plurals name="gt_618ceaf828dd8956">

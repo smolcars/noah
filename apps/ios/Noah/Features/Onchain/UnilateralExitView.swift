@@ -456,6 +456,7 @@ struct ExitReviewView: View {
     /// the claim fee comes out of these coins.
     @ViewBuilder private func quoteDetails(_ quote: OnchainQuote, money: ExitMoney) -> some View {
         ExitGroupLabel(text: L10n.text("From your on-chain wallet", locale: language)).padding(.top, 22)
+        ExitCaveat(text: L10n.text("Network fees come from your on-chain balance, not from these coins.", locale: language), key: true)
         VStack(spacing: 0) {
             if let chainFee = quote.chainFee, quote.fee != nil {
                 ExitDetailRow(label: L10n.text("Network fees", locale: language), value: money.about(chainFee), numeric: true)
@@ -473,7 +474,9 @@ struct ExitReviewView: View {
             ExitWarning(text: L10n.text(
                 "Fee estimate unavailable. Fees and amount to receive are unknown. Continue without an estimate only if you accept this uncertainty.",
                 locale: language))
-            ExitWarning(text: L10n.text("Broadcast funding status is unknown; confirmed onchain funds are required.", locale: language), muted: true)
+            ExitWarning(
+                text: L10n.text("Noah couldn't check whether your on-chain balance can cover the fees. Confirmed on-chain funds are needed.", locale: language),
+                muted: true)
         } else if !quote.fundable, let chainFee = quote.chainFee {
             ExitWarning(text: L10n.text("Not enough on-chain bitcoin for the fees. The exit starts, then waits until you add about {amount}.",
                                         money(chainFee - min(chainFee, quote.confirmed)), locale: language))
@@ -495,7 +498,7 @@ struct ExitReviewView: View {
                 ExitDetailRow(label: L10n.text("Claim fee", locale: language), value: L10n.text("Unknown", locale: language), hairline: false)
             }
         }
-        ExitCaveat(text: L10n.text("Only the claim fee comes out of the amount.", locale: language))
+        ExitCaveat(text: L10n.text("Only the claim fee is deducted from these coins.", locale: language), key: true)
         if let fee = quote.fee, quote.chainFee != nil,
            let warning = ExitRules.warning(amount: quote.amount, claimFee: fee, totalFee: quote.totalFee, claimOnly: false) {
             ExitWarning(text: L10n.text(warning, locale: language))

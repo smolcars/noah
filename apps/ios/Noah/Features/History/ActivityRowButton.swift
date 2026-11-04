@@ -271,7 +271,7 @@ struct ActivitySearchField: View {
         HStack(spacing: 8) {
             HStack(spacing: 8) {
                 Image(systemName: "magnifyingglass").accessibilityHidden(true).font(.system(size: 16, weight: .medium)).foregroundStyle(NoahTokens.Colors.muted)
-                TextField("Search", text: $query)
+                TextField(text: $query, prompt: Text("Search").foregroundStyle(NoahTokens.Colors.muted)) { Text("Search") }
                     .noahText(NoahTokens.Typography.body)
                     .focused($focused)
                     .textInputAutocapitalization(.never)

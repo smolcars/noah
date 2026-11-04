@@ -172,7 +172,7 @@ class SendReceiveGalleryTest {
     private fun Shots.endings() {
         fun ended(name: String, outcome: SendFixtures.Outcome, payment: SendPayment, env: SendEnv = SendFixtures.env(),
             quote: SendQuote = SendQuote(payment.amount, 0, payment.amount, walletIdentity = SendFixtures.owner),
-            block: suspend (SendController) -> Unit = {}) {
+            block: suspend (SendController) -> Unit = {}, then: () -> Unit = {}) {
             if (only != null && name !in only) return
             val wallet = SendFixtures.Wallet(outcome, quote).apply { gate.complete(Unit) }
             val presentation = SendFixtures.presentation(wallet)
@@ -180,7 +180,7 @@ class SendReceiveGalleryTest {
                 presentation.model.controller.submit(payment, quote)?.await()
                 block(presentation.model.controller)
             }
-            show(name, 1_400) { SendPreviewHost(presentation, env) }
+            show(name, 1_400, then) { SendPreviewHost(presentation, env) }
         }
         val arkPayment = SendPayment(SendFixtures.ark, "ark", 500)
         val lnPayment = SendPayment("maya@localhost.com", "lnurl", 2_500)
@@ -203,7 +203,16 @@ class SendReceiveGalleryTest {
         ended("send-result-not-sent", SendFixtures.Outcome.notSent, arkPayment)
         ended("send-result-already-paid", SendFixtures.Outcome.alreadyPaid, lnPayment)
         ended("send-result-unknown", SendFixtures.Outcome.unknown, arkPayment)
-        ended("send-result-unavailable", SendFixtures.Outcome.arkSent, arkPayment) { it.invalidateForWalletChange() }
+        ended("send-result-unavailable", SendFixtures.Outcome.arkSent, arkPayment, block = { it.invalidateForWalletChange() })
+        // A paid invoice: the result's To block with the invoice's card, its start, then expanded in place. Display-only
+        // invoice text, as long as a real one so it takes more than the card's three lines.
+        val invoicePayment = SendPayment(SendFixtures.invoice + "q".repeat(160), "lightning", 5_000)
+        ended("send-result-invoice", SendFixtures.Outcome.lightningSent, invoicePayment)
+        ended("send-result-invoice-expanded", SendFixtures.Outcome.lightningSent, invoicePayment, then = {
+            compose.onNodeWithTag("send-destination-expand", useUnmergedTree = true)
+                .performSemanticsAction(androidx.compose.ui.semantics.SemanticsActions.OnClick)
+            compose.mainClock.advanceTimeBy(600)
+        })
     }
 
     private fun Shots.receiving() {

@@ -459,6 +459,8 @@ private struct SettingsSheetModifier<Item: Identifiable & Equatable, Sheet: View
                 }
                 .scrollBounceBehavior(.basedOnSize)
                 .presentationDetents([.height(min(max(height, 200), 720))])
+                // Solid, as Ways to pay: dense rows and fields never sit over blurred highlights.
+                .presentationBackground(NoahTokens.Colors.sheet)
                 .presentationDragIndicator(.visible)
                 .interactiveDismissDisabled(locked)
             }
@@ -543,8 +545,7 @@ struct SettingsActionStyle: ButtonStyle {
                 .padding(.vertical, wrap ? 10 : 0)
                 .frame(maxWidth: .infinity, minHeight: NoahTokens.Size.button)
                 .contentShape(Capsule())
-                .glassCompat(in: Capsule(), interactive: isEnabled,
-                             tint: red ? NoahTokens.Colors.failure : isEnabled ? NoahTokens.Colors.foreground : NoahTokens.Colors.soft)
+                .pillFill(enabled: isEnabled, tint: red ? NoahTokens.Colors.failure : NoahTokens.Colors.foreground)
                 .scaleEffect(configuration.isPressed && !reduceMotion ? 0.97 : 1)
                 .animation(NoahTokens.Motion.tap, value: configuration.isPressed)
                 .animation(NoahTokens.Motion.travel(reduceMotion, NoahTokens.Motion.bouncy), value: red)

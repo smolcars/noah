@@ -177,7 +177,7 @@ struct OnchainReviewSheet: View {
                     "Fee estimate unavailable. Fees and amount to receive are unknown. Continue without an estimate only if you accept this uncertainty.")
                     .foregroundStyle(NoahColor.destructive)
                 if quote.action == .startExit {
-                    Text("Broadcast funding status is unknown; confirmed onchain funds are required.")
+                    Text("Noah couldn't check whether your on-chain balance can cover the fees. Confirmed on-chain funds are needed.")
                 }
             }
             Text(LocalizedStringKey(explanation))

@@ -1441,38 +1441,38 @@
         }
       }
     },
-    "After {count} confirmations": {
-      "comment": "GT gt_c99b0d023c7ff010; arguments: count",
+    "After {count} confirmations (Bitcoin blocks)": {
+      "comment": "GT gt_e95ee301e98c2f56; arguments: count",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "After %1$@ confirmations"
+            "value": "After %1$@ confirmations (Bitcoin blocks)"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Tras %1$@ confirmaciones"
+            "value": "After %1$@ confirmations (Bitcoin blocks)"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$@回の承認後"
+            "value": "After %1$@ confirmations (Bitcoin blocks)"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$@회 확인 후"
+            "value": "After %1$@ confirmations (Bitcoin blocks)"
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Efter %1$@ bekräftelser"
+            "value": "After %1$@ confirmations (Bitcoin blocks)"
           }
         }
       }
@@ -2397,42 +2397,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Förankring"
-          }
-        }
-      }
-    },
-    "Anchor + {fee} fee · {n} of {total}": {
-      "comment": "GT gt_94c45bc285c9613e; arguments: fee, n, total",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Anchor + %1$@ fee · %2$@ of %3$@"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ancla + comisión de %1$@ · %2$@ de %3$@"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "アンカー + 手数料 %1$@ · %2$@/%3$@"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "앵커 + 수수료 %1$@ · %3$@개 중 %2$@"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Ankare + %1$@ i avgift · %2$@ av %3$@"
           }
         }
       }
@@ -5857,42 +5821,6 @@
         }
       }
     },
-    "Broadcast funding status is unknown; confirmed onchain funds are required.": {
-      "comment": "GT gt_4f8d20d681709634; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Broadcast funding status is unknown; confirmed onchain funds are required."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Se desconoce si hay fondos suficientes para la difusión; se necesitan fondos confirmados en la cadena."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ブロードキャスト用資金の状況は不明です。承認済みのオンチェーン資金が必要です。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "전파 비용 충당 여부를 알 수 없습니다. 확정된 온체인 자금이 필요합니다."
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Det är okänt om medlen räcker till sändningsavgifterna; bekräftade medel på kedjan krävs."
-          }
-        }
-      }
-    },
     "Broadcast without estimate": {
       "comment": "GT gt_a27a4742cc2eca3e; arguments: none",
       "extractionState": "manual",
@@ -6937,6 +6865,42 @@
         }
       }
     },
+    "Check status again": {
+      "comment": "GT gt_84baa61bd34d1b8e; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Check status again"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Check status again"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Check status again"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Check status again"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Check status again"
+          }
+        }
+      }
+    },
     "Check the address. This can’t be undone.": {
       "comment": "GT gt_44cb983669c9d0a9; arguments: none",
       "extractionState": "manual",
@@ -7149,6 +7113,42 @@
           "stringUnit": {
             "state": "translated",
             "value": "Kontrollera ord %1$@"
+          }
+        }
+      }
+    },
+    "Check your connection and try again.": {
+      "comment": "GT gt_481859b689b0d0d9; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Check your connection and try again."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Check your connection and try again."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Check your connection and try again."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Check your connection and try again."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Check your connection and try again."
           }
         }
       }
@@ -8217,42 +8217,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Inlöst i block %1$@"
-          }
-        }
-      }
-    },
-    "Claimed with your key": {
-      "comment": "GT gt_3de215817971a2de; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Claimed with your key"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Claimed with your key"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Claimed with your key"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Claimed with your key"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Claimed with your key"
           }
         }
       }
@@ -10845,6 +10809,42 @@
           "stringUnit": {
             "state": "translated",
             "value": "Det gick inte att registrera hos UnifiedPush. Försök igen."
+          }
+        }
+      }
+    },
+    "Couldn't restore": {
+      "comment": "GT gt_ac9efb9ac1b7ec50; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't restore"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't restore"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't restore"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't restore"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't restore"
           }
         }
       }
@@ -16069,6 +16069,42 @@
         }
       }
     },
+    "Exiting to on-chain": {
+      "comment": "GT gt_a53103e6484bda92; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Exiting to on-chain"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Exiting to on-chain"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Exiting to on-chain"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Exiting to on-chain"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Exiting to on-chain"
+          }
+        }
+      }
+    },
     "Exits": {
       "comment": "GT gt_5e561017c8169c76; arguments: none",
       "extractionState": "manual",
@@ -17445,6 +17481,42 @@
           "stringUnit": {
             "state": "translated",
             "value": "Avgiftssats"
+          }
+        }
+      }
+    },
+    "Fee {fee} · {n} of {total}": {
+      "comment": "GT gt_8211ff15a947c7cd; arguments: fee, n, total",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fee %1$@ · %2$@ of %3$@"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fee %1$@ · %2$@ of %3$@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fee %1$@ · %2$@ of %3$@"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fee %1$@ · %2$@ of %3$@"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fee %1$@ · %2$@ of %3$@"
           }
         }
       }
@@ -21181,38 +21253,38 @@
         }
       }
     },
-    "It confirms in about 20 minutes. Activity shows when.": {
-      "comment": "GT gt_f89a30c95c2897b8; arguments: none",
+    "It confirms in about 20 minutes. You'll see it in Activity.": {
+      "comment": "GT gt_0d8736a156811f27; arguments: none",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "It confirms in about 20 minutes. Activity shows when."
+            "value": "It confirms in about 20 minutes. You'll see it in Activity."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Se confirma en unos 20 minutos. Actividad mostrará cuándo."
+            "value": "It confirms in about 20 minutes. You'll see it in Activity."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "約20分で承認されます。承認はアクティビティに表示されます。"
+            "value": "It confirms in about 20 minutes. You'll see it in Activity."
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "약 20분 후 확인돼요. 활동에서 확인할 수 있어요."
+            "value": "It confirms in about 20 minutes. You'll see it in Activity."
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Den bekräftas om cirka 20 minuter. Aktivitet visar när."
+            "value": "It confirms in about 20 minutes. You'll see it in Activity."
           }
         }
       }
@@ -25597,6 +25669,42 @@
         }
       }
     },
+    "Network fees come from your on-chain balance, not from these coins.": {
+      "comment": "GT gt_99b6dfcd12886f76; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Network fees come from your on-chain balance, not from these coins."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Network fees come from your on-chain balance, not from these coins."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Network fees come from your on-chain balance, not from these coins."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Network fees come from your on-chain balance, not from these coins."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Network fees come from your on-chain balance, not from these coins."
+          }
+        }
+      }
+    },
     "Network fees come from your on-chain {amount} at {rate} sat/vB. Transactions your VTXOs share are paid once. Fees may change.": {
       "comment": "GT gt_6c79c5d1bd98b91d; arguments: amount, rate",
       "extractionState": "manual",
@@ -27937,6 +28045,42 @@
         }
       }
     },
+    "Noah couldn't check whether your on-chain balance can cover the fees. Confirmed on-chain funds are needed.": {
+      "comment": "GT gt_98831782a07d2a12; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noah couldn't check whether your on-chain balance can cover the fees. Confirmed on-chain funds are needed."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noah couldn't check whether your on-chain balance can cover the fees. Confirmed on-chain funds are needed."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noah couldn't check whether your on-chain balance can cover the fees. Confirmed on-chain funds are needed."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noah couldn't check whether your on-chain balance can cover the fees. Confirmed on-chain funds are needed."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noah couldn't check whether your on-chain balance can cover the fees. Confirmed on-chain funds are needed."
+          }
+        }
+      }
+    },
     "Noah couldn't confirm that your recovery phrase was saved. Do not retry. Unlock your device, then close and restart Noah to recover safely.": {
       "comment": "GT gt_e107aa3075b29c81; arguments: none",
       "extractionState": "manual",
@@ -27969,42 +28113,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Noah kunde inte bekräfta att din återställningsfras sparades. Försök inte igen. Lås upp enheten. Stäng sedan Noah och starta om appen för en säker återställning."
-          }
-        }
-      }
-    },
-    "Noah couldn't download your backup. Check your internet connection and try again.": {
-      "comment": "GT gt_3c1e8037a80178df; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Noah couldn't download your backup. Check your internet connection and try again."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Noah no pudo descargar tu copia de seguridad. Comprueba tu conexión a internet e inténtalo de nuevo."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Noahがバックアップをダウンロードできませんでした。インターネット接続を確認して再試行してください。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Noah가 백업을 다운로드하지 못했습니다. 인터넷 연결을 확인하고 다시 시도해 주세요."
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Noah kunde inte hämta din säkerhetskopia. Kontrollera internetanslutningen och försök igen."
           }
         }
       }
@@ -28113,42 +28221,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Noah kunde inte ta bort tillfälliga plånboksfiler. Starta om Noah och försök igen."
-          }
-        }
-      }
-    },
-    "Noah couldn't restore your wallet. Please try again later.": {
-      "comment": "GT gt_62ee841196b41940; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Noah couldn't restore your wallet. Please try again later."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Noah no pudo restaurar tu billetera. Inténtalo más tarde."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Noahでウォレットを復元できませんでした。しばらくしてからもう一度お試しください。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Noah가 지갑을 복원하지 못했습니다. 나중에 다시 시도하세요."
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Noah kunde inte återställa din plånbok. Försök igen senare."
           }
         }
       }
@@ -30685,38 +30757,38 @@
         }
       }
     },
-    "Only the claim fee comes out of the amount.": {
-      "comment": "GT gt_5cf022fe135beed2; arguments: none",
+    "Only the claim fee is deducted from these coins.": {
+      "comment": "GT gt_1c307fc3ba1249c9; arguments: none",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Only the claim fee comes out of the amount."
+            "value": "Only the claim fee is deducted from these coins."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Only the claim fee comes out of the amount."
+            "value": "Only the claim fee is deducted from these coins."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Only the claim fee comes out of the amount."
+            "value": "Only the claim fee is deducted from these coins."
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "Only the claim fee comes out of the amount."
+            "value": "Only the claim fee is deducted from these coins."
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Only the claim fee comes out of the amount."
+            "value": "Only the claim fee is deducted from these coins."
           }
         }
       }
@@ -31329,6 +31401,42 @@
           "stringUnit": {
             "state": "translated",
             "value": "Utgående"
+          }
+        }
+      }
+    },
+    "Over fee limit": {
+      "comment": "GT gt_dc8cfda6600dba8e; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Over fee limit"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Over fee limit"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Over fee limit"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Over fee limit"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Over fee limit"
           }
         }
       }
@@ -32377,6 +32485,42 @@
         }
       }
     },
+    "Payment received": {
+      "comment": "GT gt_2fef7951de07b776; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Payment received"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Payment received"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Payment received"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Payment received"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Payment received"
+          }
+        }
+      }
+    },
     "Payment request": {
       "comment": "GT gt_0cd5e62f85e54229; arguments: none",
       "extractionState": "manual",
@@ -33201,6 +33345,42 @@
           "stringUnit": {
             "state": "translated",
             "value": "Försök igen"
+          }
+        }
+      }
+    },
+    "Please try again later.": {
+      "comment": "GT gt_386b9144ee224202; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Please try again later."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Please try again later."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Please try again later."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Please try again later."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Please try again later."
           }
         }
       }
@@ -40633,6 +40813,42 @@
         }
       }
     },
+    "Show full invoice": {
+      "comment": "GT gt_e664b825fcdcf93e; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Show full invoice"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Show full invoice"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Show full invoice"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Show full invoice"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Show full invoice"
+          }
+        }
+      }
+    },
     "Show payment details": {
       "comment": "GT gt_4aa5f4cd7ecfd4da; arguments: none",
       "extractionState": "manual",
@@ -44017,6 +44233,42 @@
         }
       }
     },
+    "The outcome isn't known yet. This checks the payment. It won't send it again.": {
+      "comment": "GT gt_58031d0ba8c82f55; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The outcome isn't known yet. This checks the payment. It won't send it again."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The outcome isn't known yet. This checks the payment. It won't send it again."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The outcome isn't known yet. This checks the payment. It won't send it again."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The outcome isn't known yet. This checks the payment. It won't send it again."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The outcome isn't known yet. This checks the payment. It won't send it again."
+          }
+        }
+      }
+    },
     "The recipient no longer accepts this amount. Update or cancel the recurring payment.": {
       "comment": "GT gt_b0186376f1dac3ea; arguments: none",
       "extractionState": "manual",
@@ -46525,6 +46777,42 @@
         }
       }
     },
+    "To restore, Noah needs this phrase and a wallet backup.": {
+      "comment": "GT gt_31a0a151c58cdcdf; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "To restore, Noah needs this phrase and a wallet backup."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "To restore, Noah needs this phrase and a wallet backup."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "To restore, Noah needs this phrase and a wallet backup."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "To restore, Noah needs this phrase and a wallet backup."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "To restore, Noah needs this phrase and a wallet backup."
+          }
+        }
+      }
+    },
     "Today": {
       "comment": "GT gt_2b065c7c9ce466e5; arguments: none",
       "extractionState": "manual",
@@ -48609,6 +48897,42 @@
           "stringUnit": {
             "state": "translated",
             "value": "Uppdaterar plånboken"
+          }
+        }
+      }
+    },
+    "Use an address for this network.": {
+      "comment": "GT gt_2e1b88a4431148d2; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Use an address for this network."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Use an address for this network."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Use an address for this network."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Use an address for this network."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Use an address for this network."
           }
         }
       }
@@ -56394,6 +56718,102 @@
                 "stringUnit": {
                   "state": "translated",
                   "value": "%1$lld klara att lösa in"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "{n} sats": {
+      "comment": "GT gt_cfa4f6070c71d557; arguments: n",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%1$lld sat"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%1$lld sats"
+                }
+              }
+            }
+          }
+        },
+        "es": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%1$lld sat"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%1$lld sats"
+                }
+              }
+            }
+          }
+        },
+        "ja": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%1$lld sat"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%1$lld sats"
+                }
+              }
+            }
+          }
+        },
+        "ko": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%1$lld sat"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%1$lld sats"
+                }
+              }
+            }
+          }
+        },
+        "sv": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%1$lld sat"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%1$lld sats"
                 }
               }
             }

@@ -42,6 +42,7 @@ struct SendHoldButton: View {
             .foregroundStyle(enabled ? NoahTokens.Colors.background : NoahTokens.Colors.muted)
             .frame(maxWidth: .infinity, minHeight: 58)
             .background(enabled ? NoahTokens.Colors.foreground : NoahTokens.Colors.soft, in: Capsule())
+            .overlay { if !enabled { Capsule().strokeBorder(NoahTokens.Colors.hairline, lineWidth: 1) } }
             // Your finger signs: the stroke traces the pill from its top-left.
             .overlay {
                 PillOutline()

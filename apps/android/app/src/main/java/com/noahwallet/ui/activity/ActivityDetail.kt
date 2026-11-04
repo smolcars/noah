@@ -486,15 +486,14 @@ private fun LightningBlocks(record: HistoryTransaction, toasts: HomeToasts, debu
     if (debug) DetailBlock("Payment ID", record.id, toasts)
 }
 
-/** bark's movement: its type, ID, subsystem and intended and effective changes. */
+/** bark's movement, in Debug mode only: its type, ID, subsystem and intended and effective changes. */
 @Composable
 private fun MovementRows(record: HistoryTransaction, toasts: HomeToasts, signed: (Long) -> String, debug: Boolean) {
+    if (!debug) return
     record.movementKindLabel?.let { DetailRow("Movement type", tr(it), small = true, toasts = toasts) }
-    if (debug) {
-        record.movementId?.let { DetailRow("Movement ID", it.toString(), copy = it.toString(), small = true, toasts = toasts) }
-        record.subsystemName?.let { DetailRow("Subsystem", "$it (${record.subsystemKind.orEmpty()})", small = true, toasts = toasts) }
-        record.intendedBalanceSat?.let { DetailRow("Intended change", signed(it), ValueKind.number, small = true, toasts = toasts) }
-    }
+    record.movementId?.let { DetailRow("Movement ID", it.toString(), copy = it.toString(), small = true, toasts = toasts) }
+    record.subsystemName?.let { DetailRow("Subsystem", "$it (${record.subsystemKind.orEmpty()})", small = true, toasts = toasts) }
+    record.intendedBalanceSat?.let { DetailRow("Intended change", signed(it), ValueKind.number, small = true, toasts = toasts) }
     record.effectiveBalanceSat?.let { DetailRow("Effective change", signed(it), ValueKind.number, small = true, toasts = toasts) }
 }
 
@@ -545,7 +544,8 @@ private fun OkMark() {
 @Composable
 private fun ExplorerButton(open: () -> Unit) {
     val view = tr("View in explorer")
-    Box(Modifier.offset(x = 4.dp).size(30.dp).clip(CircleShape).clickable(onClickLabel = view, role = Role.Button, onClick = open)
+    // A 48 dp target, as Copy's beside it.
+    Box(Modifier.offset(x = 13.dp).size(48.dp).clip(CircleShape).clickable(onClickLabel = view, role = Role.Button, onClick = open)
         .semantics { contentDescription = view }, contentAlignment = Alignment.Center) {
         Icon(painterResource(R.drawable.ic_activity_external), null, Modifier.size(17.dp), tint = LocalPalette.current.muted)
     }

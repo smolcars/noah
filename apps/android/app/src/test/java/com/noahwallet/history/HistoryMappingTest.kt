@@ -143,7 +143,7 @@ class HistoryMappingTest {
     }
 
     @Test fun pendingRowsSayWhatTheyAreWaitingFor() {
-        assertEquals("Exiting", home(movement("bark.exit:start", "pending", intended = -20_000, sentTo = listOf("bitcoin" to "bcrt1qexit"))).state)
+        assertEquals("Exiting to on-chain", home(movement("bark.exit:start", "pending", intended = -20_000, sentTo = listOf("bitcoin" to "bcrt1qexit"))).state)
         val offboard = movement("bark.offboard:send_onchain", "pending", intended = -40_000, effective = -40_420, sentTo = listOf("bitcoin" to "bcrt1qx"))
         assertEquals("In a round", home(offboard).state)
         val signed = movement("bark.offboard:send_onchain", "pending", intended = -40_000, effective = -40_420, sentTo = listOf("bitcoin" to "bcrt1qx"),

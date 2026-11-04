@@ -38,9 +38,9 @@ struct RestoreIssue: Equatable {
             return noBackup
         }
         if error is URLError {
-            return Self(message: "Noah couldn't download your backup. Check your internet connection and try again.")
+            return Self(title: "Couldn't restore", message: "Check your connection and try again.")
         }
-        return Self(message: "Noah couldn't restore your wallet. Please try again later.")
+        return Self(title: "Couldn't restore", message: "Please try again later.")
     }
 
     private static func from(_ failure: WalletRestorer.Failure) -> Self {

@@ -141,7 +141,7 @@ struct ReceiveAmountSheet: View {
     /// "Add a note": a chip that opens into today's description field.
     @ViewBuilder private var note: some View {
         if draft.noteOpen {
-            TextField("Add a note", text: $draft.description, axis: .vertical)
+            TextField(text: $draft.description, prompt: Text("Add a note").foregroundStyle(NoahTokens.Colors.muted), axis: .vertical) { Text("Add a note") }
                 .noahText(NoahTokens.Typography.body)
                 .lineLimit(1...3)
                 .focused($noteFocused)

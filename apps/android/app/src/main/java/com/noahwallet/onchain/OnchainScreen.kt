@@ -301,7 +301,8 @@ private fun ReviewWarnings(quote: OnchainQuote) {
     if (quote.feesUnknown) {
         Text(tr("Fee estimate unavailable. Fees and amount to receive are unknown. Continue without an estimate only if you accept this uncertainty."),
             color = MaterialTheme.colorScheme.error)
-        if (quote.action == OnchainAction.startExit) Text(tr("Broadcast funding status is unknown; confirmed onchain funds are required."))
+        @Suppress("MaxLineLength") // one translation source string
+        if (quote.action == OnchainAction.startExit) Text(tr("Noah couldn't check whether your on-chain balance can cover the fees. Confirmed on-chain funds are needed."))
     }
     Text(reviewText(quote))
     if (quote.action in setOf(OnchainAction.startExit, OnchainAction.progress, OnchainAction.claim)) {

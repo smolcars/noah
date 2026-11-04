@@ -177,6 +177,19 @@ struct HomePillStyle: ButtonStyle {
     var height: CGFloat = 36
     var font = HomeText.strong
 
+    private struct Fill: ViewModifier {
+        let prominent: Bool
+        let enabled: Bool
+        func body(content: Content) -> some View {
+            if prominent {
+                content.pillFill(enabled: enabled, tint: NoahTokens.Colors.foreground)
+            } else {
+                content.glassCompat(in: Capsule(), interactive: enabled)
+                    .overlay { Capsule().strokeBorder(NoahTokens.Colors.hairline, lineWidth: 1) }
+            }
+        }
+    }
+
     func makeBody(configuration: Configuration) -> some View {
         Styled(configuration: configuration, prominent: prominent, height: height, font: font)
     }
@@ -193,15 +206,12 @@ struct HomePillStyle: ButtonStyle {
             configuration.label
                 .noahText(font)
                 .lineLimit(1)
-                .foregroundStyle(prominent ? isEnabled ? NoahTokens.Colors.background : NoahTokens.Colors.muted : NoahTokens.Colors.foreground)
+                .foregroundStyle(isEnabled ? prominent ? NoahTokens.Colors.background : NoahTokens.Colors.foreground : NoahTokens.Colors.muted)
                 .padding(.horizontal, 16)
                 .frame(minHeight: height)
                 .contentShape(Capsule())
-                // Disabled filled: a soft fill with a muted label (readable), not a faded pill.
-                .glassCompat(in: Capsule(), interactive: isEnabled,
-                             tint: prominent ? isEnabled ? NoahTokens.Colors.foreground : NoahTokens.Colors.soft : nil)
-                .overlay { if !prominent { Capsule().strokeBorder(NoahTokens.Colors.hairline, lineWidth: 1) } }
-                .opacity(isEnabled || prominent ? 1 : 0.5)
+                // Disabled: a muted label (readable), not a faded pill; filled ones get the soft fill.
+                .modifier(Fill(prominent: prominent, enabled: isEnabled))
                 .scaleEffect(configuration.isPressed && !reduceMotion ? 0.95 : 1)
                 .animation(NoahTokens.Motion.tap, value: configuration.isPressed)
         }

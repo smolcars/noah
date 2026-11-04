@@ -56,7 +56,6 @@ import com.noahwallet.ui.send.SendType
 import com.noahwallet.ui.send.StageArt
 import com.noahwallet.ui.send.StageArt.badge
 import com.noahwallet.ui.send.StageArt.icon
-import com.noahwallet.ui.send.StageArt.padlock
 import com.noahwallet.ui.send.rememberBlockSlide
 import kotlinx.coroutines.isActive
 
@@ -79,12 +78,8 @@ internal object ReceiveTimeline {
         fun at(ms: Long) = t >= pace(ms, reduceMotion)
         return when (rail) {
             ReceiveArrival.Rail.ark -> null
-            ReceiveArrival.Rail.lightning -> when {
-                at(4_360) -> null
-                at(2_500) -> "Received"
-                // It's already claimed (a successful movement starts the arrival); the motion retells that.
-                else -> "Claimed with your key"
-            }
+            // It's already claimed (a successful movement starts the arrival): it says so from the start while the motion retells it.
+            ReceiveArrival.Rail.lightning -> if (at(4_360)) null else "Payment received"
             ReceiveArrival.Rail.onchain -> if (at(900)) null else "Seen on the network"
         }
     }
@@ -321,7 +316,7 @@ private class ArrivalFrame(val rail: ReceiveArrival.Rail, val t: Long, val reduc
     }
     fun travel(v: Float) = if (reduceMotion) (if (v > 0f) 1f else 0f) else v
 
-    /** The coin dropping from the server into the QR's centre; a Lightning one carries its padlock. */
+    /** The coin dropping from the server into the QR's centre (no padlock: it has already arrived; the key still turns). */
     fun DrawScope.coin(glyph: TextLayoutResult) {
         val drop = at(if (rail == ReceiveArrival.Rail.ark) 380 else 850, curve = SpringCurve.bouncy)
         val coinOut = at(if (rail == ReceiveArrival.Rail.ark) 1_250 else 2_760).coerceIn(0f, 1f)
@@ -332,11 +327,6 @@ private class ArrivalFrame(val rail: ReceiveArrival.Rail, val t: Long, val reduc
         scale(coinScale, coinScale, Offset(cx, coinY)) {
             drawCircle(ink, 26f, Offset(cx, coinY), alpha = coinAlpha)
             drawText(glyph, Color.White, Offset(cx - glyph.size.width / 2f, coinY - glyph.size.height / 2f), alpha = coinAlpha)
-            if (rail == ReceiveArrival.Rail.lightning) {
-                val open = at(1_650, 420, SpringCurve.bouncy)
-                val lockOut = at(2_500).coerceIn(0f, 1f)
-                padlock(Offset(cx, coinY - 25), coinAlpha * (1 - lockOut), open, ink, Color.White)
-            }
         }
     }
 
@@ -384,8 +374,9 @@ internal fun ReceiveBlockRow(arrival: ReceiveArrival?, tip: Long?, confirmedAt: 
     val visible = arrival?.rail == ReceiveArrival.Rail.onchain && shownTip != null
     ConfirmedHaptic(arrival, confirmedAt)
     val fade = if (visible) step(elapsed, 0, SpringCurve.soft, reduceMotion = reduceMotion).coerceIn(0f, 1f) else 0f
+    // 11 sp as drawn (the row scales by width / 300), and larger with the font scale.
     val style = TextStyle(fontFamily = NoahTokens.Display, fontWeight = FontWeight.Medium,
-        fontSize = with(density) { (10.5f / (density.density * fontScale)).sp })
+        fontSize = with(density) { (11f * fontScale * 300f / width.value).toSp() })
     val next = remember(nextLabel, density) { measurer.measure(nextLabel, style) }
     Canvas(modifier.width(width).height(58.dp).clearAndSetSemantics { }) {
         if (!visible) return@Canvas

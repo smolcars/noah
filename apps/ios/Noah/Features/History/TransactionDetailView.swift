@@ -572,11 +572,8 @@ struct DetailLine: View {
         VStack(alignment: .leading, spacing: 2) {
             labelText.padding(.top, 10)
             HStack(alignment: .firstTextBaseline, spacing: 8) {
-                Text(verbatim: value).font(ActivityDetailText.monoSmall)
-                    .foregroundStyle(NoahTokens.Colors.foreground)
-                    .textSelection(.enabled)
+                IdentifierText(value: value, selectable: !chevron)
                     .frame(maxWidth: .infinity, alignment: .leading)
-                    .fixedSize(horizontal: false, vertical: true)
                 actions
             }
             .padding(.bottom, 8)
@@ -630,7 +627,10 @@ struct DetailLine: View {
 
     @ViewBuilder private var valueText: some View {
         let text = Text(verbatim: value)
-        if mono {
+        if mono && wraps {
+            IdentifierText(value: value, color: failure ? NoahTokens.Colors.failure : NoahTokens.Colors.foreground, trailing: true,
+                           selectable: !chevron)
+        } else if mono {
             text.font(compact ? ActivityDetailText.monoSmall : ActivityDetailText.mono)
                 .lineLimit(wraps ? nil : 1).truncationMode(.middle)
                 .textSelection(.enabled)

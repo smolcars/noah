@@ -165,6 +165,7 @@ struct HomeView: View {
             .onboardingPane()
         }
         .modifier(HomeScrollKeeper(area: .compact, memory: scrollMemory) { scrollY = $0 })
+        .tabBarScrollEdge()
         .refreshable { await pullToRefresh() }
         .modifier(HomeTopBarInset(scrolled: scrollY > 2) {
             topBar(tucked: true).padding(.horizontal, 16).padding(.top, 4).padding(.bottom, 6).modifier(appear(0))

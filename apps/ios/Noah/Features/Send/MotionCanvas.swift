@@ -226,7 +226,8 @@ struct ChainBlockRow {
         var canvas = canvas
         canvas.context.opacity *= opacity
         let colors = canvas.colors
-        let label = size > 34 ? 11.5 : 10.5
+        // At least 12 pt as drawn. Only the newest block and "next" are numbered, so the larger labels never touch.
+        let label = max(size > 34 ? 11.5 : 10.5, 12 / max(canvas.scale, 0.01))
         let confirmed = confirmedHeight != nil && confirmedAt.map { time.t >= $0 } == true
         let mined = confirmed ? time.p(confirmedAt ?? 0, .snappy) : 0
         // The row slides one block along as the transaction confirms.
@@ -238,7 +239,8 @@ struct ChainBlockRow {
             let fade = index == 0 && confirmed ? 1 - time.o(confirmedAt ?? 0, .snappy) : 1
             let rect = CGRect(x: canvas.point(x, y).x, y: canvas.point(x, y).y, width: size * canvas.scale, height: size * canvas.scale)
             canvas.fill(Path(roundedRect: rect, cornerRadius: 7 * canvas.scale), colors.foreground.opacity((0.55 + Double(index) * 0.15) * fade))
-            if tip != nil || confirmed {
+            // The number needs about 50 pt beside "next"; a smaller row shows "next" alone.
+            if index == 2, tip != nil, !confirmed, gap * canvas.scale >= 54 {
                 canvas.text(height(h), x + size / 2, y + size + 14, size: label, color: colors.muted.opacity(fade), weight: .medium)
             }
         }

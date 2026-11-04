@@ -17,4 +17,11 @@ enum BitcoinAmount {
         case .sats: return "\(number) sats"
         }
     }
+
+    /// "1,500 sats", translated and plural-aware, under a ₿ amount with no price to show beside it.
+    static func satsLine(_ sats: Int64, locale: Locale) -> String {
+        // The plural template prints the count ungrouped; show it grouped as everywhere else.
+        L10n.plural("{n} sats", count: Int(clamping: sats), locale: locale.identifier)
+            .replacingOccurrences(of: String(sats), with: sats.formatted(.number.locale(locale)))
+    }
 }

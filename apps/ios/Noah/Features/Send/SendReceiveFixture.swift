@@ -13,6 +13,8 @@ struct SendReceiveFixture {
     /// Receive opens on this format, and with this sheet ("formats" or "amount").
     var receiveFormat: ReceiveFormat?
     var receiveSheet: String?
+    /// Send's To card opens with the whole invoice shown.
+    var invoiceExpanded = false
 }
 
 extension EnvironmentValues {

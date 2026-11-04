@@ -57,7 +57,8 @@ data class RestoreIssue(val message: String, val requiresRestart: Boolean = fals
             else -> generic
         }
         private val futureSchema = Regex("Snapshot schema version [0-9]+ is newer than supported version [0-9]+")
-        private val connectivity = RestoreIssue("Noah couldn't download your backup. Check your internet connection and try again.")
-        private val generic = RestoreIssue("Noah couldn't restore your wallet. Please try again later.")
+        // A short red headline over a calm body; only a connection failure says to check the connection.
+        private val connectivity = RestoreIssue("Check your connection and try again.", title = "Couldn't restore")
+        private val generic = RestoreIssue("Please try again later.", title = "Couldn't restore")
     }
 }

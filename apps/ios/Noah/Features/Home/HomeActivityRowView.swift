@@ -61,7 +61,7 @@ struct HomeActivityRowView: View {
         case .sending: return joined(L10n.text("Sending", locale: language), kind)
         case .confirming: return joined(L10n.text("Confirming", locale: language), kind)
         case .inRound: return L10n.text("In a round", locale: language)
-        case .exiting: return L10n.text("Exiting", locale: language)
+        case .exiting: return L10n.text("Exiting to on-chain", locale: language)
         case .done: return joined(kind, time)
         }
     }

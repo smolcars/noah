@@ -189,7 +189,7 @@ internal fun StatusLine(text: String, failed: Boolean, dot: Boolean, onClick: ((
 
 /**
  * The top bar's quiet wallet activity, in a fixed slot so nothing moves: a turning glyph while a background task or
- * backup runs ([running] names it for TalkBack), a green check for about 2 s once a backup completes, else nothing.
+ * backup runs ([running] names it for TalkBack), a check for about 2 s once a backup completes, else nothing.
  */
 @Composable
 internal fun ActivityGlyph(running: String?, backedUpAt: Long?) {
@@ -216,9 +216,9 @@ internal fun ActivityGlyph(running: String?, backedUpAt: Long?) {
             else androidx.compose.animation.scaleIn(spring(.5f, 400f), initialScale = .3f),
             exit = androidx.compose.animation.fadeOut(fade)) {
             val label = tr("Backup completed")
-            // Today's success green (Send's ✓, the widget).
-            Box(Modifier.size(20.dp).background(Color(0xFF22C55E), CircleShape).semantics { contentDescription = label }, contentAlignment = Alignment.Center) {
-                Icon(painterResource(HomeIcons.check), null, Modifier.size(14.dp), tint = Color.White)
+            // The foreground check in a soft circle: the palette has no green.
+            Box(Modifier.size(24.dp).background(palette.soft, CircleShape).semantics { contentDescription = label }, contentAlignment = Alignment.Center) {
+                Icon(painterResource(HomeIcons.check), null, Modifier.size(15.dp), tint = palette.foreground)
             }
         }
     }

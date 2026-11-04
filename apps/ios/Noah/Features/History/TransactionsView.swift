@@ -261,6 +261,7 @@ private struct ActivityListPane: View {
                 .padding(.bottom, 32)
             }
             .scrollPosition(id: $scrollAnchor, anchor: .top)
+            .tabBarScrollEdge()
             // After the update, so the list is back to full length first.
             .onChange(of: query.isEmpty || !searching) { _, showsList in
                 if showsList { proxy.scrollTo(listAnchor ?? Self.titleID, anchor: .top) }
@@ -479,7 +480,7 @@ extension ActivityList {
         case .sending: "Sending"
         case .confirming: "Confirming"
         case .inRound: "In a round"
-        case .exiting: "Exiting"
+        case .exiting: "Exiting to on-chain"
         case .done: nil
         }
         return [kind, status].compactMap(\.self).flatMap { [$0, L10n.text($0, locale: locale)] }

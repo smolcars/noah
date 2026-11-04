@@ -413,7 +413,7 @@ struct ExitStatusLine: View {
             if progress.bumped { return tr("Fees rose. Paying more · waiting for block {height}", block(tip + 1)) }
             if progress.stuck > 0 { return L10n.plural("Not in a block yet · {n} blocks", count: Int(progress.stuck), locale: language) }
             if let child = current?.status.child_txid, let fee = overview?.childFees[child] {
-                return tr("Anchor + {fee} fee · {n} of {total}", money(fee), n, total)
+                return tr("Fee {fee} · {n} of {total}", money(fee), n, total)
             }
             return tr("Waiting for block {height} · {n} of {total}", block(tip + 1), n, total)
         case .shared: return tr("Already sent by someone else · {n} of {total}", n, total)
@@ -506,7 +506,10 @@ struct ExitStatusLine: View {
 
     /// "about 16 h", or "under an hour" for a few blocks.
     static func about(_ blocks: UInt32, _ language: String) -> String {
-        blocks < 6 ? L10n.text("under an hour", locale: language) : L10n.text("about {time}", VtxoList.span(Int64(blocks), locale: language), locale: language)
+        blocks < 6 ? L10n.text("under an hour", locale: language) : L10n.text(
+            "about {time}",
+            VtxoList.timeLeft(Int64(blocks), locale: language),
+            locale: language)
     }
 
     /// "1 VTXO · 4 transactions".

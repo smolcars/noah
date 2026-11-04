@@ -41,7 +41,7 @@
   <string name="gt_7b68fe5510851da3">"Después de"</string>
   <string name="gt_1ab182592ebf923e">"Tras una confirmación"</string>
   <string name="gt_19e0adbfc9cad76d">"Tras el bloqueo de tiempo"</string>
-  <string name="gt_c99b0d023c7ff010">"Tras %1$s confirmaciones"</string>
+  <string name="gt_e95ee301e98c2f56">"After %1$s confirmations (Bitcoin blocks)"</string>
   <plurals name="gt_d7e9ece445e2d5a3">
     <item quantity="one">"Tras %1$s pago"</item>
     <item quantity="many">"Tras %1$s pagos"</item>
@@ -70,7 +70,6 @@
   <string name="gt_9bb0c676a3c4146c">"Se comprobará un pago Lightning existente. No se creará ningún pago nuevo."</string>
   <string name="gt_3841549f59f967ba">"Una salida que necesita esta salida se gastó en cadena, así que no puede terminar."</string>
   <string name="gt_a4ae750b610e875e">"Anclaje"</string>
-  <string name="gt_94c45bc285c9613e">"Ancla + comisión de %1$s · %2$s de %3$s"</string>
   <string name="gt_15ea390b9d935697">"Hay otro pago de Lightning en curso. Inténtalo de nuevo cuando termine."</string>
   <string name="gt_c4e9b3d10877c72c">"Otra billetera"</string>
   <string name="gt_75ff3fb1ac6ce5d1">"Cualquiera con este teléfono podría ver tu frase. Configura un bloqueo de pantalla en Ajustes para protegerla."</string>
@@ -166,7 +165,6 @@
   <string name="gt_01c437c9f900b81f">"Depósito iniciado. Los fondos podrán gastarse cuando se complete el depósito."</string>
   <string name="gt_8fed00ef8e09c48a">"No se envió el depósito. Revísalo de nuevo cuando la billetera esté lista."</string>
   <string name="gt_479ad21ac9096236">"Abajo"</string>
-  <string name="gt_4f8d20d681709634">"Se desconoce si hay fondos suficientes para la difusión; se necesitan fondos confirmados en la cadena."</string>
   <string name="gt_a27a4742cc2eca3e">"Difundir sin estimación"</string>
   <string name="gt_b2c48022f83bafa7">"CAD"</string>
   <string name="gt_c46701fbec1318d7">"CC BY 4.0"</string>
@@ -196,12 +194,14 @@
   <string name="gt_fb7099ad8e818d42">"Volver a comprobar"</string>
   <string name="gt_c52a96b66db5c212">"Comprobar estado de la operación"</string>
   <string name="gt_69cd3590300a68c6">"Comprobar estado"</string>
+  <string name="gt_84baa61bd34d1b8e">"Check status again"</string>
   <string name="gt_44cb983669c9d0a9">"Revisa la dirección. Esto no se puede deshacer."</string>
   <string name="gt_c31be569a492274b">"Comprueba el importe, los VTXO seleccionados y el destino. Puede que no haya suficientes fondos confirmados."</string>
   <string name="gt_4282111188a1f2bd">"Check the words. Noah can only restore a wallet that had backups turned on."</string>
   <string name="gt_ff65032d5e881811">"Comprueba el resultado de este pago antes de aprobarlo de nuevo."</string>
   <string name="gt_6f113ce35347ffe6">"Comprueba el resultado de este pago antes de editarlo."</string>
   <string name="gt_710d52f182321f4a">"Revisa la palabra %1$s"</string>
+  <string name="gt_481859b689b0d0d9">"Check your connection and try again."</string>
   <string name="gt_7732287944e204a9">"Revisa tu correo"</string>
   <string name="gt_4ac7dc7e4285ca5d">"Revisa tu historial y confírmalo con el destinatario. Es posible que este pago ya se haya enviado."</string>
   <string name="gt_9b69d23b16f9a10b">"Revisa tu frase de recuperación. Introduce las 12 o 24 palabras en el orden correcto."</string>
@@ -234,7 +234,6 @@
   <string name="gt_ddcd2779294a61f0">"Reclamado"</string>
   <string name="gt_a0db5cf3b152db7a">"Reclamado en"</string>
   <string name="gt_1b9a6f007e618766">"Reclamado en el bloque %1$s"</string>
-  <string name="gt_3de215817971a2de">"Claimed with your key"</string>
   <string name="gt_6ff55162d8a9bb5e">"Reclamado · bloque %1$s"</string>
   <string name="gt_9928373127bf808f">"Reclamando"</string>
   <string name="gt_0075dff6ca828fc1">"Reclamando · esperando el bloque %1$s"</string>
@@ -307,6 +306,7 @@
   <string name="gt_b8e043dbc53a4a4c">"No se pudo actualizar tu perfil. Vuelve a intentarlo."</string>
   <string name="gt_d08dea249a1c48bb">"No se pudo completar de nuevo el registro. Vuelve a intentarlo."</string>
   <string name="gt_b8f165e6a90e3092">"No se pudo completar el registro en UnifiedPush. Vuelve a intentarlo."</string>
+  <string name="gt_ac9efb9ac1b7ec50">"Couldn\'t restore"</string>
   <string name="gt_0d5423d40addc1a4">"No se pudo reanudar la recuperación. Reinicia Noah e inténtalo de nuevo."</string>
   <string name="gt_9f01ece862c96f1d">"No se pudo guardar la preferencia de autenticación."</string>
   <string name="gt_83462be19140c53a">"No se pudo guardar la preferencia de transferencia automática."</string>
@@ -459,6 +459,7 @@
   <string name="gt_85fc46c17cd71d1d">"Retirado"</string>
   <string name="gt_7c2f8a4625fab18d">"Monedas retiradas"</string>
   <string name="gt_4a366d77739e7414">"Retirando"</string>
+  <string name="gt_a53103e6484bda92">"Exiting to on-chain"</string>
   <string name="gt_5e561017c8169c76">"Salidas"</string>
   <string name="gt_db5f066a21225f71">"Se ha avanzado en las salidas. Es posible que se hayan difundido transacciones o aumentado sus comisiones."</string>
   <string name="gt_26377ba9c6b97926">"Las salidas lo usan cuando se confirma."</string>
@@ -502,6 +503,7 @@
   <string name="gt_26290dab5e50b113">"Comisión del pago existente: %1$s sats"</string>
   <string name="gt_78ab175434313451">"Fee is an estimate. It can rise if more coins are needed."</string>
   <string name="gt_6c6cc6eb80efa410">"Tasa de comisión"</string>
+  <string name="gt_8211ff15a947c7cd">"Fee %1$s · %2$s of %3$s"</string>
   <string name="gt_aac77df347205252">"Comentarios"</string>
   <string name="gt_779ff4584d72f733">"Las comisiones superan lo que valen estos VTXOs."</string>
   <string name="gt_e45e304fea7e1b7b">"Comisiones mayores que su valor"</string>
@@ -608,7 +610,7 @@
   <string name="gt_bfd57e13f17196fe">"Las facturas necesitan un importe"</string>
   <string name="gt_6ada3d7f67a75b5e">"Llegó al instante."</string>
   <string name="gt_047f932e6c3ea4f2">"Llegó al instante. Los envíos por Ark son gratis."</string>
-  <string name="gt_f89a30c95c2897b8">"Se confirma en unos 20 minutos. Actividad mostrará cuándo."</string>
+  <string name="gt_0d8736a156811f27">"It confirms in about 20 minutes. You\'ll see it in Activity."</string>
   <string name="gt_5002fe6fff33796d">"Necesita %1$s confirmaciones para llegar."</string>
   <string name="gt_12ad7bf0e646c2d9">"Ahora son bitcoins normales."</string>
   <string name="gt_5cc37a0a3b8a1e82">"El equipo de Noah ya lo tiene."</string>
@@ -733,6 +735,7 @@
   <string name="gt_1744b96470b51bf3">"Red"</string>
   <string name="gt_82c5067df6801187">"Comisión de red"</string>
   <string name="gt_598ce3ccc02e5890">"Comisiones de red"</string>
+  <string name="gt_99b6dfcd12886f76">"Network fees come from your on-chain balance, not from these coins."</string>
   <string name="gt_6c79c5d1bd98b91d">"Las comisiones de red salen de tus %1$s en cadena a %2$s sat/vB. Las transacciones que comparten tus VTXOs se pagan una vez. Las comisiones pueden cambiar."</string>
   <string name="gt_e5cff1be1c0e3c93">"La red no coincide: se esperaba %1$s, pero se obtuvo %2$s"</string>
   <string name="gt_6300ef800bb88429">"Nunca"</string>
@@ -798,12 +801,11 @@
   <string name="gt_5a00f75927a33884">"Noah cierra la billetera y detiene los pagos hasta que desactives esta opción."</string>
   <string name="gt_c1f6e702ec74583d">"Noah no pudo leer ni guardar el intento de pago. El envío está desactivado hasta que se pueda recuperar su estado."</string>
   <string name="gt_34c9cafb61bbac7d">"Noah no pudo acceder al almacenamiento seguro. Desbloquea tu dispositivo e inténtalo de nuevo."</string>
+  <string name="gt_98831782a07d2a12">"Noah couldn\'t check whether your on-chain balance can cover the fees. Confirmed on-chain funds are needed."</string>
   <string name="gt_e107aa3075b29c81">"Noah no pudo confirmar que tu frase de recuperación se hubiera guardado. No lo intentes de nuevo. Desbloquea tu dispositivo y luego cierra y reinicia Noah para realizar la recuperación de forma segura."</string>
-  <string name="gt_3c1e8037a80178df">"Noah no pudo descargar tu copia de seguridad. Comprueba tu conexión a internet e inténtalo de nuevo."</string>
   <string name="gt_e92407ae0cc29539">"Noah no pudo completar ni deshacer una restauración interrumpida. Los archivos de tu billetera se han dejado intactos. Reinicia Noah para intentarlo de nuevo."</string>
   <string name="gt_8ad019accd01ac95">"Noah no pudo abrir la billetera restaurada de forma segura. Cierra y reinicia Noah para continuar."</string>
   <string name="gt_55037f1fddcada0f">"Noah no pudo eliminar los archivos temporales de la billetera. Reinicia Noah e inténtalo de nuevo."</string>
-  <string name="gt_62ee841196b41940">"Noah no pudo restaurar tu billetera. Inténtalo más tarde."</string>
   <string name="gt_db92e3e2f6075f8b">"Noah no pudo deshacer la restauración de forma segura. No lo intentes de nuevo. Cierra y reinicia Noah para que pueda recuperar tu billetera."</string>
   <string name="gt_822918727e4f828f">"Predeterminado de Noah"</string>
   <string name="gt_9bbbe9d436c3e3e3">"Noah no ha confirmado el resultado final. No vuelvas a pagar. Consultar el estado nunca provoca el envío de otro pago."</string>
@@ -879,7 +881,7 @@
   <string name="gt_d6e3df34a55bbeb3">"Una última transacción. Su comisión sale del importe."</string>
   <string name="gt_51795cf8f3fe4c84">"Una transacción por bloque: unos diez minutos cada una."</string>
   <string name="gt_4831cbdad7ad0bb6">"Solo para alertas urgentes sobre tu billetera."</string>
-  <string name="gt_5cf022fe135beed2">"Only the claim fee comes out of the amount."</string>
+  <string name="gt_1c307fc3ba1249c9">"Only the claim fee is deducted from these coins."</string>
   <string name="gt_4de503f8d4f0bcbc">"Solo %1$s disponible"</string>
   <string name="gt_e2abf2ae09785e85">"Abre Noah para enviar %1$s a %2$s."</string>
   <string name="gt_f9d77f6cb2f252e8">"Abrir perfil"</string>
@@ -897,6 +899,7 @@
   <string name="gt_6201f81787adfaf8">"Monedas de otras personas en esta ronda"</string>
   <string name="gt_f893fab7e39f5540">"Si no, Android puede pausar Noah y los pagos podrían dejar de llegar."</string>
   <string name="gt_3619cf0b90923a4b">"Saliente"</string>
+  <string name="gt_dc8cfda6600dba8e">"Over fee limit"</string>
   <string name="gt_84c9bc73297ace6e">"Intento anulado"</string>
   <string name="gt_b896460456edd89b">"Confirmación de anulación"</string>
   <string name="gt_33a067f2594b14e7">"¿Anular la protección contra repeticiones?"</string>
@@ -926,6 +929,7 @@
   <string name="gt_9b618cb731269ec8">"Es posible que el pago se haya enviado"</string>
   <string name="gt_9244b7af07845b9d">"Pago no enviado"</string>
   <string name="gt_5f984c8b843f3399">"Preimagen del pago"</string>
+  <string name="gt_2fef7951de07b776">"Payment received"</string>
   <string name="gt_0cd5e62f85e54229">"Solicitud de pago"</string>
   <string name="gt_2bc4ef41a5775e8d">"Pago enviado"</string>
   <string name="gt_f643e0c5a72874d3">"No se pudo guardar el estado del pago. Vuelve a consultarlo después de reiniciar Noah."</string>
@@ -949,6 +953,7 @@
   <string name="gt_c12ff673ae9836ca">"Posición de reproducción"</string>
   <string name="gt_813f0164d8d31cd2">"Abre la configuración de tu dispositivo y permite que Noah se ejecute en segundo plano. Luego, continúa."</string>
   <string name="gt_de5aa7c10f561635">"Inténtalo de nuevo"</string>
+  <string name="gt_386b9144ee224202">"Please try again later."</string>
   <string name="gt_2fc0c524431a9236">"Punto"</string>
   <string name="gt_89ff281050e4797e">"Apunta la cámara a un código QR de pago."</string>
   <string name="gt_5e4e164840885a18">"Posible pago relacionado en el historial"</string>
@@ -1160,6 +1165,7 @@
   <string name="gt_0df6f1cad36c49da">"Mostrar"</string>
   <string name="gt_2150d8df37e48957">"Mostrar todo"</string>
   <string name="gt_3175b05f8140f78b">"Mostrar de todos modos"</string>
+  <string name="gt_e664b825fcdcf93e">"Show full invoice"</string>
   <string name="gt_4aa5f4cd7ecfd4da">"Mostrar detalles del pago"</string>
   <string name="gt_93749012e2444865">"Mostrar frase de recuperación"</string>
   <string name="gt_d8425d416f6d496d">"Mostrar saldo de la billetera"</string>
@@ -1254,6 +1260,7 @@
   <string name="gt_708398a18d2f5dfe">"No se pudo guardar la posición del mapa."</string>
   <string name="gt_35a7d1e62f8a6b9d">"The network fee is set when sent and comes out of this total."</string>
   <string name="gt_bc71b743861782dc">"Es posible que la operación se haya iniciado. Comprueba su estado antes de repetirla. Las demás operaciones de recuperación siguen disponibles."</string>
+  <string name="gt_58031d0ba8c82f55">"The outcome isn\'t known yet. This checks the payment. It won\'t send it again."</string>
   <string name="gt_b0186376f1dac3ea">"El destinatario ya no acepta este importe. Actualiza o cancela el pago recurrente."</string>
   <string name="gt_0d09cc372ee7f6aa">"Se encontró la transacción registrada. Revisa su estado en la red."</string>
   <string name="gt_75b3d8381b514e22">"La ronda,"</string>
@@ -1326,6 +1333,7 @@
   <string name="gt_9dcff98e275f0cb9">"Cronología"</string>
   <string name="gt_e12a2ce4d26b2017">"Bloqueo temporal"</string>
   <string name="gt_f4b06ef6d3c81436">"Para"</string>
+  <string name="gt_31a0a151c58cdcdf">"To restore, Noah needs this phrase and a wallet backup."</string>
   <string name="gt_2b065c7c9ce466e5">"Hoy"</string>
   <string name="gt_8e5d375aee547cf8">"Demasiado poco para salir · menos de %1$s"</string>
   <string name="gt_168d36c2d331807e">"Duración"</string>
@@ -1384,6 +1392,7 @@
   <string name="gt_9f725ecf91f1aaf9">"Actualizado a las %1$s"</string>
   <string name="gt_a7a68b529b93080a">"Actualizando la billetera Noah"</string>
   <string name="gt_77a11d005b310667">"Actualizando billetera"</string>
+  <string name="gt_2e1b88a4431148d2">"Use an address for this network."</string>
   <string name="gt_a769cedc799260e8">"Usar predeterminado"</string>
   <string name="gt_330cc4388c5218a4">"Usar servidor predeterminado"</string>
   <string name="gt_28ef268f1e77dc1b">"Usa la frase de recuperación guardada en este dispositivo para restaurar tu copia de seguridad."</string>
@@ -1646,6 +1655,11 @@
     <item quantity="one">"%1$s lista para reclamar"</item>
     <item quantity="many">"%1$s listas para reclamar"</item>
     <item quantity="other">"%1$s listas para reclamar"</item>
+  </plurals>
+  <plurals name="gt_cfa4f6070c71d557">
+    <item quantity="one">"%1$s sat"</item>
+    <item quantity="many">"%1$s sats"</item>
+    <item quantity="other">"%1$s sats"</item>
   </plurals>
   <string name="gt_996a4adc403eb54c">"%1$s segundos"</string>
   <plurals name="gt_618ceaf828dd8956">

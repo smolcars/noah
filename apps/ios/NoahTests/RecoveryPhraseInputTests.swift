@@ -239,7 +239,7 @@ struct RestoreIssueTests {
         #expect(!missing.message.contains(secret))
         #expect(RestoreIssue.from(ServerFailure(message: secret, statusCode: 401, code: "USER_NOT_FOUND")).message == missing.message)
         #expect(RestoreIssue.from(BackupCrypto.Failure.authenticationFailed).message.contains("unlock the backup"))
-        #expect(RestoreIssue.from(URLError(.notConnectedToInternet)).message.contains("internet connection"))
+        #expect(RestoreIssue.from(URLError(.notConnectedToInternet)).message == "Check your connection and try again.")
         #expect(!RestoreIssue.from(ServerFailure(message: secret, statusCode: 500)).message.contains(secret))
         #expect(RestoreIssue.from(RestoreTransaction.Failure.journalUnreadable).requiresRestart)
         #expect(RestoreIssue.committed.requiresRestart)

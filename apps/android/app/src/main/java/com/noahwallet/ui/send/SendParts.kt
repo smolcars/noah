@@ -99,7 +99,6 @@ internal object SendType {
 }
 
 internal object SendIcons {
-    val back = R.drawable.ic_sr_back
     val copy = R.drawable.ic_sr_copy
     val swap = R.drawable.ic_sr_swap
     val delete = R.drawable.ic_sr_delete
@@ -385,18 +384,21 @@ internal fun HoldToConfirm(hold: String, busyLabel: String, action: String, conf
     val currentEnabled by rememberUpdatedState(enabled)
     val label = if (sending) busyLabel else hold
     val gesture = HoldGesture(scope, progress, press, haptics, reduceMotion)
+    // Disabled keeps its shape, as a disabled pill does: a soft fill and a muted label (never a faded black pill).
+    val off = !enabled && !sending
+    val ink = if (off) palette.muted else palette.background
     // [wrap]: a long label takes a second line and the pill grows (exit pages at large text), rather than shrinking.
     Box(modifier.fillMaxWidth().then(if (wrap) Modifier.heightIn(min = 58.dp) else Modifier.height(58.dp))
-        .graphicsLayer { scaleX = press.value; scaleY = press.value; alpha = if (enabled || sending) 1f else .4f }
+        .graphicsLayer { scaleX = press.value; scaleY = press.value }
         .holdStroke(progress, palette.orange)
-        .background(palette.foreground, RoundedCornerShape(29.dp))
+        .background(if (off) palette.soft else palette.foreground, RoundedCornerShape(29.dp))
         .testTag(tag)
         // A pose change moves the pill under the finger, so it restarts the gesture: hold again in the new pose.
         .pointerInput(LocalPose.current) { with(gesture) { detect({ currentEnabled }, { currentConfirm() }) } }
         .holdSemantics(label, action, enabled) { currentEnabled.also { if (it) confirming = true } }, contentAlignment = Alignment.Center) {
-        if (wrap) WrappingLabel(label, SendType.pill.copy(color = palette.background, textAlign = TextAlign.Center),
+        if (wrap) WrappingLabel(label, SendType.pill.copy(color = ink, textAlign = TextAlign.Center),
             Modifier.padding(horizontal = 16.dp, vertical = 6.dp))
-        else androidx.compose.foundation.text.BasicText(label, Modifier.padding(horizontal = 16.dp), style = SendType.pill.copy(color = palette.background),
+        else androidx.compose.foundation.text.BasicText(label, Modifier.padding(horizontal = 16.dp), style = SendType.pill.copy(color = ink),
             maxLines = 1, autoSize = androidx.compose.foundation.text.TextAutoSize.StepBased(minFontSize = 11.sp, maxFontSize = SendType.pill.fontSize))
     }
     LaunchedEffect(sending) { if (!sending && progress.value >= 1f) progress.snapTo(0f) }
