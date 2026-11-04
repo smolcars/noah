@@ -964,7 +964,7 @@ private fun SendingStep(presentation: SendPresentation, env: SendEnv, actions: S
             val sent = shown in setOf(SendEnding.arkSent, SendEnding.lightningSent, SendEnding.chainSent)
             SwapTitle(sendingTitle(shown, amount, receipt, env), SendType.big, Modifier.padding(top = 6.dp).testTag(if (sent) "send-success" else "send-title"))
             val height by stageHeight(resultShown, motion, elapsed, reduceMotion, pose, fit)
-            SendingPicture(who, payment, env, motion, elapsed, tip, confirmedAt, line, height, { stagePx = it }, explanation = {
+            SendingPicture(who, payment, env, motion, elapsed, tip, confirmedAt, line, height, { stagePx = it }, content = {
                 // The outcome, who and why sit together at the top.
                 ResultLine(shown, attempt, receipt, formatted(amount, env), who, env, controller.message, show)
             })
@@ -1054,10 +1054,10 @@ private fun stageHeight(pose: OnboardingPose): Dp = when (pose) {
 /** Who it's to, the stage and its phase line. */
 @Composable
 private fun SendingPicture(who: SendWho, payment: SendPayment?, env: SendEnv, motion: SendMotion, elapsed: Long, tip: Long?, confirmedAt: Long?,
-    line: PhaseLine?, stageHeight: Dp, measured: (Int) -> Unit, explanation: @Composable () -> Unit) {
+    line: PhaseLine?, stageHeight: Dp, measured: (Int) -> Unit, content: @Composable () -> Unit) {
     // The same To block the review showed: the name, an invoice's description and the whole destination.
     payment?.let { RecipientBlock(it.destination, it.method, env, Modifier.padding(top = 16.dp)) }
-    explanation()
+    content() // the explanation, under the To block
     Box(Modifier.fillMaxWidth().onSizeChanged { measured(it.height) }) {
         if (stageHeight > 0.dp) SendStage(motion, elapsed, who.copy(name = tr(who.name)), tip, confirmedAt,
             Modifier.fillMaxWidth().padding(top = 8.dp).height(stageHeight).testTag("send-stage"))
