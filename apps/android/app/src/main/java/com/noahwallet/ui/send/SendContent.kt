@@ -168,6 +168,21 @@ internal object SendWhoRules {
     }
     fun short(value: String) = if (value.length <= 14) value else value.take(4) + "…" + value.takeLast(4)
 
+    /**
+     * Who a payment goes to, from what was entered only: a name ([title]), the Lightning address behind a Noah
+     * name or an invoice's own description ([detail]), and the [full] address, invoice or request to compare.
+     */
+    data class Recipient(val title: String, val detail: String?, val full: String?)
+    fun recipient(destination: String, method: String?, ownDomain: String?): Recipient {
+        val value = SendDestination.cleaned(destination)
+        return when (method) {
+            "lnurl" -> of(destination, method, ownDomain).name.let { name -> Recipient(name, value.lowercase(Locale.ROOT).takeIf { it != name }, null) }
+            "lightning" -> Recipient("Lightning invoice · recipient not named",
+                com.noahwallet.send.PaymentEncoding.invoice(value.removePrefix("lightning:"))?.description?.trim()?.takeIf { it.isNotEmpty() }, value)
+            else -> Recipient(kind(method, destination, ownDomain) ?: "Payment request", null, value)
+        }
+    }
+
     /** Recent recipients from outgoing history (no new storage): payable again, newest first, each once. */
     fun recents(history: List<HistoryTransaction>, network: String, limit: Int = 8): List<String> = history
         .filter { it.direction == "outgoing" && it.movementStatus == "successful" }
@@ -223,9 +238,10 @@ internal fun SendApproval(presentation: SendPresentation, payment: SendPayment, 
         else (fadeIn(NoahTokens.Motion.snappy()) + slideInHorizontally(NoahTokens.Motion.snappy()) { shift }) togetherWith fadeOut(tween(120))
     }) { sending ->
         if (sending) SendingStep(presentation, env, actions, reviewed = payment)
-        else ReviewPanes(quote.amount, SendWhoRules.of(payment.destination, payment.method, env.ownDomain), payment.rail(), payment.source, quote, payment, env,
+        else ReviewPanes(quote.amount, presentation.model.fiatOf(quote.amount, env), payment.destination, payment.method, payment.rail(), payment.source,
+            quote, payment, env,
             backEnabled = !paying, back = cancel, notes = {
-                reviewNote(null, quote, env, null)?.let { Text(it, Modifier.padding(top = 12.dp), style = SendType.small, color = LocalPalette.current.muted) }
+                reviewNote(null, quote, env, null)?.let { Text(it, Modifier.padding(top = 12.dp), style = SendType.line, color = LocalPalette.current.muted) }
                 controller.message?.let { ErrorLine(it) }
             }) {
             HoldToSend(formatted(quote.amount, env), enabled = !paying, sending = paying, modifier = Modifier.padding(bottom = 6.dp), onConfirm = confirm)
@@ -237,6 +253,9 @@ private fun SendPayment.rail() = when (SendRoute.of(this)) { SendRoute.ark -> Se
     else -> SendRail.onchain }
 
 private fun formatted(sats: Long, env: SendEnv) = BitcoinAmount.format(sats, env.unit, env.locale)
+
+/** The amount in the chosen currency, when today's price is known (as the amount step shows it). */
+private fun SendModel.fiatOf(sats: Long, env: SendEnv) = btcPrice?.let { FiatCurrency.display(sats, it, fiatCurrency, env.locale) }
 
 /**
  * The step's two parts: [leading] (the amount, title, recipient or stage) and [trailing] (keypad, results,
@@ -303,15 +322,14 @@ private fun StepPanes(nav: @Composable RowScope.() -> Unit, leadingCentred: Bool
 private fun ColumnScope.CompactPanes(leading: @Composable ColumnScope.() -> Unit, trailing: @Composable ColumnScope.() -> Unit,
     bottom: (@Composable ColumnScope.() -> Unit)?, stacked: @Composable (Modifier) -> Unit) {
     val column = Modifier.fillMaxWidth().widthIn(max = 520.dp).align(Alignment.CenterHorizontally)
-    // A step with an action at the foot (Hold to send, Done, Close) scrolls as one page when it doesn't fit, so a
-    // short window or large text can never squeeze the action out under [leading]; when it fits, nothing moves.
-    if (bottom != null) BoxWithConstraints(column.weight(1f)) {
-        Column(Modifier.fillMaxWidth().verticalScroll(rememberScrollState()).heightIn(min = maxHeight)) {
+    // A step with an action at the foot (Hold to send, Done) keeps it pinned and whole: the content above scrolls
+    // when it doesn't fit (a short window or large text), and the foot's own top spacing keeps them apart.
+    if (bottom != null) Column(column.weight(1f)) {
+        Column(Modifier.fillMaxWidth().weight(1f).verticalScroll(rememberScrollState())) {
             Column(Modifier.fillMaxWidth(), content = leading)
             Column(Modifier.fillMaxWidth(), content = trailing)
-            Spacer(Modifier.weight(1f))
-            Column(Modifier.fillMaxWidth(), content = bottom)
         }
+        Column(Modifier.fillMaxWidth(), content = bottom)
     } else {
         Column(column, content = leading)
         stacked(column.weight(1f))
@@ -501,7 +519,13 @@ private fun Modifier.clickableNoRipple(onClick: () -> Unit) = clickable(interact
 @Composable
 private fun ErrorLine(text: String, model: SendModel? = null) {
     val context = LocalContext.current
-    Text(model?.destinationError?.localized(context) ?: tr(text), Modifier.fillMaxWidth().padding(top = 12.dp), style = SendType.small,
+    // A wrong network says so plainly; the parser's own wording ("expected regtest, got mainnet") stays in its error.
+    val wrongNetwork = model?.destinationError.let { error ->
+        val mismatch = { e: com.noahwallet.send.SendDestinationError -> e is com.noahwallet.send.SendDestinationError.NetworkMismatch }
+        error != null && (mismatch(error) || (error is com.noahwallet.send.SendDestinationError.InvalidMethods && error.errors.all(mismatch)))
+    }
+    Text(if (wrongNetwork) tr("This address is for a different Bitcoin network.") else model?.destinationError?.localized(context) ?: tr(text),
+        Modifier.fillMaxWidth().padding(top = 12.dp), style = SendType.small,
         color = LocalPalette.current.failure, textAlign = TextAlign.Center)
 }
 
@@ -628,7 +652,7 @@ private fun railIcon(rail: SendRail) = when (rail) { SendRail.ark -> SendIcons.a
 @Composable
 private fun railLine(rail: SendRail, fee: Long?, env: SendEnv): String = when (rail) {
     SendRail.ark -> when (fee) { null -> tr("Instantly"); 0L -> tr("Instant · free"); else -> tr("Instant · {fee} fee", formatted(fee, env)) }
-    SendRail.lightning -> fee?.let { tr("Seconds · {fee} fee", formatted(it, env)) } ?: tr("In seconds")
+    SendRail.lightning -> fee?.let { tr("Seconds · {fee} fee", formatted(it, env)) } ?: tr("Usually in seconds")
     SendRail.onchain -> fee?.let { tr("About 20 min · {fee} fee", formatted(it, env)) } ?: tr("In about 20 minutes")
 }
 
@@ -702,10 +726,10 @@ private fun ReviewStep(presentation: SendPresentation, env: SendEnv) {
     val payment = model.payment
     val ready = (model.showReview || controller.locked) && quote != null && payment != null
     val amount = quote?.amount ?: model.sats
-    ReviewPanes(amount, SendWhoRules.of(model.destination, model.parsed.destinationType, env.ownDomain), model.progress.selectedRail, model.source,
+    ReviewPanes(amount, model.fiatOf(amount, env), model.destination, model.parsed.destinationType, model.progress.selectedRail, model.source,
         quote, payment, env, backEnabled = !model.busy, back = model::back, notes = {
             reviewNote(model, quote, env,
-                presentation.typedBefore)?.let { Text(it, Modifier.padding(top = 12.dp), style = SendType.small, color = LocalPalette.current.muted) }
+                presentation.typedBefore)?.let { Text(it, Modifier.padding(top = 12.dp), style = SendType.line, color = LocalPalette.current.muted) }
             model.error?.let { ErrorLine(it, model) }
             controller.message?.let { ErrorLine(it) }
         }) {
@@ -720,18 +744,17 @@ private fun ReviewStep(presentation: SendPresentation, env: SendEnv) {
 
 /** The review's layout: "Send ₿X", who it goes to, the rows, then [notes] and [action] (Hold to send) at the foot. */
 @Composable
-private fun ReviewPanes(amount: Long, who: SendWho, rail: SendRail?, source: SendSource?, quote: SendQuote?, payment: SendPayment?, env: SendEnv,
-    backEnabled: Boolean, back: () -> Unit, notes: @Composable ColumnScope.() -> Unit, action: @Composable ColumnScope.() -> Unit) {
+private fun ReviewPanes(amount: Long, fiat: String?, destination: String, method: String?, rail: SendRail?, source: SendSource?, quote: SendQuote?,
+    payment: SendPayment?, env: SendEnv, backEnabled: Boolean, back: () -> Unit, notes: @Composable ColumnScope.() -> Unit,
+    action: @Composable ColumnScope.() -> Unit) {
     val palette = LocalPalette.current
     val tabletop = LocalPose.current is OnboardingPose.Tabletop
     val rows = @Composable { ReviewRows(source, quote, payment, rail, env, if (tabletop) 16.dp else 24.dp) }
     StepPanes(nav = { Back(backEnabled, back); Spacer(Modifier.weight(1f)) }, leadingCentred = false, trailingAt = Alignment.Bottom, leading = {
         Text(tr("Send {amount}", formatted(amount, env)), Modifier.padding(top = 18.dp).semantics { heading() }.testTag("send-review-title"),
             style = SendType.big, color = palette.foreground)
-        Row(Modifier.padding(top = 16.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            WhoAvatar(who, 36.dp, SendType.initial.copy(fontSize = androidx.compose.ui.unit.TextUnit(15f, androidx.compose.ui.unit.TextUnitType.Sp)))
-            Text(tr(who.name), style = SendType.body, color = palette.foreground, maxLines = 1, overflow = TextOverflow.Ellipsis)
-        }
+        fiat?.let { Text(it, Modifier.padding(top = 6.dp), style = SendType.body, color = palette.muted) }
+        RecipientBlock(destination, method, env, Modifier.padding(top = 20.dp))
         if (tabletop) rows()
     }, trailing = {
         if (!tabletop) rows()
@@ -740,6 +763,31 @@ private fun ReviewPanes(amount: Long, who: SendWho, rail: SendRail?, source: Sen
         Spacer(Modifier.height(24.dp))
         action()
     })
+}
+
+/** "To": the recipient's name and avatar, then the full address or invoice, selectable, so it can be compared before sending. */
+@Composable
+private fun RecipientBlock(destination: String, method: String?, env: SendEnv, modifier: Modifier = Modifier) {
+    val palette = LocalPalette.current
+    val who = SendWhoRules.of(destination, method, env.ownDomain)
+    val recipient = SendWhoRules.recipient(destination, method, env.ownDomain)
+    Column(modifier.fillMaxWidth().testTag("send-review-recipient")) {
+        Text(tr("To"), Modifier.semantics { heading() }, style = SendType.section, color = palette.muted)
+        Row(Modifier.padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            WhoAvatar(who, 36.dp, SendType.initial.copy(fontSize = androidx.compose.ui.unit.TextUnit(15f, androidx.compose.ui.unit.TextUnitType.Sp)))
+            Column(Modifier.weight(1f)) {
+                Text(tr(recipient.title), style = SendType.strong, color = palette.foreground)
+                recipient.detail?.let { Text(it, style = SendType.line, color = palette.muted) }
+            }
+        }
+        recipient.full?.let { full ->
+            androidx.compose.foundation.text.selection.SelectionContainer {
+                Text(full, Modifier.padding(top = 10.dp).fillMaxWidth().tonal(RoundedCornerShape(14.dp), palette.soft).padding(12.dp),
+                    style = SendType.mono.copy(fontSize = androidx.compose.ui.unit.TextUnit(14f, androidx.compose.ui.unit.TextUnitType.Sp),
+                        lineHeight = androidx.compose.ui.unit.TextUnit(20f, androidx.compose.ui.unit.TextUnitType.Sp)), color = palette.foreground)
+            }
+        }
+    }
 }
 
 @Composable
@@ -755,7 +803,7 @@ private fun ReviewRows(source: SendSource?, quote: SendQuote?, payment: SendPaym
                 wraps = true)
             payment?.source?.let { ValueRow(tr("From"), tr(it.label), wraps = true) }
             if (!payment?.comment.isNullOrEmpty()) ValueRow(tr("Note"), payment.comment, wraps = true)
-            ValueRow(tr(if (!quote.vtxoIDs.isNullOrEmpty()) "Total (reviewed coins)" else if (quote.approximate) "Estimated total" else "Total"),
+            ValueRow(tr(if (quote.approximate && quote.vtxoIDs.isNullOrEmpty()) "Estimated total" else "Total"),
                 formatted(quote.total, env), number = true, divider = false, wraps = true)
         }
     }
@@ -763,8 +811,7 @@ private fun ReviewRows(source: SendSource?, quote: SendQuote?, payment: SendPaym
 
 /** The Arrives row's words and count. An Ark-funded on-chain send waits for the round's confirmations (today's setting). */
 internal fun arrives(rail: SendRail, source: SendSource?, needed: Long): Pair<String, Long?> = when (rail) {
-    SendRail.ark -> "Instantly" to null
-    SendRail.lightning -> "In seconds" to null
+    SendRail.ark, SendRail.lightning -> "Usually in seconds" to null
     SendRail.onchain -> when {
         source == SendSource.onchain -> "In about 20 minutes" to null
         needed <= 1 -> "After one confirmation" to null
@@ -778,10 +825,8 @@ private fun reviewNote(model: SendModel?, quote: SendQuote?, env: SendEnv, typed
     quote?.checkpoint != null -> tr("An existing Lightning payment will be checked. No new payment will be created.")
     model?.parsed?.amount != null && typedBefore != null && typedBefore > 0 && typedBefore != quote?.amount ->
         tr("The invoice sets the amount to {amount}", formatted(model.parsed.amount!!.toLong(), env))
-    !quote?.vtxoIDs.isNullOrEmpty() -> tr("The exact amount depends on the network fee when sent. The total is exactly the reviewed coins.")
-    quote?.approximate == true -> tr(
-        "The fee and total are estimates based on two inputs and two outputs. The final fee and total may be higher if more coins are needed.",
-    )
+    !quote?.vtxoIDs.isNullOrEmpty() -> tr("The network fee is set when sent and comes out of this total.")
+    quote?.approximate == true -> tr("Fee is an estimate. It can rise if more coins are needed.")
     else -> null
 }
 
@@ -821,16 +866,61 @@ private fun SendingStep(presentation: SendPresentation, env: SendEnv, actions: S
     StepPanes(nav = { }, leadingCentred = false, trailingAt = Alignment.CenterVertically, leading = {
         val sent = shown in setOf(SendEnding.arkSent, SendEnding.lightningSent, SendEnding.chainSent)
         SwapTitle(sendingTitle(shown, amount, receipt, env), SendType.big, Modifier.padding(top = 6.dp).testTag(if (sent) "send-success" else "send-title"))
-        SendingPicture(who, motion, elapsed, tip, confirmedAt, line, stageHeight(pose))
+        val height by stageHeight(resultShown, motion, elapsed, reduceMotion, pose)
+        SendingPicture(who, payment, env, motion, elapsed, tip, confirmedAt, line, height, explanation = {
+            // The outcome, who and why sit together at the top.
+            ResultLine(shown, attempt, receipt, formatted(amount, env), who, env, controller.message, show)
+        })
+        LongWait(live, shown, route)
     }, trailing = {
         Column(Modifier.fillMaxWidth().padding(top = 18.dp).graphicsLayer { alpha = show.value.coerceIn(0f, 1f)
             if (!reduceMotion) translationY = 16 * (1 - show.value) * density }) {
-            shown?.takeIf { it != SendEnding.sending }?.let { ResultArea(it, controller, attempt, receipt, amount, who, env, actions) }
+            shown?.takeIf { it != SendEnding.sending }?.let { ResultArea(it, controller, attempt, receipt, env, actions) }
         }
     }, bottom = {
         Spacer(Modifier.height(16.dp))
         SendingFoot(shown, receipt, controller, actions, show)
     })
+}
+
+/** The stage's height: a stopped stage has faded to nothing, so its room goes to the result instead of an empty gap. */
+@Composable
+private fun stageHeight(resultShown: Boolean, motion: SendMotion, elapsed: Long, reduceMotion: Boolean, pose: OnboardingPose): State<Dp> {
+    val blank = resultShown && SendTimeline.started(motion, elapsed, reduceMotion).any { it.phase == SendPhase.stop }
+    return androidx.compose.animation.core.animateDpAsState(if (blank) 0.dp else stageHeight(pose),
+        if (reduceMotion) tween(0) else NoahTokens.Motion.snappy(), label = "stage-height")
+}
+
+/** Why the result is what it is, under the outcome and recipient; muted for a plain success. */
+@Composable
+private fun ResultLine(shown: SendEnding?, attempt: SendAttempt?, receipt: SendReceipt?, amount: String, who: SendWho, env: SendEnv,
+    message: String?, show: Animatable<Float, AnimationVector1D>) {
+    val palette = LocalPalette.current
+    // "Payment not sent" says why right under it: today's message, shown once.
+    val text = shown?.takeIf { it != SendEnding.sending }?.let { resultLine(it, attempt, receipt, amount, who, env) }
+        ?: message?.takeIf { shown == SendEnding.notSent }?.let { tr(it) } ?: return
+    val sent = shown in setOf(SendEnding.arkSent, SendEnding.lightningSent, SendEnding.chainSent)
+    Text(text, Modifier.padding(top = 8.dp).graphicsLayer { alpha = show.value.coerceIn(0f, 1f) }.testTag("send-result-line"), style = SendType.body,
+        color = if (sent) palette.muted else palette.foreground)
+}
+
+/**
+ * A quiet line once [live] sending has run 8 s with nothing [shown] yet (Lightning has its own "still paying" ending);
+ * nothing else changes. Its own timer: the stage's clock stops once the picture is still.
+ */
+@Composable
+private fun LongWait(live: SendMotion?, shown: SendEnding?, route: SendRoute) {
+    val waiting = shown == null && route != SendRoute.lightning
+    val longWait by produceState(false, live, waiting) {
+        value = false
+        if (live == null || !waiting) return@produceState
+        kotlinx.coroutines.delay((8_000 - (SystemClock.elapsedRealtime() - live.startedAt)).coerceAtLeast(0))
+        value = true
+    }
+    androidx.compose.animation.AnimatedVisibility(longWait, enter = fadeIn(), exit = fadeOut()) {
+        Text(tr("Still working… this can take a minute."), Modifier.fillMaxWidth().padding(top = 6.dp), style = SendType.line,
+            color = LocalPalette.current.muted, textAlign = TextAlign.Center)
+    }
 }
 
 /** The result fades and rises in once it's shown (at once when it already was). */
@@ -854,10 +944,24 @@ private fun stageHeight(pose: OnboardingPose): Dp = when (pose) {
 
 /** Who it's to, the stage and its phase line. */
 @Composable
-private fun SendingPicture(who: SendWho, motion: SendMotion, elapsed: Long, tip: Long?, confirmedAt: Long?, line: PhaseLine?, stageHeight: Dp) {
-    if (who.name.isNotEmpty()) Text(tr("to {recipient}", tr(who.name)), Modifier.padding(top = 6.dp), style = SendType.body,
-        color = LocalPalette.current.muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
-    SendStage(motion, elapsed, who.copy(name = tr(who.name)), tip, confirmedAt,
+private fun SendingPicture(who: SendWho, payment: SendPayment?, env: SendEnv, motion: SendMotion, elapsed: Long, tip: Long?, confirmedAt: Long?,
+    line: PhaseLine?, stageHeight: Dp, explanation: @Composable () -> Unit) {
+    val palette = LocalPalette.current
+    val recipient = payment?.let { SendWhoRules.recipient(it.destination, it.method, env.ownDomain) }
+    // The same recipient the review named: the name, an invoice's description, or the whole address (an invoice's own text is too long here).
+    if (recipient != null) {
+        Text(tr("to {recipient}", tr(recipient.title)), Modifier.padding(top = 6.dp), style = SendType.body, color = palette.muted)
+        recipient.detail?.let { Text(it, style = SendType.line, color = palette.muted) }
+        recipient.full?.takeIf { recipient.title != "Lightning invoice · recipient not named" }?.let {
+            androidx.compose.foundation.text.selection.SelectionContainer {
+                Text(it, Modifier.padding(top = 2.dp), style = SendType.mono.copy(fontSize = androidx.compose.ui.unit.TextUnit(14f,
+                    androidx.compose.ui.unit.TextUnitType.Sp), lineHeight = androidx.compose.ui.unit.TextUnit(20f, androidx.compose.ui.unit.TextUnitType.Sp)),
+                    color = palette.muted)
+            }
+        }
+    }
+    explanation()
+    if (stageHeight > 0.dp) SendStage(motion, elapsed, who.copy(name = tr(who.name)), tip, confirmedAt,
         Modifier.fillMaxWidth().padding(top = 8.dp).height(stageHeight).testTag("send-stage"))
     PhaseText(line?.let { phaseText(it) }, line?.done == true, Modifier.padding(top = 4.dp))
 }
@@ -928,12 +1032,15 @@ private fun SendingFoot(ending: SendEnding?, receipt: SendReceipt?, controller: 
     // attempt and the send lock exactly as they are. A host without a tab bar offers the same on every unresolved result.
     val unresolved = actions.leaveUnresolved && ending in setOf(SendEnding.unknown, SendEnding.unavailable)
     val fade = Modifier.graphicsLayer { alpha = show.value.coerceIn(0f, 1f) }
+    // While the outcome is unresolved, Check status is the primary action and Done steps back.
+    val secondary = unresolved || ending == SendEnding.pending
     if ((doneShown && receipt?.broadcastRetryPending == true) || unresolved) {
-        SendPill(tr("Close"), Modifier.fillMaxWidth().padding(bottom = 6.dp).testTag("send-leave").then(fade)) {
+        SendPill(tr("Done"), Modifier.fillMaxWidth().padding(bottom = 6.dp).testTag("send-leave").then(fade), outlined = secondary) {
             haptics.light(); actions.leave()
         }
     } else if (doneShown) {
-        SendPill(tr("Done"), Modifier.fillMaxWidth().padding(bottom = 6.dp).testTag("send-success-done").then(fade), enabled = !controller.checking) {
+        SendPill(tr("Done"), Modifier.fillMaxWidth().padding(bottom = 6.dp).testTag("send-success-done").then(fade), enabled = !controller.checking,
+            outlined = secondary) {
             haptics.light(); if (ending == SendEnding.pending) actions.leave() else actions.done()
         }
     }
@@ -972,32 +1079,31 @@ private fun resultTitle(ending: SendEnding, amount: Long, receipt: SendReceipt?,
  * today's meaning and wording (status, messages, retries and the override audit), restyled.
  */
 @Composable
-internal fun ResultArea(ending: SendEnding, controller: SendController, attempt: SendAttempt?, receipt: SendReceipt?, amount: Long, who: SendWho,
-    env: SendEnv, actions: SendActions) {
+internal fun ResultArea(ending: SendEnding, controller: SendController, attempt: SendAttempt?, receipt: SendReceipt?, env: SendEnv,
+    actions: SendActions) {
     val palette = LocalPalette.current
     val context = LocalContext.current
     val haptics = rememberHaptics()
     fun copy(label: String, value: String) {
         (context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager).setPrimaryClip(ClipData.newPlainText(label, value)); haptics.success()
     }
-    resultLine(ending, attempt, receipt, formatted(amount, env), who)?.let {
-        Text(it, style = SendType.line, color = palette.muted, modifier = Modifier.testTag("send-result-line"))
-    }
-    Column(Modifier.padding(top = 12.dp)) {
+    Column {
         val rows = resultRows(ending, attempt, receipt, env, ::copy)
         rows.forEachIndexed { index, row -> row(index < rows.lastIndex) }
     }
     // Today's notes, in the order today's receipt showed them.
     resultNotes(ending, controller, attempt, receipt, env).forEach { (text, failure) ->
-        Text(text, Modifier.padding(top = 10.dp), style = SendType.small, color = if (failure) palette.failure else palette.muted)
+        Text(text, Modifier.padding(top = 10.dp), style = SendType.line, color = if (failure) palette.failure else palette.muted)
     }
     ResultActions(ending, controller, receipt, env, actions)
 }
 
 @Composable
-private fun resultLine(ending: SendEnding, attempt: SendAttempt?, receipt: SendReceipt?, amount: String, who: SendWho): String? = when (ending) {
+private fun resultLine(ending: SendEnding, attempt: SendAttempt?, receipt: SendReceipt?, amount: String, who: SendWho, env: SendEnv): String? = when (ending) {
     SendEnding.arkSent -> if ((attempt?.quote?.fee ?: 0L) == 0L) tr("It arrived instantly. Ark sends are free.") else null
-    SendEnding.lightningSent -> tr("Paid over Lightning. Their secret is your proof of payment.")
+    SendEnding.lightningSent -> if (receipt != null && attempt != null &&
+        SendSuccessDetails(receipt, attempt.payment, env.history, java.util.Date(attempt.startedAt)).proof != null)
+        tr("Paid over Lightning. The proof below shows this payment was made.") else tr("Paid over Lightning.")
     SendEnding.chainSent -> when {
         receipt?.broadcastRetryPending == true -> tr(SendReceipt.broadcastPendingMessage)
         receipt?.chainStatus?.takeIf { it.kind == com.noahwallet.services.wallet.ChainStatus.Kind.confirmed }?.height != null ->
@@ -1078,7 +1184,7 @@ private fun resultNotes(ending: SendEnding, controller: SendController, attempt:
     }
     receipt?.chainStatus?.takeIf { it.kind == com.noahwallet.services.wallet.ChainStatus.Kind.notFound }?.let { add(tr(it.text) to false) }
     if (ending != SendEnding.chainSent && receipt?.broadcastRetryPending == true) add(tr(SendReceipt.broadcastPendingMessage) to false)
-    controller.message?.let { add(tr(it) to true) }
+    controller.message?.takeIf { ending != SendEnding.notSent }?.let { add(tr(it) to true) }
 }
 
 /** Today's actions: check status (never submits), the explorer link and the audited override. */
@@ -1093,27 +1199,31 @@ private fun ResultActions(ending: SendEnding, controller: SendController, receip
             controller.state == SendController.State.succeeded -> "Refresh payment status"
             else -> "Check status"
         }
-        if (ending == SendEnding.chainSent) TextButton(actions.checkStatus, enabled = !controller.checking, modifier = Modifier.padding(top = 8.dp)) {
-            Text(tr(label), style = SendType.line, color = palette.foreground)
-        } else SendPill(tr(label), Modifier.fillMaxWidth().padding(top = 16.dp).testTag("send-check-status"), enabled = !controller.checking, outlined = true,
-            onClick = actions.checkStatus)
+        // Unresolved: checking is the next step, so it's the filled action; otherwise a secondary refresh.
+        val unresolved = ending in setOf(SendEnding.unknown, SendEnding.unavailable, SendEnding.pending)
+        SendPill(tr(label), Modifier.fillMaxWidth().padding(top = 16.dp).testTag("send-check-status"), enabled = !controller.checking,
+            outlined = !unresolved, onClick = actions.checkStatus)
     }
     receipt?.txid?.takeIf { it.isNotEmpty() && env.variant != "regtest" && ending == SendEnding.chainSent }?.let { txid ->
         val explorer = "https://mempool.space/${if (env.variant == "mainnet") "" else "signet/"}tx/$txid"
-        TextButton({ context.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, explorer.toUri())) }) {
+        TextButton({ context.startActivity(android.content.Intent(android.content.Intent.ACTION_VIEW, explorer.toUri())) },
+            Modifier.fillMaxWidth().heightIn(min = 48.dp)) {
             Text(tr("View in explorer"), style = SendType.line, color = palette.foreground)
         }
     }
     if (controller.canOverride) OverrideAction(controller, actions)
 }
 
-/** "Start a new payment after checking history": two confirmations, then the audited override. */
+/** "Pay again anyway", a quiet action under its caution: two confirmations, then the audited override. */
 @Composable
 private fun OverrideAction(controller: SendController, actions: SendActions) {
     val scope = rememberCoroutineScope()
     var overrideStep by remember { mutableIntStateOf(0) }
-    TextButton({ overrideStep = 1 }, Modifier.padding(top = 4.dp)) {
-        Text(tr("Start a new payment after checking history"), style = SendType.line, color = LocalPalette.current.failure)
+    val palette = LocalPalette.current
+    Text(tr("Don't pay again until you've checked Activity."), Modifier.fillMaxWidth().padding(top = 20.dp), style = SendType.line,
+        color = palette.muted, textAlign = TextAlign.Center)
+    TextButton({ overrideStep = 1 }, Modifier.fillMaxWidth().heightIn(min = 48.dp).testTag("send-override")) {
+        Text(tr("Pay again anyway"), style = SendType.line.copy(fontWeight = androidx.compose.ui.text.font.FontWeight.Medium), color = palette.foreground)
     }
     if (overrideStep == 0) return
     fun confirm() {

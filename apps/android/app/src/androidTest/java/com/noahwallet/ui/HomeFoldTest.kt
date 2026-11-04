@@ -162,7 +162,7 @@ class HomeFoldTest {
 
     @Test fun suspendedShowsOnlyTheSuspendedState() {
         show(HomeFixtures.ui("suspended"), null)
-        compose.onNodeWithText("Wallet Suspended", useUnmergedTree = true).assertExists()
+        compose.onNodeWithText("Wallet suspended", useUnmergedTree = true).assertExists()
         compose.onNodeWithText("Open Settings", useUnmergedTree = true).assertExists()
         for (tag in listOf("home-balance", "home-recent", "home-activity", "home-get-paid"))
             compose.onAllNodesWithTag(tag, useUnmergedTree = true).assertCountEquals(0)

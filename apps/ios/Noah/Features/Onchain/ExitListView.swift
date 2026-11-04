@@ -73,8 +73,7 @@ struct ExitListView: View {
                 .accessibilityIdentifier("exit-list-claim")
             }
             Button(L10n.text("Exit more VTXOs", locale: language)) { settings.open(.exitChoose) }
-                .buttonStyle(.plain).noahText(NoahTokens.Typography.control).underline()
-                .frame(minHeight: NoahTokens.Size.hitTarget)
+                .buttonStyle(HomePillStyle(prominent: false, height: NoahTokens.Size.hitTarget))
                 .accessibilityIdentifier("exit-list-more")
         }
         .settingsChrome("Exits") {

@@ -64,7 +64,7 @@ internal fun ScreenshotCropDialog(image: Bitmap, onCancel: () -> Unit, onCrop: (
     )) { mutableStateOf(ScreenshotCrop()) }
     val bitmap = remember(image) { image.asImageBitmap() }
     val left = tr("Left"); val right = tr("Right"); val top = tr("Top"); val bottom = tr("Bottom")
-    WalletAlertDialog(onDismissRequest = onCancel, title = { Text(tr("Crop Screenshot")) }, text = {
+    WalletAlertDialog(onDismissRequest = onCancel, title = { Text(tr("Crop screenshot")) }, text = {
         Column {
             Canvas(Modifier.fillMaxWidth().height(200.dp)) {
                 val scale = minOf(size.width / image.width, size.height / image.height)

@@ -290,10 +290,13 @@ internal fun ValueRow(label: String, value: String, modifier: Modifier = Modifie
         .semantics(mergeDescendants = true) { }
     val copyButton = @Composable {
         val copyLabel = tr("Copy")
-        if (copy != null) Box(Modifier.padding(start = 8.dp).size(36.dp).tonal(CircleShape, palette.soft)
+        // A 48 dp target around the 36 dp button.
+        if (copy != null) Box(Modifier.padding(start = 2.dp).offset(x = 6.dp).size(48.dp).clip(CircleShape)
             .clickable(role = Role.Button, onClickLabel = copyLabel, onClick = copy).semantics { contentDescription = copyLabel },
             contentAlignment = Alignment.Center) {
-            Icon(painterResource(SendIcons.copy), null, Modifier.size(18.dp), tint = palette.foreground)
+            Box(Modifier.size(36.dp).tonal(CircleShape, palette.soft), contentAlignment = Alignment.Center) {
+                Icon(painterResource(SendIcons.copy), null, Modifier.size(18.dp), tint = palette.foreground)
+            }
         }
     }
     if (wraps) LineOrStack(row, label = { Text(label, style = SendType.body, color = palette.muted) }) {
@@ -551,17 +554,24 @@ internal fun SendPill(title: String, modifier: Modifier = Modifier, enabled: Boo
     val scale by animateFloatAsState(if (pressed && !LocalReduceMotion.current) .97f else 1f, NoahTokens.Motion.tap(), label = "pill")
     val shape = RoundedCornerShape(height / 2)
     val style = if (height < 52.dp) SendType.pill.copy(fontSize = 16.sp, lineHeight = 20.sp) else SendType.pill
-    // Red only while it can act (prototype `.pill.bad:disabled`): a disabled destructive pill looks like any other.
-    val red = danger && enabled
-    val ink = if (outlined) palette.foreground else if (red) Color.White else palette.background
-    Box(modifier.then(if (wrap) Modifier.heightIn(min = height) else Modifier.height(height)).graphicsLayer { scaleX = scale; scaleY = scale
-        alpha = if (enabled || loading) 1f else .28f }
-        .then(if (outlined) Modifier.border(1.5.dp, palette.hairline, shape).clip(shape) else Modifier.tonal(shape,
-            if (red) palette.failure else palette.foreground))
+    val (fill, ink) = pillColors(off = !enabled && !loading, outlined = outlined, red = danger && enabled, palette = palette)
+    Box(modifier.then(if (wrap) Modifier.heightIn(min = height) else Modifier.height(height)).graphicsLayer { scaleX = scale; scaleY = scale }
+        .then(if (outlined) Modifier.border(1.5.dp, palette.hairline, shape).clip(shape) else Modifier.tonal(shape, fill))
         .clickable(interaction, indication = androidx.compose.material3.ripple(), enabled = enabled && !loading, role = Role.Button, onClick = onClick)
         .padding(horizontal = 14.dp, vertical = if (wrap) 6.dp else 0.dp), contentAlignment = Alignment.Center) {
         PillLabel(title, style.copy(color = ink, textAlign = TextAlign.Center), loading, icon, wrap)
     }
+}
+
+/**
+ * A pill's fill and ink. Disabled ([off]) keeps its shape: a soft fill and muted label that stay readable (never a faded black
+ * pill). Red only while it can act (prototype `.pill.bad:disabled`): a disabled destructive pill looks like any other.
+ */
+private fun pillColors(off: Boolean, outlined: Boolean, red: Boolean, palette: NoahTokens.Palette): Pair<Color, Color> = when {
+    off -> palette.soft to palette.muted
+    outlined -> Color.Transparent to palette.foreground
+    red -> palette.failure to Color.White
+    else -> palette.foreground to palette.background
 }
 
 /** The pill's spinner or icon, then its title: on one line that shrinks to fit, or wrapping with [wrap]. */

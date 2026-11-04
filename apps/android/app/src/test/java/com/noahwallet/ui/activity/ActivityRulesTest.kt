@@ -259,7 +259,7 @@ class ActivityRulesTest {
         val none = listOf(ActivityRules.FeeLine("Fee", ActivityRules.FeeValue.None))
         // bark 0.8 keeps the planned fee on a send that never left.
         assertEquals(("Failed · nothing left your wallet" to ActivityRules.Tone.failed) to none, summary(send("failed", 0, 15)))
-        assertEquals(("Refunded · back in your wallet" to ActivityRules.Tone.failed) to none, summary(send("failed", 0, 0, outputs = listOf("revoked:0"))))
+        assertEquals(("Refunded · back in your wallet" to ActivityRules.Tone.plain) to none, summary(send("failed", 0, 0, outputs = listOf("revoked:0"))))
         assertEquals(("Sent" to ActivityRules.Tone.plain) to listOf(ActivityRules.FeeLine("Fee", ActivityRules.FeeValue.Sats(15))),
             summary(send("successful", -5_015, 15)))
     }

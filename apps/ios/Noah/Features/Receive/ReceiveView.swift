@@ -175,6 +175,8 @@ struct ReceiveView: View {
                                      if select(picked) { Task { try? await Task.sleep(for: .milliseconds(250)); self.sheet = nil } }
                                  }, onCopy: copy)
                     .presentationDetents([.fraction(0.66), .large])
+                    // Solid, so the QR behind never shows through the dense rows.
+                    .presentationBackground(NoahTokens.Colors.sheet)
             }
         }
         .navigationDestination(isPresented: $profile) { SettingsHost(page: .profile) }
@@ -187,10 +189,7 @@ struct ReceiveView: View {
             if !wide {
                 HStack {
                     Spacer()
-                    SendIconButton(systemName: "doc.on.doc", label: "Show payment details", id: "receive-copy-button") {
-                        haptics.play(.light)
-                        sheet = .formats
-                    }
+                    waysToPay
                 }
                 .frame(height: NoahTokens.Size.hitTarget)
                 .padding(.top, 4)
@@ -218,11 +217,26 @@ struct ReceiveView: View {
         .frame(maxWidth: .infinity, maxHeight: wide ? .infinity : nil)
     }
 
+    /// Opens "Ways to pay you": labeled, so it doesn't read as Copy.
+    private var waysToPay: some View {
+        Button {
+            haptics.play(.light)
+            sheet = .formats
+        } label: {
+            HStack(spacing: 6) {
+                Text("Ways to pay")
+                Image(systemName: "chevron.down").font(.system(size: 13, weight: .semibold)).accessibilityHidden(true)
+            }
+        }
+        .buttonStyle(HomePillStyle(prominent: false, height: NoahTokens.Size.hitTarget, font: NoahTokens.Typography.control))
+        .accessibilityIdentifier("receive-copy-button")
+    }
+
     private var card: some View {
         let shown = shown
         return ReceiveCard(payload: shown.payload, title: shown.title, caption: shown.caption,
                            band: shown.bandAmount.map { ($0, shown.bandFiat) }, qrSide: qrSide,
-                           listening: model.request != nil && scenePhase == .active, arrival: arrival,
+                           arrival: arrival,
                            unit: app.amountUnit, tilt: tilt, unavailable: shown.unavailable) {
             profile = true
         }

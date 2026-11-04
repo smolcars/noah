@@ -103,7 +103,7 @@ struct ActivityDetail: Equatable {
         let transaction = facts.transaction, outgoing = facts.outgoing, lightning = facts.lightning, onchain = facts.onchain
         let line: String, tone: Tone
         switch facts.row.status {
-        case .refunded: line = "Refunded · back in your wallet"; tone = .failure
+        case .refunded: line = "Refunded · back in your wallet"; tone = .plain
         case .failed(let none): line = none ? "Failed · nothing left your wallet" : "Failed"; tone = .failure
         case .canceled(let none): line = none ? "Canceled · nothing left your wallet" : "Canceled"; tone = .muted
         case .exiting: line = "Exiting"; tone = .pending

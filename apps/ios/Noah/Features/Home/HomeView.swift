@@ -236,6 +236,11 @@ struct HomeView: View {
 
     /// Balance, fiat, the status line and the nudge.
     @ViewBuilder private func balanceBlock(tuck: CGFloat) -> some View {
+        // While the balance can't load, the number shown is the last one read.
+        if walletError != nil, summary != nil {
+            Text("Last known balance").noahText(NoahTokens.Typography.sub).foregroundStyle(NoahTokens.Colors.muted)
+                .opacity(1 - tuck).padding(.top, 8).accessibilityIdentifier("home-last-known-balance")
+        }
         HomeBalanceView(sats: summary?.balance.totalSats, unit: model.amountUnit, hidden: model.isBalanceHidden,
                         tuck: tuck, onDetails: openBalance, onToggleHidden: toggleHidden)
             .padding(.top, 8).modifier(appear(1))

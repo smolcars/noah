@@ -201,8 +201,7 @@ struct ExitVtxoDetailView: View {
                 haptics.play(.warning)
                 Task { await model.review(.cancel, ids: [id]) }
             }
-            .buttonStyle(.plain).noahText(NoahTokens.Typography.control).underline()
-            .frame(minHeight: NoahTokens.Size.hitTarget)
+            .buttonStyle(HomePillStyle(prominent: false, height: NoahTokens.Size.hitTarget))
             .disabled(model.locked)
             .accessibilityIdentifier("exit-cancel")
         }

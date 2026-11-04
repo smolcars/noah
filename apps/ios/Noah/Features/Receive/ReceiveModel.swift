@@ -114,7 +114,7 @@ final class ReceiveModel {
                             receivedRail = rail
                             receivedSats = sats
                         case .lightningFailed(let canceled):
-                            baseErrorTitle = canceled ? L10n.text("Lightning Receive Canceled") : L10n.text("Lightning Receive Failed")
+                            baseErrorTitle = canceled ? L10n.text("Lightning receive canceled") : L10n.text("Lightning receive failed")
                             baseError = L10n.text("The Lightning payment could not be received. Generate a new payment request and try again.")
                         }
                         return

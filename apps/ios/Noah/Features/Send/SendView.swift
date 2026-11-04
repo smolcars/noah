@@ -169,7 +169,7 @@ struct SendView: View {
     }
 
     private var errorText: String? {
-        model.error.map { model.destinationError?.message(locale: locale.identifier) ?? L10n.text($0, locale: locale.identifier) }
+        model.error.map { model.destinationError?.screenMessage(locale: locale.identifier) ?? L10n.text($0, locale: locale.identifier) }
     }
 
     // MARK: Amount
@@ -288,13 +288,14 @@ struct SendView: View {
         } label: {
             HStack(spacing: 8) {
                 Text(verbatim: fiatLine).noahText(NoahTokens.Typography.body)
-                Image(systemName: "arrow.up.arrow.down").font(.system(size: 14, weight: .medium))
+                if model.btcPrice != nil { Image(systemName: "arrow.up.arrow.down").font(.system(size: 14, weight: .medium)) }
             }
             .foregroundStyle(NoahTokens.Colors.muted)
             .frame(minHeight: NoahTokens.Size.hitTarget)
             .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        // Not .plain: disabled (no rate) must keep the "rate unavailable" line readable.
+        .buttonStyle(HomePressStyle(scale: 0.97))
         .disabled(model.btcPrice == nil)
         .accessibilityLabel(Text("Switch amount currency"))
         .accessibilityValue(Text(verbatim: fiatLine))
@@ -385,9 +386,11 @@ extension SendView {
             if !model.destination.isEmpty {
                 Button { model.destination = "" } label: {
                     Image(systemName: "xmark.circle.fill").font(.system(size: 17)).foregroundStyle(NoahTokens.Colors.muted)
-                        .frame(width: 32, height: 44)
+                        .frame(width: NoahTokens.Size.hitTarget, height: NoahTokens.Size.hitTarget)
+                        .contentShape(Rectangle())
                 }
                 .buttonStyle(.plain)
+                .padding(.horizontal, -6)
                 .accessibilityLabel(Text("Clear"))
             }
             PasteButton(payloadType: String.self) { values in
@@ -599,7 +602,7 @@ extension SendView {
             guard let fee else { return L10n.text("Instantly", locale: language) }
             return railFees[rail] == 0 ? L10n.text("Instant · free", locale: language) : L10n.text("Instant · {fee} fee", fee, locale: language)
         case .lightning:
-            return fee.map { L10n.text("Seconds · {fee} fee", $0, locale: language) } ?? L10n.text("In seconds", locale: language)
+            return fee.map { L10n.text("Seconds · {fee} fee", $0, locale: language) } ?? L10n.text("Usually in seconds", locale: language)
         case .onchain:
             return fee.map { L10n.text("About 20 min · {fee} fee", $0, locale: language) } ?? L10n.text("In about 20 minutes", locale: language)
         }
@@ -616,8 +619,9 @@ extension SendView {
                 Image(systemName: Self.glyph(rail)).accessibilityHidden(true).font(.system(size: 18, weight: .medium))
                     .frame(width: 40, height: 40)
                     .background(NoahTokens.Colors.background, in: Circle())
+                    .opacity(enabled ? 1 : 0.4)
                 VStack(alignment: .leading, spacing: 0) {
-                    Text(LocalizedStringKey(rail.label)).noahText(NoahTokens.Typography.button)
+                    Text(LocalizedStringKey(rail.label)).noahText(NoahTokens.Typography.button).opacity(enabled ? 1 : 0.4)
                     Text(verbatim: railSubtitle(rail)).noahText(HomeText.footnote).foregroundStyle(NoahTokens.Colors.muted)
                         .fixedSize(horizontal: false, vertical: true)
                 }
@@ -635,7 +639,6 @@ extension SendView {
         }
         .buttonStyle(HomePressStyle(scale: 0.98))
         .disabled(!enabled)
-        .opacity(enabled ? 1 : 0.4)
         .accessibilityIdentifier("send-rail-\(rail.rawValue)")
     }
 
@@ -688,8 +691,9 @@ extension SendView {
                 Image(systemName: source == .offchain ? "sailboat" : "link").accessibilityHidden(true).font(.system(size: 18, weight: .medium))
                     .frame(width: 40, height: 40)
                     .background(NoahTokens.Colors.background, in: Circle())
+                    .opacity(enabled ? 1 : 0.4)
                 VStack(alignment: .leading, spacing: 0) {
-                    Text(LocalizedStringKey(source.label)).noahText(NoahTokens.Typography.button)
+                    Text(LocalizedStringKey(source.label)).noahText(NoahTokens.Typography.button).opacity(enabled ? 1 : 0.4)
                     Text(verbatim: L10n.text("{amount} available", format(balance), locale: locale.identifier))
                         .noahText(HomeText.footnote).foregroundStyle(NoahTokens.Colors.muted)
                 }
@@ -702,7 +706,6 @@ extension SendView {
         }
         .buttonStyle(HomePressStyle(scale: 0.98))
         .disabled(!enabled)
-        .opacity(enabled ? 1 : 0.4)
         .accessibilityIdentifier("send-source-\(source.rawValue)")
     }
 

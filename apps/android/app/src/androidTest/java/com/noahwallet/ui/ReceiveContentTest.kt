@@ -18,14 +18,14 @@ class ReceiveContentTest {
     @get:Rule val compose = createAndroidComposeRule<ComponentActivity>()
 
     @Test fun invoiceErrorsAreTranslated() {
-        val ui = ReceiveFixtures.ui("request").copy(listening = false, invoiceError = "Could not generate a Lightning invoice. Please try again.")
+        val ui = ReceiveFixtures.ui("request").copy(invoiceError = "Could not generate a Lightning invoice. Please try again.")
         compose.setContent { LocalizedContent("es") { NoahTheme { ReceivePreviewHost(ui) } } }
         compose.onNodeWithText("No se pudo generar una factura Lightning. Inténtalo de nuevo.").assertExists()
         compose.onAllNodesWithText("Could not generate a Lightning invoice. Please try again.").assertCountEquals(0)
     }
 
     @Test fun aRestoredAmountSheetStaysOpenUntilASaveReturns() {
-        var ui by mutableStateOf(ReceiveFixtures.ui("address").copy(listening = false))
+        var ui by mutableStateOf(ReceiveFixtures.ui("address"))
         val restoration = StateRestorationTester(compose)
         restoration.setContent { NoahTheme { ReceivePreviewHost(ui) } }
         compose.onNodeWithTag("receive-amount-button").performClick()
@@ -44,7 +44,7 @@ class ReceiveContentTest {
     }
 
     @Test fun aNewArrivalClosesOpenSheetsBeforeItPlays() {
-        var ui by mutableStateOf(ReceiveFixtures.ui("address").copy(listening = false))
+        var ui by mutableStateOf(ReceiveFixtures.ui("address"))
         compose.mainClock.autoAdvance = false
         compose.setContent { NoahTheme { ReceivePreviewHost(ui) } }
         compose.mainClock.advanceTimeBy(500)
@@ -74,7 +74,7 @@ class ReceiveContentTest {
     }
 
     @Test fun aRestoredArrivalLeavesARestoredSheetOpen() {
-        val ui = ReceiveFixtures.ui("address").copy(listening = false, arrival = ReceiveFixtures.arrival(ReceiveArrival.Rail.onchain, 20_000))
+        val ui = ReceiveFixtures.ui("address").copy(arrival = ReceiveFixtures.arrival(ReceiveArrival.Rail.onchain, 20_000))
         val restoration = StateRestorationTester(compose)
         compose.mainClock.autoAdvance = false
         restoration.setContent { NoahTheme { ReceivePreviewHost(ui) } }

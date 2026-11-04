@@ -67,6 +67,7 @@ data class HomeRow(
             // An invoice or offer names no one: its own description, else what happened.
             val invoiceRow = row.type == "Bolt11" || row.offer != null
             val lightning = row.type == "Bolt11" || row.type == "Lnurl"
+            val moved = row.movementStatus != "failed" && row.movementStatus != "canceled"
 
             fun title(): String = when {
                 recurring != null -> recurring.label
@@ -74,7 +75,11 @@ data class HomeRow(
                 address != null -> address
                 row.isRenewal -> "Renewed"
                 invoiceRow -> row.description ?: if (outgoing) "Sent" else "Received"
-                else -> row.displayLabel
+                // Plain words for what happened; the protocol's names (Board, Offboard) stay in Details.
+                row.movementKind == "onboard" -> if (moved) "Moved to Ark" else "Move to Ark"
+                row.movementKind == "offboard" -> if (moved) "Moved to on-chain" else "Move to on-chain"
+                row.exitFeeFor != null || row.movementKind == "exit" -> row.displayLabel
+                else -> if (outgoing) "Sent" else "Received"
             }
             fun kind(): String? = when {
                 recurring != null -> "Recurring"

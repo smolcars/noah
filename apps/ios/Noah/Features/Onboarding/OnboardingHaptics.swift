@@ -98,14 +98,14 @@ struct OnboardingPrimaryButtonStyle: ButtonStyle {
         var body: some View {
             configuration.label
                 .noahText(NoahTokens.Typography.button)
-                .foregroundStyle(NoahTokens.Colors.background)
+                .foregroundStyle(isEnabled ? NoahTokens.Colors.background : NoahTokens.Colors.muted)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, NoahTokens.Space.xl)
                 .frame(maxWidth: .infinity, minHeight: NoahTokens.Size.button)
                 .contentShape(Capsule())
-                // Disabled is a 20% tint, not view opacity: grouped glass ignores opacity.
+                // Disabled is a soft tint with a muted label (readable, ≥4.5:1), not view opacity: grouped glass ignores opacity.
                 .glassCompat(in: Capsule(), interactive: isEnabled,
-                             tint: isEnabled ? NoahTokens.Colors.foreground : NoahTokens.Colors.foreground.opacity(0.2))
+                             tint: isEnabled ? NoahTokens.Colors.foreground : NoahTokens.Colors.soft)
                 .glassCompatID(glassID ?? "", in: glassID == nil ? nil : namespace)
                 .scaleEffect(configuration.isPressed && !reduceMotion ? 0.97 : 1)
                 .animation(NoahTokens.Motion.tap, value: configuration.isPressed)

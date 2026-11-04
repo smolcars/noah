@@ -160,7 +160,7 @@ struct WalletLockView: View {
                     }
                     Button { Task { await lock.unlock() } } label: {
                         HStack(spacing: 8) {
-                            if lock.authenticating { ProgressView().tint(NoahTokens.Colors.background) }
+                            if lock.authenticating { ButtonSpinner() }
                             else { Image(systemName: lock.biometry.symbol).accessibilityHidden(true) }
                             Text("Unlock")
                         }

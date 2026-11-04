@@ -141,7 +141,7 @@ class RestoreIssueTest {
     @Test fun missingBackupCryptoNetworkAndRawErrors() {
         val raw = "sensitive request data"
         val missing = RestoreIssue.from(ServerFailure(raw, 404))
-        assertTrue(missing.message.contains("No backup"))
+        assertEquals("No backup found", missing.title); assertTrue(missing.message.contains("backups turned on"))
         assertEquals(missing, RestoreIssue.from(ServerFailure(raw, 401, "USER_NOT_FOUND")))
         assertTrue(RestoreIssue.from(BackupCrypto.Failure(BackupCrypto.Reason.authenticationFailed)).message.contains("unlock the backup"))
         assertTrue(RestoreIssue.from(IOException(raw)).message.contains("internet connection"))

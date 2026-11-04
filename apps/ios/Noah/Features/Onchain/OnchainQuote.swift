@@ -85,11 +85,11 @@ enum OnchainAction: String, Codable, Sendable {
     var title: String {
         switch self {
         case .board: "Board to Ark"
-        case .refresh: "Refresh VTXOs"
-        case .startExit: "Start Emergency Exit"
-        case .progress: "Progress Exits"
-        case .claim: "Claim Exits"
-        case .cancel: "Cancel Exit"
+        case .refresh: "Renew VTXOs"
+        case .startExit: "Start emergency exit"
+        case .progress: "Progress exits"
+        case .claim: "Claim exits"
+        case .cancel: "Cancel exit"
         }
     }
 }

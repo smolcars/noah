@@ -114,8 +114,10 @@ struct ReceiveAmountSheet: View {
             }
             .foregroundStyle(NoahTokens.Colors.muted)
             .frame(minHeight: NoahTokens.Size.hitTarget)
+            .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        // Not .plain: disabled (no rate) must keep the "rate unavailable" line readable.
+        .buttonStyle(HomePressStyle(scale: 0.97))
         .disabled(btcPrice == nil || model.isSaving)
         .accessibilityLabel(useFiat ? Text("Switch to sats") : Text(L10n.text("Switch to {value1}", app.preferredCurrency, locale: locale.identifier)))
         .accessibilityIdentifier("receive-currency-toggle")
@@ -125,7 +127,8 @@ struct ReceiveAmountSheet: View {
         Button(action: done) {
             ZStack {
                 Text("Done").opacity(model.isSaving ? 0 : 1)
-                if model.isSaving { ProgressView().tint(NoahTokens.Colors.background) }
+                // Saving disables the pill, so the spinner sits on the soft disabled fill.
+                if model.isSaving { ProgressView().tint(NoahTokens.Colors.muted) }
             }
             .frame(maxWidth: .infinity)
         }

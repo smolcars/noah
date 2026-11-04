@@ -195,7 +195,8 @@ private struct SettingsShotHost: View {
     @State private var window = OnboardingLayout(size: .zero, insets: EdgeInsets())
 
     var body: some View {
-        NavigationStack { SettingsHost(page: page) }
+        // Settings opens over Home in the app: an empty base gives the shot the system Back it has there.
+        NavigationStack(path: .constant([0])) { Color.clear.navigationDestination(for: Int.self) { _ in SettingsHost(page: page) } }
             .environment(\.settings, SettingsNavigator(live: true, wide: window.wide,
                                                        leadingWidth: max(0, window.size.width / 2 - window.insets.leading)))
             .onboardingWindow($window)

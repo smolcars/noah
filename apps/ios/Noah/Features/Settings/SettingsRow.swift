@@ -505,6 +505,15 @@ struct SettingsSheetButtons: View {
     }
 }
 
+/// A busy spinner inside a black pill: white on the pill, muted on the soft fill a disabled pill has.
+struct ButtonSpinner: View {
+    @Environment(\.isEnabled) private var isEnabled
+
+    var body: some View {
+        ProgressView().tint(isEnabled ? NoahTokens.Colors.background : NoahTokens.Colors.muted)
+    }
+}
+
 /// The black pill, or red for destructive actions once they're enabled (prototype `.pill.bad`).
 struct SettingsActionStyle: ButtonStyle {
     var destructive = false
@@ -527,7 +536,7 @@ struct SettingsActionStyle: ButtonStyle {
             let red = destructive && isEnabled
             configuration.label
                 .noahText(NoahTokens.Typography.button)
-                .foregroundStyle(red ? Color.white : NoahTokens.Colors.background)
+                .foregroundStyle(red ? Color.white : isEnabled ? NoahTokens.Colors.background : NoahTokens.Colors.muted)
                 .lineLimit(wrap ? nil : 1)
                 .multilineTextAlignment(.center)
                 .padding(.horizontal, NoahTokens.Space.xl)
@@ -535,7 +544,7 @@ struct SettingsActionStyle: ButtonStyle {
                 .frame(maxWidth: .infinity, minHeight: NoahTokens.Size.button)
                 .contentShape(Capsule())
                 .glassCompat(in: Capsule(), interactive: isEnabled,
-                             tint: red ? NoahTokens.Colors.failure : isEnabled ? NoahTokens.Colors.foreground : NoahTokens.Colors.foreground.opacity(0.2))
+                             tint: red ? NoahTokens.Colors.failure : isEnabled ? NoahTokens.Colors.foreground : NoahTokens.Colors.soft)
                 .scaleEffect(configuration.isPressed && !reduceMotion ? 0.97 : 1)
                 .animation(NoahTokens.Motion.tap, value: configuration.isPressed)
                 .animation(NoahTokens.Motion.travel(reduceMotion, NoahTokens.Motion.bouncy), value: red)

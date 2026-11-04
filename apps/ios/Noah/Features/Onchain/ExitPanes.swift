@@ -300,6 +300,31 @@ struct ExitSegment: View {
 }
 
 /// A warning line with the shield (prototype `.warn`): red, or muted for notes.
+/// A label over a group of exit rows ("From these coins").
+struct ExitGroupLabel: View {
+    let text: String
+
+    var body: some View {
+        Text(verbatim: text).noahText(HomeText.section).foregroundStyle(NoahTokens.Colors.muted)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .accessibilityAddTraits(.isHeader)
+    }
+}
+
+/// A decision-critical line next to what it qualifies: body size, foreground for the key consequence.
+struct ExitCaveat: View {
+    let text: String
+    var key = false
+
+    var body: some View {
+        Text(verbatim: text).noahText(NoahTokens.Typography.sub)
+            .foregroundStyle(key ? NoahTokens.Colors.foreground : NoahTokens.Colors.muted)
+            .fixedSize(horizontal: false, vertical: true)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .padding(.top, 12)
+    }
+}
+
 struct ExitWarning: View {
     let text: String
     var symbol = "exclamationmark.shield"

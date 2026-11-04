@@ -364,7 +364,7 @@ private class TreeDrawing(scope: DrawScope, val f: TreeFrame, val palette: NoahT
         val arkA = m.ark(t)
         if (arkA > .01f) {
             drawLine(palette.hairline, Offset(14f, yC), Offset(w - 50, yC), 1f, alpha = arkA)
-            text(measure(layout.words.tr("Ark"), 11f * k), 14f, yC - 10, palette.muted, arkA)
+            text(measure(layout.words.tr("Ark"), 12f * k), 14f, yC - 10, palette.muted, arkA)
             treeBadge(Offset(w - 30, yC), 14f, StageArt.server, palette.foreground, palette.hairline, palette.background,
                 if (s.explain) 1f else arkA, dashed = s.lifting, dots = true)
         }
@@ -373,7 +373,7 @@ private class TreeDrawing(scope: DrawScope, val f: TreeFrame, val palette: NoahT
     private fun chain() {
         // The chain: the ground line, with the round's transaction in its block as the base.
         drawLine(palette.foreground, Offset(12f, gY + .5f), Offset(w - 12, gY + .5f), 1.2f, alpha = .32f)
-        text(measure(layout.words.tr("Bitcoin"), 10.5f * k), 14f, gY + 12 * k, palette.muted, 1f)
+        text(measure(layout.words.tr("Bitcoin"), 12f * k), 14f, gY + 12 * k, palette.muted, 1f)
     }
 
     private fun stubs() {
@@ -396,7 +396,7 @@ private class TreeDrawing(scope: DrawScope, val f: TreeFrame, val palette: NoahT
         layout.caption?.let { lines ->
             val a = treeA * m.pop(1, t) * (1 - .6f * canU) * labA
             val y0 = f.ys[1] + layout.captionY; val right = tx - rS / 2 - 9
-            lines.forEachIndexed { i, l -> text(measure(l, 10f * k), right, y0 + i * 12.5f * k, palette.muted, a * .9f, 1) }
+            lines.forEachIndexed { i, l -> text(measure(l, 12f * k), right, y0 + i * 14.5f * k, palette.muted, a * .9f, 1) }
         }
     }
 

@@ -25,7 +25,7 @@ import Testing
         #expect(quote.recipientIsEstimated)
         #expect(quote.recipientDescription == "Recipient receives about 900 sats")
         #expect(!quote.approximate && quote.total == 1000)
-        #expect(SendQuote.recipientEstimateExplanation.contains("exactly the reviewed coins"))
+        #expect(SendQuote.recipientEstimateExplanation.contains("comes out of this total"))
         #expect(!SendQuote(amount: 900, fee: 100, total: 1000).recipientIsEstimated)
     }
     @Test func receiptUsesActualOutputAndFeeInsteadOfQuote() throws {

@@ -33,7 +33,7 @@ struct HomeBanner: Equatable {
         case .inProgress:
             return Self(title: "Backing up wallet", message: "Running in background")
         case .failed:
-            return Self(title: "Backup failed", message: "An unknown error occurred while backing up.", retry: true)
+            return Self(title: "Backup failed", message: "Couldn't reach Noah. Tap to try again.", retry: true)
         case .success:
             guard !state.backupPending, let time = state.lastBackupAt, now - time < 5_000 else { return nil }
             let formatter = DateFormatter()

@@ -22,7 +22,7 @@ struct NotificationsPage: View {
                 SettingsStatusHeader(mark: on ? .on("bell") : .failedIcon,
                                      title: L10n.text(on ? "On" : "Off", locale: language),
                                      detail: L10n.text(on ? "Noah can receive and renew while closed."
-                                         : "Noah can’t receive payments or renew your bitcoin.", locale: language),
+                                         : "Noah can’t receive payments or renew your Ark coins.", locale: language),
                                      failure: !on)
             }
             SettingsGroup {

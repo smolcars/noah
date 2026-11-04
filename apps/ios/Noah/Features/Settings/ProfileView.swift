@@ -247,7 +247,7 @@ struct LightningAddressPage: View {
         .settingsFooter {
             Button(action: save) {
                 HStack(spacing: 8) {
-                    if busy { ProgressView().tint(NoahTokens.Colors.background) }
+                    if busy { ButtonSpinner() }
                     Text(L10n.text("Save", locale: language))
                 }
             }
@@ -385,7 +385,7 @@ struct EmailPage: View {
                     Task { await email.sendCode() }
                 } label: {
                     HStack(spacing: 8) {
-                        if email.stage == .sending { ProgressView().tint(NoahTokens.Colors.background) }
+                        if email.stage == .sending { ButtonSpinner() }
                         Text(L10n.text("Send code", locale: language))
                     }
                 }

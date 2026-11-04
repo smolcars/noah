@@ -17,7 +17,6 @@ struct OnboardingProgressScreen: View {
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.locale) private var locale
-
     var body: some View {
         OnboardingPanes(wide: layout.wide, column: .leading(layout.chainY(mode) + 30),
                         sideInsets: (layout.insets.leading, layout.insets.trailing)) {
@@ -42,11 +41,11 @@ struct OnboardingProgressScreen: View {
                     .noahText(NoahTokens.Typography.amount)
                     .monospacedDigit()
                     .foregroundStyle(NoahTokens.Colors.foreground)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.6)
+                    .lineLimit(1).minimumScaleFactor(0.6)
                     .onboardingAppear(0, base: 0.5, distance: 8)
                     .accessibilityHidden(count.reveal == nil)
                 }
+                OnboardingStillWorking()
             }
             .padding(.top, layout.wide ? 0 : 22)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: layout.wide ? .center : .top)
@@ -58,5 +57,29 @@ struct OnboardingProgressScreen: View {
         guard let reveal = count.reveal else { return 0 }
         if reduceMotion { return count.total }
         return TreeScene.restoredAmount(total: count.total, lit: count.lit, at: date.timeIntervalSince(reveal))
+    }
+}
+
+/// Past ~8 s a quiet line says it's still going; nothing else changes.
+private struct OnboardingStillWorking: View {
+    @State private var slow = false
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.locale) private var locale
+
+    var body: some View {
+        ZStack {
+            if slow {
+                Text(L10n.text("Still working… this can take a minute.", locale: locale.identifier))
+                    .noahText(NoahTokens.Typography.sub)
+                    .foregroundStyle(NoahTokens.Colors.muted)
+                    .multilineTextAlignment(.center)
+                    .transition(.opacity)
+            }
+        }
+        .animation(NoahTokens.Motion.travel(reduceMotion), value: slow)
+        .task {
+            do { try await Task.sleep(for: .seconds(8)) } catch { return }
+            slow = true
+        }
     }
 }

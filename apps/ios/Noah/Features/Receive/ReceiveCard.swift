@@ -37,9 +37,8 @@ struct ReceiveArrival: Equatable, Identifiable {
         switch rail {
         case .ark: return ("", false)
         case .lightning:
-            if t < 0.85 { return (L10n.text("Incoming over Lightning", locale: language), false) }
-            if t < 1.65 { return (L10n.text("Ark holds it for you", locale: language), false) }
-            if t < 2.5 { return (L10n.text("Claiming with your key", locale: language), false) }
+            // It's already claimed (a successful movement starts the arrival); the motion retells that.
+            if t < 2.5 { return (L10n.text("Claimed with your key", locale: language), false) }
             return t < flipAt + 1.6 ? (L10n.text("Received", locale: language), true) : ("", false)
         case .onchain:
             if t < 0.9 { return (L10n.text("Seen on the network", locale: language), false) }
@@ -54,7 +53,7 @@ struct ReceiveArrival: Equatable, Identifiable {
     var phaseBoundaries: [Double] {
         switch rail {
         case .ark: []
-        case .lightning: [0.85, 1.65, 2.5, flipAt + 1.6]
+        case .lightning: [2.5, flipAt + 1.6]
         case .onchain: [0.9] + (confirmedAt.map { [elapsed($0)] } ?? [])
         }
     }
@@ -166,8 +165,7 @@ struct ReceiveArrivalQueue: Equatable {
 }
 
 /// The receive card: your QR on white with its name, caption and amount band on the front;
-/// the arrival's ring, check, amount and rail on the back. A thin orange light circles it
-/// while it's listening.
+/// the arrival's ring, check, amount and rail on the back.
 struct ReceiveCard: View {
     let payload: String?
     /// Verbatim title under the QR (the address itself for the Lightning address).
@@ -175,7 +173,6 @@ struct ReceiveCard: View {
     let caption: String
     var band: (amount: String, fiat: String?)?
     let qrSide: CGFloat
-    var listening = false
     var arrival: ReceiveArrival?
     var unit: BitcoinAmountUnit = .bip177
     var tilt = 0
@@ -232,9 +229,6 @@ struct ReceiveCard: View {
                 SpringKeyframe(-10, duration: 0.18, spring: .init(response: 0.4, dampingRatio: 0.6))
                 SpringKeyframe(0, duration: 0.5, spring: .init(response: 0.4, dampingRatio: 0.6))
             }
-        }
-        .background {
-            if listening && !reduceMotion && arrival == nil { ListeningLight() }
         }
         .task(id: arrival?.id) {
             guard let arrival else { return }
@@ -337,27 +331,6 @@ struct ReceiveCard: View {
     }
 }
 
-/// A thin orange segment slowly circling the card, 7 s a lap (prototype `.comet`).
-private struct ListeningLight: View {
-    var body: some View {
-        TimelineView(.animation) { timeline in
-            GeometryReader { proxy in
-                let size = CGSize(width: proxy.size.width + 3, height: proxy.size.height + 3)
-                let radius = NoahTokens.Radius.card + 1.5
-                let perimeter = 2 * (size.width + size.height) - (8 - 2 * .pi) * radius
-                let lap = timeline.date.timeIntervalSinceReferenceDate.truncatingRemainder(dividingBy: 7) / 7
-                RoundedRectangle(cornerRadius: radius, style: .circular)
-                    .stroke(NoahTokens.Colors.orange, style: StrokeStyle(
-                        lineWidth: 2.5, lineCap: .round, dash: [46, max(1, perimeter - 46)], dashPhase: -perimeter * lap))
-                    .frame(width: size.width, height: size.height)
-                    .position(x: proxy.size.width / 2, y: proxy.size.height / 2)
-            }
-        }
-        .allowsHitTesting(false)
-        .accessibilityHidden(true)
-    }
-}
-
 /// Above the card: the Ark server delivers a coin (Ark), or the bolt hits it, it holds a
 /// locked coin and your key claims it (Lightning). The card is always white, so its marks
 /// are fixed colours.
@@ -432,7 +405,7 @@ private struct ArrivalOverlay: View {
                     canvas.stroke(path, canvas.colors.orange, 3.2, dash: [240, 240], phase: CGFloat(offset < 0 ? offset + 480 : offset))
                 }
             }
-            // "Ark holds it for you": a locked coin drops into the card; your key opens it.
+            // A locked coin drops into the card; your key opens it.
             let drop = time.p(0.85, .bouncy)
             let coinOpacity = time.o(0.85, .bouncy) * (1 - time.o(arrival.flipAt, .snappy))
             canvas.layer(

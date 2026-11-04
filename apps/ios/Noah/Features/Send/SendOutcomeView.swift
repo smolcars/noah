@@ -32,6 +32,8 @@ struct SendOutcomeView: View {
     @State private var confirmOverride = false
     @State private var resultShown = false
     @State private var slow = false
+    /// Sending has run past about 8 s: a quiet "Still working" line under the phase.
+    @State private var longWait = false
     @State private var window = OnboardingLayout(size: .zero, insets: EdgeInsets())
     @State private var haptics = OnboardingHaptics()
 
@@ -64,7 +66,7 @@ struct SendOutcomeView: View {
         recipient ?? payment.map { .of(destination: $0.destination, ownDomain: LightningIdentity.domain(for: .current), payment: $0) }
             ?? SendRecipientLabel(name: "", nameIsVerbatim: true, avatar: .lightning)
     }
-    private var recipientName: String { label.nameIsVerbatim ? label.name : L10n.text(label.name, locale: locale.identifier) }
+    private var recipientName: String { label.nameIsVerbatim ? label.name : L10n.text(label.identity, locale: locale.identifier) }
     private func format(_ sats: UInt64) -> String { BitcoinAmount.format(sats: Int64(clamping: sats), unit: unit, locale: locale) }
     private var sendingAmount: UInt64 { attempt?.quote?.amount ?? payment?.amount ?? 0 }
 
@@ -93,6 +95,12 @@ struct SendOutcomeView: View {
         .task(id: refundKey) { await readRefund() }
         .task(id: resultKey) { await revealResult() }
         .task(id: hapticKey) { await playHaptics() }
+        .task(id: kind == .sending) {
+            longWait = false
+            guard kind == .sending else { return }
+            do { try await Task.sleep(for: .seconds(8)) } catch { return }
+            longWait = true
+        }
         .alert(SendOverrideAudit.titleText, isPresented: $confirmOverride) {
             Button("Keep checking", role: .cancel) {}
             Button(LocalizedStringKey(SendOverrideAudit.confirmationText), role: .destructive) {
@@ -178,6 +186,8 @@ struct SendOutcomeView: View {
                         .noahText(NoahTokens.Typography.body).foregroundStyle(NoahTokens.Colors.muted)
                         .lineLimit(1).truncationMode(.middle)
                 }
+                // The outcome, who, and why sit together at the top.
+                resultLine
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             // Without a saved payment (status unavailable) there's nothing to draw.
@@ -190,7 +200,28 @@ struct SendOutcomeView: View {
                 .animation(NoahTokens.Motion.travel(reduceMotion, NoahTokens.Motion.soft), value: stageHeight)
                 .padding(.top, isWide ? 40 : 8)
                 phaseLine.padding(.top, 4)
+                stillWorking
             }
+        }
+    }
+
+    @ViewBuilder private var resultLine: some View {
+        if showsResult, let line {
+            Text(verbatim: line).noahText(NoahTokens.Typography.body)
+                .foregroundStyle(kind == .sent ? NoahTokens.Colors.muted : NoahTokens.Colors.foreground)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.top, 6)
+                .transition(.opacity)
+                .accessibilityIdentifier("send-result-line")
+        }
+    }
+
+    /// Lightning has its own "Still paying" step; the others get this after about 8 s.
+    @ViewBuilder private var stillWorking: some View {
+        if longWait && kind == .sending && rail != .lightning {
+            Text("Still working… this can take a minute.").noahText(NoahTokens.Typography.sub).foregroundStyle(NoahTokens.Colors.muted)
+                .multilineTextAlignment(.center).frame(maxWidth: .infinity).padding(.top, 6)
+                .transition(.opacity)
         }
     }
 
@@ -279,17 +310,16 @@ struct SendOutcomeView: View {
 
     private var resultSection: some View {
         VStack(alignment: .leading, spacing: 0) {
-            if resultShown || ![.sent, .refunded, .stillSending, .sending].contains(kind) { result }
+            if showsResult { result }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
         .transition(reduceMotion ? .opacity : .opacity.combined(with: .offset(y: 16)))
         .animation(NoahTokens.Motion.travel(reduceMotion), value: resultShown)
     }
 
+    private var showsResult: Bool { resultShown || ![.sent, .refunded, .stillSending, .sending].contains(kind) }
+
     @ViewBuilder private var result: some View {
-        if let line { Text(verbatim: line).noahText(NoahTokens.Typography.sub).foregroundStyle(NoahTokens.Colors.muted)
-            .fixedSize(horizontal: false, vertical: true).accessibilityIdentifier("send-result-line")
-        }
         switch kind {
         case .sending: EmptyView()
         case .stillSending:
@@ -342,7 +372,8 @@ struct SendOutcomeView: View {
                 }
             }
         }
-        if let message = controller.message {
+        // Shown once: a failure's message is often the result line itself.
+        if let message = controller.message, L10n.text(message, locale: locale.identifier) != line {
             fine(L10n.text(message, locale: locale.identifier))
         }
     }
@@ -364,7 +395,9 @@ extension SendOutcomeView {
                 return (receipt.fee ?? attempt?.quote?.fee ?? 0) == 0
                     ? L10n.text("It arrived instantly. Ark sends are free.", locale: language)
                     : L10n.text("It arrived instantly.", locale: language)
-            case .lightning: return L10n.text("Paid over Lightning. Their secret is your proof of payment.", locale: language)
+            case .lightning:
+                return proof(receipt) == nil ? L10n.text("Paid over Lightning.", locale: language)
+                    : L10n.text("Paid over Lightning. The proof below shows this payment was made.", locale: language)
             case .onchainSwap, .onchainWallet:
                 return Self.onchainLine(confirmed: motion.confirmedHeight != nil).map { L10n.text($0, locale: language) }
             }
@@ -491,14 +524,23 @@ extension SendOutcomeView {
                 case .retry: pill("Retry", id: "send-retry") { Task { await controller.checkStatus() } }
                 // Leaving keeps the attempt and the send lock exactly as they are.
                 case .leave: pill("Done", id: "send-success-done") { onLeave() }
-                case .close: pill("Close", id: "send-leave", prominent: false) { onLeave() }
+                case .close: pill("Done", id: "send-leave", prominent: false) { onLeave() }
                 }
             }
             if controller.canOverride {
-                Button("Start a new payment after checking history", role: .destructive) { confirmOverride = true }
+                Text("Don't pay again until you've checked Activity.")
+                    .noahText(HomeText.footnote)
+                    .foregroundStyle(NoahTokens.Colors.muted)
+                    .multilineTextAlignment(.center)
+                    .frame(maxWidth: .infinity)
+                    .padding(.top, 8)
+                // Quiet on purpose: paying again is the risky path, and it still asks first.
+                Button("Pay again anyway") { confirmOverride = true }
+                    .buttonStyle(.plain)
                     .noahText(HomeText.strong)
-                    .foregroundStyle(NoahTokens.Colors.failure)
-                    .frame(minHeight: NoahTokens.Size.hitTarget)
+                    .foregroundStyle(NoahTokens.Colors.muted)
+                    .frame(maxWidth: .infinity, minHeight: NoahTokens.Size.hitTarget)
+                    .contentShape(Rectangle())
                     .accessibilityIdentifier("send-override")
             }
         }
@@ -511,11 +553,12 @@ extension SendOutcomeView {
         } label: {
             ZStack {
                 Text("Check status").opacity(controller.checking ? 0 : 1)
-                if controller.checking { ProgressView().tint(NoahTokens.Colors.foreground) }
+                // Checking disables the pill, so the spinner sits on the soft disabled fill.
+                if controller.checking { ProgressView().tint(NoahTokens.Colors.muted) }
             }
             .frame(maxWidth: .infinity)
         }
-        .buttonStyle(HomePillStyle(prominent: false, height: 52, font: NoahTokens.Typography.button))
+        .buttonStyle(HomePillStyle(height: 52, font: NoahTokens.Typography.button))
         .disabled(controller.checking)
         .accessibilityIdentifier("send-check-status")
     }

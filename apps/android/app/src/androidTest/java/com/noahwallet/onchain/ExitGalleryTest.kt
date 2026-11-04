@@ -3,6 +3,7 @@ package com.noahwallet.onchain
 import android.graphics.Bitmap
 import androidx.activity.ComponentActivity
 import androidx.activity.enableEdgeToEdge
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
@@ -40,7 +41,9 @@ class ExitGalleryTest {
         else ExitFixtures.money
         val shots = Shots(folder, only, money)
         compose.setContent { NoahTheme { Localized(language) { shots.scene?.let { (name, content) -> key(name) {
-            Box(Modifier.fillMaxSize().windowInsetsPadding(WindowInsets.safeDrawing)) { ExitPreviewHost(content) }
+            // The app draws its background behind the system bars; so does the gallery, or dark captures get light bars.
+            Box(Modifier.fillMaxSize().background(galleryBackground())
+                .windowInsetsPadding(WindowInsets.safeDrawing)) { ExitPreviewHost(content) }
         } } } } }
         val f = ExitFixtures
         val estimate: suspend (List<String>) -> OnchainQuote? = { ids ->
@@ -188,3 +191,8 @@ private fun Localized(language: String?, content: @Composable () -> Unit) {
     CompositionLocalProvider(androidx.compose.ui.platform.LocalConfiguration provides context.resources.configuration,
         androidx.compose.ui.platform.LocalResources provides context.resources, content = content)
 }
+
+/** The window behind the system bars, as the app paints it (NoahTheme's choice of light or dark). */
+@androidx.compose.runtime.Composable
+internal fun galleryBackground() = if (androidx.compose.foundation.isSystemInDarkTheme()) com.noahwallet.ui.design.NoahTokens.Dark.background
+else com.noahwallet.ui.design.NoahTokens.Light.background

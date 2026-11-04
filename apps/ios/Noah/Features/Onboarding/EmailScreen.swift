@@ -130,7 +130,7 @@ struct EmailScreen: View {
                 .focused($focus, equals: .email)
                 .onSubmit(send)
                 .disabled(email.stage == .sending)
-                .accessibilityLabel(Text("Email Address"))
+                .accessibilityLabel(Text("Email address"))
                 .accessibilityIdentifier("email-address-input")
             CheckStroke(drawn: email.isValid)
                 .frame(width: 24, height: 24)

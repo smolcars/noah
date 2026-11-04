@@ -37,7 +37,7 @@ struct FeedbackView: View {
             } else {
                 Button(action: submit) {
                     HStack(spacing: 8) {
-                        if busy { ProgressView().tint(NoahTokens.Colors.background) }
+                        if busy { ButtonSpinner() }
                         Text(L10n.text("Send", locale: language))
                     }
                 }

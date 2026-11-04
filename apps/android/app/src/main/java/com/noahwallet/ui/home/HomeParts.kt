@@ -238,7 +238,8 @@ internal fun NudgeCard(icon: Int, title: String, subtitle: String?, action: Stri
         }
         action?.let { Pill(it, enabled = enabled, onClick = onAction) }
         dismissLabel?.let { label ->
-            Box(Modifier.padding(start = 0.dp).offset(x = (-4).dp).size(28.dp).clip(CircleShape).clickable(onClickLabel = label, role = Role.Button,
+            // A 48 dp target; the × itself stays small and quiet.
+            Box(Modifier.offset(x = 8.dp).size(48.dp).clip(CircleShape).clickable(onClickLabel = label, role = Role.Button,
                 onClick = onDismiss)
                 .semantics { contentDescription = label }, contentAlignment = Alignment.Center) {
                 Icon(painterResource(HomeIcons.close), null, Modifier.size(14.dp), tint = palette.muted)
@@ -256,11 +257,13 @@ internal fun Pill(title: String, modifier: Modifier = Modifier, height: Dp = 36.
     val pressed by interaction.collectIsPressedAsState()
     val scale by animateFloatAsState(if (pressed && !LocalReduceMotion.current) .95f else 1f, NoahTokens.Motion.tap(), label = "pill")
     val shape = RoundedCornerShape(height / 2)
-    Box(modifier.height(height).graphicsLayer { scaleX = scale; scaleY = scale; alpha = if (enabled) 1f else .4f }
-        .then(if (outlined) Modifier.border(1.5.dp, palette.hairline, shape).clip(shape) else Modifier.tonal(shape, container ?: palette.foreground))
+    // Disabled keeps its shape: a soft fill and muted label that stay readable.
+    Box(modifier.height(height).graphicsLayer { scaleX = scale; scaleY = scale }
+        .then(if (outlined) Modifier.border(1.5.dp, palette.hairline, shape).clip(shape)
+        else Modifier.tonal(shape, if (!enabled) palette.soft else container ?: palette.foreground))
         .clickable(interaction, indication = androidx.compose.material3.ripple(), enabled = enabled, role = Role.Button, onClick = onClick)
         .padding(horizontal = 16.dp), contentAlignment = Alignment.Center) {
-        Text(title, style = style, color = content ?: if (outlined) palette.foreground else palette.background, maxLines = 1)
+        Text(title, style = style, color = if (!enabled) palette.muted else content ?: if (outlined) palette.foreground else palette.background, maxLines = 1)
     }
 }
 
@@ -275,7 +278,9 @@ internal fun RowAvatar(row: HomeRow, new: Boolean, pop: Boolean, modifier: Modif
     Box(modifier.size(side)) {
         AvatarFace(row.avatar, large)
         if (row.pending) PendingRing(side, large, Modifier.align(Alignment.Center))
-        if (row.failed) FailedMark(large, Modifier.align(Alignment.BottomEnd))
+        // Red only for a failure; a refund came back, so it gets a neutral return arrow.
+        if (row.refunded) RefundMark(large, Modifier.align(Alignment.BottomEnd))
+        else if (row.failed) FailedMark(large, Modifier.align(Alignment.BottomEnd))
         if (new) NewDot(pop, fading, onSeen, Modifier.align(Alignment.TopEnd))
     }
 }
@@ -327,6 +332,22 @@ private fun FailedMark(large: Boolean, modifier: Modifier) {
     }
 }
 
+@Composable
+private fun RefundMark(large: Boolean, modifier: Modifier) {
+    val palette = LocalPalette.current
+    Box(modifier.offset(if (large) 4.dp else 5.dp, if (large) 4.dp else 5.dp)
+        .size(if (large) 26.dp else 21.dp).background(palette.background, CircleShape)
+        .padding(2.dp).background(palette.foreground, CircleShape), contentAlignment = Alignment.Center) {
+        Icon(painterResource(com.noahwallet.R.drawable.ic_home_refund), null, Modifier.size(if (large) 13.dp else 11.dp), tint = palette.background)
+    }
+}
+
+/** An empty list's still mark: one icon in a soft circle, nothing that looks like rows still loading. */
+@Composable
+internal fun EmptyMark(content: @Composable () -> Unit) {
+    Box(Modifier.size(64.dp).background(LocalPalette.current.soft, CircleShape).clearAndSetSemantics { }, contentAlignment = Alignment.Center) { content() }
+}
+
 /** The new row's orange dot: pops in with [pop]; [fading] grows it a little, shrinks it away, then [onSeen]. */
 @Composable
 private fun NewDot(pop: Boolean, fading: Boolean, onSeen: () -> Unit, modifier: Modifier) {
@@ -351,7 +372,7 @@ private fun NewDot(pop: Boolean, fading: Boolean, onSeen: () -> Unit, modifier: 
     }.background(palette.background, CircleShape).padding(2.dp).background(palette.orange, CircleShape))
 }
 
-/** Kind · time, or the row's state; "Failed" and "Canceled" read in the failure colour. */
+/** Kind · time, or the row's state; only "Failed" reads in the failure colour (a refund came back, a cancel was chosen). */
 @Composable
 internal fun rowSubtitle(row: HomeRow, locale: java.util.Locale, now: java.util.Date): Pair<String, Boolean> {
     val time = row.date?.let { date ->
@@ -363,8 +384,8 @@ internal fun rowSubtitle(row: HomeRow, locale: java.util.Locale, now: java.util.
     val kind = row.kind?.let { tr(it) }
     val state = row.state?.let { tr(it) }
     return when {
-        row.refunded -> tr("Refunded · back in your wallet") to true
-        row.failed || row.canceled -> (state!! + if (row.unchanged) " " + tr("· nothing left your wallet") else "") to true
+        row.refunded -> tr("Refunded · back in your wallet") to false
+        row.failed || row.canceled -> (state!! + if (row.unchanged) " " + tr("· nothing left your wallet") else "") to row.failed
         state != null -> listOfNotNull(state, kind).joinToString(" · ") to false
         else -> listOfNotNull(kind, time).joinToString(" · ") to false
     }

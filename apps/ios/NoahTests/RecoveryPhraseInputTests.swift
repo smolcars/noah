@@ -235,7 +235,7 @@ struct RestoreIssueTests {
     @Test func distinguishesMissingBackupWrongPhraseAndNetworkWithoutDisplayingRawErrors() {
         let secret = "sensitive request data"
         let missing = RestoreIssue.from(ServerFailure(message: secret, statusCode: 404))
-        #expect(missing.message.contains("No backup"))
+        #expect(missing.title == "No backup found")
         #expect(!missing.message.contains(secret))
         #expect(RestoreIssue.from(ServerFailure(message: secret, statusCode: 401, code: "USER_NOT_FOUND")).message == missing.message)
         #expect(RestoreIssue.from(BackupCrypto.Failure.authenticationFailed).message.contains("unlock the backup"))

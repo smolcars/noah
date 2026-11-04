@@ -31,16 +31,16 @@ class HomeRowsTest {
         assertEquals("Received", bolt.title); assertEquals("Lightning", bolt.kind)
         assertEquals(HomeRow.Avatar.Lightning, bolt.avatar); assertEquals("+", bolt.sign); assertNull(bolt.counterparty)
         val ark = HomeRow.of(row("Arkoor", "outgoing", "tark1qexample"), "noahwallet.io")
-        assertEquals("Ark", ark.title); assertEquals(HomeRow.Avatar.Sent, ark.avatar)
+        assertEquals("Sent", ark.title); assertEquals("Ark", ark.kind); assertEquals(HomeRow.Avatar.Sent, ark.avatar)
         val received = HomeRow.of(row("Arkoor", "incoming", kind = "arkoor-receive"), null)
-        assertEquals(HomeRow.Avatar.Received, received.avatar)
+        assertEquals("Received", received.title); assertEquals(HomeRow.Avatar.Received, received.avatar)
         // Incoming records never name a sender, so the first payment never invents a "from".
         assertNull(HomeRow.of(row("Lnurl", "incoming", "maya@noahwallet.io"), "noahwallet.io").counterparty)
     }
 
     @Test fun onchainRowsUseTheLinkAndInternalTransfersHaveNoSign() {
         val board = HomeRow.of(row("Onchain", "incoming", kind = "onboard"), null)
-        assertEquals("Board", board.title); assertEquals("On-chain", board.kind)
+        assertEquals("Moved to Ark", board.title); assertEquals("On-chain", board.kind)
         assertEquals(HomeRow.Avatar.Chain, board.avatar); assertEquals("", board.sign)
         val deposit = HomeRow.of(row("Onchain", "incoming", source = "onchain-wallet", confirmed = false, dateLabel = "Unconfirmed"), null)
         assertTrue(deposit.pending); assertEquals("Confirming", deposit.state); assertNull("no time for an unconfirmed deposit", deposit.date)

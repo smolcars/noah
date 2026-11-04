@@ -98,17 +98,18 @@ internal fun VtxosPage(app: AppModel, nav: SettingsNav) {
     val visible = VtxoRules.visible(vtxos, filter)
     fun renew(ids: List<String>) { scope.launch { model.review(OnchainAction.refresh, ids) } }
     val idle = !model.busy && !app.isWalletSuspended
-    SettingsFrame(tr("VTXOs"), nav.back, chip = filterChip(filter) { filter = VtxoRules.Filter.all }, actions = {
-        VtxoMenu(filter, enabled = !model.busy, onFilter = {
-            if (it != filter) haptics.selection()
-            filter = it
-        },
-            onSelect = { selecting = true; selected = VtxoRules.preselected(vtxos).toList(); model.invalidate() },
-            onRefresh = { model.invalidate(); scope.launch { model.load() } })
-    }, foot = if (!selecting) null else ({
-        RenewFoot(chosen.size, enabled = chosen.isNotEmpty() && idle, loading = model.busy,
-            cancel = { selecting = false; selected = emptyList() }) { renew(chosen.map { it.id }) }
-    })) {
+    SettingsFrame(tr("VTXOs"), nav.back, line = tr("VTXOs are your bitcoin on Ark. Renew them before they expire to keep them safe."),
+        chip = filterChip(filter) { filter = VtxoRules.Filter.all }, actions = {
+            VtxoMenu(filter, enabled = !model.busy, onFilter = {
+                if (it != filter) haptics.selection()
+                filter = it
+            },
+                onSelect = { selecting = true; selected = VtxoRules.preselected(vtxos).toList(); model.invalidate() },
+                onRefresh = { model.invalidate(); scope.launch { model.load() } })
+        }, foot = if (!selecting) null else ({
+            RenewFoot(chosen.size, enabled = chosen.isNotEmpty() && idle, loading = model.busy,
+                cancel = { selecting = false; selected = emptyList() }) { renew(chosen.map { it.id }) }
+        })) {
         when {
             app.isWalletSuspended -> FinePrint(tr("Wallet suspended. Resume your wallet in Settings."))
             model.overview == null -> FinePrint(if (model.loading) tr("Loading…") else tr("Couldn't read wallet status. Pull to refresh."))
@@ -280,30 +281,13 @@ private fun VtxoAvatar(size: androidx.compose.ui.unit.Dp, glyphAvatar: Boolean, 
     else com.noahwallet.ui.settings.SettingsAvatar(size, icon = icon, due = due, pending = pending)
 }
 
-/** No VTXOs yet: ghost rows and one line. */
+/** No VTXOs yet: a still mark and one line. */
 @Composable
 private fun EmptyVtxos() {
     val palette = LocalPalette.current
-    Column(Modifier.fillMaxWidth().padding(top = 40.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-        Column(Modifier.widthIn(max = 300.dp).fillMaxWidth().clearAndSetSemantics { }) {
-            repeat(3) { i ->
-                Row(Modifier.fillMaxWidth().height(60.dp).graphicsLayer { alpha = 1 - i * .28f }, verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                    Box(Modifier.size(42.dp).background(palette.background, CircleShape).drawBehind {
-                        drawCircle(palette.hairline, size.minDimension / 2 - 1.dp.toPx(), style = Stroke(1.5.dp.toPx()))
-                    }, contentAlignment = Alignment.Center) {
-                        if (i == 1) Icon(painterResource(SettingsIcons.lock), null, Modifier.size(20.dp), tint = palette.muted)
-                        else Text("₿", style = HomeType.avatar, color = palette.muted)
-                    }
-                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(7.dp)) {
-                        Box(Modifier.fillMaxWidth(listOf(.58f, .46f, .52f)[i]).height(10.dp).background(palette.soft, RoundedCornerShape(5.dp)))
-                        Box(Modifier.fillMaxWidth(listOf(.34f, .40f, .28f)[i]).height(10.dp).background(palette.soft, RoundedCornerShape(5.dp)))
-                    }
-                    Box(Modifier.size(54.dp, 12.dp).background(palette.soft, RoundedCornerShape(6.dp)))
-                }
-            }
-        }
-        Text(tr("No VTXOs yet"), Modifier.padding(top = 26.dp, bottom = 6.dp), style = HomeType.listTitle, color = palette.foreground)
+    Column(Modifier.fillMaxWidth().padding(top = 96.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        com.noahwallet.ui.home.EmptyMark { Text("₿", style = HomeType.avatar, color = palette.muted) }
+        Text(tr("No VTXOs yet"), Modifier.padding(top = 20.dp, bottom = 6.dp), style = HomeType.listTitle, color = palette.foreground)
         Text(tr("Bitcoin you receive shows up here as VTXOs."), Modifier.widthIn(max = 280.dp), style = HomeType.line, color = palette.muted,
             textAlign = androidx.compose.ui.text.style.TextAlign.Center)
     }

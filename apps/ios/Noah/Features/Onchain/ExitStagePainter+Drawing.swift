@@ -78,7 +78,7 @@ extension ExitStagePainter {
         let captionAlpha = f.tree * (f.pop[safe: 1] ?? 1) * (1 - 0.6 * f.cancel) * (s.explain ? f.labels : 1 - f.dim)
         if captionAlpha > 0.02, let lines = arrangement.caption {
             for (index, line) in lines.enumerated() {
-                text(line, TX - g.roundSide / 2 - 9, arrangement.captionY + Double(index) * 12.5 * L, size: 10 * L, color: c.muted, anchor: .trailing,
+                text(line, TX - g.roundSide / 2 - 9, arrangement.captionY + Double(index) * 12.5 * L, size: 11.5 * L, color: c.muted, anchor: .trailing,
                      opacity: captionAlpha * 0.9)
             }
         }

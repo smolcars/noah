@@ -77,7 +77,7 @@ The user decided these on 2026-10-23:
 - **States:**
   - **Loading:** skeleton rows that pulse; they stay still under Reduce Motion.
   - **Error:** "Couldn't load activity", today's message, and "Try again". A suspended wallet shows Android's existing message in the same layout, and iOS gets the same.
-  - **Empty:** ghost rows showing the three avatar kinds, "No activity yet", and a Receive pill that opens the Receive tab.
+  - **Empty:** a still icon (no skeleton rows: those mean loading), "No activity yet", and a Receive pill that opens the Receive tab.
   - **Filter with no rows:** e.g. "No Lightning payments" with "Show all".
 
 ## Detail
@@ -101,7 +101,7 @@ The user decided these on 2026-10-23:
 | Total | Amount plus fees, on sends only. |
 | Date | The date; "Unconfirmed" before a block. |
 | Confirmed | "Block N", on-chain only. |
-| Entered as | The fiat amount, when entered in fiat (as today). |
+| You entered | The fiat amount, when entered in fiat (as today). |
 | Note | The comment or description. |
 | Proof of payment | The preimage, for successful Lightning sends only, with copy. |
 | Transaction ID | Copy, plus the explorer icon. Android's "No browser available" toast stays. |
@@ -109,7 +109,7 @@ The user decided these on 2026-10-23:
 | Progress | "Exit details ›" on exit rows; opens exit progress. |
 
 - **Details** (collapsed; opens with the soft spring). Everything today's technical section shows:
-  - payment ID;
+  - payment ID (debug mode only);
   - payment hash: new, decoded from the stored invoice;
   - preimage, for receives;
   - invoice;
@@ -117,9 +117,9 @@ The user decided these on 2026-10-23:
   - balance change;
   - block height and block hash;
   - raw transaction;
-  - movement type and ID;
-  - subsystem;
-  - intended and effective change;
+  - movement type, and its ID (debug mode only);
+  - subsystem (debug mode only);
+  - intended change (debug mode only) and effective change;
   - chain anchor (hidden when it equals the txid, as in React Native);
   - metadata JSON;
   - "sent to" / "received on" lists (multi-destination keeps "destination · amount");

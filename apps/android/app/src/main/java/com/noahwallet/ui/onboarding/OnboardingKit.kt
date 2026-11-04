@@ -15,7 +15,6 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
@@ -150,11 +149,11 @@ internal fun PillButton(title: String, modifier: Modifier = Modifier, enabled: B
     val pressed by interaction.collectIsPressedAsState()
     val reduceMotion = LocalReduceMotion.current
     val scale by animateFloatAsState(if (pressed && !reduceMotion) .97f else 1f, NoahTokens.Motion.tap(), label = "press")
-    val alpha by animateFloatAsState(if (enabled || loading) 1f else .2f, tween(250), label = "enabled")
+    // Disabled keeps its shape: a soft fill and muted label that stay readable; a loading button keeps its colours.
     val colors = if (outlined) ButtonDefaults.outlinedButtonColors(contentColor = palette.foreground,
-        disabledContentColor = palette.foreground)
+        disabledContentColor = if (loading) palette.foreground else palette.muted)
     else ButtonDefaults.buttonColors(containerColor = palette.foreground, contentColor = palette.background,
-        disabledContainerColor = palette.foreground, disabledContentColor = palette.background)
+        disabledContainerColor = if (loading) palette.foreground else palette.soft, disabledContentColor = if (loading) palette.background else palette.muted)
     val content: @Composable RowScope.() -> Unit = {
         if (loading) CircularProgressIndicator(Modifier.size(22.dp), color = if (outlined) palette.foreground else palette.background, strokeWidth = 2.5.dp)
         else {
@@ -162,7 +161,7 @@ internal fun PillButton(title: String, modifier: Modifier = Modifier, enabled: B
             Text(title, style = NoahTokens.Typography.button, textAlign = TextAlign.Center)
         }
     }
-    val shaped = modifier.heightIn(min = NoahTokens.Size.button).scale(scale).alpha(alpha)
+    val shaped = modifier.heightIn(min = NoahTokens.Size.button).scale(scale)
     if (outlined) OutlinedButton(onClick, shaped, enabled = enabled && !loading, shape = CircleShape, colors = colors,
         border = androidx.compose.foundation.BorderStroke(1.5.dp, palette.hairline), interactionSource = interaction, content = content)
     else Button(onClick, shaped, enabled = enabled && !loading, shape = CircleShape, colors = colors, interactionSource = interaction, content = content)

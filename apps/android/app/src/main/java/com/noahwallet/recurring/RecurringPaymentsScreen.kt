@@ -76,7 +76,19 @@ private fun scheduleLine(s: RecurringPayment, running: Boolean, locale: java.uti
     s.status == "paused" -> tr("Paused") to false
     s.status == "completed" -> tr("Completed") to false
     s.status == "needs_approval" -> tr("Needs approval") to true
-    else -> tr("Needs attention") to true
+    else -> tr(attentionReason(s)) to true
+}
+
+/** needs_attention's own reason, short enough for a row; the page shows the full message. */
+private fun attentionReason(s: RecurringPayment): String = when {
+    s.requiresPolicyApproval -> "Approval needed"
+    else -> when (s.issue?.code) {
+        RecurringIssue.Code.automationStopped -> "Wallet suspended"
+        RecurringIssue.Code.interrupted, RecurringIssue.Code.uncertain -> "Check status"
+        RecurringIssue.Code.alreadyPaid -> "Already paid"
+        RecurringIssue.Code.retryableFailure -> "Couldn't prepare payment"
+        else -> "Needs attention"
+    }
 }
 
 /** The recipient's mark: an initial for Lightning addresses, Ark's or Lightning's glyph otherwise. */
@@ -146,36 +158,20 @@ private fun ScheduleListRow(app: AppModel, s: RecurringPayment, running: Boolean
         }
         Text(s.formattedAmount(app.amountUnit, locale).let { if (app.hidden) "••••" else it }, style = HomeType.amount,
             color = if (s.status == "active") palette.foreground else palette.muted, maxLines = 1)
+        Icon(painterResource(com.noahwallet.ui.home.HomeIcons.chevron), null, Modifier.offset(x = (-6).dp).size(18.dp), tint = palette.muted)
     }
 }
 
-/** No payments yet: ghost rows, a line and New payment. */
+/** No payments yet: a still mark, a line and New payment. */
 @Composable
 private fun EmptyRecurring(enabled: Boolean, create: () -> Unit) {
     val palette = LocalPalette.current
-    val initial = "r" // a recipient's initial in the ghost rows; not copy
-    Column(Modifier.fillMaxWidth().padding(top = 40.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-        Column(Modifier.widthIn(max = 300.dp).fillMaxWidth().clearAndSetSemantics { }) {
-            listOf<@Composable () -> Unit>(
-                { Text(initial, style = HomeType.avatar, color = palette.muted) },
-                { Icon(painterResource(SettingsIcons.lightning), null, Modifier.size(20.dp), tint = palette.muted) },
-                { Icon(painterResource(SettingsIcons.repeat), null, Modifier.size(20.dp), tint = palette.muted) },
-            ).forEachIndexed { i, glyph ->
-                Row(Modifier.fillMaxWidth().height(60.dp).graphicsLayer { alpha = 1 - i * .28f }, verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(14.dp)) {
-                    Box(Modifier.size(42.dp).border(1.5.dp, palette.hairline, CircleShape), contentAlignment = Alignment.Center) { glyph() }
-                    Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(7.dp)) {
-                        Box(Modifier.fillMaxWidth(listOf(.56f, .44f, .60f)[i]).height(10.dp).background(palette.soft, RoundedCornerShape(5.dp)))
-                        Box(Modifier.fillMaxWidth(listOf(.38f, .30f, .34f)[i]).height(10.dp).background(palette.soft, RoundedCornerShape(5.dp)))
-                    }
-                    Box(Modifier.size(54.dp, 12.dp).background(palette.soft, RoundedCornerShape(6.dp)))
-                }
-            }
-        }
-        Text(tr("No recurring payments"), Modifier.padding(top = 26.dp, bottom = 6.dp), style = HomeType.listTitle, color = palette.foreground)
+    Column(Modifier.fillMaxWidth().padding(top = 96.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+        com.noahwallet.ui.home.EmptyMark { Icon(painterResource(SettingsIcons.repeat), null, Modifier.size(26.dp), tint = palette.muted) }
+        Text(tr("No recurring payments"), Modifier.padding(top = 20.dp, bottom = 6.dp), style = HomeType.listTitle, color = palette.foreground)
         Text(tr("Rent, allowances or donations, paid on time."), Modifier.widthIn(max = 280.dp).padding(bottom = 18.dp), style = HomeType.line,
             color = palette.muted, textAlign = TextAlign.Center)
-        com.noahwallet.ui.home.Pill(tr("New payment"), height = 40.dp, style = ActivityType.link, enabled = enabled, onClick = create)
+        com.noahwallet.ui.home.Pill(tr("New payment"), height = 44.dp, style = ActivityType.link, enabled = enabled, onClick = create)
     }
 }
 

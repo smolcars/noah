@@ -110,7 +110,7 @@ object ActivityRules {
     fun status(row: Row): Pair<String, Tone> {
         val record = row.record; val home = row.home
         return when {
-            home.refunded -> "Refunded · back in your wallet" to Tone.failed
+            home.refunded -> "Refunded · back in your wallet" to Tone.plain
             home.failed -> (if (home.unchanged) "Failed · nothing left your wallet" else "Failed") to Tone.failed
             home.canceled -> (if (home.unchanged) "Canceled · nothing left your wallet" else "Canceled") to Tone.muted
             home.pending -> pendingStatus(record, home) to Tone.pending

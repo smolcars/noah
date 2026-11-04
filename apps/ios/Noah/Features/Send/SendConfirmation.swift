@@ -76,13 +76,12 @@ struct SendConfirmation: View {
                 .lineLimit(1).minimumScaleFactor(0.5)
                 .padding(.top, 18)
                 .accessibilityIdentifier("send-review-title")
-            HStack(spacing: 12) {
-                SendAvatar(label: label, size: 36)
-                Group { if label.nameIsVerbatim { Text(verbatim: label.name) } else { Text(LocalizedStringKey(label.name)) } }
-                    .noahText(NoahTokens.Typography.body).foregroundStyle(NoahTokens.Colors.foreground)
-                    .lineLimit(1).truncationMode(.middle)
+            if let btcPrice {
+                Text(verbatim: FiatCurrency.display(sats: Int64(clamping: quote.amount), btcPrice: btcPrice, currency: fiatCurrency, locale: locale))
+                    .noahText(NoahTokens.Typography.body).foregroundStyle(NoahTokens.Colors.muted)
+                    .padding(.top, 4)
+                    .accessibilityIdentifier("send-review-fiat")
             }
-            .padding(.top, 16)
         }
         .padding(.horizontal, isWide ? 34 : 20)
         .padding(.bottom, isWide ? 96 : 0)
@@ -96,10 +95,15 @@ struct SendConfirmation: View {
             // and the rows scroll when large text makes them taller than the pane.
             ScrollView {
                 VStack(alignment: .leading, spacing: 0) {
-                    rows.padding(.top, isWide ? 0 : 24)
-                    if let fine { Text(verbatim: fine).noahText(HomeText.footnote).foregroundStyle(NoahTokens.Colors.muted).padding(.top, 12) }
+                    recipientBlock.padding(.top, isWide ? 0 : 20)
+                    rows.padding(.top, 16)
+                    if let fine {
+                        Text(verbatim: fine).noahText(NoahTokens.Typography.sub).foregroundStyle(NoahTokens.Colors.muted)
+                            .fixedSize(horizontal: false, vertical: true).padding(.top, 12)
+                    }
                     if let message = controller.message {
-                        Text(LocalizedStringKey(message)).noahText(HomeText.footnote).foregroundStyle(NoahTokens.Colors.failure).padding(.top, 12)
+                        Text(LocalizedStringKey(message)).noahText(NoahTokens.Typography.sub).foregroundStyle(NoahTokens.Colors.failure)
+                            .fixedSize(horizontal: false, vertical: true).padding(.top, 12)
                     }
                 }
             }
@@ -122,6 +126,51 @@ struct SendConfirmation: View {
 
     private var rail: SendMotion.Rail { SendMotion.Rail(payment) }
 
+    /// "To": who it goes to, then the full address or invoice, selectable, so it can be compared before
+    /// holding. An invoice adds its own description when it has one; it never names its payee.
+    private var recipientBlock: some View {
+        let full = Self.fullDestination(payment.destination, shown: label.name)
+        return VStack(alignment: .leading, spacing: 8) {
+            Text("To").noahText(NoahTokens.Typography.sub).foregroundStyle(NoahTokens.Colors.muted)
+                .accessibilityAddTraits(.isHeader)
+            HStack(spacing: 12) {
+                SendAvatar(label: label, size: 36)
+                Group { if label.nameIsVerbatim { Text(verbatim: label.name) } else { Text(LocalizedStringKey(label.identity)) } }
+                    .noahText(NoahTokens.Typography.label).foregroundStyle(NoahTokens.Colors.foreground)
+                    .lineLimit(2).truncationMode(.middle)
+            }
+            if let note = Self.invoiceDescription(payment) {
+                Text(verbatim: "“\(note)”").noahText(NoahTokens.Typography.body).foregroundStyle(NoahTokens.Colors.foreground)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+            if let full {
+                Text(verbatim: full).font(.system(.subheadline, design: .monospaced)).foregroundStyle(NoahTokens.Colors.foreground)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .textSelection(.enabled)
+                    .accessibilityIdentifier("send-review-destination")
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.bottom, 16)
+        .overlay(alignment: .bottom) { Rectangle().fill(NoahTokens.Colors.hairline).frame(height: 1) }
+        .accessibilityElement(children: .contain)
+        .accessibilityIdentifier("send-review-recipient")
+    }
+
+    /// The reviewed destination in full, unless the name above already is it.
+    static func fullDestination(_ destination: String, shown: String) -> String? {
+        let value = SendDestination.cleaned(destination)
+        return value.isEmpty || value.caseInsensitiveCompare(shown) == .orderedSame ? nil : value
+    }
+
+    /// A BOLT11 invoice's or BOLT12 offer's own description, as the payee wrote it.
+    static func invoiceDescription(_ payment: SendPayment) -> String? {
+        let value = SendDestination.cleaned(payment.destination)
+        let text = (PaymentEncoding.invoice(value)?.description ?? PaymentEncoding.offerDescription(value))?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        return text?.isEmpty == false ? text : nil
+    }
+
     @ViewBuilder private var rows: some View {
         let estimated = quote.approximate || quote.recipientIsEstimated
         // Every row stacks its label above its value when large text won't fit them on one line.
@@ -137,7 +186,7 @@ struct SendConfirmation: View {
             } else {
                 SendDetailRow(estimated ? "Estimated fee" : "Fee", number: format(quote.fee), wraps: true)
             }
-            SendDetailRow(quote.recipientIsEstimated ? "Total (reviewed coins)" : quote.approximate ? "Estimated total" : "Total",
+            SendDetailRow(quote.approximate && !quote.recipientIsEstimated ? "Estimated total" : "Total",
                           number: format(quote.total), last: payment.comment.isEmpty, wraps: true)
             if !payment.comment.isEmpty {
                 SendDetailRow("Note", text: payment.comment, verbatim: true, last: true, wraps: true)
@@ -163,8 +212,7 @@ struct SendConfirmation: View {
     /// (today's setting), shown here so no fine print can crowd them out.
     static func arrives(_ rail: SendMotion.Rail, required: UInt32, locale: String) -> String {
         switch rail {
-        case .ark: L10n.text("Instantly", locale: locale)
-        case .lightning: L10n.text("In seconds", locale: locale)
+        case .ark, .lightning: L10n.text("Usually in seconds", locale: locale)
         case .onchainWallet: L10n.text("In about 20 minutes", locale: locale)
         case .onchainSwap:
             if required <= 1 { L10n.text("After one confirmation", locale: locale) }

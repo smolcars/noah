@@ -288,7 +288,7 @@ internal class TreeLayout(val scene: ExitScene, val words: TreeStrings, val geo:
             if (!s.wallet && !s.claiming) return emptyList()
             val (first, second) = walletText(s, w, balance, received)
             val grow = if (s.claiming) 1.1f else 1f; val k = geo.scale
-            val sizes = 10.5f * k * grow to 11f * k * grow
+            val sizes = 12f * k * grow to 12.5f * k * grow
             // Both inside the picture, however large the text.
             val y2 = min(geo.ground + 24 * k * grow, geo.height - textHeight(sizes.second) / 2 - 1)
             val y1 = min(geo.ground + 11 * k, y2 - (textHeight(sizes.first) + textHeight(sizes.second)) / 2)
@@ -339,7 +339,7 @@ internal class TreeLayout(val scene: ExitScene, val words: TreeStrings, val geo:
                 if (s.claiming) geo.claimNode.let { (x, y) -> shapes += TreeShape.box(TreeShape.Kind.claim, "claim", x - 6.5f, y - 6.5f, x + 6.5f, y + 6.5f) }
                 val lines = walletLines(s, geo, w, balance, received)
                 if (s.wallet || s.claiming) badge(lines)
-                shapes += text(w.tr("Bitcoin"), 14f, geo.ground + 12 * k, 10.5f * k, false, false, TreeShape.Kind.text, "bitcoin")
+                shapes += text(w.tr("Bitcoin"), 14f, geo.ground + 12 * k, 12f * k, false, false, TreeShape.Kind.text, "bitcoin")
                 if (server) {
                     shapes += text(w.tr("Ark"), 14f, geo.coinY - 10, 11f * k, false, false, TreeShape.Kind.text, "ark")
                     shapes += TreeShape.circle(TreeShape.Kind.server, "server", geo.width - 30, geo.coinY, 14f)
@@ -479,7 +479,7 @@ internal class TreeLayout(val scene: ExitScene, val words: TreeStrings, val geo:
                 // reaching down beside it to the ground; left out when neither fits.
                 var caption: List<String>? = null; var captionY = 0f
                 if (n > 1 && stubs.isNotEmpty()) {
-                    val size = 10f * k; val lh = 12.5f * k; val right = tx - geo.block / 2 - 9
+                    val size = 12f * k; val lh = 14.5f * k; val right = tx - geo.block / 2 - 9
                     val wrapped = TreeLabels.wrap(w.tr("Other people’s coins in this round"), right - 14) { measure.width(it, size, false) }
                     val width = wrapped.maxOf { measure.width(it, size, false) }
                     val top = ys[1] + 9; val height = wrapped.size * lh

@@ -236,7 +236,7 @@ struct SettingsList: View {
         SettingsGroup(label: "Security") {
             let backup = BackupStatus(summary.backup, enabled: app.server.state.isBackupEnabled == true)
             row(
-                "Backup",
+                "Wallet backup",
                 icon: "icloud.and.arrow.up",
                 page: .backup,
                 id: "settings-backup",
@@ -462,38 +462,39 @@ private struct SettingsUnitSheet: View {
     @State private var haptics = OnboardingHaptics()
 
     var body: some View {
-        SettingsSheetBody(title: L10n.text("Bitcoin unit", locale: locale.identifier), line: L10n.text("How amounts are written.", locale: locale.identifier)) {
-            VStack(spacing: 10) {
-                ForEach(BitcoinAmountUnit.allCases, id: \.self) { unit in
-                    Button { pick(unit) } label: {
-                        HStack {
-                            VStack(alignment: .leading, spacing: 4) {
-                                Text(verbatim: BitcoinAmount.format(
-                                    sats: Int64(clamping: (fixture?.summary ?? app.summary)?.balance.totalSats ?? 0),
-                                    unit: unit,
-                                    locale: locale))
-                                    .noahText(NoahTokens.Typography.code).monospacedDigit()
-                                Text(LocalizedStringKey(unit == .bip177 ? "Bitcoin (BIP-177)" : "Satoshis"))
-                                    .noahText(NoahTokens.Typography.sub).foregroundStyle(NoahTokens.Colors.muted)
+        SettingsSheetBody(title: L10n.text("Bitcoin unit", locale: locale.identifier), line: L10n.text("How amounts are written.", locale: locale.identifier)
+            + " " + L10n.text("₿1 = 1 sat.", locale: locale.identifier)) {
+                VStack(spacing: 10) {
+                    ForEach(BitcoinAmountUnit.allCases, id: \.self) { unit in
+                        Button { pick(unit) } label: {
+                            HStack {
+                                VStack(alignment: .leading, spacing: 4) {
+                                    Text(verbatim: BitcoinAmount.format(
+                                        sats: Int64(clamping: (fixture?.summary ?? app.summary)?.balance.totalSats ?? 0),
+                                        unit: unit,
+                                        locale: locale))
+                                        .noahText(NoahTokens.Typography.code).monospacedDigit()
+                                    Text(LocalizedStringKey(unit == .bip177 ? "Bitcoin (BIP-177)" : "Satoshis"))
+                                        .noahText(NoahTokens.Typography.sub).foregroundStyle(NoahTokens.Colors.muted)
+                                }
+                                Spacer()
+                                SettingsCheck(on: app.amountUnit == unit)
                             }
-                            Spacer()
-                            SettingsCheck(on: app.amountUnit == unit)
+                            .padding(18)
+                            .glassCompat(in: RoundedRectangle(cornerRadius: 22, style: .continuous))
+                            .overlay {
+                                RoundedRectangle(cornerRadius: 22, style: .continuous)
+                                    .strokeBorder(NoahTokens.Colors.foreground, lineWidth: 2).opacity(app.amountUnit == unit ? 1 : 0)
+                            }
+                            .contentShape(Rectangle())
                         }
-                        .padding(18)
-                        .glassCompat(in: RoundedRectangle(cornerRadius: 22, style: .continuous))
-                        .overlay {
-                            RoundedRectangle(cornerRadius: 22, style: .continuous)
-                                .strokeBorder(NoahTokens.Colors.foreground, lineWidth: 2).opacity(app.amountUnit == unit ? 1 : 0)
-                        }
-                        .contentShape(Rectangle())
+                        .buttonStyle(.plain)
+                        .accessibilityAddTraits(app.amountUnit == unit ? .isSelected : [])
+                        .accessibilityIdentifier("preference-\(unit.rawValue)")
                     }
-                    .buttonStyle(.plain)
-                    .accessibilityAddTraits(app.amountUnit == unit ? .isSelected : [])
-                    .accessibilityIdentifier("preference-\(unit.rawValue)")
                 }
-            }
-            .padding(.top, 16)
-        } actions: { EmptyView() }
+                .padding(.top, 16)
+            } actions: { EmptyView() }
             .onboardingHaptics(haptics)
     }
 

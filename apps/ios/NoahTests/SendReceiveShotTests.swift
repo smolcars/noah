@@ -274,7 +274,7 @@ struct SendReceiveShotTests {
             staging.review(SendPayment(destination: "maya@localhost.com", method: "lightning", amount: 1_500, comment: "Coffee and a croissant, thanks!"),
                            SendQuote(amount: 1_500, fee: 12, total: 1_512), destination: "maya@localhost.com")
         case "review-max":
-            // An Ark-funded on-chain Max send: the longest labels (From, Estimated fee, Total (reviewed coins)).
+            // An Ark-funded on-chain Max send: the longest labels (From, Estimated fee, Total).
             staging.review(SendPayment(destination: bitcoin, method: "onchain", amount: 152_100, source: .offchain, max: true),
                            SendQuote(amount: 152_100, fee: 642, total: 152_742, vtxoIDs: ["fixture:0"]), destination: bitcoin)
         default: return false

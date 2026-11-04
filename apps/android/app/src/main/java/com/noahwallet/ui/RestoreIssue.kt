@@ -6,9 +6,10 @@ import com.noahwallet.services.wallet.WalletSession
 import io.github.niteshbalusu11.bark.BarkError
 import java.io.IOException
 
-/** Fixed copy only: provider/server exceptions can contain secrets. */
-data class RestoreIssue(val message: String, val requiresRestart: Boolean = false) {
+/** Fixed copy only: provider/server exceptions can contain secrets. A [title] is a short red headline over a calm [message]. */
+data class RestoreIssue(val message: String, val requiresRestart: Boolean = false, val title: String? = null) {
     companion object {
+        val noBackup = RestoreIssue("Check the words. Noah can only restore a wallet that had backups turned on.", title = "No backup found")
         val newerBackup = RestoreIssue("This backup was created by a newer version of Noah. Update the app, then try restoring again.")
         val invalidPhrase = RestoreIssue("Check your recovery phrase. Enter all 12 or 24 words in the correct order.")
         val committed = RestoreIssue("Your backup was restored, but setup couldn't finish. Do not restore again. Close and restart Noah to continue.", true)
@@ -51,8 +52,7 @@ data class RestoreIssue(val message: String, val requiresRestart: Boolean = fals
             // The SDK has no typed error code for a future snapshot schema yet.
             is BarkError -> if (futureSchema.matches(error.message.orEmpty())) newerBackup else generic
             is ServerFailure -> if (error.kind == ServerFailure.Kind.connectivity) connectivity
-            else if (error.status == 404 || error.code == "USER_NOT_FOUND")
-                RestoreIssue("No backup was found for this recovery phrase. Check the words and make sure this wallet had backups enabled.") else generic
+            else if (error.status == 404 || error.code == "USER_NOT_FOUND") noBackup else generic
             is IOException -> connectivity
             else -> generic
         }

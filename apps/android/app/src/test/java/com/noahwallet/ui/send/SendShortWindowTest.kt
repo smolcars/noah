@@ -31,10 +31,15 @@ import org.robolectric.annotation.Config
  * A short window (360 × 480 dp, a phone in split screen) and large text: Send's tall stage and title must never squeeze
  * the step's action out of reach. Each action is scrolled to, must lie wholly inside the window, and is tapped by touch.
  */
-/** Scrolls [tag] into view and checks nothing clips it (a scroller, a pane or the window), so a touch anywhere on it lands. */
+/**
+ * Scrolls [tag] into view (a foot action is pinned, outside any scroller) and checks nothing clips it (a scroller, a pane
+ * or the window), so a touch anywhere on it lands.
+ */
 internal fun ComposeTestRule.assertReachable(tag: String) {
     assertEquals("nodes tagged $tag", 1, onAllNodesWithTag(tag).fetchSemanticsNodes().size)
-    val node = onNodeWithTag(tag).performScrollTo().fetchSemanticsNode()
+    if (onNodeWithTag(tag).fetchSemanticsNode().let { node -> generateSequence(node.parent) { it.parent }
+            .any { androidx.compose.ui.semantics.SemanticsActions.ScrollBy in it.config } }) onNodeWithTag(tag).performScrollTo()
+    val node = onNodeWithTag(tag).fetchSemanticsNode()
     val visible = node.boundsInRoot
     assertTrue("$tag has no height", node.size.height > 0)
     assertEquals("$tag is cut off: $visible shows ${visible.size} of ${node.size}", node.size.height.toFloat(), visible.height, 0.5f)

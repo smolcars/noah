@@ -9,6 +9,7 @@ import androidx.compose.animation.core.AnimationVector1D
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -24,6 +25,7 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.geometry.Offset
@@ -79,8 +81,6 @@ data class ReceiveUi(
     val chain: ReceiveArrival? = arrival?.takeIf { it.rail == ReceiveArrival.Rail.onchain },
     val tip: Long? = null,
     val confirmedAt: Long? = null,
-    /** The wallet can receive here: the listening light circles the card. */
-    val listening: Boolean = false,
 ) {
     val amount get() = request?.amountSat
     fun sats(value: Long) = BitcoinAmount.format(value, unit, locale)
@@ -217,7 +217,7 @@ private fun rememberFormatSelect(ui: ReceiveUi, actions: ReceiveActions, sheet: 
 private fun ReceiveCardSlot(ui: ReceiveUi, face: CardFace, tilt: Float, cardWidth: Dp, qrSide: Dp, actions: ReceiveActions, openFormats: (() -> Unit)?) {
     if (ui.error != null && ui.request == null && ui.format != ReceiveFormat.lightningAddress) ErrorCard(ui.error, ui.errorTitle, cardWidth, actions.retry)
     else FitHeight {
-        ReceiveCard(face, ui.arrival, ui.arrival?.let { ui.sats(it.sats) }, ui.listening && ui.error == null, tilt, cardWidth, qrSide,
+        ReceiveCard(face, ui.arrival, ui.arrival?.let { ui.sats(it.sats) }, tilt, cardWidth, qrSide,
             actions.profile, openFormats)
     }
 }
@@ -337,7 +337,7 @@ private fun CompactReceive(ui: ReceiveUi, cardWidth: Dp, card: @Composable () ->
         Column(Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(horizontal = 20.dp).padding(top = 6.dp, bottom = 16.dp),
             horizontalAlignment = Alignment.CenterHorizontally) {
             Row(Modifier.fillMaxWidth().height(44.dp), horizontalArrangement = Arrangement.End, verticalAlignment = Alignment.CenterVertically) {
-                CircleButton(SendIcons.copy, tr("Ways to pay you"), Modifier.testTag("receive-formats"), onClick = formats)
+                WaysToPay(formats)
             }
             Box(Modifier.padding(top = 12.dp)) { card() }
             under()
@@ -475,6 +475,19 @@ private fun FitHeight(content: @Composable () -> Unit) {
     }
 }
 
+/** Opens "Ways to pay you": a labelled control, since a copy glyph would promise a copy. */
+@Composable
+private fun WaysToPay(onClick: () -> Unit) {
+    val palette = LocalPalette.current
+    val haptics = rememberHaptics()
+    Row(Modifier.height(44.dp).clip(CircleShape).border(1.5.dp, palette.hairline, CircleShape)
+        .clickable(role = Role.Button, onClickLabel = tr("Ways to pay you")) { haptics.light(); onClick() }.padding(horizontal = 16.dp)
+        .testTag("receive-formats"), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        Text(tr("Ways to pay"), style = NoahTokens.Typography.control, color = palette.foreground)
+        Icon(painterResource(com.noahwallet.ui.home.HomeIcons.chevron), null, Modifier.size(16.dp).graphicsLayer { rotationZ = 90f }, tint = palette.foreground)
+    }
+}
+
 @Composable
 private fun ErrorCard(error: String, title: String?, width: Dp, retry: () -> Unit) {
     val palette = LocalPalette.current
@@ -495,27 +508,34 @@ private fun FormatList(ui: ReceiveUi, rows: List<FormatRow>, onSelect: (ReceiveF
             val selected = row.format == ui.format
             val dot by animateFloatAsState(if (selected) 1f else 0f, tween(200), label = "radio")
             val copyLabel = tr("Copy {label}", row.name)
-            Row(Modifier.fillMaxWidth().heightIn(min = 66.dp).graphicsLayer { alpha = if (row.enabled ||
-                row.format == ReceiveFormat.invoice) (if (row.enabled) 1f else .35f) else .35f }
+            // Unavailable: the title and controls dim; the reason stays readable.
+            Row(Modifier.fillMaxWidth().heightIn(min = 66.dp)
                 .drawBehind { if (index < rows.lastIndex) drawRect(palette.hairline, Offset(0f, size.height - 1.dp.toPx()), Size(size.width, 1.dp.toPx())) }
                 .clickable(enabled = row.enabled || row.format == ReceiveFormat.invoice, role = Role.RadioButton) { onSelect(row.format) }
                 .semantics { this.selected = selected }.testTag("receive-format-${row.format.name}"),
                 verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                 Box(Modifier.size(10.dp).background(androidx.compose.ui.graphics.lerp(palette.background.copy(alpha = 0f), palette.foreground, dot),
                     CircleShape)
-                    .then(if (dot < 1f) Modifier.drawBehind { drawCircle(palette.hairline, size.minDimension / 2 - .75.dp.toPx(),
+                    .then(if (dot < 1f) Modifier.drawBehind { drawCircle(palette.muted, size.minDimension / 2 - .75.dp.toPx(),
                         style = androidx.compose.ui.graphics.drawscope.Stroke(1.5.dp.toPx())) } else Modifier))
                 Column(Modifier.weight(1f).padding(vertical = 10.dp)) {
                     Text(row.name, style = SendType.strong.copy(fontSize = androidx.compose.ui.unit.TextUnit(15f, androidx.compose.ui.unit.TextUnitType.Sp)),
-                        color = palette.foreground)
-                    if (row.value.isNotEmpty()) Text(row.value, Modifier.padding(top = 1.dp), style = SendType.mono, color = palette.foreground, maxLines = 1,
-                        overflow = TextOverflow.Ellipsis)
+                        color = if (row.enabled) palette.foreground else palette.muted)
+                    // A real value in mono; an unavailable one's reason ("Add an amount first") as plain text.
+                    if (row.value.isNotEmpty()) Text(row.value, Modifier.padding(top = 1.dp),
+                        style = if (row.enabled) SendType.mono.copy(fontSize = androidx.compose.ui.unit.TextUnit(14f,
+                            androidx.compose.ui.unit.TextUnitType.Sp)) else SendType.line,
+                        color = if (row.enabled) palette.foreground else palette.muted, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     Text(row.subtitle, style = SendType.small, color = palette.muted)
                 }
-                Box(Modifier.size(36.dp).tonal(CircleShape, palette.soft).clickable(enabled = row.enabled, role = Role.Button,
+                // A 48 dp target around the 36 dp button.
+                Box(Modifier.offset(x = 6.dp).size(48.dp).clip(CircleShape).clickable(enabled = row.enabled, role = Role.Button,
                     onClickLabel = copyLabel) { onCopy(row.format) }
                     .semantics { contentDescription = copyLabel }.testTag("receive-copy-${row.format.name}"), contentAlignment = Alignment.Center) {
-                    Icon(painterResource(SendIcons.copy), null, Modifier.size(18.dp), tint = palette.foreground)
+                    Box(Modifier.size(36.dp).tonal(CircleShape, palette.soft).graphicsLayer { alpha = if (row.enabled) 1f else .35f },
+                        contentAlignment = Alignment.Center) {
+                        Icon(painterResource(SendIcons.copy), null, Modifier.size(18.dp), tint = palette.foreground)
+                    }
                 }
             }
         }

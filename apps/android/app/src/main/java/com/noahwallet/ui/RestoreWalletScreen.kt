@@ -97,18 +97,15 @@ private fun StoredSeedRestoreScreen(model: AppModel) {
     }, form = {}, actions = {
         // As on iOS, the error sits just above the button.
         Column(verticalArrangement = Arrangement.spacedBy(NoahTokens.Space.l)) {
-            flow.issue?.let {
-                Text(tr(it.message), Modifier.testTag("restore-error").semantics { liveRegion = LiveRegionMode.Assertive },
-                    style = NoahTokens.Typography.sub, color = palette.failure)
-            }
+            flow.issue?.let { RestoreIssueText(it, Modifier.testTag("restore-error")) }
             if (model.isWalletSuspended) {
                 Text(tr("Your wallet is suspended. Resume recovery to restore its backup, or delete this wallet from your device."),
                     style = NoahTokens.Typography.sub, color = palette.muted)
-                PillButton(tr("Resume Recovery"), Modifier.fillMaxWidth(), enabled = !blocked, outlined = true) {
+                PillButton(tr("Resume recovery"), Modifier.fillMaxWidth(), enabled = !blocked, outlined = true) {
                     model.action("Couldn't resume recovery. Restart Noah and try again.") { model.resumeRestoreRecovery() }
                 }
             }
-            if (flow.issue?.requiresRestart != true) PillButton(tr("Restore Wallet"), Modifier.fillMaxWidth(), enabled = model.canRestoreWallet) {
+            if (flow.issue?.requiresRestart != true) PillButton(tr("Restore wallet"), Modifier.fillMaxWidth(), enabled = model.canRestoreWallet) {
                 // Restoring has no way back until a restore fails, so never enter it for a request restoreWallet would drop.
                 if (!model.canRestoreWallet) return@PillButton
                 haptics.medium()
@@ -168,8 +165,7 @@ private fun PhraseRestoreScreen(model: AppModel, clipboard: RestoreClipboard) {
         key(entry.clearGeneration, words.size) {
             WordGrid(entry, words, !blocked, Modifier.padding(top = 18.dp).graphicsLayer { translationX = shake.value * density }.entrance(3, play))
         }
-        Text(restoreMessage(entry, firstBad, flow).orEmpty(), Modifier.padding(top = 14.dp).heightIn(min = 20.dp).testTag("restore-error")
-            .semantics { liveRegion = LiveRegionMode.Assertive }, style = NoahTokens.Typography.sub, color = palette.failure)
+        PhraseMessage(entry, firstBad, flow)
     }, accessory = true, actions = {
         if (keyboard) Suggestions(entry, entry.focused ?: 0)
         else Row(Modifier.fillMaxWidth().padding(top = NoahTokens.Space.s), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -287,7 +283,29 @@ private fun restoreMessage(entry: PhraseEntry, firstBad: Int?, flow: RestoreFlow
     entry.wrongWordCount || entry.pasteRejected -> tr("Paste exactly 12 or 24 words. Your entries haven't been replaced.")
     entry.checksumFailed -> tr("These words don’t form a valid phrase.")
     firstBad != null -> tr("Check word {number}", firstBad + 1)
-    else -> flow.issue?.message?.let { tr(it) }
+    else -> flow.issue?.takeIf { it.title == null }?.message?.let { tr(it) }
+}
+
+/** Under the words: the entry's problem, or the restore's (a titled one as headline and body). */
+@Composable
+private fun PhraseMessage(entry: PhraseEntry, firstBad: Int?, flow: RestoreFlow) {
+    val message = restoreMessage(entry, firstBad, flow)
+    val titled = flow.issue?.takeIf { message == null && it.title != null }
+    if (titled != null) RestoreIssueText(titled, Modifier.padding(top = 14.dp).testTag("restore-error"))
+    else Text(message.orEmpty(), Modifier.padding(top = 14.dp).heightIn(min = 20.dp).testTag("restore-error")
+        .semantics { liveRegion = LiveRegionMode.Assertive }, style = NoahTokens.Typography.sub, color = LocalPalette.current.failure)
+}
+
+/** A restore problem: a red headline over a plain body when it has a title (only the headline is an alarm), else one red line. */
+@Composable
+internal fun RestoreIssueText(issue: RestoreIssue, modifier: Modifier = Modifier, textAlign: androidx.compose.ui.text.style.TextAlign? = null) {
+    val palette = LocalPalette.current
+    Column(modifier.semantics(mergeDescendants = issue.title != null) { liveRegion = LiveRegionMode.Assertive },
+        verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        issue.title?.let { Text(tr(it), Modifier.fillMaxWidth(), style = NoahTokens.Typography.button, color = palette.failure, textAlign = textAlign) }
+        Text(tr(issue.message), Modifier.fillMaxWidth(), style = NoahTokens.Typography.sub,
+            color = if (issue.title != null) palette.foreground else palette.failure, textAlign = textAlign)
+    }
 }
 
 /** The keyboard accessory: suggestions reveal the private prefix, so they expose no semantics. */

@@ -85,10 +85,9 @@ internal fun ExitStartContent(quote: OnchainQuote?, fallback: OnchainQuote?, con
                 onClick = reviewAgain)
         }
     }, leading = { StartLeading(review, known, money, depth, delta) }) {
-        StartTotals(known, confirmed, delta, money)
-        StartWarnings(review, known, quote != null && !current, money)
-        @Suppress("MaxLineLength") // one translation source string
-        FinePrint(tr("Noah then sends and fee-bumps the exit’s transactions on its own, including in the background when the system lets it, paying from your on-chain bitcoin. Fees are estimates. Only the claim fee comes out of the amount. You can cancel until the last transaction is sent."))
+        StartTotals(review, known, confirmed, delta, money)
+        StartWarnings(review, known, quote != null && !current)
+        Caveat(tr("You can cancel until the last transaction is sent."), key = true)
         content()
     }
 }
@@ -110,28 +109,33 @@ private fun ColumnScope.StartLeading(review: OnchainQuote?, known: OnchainQuote?
     else if (review != null) ExitPath(path, review.ids.size > 1, known?.transactions?.toInt(), delta)
 }
 
+/**
+ * Two sources of money, each under its own label: the on-chain wallet pays the network fees (its funding warnings
+ * right under them), and only the claim fee comes out of these coins.
+ */
 @Composable
-private fun StartTotals(known: OnchainQuote?, confirmed: Long?, delta: Long?, money: (Long) -> String) {
-    Column(Modifier.padding(top = 18.dp)) {
-        ExitValueRow(tr("Network fees"), known?.chainFee?.let { "~" + money(it) } ?: tr("Unknown"), kind = ValueKind.number)
-        confirmed?.let { ExitValueRow(tr("Paid from"), tr("On-chain · {amount}", money(it))) }
-        ExitValueRow(tr("Claim fee"), known?.fee?.let { "~" + money(it) } ?: tr("Unknown"), kind = ValueKind.number)
-        known?.feeRate?.let { ExitValueRow(tr("Fee rate"), tr("{rate} sat/vB", it.toString())) }
-        ExitValueRow(tr("Timelock"), delta?.let { trPlural("{n} blocks", it) } ?: tr("Unknown"), last = true)
-        TotalRow(tr("You get"), known?.fee?.let { "~" + money(ExitRules.received(known.amount, it)) } ?: tr("Unknown"))
-    }
+private fun StartTotals(review: OnchainQuote?, known: OnchainQuote?, confirmed: Long?, delta: Long?, money: (Long) -> String) {
+    SectionLabel(tr("From your on-chain wallet"))
+    ExitValueRow(tr("Network fees"), known?.chainFee?.let { "~" + money(it) } ?: tr("Unknown"), kind = ValueKind.number)
+    known?.feeRate?.let { ExitValueRow(tr("Fee rate"), tr("{rate} sat/vB", it.toString())) }
+    confirmed?.let { ExitValueRow(tr("Paid from"), tr("On-chain · {amount}", money(it)), last = true) }
+    if (known != null && !known.fundable) Warning(tr("Not enough on-chain bitcoin for the fees. The exit starts, then waits until you add about {amount}.",
+        money(checkNotNull(known.chainFee) - known.confirmed)), failed = true)
+    if (review?.feesUnknown == true) Warning(tr("Broadcast funding status is unknown; confirmed onchain funds are required."), failed = true)
+    Caveat(tr("Noah sends and fee-bumps the exit’s transactions on its own, including in the background when the system lets it. Fees are estimates."))
+    SectionLabel(tr("From these coins"), Modifier.padding(top = 4.dp))
+    ExitValueRow(tr("Claim fee"), known?.fee?.let { "~" + money(it) } ?: tr("Unknown"), kind = ValueKind.number)
+    ExitValueRow(tr("Timelock"), delta?.let { trPlural("{n} blocks", it) } ?: tr("Unknown"), last = true)
+    TotalRow(tr("You get"), known?.fee?.let { "~" + money(ExitRules.received(known.amount, it)) } ?: tr("Unknown"))
+    Caveat(tr("Only the claim fee comes out of the amount."))
 }
 
 @Composable
-private fun StartWarnings(review: OnchainQuote?, known: OnchainQuote?, changed: Boolean, money: (Long) -> String) {
-    if (known != null && !known.fundable) Warning(tr("Not enough on-chain bitcoin for the fees. The exit starts, then waits until you add about {amount}.",
-        money(checkNotNull(known.chainFee) - known.confirmed)), failed = true)
+private fun StartWarnings(review: OnchainQuote?, known: OnchainQuote?, changed: Boolean) {
     if (known != null) ExitRules.warning(known.amount, checkNotNull(known.fee), known.totalFee, claimOnly = false)?.let { Warning(tr(it), failed = true) }
-    if (review?.feesUnknown == true) {
-        Warning(tr("Fee estimate unavailable. Fees and amount to receive are unknown. Continue without an estimate only if you accept this uncertainty."),
-            failed = true)
-        Warning(tr("Broadcast funding status is unknown; confirmed onchain funds are required."), failed = true)
-    }
+    if (review?.feesUnknown == true) Warning(
+        tr("Fee estimate unavailable. Fees and amount to receive are unknown. Continue without an estimate only if you accept this uncertainty."),
+        failed = true)
     if (changed) Warning(tr(OnchainFailure.changed.text), failed = true)
 }
 

@@ -177,7 +177,7 @@ private fun SecurityGroup(model: AppModel, live: SettingsLive, selected: NavKey?
     val activity = androidx.activity.compose.LocalActivity.current as? FragmentActivity
     val backup = SettingsRules.backup(model.server.state.isBackupEnabled == true, live.backup.lastBackupStatus)
     SettingsGroup(label = tr("Security"), rows = listOfNotNull(
-        { d -> SettingsRow(tr("Backup"), SettingsIcons.cloud, value = when (backup) {
+        { d -> SettingsRow(tr("Wallet backup"), SettingsIcons.cloud, value = when (backup) {
             SettingsRules.Backup.failed -> tr("Failed"); SettingsRules.Backup.running -> tr("Backing up…")
             SettingsRules.Backup.on -> tr("On"); SettingsRules.Backup.off -> tr("Off")
         }, dot = if (backup == SettingsRules.Backup.failed) RowDot.failure else null, failed = backup == SettingsRules.Backup.failed,
@@ -314,7 +314,7 @@ private fun UnitSheet(model: AppModel, dismiss: () -> Unit) {
     val palette = LocalPalette.current
     val locale = Locale.forLanguageTag(model.localeIdentifier)
     val sample = model.summary?.balance?.totalSats?.toLong()?.takeIf { !model.hidden && it > 0 } ?: 1234L
-    SettingsSheet(dismiss, tr("Bitcoin unit"), tr("How amounts are written.")) { close ->
+    SettingsSheet(dismiss, tr("Bitcoin unit"), tr("How amounts are written.") + " " + tr("₿1 = 1 sat.")) { close ->
         val choose = rememberChoice(model, close)
         for ((unit, label) in listOf(BitcoinAmountUnit.bip177 to tr("Bitcoin (BIP-177)"), BitcoinAmountUnit.sats to tr("Satoshis"))) {
             val on = model.amountUnit == unit

@@ -23,6 +23,8 @@ struct TransactionDetailView: View {
     @State private var toast: HomeToast?
     @State private var shareAnchor: CGRect?
     @State private var haptics = OnboardingHaptics()
+    /// Internal IDs and bark's bookkeeping show only in debug mode.
+    @State private var debug = DebugMode.isOn()
 
     init(transaction: HistoryTransaction, wide: Bool = false, closable: Bool = true, detailsOpen: Binding<Bool>? = nil,
          onRepeatPayment: @escaping (RepeatPayment) -> Void, onClose: @escaping () -> Void) {
@@ -93,7 +95,8 @@ struct TransactionDetailView: View {
 
     private var header: some View {
         VStack(alignment: .leading, spacing: 0) {
-            HomeAvatar(avatar: row.avatar, pending: row.status.isPending, failed: row.status.isFailure, isNew: false, size: 60)
+            HomeAvatar(avatar: row.avatar, pending: row.status.isPending, failed: row.status.isFailure,
+                       refunded: row.status == .refunded, isNew: false, size: 60)
                 // Switching rows on wide pops the avatar (bouncy) while the amount rolls.
                 .id(transaction.id)
                 .transition(reduceMotion ? .opacity : .scale(scale: 0.6).combined(with: .opacity))
@@ -175,7 +178,7 @@ struct TransactionDetailView: View {
         if let total = detail.total { line("Total", money(total), numeric: true) }
         if detail.showsDate { line("Date", dateText) }
         if let height = confirmedBlock { line("Confirmed", L10n.text("Block {height}", height.formatted(.number.locale(locale)), locale: language)) }
-        if let entered = enteredAs { line("Entered as", hidden ? "••••" : entered) }
+        if let entered = enteredAs { line("You entered", hidden ? "••••" : entered) }
         if let note = detail.note { line("Note", note, wraps: true) }
         if let recurring = transaction.recurring {
             link(.schedule(recurring.scheduleID), "Repeats", recurring.interval.text(locale: language))
@@ -271,11 +274,15 @@ struct TransactionDetailView: View {
         }
         destinations("Sent to", transaction.sentTo ?? [])
         destinations("Received on", transaction.receivedOn ?? [])
-        small("Payment ID", transaction.id, mono: true, copy: transaction.id)
-        if let id = transaction.movementId { small("Movement ID", String(id), copy: String(id)) }
+        if debug {
+            small("Payment ID", transaction.id, mono: true, copy: transaction.id)
+            if let id = transaction.movementId { small("Movement ID", String(id), copy: String(id)) }
+        }
         if let kind = transaction.movementKindLabel { small("Movement type", L10n.text(kind, locale: language)) }
-        if let name = transaction.subsystemName { small("Subsystem", "\(name) (\(transaction.subsystemKind ?? ""))", mono: true) }
-        if let intended = transaction.intendedBalanceSat { small("Intended change", signed(intended), numeric: true) }
+        if debug {
+            if let name = transaction.subsystemName { small("Subsystem", "\(name) (\(transaction.subsystemKind ?? ""))", mono: true) }
+            if let intended = transaction.intendedBalanceSat { small("Intended change", signed(intended), numeric: true) }
+        }
         if let effective = transaction.effectiveBalanceSat { small("Effective change", signed(effective), numeric: true) }
         if let anchor = transaction.chainAnchor, anchor != transaction.txid, anchor.split(separator: ":").first.map(String.init) != transaction.txid {
             small("Chain anchor", anchor, mono: true, copy: anchor)
@@ -504,8 +511,9 @@ final class ActivityDetailReads {
 
 enum ActivityDetailText {
     static let amount = NoahTokens.TextStyle(size: 46, lineHeight: nil, weight: .semibold, display: true, tracking: -0.025, textStyle: .largeTitle)
-    static let mono = Font.system(size: 14.5, weight: .regular, design: .monospaced)
-    static let monoSmall = Font.system(size: 13.5, weight: .regular, design: .monospaced)
+    /// 15 pt and scaling with Dynamic Type: identifiers are read and compared.
+    static let mono = Font.system(.subheadline, design: .monospaced)
+    static let monoSmall = Font.system(.subheadline, design: .monospaced)
 }
 
 /// One row of the table: a muted label, then the value with its glyph, copy, explorer or chevron.
@@ -527,54 +535,97 @@ struct DetailLine: View {
     var glyphColor: Color?
 
     var body: some View {
-        HStack(alignment: wraps ? .firstTextBaseline : .center, spacing: 18) {
-            Text(verbatim: label)
-                .noahText(compact ? NoahTokens.Typography.sub : NoahTokens.Typography.body)
-                .foregroundStyle(NoahTokens.Colors.muted)
-                .fixedSize()
-            Spacer(minLength: 0)
-            trailing
+        Group {
+            // A compact identifier that can't fit beside its label goes under it, whole and wrapping.
+            if compact && mono && !wraps {
+                ViewThatFits(in: .horizontal) {
+                    inline(fitted: true)
+                    stacked
+                }
+            } else {
+                inline(fitted: false)
+            }
         }
-        .frame(minHeight: compact ? 44 : 48)
-        .padding(.vertical, wraps ? 10 : 0)
         .contentShape(Rectangle())
         .overlay(alignment: .bottom) { if hairline { HomeHairline() } }
         .accessibilityElement(children: .combine)
     }
 
-    private var trailing: some View {
+    private var labelText: some View {
+        Text(verbatim: label)
+            .noahText(compact ? NoahTokens.Typography.sub : NoahTokens.Typography.body)
+            .foregroundStyle(NoahTokens.Colors.muted)
+            .fixedSize()
+    }
+
+    private func inline(fitted: Bool) -> some View {
+        HStack(alignment: wraps ? .firstTextBaseline : .center, spacing: 18) {
+            labelText
+            Spacer(minLength: 0)
+            trailing(fitted: fitted)
+        }
+        .frame(minHeight: compact ? 44 : 48)
+        .padding(.vertical, wraps ? 10 : 0)
+    }
+
+    private var stacked: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            labelText.padding(.top, 10)
+            HStack(alignment: .firstTextBaseline, spacing: 8) {
+                Text(verbatim: value).font(ActivityDetailText.monoSmall)
+                    .foregroundStyle(NoahTokens.Colors.foreground)
+                    .textSelection(.enabled)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .fixedSize(horizontal: false, vertical: true)
+                actions
+            }
+            .padding(.bottom, 8)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    private func trailing(fitted: Bool) -> some View {
         HStack(spacing: 8) {
             if let glyph {
                 Image(systemName: glyph).accessibilityHidden(true).font(.system(size: 14, weight: .medium))
                     .foregroundStyle(glyphColor ?? NoahTokens.Colors.foreground)
             }
             valueText.foregroundStyle(failure ? NoahTokens.Colors.failure : NoahTokens.Colors.foreground)
-            if let onCopy {
-                Button(action: onCopy) {
-                    Image(systemName: copied ? "checkmark" : "doc.on.doc")
-                        .font(.system(size: 15, weight: copied ? .semibold : .regular))
-                        .contentTransition(.symbolEffect(.replace))
-                        .frame(width: 30, height: 30)
-                }
-                .buttonStyle(.plain)
-                .foregroundStyle(NoahTokens.Colors.muted)
-                .padding(.trailing, -6)
-                .accessibilityLabel(Text(L10n.text("Copy {label}", label)))
-            }
-            if let explorer {
-                SwiftUI.Link(destination: explorer) {
-                    Image(systemName: "arrow.up.right.square").font(.system(size: 15)).frame(width: 30, height: 30)
-                }
-                .foregroundStyle(NoahTokens.Colors.muted)
-                .padding(.trailing, -6)
-                .accessibilityLabel(Text("View in explorer"))
-            }
+                .fixedSize(horizontal: fitted, vertical: false)
+            actions
             if chevron {
                 Image(systemName: "chevron.right").accessibilityHidden(true).font(.system(size: 14, weight: .semibold))
                     .foregroundStyle(NoahTokens.Colors.muted)
             }
         }
         .layoutPriority(1)
+    }
+
+    /// Copy and explorer: 44-pt targets around 15-pt glyphs, pulled in so the glyphs stay where they were.
+    @ViewBuilder private var actions: some View {
+        if let onCopy {
+            Button(action: onCopy) {
+                Image(systemName: copied ? "checkmark" : "doc.on.doc")
+                    .font(.system(size: 15, weight: copied ? .semibold : .regular))
+                    .contentTransition(.symbolEffect(.replace))
+                    .frame(width: NoahTokens.Size.hitTarget, height: NoahTokens.Size.hitTarget)
+                    .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(NoahTokens.Colors.muted)
+            .padding(.horizontal, -7)
+            .accessibilityLabel(Text(L10n.text("Copy {label}", label)))
+        }
+        if let explorer {
+            SwiftUI.Link(destination: explorer) {
+                Image(systemName: "arrow.up.right.square").font(.system(size: 15))
+                    .frame(width: NoahTokens.Size.hitTarget, height: NoahTokens.Size.hitTarget)
+                    .contentShape(Rectangle())
+            }
+            .foregroundStyle(NoahTokens.Colors.muted)
+            .padding(.horizontal, -7)
+            .accessibilityLabel(Text("View in explorer"))
+        }
     }
 
     @ViewBuilder private var valueText: some View {

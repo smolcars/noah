@@ -133,47 +133,28 @@ struct ActivitySkeleton: View {
     }
 }
 
-/// Ghost rows showing the three avatar kinds, "No activity yet" and Receive.
+/// A still icon, "No activity yet" and Receive: nothing that looks like loading rows.
 struct ActivityEmptyView: View {
     let onReceive: () -> Void
 
     var body: some View {
         VStack(spacing: 0) {
-            VStack(spacing: 0) {
-                ghost(avatar: AnyView(Text(verbatim: "a").noahText(HomeText.initial)), widths: (0.62, 0.34)).opacity(1)
-                ghost(avatar: AnyView(Image(systemName: "bolt").font(.system(size: 17, weight: .medium))), widths: (0.48, 0.40)).opacity(0.72)
-                ghost(avatar: AnyView(Image(systemName: "link").font(.system(size: 16, weight: .medium))), widths: (0.56, 0.28)).opacity(0.44)
-            }
-            .frame(maxWidth: 300)
-            .accessibilityHidden(true)
+            Image(systemName: "list.bullet")
+                .font(.system(size: 26, weight: .medium))
+                .foregroundStyle(NoahTokens.Colors.muted)
+                .frame(width: 64, height: 64)
+                .background(NoahTokens.Colors.soft, in: Circle())
+                .accessibilityHidden(true)
             Text("No activity yet").noahText(ActivityText.emptyTitle)
                 .foregroundStyle(NoahTokens.Colors.foreground)
-                .padding(.top, 30).padding(.bottom, 18)
+                .padding(.top, 20).padding(.bottom, 18)
             Button("Receive", action: onReceive)
-                .buttonStyle(HomePillStyle(height: 40))
+                .buttonStyle(HomePillStyle(height: 44))
                 .accessibilityIdentifier("activity-empty-receive")
         }
         .frame(maxWidth: .infinity)
-        .padding(.top, 44)
+        .padding(.top, 120)
         .padding(.horizontal, NoahTokens.Space.screen)
-    }
-
-    private func ghost(avatar: AnyView, widths: (CGFloat, CGFloat)) -> some View {
-        HStack(spacing: 14) {
-            avatar
-                .foregroundStyle(NoahTokens.Colors.muted)
-                .frame(width: 42, height: 42)
-                .overlay(Circle().strokeBorder(NoahTokens.Colors.hairline, lineWidth: 1.5))
-            GeometryReader { proxy in
-                VStack(alignment: .leading, spacing: 7) {
-                    Capsule().fill(NoahTokens.Colors.soft).frame(width: proxy.size.width * widths.0, height: 10)
-                    Capsule().fill(NoahTokens.Colors.soft).frame(width: proxy.size.width * widths.1, height: 10)
-                }
-                .frame(maxHeight: .infinity, alignment: .center)
-            }
-            Capsule().fill(NoahTokens.Colors.soft).frame(width: 54, height: 12)
-        }
-        .frame(height: 60)
     }
 }
 

@@ -79,9 +79,9 @@ class RestoreUIDeviceTest {
             button != null
         }
     }
-    /** "Restore" on the phrase screen; the stored-seed recovery screen keeps "Restore Wallet". */
+    /** "Restore" on the phrase screen; the stored-seed recovery screen keeps "Restore wallet". */
     private fun submitButton() = find(automation.rootInActiveWindow) { node ->
-        node.isClickable && node.isEnabled && find(node) { !it.isEditable && it.text?.toString() in setOf("Restore", "Restore Wallet") } != null
+        node.isClickable && node.isEnabled && find(node) { !it.isEditable && it.text?.toString() in setOf("Restore", "Restore wallet") } != null
     }
 
     private fun launch(): Pair<MainActivity, AppModel> {
@@ -306,8 +306,8 @@ class RestoreUIDeviceTest {
             assertNull(find(automation.rootInActiveWindow) { it.isEditable })
             assertTrue(seedOnly.second.isWalletSuspended)
             assertNull(submitButton())
-            waitFor("Deletion fallback remains available") { text("Delete Wallet") != null }
-            clickText("Resume Recovery")
+            waitFor("Deletion fallback remains available") { text("Delete wallet") != null }
+            clickText("Resume recovery")
             waitFor("Recovery resumed") { seedOnly.second.canRestoreWallet }
             // Home, not the battery prompt or the notifications gate, follows Ready: this disposable app is exempt from
             // battery optimisation, and a fresh install on API 33+ starts with notifications denied.
@@ -369,17 +369,17 @@ class RestoreUIDeviceTest {
         val activity = launched.first; val model = launched.second
         try {
             assertEquals(LaunchState.seedWithoutWalletData, model.launchState)
-            clickText("Delete Wallet")
+            clickText("Delete wallet")
             waitFor("Typed confirmation appears") { find(automation.rootInActiveWindow) { it.isEditable && !it.isPassword } != null }
             val confirm = checkNotNull(find(automation.rootInActiveWindow) { it.isEditable && !it.isPassword })
             assertTrue(confirm.performAction(AccessibilityNodeInfo.ACTION_SET_TEXT,
                 Bundle().apply { putCharSequence(AccessibilityNodeInfo.ACTION_ARGUMENT_SET_TEXT_CHARSEQUENCE, "delete") }))
             waitFor("Deletion confirmation enabled") {
                 find(automation.rootInActiveWindow) { node -> node.isClickable && node.isEnabled &&
-                    find(node) { it.text?.toString() == "Delete Wallet" } != null } != null
+                    find(node) { it.text?.toString() == "Delete wallet" } != null } != null
             }
             assertTrue(checkNotNull(find(automation.rootInActiveWindow) { node -> node.isClickable && node.isEnabled &&
-                find(node) { it.text?.toString() == "Delete Wallet" } != null }).performAction(AccessibilityNodeInfo.ACTION_CLICK))
+                find(node) { it.text?.toString() == "Delete wallet" } != null }).performAction(AccessibilityNodeInfo.ACTION_CLICK))
             waitFor("Creation available after confirmed deletion") { text("Create wallet") != null }
             assertEquals(LaunchState.onboarding, model.launchState)
             assertEquals(SecretResult.NotFound, SeedStorage(context, "regtest").read())
@@ -451,7 +451,7 @@ class RestoreUIDeviceTest {
             assertEquals(LaunchState.secureStorageUnavailable, launched.second.launchState)
             waitFor("Waiting for secure storage screen shown") { text("Unlock your device") != null }
             assertTrue(location.restorePending); assertTrue(location.databaseExists)
-            assertNull(text("Create Wallet")); assertNull(text("Restore Wallet"))
+            assertNull(text("Create Wallet")); assertNull(text("Restore wallet"))
         } finally {
             instrumentation.runOnMainSync { activity?.finish() }
             location.directory.deleteRecursively(); location.restoreDirectory.deleteRecursively(); seedFile.delete()

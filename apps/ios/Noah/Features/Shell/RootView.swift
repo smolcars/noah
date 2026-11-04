@@ -41,7 +41,7 @@ struct RootView: View {
                     .padding()
             }
             if model.phase == .blocked(.seedWithoutWalletData) || model.phase == .blocked(.walletDataWithoutSeed) {
-                Button("Delete Wallet", role: .destructive) { showingDelete = true }
+                Button("Delete wallet", role: .destructive) { showingDelete = true }
                     .padding()
             }
         }

@@ -86,16 +86,16 @@ class StoredSeedShotsTest {
             Thread.sleep(1000)
             settings.removeAll()
             model = launch()
-            waitFor("Restore offered") { model.canRestoreWallet && button("Restore Wallet") != null }
+            waitFor("Restore offered") { model.canRestoreWallet && button("Restore wallet") != null }
             capture("idle")
-            assertTrue(checkNotNull(button("Restore Wallet")).performAction(AccessibilityNodeInfo.ACTION_CLICK))
+            assertTrue(checkNotNull(button("Restore wallet")).performAction(AccessibilityNodeInfo.ACTION_CLICK))
             waitFor("Restore running") { model.restore.running }
             capture("restoring", 2600)
             waitFor("The silent server fails the restore", 120_000) { model.restore.issue != null && !model.busy }
             // A failure returns to Recovery phrase found with its error, and Restore Wallet is offered again.
             val message = checkNotNull(model.restore.issue).message
             waitFor("Back on Recovery phrase found with the error and Restore Wallet enabled") {
-                text("Recovery phrase found") != null && text(message) != null && button("Restore Wallet") != null
+                text("Recovery phrase found") != null && text(message) != null && button("Restore wallet") != null
             }
             assertEquals("storedSeed", model.step)
             capture("error")

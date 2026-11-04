@@ -104,7 +104,7 @@ fun ReceiveScreen(app: AppModel, onProfile: () -> Unit = {}) {
     }
 }
 
-/** What the screen shows: the request, its format and arrival, the chain's block row, and whether it's listening. */
+/** What the screen shows: the request, its format and arrival, and the chain's block row. */
 @Composable
 private fun receiveUi(app: AppModel, state: ReceiveScreenState, chain: ReceiveArrival?, tip: Long?, price: Double?, currency: String): ReceiveUi {
     val rows = app.history.transactions
@@ -117,9 +117,7 @@ private fun receiveUi(app: AppModel, state: ReceiveScreenState, chain: ReceiveAr
     return ReceiveUi(request, address, format, app.amountUnit, java.util.Locale.forLanguageTag(app.localeIdentifier), price, currency, error = error,
         errorTitle = state.errorTitle.value, saving = state.saving.value, invoiceError = state.invoiceError.value,
         arrival = state.arrival.value, chain = chain, tip = tip?.let { current -> confirmedAt?.let { maxOf(current, it) } ?: current },
-        confirmedAt = confirmedAt,
-        listening = app.session.isOpen && !app.isWalletSuspended && error == null &&
-            ((format == ReceiveFormat.lightningAddress && address != null) || request != null))
+        confirmedAt = confirmedAt)
 }
 
 /**
@@ -190,7 +188,7 @@ private class ReceiveScreenState(
 
     private fun lightningFailed(event: ReceiveCompletion.LightningFailed) {
         request.value = null; format.value = ReceiveFormats.afterAmount(format.value, false)
-        errorTitle.value = if (event.canceled) "Lightning Receive Canceled" else "Lightning Receive Failed"
+        errorTitle.value = if (event.canceled) "Lightning receive canceled" else "Lightning receive failed"
         error.value = "The Lightning payment could not be received. Generate a new payment request and try again."
     }
 

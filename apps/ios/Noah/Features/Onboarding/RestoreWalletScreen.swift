@@ -196,6 +196,15 @@ struct RestoreWalletScreen: View {
 
     @ViewBuilder
     private var message: some View {
+        if let issue, let title = issue.title {
+            RestoreIssueText(title: title, message: issue.message)
+        } else {
+            errorLine
+        }
+    }
+
+    @ViewBuilder
+    private var errorLine: some View {
         let text: String? = if let issue { issue.message }
         else if draft.input.wrongWordCount || draft.pasteRejected { "Paste exactly 12 or 24 words. Your entries haven't been replaced." }
         else if let invalid = draft.firstInvalid { L10n.text("Check word {number}", invalid + 1, locale: locale.identifier) }
@@ -395,13 +404,17 @@ struct StoredSeedRestoreScreen: View {
             VStack(alignment: .leading, spacing: NoahTokens.Space.l) {
                 Spacer(minLength: 0)
                 if let issue {
-                    Text(LocalizedStringKey(issue.message))
-                        .noahText(NoahTokens.Typography.sub)
-                        .foregroundStyle(NoahTokens.Colors.failure)
-                        .accessibilityIdentifier("restore-error")
+                    if let title = issue.title {
+                        RestoreIssueText(title: title, message: issue.message)
+                    } else {
+                        Text(LocalizedStringKey(issue.message))
+                            .noahText(NoahTokens.Typography.sub)
+                            .foregroundStyle(NoahTokens.Colors.failure)
+                            .accessibilityIdentifier("restore-error")
+                    }
                 }
                 if issue?.requiresRestart != true {
-                    Button("Restore Wallet", action: onRestore)
+                    Button("Restore wallet", action: onRestore)
                         .buttonStyle(OnboardingPrimaryButtonStyle())
                         .accessibilityIdentifier("restore-wallet-submit")
                 }
@@ -410,6 +423,23 @@ struct StoredSeedRestoreScreen: View {
             .padding(.bottom, NoahTokens.Space.l)
             .onboardingPane()
         }
+    }
+}
+
+/// A restore problem as a red headline and a plain body: only the headline is an alarm.
+private struct RestoreIssueText: View {
+    let title: String
+    let message: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Text(LocalizedStringKey(title)).noahText(NoahTokens.Typography.button).foregroundStyle(NoahTokens.Colors.failure)
+            Text(LocalizedStringKey(message)).noahText(NoahTokens.Typography.sub).foregroundStyle(NoahTokens.Colors.foreground)
+        }
+        .fixedSize(horizontal: false, vertical: true)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .accessibilityElement(children: .combine)
+        .accessibilityIdentifier("restore-error")
     }
 }
 

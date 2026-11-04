@@ -254,9 +254,11 @@ internal class TreeGeometry(val width: Float, val height: Float, val n: Int, val
     val walletY = ground - 21
     val room = roundY - coinY
     val spread = min(26f, width * .068f)
-    val lineHeight = 14 * scale
-    val fontSize = 11.5f * scale
-    val subSize = 10.5f * scale
+    // Labels at the caption size (13) and notes at 11, growing less with large text than the rest so every block keeps its label.
+    private val labelScale = min(scale, 1.1f)
+    val lineHeight = 16 * labelScale
+    val fontSize = 13f * labelScale
+    val subSize = 11f * labelScale
 
     /** The room your coin keeps: its dashed ring, or the timelock's dial (ticks and all) while it's locked ([lock], 0 → 1). */
     fun coinReserve(lock: Float = 0f) = coinR + 5 + 13 * lock.coerceIn(0f, 1f)

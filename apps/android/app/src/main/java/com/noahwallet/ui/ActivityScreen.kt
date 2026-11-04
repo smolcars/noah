@@ -15,6 +15,7 @@ import com.noahwallet.history.HistoryMetadata
 import com.noahwallet.history.HistoryTransaction
 import com.noahwallet.history.RepeatPayment
 import com.noahwallet.services.server.value
+import com.noahwallet.services.storage.PersistedWalletState
 import com.noahwallet.services.wallet.ChainStatus
 import com.noahwallet.services.wallet.WalletConfiguration
 import com.noahwallet.ui.activity.*
@@ -82,12 +83,14 @@ internal fun paymentDetail(app: AppModel, state: ActivityState, price: Double?, 
     var tip by remember { mutableStateOf<Long?>(null) }
     val confirmedAt = remember { mutableStateMapOf<String, Long>() }
     val chainReads = remember { ChainReads() }
+    val debug = remember { app.settings.persistedState<PersistedWalletState>(PersistedWalletState.key)?.isDebugModeEnabled == true }
     val ui = ActivityUi(
         records = history.transactions, loading = history.isLoading, error = history.error, refreshing = false, unit = app.amountUnit,
         locale = Locale.forLanguageTag(app.localeIdentifier), hidden = app.hidden,
         ownDomain = app.server.state.lightningAddress?.substringAfter('@', "")?.takeIf { it.isNotEmpty() }, variant = BuildConfig.APP_VARIANT,
         currency = app.preferredCurrency.takeIf { it in FiatCurrency.supported } ?: "USD", price = price, tip = tip, confirmedAt = confirmedAt.toMap(),
         chainNeeded = WalletConfiguration.base(BuildConfig.APP_VARIANT).roundTxRequiredConfirmations.toLong(), revision = history.revision, now = Date(),
+        debug = debug,
     )
     val actions = ActivityActions(
         repeat = { state.selected = null; onRepeatPayment(it) },

@@ -33,7 +33,7 @@ object ReceiveFixtures {
         }
         return ReceiveUi(request, if (state == "no-address") null else address, format, BitcoinAmountUnit.bip177, Locale.US, 112_000.0, "USD",
             error = if (state == "error") "Could not generate a receive request. Please try again." else null,
-            arrival = arrival, tip = 921_345, confirmedAt = confirmedAt, listening = state != "error" && state != "loading" && arrival == null)
+            arrival = arrival, tip = 921_345, confirmedAt = confirmedAt)
     }
 
     /** An arrival whose clock reads [at] ms now. */

@@ -97,7 +97,7 @@ class OnboardingFoldTest {
             WindowRegion(width / 2 - 12, 0, width / 2 + 12, height)
         }
         assertClear("distributor", vertical)
-        compose.onNodeWithText("Select Distributor", useUnmergedTree = true).fetchSemanticsNode().boundsInWindow.let {
+        compose.onNodeWithText("Select distributor", useUnmergedTree = true).fetchSemanticsNode().boundsInWindow.let {
             assertTrue("distributor setup trails: $it", it.left >= vertical.right)
         }
         val fold = show("name") { width, height -> WindowRegion(width / 2 - 12, 0, width / 2 + 12, height) }
@@ -110,7 +110,7 @@ class OnboardingFoldTest {
         compose.onNodeWithText("Recovery phrase found", useUnmergedTree = true).fetchSemanticsNode().boundsInWindow.let {
             assertTrue("stored-phrase headline leads: $it", it.right <= stored.left)
         }
-        for (title in listOf("Restore Wallet", "Delete Wallet")) compose.onNodeWithText(title, useUnmergedTree = true).fetchSemanticsNode().boundsInWindow.let {
+        for (title in listOf("Restore wallet", "Delete wallet")) compose.onNodeWithText(title, useUnmergedTree = true).fetchSemanticsNode().boundsInWindow.let {
             assertTrue("$title trails: $it", it.left >= stored.right)
         }
     }
@@ -124,7 +124,7 @@ class OnboardingFoldTest {
             WindowRegion(0, height / 2 - 12, width, height / 2 + 12)
         }
         assertClear("distributor", horizontal)
-        compose.onNodeWithText("Select Distributor", useUnmergedTree = true).fetchSemanticsNode().boundsInWindow.let {
+        compose.onNodeWithText("Select distributor", useUnmergedTree = true).fetchSemanticsNode().boundsInWindow.let {
             assertTrue("distributor setup below the fold: $it", it.top >= horizontal.bottom)
         }
         val fold = show("name") { width, height -> WindowRegion(0, height / 2 - 12, width, height / 2 + 12) }
@@ -142,7 +142,7 @@ class OnboardingFoldTest {
         compose.onNodeWithText("Recovery phrase found", useUnmergedTree = true).fetchSemanticsNode().boundsInWindow.let {
             assertTrue("stored-phrase headline above: $it", it.bottom <= stored.top)
         }
-        for (title in listOf("Restore Wallet", "Delete Wallet")) compose.onNodeWithText(title, useUnmergedTree = true).fetchSemanticsNode().boundsInWindow.let {
+        for (title in listOf("Restore wallet", "Delete wallet")) compose.onNodeWithText(title, useUnmergedTree = true).fetchSemanticsNode().boundsInWindow.let {
             assertTrue("$title below: $it", it.top >= stored.bottom)
         }
     }
