@@ -24,6 +24,67 @@ jobs:
       git_ref: ${{ github.ref }}
     secrets: inherit
 
+  ios:
+    name: iOS ${{ matrix.flavor }} archive
+    # Self-hosted with signing: the same runner, identity and Xcode account as native-telegram-ios.yml.
+    runs-on: macOS
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - { flavor: signet, scheme: Noah-Signet, configuration: Release-Signet }
+          - { flavor: mainnet, scheme: Noah, configuration: Release-Mainnet }
+    env:
+      NIX_CONFIG: |
+        post-build-hook =
+        extra-substituters =
+        substituters = https://cache.nixos.org/
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Validate native release version
+        env:
+          RELEASE_TAG: ${{ github.ref_name }}
+        run: nix shell --inputs-from . nixpkgs#bun --command bun scripts/check_native_release.ts "$RELEASE_TAG"
+
+      - name: Install XcodeGen
+        run: command -v xcodegen || brew install xcodegen
+
+      - name: Prepare temporary archive directory
+        run: echo "IOS_TEMP=$(mktemp -d /private/tmp/noah-${{ matrix.flavor }}-release-XXXXXX)" >> "$GITHUB_ENV"
+
+      - name: Generate Xcode project
+        working-directory: apps/ios
+        run: xcodegen generate
+
+      - name: Archive ${{ matrix.scheme }}
+        working-directory: apps/ios
+        env:
+          SENTRY_AUTH_TOKEN: ${{ secrets.SENTRY_AUTH_TOKEN }}
+          SENTRY_ORG: dunder-rn
+          SENTRY_PROJECT: react-native
+        run: |
+          nix shell --inputs-from ../.. nixpkgs#sentry-cli --command xcodebuild \
+            -project Noah.xcodeproj -scheme "${{ matrix.scheme }}" -configuration "${{ matrix.configuration }}" \
+            -destination 'generic/platform=iOS' -jobs 2 -allowProvisioningUpdates \
+            -derivedDataPath "$IOS_TEMP/DerivedData" \
+            -archivePath "$IOS_TEMP/noah-${{ matrix.flavor }}.xcarchive" archive
+
+      - name: Package archive
+        run: tar -czf "$IOS_TEMP/noah-${{ matrix.flavor }}.xcarchive.tar.gz" -C "$IOS_TEMP" "noah-${{ matrix.flavor }}.xcarchive"
+
+      - uses: actions/upload-artifact@v7
+        with:
+          name: noah-ios-${{ matrix.flavor }}
+          path: ${{ env.IOS_TEMP }}/noah-${{ matrix.flavor }}.xcarchive.tar.gz
+          if-no-files-found: error
+          retention-days: 90
+
+      - name: Remove archive and DerivedData
+        if: always() && env.IOS_TEMP != ''
+        run: rm -rf "$IOS_TEMP"
+
   release:
     name: Create GitHub Release
     runs-on: ubuntu-latest
@@ -52,5 +113,5 @@ jobs:
             echo "### Android release $RELEASE_TAG"
             echo 'Signet and Mainnet APKs are attached to the GitHub Release.'
             echo 'For manual Google Play publishing, download the AABs from **native-android-signet** and **native-android-mainnet** in this run.'
-            echo 'iOS archives and TestFlight distribution run separately in Xcode Cloud.'
+            echo 'iOS archives are in **noah-ios-signet** and **noah-ios-mainnet** in this run; upload them from Xcode Organizer.'
           } >> "$GITHUB_STEP_SUMMARY"
