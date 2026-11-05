@@ -339,7 +339,10 @@ class AppServices private constructor(private val context: Context) {
                 foregroundSync.run {
                     currentCoroutineContext().ensureActive()
                     if (!budget.available || !foregroundSyncAllowed()) return@run
-                    try { session.startMailboxProcessor() }
+                    try {
+                        session.startMailboxProcessor()
+                        if (!budget.available) session.stopMailboxProcessor() // the app left the front during the start
+                    }
                     catch (cancelled: CancellationException) { throw cancelled }
                     catch (@Suppress("TooGenericExceptionCaught") failure: Exception) { // the pass still syncs; the next one retries
                         AppLog(context, "mailbox").w("Mailbox processor didn't start (${failure::class.simpleName})")

@@ -730,7 +730,11 @@ extension WalletSession {
     /// lands, not on the next pass. Starting it again does nothing; background jobs never start it.
     private func startMailboxProcessor() async {
         guard case .open(let handles) = state, await ForegroundExecution.isActive else { return }
-        do { try await Task { try await handles.wallet.startMailboxProcessor() }.value } catch {
+        do {
+            try await Task { try await handles.wallet.startMailboxProcessor() }.value
+            // The app left the front during the start, possibly after its stop ran: stop again.
+            if await !ForegroundExecution.isActive { await stopMailboxProcessor() }
+        } catch {
             AppLog("mailbox").w("Mailbox processor didn't start (\(String(describing: type(of: error))))")
         }
     }

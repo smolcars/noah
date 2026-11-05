@@ -424,8 +424,18 @@ class WalletSession internal constructor(
     suspend fun claimLightningReceives() = withOpen { it.claimLightningReceives() }
     /** Foreground passes only (background jobs never start it); starting it again does nothing. */
     suspend fun startMailboxProcessor() = withOpen { it.startMailboxProcessor() }
-    /** The app left the front; closing the wallet also stops it. The next foreground pass starts it again. */
-    suspend fun stopMailboxProcessor() = withOpen { it.stopMailboxProcessor() }
+    /**
+     * The app left the front; the next foreground pass starts it again. Counted like a call but not through [withOpen]:
+     * it must also stop while a recurring payment holds the wallet ([exclusiveSend]).
+     */
+    suspend fun stopMailboxProcessor() = withContext(NonCancellable + Dispatchers.IO) {
+        val handles = synchronized(lock) {
+            val open = (state as? State.Open)?.handles ?: return@withContext
+            if (runningCalls++ == 0) drained = CompletableDeferred()
+            open
+        }
+        try { handles.stopMailboxProcessor() } finally { synchronized(lock) { if (--runningCalls == 0) drained.complete(Unit) } }
+    }
     /** The widget's wave history and Home's Renew, best effort, beside a summary with the balance [shown]. */
     suspend fun widgetExtras(shown: WalletBalance?): com.noahwallet.services.push.WidgetDataWriter.Extras =
         withOpen { com.noahwallet.services.push.WidgetDataWriter.extras(it, variant, shown) }
@@ -644,6 +654,8 @@ class WalletSession internal constructor(
         } finally {
             if (!discarded) synchronized(lock) { state = if (quarantined || location.restorePending) State.Quarantined(handles) else State.Open(handles) }
         }
+        // close() only signals the processor; a mailbox sync in progress must finish before the files are released.
+        runCatching { handles.stopMailboxProcessor() }
         var closed = false
         try {
             handles.close()
