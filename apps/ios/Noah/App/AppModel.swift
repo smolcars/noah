@@ -624,7 +624,7 @@ extension AppModel {
     }
 
     func appEnteredBackground() {
-        Task { await session.stopMailboxProcessor() }
+        Task { await session.reconcileMailboxProcessor() }
     }
 
     func appBecameActive() async {

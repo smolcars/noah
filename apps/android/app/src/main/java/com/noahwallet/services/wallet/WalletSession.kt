@@ -422,19 +422,26 @@ class WalletSession internal constructor(
     suspend fun maintenanceDelegated() = withOpen { it.maintenanceDelegated() }
     suspend fun bolt11Invoice(amountSats: ULong): String = withOpen { it.bolt11Invoice(amountSats) }
     suspend fun claimLightningReceives() = withOpen { it.claimLightningReceives() }
-    /** Foreground passes only (background jobs never start it); starting it again does nothing. */
-    suspend fun startMailboxProcessor() = withOpen { it.startMailboxProcessor() }
     /**
-     * The app left the front; the next foreground pass starts it again. Counted like a call but not through [withOpen]:
-     * it must also stop while a recurring payment holds the wallet ([exclusiveSend]).
+     * Runs bark's mailbox processor exactly while [inFront] holds: starts or stops it, then repeats if the answer changed
+     * meanwhile, so a stale start or stop never wins; starting again does nothing. Counted like a call (close waits for
+     * it) but not through [withOpen]: leaving the front must stop it even while a recurring payment holds the wallet.
      */
-    suspend fun stopMailboxProcessor() = withContext(NonCancellable + Dispatchers.IO) {
+    suspend fun reconcileMailboxProcessor(inFront: () -> Boolean) = withContext(NonCancellable + Dispatchers.IO) {
         val handles = synchronized(lock) {
             val open = (state as? State.Open)?.handles ?: return@withContext
             if (runningCalls++ == 0) drained = CompletableDeferred()
             open
         }
-        try { handles.stopMailboxProcessor() } finally { synchronized(lock) { if (--runningCalls == 0) drained.complete(Unit) } }
+        try {
+            var applied: Boolean? = null
+            while (synchronized(lock) { (state as? State.Open)?.handles === handles }) {
+                val wanted = inFront()
+                if (wanted == applied) break
+                if (wanted) handles.startMailboxProcessor() else handles.stopMailboxProcessor()
+                applied = wanted
+            }
+        } finally { synchronized(lock) { if (--runningCalls == 0) drained.complete(Unit) } }
     }
     /** The widget's wave history and Home's Renew, best effort, beside a summary with the balance [shown]. */
     suspend fun widgetExtras(shown: WalletBalance?): com.noahwallet.services.push.WidgetDataWriter.Extras =

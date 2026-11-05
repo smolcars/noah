@@ -15,6 +15,8 @@ internal object PeriodicExecution {
     private var foreground = false
     private val active = mutableMapOf<RecurringBudget, CompletableDeferred<Unit>>()
 
+    val isForeground: Boolean get() = synchronized(lock) { foreground }
+
     fun foreground(value: Boolean) = synchronized(lock) {
         foreground = value
         if (value) active.keys.forEach { it.revoke() }
