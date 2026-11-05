@@ -716,10 +716,10 @@ extension WalletSession {
     /// return to the front (maintenance due) logs its stages' timing.
     func syncInForeground() async throws {
         guard isOpen else { return }
-        await startMailboxProcessor()
         let flight = syncFlight
         let timing = maintenanceDue ? PassTiming() : nil
         try await withOpenWallet { handles in
+            await Self.startMailboxProcessor(handles)
             try await flight.run(ForegroundPass.live(self, handles, timing: timing).stages.map { stage in
                 { try await self.runSyncStage({ _ in try await stage() }, handles: handles) }
             })
@@ -727,13 +727,14 @@ extension WalletSession {
     }
 
     /// Bark's mailbox processor while the app is in front, so an Ark payment arrives (and Receive plays it) as it
-    /// lands, not on the next pass. Starting it again does nothing; background jobs never start it.
-    private func startMailboxProcessor() async {
-        guard case .open(let handles) = state, await ForegroundExecution.isActive else { return }
+    /// lands, not on the next pass. Starting it again does nothing; background jobs never start it. Runs inside the
+    /// pass's counted call, so a close waits for it before its own stop.
+    private static func startMailboxProcessor(_ handles: Handles) async {
+        guard await ForegroundExecution.isActive else { return }
         do {
-            try await Task { try await handles.wallet.startMailboxProcessor() }.value
+            try await handles.wallet.startMailboxProcessor()
             // The app left the front during the start, possibly after its stop ran: stop again.
-            if await !ForegroundExecution.isActive { await stopMailboxProcessor() }
+            if await !ForegroundExecution.isActive { try await handles.wallet.stopMailboxProcessor() }
         } catch {
             AppLog("mailbox").w("Mailbox processor didn't start (\(String(describing: type(of: error))))")
         }
