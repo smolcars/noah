@@ -103,8 +103,8 @@ android {
         require(regtestLnurlDomain.matches(Regex("[a-zA-Z0-9.-]+"))) { "Invalid regtest Lightning-address domain" }
         buildConfigField("String", "REGTEST_LNURL_DOMAIN", "\"$regtestLnurlDomain\"")
         buildConfigField("String", "SENTRY_DSN", "\"${sentryDsn.replace("\\", "\\\\").replace("\"", "\\\"")}\"")
-        versionCode = 100
-        versionName = "0.2.0"
+        versionCode = 101
+        versionName = "1.0.0"
         // Same ABIs as the RN app; MMKV and bark-bolt-ffi ship no x86 libraries.
         // -PnoahAbis=arm64-v8a narrows a phone-only build (the Telegram signet APK); emulators need x86_64.
         val abis = providers.gradleProperty("noahAbis").orNull?.split(',')?.map(String::trim)?.filter(String::isNotEmpty)
