@@ -7,31 +7,42 @@ It is intentionally operational: where code lives, how the runtime behaves, and 
 
 ## Project summary
 
-- Noah is a mobile Bitcoin wallet for Ark (L2).
-- Monorepo contains:
-  - `client/`: React Native + Expo mobile app.
+- Noah is a self-custodial Bitcoin wallet for Ark (L2).
+- It ships as two native apps with the same features, plus a Rust server:
+  - `apps/ios/`: Swift 6 + SwiftUI app and widget.
+  - `apps/android/`: Kotlin + Jetpack Compose app and widgets.
   - `server/`: Rust Axum backend.
-  - `scripts/`: local regtest/dev stack tooling.
-  - `.railway/`: Railway configuration and deployment/recovery notes.
-  - `docs/`: deep-dive docs for push/widgets/notification coordination.
+- `client/` is the previous React Native app. It is no longer released; don't change it unless asked.
 
 ## Monorepo map
 
 - Root
   - `justfile`: primary dev command surface.
-  - `flake.nix`: Nix development environments.
+  - `flake.nix`: Nix development environments (JDK 17, Android SDK, SwiftFormat/SwiftLint, ktlint/detekt).
   - `Cargo.toml`: workspace root (member: `server`).
-  - `package.json`: Bun workspace root (workspace: `client`).
-  - `.github/workflows/`: CI/CD pipelines.
-- Client
-  - `client/App.tsx`: app root (Sentry wrapping, providers).
-  - `client/src/Navigators.tsx`: navigation stacks/tabs + onboarding gate.
-  - `client/src/AppServices.tsx`: startup side effects (sync, push, backup, server registration).
-  - `client/src/lib/`: APIs, wallet wrappers, backup/sync/tasks/logging.
-  - `client/src/hooks/`: feature hooks used by UI.
-  - `client/src/store/`: Zustand persisted stores.
-  - `client/src/types/serverTypes.ts`: generated from server via `ts-rs`.
-  - `client/nitromodules/noah-tools/`: custom Nitro module (native bridge).
+  - `package.json`: Bun workspace for repository scripts and translation tooling.
+  - `api/openapi.json`: the server's exported API contract; both apps' clients are generated from it.
+  - `.github/workflows/`: CI/CD pipelines (`native-*.yml` for the apps, `server*.yml` and `mainnet-railway-deploy.yml` for the server).
+  - `SECURITY.md`: vulnerability reporting.
+- iOS (`apps/ios/`)
+  - `project.yml`: XcodeGen spec. `Noah.xcodeproj` is generated and not committed (only its `Package.resolved` is).
+  - `Config/{Mainnet,Signet,Regtest}.xcconfig`: per-variant bundle IDs, app groups, display name, Sentry DSN.
+  - `Noah/App/`: app entry (`NoahApp.swift`, `AppDelegate.swift`, `AppModel.swift`, `AppVariant.swift`).
+  - `Noah/Features/`: screens by area (`Shell/RootView.swift`, `Home`, `Send`, `Receive`, `History`, `Onchain`, `Recurring`, `Settings`, `Onboarding`, `BtcMap`, `QRHub`, `Push`).
+  - `Noah/Services/`: `Wallet` (`WalletSession`), `Server` (`ServerClient`, auth, registration), `Push`, `Background`, `Backup`, `Storage`, `Launch`, `Logging`, `AppIntents`, plus `AppServices.swift`.
+  - `Noah/API/Generated/`: generated server client (don't hand-edit).
+  - `Noah/DesignSystem/`, `Noah/Localization/`, `Noah/Resources/` (`Localizable.xcstrings`, entitlements, privacy manifest).
+  - `NoahWidget/`: widget extension. `NoahTests/`: unit tests. `*Tests/` directories: device, live-stack and upgrade suites with their own READMEs.
+- Android (`apps/android/`)
+  - `app/build.gradle.kts`: flavors `mainnet`, `signet`, `regtest`; version name/code; signing.
+  - `app/src/main/java/com/noahwallet/`: `MainActivity.kt`, `NoahApplication.kt`, `ui/` (screens), `services/` (`wallet/WalletSession.kt`, `server/`, `push/`, `background/`, `backup/`, `storage/`, `launch/`, `logging/`, `AppServices.kt`), and feature packages (`send`, `history`, `onchain`, `recurring`, `btcmap`, `widgets`).
+  - `app/src/main/java/com/noahwallet/api/generated/`: generated server client (don't hand-edit).
+  - `gradle/libs.versions.toml` and `gradle/verification-metadata.xml`: pinned, checksum-verified dependencies.
+  - `*Tests/` directories: device and live-stack suites with their own READMEs.
+- Shared app assets (`apps/`)
+  - `apps/fixtures/`: JSON cases both platforms' tests load, so shared behavior stays identical.
+  - `apps/maestro/`: Maestro UI flows run against both apps.
+  - `apps/i18n/` and `apps/tools/translations.mjs`: English source copy and translations.
 - Server
   - `server/src/main.rs`: app bootstrap, dependencies, routers, middleware, cron.
   - `server/src/routes/public_api_v0.rs`: public + semi-public API handlers.
@@ -39,23 +50,26 @@ It is intentionally operational: where code lives, how the runtime behaves, and 
   - `server/src/routes/app_middleware.rs`: auth/user/email middleware.
   - `server/src/db/`: database repository layer.
   - `server/src/cache/`: Redis-backed stores (k1, invoice, email verification, maintenance).
-  - `server/src/types.rs`: shared API payloads and enums exported to TS.
+  - `server/src/types.rs`: shared API payloads and enums.
+  - `server/src/openapi.rs`: OpenAPI export.
   - `server/src/tests/`: integration-style endpoint/repository tests.
   - `server/migrations/`: SQL migrations.
+- Other: `scripts/` (regtest stack, release tooling), `.railway/` (deployments), `docs/` (design and operations notes; native release runbook in `docs/native-rewrite/RELEASING.md`).
 
 ## Tech stack
 
-### Client
+### iOS
 
-- React Native + Expo (bare-style native projects in `ios/` and `android/`).
-- Runtime/package manager: Bun.
-- TS strict mode.
-- State: Zustand with MMKV persistence.
-- Data fetching: TanStack Query.
-- Styling: Uniwind/Nativewind + `global.css` theme variables.
-- Ark APIs: `react-native-nitro-ark`.
-- Custom native bridge: `noah-tools` Nitro module.
-- React compiler
+- Swift 6 with warnings as errors, SwiftUI, iOS 18 deployment target, Xcode 27+.
+- XcodeGen generates the project; Swift Package Manager pins dependencies with `exactVersion` in `project.yml`.
+- Wallet SDK: bark-bolt-ffi. Other packages: Sentry, MapLibre, MMKV, ZIPFoundation, swift-openapi-runtime.
+- Lint/format: SwiftFormat and SwiftLint (`--strict`).
+
+### Android
+
+- Kotlin, Jetpack Compose, Navigation 3, Gradle with strict dependency verification, JDK 17, compile/target SDK 37, min SDK 24.
+- Wallet SDK: bark-bolt-ffi (`io.github.niteshbalusu11:bark-bolt-ffi-android`). Server client generated with Fabrikt.
+- Lint/format: ktlint and detekt (all rules, `Config/detekt/detekt.yml`).
 
 ### Server
 
@@ -71,18 +85,18 @@ It is intentionally operational: where code lives, how the runtime behaves, and 
 
 ### Setup
 
-- Install deps: `just install` (or `bun install`).
-- Enter Nix shell (recommended): `direnv allow` or `nix develop`.
+- Enter the Nix shell (recommended): `direnv allow` or `nix develop`.
+- Install Bun dependencies for scripts and translations: `just install`.
+- iOS also needs Xcode 27+ and XcodeGen (`brew install xcodegen`).
 
 ### Mobile app execution policy for autonomous agents
 
 - Feel free to run simulator/emulator commands.
-- If Nix shell is available run inside commands using Nix.
-- When installing Pods, use `just ios-prebuild`.
-- When working with simulators in debug mode, you will need to start expo dev server.
-- When spinning up simulator, for iOS, use xcode cli to build the regtest app.
-- For Android, `just android-regtest` should work.
-- Rely on GitHub Actions client pipelines for platform builds (Android and iOS).
+- If the Nix shell is available, run commands inside it.
+- iOS: `just ios-native-generate` after changing `project.yml`, then build/test with `just ios-native-build <Variant>` / `just ios-native-test <Variant>`, or `xcodebuild` against `apps/ios/Noah.xcodeproj` with schemes `Noah`, `Noah-Signet`, `Noah-Regtest`.
+- Android: `just android-native-build <Variant>`, `just android-native-install <Variant>`, `just android-native-test`, or `./gradlew` from `apps/android`.
+- Use the Regtest variant against the local stack. Native builds share bundle/application IDs with the old React Native app, so installing one replaces it on that simulator or device.
+- Rely on GitHub Actions for signed builds and releases.
 
 ### Server run commands
 
@@ -99,36 +113,36 @@ It is intentionally operational: where code lives, how the runtime behaves, and 
 
 ### Quality checks
 
-- Client checks: `just check` (runs lint + typecheck under client).
-- Server checks: `just server-check` and `cargo fmt --check`.
-- Combined: `just check-all`.
+- Native lint: `just native-lint` (the pre-commit hook runs the same checks); fix formatting with `just native-format`.
+- Native tests: `just ios-native-test Regtest` and `just android-native-test`.
+- Translations: `bun apps/tools/translations.mjs --check`.
+- Server checks: `just server-check`, `cargo fmt --check` and `just server-test`.
 
-## Client architecture details
+### Releases
 
-### App boot sequence
+- `just bump-native <x.y.z>` updates both apps' versions and build numbers; tagging `vX.Y.Z` builds Android artifacts, archives both iOS apps and deploys the mainnet server. Follow `docs/native-rewrite/RELEASING.md`.
 
-- `client/index.ts` imports `~/lib/pushNotifications` for task registration before root component registration.
-- `client/App.tsx` sets providers (QueryClient, SafeArea, GestureHandler, AlertProvider), configures Sentry in non-debug/non-regtest.
-- `client/src/Navigators.tsx`:
-  - Determines onboarding vs main app based on wallet state.
-  - Handles push-permission gate screen.
-  - Initializes services via `<AppServices />` after wallet is loaded.
+## App architecture details
 
-### Wallet and payments
+### Launch and services
 
-- Do not call `react-native-nitro-ark` directly from screens/components.
-- Use wrappers/hooks in:
-  - `client/src/lib/walletApi.ts`
-  - `client/src/lib/paymentsApi.ts`
-  - `client/src/hooks/useWallet.ts`
-  - `client/src/hooks/usePayments.ts`
-- Background sync entrypoint: `client/src/lib/sync.ts`.
+- iOS: `NoahApp` / `AppDelegate` start the app; `AppModel` and `Features/Shell/RootView.swift` choose onboarding vs the main app; `Services/AppServices.swift` runs startup side effects (sync, push, backup, server registration) once the wallet is open.
+- Android: `NoahApplication` and `MainActivity` start the app; `ui/AppModel.kt` and `ui/NoahApp.kt` choose onboarding vs the main app; `services/AppServices.kt` runs the startup side effects.
 
-### Build variants
+### Wallet
 
-- App variant comes from native (`getAppVariant()` via Nitro module).
-- Android flavors in `client/android/app/build.gradle`: `mainnet`, `signet`, `regtest`.
-- iOS schemes/xcconfigs in `client/ios/Config/*.xcconfig` and `Noah-*.xcscheme`.
+- Open and drive the wallet through `WalletSession` (iOS `Services/Wallet/`, Android `services/wallet/`); don't open a separate bark-bolt-ffi wallet elsewhere.
+- Bark's daemon never runs (`runDaemon = false`). While the app is in front, the foreground pass in `WalletSession` syncs every 60 s and on resume, runs delegated maintenance and progresses exits. Background refresh and push-triggered jobs run their own bounded passes (`Services/Background`, `services/background`).
+- Send, exit, board and recurring flows keep journals so an interrupted operation is reconciled, never resubmitted blindly. Keep that coordination intact when changing them.
+
+### Build variants and identity
+
+- iOS variants come from `Config/<Variant>.xcconfig`; Android from the product flavors in `app/build.gradle.kts`.
+- Bundle/application IDs, app groups, widget IDs, keychain items, MMKV files and the Android signing key match the React Native app so the native apps install as in-place updates. Never change them.
+
+### Server API clients
+
+- Clients are generated from `api/openapi.json`: `just generate-api-ios` (into `apps/ios/Noah/API/Generated`) and `just generate-api-android` (into `com.noahwallet.api.generated`).
 
 ## Server architecture details
 
@@ -151,21 +165,20 @@ It is intentionally operational: where code lives, how the runtime behaves, and 
 
 ## Shared types and contract generation
 
-- Source of truth for shared API types: `server/src/types.rs`.
-- Export target: `client/src/types/serverTypes.ts` (generated by `ts-rs`).
-- If server types changed, run server tests/build flow that regenerates TS output, then verify client compiles.
-- Do not hand-edit `client/src/types/serverTypes.ts`.
+- Source of truth for shared API types: `server/src/types.rs` (with `utoipa` schemas).
+- After an intentional API change, run `just generate-api` to rewrite `api/openapi.json`, then regenerate both app clients and check both apps compile. The `Native API drift` workflow fails when any of these are stale.
+- Server tests also rewrite the legacy `client/src/types/serverTypes.ts` through `ts-rs`; commit it with the change and never hand-edit it.
 
 ## Required coding standards
 
-### Client
+### Native apps
 
-- Keep TypeScript strict.
-- Avoid `any`.
-- Prefer `neverthrow` `Result` flows for recoverable errors.
-- Use project logger from `~/lib/log`.
-- Do not add `console.*` (lint blocks this in app code).
-- For wallet/native actions, use existing hooks/wrapper modules.
+- Keep the two apps in step: a behavior change lands on both platforms, with shared cases in `apps/fixtures/` when the rule is platform independent.
+- iOS: Swift 6 strict concurrency with warnings as errors; SwiftFormat/SwiftLint clean.
+- Android: ktlint and detekt clean; keep `verification-metadata.xml` updated when dependencies change.
+- Log through the app loggers (`Services/Logging/AppLog.swift`, `services/logging/AppLog.kt`). `apps/tools/check-log-output.mjs` fails CI on new print/log sinks.
+- Write copy in English in native code, then run the translation tooling; don't hand-edit generated `.xcstrings` / `strings.xml` entries.
+- Don't hand-edit generated API clients or the generated Xcode project.
 
 ### Server
 
@@ -182,14 +195,22 @@ It is intentionally operational: where code lives, how the runtime behaves, and 
 - Respect route gating and middleware layering.
 - Validate user-provided lightning addresses through existing validation paths.
 - Keep background job coordination logic intact when touching push/wallet load flows.
+- Never change the apps' bundle/application IDs, app groups, keychain/storage identifiers or signing identity.
+- Report vulnerabilities as described in `SECURITY.md`.
 
 ## High-value files to read first for most tasks
 
-- `client/src/Navigators.tsx`
-- `client/src/AppServices.tsx`
-- `client/src/lib/api.ts`
-- `client/src/lib/walletApi.ts`
-- `client/src/lib/pushNotifications.ts`
+- `apps/ios/project.yml`
+- `apps/ios/Noah/App/AppModel.swift`
+- `apps/ios/Noah/Features/Shell/RootView.swift`
+- `apps/ios/Noah/Services/AppServices.swift`
+- `apps/ios/Noah/Services/Wallet/WalletSession.swift`
+- `apps/ios/Noah/Services/Server/ServerClient.swift`
+- `apps/android/app/build.gradle.kts`
+- `apps/android/app/src/main/java/com/noahwallet/ui/AppModel.kt`
+- `apps/android/app/src/main/java/com/noahwallet/services/AppServices.kt`
+- `apps/android/app/src/main/java/com/noahwallet/services/wallet/WalletSession.kt`
+- `apps/android/app/src/main/java/com/noahwallet/services/server/ServerClient.kt`
 - `server/src/main.rs`
 - `server/src/routes/public_api_v0.rs`
 - `server/src/routes/gated_api_v0.rs`
