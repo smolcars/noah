@@ -623,6 +623,10 @@ extension AppModel {
         catchUp.started += 1
     }
 
+    func appEnteredBackground() {
+        Task { await session.reconcileMailboxProcessor() }
+    }
+
     func appBecameActive() async {
         await session.appBecameActive()
         guard UIApplication.shared.applicationState == .active else { return }

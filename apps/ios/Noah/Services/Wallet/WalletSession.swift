@@ -275,6 +275,7 @@ actor WalletSession {
             do {
                 try await discardSendReviews()
                 try await discardBoardReviews()
+                try? await Task { try await handles.wallet.stopMailboxProcessor() }.value
                 try await Task { try await handles.wallet.stopDaemonWait() }.value
             } catch {
                 state = previousState
@@ -715,12 +716,33 @@ extension WalletSession {
     /// return to the front (maintenance due) logs its stages' timing.
     func syncInForeground() async throws {
         guard isOpen else { return }
+        await reconcileMailboxProcessor()
         let flight = syncFlight
         let timing = maintenanceDue ? PassTiming() : nil
         try await withOpenWallet { handles in
             try await flight.run(ForegroundPass.live(self, handles, timing: timing).stages.map { stage in
                 { try await self.runSyncStage({ _ in try await stage() }, handles: handles) }
             })
+        }
+    }
+
+    /// Runs bark's mailbox processor exactly while the app is in front, so an Ark payment lands (and Receive plays it)
+    /// at once, not on the next pass. Repeats if the app moved meanwhile, so a stale start or stop never wins. Counted
+    /// like a call (close waits for it) but without the call gates: leaving the front must stop it even mid-send.
+    func reconcileMailboxProcessor() async {
+        guard case .open(let handles) = state else { return }
+        runningCalls += 1
+        defer { callFinished() }
+        var active = await ForegroundExecution.isActive
+        while case .open = state {
+            do {
+                try await Task { [active] in
+                    if active { try await handles.wallet.startMailboxProcessor() } else { try await handles.wallet.stopMailboxProcessor() }
+                }.value
+            } catch { AppLog("mailbox").w(#"Mailbox processor update failed (\#(String(describing: type(of: error))))"#); return }
+            let now = await ForegroundExecution.isActive
+            if now == active { return }
+            active = now
         }
     }
 

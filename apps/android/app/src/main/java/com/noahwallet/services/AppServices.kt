@@ -339,12 +339,25 @@ class AppServices private constructor(private val context: Context) {
                 foregroundSync.run {
                     currentCoroutineContext().ensureActive()
                     if (!budget.available || !foregroundSyncAllowed()) return@run
+                    reconcileMailboxProcessor()
                     com.noahwallet.services.wallet.WalletBackgroundActivity.during { foregroundWork.run(session.walletChanges.value) }
                 }
             }
         } catch (cancelled: CancellationException) { throw cancelled }
         catch (_: Exception) { /* The next foreground tick retries without provider diagnostics. */ }
         finally { cancellation.dispose() }
+    }
+
+    /** The app left the front: stop processing the mailbox until the next foreground pass. */
+    fun stopMailboxProcessor() { scope.launch { reconcileMailboxProcessor() } }
+
+    /** Runs the mailbox processor exactly while the app is visible ([com.noahwallet.services.background.PeriodicExecution]). */
+    private suspend fun reconcileMailboxProcessor() {
+        try { session.reconcileMailboxProcessor(com.noahwallet.services.background.PeriodicExecution::isForeground) }
+        catch (cancelled: CancellationException) { throw cancelled }
+        catch (@Suppress("TooGenericExceptionCaught") failure: Exception) { // the next foreground pass tries again
+            AppLog(context, "mailbox").w("Mailbox processor update failed (${failure::class.simpleName})")
+        }
     }
 
     private fun foregroundSyncAllowed(): Boolean {
