@@ -2,7 +2,7 @@
 
 Android releases are built by GitHub Actions from `apps/android`. iOS releases
 are archived and distributed by Xcode Cloud from `apps/ios`. One `vX.Y.Z` tag
-releases both Signet and Mainnet. Variant-specific tags such as `v0.2.0.signet`
+releases both Signet and Mainnet. Variant-specific tags such as `v1.0.0.signet`
 are not supported by the native release workflow.
 
 ## Prepare the release
@@ -13,7 +13,7 @@ On a release branch, run one of:
 just bump-native          # patch version; increment both build numbers
 just bump-native minor
 just bump-native major
-just bump-native 0.2.0    # explicit version; increment both build numbers
+just bump-native 1.0.0    # explicit version; increment both build numbers
 ```
 
 The command updates Android's `versionName` / `versionCode` in
@@ -23,8 +23,7 @@ agree before it writes. Explicit versions can stay the same to rebuild a
 release, but cannot go backwards. Each platform's build number increases by one.
 It does not modify React Native versions or commit, push, or tag anything.
 
-For the first native release, the committed version is already `0.2.0`, build
-100. Use `just bump-native 0.2.0` to keep that version and advance both builds.
+The first native release is `1.0.0`, build 101 on both platforms.
 Check that the Android version code exceeds every code already uploaded to the
 corresponding Google Play apps, including testing tracks.
 
@@ -32,8 +31,8 @@ Open a PR containing the version changes. After checks pass and it is merged,
 tag the merged commit (substitute the actual version and commit):
 
 ```sh
-git tag -a v0.2.0 <merged-commit> -m 'Noah 0.2.0'
-git push origin v0.2.0
+git tag -a v1.0.0 <merged-commit> -m 'Noah 1.0.0'
+git push origin v1.0.0
 ```
 
 Android validates that the tag exactly matches both committed native versions
@@ -85,7 +84,7 @@ checks separately. React Native source and shared assets remain in the repo.
 
 ```sh
 bun test scripts/native_release.test.ts
-bun scripts/check_native_release.ts v0.2.0 # use the committed native version
+bun scripts/check_native_release.ts v1.0.0 # use the committed native version
 actionlint .github/workflows/native-release.yml .github/workflows/native-android-artifacts.yml .github/workflows/native-release-checks.yml
 ```
 
