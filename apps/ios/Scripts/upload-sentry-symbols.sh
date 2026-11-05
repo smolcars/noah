@@ -8,6 +8,8 @@ case "${CONFIGURATION:-}" in
 esac
 [ "${PLATFORM_NAME:-}" = iphoneos ] || exit 0
 [ "${ACTION:-}" = install ] || exit 0
+# Xcode Cloud uploads from ci_scripts/ci_post_xcodebuild.sh instead (set by ci_post_clone.sh).
+[ "${NOAH_SENTRY_UPLOAD_IN_BUILD:-YES}" = YES ] || exit 0
 
 : "${SENTRY_AUTH_TOKEN:?Provide SENTRY_AUTH_TOKEN to upload archive symbols}"
 : "${SENTRY_ORG:?Provide the RN Sentry organization}"

@@ -65,6 +65,9 @@ upgrade without uninstalling or clearing app data.
 Configure both Xcode Cloud release workflows to watch the same `v*` tags, using
 schemes `Noah-Signet` and `Noah`. Confirm the builds use the tagged commit.
 The post-clone script generates the Xcode project before package resolution.
+Both workflows need `SENTRY_ORG=dunder-rn`, `SENTRY_PROJECT=react-native` and a
+secret `SENTRY_AUTH_TOKEN` in their environment: `ci_post_xcodebuild.sh`
+uploads the archive's dSYMs and fails the build, before TestFlight, without them.
 Xcode Cloud manages uploaded build numbers separately from the repository's
 build number; set its next build number above previous uploads if necessary.
 Verify this for both apps before the first release.
