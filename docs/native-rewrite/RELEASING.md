@@ -1,7 +1,7 @@
 # Releasing the native apps
 
-Android releases are built by GitHub Actions from `apps/android`. iOS releases
-are archived and distributed by Xcode Cloud from `apps/ios`. One `vX.Y.Z` tag
+GitHub Actions builds the Android releases from `apps/android` and archives the
+iOS releases from `apps/ios`; store uploads are manual. One `vX.Y.Z` tag
 releases both Signet and Mainnet. Variant-specific tags such as `v1.0.0.signet`
 are not supported by the native release workflow.
 
@@ -61,18 +61,15 @@ upgrade without uninstalling or clearing app data.
 
 ## iOS and migration setup
 
-Configure both Xcode Cloud release workflows to watch the same `v*` tags, using
-schemes `Noah-Signet` and `Noah`. Confirm the builds use the tagged commit.
-The post-clone script generates the Xcode project before package resolution.
-Both workflows need `SENTRY_ORG=dunder-rn`, `SENTRY_PROJECT=react-native` and a
-secret `SENTRY_AUTH_TOKEN` in their environment: `ci_post_xcodebuild.sh`
-uploads the archive's dSYMs and fails the build, before TestFlight, without them.
-Xcode Cloud manages uploaded build numbers separately from the repository's
-build number; set its next build number above previous uploads if necessary.
-Verify this for both apps before the first release.
+`Native Release` also archives `Noah` (Release-Mainnet) and `Noah-Signet`
+(Release-Signet) on the self-hosted `macOS` runner, with the signing identity and
+Xcode account the native Telegram workflow uses. The archive uploads its dSYMs to
+Sentry. Download `noah-ios-mainnet` and `noah-ios-signet` from the run (kept 90
+days), unpack each `.xcarchive.tar.gz`, open the archive in Xcode's Organizer and
+choose Distribute App → App Store Connect to upload it to the matching app. The
+build number is the repository's `CURRENT_PROJECT_VERSION`.
 
-GitHub does not wait for Xcode Cloud before publishing Android APKs. Check
-Xcode Cloud separately for archive success and TestFlight distribution.
+The GitHub Release does not wait for the iOS archives.
 The existing server workflow still reacts to `v*` tags as before.
 
 The React Native workflows are preserved as `.yml.bak` files and do not run.
