@@ -93,6 +93,9 @@ class WalletSession internal constructor(
         suspend fun bolt11Invoice(amountSats: ULong): String
         suspend fun claimLightningReceives()
         suspend fun createSnapshot(destination: File): WalletSnapshotInfo
+        /** Bark's mailbox processor: Ark payments land as they arrive instead of on the next sync. */
+        suspend fun startMailboxProcessor() {}
+        suspend fun stopMailboxProcessor() {}
         fun close()
     }
 
@@ -419,6 +422,10 @@ class WalletSession internal constructor(
     suspend fun maintenanceDelegated() = withOpen { it.maintenanceDelegated() }
     suspend fun bolt11Invoice(amountSats: ULong): String = withOpen { it.bolt11Invoice(amountSats) }
     suspend fun claimLightningReceives() = withOpen { it.claimLightningReceives() }
+    /** Foreground passes only (background jobs never start it); starting it again does nothing. */
+    suspend fun startMailboxProcessor() = withOpen { it.startMailboxProcessor() }
+    /** The app left the front; closing the wallet also stops it. The next foreground pass starts it again. */
+    suspend fun stopMailboxProcessor() = withOpen { it.stopMailboxProcessor() }
     /** The widget's wave history and Home's Renew, best effort, beside a summary with the balance [shown]. */
     suspend fun widgetExtras(shown: WalletBalance?): com.noahwallet.services.push.WidgetDataWriter.Extras =
         withOpen { com.noahwallet.services.push.WidgetDataWriter.extras(it, variant, shown) }
@@ -785,6 +792,8 @@ class WalletSession internal constructor(
         override suspend fun bolt11Invoice(amountSats: ULong) = wallet.bolt11Invoice(amountSats, null).invoice
         override suspend fun claimLightningReceives() { wallet.tryClaimAllLightningReceives(false) }
         override suspend fun createSnapshot(destination: File) = wallet.createSnapshot(destination.path)
+        override suspend fun startMailboxProcessor() { wallet.startMailboxProcessor() }
+        override suspend fun stopMailboxProcessor() { wallet.stopMailboxProcessor() }
         override fun close() { try { wallet.close() } finally { onchain.close() } }
     }
 }

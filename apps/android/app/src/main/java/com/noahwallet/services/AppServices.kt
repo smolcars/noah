@@ -339,12 +339,26 @@ class AppServices private constructor(private val context: Context) {
                 foregroundSync.run {
                     currentCoroutineContext().ensureActive()
                     if (!budget.available || !foregroundSyncAllowed()) return@run
+                    try { session.startMailboxProcessor() }
+                    catch (cancelled: CancellationException) { throw cancelled }
+                    catch (@Suppress("TooGenericExceptionCaught") failure: Exception) { // the pass still syncs; the next one retries
+                        AppLog(context, "mailbox").w("Mailbox processor didn't start (${failure::class.simpleName})")
+                    }
                     com.noahwallet.services.wallet.WalletBackgroundActivity.during { foregroundWork.run(session.walletChanges.value) }
                 }
             }
         } catch (cancelled: CancellationException) { throw cancelled }
         catch (_: Exception) { /* The next foreground tick retries without provider diagnostics. */ }
         finally { cancellation.dispose() }
+    }
+
+    /** The app left the front: stop processing the mailbox until the next foreground pass. */
+    fun stopMailboxProcessor() {
+        scope.launch {
+            try { session.stopMailboxProcessor() }
+            catch (cancelled: CancellationException) { throw cancelled }
+            catch (_: Exception) { /* Closed or suspended: nothing is running. */ }
+        }
     }
 
     private fun foregroundSyncAllowed(): Boolean {

@@ -79,6 +79,7 @@ class MainActivity : FragmentActivity() {
 
     override fun onStop() {
         com.noahwallet.services.background.PeriodicExecution.foreground(false)
+        model?.services?.stopMailboxProcessor()
         if (model == null && !isChangingConfigurations) invalidatedBeforeReady = true
         super.onStop()
     }

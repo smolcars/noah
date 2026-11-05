@@ -57,7 +57,7 @@ struct RootView: View {
         }
         .onChange(of: scenePhase) { _, phase in
             if phase != .active { model.appBecameInactive() }
-            if phase == .background { lock.background() }
+            if phase == .background { lock.background(); model.appEnteredBackground() }
             if phase == .active {
                 model.localeIdentifier = LegacyLocale.resolved()
                 Task { await lock.refresh() } // Face ID enrolment or permission may have changed in Settings.
