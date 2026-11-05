@@ -736,7 +736,7 @@ extension WalletSession {
             // The app left the front during the start, possibly after its stop ran: stop again.
             if await !ForegroundExecution.isActive { try await handles.wallet.stopMailboxProcessor() }
         } catch {
-            AppLog("mailbox").w("Mailbox processor didn't start (\(String(describing: type(of: error))))")
+            AppLog("mailbox").w(#"Mailbox processor didn't start (\#(String(describing: type(of: error))))"#)
         }
     }
 
