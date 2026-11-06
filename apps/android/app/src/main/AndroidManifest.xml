@@ -33,6 +33,8 @@
         <!-- Registration enables auto-init after onboarding; existing FCM storage remains intact. -->
         <meta-data android:name="firebase_messaging_auto_init_enabled" android:value="false" />
         <meta-data android:name="firebase_analytics_collection_enabled" android:value="false" />
+        <!-- Notices FCM shows itself (Expo-token pushes before the first open) use RN's existing high-importance channel. -->
+        <meta-data android:name="com.google.firebase.messaging.default_notification_channel_id" android:value="default" />
         <service android:name=".services.push.NoahFirebaseMessagingService" android:exported="false">
             <intent-filter>
                 <action android:name="com.google.firebase.MESSAGING_EVENT" />
