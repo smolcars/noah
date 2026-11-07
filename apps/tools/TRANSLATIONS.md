@@ -44,6 +44,8 @@ Only `seed` runs GT's offline RN extractor and reads `client/src/_gt/{locale}.js
 
 Language preference stays `generaltranslation.locale`: iOS UserDefaults.standard and Android `gt_store` SharedPreferences. Without a supported preference, native device-locale fallback follows RN order, then English. UI selection and headless notifications reread that preference.
 
+Siri's App Shortcut phrases are not part of this tool: `apps/ios/Noah/Resources/AppShortcuts.xcstrings` is hand-translated (iOS-only, and it must never reach GT), and `AppShortcutPhraseTests` checks every phrase in `NoahAppShortcuts.swift` has every locale with `${applicationName}` kept.
+
 `TranslationsTests` / `TranslationsTest` check compiled resources for every used native key in all five locales, the 25-case RN resolver oracle, active plural forms (including zero and grouped millions on Android), live preference re-resolution, and translated native-only notification templates. The frozen RN oracle in `apps/fixtures/translations.json` remains independent of native generation. Its optional RN-only regeneration command is `bun apps/tools/generate-translations-fixture.ts`.
 
 ## CI bot

@@ -63,6 +63,27 @@ grouping. `fiat` is the already formatted fiat string or null.
 - pay: `Opening Send to {recipient}.`
 - Errors say what to do next: `Noah couldn't reach the Ark server. Check your connection and try again.`
 
+## Siri on iOS (Phase 1)
+
+- **Phrases** (`NoahAppShortcuts.swift`): every shortcut lists the ways people ask, with the app's name in
+  several places ("… in Noah", "Use Noah to …", "Ask Noah …"). Balance leads with phrases that avoid the word
+  "balance" ("How many sats do I have in Noah") to dodge Apple Wallet. The React Native phrases all stay. Seven
+  shortcuts; Pay makes eight.
+- **Translations** (`Resources/AppShortcuts.xcstrings`): hand-translated into es, ja, ko and sv, outside
+  `apps/tools/translations.mjs` (phrases are iOS-only, a different table, and must never go to General
+  Translation). `AppShortcutPhraseTests` fails when a phrase lacks a locale, loses `${applicationName}`, or two
+  phrases read the same.
+- **No alternative app names.** "Noah Wallet" would invite the Wallet clash; script names for ja/ko ("ノア",
+  "노아") wait for a test on a device set to those languages.
+- **Open Receive and Scan** open the app (`openAppWhenRun`) and hand it the widgets' own URL, so `WidgetRoute`
+  applies the same gates and app lock. `OpenURLIntent` refuses the app's custom scheme.
+- **Fiat** comes from the quote Home last published for the widgets (never fetched by Siri), in the chosen
+  currency; Hide amounts drops it.
+- **Last payment** is the newest row in Activity's order that is a settled payment: renewals, moves to Ark or
+  on-chain, exits and their fees, and pending, failed or canceled rows don't count. "Who" is the Lightning
+  address an outgoing payment went to.
+- **Settings → Siri** lists a few phrases, Siri's tip and the system's link to Noah's shortcuts.
+
 ## Siri index (iOS)
 
 Noah adds its balance, activity and recipients to the on-device index (`IndexedEntity`) so Siri

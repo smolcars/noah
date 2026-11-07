@@ -73,7 +73,11 @@ targets:
         excludes:
           - API/openapi-generator-config.yaml
           - Resources/Localizable.xcstrings
+          - Resources/AppShortcuts.xcstrings
       - path: Noah/Resources/Localizable.xcstrings
+        buildPhase: resources
+      # Siri's App Shortcut phrases, hand-translated (AppShortcutPhraseTests keeps them in step).
+      - path: Noah/Resources/AppShortcuts.xcstrings
         buildPhase: resources
       - path: ../../client/assets/btcmap/places.btcmap
         buildPhase: resources
