@@ -286,7 +286,8 @@ actor SiriIndexer {
         // Read before queueing: a background pass holding the wallet may be waiting on the queue to index.
         let read = await readWallet()
         await serial { indexer in
-            guard indexer.history == nil, indexer.dependencies.setting.isOn() else { return }
+            // Even if rows were handed over meanwhile: `apply` keeps them and takes only a newer balance.
+            guard indexer.dependencies.setting.isOn() else { return }
             indexer.apply(read)
             await indexer.publish()
         }

@@ -218,6 +218,19 @@ struct SiriIndexTests {
         let snapshot = await query.value
         // The pass's newer balance wins over the query's read; the read's rows fill the rest.
         #expect(snapshot.balance?.sats == 1 && snapshot.payments.count == 4)
+
+        // Rows handed over during the read win, and the read still supplies the balance.
+        let other = Recording(), otherGate = Gate()
+        var otherDependencies = other.dependencies()
+        let otherRead = otherDependencies.read
+        otherDependencies.read = { await otherGate.wait(); return try await otherRead() }
+        let otherIndexer = SiriIndexer(dependencies: otherDependencies)
+        let otherQuery = Task { await otherIndexer.current() }
+        while await otherGate.waiting == 0 { await Task.yield() }
+        await otherIndexer.update(history: [Self.history[0]]).value
+        await otherGate.release()
+        let merged = await otherQuery.value
+        #expect(merged.balance?.sats == 694_375 && merged.payments.map(\.id) == ["received"])
     }
 
     @Test func queriesReadTheWalletWhenNothingWasHandedOver() async {
