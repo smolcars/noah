@@ -34,7 +34,7 @@ fun onchainReady(app: AppModel) = onchainWallet(app, ExitRules::ready)
 private fun onchainWallet(app: AppModel, rule: (Boolean, Boolean, Boolean, Boolean) -> Boolean): Boolean {
     val persisted = app.settings.persistedState<PersistedWalletState>(PersistedWalletState.key)
     return rule(persisted?.isInitialized != false, app.session.isOpen,
-        app.isWalletSuspended || persisted?.isWalletSuspended == true, WalletBackgroundActivity.isRunning)
+        app.isWalletSuspended || persisted?.isWalletSuspended == true, WalletBackgroundActivity.isJobRunning)
 }
 /** Waits while the wallet is only briefly not ready ([ExitRules.settling]), as after every app switch; true once it's ready. */
 internal suspend fun onchainSettle(app: AppModel): Boolean {

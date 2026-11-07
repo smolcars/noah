@@ -242,7 +242,7 @@ private fun rememberChainTip(app: AppModel): Long? {
             while (isActive) {
                 runCatching { app.session.chainTip() }.getOrNull()?.let { tip = it }
                 delay(30_000)
-                runCatching { app.refresh(sync = true); app.history.refresh(app.preferredCurrency) }
+                runCatching { app.refresh(sync = { app.session.sync() }); app.history.refresh(app.preferredCurrency) }
             }
         }
     }

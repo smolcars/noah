@@ -8,10 +8,10 @@ import java.util.concurrent.atomic.AtomicBoolean
  * wallet that has just opened (created, restored or reopened), also runs delegated maintenance, so VTXOs due for refresh
  * go into a delegated round. Background jobs cover the time in between.
  *
- * The on-chain wallet syncs last: its sync holds that wallet for the whole Esplora round trip, and every read of it
- * (Home's balance and history) waits meanwhile. Nothing before it needs it fresh: bark's sync and maintenance don't touch
- * it, and exit progress funds fee children from the confirmed coins the last pass found, as bark's daemon did, whose exit
- * loop never waited for its on-chain sync.
+ * The on-chain wallet syncs last: its Esplora round trip is the pass's longest stage (12 s+ on mainnet), though since
+ * bark-bolt-ffi 0.8.0 reads of that wallet no longer wait for it. Nothing before it needs it fresh: bark's sync and
+ * maintenance don't touch it, and exit progress funds fee children from the confirmed coins the last pass found, as
+ * bark's daemon did, whose exit loop never waited for its on-chain sync.
  */
 internal class ForegroundWalletWork(
     /** bark's wallet sync and Lightning claims, without the on-chain wallet's. */

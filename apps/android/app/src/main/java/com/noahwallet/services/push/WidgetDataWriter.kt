@@ -91,6 +91,8 @@ object WidgetDataWriter {
     private fun dates(raw: String?): Map<String, WidgetWave.ChainDate> =
         raw?.let { runCatching { kotlinx.serialization.json.Json.decodeFromString(dateMap, it) }.getOrNull() }.orEmpty()
     private fun prefs(context: Context, variant: String) = context.getSharedPreferences("com.noahwallet.$variant", Context.MODE_PRIVATE)
+    /** The balance the widget shows (sats), for Home's launch preview; null without a snapshot. */
+    fun shownBalance(context: Context, variant: String): Long? = WidgetSnapshot.read(prefs(context, variant))?.balance
 
     private suspend fun <T> optional(read: suspend () -> T): T? = try { read() }
     catch (cancelled: CancellationException) { throw cancelled } catch (_: Exception) { null }

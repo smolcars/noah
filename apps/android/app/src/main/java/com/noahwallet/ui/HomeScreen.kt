@@ -82,7 +82,8 @@ fun HomeScreen(model: AppModel, onViewAll: () -> Unit,
         rounds = { showRounds = true },
         refresh = {
             scope.launch { refreshing = true
-                try { model.refresh(true); model.history.refresh(model.preferredCurrency); refreshRevision++ } finally { refreshing = false } }
+                try { model.refresh(model.session::syncArk); model.history.refresh(model.preferredCurrency); refreshRevision++ } finally { refreshing = false }
+                model.syncInBackground() }
         },
     )
     com.noahwallet.ui.onboarding.OnboardingFrame(null, splitAtWindowCentre = true) {
@@ -245,7 +246,7 @@ private fun homeUi(model: AppModel, signals: HomeSignals, price: Double?, curren
         variant = BuildConfig.APP_VARIANT, balance = balance,
         unit = model.amountUnit,
         locale = locale, hidden = model.hidden,
-        fiat = HomeRules.fiat(balance?.totalSats?.toLong(), price, currency, locale, model.hidden),
+        fiat = HomeRules.fiat((balance?.totalSats ?: model.previewBalance)?.toLong(), price, currency, locale, model.hidden),
         status = HomeRules.status(model.error, balance, rows, signals.active.size),
         nudge = HomeRules.nudge(memory.notices, memory.renew, backupBanner, model.recoveryPhraseBackedUp,
             emailPrompt = emailPrompt && model.server.state.isEmailVerified != true, updateRequired = signals.version?.updateRequired == true),
@@ -253,6 +254,7 @@ private fun homeUi(model: AppModel, signals: HomeSignals, price: Double?, curren
         roundsActive = signals.active.isNotEmpty(),
         activity = HomeRules.activity(backupBanner, signals.background).takeIf { !suspended },
         backedUpAt = HomeRules.backedUpAt(backupBanner, signals.backup).takeIf { !suspended },
+        previewTotal = model.previewBalance,
     )
 }
 

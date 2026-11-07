@@ -56,7 +56,7 @@ fun ActivityScreen(app: AppModel, onRepeatPayment: (RepeatPayment) -> Unit, onRe
     val ui = detailUi.copy(refreshing = refreshing, newRows = ActivityRules.newRows(history.transactions, seen))
     val actions = detailActions.copy(
         refresh = {
-            scope.launch { refreshing = true; try { history.refresh(app.preferredCurrency, true) } finally { refreshing = false } }
+            scope.launch { refreshing = true; try { history.refresh(app.preferredCurrency, true) } finally { refreshing = false }; app.syncInBackground() }
         },
         retry = { scope.launch { history.refresh(app.preferredCurrency) } },
         receive = onReceive,
