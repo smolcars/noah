@@ -26,6 +26,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.res.stringResource
@@ -60,7 +61,9 @@ fun LaunchGateView(model: AppModel) {
     LaunchedEffect(covered) { if (covered) focus.clearFocus(force = true) }
     val route = launchRoute(model, gate)
     val links = androidx.lifecycle.viewmodel.compose.viewModel<PaymentLinks>()
-    val linkStep = linkStep(route, model.walletLock.locked, checking, state, model.error != null, model.isWalletSuspended)
+    // The launch preview's links wait for the opened wallet, as they did behind the opening message.
+    val linkStep = linkStep(if (model.showsLaunchPreview) LaunchRoute.message else route, model.walletLock.locked, checking, state,
+        model.error != null, model.isWalletSuspended)
     DropIgnoredLinks(links, linkStep)
     fun unlock() { scope.launch { model.walletLock.unlock(activity) } }
     androidx.compose.runtime.CompositionLocalProvider(LocalWalletPrivacy provides WalletPrivacy(covered,
@@ -86,7 +89,12 @@ private fun LaunchRouteContent(route: LaunchRoute, model: AppModel, gate: Platfo
         LaunchRoute.loading -> LaunchMessage(null, false, model::start, model)
         LaunchRoute.push -> PushNotificationsRequiredScreen(gate.requesting, gate.request)
         LaunchRoute.battery -> com.noahwallet.ui.onboarding.OnboardingFrame(null) { BatteryOptimizationScreen(model, onContinue = gate.recheck) }
-        LaunchRoute.app -> NoahApp(model, links)
+        // One branch for the launch preview and the opened wallet, so the same composition carries on when the open finishes.
+        LaunchRoute.app -> androidx.compose.foundation.layout.Box(if (model.showsLaunchPreview) Modifier.clearAndSetSemantics {} else Modifier) {
+            NoahApp(model, links)
+            // Read-only until the open's identity checks pass: this layer takes every touch.
+            if (model.showsLaunchPreview) androidx.compose.foundation.layout.Box(Modifier.matchParentSize().pointerInput(Unit) {})
+        }
         LaunchRoute.onboarding -> Onboarding(model)
     }
 }
@@ -207,7 +215,7 @@ private fun launchRoute(model: AppModel, gate: PlatformGate): LaunchRoute {
         !PlatformGateRules.launchResolved(state) -> LaunchRoute.message
         !gate.ready && !gate.resolved -> LaunchRoute.loading
         finishingRestore(model) -> LaunchRoute.onboarding
-        (model.open || model.isWalletSuspended) && model.onboarded -> gateRoute(gate.gate)
+        model.showsWallet && model.onboarded -> gateRoute(gate.gate)
         state == LaunchState.onboarding || (model.open && !model.onboarded) -> LaunchRoute.onboarding
         else -> LaunchRoute.message
     }

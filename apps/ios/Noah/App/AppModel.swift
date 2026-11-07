@@ -42,6 +42,14 @@ final class AppModel {
     }
 
     private(set) var phase: Phase = .launching
+    /// An existing wallet is opening at launch: the wallet shows read-only meanwhile, with the widget's last balance.
+    private(set) var previewsLaunch = false
+    @ObservationIgnored private var launchBalance: UInt64?
+    var showsLaunchPreview: Bool { previewsLaunch && phase == .launching && !customServerUnresponsive }
+    /// The wallet tabs are on screen, opened or in the launch preview.
+    var showsWallet: Bool { phase == .wallet || showsLaunchPreview }
+    /// Home's balance before the first summary: only in the launch preview.
+    var previewBalance: UInt64? { showsLaunchPreview ? launchBalance : nil }
     private(set) var summaryRevision = 0
     private(set) var catchUp = CatchUp()
     private(set) var summary: WalletSession.Summary?
@@ -169,6 +177,7 @@ final class AppModel {
         // `.task` can run again if the root view is rebuilt; launch once.
         guard !started, !starting else { return }
         starting = true
+        previewsLaunch = false
         defer { starting = false }
         // An upgraded or suspended wallet may write no balance for a long time; the widget still needs the language.
         WidgetDataWriter.publishLanguage(variant: variant)
@@ -207,6 +216,13 @@ final class AppModel {
         switch state {
         case .existingWallet:
             resumeOnboarding = Self.resumesOnboarding(settings.persistedState(PersistedWalletState.self, key: PersistedWalletState.key))
+            if !resumeOnboarding && !isWalletSuspended {
+                // The open waits on the network (~1.4 s on mainnet); show the wallet read-only until then.
+                launchBalance = UserDefaults(suiteName: variant.appGroup)
+                    .flatMap { WidgetSnapshot.read(from: $0, variant: variant.rawValue)?.balance }
+                previewsLaunch = true
+                LaunchTiming.shared.mark(.previewShown)
+            }
             await openExistingWallet()
             if phase == .launching && !customServerUnresponsive { phase = resumeOnboarding ? .onboarding : .wallet }
         case .onboarding:
@@ -384,11 +400,13 @@ extension AppModel {
             return
         }
         do {
-            try await session.sync()
+            try await session.syncArk()
         } catch {
             log.w("Wallet sync failed: \(Self.describe(error))")
         }
         await refresh()
+        // The foreground pass ends with the on-chain sync; a pass already running covers this one.
+        Task { await ForegroundExecution.run { await AppServices.shared.syncInForeground(); await refresh() } }
     }
 
     private static func describe(_ error: Error) -> String {

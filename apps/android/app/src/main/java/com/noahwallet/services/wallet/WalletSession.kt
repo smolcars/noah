@@ -89,6 +89,7 @@ class WalletSession internal constructor(
         /** [sync]'s two halves, for the foreground pass ([ForegroundWalletWork]), which syncs the on-chain wallet last. */
         suspend fun syncWallet(): Unit = throw UnsupportedOperationException()
         suspend fun syncOnchain(): Unit = throw UnsupportedOperationException()
+        suspend fun initialScan(): Unit = throw UnsupportedOperationException()
         suspend fun maintenanceDelegated()
         suspend fun bolt11Invoice(amountSats: ULong): String
         /** A BOLT11 invoice carrying [description], and a fresh Ark address: what voice assistants create. */
@@ -402,13 +403,27 @@ class WalletSession internal constructor(
         }
     }
 
+    /** Pull to refresh's sync: Ark only; the on-chain sync (12 s+ on mainnet) follows in the foreground pass, with no spinner waiting on it. */
+    suspend fun syncArk() {
+        if (isOpen) withOpen { handles -> (handles.synchronization ?: syncFlight).run(handles::syncWallet) }
+    }
+
     /** The foreground pass's sync before its other stages: bark's wallet and Lightning claims; [syncOnchain] runs last. */
     suspend fun syncWalletAndClaims() {
         if (isOpen) withOpen { handles -> (handles.synchronization ?: syncFlight).run(handles::syncWallet, handles::claimLightningReceives) }
     }
 
+    /**
+     * The foreground pass's on-chain sync. A restored database misses payments to addresses revealed after its backup, and
+     * handing out each address until it's paid never reveals them, so a restore's first one is bark's full scan.
+     */
     suspend fun syncOnchain() {
-        if (isOpen) withOpen { handles -> (handles.synchronization ?: syncFlight).run(handles::syncOnchain) }
+        val scan = File(location.directory, com.noahwallet.services.backup.RestoreTransaction.onchainScanName)
+        if (isOpen) withOpen { handles ->
+            (handles.synchronization ?: syncFlight).run({
+                if (!scan.exists()) handles.syncOnchain() else { handles.initialScan(); handles.syncOnchain(); check(scan.delete()) }
+            })
+        }
     }
 
     suspend fun transactionHistory(): List<HistoryTransaction> = withOpen { handles ->
@@ -472,14 +487,17 @@ class WalletSession internal constructor(
         }
     }
 
-    private suspend fun <T> withM6(block: suspend (Handles) -> T): T = withOpen {
-        if (WalletBackgroundActivity.isRunning) throw OnchainException(OnchainFailure.unavailable)
+    /** Reads wait out push, periodic and assistant jobs; [executing] (what takes [onchainMutation]) also the foreground pass. */
+    private fun onchainBlocked(executing: Boolean) =
+        if (executing) WalletBackgroundActivity.isRunning else WalletBackgroundActivity.isJobRunning
+    private suspend fun <T> withM6(executing: Boolean = false, block: suspend (Handles) -> T): T = withOpen {
+        if (onchainBlocked(executing)) throw OnchainException(OnchainFailure.unavailable)
         block(it)
     }
     private val onchainMutation = Mutex()
     val onchainJournal = OnchainOperationJournal(File(location.directory, "noah-onchain-attempt.json"))
-    private fun onchainOperations(handles: Handles) = OnchainOperations(handles.m6, onchainJournal,
-        ready = { !isSuspended() && !WalletBackgroundActivity.isRunning }, refused = com.noahwallet.onchain.ExitErrors.refused)
+    private fun onchainOperations(handles: Handles, executing: Boolean = false) = OnchainOperations(handles.m6, onchainJournal,
+        ready = { !isSuspended() && !onchainBlocked(executing) }, refused = com.noahwallet.onchain.ExitErrors.refused)
     suspend fun onchainOverview(): OnchainOverview = withM6 {
         onchainOperations(it).overview(WalletConfiguration.base(variant).vtxoRefreshExpiryThreshold.toUInt())
     }
@@ -506,17 +524,17 @@ class WalletSession internal constructor(
     suspend fun executeOnchain(quote: OnchainQuote, funding: AutoBoardFunding.Snapshot? = null, renewal: Boolean = false,
         keepOnchain: (Set<String>) -> Unit = {}, kept: (String) -> Set<String> = { emptySet() },
         recordClaim: (com.noahwallet.onchain.ExitClaimRecords.Record) -> Unit = {},
-        newRun: (List<String>) -> Unit = {}, shortOfFunds: (Map<String, Long>) -> Unit = {}): String = withM6 { handles ->
+        newRun: (List<String>) -> Unit = {}, shortOfFunds: (Map<String, Long>) -> Unit = {}): String = withM6(executing = true) { handles ->
         val threshold = if (renewal) WalletConfiguration.base(variant).vtxoRefreshExpiryThreshold.toUInt() else null
         onchainMutation.withLock {
-            onchainOperations(handles).execute(quote, funding, renewalThreshold = threshold, keepOnchain = keepOnchain, kept = kept,
+            onchainOperations(handles, executing = true).execute(quote, funding, renewalThreshold = threshold, keepOnchain = keepOnchain, kept = kept,
                 recordClaim = recordClaim, newRun = newRun, shortOfFunds = shortOfFunds)
         }
     }
     internal suspend fun exitCosts(ids: List<String>): Map<String, com.noahwallet.onchain.ExitCosts.Cost?> = withM6 { onchainOperations(it).exitCosts(ids) }
     internal suspend fun exitExcluded(): Set<String> = withM6 { onchainOperations(it).exitExcluded() }
-    suspend fun abandonUnsubmittedAutoBoard(quote: OnchainQuote): Boolean = withM6 { handles ->
-        onchainMutation.withLock { onchainOperations(handles).abandonUnsubmittedAutoBoard(quote) }
+    suspend fun abandonUnsubmittedAutoBoard(quote: OnchainQuote): Boolean = withM6(executing = true) { handles ->
+        onchainMutation.withLock { onchainOperations(handles, executing = true).abandonUnsubmittedAutoBoard(quote) }
     }
     suspend fun checkOnchainAttempt(id: String): Boolean = withM6 { onchainOperations(it).check(id) }
     /**
@@ -786,7 +804,8 @@ class WalletSession internal constructor(
         override suspend fun pendingRounds() = wallet.syncPendingRounds()
         override suspend fun history() = wallet.history()
         override suspend fun transactions() = onchain.transactions()
-        override suspend fun receiveRequest() = ReceiveRequest(wallet.newAddress(), onchain.newAddress())
+        // Each address until it's paid, so a Receive visit derives nothing and later on-chain syncs don't grow.
+        override suspend fun receiveRequest() = ReceiveRequest(wallet.nextUnusedAddress().address, onchain.nextUnusedAddress())
         override suspend fun receiveInvoice(request: ReceiveRequest, amountSat: Long, description: String): ReceiveRequest {
             val invoice = wallet.bolt11Invoice(amountSat.toULong(), description.ifEmpty { null })
             return request.copy(amountSat = amountSat, description = description,
@@ -812,6 +831,7 @@ class WalletSession internal constructor(
         override suspend fun sync() { WalletSync.attemptAll({ onchain.sync() }, { wallet.sync() }) }
         override suspend fun syncWallet() { wallet.sync() }
         override suspend fun syncOnchain() { onchain.sync() }
+        override suspend fun initialScan() { onchain.initialScan(null) }
         override suspend fun maintenanceDelegated() { wallet.maintenanceDelegated() }
         override suspend fun bolt11Invoice(amountSats: ULong) = wallet.bolt11Invoice(amountSats, null).invoice
         override suspend fun lightningInvoice(amountSats: ULong, description: String?) = wallet.bolt11Invoice(amountSats, description).invoice

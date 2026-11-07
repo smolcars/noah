@@ -55,7 +55,9 @@ fun NoahApp(model: AppModel, links: PaymentLinks? = null) {
     val settingsStack = rememberNavBackStack(SettingsDestination.Settings)
     val tab = rememberSaveable { mutableStateOf(Destination.Home) }
     val nav = remember(backStack, settingsStack, tab) { AppNavigator(model, backStack, settingsStack, tab, SettingsEntry()) }
-    val selectedTab = tab.value
+    // The launch preview shows Home alone: a tab or page restored with the activity reads the wallet once it's open.
+    val preview = model.showsLaunchPreview
+    val (selectedTab, homeStack) = if (preview) Destination.Home to listOf<NavKey>(Destination.Home) else tab.value to backStack
     val tabState = rememberSaveableStateHolder()
     BackHandler(enabled = selectedTab != Destination.Home) { nav.goBack() }
     // Leaving Activity forgets a notification's payment it hasn't opened yet; a rotation keeps the tab, and the payment.
@@ -67,15 +69,15 @@ fun NoahApp(model: AppModel, links: PaymentLinks? = null) {
     }
     WalletForeground(model)
     RecentShortcuts(model)
-    if (selectedTab == Destination.Home && backStack.last() == Destination.Home) {
+    if (!preview && selectedTab == Destination.Home && homeStack.last() == Destination.Home) {
         com.noahwallet.onchain.AutoBoardPrompt(model) { model.autoBoardSuccessBanner = it to System.currentTimeMillis() }
     }
     // Home, Settings, Send, Receive and Activity split the whole window at a fold themselves; every other screen (the
     // map among them) keeps one pane.
     var sendBarHidden by remember { mutableStateOf(false) }
     var activityBarHidden by remember { mutableStateOf(false) }
-    val settingsVisible = backStack.last() == SettingsDestination.Settings && selectedTab == Destination.Home
-    val homeOwnsWindow = ownsWindow(model, nav, settingsVisible)
+    val settingsVisible = homeStack.last() == SettingsDestination.Settings && selectedTab == Destination.Home
+    val homeOwnsWindow = ownsWindow(model, selectedTab, homeStack, settingsVisible)
     WindowBackground(homeOwnsWindow)
     androidx.compose.foundation.layout.Box(Modifier.fillMaxSize().avoidHinge(if (homeOwnsWindow) emptyList() else LocalFoldingFeatures.current)) {
         // Settings isn't a tab: phones hide the bar under it; the rail stays.
@@ -85,7 +87,7 @@ fun NoahApp(model: AppModel, links: PaymentLinks? = null) {
                 SharedTransitionLayout {
                     CompositionLocalProvider(LocalAppShared provides this, LocalSettingsEntry provides nav.settingsEntry) {
                         NavDisplay(
-                            backStack = mainTabEntries(selectedTab, backStack),
+                            backStack = mainTabEntries(selectedTab, homeStack),
                             modifier = Modifier.padding(padding),
                             onBack = { nav.goBack() },
                             entryProvider = entryProvider {
@@ -190,9 +192,8 @@ private fun RecentShortcuts(model: AppModel) {
 }
 
 /** Home, Settings and the Send, Receive and Activity tabs draw the whole window; others keep one pane. */
-private fun ownsWindow(model: AppModel, nav: AppNavigator, settingsVisible: Boolean): Boolean {
-    val tab = nav.selectedTab
-    val homeVisible = nav.backStack.last() == Destination.Home && (tab == Destination.Home || model.isWalletSuspended)
+private fun ownsWindow(model: AppModel, tab: Destination, homeStack: List<NavKey>, settingsVisible: Boolean): Boolean {
+    val homeVisible = homeStack.last() == Destination.Home && (tab == Destination.Home || model.isWalletSuspended)
     return homeVisible || settingsVisible ||
         (!model.isWalletSuspended && tab in listOf(Destination.Send, Destination.Receive, Destination.History))
 }

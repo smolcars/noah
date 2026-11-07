@@ -30,6 +30,14 @@ class AppModel(application: Application, val settings: SettingsStorage = Setting
     var switchingToDefaultServer by mutableStateOf(false); private set
     private var customOpenWait: EsploraOpenWait? = null
     var error by mutableStateOf<String?>(null)
+    /** An existing wallet opening at launch shows its tabs meanwhile, read-only until [open] ([showsLaunchPreview]). */
+    private var previewsLaunch by mutableStateOf(false)
+    @Volatile private var launchBalance: ULong? = null
+    val showsLaunchPreview get() = previewsLaunch && !open
+    /** The wallet's tabs show, once onboarded: open, suspended, or in the launch preview. */
+    val showsWallet get() = open || isWalletSuspended || showsLaunchPreview
+    /** Home's balance until the launch's first summary: the widget's last, and only in the launch preview. */
+    val previewBalance get() = launchBalance.takeIf { previewsLaunch }
     var summaryRevision by mutableLongStateOf(0L); private set
     var summary by mutableStateOf<WalletSession.Summary?>(null); private set
     var hidden by mutableStateOf((state("privacy-storage")["isHomeBalanceHidden"] as? JsonPrimitive)?.booleanOrNull ?: false)
@@ -330,16 +338,25 @@ class AppModel(application: Application, val settings: SettingsStorage = Setting
     private suspend fun openExistingWallet() {
         onboarded = services.isOnboarded()
         if (isWalletSuspended) return
-        withContext(Dispatchers.IO) {
-            val wait = EsploraOpenWait(); customOpenWait = wait
-            services.openWalletInForeground(walletMutationHeld = true, customWait = wait, lateCompletion = ::lateOpen)
-            customOpenWait = null
+        if (onboarded) {
+            // The open waits on the network (~1.4 s on mainnet); the wallet shows read-only until then.
+            launchBalance = com.noahwallet.services.push.WidgetDataWriter.shownBalance(getApplication(), BuildConfig.APP_VARIANT)?.toULong()
+            previewsLaunch = true
+            LaunchTiming.shared(getApplication()).mark(LaunchTiming.Milestone.previewShown)
         }
-        LaunchTiming.shared(getApplication()).mark(LaunchTiming.Milestone.walletOpened)
-        open = true
-        onboarded = services.isOnboarded()
-        if (!onboarded) step = OnboardingNavigation.resumeStep
-        refresh(walletMutationHeld = true)
+        // Ends after the first summary, so Home's balance never blanks between the preview's and the wallet's.
+        try {
+            withContext(Dispatchers.IO) {
+                val wait = EsploraOpenWait(); customOpenWait = wait
+                services.openWalletInForeground(walletMutationHeld = true, customWait = wait, lateCompletion = ::lateOpen)
+                customOpenWait = null
+            }
+            LaunchTiming.shared(getApplication()).mark(LaunchTiming.Milestone.walletOpened)
+            open = true
+            onboarded = services.isOnboarded()
+            if (!onboarded) step = OnboardingNavigation.resumeStep
+            refresh(walletMutationHeld = true)
+        } finally { previewsLaunch = false }
         services.startServerServices()
     }
 
@@ -435,9 +452,11 @@ class AppModel(application: Application, val settings: SettingsStorage = Setting
         restoreLocation.deletionMarker.exists() || persistedSuspended()
     private fun persistedSuspended() = settings.persistedState<PersistedWalletState>(PersistedWalletState.key)?.isWalletSuspended == true
 
-    suspend fun refresh(sync: Boolean = false, walletMutationHeld: Boolean = false): Unit = withContext(Dispatchers.IO) {
+    /** [sync]: the wallet sync to run first ([WalletSession.sync], or pull to refresh's [WalletSession.syncArk]). */
+    suspend fun refresh(sync: (suspend () -> Unit)? = null, walletMutationHeld: Boolean = false): Unit = withContext(Dispatchers.IO) {
         if (open && (RestoreTransaction(restoreLocation).settingsPending || restoreCompletionJournal.pending)) retryRestoreSettings(walletMutationHeld)
-        if (isWalletSuspended || persistedSuspended()) return@withContext
+        // The launch's own refresh follows the open; one before it would count as a summary with nothing read.
+        if (isWalletSuspended || persistedSuspended() || showsLaunchPreview) return@withContext
         val generation = summaryRefresh.incrementAndGet()
         val caller = currentCoroutineContext()
         val admission = com.noahwallet.recurring.RecurringRuntime.shared(getApplication()).syncForegroundAdmission
@@ -449,7 +468,7 @@ class AppModel(application: Application, val settings: SettingsStorage = Setting
         }
         try {
             checkStage()
-            if (sync) session.sync()
+            sync?.invoke()
             var ticket = 0L
             summary = ForegroundWidgetRefresh.read({ ticket = com.noahwallet.services.push.WidgetDataWriter.ticket(); session.summary() },
                 session::widgetExtras, ::checkStage) { balance, extras ->
@@ -464,9 +483,20 @@ class AppModel(application: Application, val settings: SettingsStorage = Setting
     }
 
     /**
+     * After pull to refresh's Ark sync: the foreground pass (the minute tick's call, under its admission), whose on-chain
+     * sync takes 12 s+ on mainnet, with no spinner waiting on it, then the summary. A pass already running covers it.
+     */
+    fun syncInBackground() {
+        viewModelScope.launch {
+            com.noahwallet.recurring.RecurringRuntime.shared(getApplication()).syncForegroundAdmission.run { services.syncInForeground(it) }
+            refresh()
+        }
+    }
+
+    /**
      * The app came to the front with the wallet open, a cold launch's open included: Home's summary and history rows,
-     * then [pass] (the foreground pass), then the summary again. Home reads first because the pass's on-chain sync holds
-     * the on-chain wallet for its whole Esplora round trip, and Home's balance and history wait for it meanwhile.
+     * then [pass] (the foreground pass), then the summary again. Home reads first so its balance and history show
+     * before the pass, whose on-chain sync takes 12 s+ on mainnet.
      */
     suspend fun catchUpInForeground(pass: suspend () -> Unit) {
         refresh()
