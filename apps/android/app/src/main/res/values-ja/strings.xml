@@ -1705,6 +1705,7 @@
   <string name="home">"ホーム"</string>
   <string name="receive">"受け取る"</string>
   <string name="send">"送る"</string>
+  <string name="scan">"スキャン"</string>
   <string name="widget_onchain">"オンチェーン"</string>
   <string name="widget_offchain">"オフチェーン"</string>
   <string name="widget_mainnet_description">"Bitcoin残高を確認"</string>

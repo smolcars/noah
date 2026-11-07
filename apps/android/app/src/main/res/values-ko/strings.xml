@@ -1705,6 +1705,7 @@
   <string name="home">"홈"</string>
   <string name="receive">"받기"</string>
   <string name="send">"보내기"</string>
+  <string name="scan">"스캔"</string>
   <string name="widget_onchain">"온체인"</string>
   <string name="widget_offchain">"오프체인"</string>
   <string name="widget_mainnet_description">"Bitcoin 잔액 확인"</string>

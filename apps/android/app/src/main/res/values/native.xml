@@ -11,6 +11,7 @@
   <string name="home">Home</string>
   <string name="receive">Receive</string>
   <string name="send">Send</string>
+  <string name="scan">Scan</string>
     <!-- English-only until the launch gate's copy is unified with iOS (docs/native-rewrite/TODO.md, "launch-gate safety copy"). -->
     <string name="launch_restore_incomplete" tools:ignore="MissingTranslation">Restore didn\'t finish</string>
     <string name="launch_restore_incomplete_message" tools:ignore="MissingTranslation">Noah couldn\'t finish or undo an interrupted restore. Your wallet files were kept. Unlock your device, then restart Noah to recover safely.</string>

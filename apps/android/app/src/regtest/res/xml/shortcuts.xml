@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  Launcher shortcuts (voice-assistants.md): the widget's routes, so they're held and gated like a widget tap. One copy
+  per flavor because a static shortcut names its package outright. ShortcutActivity takes them on to MainActivity.
+-->
+<shortcuts xmlns:android="http://schemas.android.com/apk/res/android" xmlns:tools="http://schemas.android.com/tools" tools:targetApi="25">
+    <shortcut android:shortcutId="receive" android:icon="@drawable/ic_shortcut_receive" android:shortcutShortLabel="@string/receive">
+        <intent android:action="android.intent.action.VIEW" android:data="com.noahwallet.regtest://widget/receive"
+            android:targetPackage="com.noahwallet.regtest" android:targetClass="com.noahwallet.ShortcutActivity" />
+    </shortcut>
+    <shortcut android:shortcutId="scan" android:icon="@drawable/ic_shortcut_scan" android:shortcutShortLabel="@string/scan">
+        <intent android:action="android.intent.action.VIEW" android:data="com.noahwallet.regtest://widget/scan"
+            android:targetPackage="com.noahwallet.regtest" android:targetClass="com.noahwallet.ShortcutActivity" />
+    </shortcut>
+    <shortcut android:shortcutId="send" android:icon="@drawable/ic_shortcut_send" android:shortcutShortLabel="@string/send">
+        <intent android:action="android.intent.action.VIEW" android:data="com.noahwallet.regtest://widget/send"
+            android:targetPackage="com.noahwallet.regtest" android:targetClass="com.noahwallet.ShortcutActivity" />
+    </shortcut>
+</shortcuts>

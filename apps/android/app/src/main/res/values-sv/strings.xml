@@ -1705,6 +1705,7 @@
   <string name="home">"Hem"</string>
   <string name="receive">"Ta emot"</string>
   <string name="send">"Skicka"</string>
+  <string name="scan">"Skanna"</string>
   <string name="widget_onchain">"På blockkedjan"</string>
   <string name="widget_offchain">"Utanför blockkedjan"</string>
   <string name="widget_mainnet_description">"Visa ditt Bitcoin-saldo"</string>

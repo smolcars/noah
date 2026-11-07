@@ -66,6 +66,7 @@ fun NoahApp(model: AppModel, links: PaymentLinks? = null) {
         if (model.recurringNotification) { nav.openSettings(SettingsDestination.Recurring); model.recurringNotification = false }
     }
     WalletForeground(model)
+    RecentShortcuts(model)
     if (selectedTab == Destination.Home && backStack.last() == Destination.Home) {
         com.noahwallet.onchain.AutoBoardPrompt(model) { model.autoBoardSuccessBanner = it to System.currentTimeMillis() }
     }
@@ -173,6 +174,18 @@ private fun WalletForeground(model: AppModel) {
             model.services.reconcileBackupTriggers()
             model.history.observe(model.preferredCurrency)
         }
+    }
+}
+
+/** Send's recent recipients on the launcher, refreshed as history changes. */
+@Composable
+private fun RecentShortcuts(model: AppModel) {
+    val context = androidx.compose.ui.platform.LocalContext.current.applicationContext
+    LaunchedEffect(model.history.revision) {
+        if (model.history.revision == 0L) return@LaunchedEffect
+        val history = model.history.transactions
+        val ownDomain = model.server.state.lightningAddress?.substringAfter('@', "")?.takeIf { it.isNotEmpty() }
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) { com.noahwallet.assistant.LauncherShortcuts.update(context, history, ownDomain) }
     }
 }
 

@@ -1748,6 +1748,7 @@
   <string name="home">"Inicio"</string>
   <string name="receive">"Recibir"</string>
   <string name="send">"Enviar"</string>
+  <string name="scan">"Escanear"</string>
   <string name="widget_onchain">"En la cadena"</string>
   <string name="widget_offchain">"Fuera de la cadena"</string>
   <string name="widget_mainnet_description">"Consulta tu saldo de Bitcoin"</string>
