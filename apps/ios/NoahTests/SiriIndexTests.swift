@@ -162,6 +162,18 @@ struct SiriIndexTests {
         await indexer.update(balance: 5, history: Self.history).value
         let published = await indexer.published
         #expect(index.upserts.count == calls && published == .empty)
+
+        // A removal that failed during deletion is tried again by the next update (onboarding sends one).
+        let failed = Recording()
+        let other = SiriIndexer(dependencies: failed.dependencies())
+        await other.update(balance: 694_375, history: Self.history).value
+        failed.present.withLock { $0 = false }
+        failed.failingRemovals.withLock { $0 = 1 }
+        let removals = failed.removedAll.count
+        await other.walletDeleted()
+        #expect(failed.removedAll.count == removals)
+        await other.update().value
+        #expect(failed.removedAll.count == removals + 1 && failed.removedAll.last == Set(SiriIndexStore.Kind.allCases))
     }
 
     @Test func switchStaysOnWhenTheIndexCantBeRemoved() async throws {
