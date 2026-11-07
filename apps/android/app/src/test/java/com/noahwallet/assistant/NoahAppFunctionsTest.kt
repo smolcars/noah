@@ -51,7 +51,7 @@ class NoahAppFunctionsTest {
         override suspend fun balance(): Long { call("balance"); return balance }
         override suspend fun invoice(amountSats: Long, note: String?): String { call("invoice $amountSats $note"); return "lnbcrt50u1fake" }
         override suspend fun arkAddress(): String { call("arkAddress"); return "tark1qfake" }
-        override fun lightningAddress() = address
+        override suspend fun lightningAddress(): String? { failure?.let { throw it }; return address }
         override suspend fun activity(): List<HistoryTransaction> { call("activity"); return rows }
         override suspend fun fiat(sats: Long) = fiat
     }
@@ -162,9 +162,11 @@ class NoahAppFunctionsTest {
 
     @Test fun failuresSayWhatToDoNext() {
         wallet.failure = AssistantWallet.NotReady()
-        val notReady = call("getBalance").error()
-        assertTrue(notReady is AppFunctionElementNotFoundException)
-        assertEquals("Noah's wallet isn't ready. Open Noah and try again.", notReady.errorMessage)
+        for (function in listOf("getBalance", "getLightningAddress")) {
+            val notReady = call(function).error()
+            assertTrue(function, notReady is AppFunctionElementNotFoundException)
+            assertEquals("Noah's wallet isn't ready. Open Noah and try again.", notReady.errorMessage)
+        }
         wallet.failure = java.io.IOException("connection refused")
         for (function in listOf("getBalance", "createArkAddress", "getRecentActivity")) {
             val unreachable = call(function).error()

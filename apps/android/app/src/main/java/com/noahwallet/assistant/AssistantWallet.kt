@@ -22,7 +22,8 @@ internal interface AssistantWallet {
     /** A BOLT11 invoice for [amountSats], carrying [note]. */
     suspend fun invoice(amountSats: Long, note: String?): String
     suspend fun arkAddress(): String
-    fun lightningAddress(): String?
+    /** The address the server registered, read only when the wallet is admitted like every other action. */
+    suspend fun lightningAddress(): String?
     /** Syncs, then Activity's rows, newest first. */
     suspend fun activity(): List<HistoryTransaction>
     /** [sats] in the user's currency, as Home shows it; null without Home's price or while the balance is hidden. */
@@ -62,7 +63,8 @@ internal interface AssistantWallet {
 
         override suspend fun arkAddress() = withWallet { it.newArkAddress() }
 
-        override fun lightningAddress() = services.registration.state.lightningAddress?.takeIf { it.isNotBlank() }
+        // Through the same admission as the rest: a suspended, missing or half-restored wallet isn't ready.
+        override suspend fun lightningAddress() = withWallet { services.registration.state.lightningAddress?.takeIf { it.isNotBlank() } }
 
         override suspend fun activity() = withWallet { session ->
             session.sync()
