@@ -1,7 +1,7 @@
 import Foundation
 import Observation
 
-/// A widget's tap: `com.noahwallet.<variant>://widget/home`, `/receive`, `/scan` or `/send`
+/// A widget's tap, or Siri's Open Receive and Scan: `com.noahwallet.<variant>://widget/home`, `/receive`, `/scan` or `/send`
 /// (docs/native-rewrite/design/widgets.md, "Opening the app from a widget"). Like a payment link it lives in
 /// memory only: held through launch and the app lock, ignored behind onboarding or a launch gate, and handed
 /// over once. It only picks a tab; nothing pays from a widget.
@@ -15,6 +15,14 @@ final class WidgetRoute {
     static func destination(_ url: URL, variant: AppVariant) -> Destination? {
         guard url.scheme?.lowercased() == "com.noahwallet.\(variant.rawValue)", url.host()?.lowercased() == "widget" else { return nil }
         return Destination(rawValue: url.path().trimmingCharacters(in: CharacterSet(charactersIn: "/")).lowercased())
+    }
+
+    /// The URL a widget, or Siri's Open Receive and Scan, opens.
+    nonisolated static func url(_ destination: Destination, variant: AppVariant) -> URL {
+        guard let url = URL(string: "com.noahwallet.\(variant.rawValue)://widget/\(destination.rawValue)") else {
+            preconditionFailure("a variant and a destination make a URL")
+        }
+        return url
     }
 
     func receive(_ url: URL, gate: PaymentLinkRoute.Gate, variant: AppVariant) {

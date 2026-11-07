@@ -16,17 +16,22 @@ import Testing
             #expect(NoahLightningInvoiceSnippetIntent.persistentIdentifier == "NoahLightningInvoiceSnippetIntent")
             #expect(CopyNoahLightningInvoiceIntent.persistentIdentifier == "CopyNoahLightningInvoiceIntent")
         }
-        // Source contract catches a renamed parameter or Siri phrase, including hidden snippets.
+        // Source contract catches a renamed type or parameter, including hidden snippets, and a dropped RN Siri phrase.
         let repo = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
             .deletingLastPathComponent()
         let rn = try String(contentsOf: repo.appending(path: "client/ios/SharedAppIntents/NoahAppIntents.swift"), encoding: .utf8)
-        let native = try String(contentsOf: repo.appending(path: "apps/ios/Noah/Services/AppIntents/NoahAppIntents.swift"), encoding: .utf8)
+        let native = try ["NoahAppIntents.swift", "NoahAppShortcuts.swift"].map {
+            try String(contentsOf: repo.appending(path: "apps/ios/Noah/Services/AppIntents/\($0)"), encoding: .utf8)
+        }.joined(separator: "\n")
         func contract(_ text: String) -> [String] {
             text.components(separatedBy: .newlines).filter {
                 $0.hasPrefix("struct ") || $0.hasPrefix("  var ") || $0.contains(".applicationName)") || $0.contains("authenticationPolicy:")
             }
         }
-        #expect(contract(rn) == contract(native))
+        func phrase(_ line: String) -> Bool { line.contains(".applicationName)") }
+        #expect(contract(rn).filter { !phrase($0) } == contract(native).filter { !phrase($0) })
+        let phrases = Set(contract(native).filter(phrase).map { $0.trimmingCharacters(in: .whitespaces) })
+        #expect(Set(contract(rn).filter(phrase).map { $0.trimmingCharacters(in: .whitespaces) }).isSubset(of: phrases))
         #expect(!native.contains("SendPaymentController"))
     }
 
@@ -66,4 +71,62 @@ import Testing
             await #expect(throws: (any Error).self) { _ = try await CreateNoahArkAddressIntent().perform() }
         }
     }
+
+    @Test func balanceGivesFiatItsSatsAndTheAppLanguage() async throws {
+        let wallet = NoahIntentWallet(newAddress: { "" }, bolt11Invoice: { _, _ in .init(paymentRequest: "") }, refreshBalance: { 694_375 },
+                                      fiat: { sats, locale in
+                                          #expect(sats == 694_375); #expect(locale == LegacyLocale.resolved())
+                                          return "$412.50"
+                                      })
+        let balance = try await NoahIntentWallet.$current.withValue(wallet) { try await GetNoahBalanceIntent().perform().value }
+        #expect(balance == 694_375)
+    }
+
+    @Test func lightningAddressIsOptional() async {
+        func wallet(_ address: String?) -> NoahIntentWallet {
+            NoahIntentWallet(newAddress: { Issue.record("Unexpected wallet access"); return "" },
+                             bolt11Invoice: { _, _ in Issue.record("Unexpected wallet access"); return .init(paymentRequest: "") },
+                             refreshBalance: { Issue.record("Unexpected wallet access"); return 0 }, lightningAddress: { address })
+        }
+        await NoahIntentWallet.$current.withValue(wallet("sam@noahwallet.com")) {
+            #expect(await GetNoahLightningAddressIntent().perform().value == "sam@noahwallet.com")
+        }
+        await NoahIntentWallet.$current.withValue(wallet(nil)) {
+            #expect(await GetNoahLightningAddressIntent().perform().value == String?.none)
+        }
+    }
+
+    @Test func walletFailuresSayWhatToDoNext() async {
+        let wallet = NoahIntentWallet(newAddress: { throw AppServices.WalletSuspended() },
+                                      bolt11Invoice: { _, _ in throw WalletSession.OpenError.busy },
+                                      refreshBalance: { throw URLError(.notConnectedToInternet) },
+                                      history: { throw AppServices.SeedUnavailable() })
+        await NoahIntentWallet.$current.withValue(wallet) {
+            await #expect(throws: AssistantFailure.suspended) { _ = try await CreateNoahArkAddressIntent().perform() }
+            let invoice = CreateNoahLightningInvoiceIntent(); invoice.amountSats = 1
+            await #expect(throws: AssistantFailure.busy) { _ = try await invoice.perform() }
+            await #expect(throws: AssistantFailure.unreachable) { _ = try await GetNoahBalanceIntent().perform() }
+            await #expect(throws: AssistantFailure.notReady) { _ = try await GetNoahLastPaymentIntent().perform() }
+        }
+    }
+
+    @Test func lastPaymentReadsHistoryOnce() async throws {
+        let reads = Counter()
+        let wallet = NoahIntentWallet(newAddress: { "" }, bolt11Invoice: { _, _ in .init(paymentRequest: "") }, refreshBalance: { 0 },
+                                      history: { await reads.add(); return [] })
+        try await NoahIntentWallet.$current.withValue(wallet) { _ = try await GetNoahLastPaymentIntent().perform() }
+        #expect(await reads.value == 1)
+    }
+
+    @Test func openIntentsUseTheWidgetsRoutes() {
+        for destination in [WidgetRoute.Destination.receive, .scan] {
+            #expect(WidgetRoute.destination(WidgetRoute.url(destination, variant: .regtest), variant: .regtest) == destination)
+        }
+        #expect(WidgetRoute.url(.scan, variant: .mainnet).absoluteString == "com.noahwallet.mainnet://widget/scan")
+    }
+}
+
+private actor Counter {
+    private(set) var value = 0
+    func add() { value += 1 }
 }

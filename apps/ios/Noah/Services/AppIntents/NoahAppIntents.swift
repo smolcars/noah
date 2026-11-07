@@ -6,29 +6,20 @@ import UniformTypeIdentifiers
 
 private enum NoahAppIntentError: LocalizedError {
   case addressCopyUnavailable
-  case addressUnavailable
-  case balanceUnavailable
   case copyUnavailable
   case invoiceDescriptionTooLong
-  case invoiceUnavailable
   case invalidAmount
 
   var errorDescription: String? {
     switch self {
     case .addressCopyUnavailable:
-      return "Noah couldn't copy the Ark address. Try again while Noah is open."
-    case .addressUnavailable:
-      return "Noah couldn't create an Ark address. Try again."
-    case .balanceUnavailable:
-      return "Noah couldn't refresh your balance. Check your connection and try again."
+      return L10n.text("Noah couldn't copy the Ark address. Try again while Noah is open.")
     case .copyUnavailable:
-      return "Noah couldn't copy the invoice. Try again while Noah is open."
+      return L10n.text("Noah couldn't copy the invoice. Try again while Noah is open.")
     case .invoiceDescriptionTooLong:
-      return "The invoice description must be 639 characters or fewer."
-    case .invoiceUnavailable:
-      return "Noah couldn't create the Lightning invoice. Check your connection and try again."
+      return L10n.text("The invoice description must be 639 characters or fewer.")
     case .invalidAmount:
-      return "The amount must be at least one sat."
+      return L10n.text("Ask for at least 1 sat.")
     }
   }
 }
@@ -54,7 +45,7 @@ private func createNoahLightningInvoice(
       effectiveDescription
     )
   } catch {
-    throw NoahAppIntentError.invoiceUnavailable
+    throw AssistantFailure(error)
   }
 }
 
@@ -70,12 +61,12 @@ struct CreateNoahArkAddressIntent: AppIntent {
     do {
       address = try await NoahIntentWallet.current.newAddress()
     } catch {
-      throw NoahAppIntentError.addressUnavailable
+      throw AssistantFailure(error)
     }
 
     return .result(
       value: address,
-      dialog: "Created a new Ark address."
+      dialog: "\(AssistantReply.arkAddress())"
     )
   }
 }
@@ -93,15 +84,12 @@ struct CreateNoahArkAddressWithSnippetIntent: AppIntent {
     do {
       address = try await NoahIntentWallet.current.newAddress()
     } catch {
-      throw NoahAppIntentError.addressUnavailable
+      throw AssistantFailure(error)
     }
 
     return .result(
       value: address,
-      dialog: IntentDialog(
-        full: "Created a new Ark address. Tap Copy Address to open Noah and copy it.",
-        supporting: "Your new Ark address is ready."
-      ),
+      dialog: "\(AssistantReply.arkAddress())",
       snippetIntent: NoahArkAddressSnippetIntent(address: address)
     )
   }
@@ -154,7 +142,8 @@ struct CopyNoahArkAddressIntent: AppIntent {
       throw NoahAppIntentError.addressCopyUnavailable
     }
 
-    return .result(dialog: "Copied the Ark address to your clipboard.")
+    let reply = L10n.text("Copied the Ark address to your clipboard.")
+    return .result(dialog: "\(reply)")
   }
 }
 
@@ -189,21 +178,23 @@ struct GetNoahBalanceIntent: AppIntent {
   static let authenticationPolicy: IntentAuthenticationPolicy = .requiresAuthentication
 
   func perform() async throws -> some IntentResult & ReturnsValue<Int> & ProvidesDialog {
+    let wallet = NoahIntentWallet.current
     let nativeBalance: UInt64
     do {
-      nativeBalance = try await NoahIntentWallet.current.refreshBalance()
+      nativeBalance = try await wallet.refreshBalance()
     } catch {
-      throw NoahAppIntentError.balanceUnavailable
+      throw AssistantFailure(error)
     }
 
     guard nativeBalance <= UInt64(Int.max) else {
-      throw NoahAppIntentError.balanceUnavailable
+      throw AssistantFailure.unreachable
     }
     let balance = Int(nativeBalance)
+    let locale = LegacyLocale.resolved()
 
     return .result(
       value: balance,
-      dialog: "Your current Noah balance is \(balance) sats."
+      dialog: "\(AssistantReply.balance(sats: nativeBalance, fiat: wallet.fiat(nativeBalance, locale), locale: locale))"
     )
   }
 }
@@ -240,7 +231,7 @@ struct CreateNoahLightningInvoiceIntent: AppIntent {
 
     return .result(
       value: invoice.paymentRequest,
-      dialog: "Created a Lightning invoice for \(amountSats) sats."
+      dialog: "\(AssistantReply.request(sats: Int64(amountSats)))"
     )
   }
 }
@@ -278,10 +269,7 @@ struct CreateNoahLightningInvoiceWithSnippetIntent: AppIntent {
 
     return .result(
       value: invoice.paymentRequest,
-      dialog: IntentDialog(
-        full: "Created a Lightning invoice for \(amountSats) sats. Tap Copy Invoice to open Noah and copy it.",
-        supporting: "Your \(amountSats)-sat Lightning invoice is ready."
-      ),
+      dialog: "\(AssistantReply.request(sats: Int64(amountSats)))",
       snippetIntent: NoahLightningInvoiceSnippetIntent(
         invoice: invoice.paymentRequest,
         amountSats: amountSats
@@ -346,7 +334,8 @@ struct CopyNoahLightningInvoiceIntent: AppIntent {
       throw NoahAppIntentError.copyUnavailable
     }
 
-    return .result(dialog: "Copied the Lightning invoice to your clipboard.")
+    let reply = L10n.text("Copied the Lightning invoice to your clipboard.")
+    return .result(dialog: "\(reply)")
   }
 }
 
@@ -374,54 +363,5 @@ private struct NoahLightningInvoiceSnippetView: View {
       .buttonStyle(.borderedProminent)
     }
     .padding()
-  }
-}
-
-@available(iOS 17.4, *)
-struct NoahAppShortcuts: AppShortcutsProvider {
-  @AppShortcutsBuilder
-  static var appShortcuts: [AppShortcut] {
-    if #available(iOS 26.0, *) {
-      AppShortcut(
-        intent: CreateNoahArkAddressWithSnippetIntent(),
-        phrases: [
-          "Create an Ark address with \(.applicationName)",
-          "Get an Ark address from \(.applicationName)",
-          "Generate an Ark address with \(.applicationName)",
-          "Make an Ark address with \(.applicationName)",
-          "Show me an Ark address from \(.applicationName)",
-          "Receive with Ark in \(.applicationName)",
-        ],
-        shortTitle: "Create Ark Address",
-        systemImageName: "qrcode"
-      )
-    }
-
-    AppShortcut(
-      intent: GetNoahBalanceIntent(),
-      phrases: [
-        "What's my balance in \(.applicationName)",
-        "Check my \(.applicationName) balance",
-        "How many sats are in \(.applicationName)",
-      ],
-      shortTitle: "Check Balance",
-      systemImageName: "bitcoinsign.circle"
-    )
-
-    if #available(iOS 26.0, *) {
-      AppShortcut(
-        intent: CreateNoahLightningInvoiceWithSnippetIntent(),
-        phrases: [
-          "Create a Lightning invoice with \(.applicationName)",
-          "Request sats with \(.applicationName)",
-          "Generate an invoice with \(.applicationName)",
-          "Make a Lightning invoice with \(.applicationName)",
-          "Create a payment request with \(.applicationName)",
-          "Receive sats with \(.applicationName)",
-        ],
-        shortTitle: "Create Lightning Invoice",
-        systemImageName: "bolt.badge.plus"
-      )
-    }
   }
 }
