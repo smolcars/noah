@@ -168,16 +168,13 @@ async fn mailbox_arkoor_payment_sends_one_push_for_all_its_vtxos() {
         notification.body.as_deref(),
         Some("You received 28000 sats via Ark.")
     );
-    // The three pubkey VTXOs, so a tap opens the payment; not the HTLC.
+    // The first pubkey VTXO, so a tap opens the payment; one ID keeps the push
+    // small however many VTXOs the payment has.
     assert_eq!(
         serde_json::from_str::<serde_json::Value>(&notification.data).unwrap(),
         serde_json::json!({
             "notification_type": "ark_payment_received",
-            "vtxo_ids": [
-                VTXO_VECTORS.arkoor2_vtxo.id().to_string(),
-                VTXO_VECTORS.round1_vtxo.id().to_string(),
-                VTXO_VECTORS.arkoor3_vtxo.id().to_string(),
-            ],
+            "vtxo_ids": [VTXO_VECTORS.arkoor2_vtxo.id().to_string()],
         })
     );
     assert_eq!(notification.priority, Priority::High);

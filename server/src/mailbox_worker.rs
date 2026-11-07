@@ -1173,8 +1173,10 @@ fn incoming_ark_payment(raw_vtxos: &[Vec<u8>]) -> Result<(Amount, Vec<String>), 
         })
 }
 
-/// The data names the received VTXOs so a tap on the notification can open the
-/// payment they arrived in. Apps that don't know the type ignore it.
+/// The data names a received VTXO so a tap on the notification can open the
+/// payment it arrived in. One is enough: all of a message's VTXOs land in one
+/// payment, and listing them all could push a many-VTXO payment past the
+/// APNs/FCM size limit. Apps that don't know the type ignore it.
 fn build_receive_notification(
     amount: Amount,
     vtxo_ids: &[String],
@@ -1195,7 +1197,7 @@ fn build_receive_notification(
         body: Some(format!("You received {amount} via Ark.")),
         data: serde_json::json!({
             "notification_type": "ark_payment_received",
-            "vtxo_ids": vtxo_ids,
+            "vtxo_ids": &vtxo_ids[..vtxo_ids.len().min(1)],
         })
         .to_string(),
         priority: Priority::High,
