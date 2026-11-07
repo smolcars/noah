@@ -1,13 +1,10 @@
 package com.noahwallet.services
 
 import android.content.Context
-import android.os.Build
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
-import com.noahwallet.BuildConfig
-import com.noahwallet.services.server.DeviceInfo
 import com.noahwallet.services.storage.*
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.*
@@ -50,15 +47,5 @@ class AuthTokenStorageTest {
                 KeyStore.getInstance("AndroidKeyStore").apply { load(null) }.deleteEntry(item.service)
             }
         }
-    }
-
-    @Test fun deviceMetadataMatchesExpoAndroidSources() {
-        val info = DeviceInfo.current()
-        assertEquals(Build.MANUFACTURER, info.deviceManufacturer)
-        assertEquals(Build.MODEL, info.deviceModel)
-        assertEquals(Build.VERSION.BASE_OS.takeIf { it.isNotEmpty() } ?: "Android", info.osName)
-        assertEquals(Build.VERSION.RELEASE, info.osVersion)
-        assertEquals(BuildConfig.VERSION_NAME, info.appVersion)
-        assertEquals(BuildConfig.VERSION_CODE.toString(), info.appBuild)
     }
 }

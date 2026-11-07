@@ -74,29 +74,12 @@ Each runs one stage per `am instrument` call, refuses a wallet it didn't create
 
 | Test | Owner and stage arguments | Stages |
 | --- | --- | --- |
-| `com.noahwallet.onchain.Ffi050LiveTest` | `-e owner 4978-disposable -e noahFfi050 <stage>` | `create`, `sync`, `board-amount`, `board-max`, `auto-review`, `cancel-cycle`, `cancel-reopen`, `offboard` and `offboard-status` (both with `-e recipient <Core address>`) |
 | `com.noahwallet.send.Ffi060LiveTest` | `-e owner ffi060-disposable -e noahFfi060 <stage>` | `create`, `receive` (pay the onchain address and mine; the host pays the invoice in `cache/ffi060-invoice.txt`), `ark` (optional `-e probe`), `ln-send` and `ln-fail` (`-e invoice <BOLT11>`; for `ln-fail` hold and then cancel it), `offboard` (`-e recipient`), `offboard-confirmed` (after one block), `reopen` |
-| `com.noahwallet.send.Ffi060UpgradeLiveTest` | `-e owner ffi060-disposable -e noahFfi060Upgrade <stage>` | `create`, `fund` (pay `cache/ffi060-upgrade-invoice.txt`), `send` (`-e invoice <2,000-sat BOLT11>`; writes `files/ffi060-upgrade-baseline.json`), `verify` |
-| `com.noahwallet.onchain.Ffi070LiveTest` | `-e owner ffi070-disposable -e noahFfi070 <stage>` | `addresses`, `auto-board` (`-e claimed <txid:vout>`, optional `-e release <txid:vout>`), `board-confirmed` (after the board's confirmations), `exit-all`. Nothing here starts an exit |
 
-`Ffi060LiveTest`, `Ffi060UpgradeLiveTest` and `Ffi070LiveTest` run against a Bark 0.8
-stack and refuse a build without its endpoints. Build with
+`Ffi060LiveTest` runs against a Bark 0.8 stack and refuses a build without its endpoints. Build with
 `-PnoahRegtestArkURL=http://10.0.2.2:13535 -PnoahRegtestBitcoindURL=http://10.0.2.2:28443 -PnoahRegtestServerURL=http://10.0.2.2:13000`
 (use your stack's ports). `nix develop --command sh apps/android/scripts/check-regtest-endpoints.sh`
 checks how those properties are validated.
-
-### Upgrading from the previous SDK build
-
-`Ffi070LiveTest` runs on the wallet `Ffi060UpgradeLiveTest` made with the 0.6.0 build:
-
-1. In a scratch worktree, check out the parent of the commit that pinned the current
-   SDK (`git log -S'bark-bolt = "0.7.0"' --format=%h -- apps/android/gradle/libs.versions.toml`),
-   build both APKs with the Bark 0.8 endpoints and install them on your emulator.
-2. Run `Ffi060UpgradeLiveTest` stages `create`, `fund` and `send`. `send` writes the
-   baseline.
-3. Install the current build's APKs over it with `adb -s "$SERIAL" install -r`. Debug
-   builds share the repo's debug keystore, so the wallet stays. Then run `verify`,
-   followed by the `Ffi070LiveTest` stages.
 
 ## Reading results
 

@@ -2,8 +2,7 @@
 
 These cover Settings › Emergency exit, Board to Ark, Auto-Board and VTXOs. The unit
 tests run with the rest of `NoahTests`. `ExitLiveTests` broadcasts on regtest and is
-off unless `NOAH_M6_LIVE_STAGE` is set. The bark-bolt-ffi stage suites that board and
-estimate exits are in [SendTests](../SendTests/README.md). Android's counterpart is
+off unless `NOAH_M6_LIVE_STAGE` is set. Android's counterpart is
 [apps/android/ExitTests](../../android/ExitTests/README.md).
 
 ## What's covered

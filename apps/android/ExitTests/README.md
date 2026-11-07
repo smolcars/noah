@@ -2,9 +2,7 @@
 
 These cover Settings › Emergency exit, Board to Ark, Auto-Board and VTXOs. The JVM
 tests run in `:app:testRegtestDebugUnitTest`. `ExitLiveTest` broadcasts on regtest and
-is skipped unless its argument is passed. The bark-bolt-ffi stage tests that board and
-estimate exits (`Ffi050LiveTest`, `Ffi070LiveTest`) are in
-[SendTests](../SendTests/README.md#bark-bolt-ffi-stage-tests). iOS's counterpart is
+is skipped unless its argument is passed. iOS's counterpart is
 [apps/ios/ExitTests](../../ios/ExitTests/README.md).
 
 ## What's covered
