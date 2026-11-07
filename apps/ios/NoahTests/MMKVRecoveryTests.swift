@@ -17,9 +17,6 @@ struct MMKVRecoveryTests {
         }
         return root
     }
-    static func close(_: URL) {
-        // SettingsStorage holds no MMKV handle.
-    }
     static func clean(_ root: URL) { try? FileManager.default.removeItem(at: root.deletingLastPathComponent()) }
     static func corrupt(_ root: URL, mode: String) throws {
         let crc = root.appending(path: id + ".crc")

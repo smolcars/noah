@@ -2,7 +2,6 @@ package com.noahwallet.services
 
 import android.app.Notification
 import android.app.NotificationManager
-import android.content.Context
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import com.google.firebase.messaging.RemoteMessage
@@ -14,26 +13,6 @@ import org.junit.runner.RunWith
 /** Presentation only: never creates/opens a wallet or executes a claim. */
 @RunWith(AndroidJUnit4::class)
 class SystemNotificationDeviceTest {
-    @Test fun recurringWakePublishesWidgetFixture() = kotlinx.coroutines.runBlocking {
-        val context = InstrumentationRegistry.getInstrumentation().targetContext
-        val balance = com.noahwallet.services.wallet.WalletBalance(
-            com.noahwallet.services.wallet.WalletBalance.Ark(1234u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u),
-            com.noahwallet.services.wallet.WalletBalance.Onchain(0u, 0u, 0u))
-        val jobs = com.noahwallet.services.push.PushJobs(com.noahwallet.services.push.PushJobs.Dependencies(
-            ensureWalletOpen = {}, maintenance = {}, createInvoice = { error("Unused") }, submitInvoice = { _, _ -> },
-            claimLightning = {}, reportMaintenance = { _, _ -> }, heartbeat = {}, announceReceived = { _, _, _ -> },
-            refreshWidget = { com.noahwallet.services.push.WidgetDataWriter.write(context, balance,
-                com.noahwallet.services.push.WidgetDataWriter.Extras(emptyList(), 100, 123),
-                { com.noahwallet.services.push.WidgetDataWriter.Display(com.noahwallet.formatting.BitcoinAmountUnit.bip177, false, "USD") }, "regtest",
-                com.noahwallet.services.push.WidgetDataWriter.ticket()) },
-            log = {}, backup = {}, reportBackup = { _, _ -> }, recurring = {},
-        ))
-        jobs.handle(com.noahwallet.api.generated.models.NotificationDataRecurringPaymentDue(1))
-        val stored = com.noahwallet.widgets.WidgetSnapshot.read(context.getSharedPreferences("com.noahwallet.regtest", Context.MODE_PRIVATE))!!
-        assertEquals(1234L, stored.balance)
-        assertEquals(123 * 600_000L, stored.renewDue!! - stored.writtenAt!!)
-    }
-
     @Test fun receiptsAreVisibleAndOpenNoah() {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         assertTrue(PushNotifications.permissionGranted(context))

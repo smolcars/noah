@@ -28,13 +28,4 @@ struct SendSuccessDetails {
         }
         self.completedAt = movement?.timestamp.flatMap { $0.timeIntervalSince1970 > 0 ? $0 : nil } ?? completedAt
     }
-
-    static func truncate(_ value: String) -> String {
-        value.count > 32 ? String(value.prefix(14)) + "…" + String(value.suffix(10)) : value
-    }
-
-    func formattedCompletedAt(locale: Locale) -> String {
-        completedAt.formatted(.dateTime.day(.twoDigits).month(.abbreviated).year().locale(locale))
-            + " · " + completedAt.formatted(.dateTime.hour(.twoDigits(amPM: .abbreviated)).minute(.twoDigits).locale(locale))
-    }
 }

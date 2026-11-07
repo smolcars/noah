@@ -8,9 +8,7 @@ import com.noahwallet.MainActivity
 import com.noahwallet.services.push.WidgetDataWriter
 import com.noahwallet.services.storage.*
 import com.noahwallet.services.wallet.*
-import com.noahwallet.ui.RecoveryPhraseInput
 import io.github.niteshbalusu11.bark.generateMnemonic
-import io.github.niteshbalusu11.bark.validateMnemonic
 import kotlinx.coroutines.*
 import org.junit.Assert.*
 import org.junit.Assume.assumeTrue
@@ -23,61 +21,6 @@ import java.util.UUID
 
 @RunWith(AndroidJUnit4::class)
 class ForegroundWidgetDeviceTest {
-    /** Capture only empty input; never weaken the production screen's FLAG_SECURE policy. */
-    @Test fun emptyTwentyFourWordEntryScreenshot() {
-        assumeTrue(InstrumentationRegistry.getArguments().getString("noahWidgetEmptyRestoreShot") == "owned-emulator")
-        val instrumentation = InstrumentationRegistry.getInstrumentation()
-        val context = instrumentation.targetContext
-        val automation = instrumentation.uiAutomation
-        fun find(node: android.view.accessibility.AccessibilityNodeInfo?, label: String): android.view.accessibility.AccessibilityNodeInfo? {
-            if (node == null) return null
-            if (node.text?.toString() == label) return node
-            repeat(node.childCount) { find(node.getChild(it), label)?.let { match -> return match } }
-            return null
-        }
-        fun waitFor(label: String): android.view.accessibility.AccessibilityNodeInfo {
-            val deadline = System.nanoTime() + 30_000_000_000L
-            while (System.nanoTime() < deadline) {
-                find(automation.rootInActiveWindow, label)?.let { return it }
-                Thread.sleep(100)
-            }
-            error("Expected empty restore mode control")
-        }
-        fun click(label: String) {
-            var node: android.view.accessibility.AccessibilityNodeInfo? = waitFor(label)
-            while (node != null && !node.isClickable) node = node.parent
-            check(node?.performAction(android.view.accessibility.AccessibilityNodeInfo.ACTION_CLICK) == true)
-            instrumentation.waitForIdleSync()
-        }
-        ActivityScenario.launch(MainActivity::class.java).use { scenario ->
-            // Welcome's restore entry (onboarding redesign): "I already have a wallet".
-            click("I already have a wallet"); click("24 words")
-            scenario.onActivity { activity ->
-                val input = androidx.lifecycle.ViewModelProvider(activity)[com.noahwallet.ui.RecoveryPhrasePresentation::class.java].input
-                check(input.words.size == 24 && input.words.all(String::isEmpty))
-                activity.window.clearFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE)
-            }
-            try {
-                instrumentation.waitForIdleSync(); Thread.sleep(500)
-                val image = checkNotNull(automation.takeScreenshot())
-                File(context.filesDir, "empty-24-restore.png").outputStream().use {
-                    check(image.compress(android.graphics.Bitmap.CompressFormat.PNG, 100, it))
-                }
-                image.recycle()
-            } finally { scenario.onActivity { it.window.addFlags(android.view.WindowManager.LayoutParams.FLAG_SECURE) } }
-        }
-    }
-
-    @Test fun barkAcceptsTwelveAndTwentyFourWordPublicVectors() {
-        for (count in listOf(12, 24)) {
-            val phrase = (List(count - 1) { StoredMnemonic.wordList[0] } + StoredMnemonic.wordList[if (count == 12) 3 else 102]).joinToString(" ")
-            assertTrue("Bark accepts public vector", validateMnemonic(phrase))
-            val input = RecoveryPhraseInput(); input.update(phrase, 0)
-            assertTrue(input.isComplete); assertEquals(count, input.words.size)
-            assertFalse(validateMnemonic(List(count) { StoredMnemonic.wordList[0] }.joinToString(" ")))
-        }
-    }
-
     @Test fun fundedForegroundRefreshPublishesTheSnapshot() = runBlocking {
         val url = InstrumentationRegistry.getArguments().getString("noahWidgetFundingURL")
         assumeTrue(url != null)

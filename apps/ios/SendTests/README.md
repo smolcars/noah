@@ -47,7 +47,7 @@ xcodebuild -project Noah.xcodeproj -scheme Noah-Regtest \
   and the Keychain tests then fail.
 - `-only-testing:NoahTests/SendSafetyTests` runs one suite. A single Swift Testing
   function needs its trailing `()`, quoted:
-  `'-only-testing:NoahTests/FFI050LiveTests/acceptance()'`.
+  `'-only-testing:NoahTests/FFI060LiveTests/acceptance()'`.
 - Add `-resultBundlePath <path>.xcresult`, then read the counts with
   `xcrun xcresulttool get test-results summary --path <path>.xcresult`.
 
@@ -87,48 +87,21 @@ deadline.
 
 ## bark-bolt-ffi stage suites
 
-`FFI050LiveTests`, `FFI060LiveTests` and `FFI070LiveTests` each have one `acceptance()`
-test. Each run executes one stage, named in `TEST_RUNNER_NOAH_FFI0x0_STAGE`. The host
-funds, pays and mines between stages, and each stage writes non-secret
-`ffi0x0-<stage>.json` evidence (plus small handoff files) to Documents.
+`FFI060LiveTests` has one `acceptance()` test. Each run executes one stage, named in
+`TEST_RUNNER_NOAH_FFI060_STAGE`. The host funds, pays and mines between stages, and each
+stage writes non-secret `ffi060-<stage>.json` evidence (plus small handoff files) to
+Documents.
 
-- **FFI050** (default stack): `create` (or `auto-setup`, with Auto-Board on), `sync`,
-  `amount`, `max`, `auto`, `board-status`, `offboard` (needs `NOAH_FFI050_RECIPIENT`, a
-  fresh Core address), `confirmed`, `cancel`, `reopen`. The board stages show the real
-  review. Approve it in the app.
 - **FFI060**: `create`, `receive` (pay the onchain address and mine a block; the stage
   writes `ffi060-invoice.txt` for the host to pay over Lightning), `ark`, `ln-send`,
   `ln-probe`, `ln-fail` (each with `NOAH_FFI060_INVOICE`; for `ln-fail` hold the invoice
   and then cancel it), `offboard` (`NOAH_FFI060_RECIPIENT`, a Core address),
-  `offboard-confirmed` (after mining one block), `reopen`, `upgrade`.
-- **FFI070**: `upgrade`, `autoboard`, then `exit-all` after the board's three
-  confirmations (`required_board_confirmations` in `scripts/captaind.toml`). Nothing
-  here starts an exit.
+  `offboard-confirmed` (after mining one block), `reopen`.
 
-FFI060 and FFI070 target a Bark 0.8 stack. If that stack doesn't use the default
+FFI060 targets a Bark 0.8 stack. If that stack doesn't use the default
 ports, pass its endpoints to `xcodebuild` as build settings (see
 `apps/ios/Config/Regtest.xcconfig`), e.g.
 `NOAH_REGTEST_ARK_URL=http://127.0.0.1:13535 NOAH_REGTEST_BITCOIND_URL=http://127.0.0.1:28443 NOAH_REGTEST_SERVER_URL=http://127.0.0.1:13000`.
-
-### Upgrading from the previous SDK build
-
-The `upgrade` stages check that a wallet made by the previous bark-bolt-ffi build
-opens unchanged. For FFI070 that is the 0.6.0 build:
-
-1. In a scratch worktree, check out the parent of the commit that pinned the current
-   SDK (`git log -S'exactVersion: 0.7.0' --format=%h -- apps/ios/project.yml`) and
-   build it for the same simulator.
-2. Create a wallet with that build (`FFI060LiveTests`, stage `create`) and fund it
-   with at least two confirmed onchain coins plus an Ark balance (`receive`).
-   `autoboard` needs two confirmed coins.
-3. Write `Documents/ffi070-upgrade-baseline.json` from that wallet, with the keys the
-   stage compares: `fingerprint`, `spendable`, `onchainConfirmed`, `movements`, `utxos`
-   and `vtxos`, in the formats `FFI070LiveTests` reads.
-4. Install the current build over it. Don't erase the simulator. Then run `upgrade`,
-   `autoboard`, mine three blocks, and run `exit-all`.
-
-FFI060's `upgrade` stage works the same way, from the 0.5.0 build, with
-`ffi060-upgrade-baseline.json` (`fingerprint`, `spendable`, `movements`).
 
 ## Screenshot fixtures
 

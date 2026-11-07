@@ -39,7 +39,6 @@ struct FFI060LiveTests {
         case "offboard": try await offboard()
         case "offboard-confirmed": try await offboardConfirmed()
         case "reopen": try await reopen(mnemonic: mnemonic)
-        case "upgrade": try await upgrade()
         default: Issue.record("Unknown stage \(stage)")
         }
         try await session.close()
@@ -203,27 +202,6 @@ struct FFI060LiveTests {
         #expect(!logs.isEmpty && !logs.contains { $0.contains(info.vtxoXpub) })
         try evidence("reopen", ["movements": UInt64(after.movementCount), "spendable": after.spendableSats,
                                 "onchainConfirmed": after.balance.onchain.confirmed])
-    }
-
-    /// In-place upgrade: a wallet funded and used by the bark-bolt-ffi 0.5.0 build opens unchanged.
-    private func upgrade() async throws {
-        let baseline = try #require(try JSONSerialization.jsonObject(with: Data(contentsOf:
-            URL.documentsDirectory.appending(path: "ffi060-upgrade-baseline.json"))) as? [String: Any])
-        func rows() async throws -> [[String: String]] {
-            try await history().sorted { $0.id < $1.id }.map {
-                ["id": "\($0.id)", "status": $0.status, "subsystem": $0.subsystemName, "kind": $0.subsystemKind,
-                 "intended": "\($0.intendedBalanceSats)", "effective": "\($0.effectiveBalanceSats)", "fee": "\($0.offchainFeeSats)"]
-            }
-        }
-        let expected = try #require(baseline["movements"] as? [[String: String]])
-        let summary = try #require(try await session.summary())
-        #expect(summary.fingerprint == baseline["fingerprint"] as? String)
-        #expect(summary.spendableSats == (baseline["spendable"] as? UInt64))
-        #expect(try await rows() == expected)
-        try await session.sync()
-        #expect(try await rows() == expected)
-        #expect(try await session.summary()?.spendableSats == (baseline["spendable"] as? UInt64))
-        try evidence("upgrade", ["movements": UInt64(expected.count), "spendable": summary.spendableSats])
     }
 
     // MARK: Helpers

@@ -11,8 +11,7 @@ One JSON file per domain, consumed by Android JUnit and iOS XCTest:
 ```
 
 `input` and `expected` are domain-specific JSON values. Keep fixtures deterministic,
-platform independent and free of real wallet secrets. `scaffold.json` is a loader
-smoke test; future domains should exercise actual shared behavior.
+platform independent and free of real wallet secrets.
 
 Android adds this directory to its test resources. `SharedFixtures.load("domain")`
 parses the envelope and returns named cases without depending on the working directory.

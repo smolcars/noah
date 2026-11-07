@@ -51,15 +51,4 @@ struct SendSuccessDetailsTests {
                                          history: [chain], completedAt: .distantFuture)
         #expect(details.completedAt == date)
     }
-    @Test func truncatesOnlyOver32AndKeepsFullProof() {
-        let value = "12345678901234567890123456789012345"
-        #expect(SendSuccessDetails.truncate(String(value.prefix(32))) == String(value.prefix(32)))
-        #expect(SendSuccessDetails.truncate(value) == "12345678901234…6789012345")
-        #expect(SendSuccessDetails.truncate("").isEmpty)
-        let details = SendSuccessDetails(receipt: .init(amount: 1000, txid: value),
-                                         payment: .init(destination: value, method: "onchain", amount: 1000),
-                                         history: [], completedAt: date)
-        #expect(details.proof?.value == value && details.destination == value)
-        #expect(details.formattedCompletedAt(locale: Locale(identifier: "en_US")).contains("2023"))
-    }
 }

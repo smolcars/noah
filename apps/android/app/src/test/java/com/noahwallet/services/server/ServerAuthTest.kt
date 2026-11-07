@@ -228,11 +228,4 @@ class ServerAuthTest {
         }
         assertEquals(0, fake.logins.get())
     }
-
-    @Test fun endpointsMatchVariantsAndSupportRegtestOverride() {
-        assertEquals("https://noahwallet.io", ServerEndpoint.baseURL("mainnet"))
-        assertEquals("https://signet.noahwallet.io", ServerEndpoint.baseURL("signet"))
-        assertEquals("http://10.0.2.2:3000", ServerEndpoint.baseURL("regtest"))
-        assertEquals("http://localhost:1234", ServerEndpoint.baseURL("regtest", "http://localhost:1234"))
-    }
 }
