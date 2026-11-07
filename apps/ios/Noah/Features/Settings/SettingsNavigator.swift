@@ -9,7 +9,7 @@ enum SettingsPage: Hashable {
     case recurring, schedule(String), editor(String?)
     /// Emergency exit: the warning, then Choose, Review, an exit's progress, Claim and the list.
     case exit, exitChoose, exitReview([String]), exitProgress(String), exitClaim, exitList
-    case notifications, advanced, arkServer, esplora, logs, debug
+    case notifications, siri, advanced, arkServer, esplora, logs, debug
     case feedback, about
 
     /// The root row a page belongs to: wide windows highlight it in the list.

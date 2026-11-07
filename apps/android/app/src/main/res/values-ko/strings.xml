@@ -98,6 +98,7 @@
   <string name="gt_72c7f155f1532f44">"도착"</string>
   <string name="gt_859a013e803dbdc6">"Ark에 도착"</string>
   <string name="gt_5dda9fcf2694981e">"입금 예정"</string>
+  <string name="gt_f5dbed41f4b30cda">"기기 잠금이 해제된 상태에서 Siri에게 지갑에 대해 물어보세요. Siri는 절대 송금하지 않습니다."</string>
   <string name="gt_5303e6e0d269f4d7">"1 sat 이상을 요청하세요."</string>
   <string name="gt_e3c03bb0dee641c5">"%1$s 요청"</string>
   <string name="gt_c6dd438b37364cad">"%1$s 이상이 되면 물어봐요"</string>
@@ -637,6 +638,7 @@
   <string name="gt_0c0c351a971353b5">"마지막 확인"</string>
   <string name="gt_ec3b8bf1e0261664">"마지막 정상 백업 %1$s"</string>
   <string name="gt_0a8ccec012d4283f">"마지막으로 확인된 잔액"</string>
+  <string name="gt_3cabad147b110e3e">"마지막 결제"</string>
   <string name="gt_e85039a1d8fa0011">"Ark에서 나가는 중"</string>
   <string name="gt_58eb9032e3bb83f0">"왼쪽"</string>
   <string name="gt_4f14b3e9b20d43a4">"제외: 가치보다 수수료가 더 드는 %1$s. 그래도 출금하려면 직접 선택하세요."</string>
@@ -1174,6 +1176,7 @@
   <string name="gt_6e65049bf16d9dc9">"서명된 거래 크기"</string>
   <string name="gt_99eb08cbad43b0c6">"Signet"</string>
   <string name="gt_4f5664161ec4f520">"Ark와 서명 중"</string>
+  <string name="gt_7cdcbd87852f9d12">"Siri"</string>
   <string name="gt_28d03596d24eeb4e">"건너뛰기"</string>
   <string name="gt_12698ce1ea5cd4ab">"건너뜀"</string>
   <string name="gt_44d27a286f01669e">"최소 이동 금액"</string>
@@ -1349,6 +1352,7 @@
   <string name="gt_444d2892548b8ea7">"트리 가지"</string>
   <string name="gt_31a165b280346408">"트리 루트"</string>
   <string name="gt_d8b8392e2c542950">"다시 시도"</string>
+  <string name="gt_5fd38e8f1d7ab62f">"이렇게 말해 보세요"</string>
   <string name="gt_026460792a12cc5d">"켜거나 지금 백업하세요"</string>
   <string name="gt_92dfd3632baeb6d4">"알림 켜기"</string>
   <string name="gt_ae9c99bb67325b70">"설정에서 켜세요. 돌아오면 Noah가 다시 확인해요."</string>

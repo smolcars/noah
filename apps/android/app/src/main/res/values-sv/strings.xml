@@ -98,6 +98,7 @@
   <string name="gt_72c7f155f1532f44">"Kommer fram"</string>
   <string name="gt_859a013e803dbdc6">"Kommer fram i Ark"</string>
   <string name="gt_5dda9fcf2694981e">"På väg"</string>
+  <string name="gt_f5dbed41f4b30cda">"Fråga Siri om din plånbok när enheten är upplåst. Siri skickar aldrig pengar."</string>
   <string name="gt_5303e6e0d269f4d7">"Begär minst 1 sat."</string>
   <string name="gt_e3c03bb0dee641c5">"Begär %1$s"</string>
   <string name="gt_c6dd438b37364cad">"Frågar när du har %1$s eller mer"</string>
@@ -637,6 +638,7 @@
   <string name="gt_0c0c351a971353b5">"Senast kontrollerad"</string>
   <string name="gt_ec3b8bf1e0261664">"Senaste lyckade säkerhetskopia %1$s"</string>
   <string name="gt_0a8ccec012d4283f">"Senast kända saldo"</string>
+  <string name="gt_3cabad147b110e3e">"Senaste betalningen"</string>
   <string name="gt_e85039a1d8fa0011">"Lämnar Ark"</string>
   <string name="gt_58eb9032e3bb83f0">"Kvar"</string>
   <string name="gt_4f14b3e9b20d43a4">"Utelämnat: %1$s som kostar mer i avgifter än det är värt. Välj det för att ta ut det ändå."</string>
@@ -1174,6 +1176,7 @@
   <string name="gt_6e65049bf16d9dc9">"Den signerade transaktionens storlek"</string>
   <string name="gt_99eb08cbad43b0c6">"Signet"</string>
   <string name="gt_4f5664161ec4f520">"Signerar med Ark"</string>
+  <string name="gt_7cdcbd87852f9d12">"Siri"</string>
   <string name="gt_28d03596d24eeb4e">"Hoppa över"</string>
   <string name="gt_12698ce1ea5cd4ab">"Överhoppad"</string>
   <string name="gt_44d27a286f01669e">"Minsta belopp att flytta"</string>
@@ -1349,6 +1352,7 @@
   <string name="gt_444d2892548b8ea7">"Gren i trädet"</string>
   <string name="gt_31a165b280346408">"Trädets rot"</string>
   <string name="gt_d8b8392e2c542950">"Försök igen"</string>
+  <string name="gt_5fd38e8f1d7ab62f">"Testa att säga"</string>
   <string name="gt_026460792a12cc5d">"Slå på den eller säkerhetskopiera nu"</string>
   <string name="gt_92dfd3632baeb6d4">"Slå på aviseringar"</string>
   <string name="gt_ae9c99bb67325b70">"Slå på dem i Inställningar. Noah kollar igen när du kommer tillbaka."</string>

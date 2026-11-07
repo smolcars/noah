@@ -3445,6 +3445,42 @@
         }
       }
     },
+    "Ask Siri about your wallet while your device is unlocked. Siri never sends money.": {
+      "comment": "GT gt_f5dbed41f4b30cda; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ask Siri about your wallet while your device is unlocked. Siri never sends money."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pregúntale a Siri por tu billetera mientras tu dispositivo está desbloqueado. Siri nunca envía dinero."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "デバイスのロックを解除した状態で、Siriにウォレットについて聞けます。Siriが送金することはありません。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "기기 잠금이 해제된 상태에서 Siri에게 지갑에 대해 물어보세요. Siri는 절대 송금하지 않습니다."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Fråga Siri om din plånbok när enheten är upplåst. Siri skickar aldrig pengar."
+          }
+        }
+      }
+    },
     "Ask for at least 1 sat.": {
       "comment": "GT gt_5303e6e0d269f4d7; arguments: none",
       "extractionState": "manual",
@@ -22509,6 +22545,42 @@
           "stringUnit": {
             "state": "translated",
             "value": "Senast kända saldo"
+          }
+        }
+      }
+    },
+    "Last payment": {
+      "comment": "GT gt_3cabad147b110e3e; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Last payment"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Último pago"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "最後の支払い"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "마지막 결제"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Senaste betalningen"
           }
         }
       }
@@ -41605,6 +41677,42 @@
         }
       }
     },
+    "Siri": {
+      "comment": "GT gt_7cdcbd87852f9d12; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Siri"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Siri"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Siri"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Siri"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Siri"
+          }
+        }
+      }
+    },
     "Skip": {
       "comment": "GT gt_28d03596d24eeb4e; arguments: none",
       "extractionState": "manual",
@@ -47853,6 +47961,42 @@
           "stringUnit": {
             "state": "translated",
             "value": "Försök igen"
+          }
+        }
+      }
+    },
+    "Try saying": {
+      "comment": "GT gt_5fd38e8f1d7ab62f; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Try saying"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Prueba a decir"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "こう言ってみてください"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "이렇게 말해 보세요"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Testa att säga"
           }
         }
       }

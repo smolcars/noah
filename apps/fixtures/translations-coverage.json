@@ -6,8 +6,8 @@
     "ko",
     "sv"
   ],
-  "catalogEntries": 1557,
-  "sourceKeys": 1594,
+  "catalogEntries": 1561,
+  "sourceKeys": 1598,
   "coverage": {
     "ios": {
       "used": [
@@ -101,6 +101,7 @@
         "Arrives",
         "Arrives in Ark",
         "Arriving",
+        "Ask Siri about your wallet while your device is unlocked. Siri never sends money.",
         "Ask for at least 1 sat.",
         "Asks for {amount}",
         "Asks when you have {amount} or more",
@@ -570,6 +571,7 @@
         "Last checked",
         "Last good backup {date}",
         "Last known balance",
+        "Last payment",
         "Leaving Ark",
         "Left",
         "Left out: {amount} that costs more in fees than it’s worth. Choose it to exit anyway.",
@@ -1032,6 +1034,7 @@
         "Signed transaction size",
         "Signet",
         "Signing with Ark",
+        "Siri",
         "Skip",
         "Skipped",
         "Smallest move",
@@ -1192,6 +1195,7 @@
         "Transactions, root first",
         "Transfer",
         "Try again",
+        "Try saying",
         "Turn it on or back up now",
         "Turn on notifications",
         "Turn them on in Settings. Noah checks again when you come back.",

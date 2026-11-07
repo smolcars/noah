@@ -98,6 +98,7 @@
   <string name="gt_72c7f155f1532f44">"Arrives"</string>
   <string name="gt_859a013e803dbdc6">"Arrives in Ark"</string>
   <string name="gt_5dda9fcf2694981e">"Arriving"</string>
+  <string name="gt_f5dbed41f4b30cda">"Ask Siri about your wallet while your device is unlocked. Siri never sends money."</string>
   <string name="gt_5303e6e0d269f4d7">"Ask for at least 1 sat."</string>
   <string name="gt_e3c03bb0dee641c5">"Asks for %1$s"</string>
   <string name="gt_c6dd438b37364cad">"Asks when you have %1$s or more"</string>
@@ -637,6 +638,7 @@
   <string name="gt_0c0c351a971353b5">"Last checked"</string>
   <string name="gt_ec3b8bf1e0261664">"Last good backup %1$s"</string>
   <string name="gt_0a8ccec012d4283f">"Last known balance"</string>
+  <string name="gt_3cabad147b110e3e">"Last payment"</string>
   <string name="gt_e85039a1d8fa0011">"Leaving Ark"</string>
   <string name="gt_58eb9032e3bb83f0">"Left"</string>
   <string name="gt_4f14b3e9b20d43a4">"Left out: %1$s that costs more in fees than it’s worth. Choose it to exit anyway."</string>
@@ -1174,6 +1176,7 @@
   <string name="gt_6e65049bf16d9dc9">"Signed transaction size"</string>
   <string name="gt_99eb08cbad43b0c6">"Signet"</string>
   <string name="gt_4f5664161ec4f520">"Signing with Ark"</string>
+  <string name="gt_7cdcbd87852f9d12">"Siri"</string>
   <string name="gt_28d03596d24eeb4e">"Skip"</string>
   <string name="gt_12698ce1ea5cd4ab">"Skipped"</string>
   <string name="gt_44d27a286f01669e">"Smallest move"</string>
@@ -1349,6 +1352,7 @@
   <string name="gt_444d2892548b8ea7">"Tree branch"</string>
   <string name="gt_31a165b280346408">"Tree root"</string>
   <string name="gt_d8b8392e2c542950">"Try again"</string>
+  <string name="gt_5fd38e8f1d7ab62f">"Try saying"</string>
   <string name="gt_026460792a12cc5d">"Turn it on or back up now"</string>
   <string name="gt_92dfd3632baeb6d4">"Turn on notifications"</string>
   <string name="gt_ae9c99bb67325b70">"Turn them on in Settings. Noah checks again when you come back."</string>

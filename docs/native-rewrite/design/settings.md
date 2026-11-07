@@ -59,7 +59,7 @@ The user decided these on 2026-10-23:
   2. Security (Backup, Recovery phrase, Face ID / App lock);
   3. Bitcoin (VTXOs, On-chain, Recurring payments, Emergency exit, Spend bitcoin nearby). "Spend bitcoin nearby" opens today's BTC Map as Home did (iOS pushes it in Home's stack; Android opens it as its own screen in one pane); Back returns to Settings;
   4. Display (Bitcoin unit, Currency, Language, Hide amounts);
-  5. App (Notifications, Advanced);
+  5. App (Notifications, Siri, Advanced);
   6. Help (Feedback, About Noah);
   7. Delete wallet, on its own.
 - **Rows** are a title plus a live value ("On", "Not saved", "12", "₿10,000", "2 active"). The one-line explanation lives on the page each row opens. A small orange dot marks rows that need you: an unsaved phrase, VTXOs to renew, a payment to approve.
@@ -115,6 +115,7 @@ Build each page as the prototype and the notes' "Every current feature" tables d
   - Battery (Android, Decision 6);
   - UnifiedPush, only without Google Play: distributor radio list, endpoint with copy, Register.
   - The launch push gate is unchanged.
+- **Siri (iOS):** one line, Siri's tip for the balance, "Try saying" with a phrase each for Request, Lightning address, Last payment and Scan (as Siri hears them: the system's language, the app's name), and the system's "Noah shortcuts" link. The "Siri & Search" switch joins it later ([`voice-assistants.md`](voice-assistants.md)).
 - **Advanced:**
   - Ark server (every row today's Ark info shows, with plainer labels; bitcoind RPC only on regtest);
   - Esplora (test, save, reset, as today);
