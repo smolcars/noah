@@ -64,15 +64,13 @@ fun ActivityScreen(app: AppModel, onRepeatPayment: (RepeatPayment) -> Unit, onRe
         barHidden = barHidden,
         seen = { id -> memory.seenRows = ActivityRules.seen(memory.seenRows, id); seen = memory.seenRows },
     )
-    // A notification's payment opens once the history has it (an Ark receive arrives with the next sync); leaving
-    // Activity forgets it.
+    // A notification's payment opens once the history has it (an Ark receive arrives with the next sync).
     val tap = app.paymentTap
     LaunchedEffect(tap, history.transactions) {
         val row = tap?.let { history.transactions.firstOrNull(it::matches) } ?: return@LaunchedEffect
         state.open(row.id)
         app.paymentTap = null
     }
-    DisposableEffect(app) { onDispose { app.paymentTap = null } }
     com.noahwallet.ui.onboarding.OnboardingFrame(null, splitAtWindowCentre = true) {
         ActivityContent(ui, actions, state, toasts)
     }
