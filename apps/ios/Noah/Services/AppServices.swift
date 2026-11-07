@@ -41,7 +41,8 @@ final class AppServices: Sendable {
             authToken: KeychainPassword.serverAuthToken(for: variant), settings: .shared,
             scratch: .shared, appGroup: variant.appGroup,
             deregister: { _ = try await client.deregister().ok },
-            settleBackground: { try await coordinator.settleForDeletion(timeout: $0) }))
+            settleBackground: { try await coordinator.settleForDeletion(timeout: $0) },
+            clearSiriIndex: { await SiriIndexer.shared.walletDeleted() }))
         restoreRecovery = RestoreRecovery {
             try await lifecycle.recoverRestoreAndDeletionLocked {
                 try await WalletRestorer.recoverInterruptedRestore(session: session, location: location, seed: seed)

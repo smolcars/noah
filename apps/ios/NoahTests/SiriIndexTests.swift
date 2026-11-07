@@ -149,19 +149,63 @@ struct SiriIndexTests {
         #expect(index.upserts.last == snapshot)
     }
 
-    @Test func aDeletedWalletLeavesNothing() async throws {
+    @Test func aDeletedWalletLeavesNothing() async {
         let index = Recording()
         let indexer = SiriIndexer(dependencies: index.dependencies())
         await indexer.update(balance: 694_375, history: Self.history).value
         index.present.withLock { $0 = false }
-        indexer.walletDeleted()
-        try await waitUntil { index.removedAll.last == Set(SiriIndexStore.Kind.allCases) }
+        await indexer.walletDeleted()
+        #expect(index.removedAll.last == Set(SiriIndexStore.Kind.allCases))
         #expect(await indexer.published == .empty)
         // Reads still under way, and anything after while no wallet is there, index nothing.
         let calls = index.upserts.count
         await indexer.update(balance: 5, history: Self.history).value
         let published = await indexer.published
         #expect(index.upserts.count == calls && published == .empty)
+    }
+
+    @Test func switchStaysOnWhenTheIndexCantBeRemoved() async throws {
+        let index = Recording()
+        let indexer = SiriIndexer(dependencies: index.dependencies())
+        await indexer.update(balance: 694_375, history: Self.history).value
+        index.failingRemovals.withLock { $0 = 1 }
+        await #expect(throws: SiriIndexer.RemovalFailed.self) { try await indexer.setEnabled(false) }
+        // Never off over indexed data: the switch is back on and the index whole again.
+        #expect(indexer.enabled && index.setting == "on")
+        #expect(await indexer.published.payments.count == 4)
+    }
+
+    @Test func anythingLeftIndexedGoesWhileOffOrWithoutAWallet() async {
+        // An earlier process may have indexed before the switch went off or the wallet went.
+        for (setting, present) in [("off", true), ("on", false)] {
+            let index = Recording()
+            index.stored.withLock { $0 = setting }
+            index.present.withLock { $0 = present }
+            let indexer = SiriIndexer(dependencies: index.dependencies())
+            index.failingRemovals.withLock { $0 = 1 }
+            await indexer.update(balance: 1).value // Fails: the next one tries again.
+            await indexer.update(balance: 2).value
+            await indexer.update(balance: 3).value // Removed already: nothing more to do.
+            #expect(index.removedAll == [Set(SiriIndexStore.Kind.allCases)])
+            #expect(await indexer.published == .empty)
+        }
+    }
+
+    @Test(.timeLimit(.minutes(1)))
+    func aQueryReadingTheWalletDoesntHoldUpIndexing() async {
+        // A background pass holds the wallet while it indexes; a Siri query waiting for the wallet mustn't block it.
+        let index = Recording(), gate = Gate()
+        var dependencies = index.dependencies()
+        let read = dependencies.read
+        dependencies.read = { await gate.wait(); return try await read() }
+        let indexer = SiriIndexer(dependencies: dependencies)
+        let query = Task { await indexer.current() }
+        while await gate.waiting == 0 { await Task.yield() }
+        await indexer.update(balance: 1).value
+        await gate.release()
+        let snapshot = await query.value
+        // The pass's newer balance wins over the query's read; the read's rows fill the rest.
+        #expect(snapshot.balance?.sats == 1 && snapshot.payments.count == 4)
     }
 
     @Test func queriesReadTheWalletWhenNothingWasHandedOver() async {
@@ -221,11 +265,6 @@ struct SiriIndexTests {
         #expect(PayNoahRecipientIntent(recipient: sam, amountSats: 0).request.sats == nil)
         #expect(AssistantReply.pay(recipient: sam.spoken, locale: "en") == "Opening Send to sam@noahwallet.com.")
     }
-
-    private func waitUntil(_ condition: () -> Bool) async throws {
-        for _ in 0..<200 where !condition() { try await Task.sleep(for: .milliseconds(10)) }
-        #expect(condition())
-    }
 }
 
 /// An index in memory, recording each change.
@@ -239,6 +278,9 @@ private final class Recording: Sendable {
     }
 
     private let log = Mutex(Log())
+    struct RemovalFailed: Error {}
+    /// The next this many `removeAll`s fail, as Spotlight can.
+    let failingRemovals = Mutex(0)
     let stored = Mutex<String?>(nil)
     let present = Mutex(true)
     let reads = Mutex(0)
@@ -255,7 +297,12 @@ private final class Recording: Sendable {
                            remove: { payments, recipients, balance in
                                self.log.withLock { $0.removed.append(.init(payments: payments, recipients: recipients, balance: balance)) }
                            },
-                           removeAll: { kinds in self.log.withLock { $0.removedAll.append(kinds) } }),
+                           removeAll: { kinds in
+                               if self.failingRemovals.withLock({ failing in defer { failing = max(0, failing - 1) }; return failing > 0 }) {
+                                   throw RemovalFailed()
+                               }
+                               self.log.withLock { $0.removedAll.append(kinds) }
+                           }),
               setting: .init(isOn: { self.stored.withLock { $0 } != "off" }, set: { on in self.stored.withLock { $0 = on ? "on" : "off" } }),
               context: { SiriIndexTests.context },
               walletPresent: { self.present.withLock { $0 } },
@@ -264,5 +311,24 @@ private final class Recording: Sendable {
                   return (694_375, SiriIndexTests.history)
               },
               recipientsChanged: { self.log.withLock { $0.recipientChanges += 1 } })
+    }
+}
+
+/// Holds a read until released, as a wallet another pass holds would.
+private actor Gate {
+    private(set) var waiting = 0
+    private var released = false
+    private var waiters: [CheckedContinuation<Void, Never>] = []
+
+    func wait() async {
+        guard !released else { return }
+        waiting += 1
+        await withCheckedContinuation { waiters.append($0) }
+    }
+
+    func release() {
+        released = true
+        waiters.forEach { $0.resume() }
+        waiters = []
     }
 }

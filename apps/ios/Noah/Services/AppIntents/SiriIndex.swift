@@ -249,64 +249,87 @@ actor SiriIndexer {
         } }
     }
 
-    /// The switch: off removes everything Noah indexed and stops indexing; on indexes again.
+    struct RemovalFailed: Error {}
+
+    /// The switch: off removes everything Noah indexed and stops indexing; on indexes again. If the index can't be
+    /// removed, the switch goes back on and this throws, so it never shows off over indexed data.
     func setEnabled(_ enabled: Bool) async throws {
         try dependencies.setting.set(enabled)
-        await serial { indexer in
-            if enabled {
-                await indexer.readIfNeeded()
+        if enabled {
+            let read = history == nil ? await readWallet() : nil
+            await serial { indexer in
+                indexer.apply(read)
                 indexer.inherited = Set(SiriIndexStore.Kind.allCases)
                 await indexer.publish()
-            } else {
-                await indexer.removeAll()
             }
+        } else if await !serial({ await $0.removeAll() }) {
+            try? dependencies.setting.set(true)
+            await serial { await $0.publish() }
+            throw RemovalFailed()
         }
     }
 
-    /// The wallet was deleted: nothing it indexed stays, and reads still under way are dropped.
-    nonisolated func walletDeleted() {
+    /// The wallet was deleted: nothing it indexed stays, and reads still under way are dropped. Returns once removed.
+    nonisolated func walletDeleted() async {
         let stamp = stamps.withLock { $0 += 1; return $0 }
-        Task { await serial { indexer in
+        await serial { indexer in
             indexer.cleared = stamp
             indexer.balance = nil
             indexer.history = nil
             await indexer.removeAll()
-        } }
+        }
     }
 
     /// What Siri's queries see, read from the wallet when this process hasn't been handed anything yet.
     func current() async -> SiriIndex.Snapshot {
+        guard history == nil, enabled else { return published }
+        // Read before queueing: a background pass holding the wallet may be waiting on the queue to index.
+        let read = await readWallet()
         await serial { indexer in
             guard indexer.history == nil, indexer.dependencies.setting.isOn() else { return }
-            await indexer.readIfNeeded()
+            indexer.apply(read)
             await indexer.publish()
         }
         return published
     }
 
-    /// Runs one change after the last, in call order.
-    private func serial(_ work: @escaping @Sendable (isolated SiriIndexer) async -> Void) async {
+    /// Runs one change after the last, in call order. Never wait on the wallet in here (see `current`).
+    @discardableResult
+    private func serial<T: Sendable>(_ work: @escaping @Sendable (isolated SiriIndexer) async -> T) async -> T {
         let previous = tail
-        let task = Task { await previous?.value; await work(self) }
-        tail = task
-        await task.value
+        let task = Task { await previous?.value; return await work(self) }
+        tail = Task { _ = await task.value }
+        return await task.value
     }
 
-    private func readIfNeeded() async {
-        guard history == nil, dependencies.walletPresent() else { return }
+    private struct WalletRead: Sendable {
+        var stamp: Int
+        var balance: UInt64
+        var history: [HistoryTransaction]
+    }
+
+    private nonisolated func readWallet() async -> WalletRead? {
+        guard dependencies.walletPresent() else { return nil }
         let stamp = stamps.withLock { $0 += 1; return $0 }
         do {
             let read = try await dependencies.read()
-            guard stamp > cleared else { return }
-            if stamp > balance?.stamp ?? 0 { balance = (read.balance, stamp) }
-            if history == nil { history = (read.history, stamp) }
+            return WalletRead(stamp: stamp, balance: read.balance, history: read.history)
         } catch {
             log.w("Couldn't read the wallet for Siri")
+            return nil
         }
+    }
+
+    private func apply(_ read: WalletRead?) {
+        guard let read, read.stamp > cleared else { return }
+        if read.stamp > balance?.stamp ?? 0 { balance = (read.balance, read.stamp) }
+        if history == nil { history = (read.history, read.stamp) }
     }
 
     private func publish() async {
         guard dependencies.setting.isOn(), dependencies.walletPresent() else {
+            // Off or no wallet: anything still indexed, here or by an earlier process, goes.
+            if !inherited.isEmpty || indexed != .empty { await removeAll() }
             published = .empty
             return
         }
@@ -348,18 +371,23 @@ actor SiriIndexer {
         }
     }
 
-    private func removeAll() async {
+    /// Whether everything was removed; if not, the next publish removes it again.
+    @discardableResult
+    private func removeAll() async -> Bool {
+        var removed = true
         do {
             try await dependencies.store.removeAll(Set(SiriIndexStore.Kind.allCases))
             inherited = []
         } catch {
             log.w("Couldn't remove Noah's Siri index")
             inherited = Set(SiriIndexStore.Kind.allCases)
+            removed = false
         }
         let hadRecipients = !indexed.recipients.isEmpty
         indexed = .empty
         published = .empty
         if hadRecipients { dependencies.recipientsChanged() }
+        return removed
     }
 }
 

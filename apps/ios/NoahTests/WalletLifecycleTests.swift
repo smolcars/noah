@@ -31,11 +31,12 @@ struct WalletLifecycleTests {
         mutation: WalletMutationGate = .shared,
         drainTimeout: Duration = .seconds(30),
         settleBackground: @escaping @Sendable () async throws -> Void = {},
-        deregister: @escaping @Sendable () async throws -> Void = {}) -> WalletLifecycle {
+        deregister: @escaping @Sendable () async throws -> Void = {},
+        clearSiriIndex: @escaping @Sendable () async -> Void = {}) -> WalletLifecycle {
         WalletLifecycle(dependencies: .init(
             session: session, location: location, seed: seed, authToken: token, settings: settings,
             scratch: scratch ?? ScratchSpace(root: root.appending(path: "scratch")), appGroup: nil, mutation: mutation, drainTimeout: drainTimeout,
-            deregister: deregister, settleBackground: { _ in try await settleBackground() }))
+            deregister: deregister, settleBackground: { _ in try await settleBackground() }, clearSiriIndex: clearSiriIndex))
     }
 
     func makeSettings() throws -> SettingsStorage {
@@ -230,6 +231,8 @@ struct WalletLifecycleTests {
         let settings = try makeSettings()
         let (seed, token) = items()
         defer { seed.remove(); token.remove() }
+        final class Clears: @unchecked Sendable { var markerPresent: [Bool] = [] }
+        let clears = Clears(), marker = location.deletionMarker.path
         for stage in 0...5 {
             try writeBarkDatabase()
             try seed.save("seed words"); try token.save("jwt")
@@ -240,8 +243,11 @@ struct WalletLifecycleTests {
             if stage >= 4 { try seed.deleteWalletSeed() }
             if stage >= 5 { token.remove(); settings.removeAll() }
             let session = WalletSession(variant: .regtest, location: location) { _, _, _, _ in throw Unreachable() }
-            let relaunched = lifecycle(session: session, settings: settings, seed: seed, token: token)
+            let relaunched = lifecycle(session: session, settings: settings, seed: seed, token: token,
+                                       clearSiriIndex: { clears.markerPresent.append(FileManager.default.fileExists(atPath: marker)) })
             try await relaunched.recoverDeletion()
+            // Siri's index is cleared before the marker goes, so a crash in between clears it again on relaunch.
+            #expect(clears.markerPresent == Array(repeating: true, count: stage + 1))
             #expect(seed.read() == .notFound)
             #expect(token.read() == .notFound)
             #expect(settings.string(forKey: PersistedWalletState.key) == nil)

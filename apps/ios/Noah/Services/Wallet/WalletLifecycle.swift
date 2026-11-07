@@ -38,8 +38,8 @@ struct WalletLifecycle: Sendable {
         var settleBackground: @Sendable (Duration) async throws -> Void = { _ in }
         var walletChanged: @Sendable () async -> Void = { await SendPaymentController.shared.reloadForWalletChange() }
         var persistAutomationStop: (@Sendable (String) throws -> Void)?
-        /// Removes what Siri's index holds of this wallet.
-        var clearSiriIndex: @Sendable () -> Void = {}
+        /// Removes what Siri's index holds of this wallet; done before the deletion marker goes, so relaunch retries it.
+        var clearSiriIndex: @Sendable () async -> Void = {}
     }
 
     static let automationStopKey = "native-recurring-automation-stop-generation"
@@ -195,6 +195,7 @@ struct WalletLifecycle: Sendable {
                 do { try await dependencies.deregister() }
                 catch { AppLog("walletLifecycle").w("Deregistration failed while deleting the wallet") }
                 try deleteLocalWallet()
+                await dependencies.clearSiriIndex()
                 await dependencies.walletChanged()
                 try FileManager.default.removeItem(at: marker)
                 try RestoreTransaction.fullSync(marker.deletingLastPathComponent())
@@ -236,7 +237,6 @@ struct WalletLifecycle: Sendable {
         dependencies.authToken.remove()
         try dependencies.settings.removeAllDurably()
         if let appGroup = dependencies.appGroup { WidgetDataWriter.clear(appGroup: appGroup) }
-        dependencies.clearSiriIndex()
     }
 
     private func authority() -> RecurringAutomationAuthority? {
@@ -265,7 +265,7 @@ extension WalletLifecycle.Dependencies {
             appGroup: services.variant.appGroup,
             deregister: { _ = try await services.client.deregister().ok },
             settleBackground: { try await services.backupCoordinator.settleForDeletion(timeout: $0) },
-            clearSiriIndex: { SiriIndexer.shared.walletDeleted() })
+            clearSiriIndex: { await SiriIndexer.shared.walletDeleted() })
     }
 }
 
