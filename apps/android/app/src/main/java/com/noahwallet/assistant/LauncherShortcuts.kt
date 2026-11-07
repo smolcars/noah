@@ -21,11 +21,14 @@ import java.util.Locale
 internal object LauncherShortcuts {
     const val RECENTS = 4
     private const val PREFIX = "recent:"
+    /** Receive, Scan and Send (res/xml/shortcuts.xml) count against the launcher's per-activity limit too. */
+    private const val STATIC = 3
 
     /** Shows [history]'s recent recipients, newest first; nothing changes while they're the ones already shown. */
     fun update(context: Context, history: List<HistoryTransaction>, ownDomain: String?, network: String = BuildConfig.APP_VARIANT) {
-        val recents = SendWhoRules.recents(history, network, RECENTS).associateBy { PREFIX + SendDestination.cleaned(it).lowercase(Locale.ROOT) }
         guarded(context, "update") {
+            val room = (ShortcutManagerCompat.getMaxShortcutCountPerActivity(context) - STATIC).coerceIn(0, RECENTS)
+            val recents = SendWhoRules.recents(history, network, room).associateBy { PREFIX + SendDestination.cleaned(it).lowercase(Locale.ROOT) }
             val shown = ShortcutManagerCompat.getDynamicShortcuts(context).filter { it.id.startsWith(PREFIX) }.sortedBy { it.rank }.map { it.id }
             if (shown == recents.keys.toList()) return@guarded
             (shown - recents.keys).takeIf { it.isNotEmpty() }?.let { ShortcutManagerCompat.removeDynamicShortcuts(context, it) }
