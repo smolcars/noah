@@ -6,8 +6,8 @@
       "kind" : "remoteSourceControl",
       "location" : "https://github.com/smolcars/bark-bolt-ffi",
       "state" : {
-        "revision" : "82b21bfa6e6289b5ab02e3003619d737b879fb65",
-        "version" : "0.8.0"
+        "revision" : "95d8e6085b85f31a0c32da55c9daaa475df05c53",
+        "version" : "0.9.0"
       }
     },
     {

@@ -276,6 +276,7 @@ internal class WidgetHandles(override val m6: OnchainWalletAccess, val balances:
     override suspend fun pendingLightningReceives() = receives.read(receiveReads++) ?: error("unavailable")
     override suspend fun pendingBoardVtxos() = boards.read(boardReads++).map { vtxo(it) }
     override fun notifications(): WalletSession.Notifications = error("unused")
+    override suspend fun receiveRequest(): ReceiveRequest = error("unused")
     override suspend fun receiveInvoice(request: ReceiveRequest, amountSat: Long, description: String): ReceiveRequest = error("unused")
     override suspend fun initializeAddress() = Unit
     override suspend fun peekPublicKey(index: UInt): String = error("unused")

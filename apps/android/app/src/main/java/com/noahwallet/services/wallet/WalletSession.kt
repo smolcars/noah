@@ -75,8 +75,7 @@ class WalletSession internal constructor(
         suspend fun pendingRounds(): List<PendingRoundStatus> = throw UnsupportedOperationException()
         suspend fun history(): List<Movement>
         suspend fun transactions(): List<WalletTransaction> = throw UnsupportedOperationException()
-        suspend fun newAddressWithIndex(): AddressWithIndex = throw UnsupportedOperationException()
-        suspend fun newOnchainAddress(): String = throw UnsupportedOperationException()
+        suspend fun receiveRequest(): ReceiveRequest
         suspend fun receiveInvoice(request: ReceiveRequest, amountSat: Long, description: String): ReceiveRequest
         suspend fun initializeAddress()
         suspend fun peekPublicKey(index: UInt): String
@@ -555,33 +554,7 @@ class WalletSession internal constructor(
 
     suspend fun createSnapshot(destination: File): WalletSnapshotInfo = withOpen { it.createSnapshot(destination) }
 
-    /** Receive's addresses, reused until each is paid: every new on-chain address joins every later on-chain sync. */
-    @kotlinx.serialization.Serializable
-    private data class ReceiveAddresses(val ark: String, val arkIndex: UInt, val onchain: String)
-
-    /**
-     * Kept paired while an amount is edited. Read and saved under the open wallet, in its folder, which a restore
-     * replaces and a deletion removes, so the addresses never outlive the database that derived them.
-     */
-    suspend fun receiveRequest(): ReceiveRequest = withOpen { handles ->
-        val file = File(location.directory, "noah-receive-addresses.json")
-        val saved = runCatching { kotlinx.serialization.json.Json.decodeFromString<ReceiveAddresses>(file.readText()) }.getOrNull()
-        // bark peeks only keys it derived, so a saved index from another database fails here.
-        val ark = saved?.takeIf { s -> runCatching { handles.peekAddress(s.arkIndex) }.getOrNull() == s.ark &&
-            handles.history().none { movement -> movement.receivedOnAddresses.any { it.paymentMethod.value == s.ark } } }
-            ?.let { AddressWithIndex(it.ark, it.arkIndex) } ?: handles.newAddressWithIndex()
-        val onchain = saved?.onchain?.takeIf { address ->
-            handles.transactions().none { (runCatching { SendTransaction.amount(address, it.txHex) }.getOrNull() ?: 0) > 0 }
-        } ?: handles.newOnchainAddress()
-        val next = ReceiveAddresses(ark.address, ark.index, onchain)
-        // A failed save only means fresh addresses next time.
-        if (next != saved) runCatching {
-            val temporary = File(location.directory, ".noah-receive-addresses.tmp")
-            temporary.writeText(kotlinx.serialization.json.Json.encodeToString(next))
-            check(temporary.renameTo(file))
-        }
-        ReceiveRequest(next.ark, next.onchain)
-    }
+    suspend fun receiveRequest(): ReceiveRequest = withOpen { it.receiveRequest() }
     suspend fun receiveInvoice(request: ReceiveRequest, amountSat: Long, description: String): ReceiveRequest {
         val note = description.trim()
         ReceiveRequest.validate(amountSat, note)
@@ -821,8 +794,8 @@ class WalletSession internal constructor(
         override suspend fun pendingRounds() = wallet.syncPendingRounds()
         override suspend fun history() = wallet.history()
         override suspend fun transactions() = onchain.transactions()
-        override suspend fun newAddressWithIndex() = wallet.newAddressWithIndex()
-        override suspend fun newOnchainAddress(): String = onchain.newAddress()
+        // Each address until it's paid, so a Receive visit derives nothing and later on-chain syncs don't grow.
+        override suspend fun receiveRequest() = ReceiveRequest(wallet.nextUnusedAddress().address, onchain.nextUnusedAddress())
         override suspend fun receiveInvoice(request: ReceiveRequest, amountSat: Long, description: String): ReceiveRequest {
             val invoice = wallet.bolt11Invoice(amountSat.toULong(), description.ifEmpty { null })
             return request.copy(amountSat = amountSat, description = description,

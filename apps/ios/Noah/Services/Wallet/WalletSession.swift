@@ -117,7 +117,7 @@ actor WalletSession {
     }
 
     private let variant: AppVariant
-    let location: WalletDataLocation
+    private let location: WalletDataLocation
     private let opener: Opener
     var sendPreparations: [String: SendPreparation] = [:]
     var unsubmittedBoardReviews: [UUID: OnchainQuote] = [:]
