@@ -5,6 +5,7 @@ struct RootView: View {
     @Environment(AppModel.self) private var model
     private var lock: WalletLock { model.walletLock }
     @State private var showingDelete = false
+    @State private var paymentTap = PaymentTapRoute.shared
     @Environment(\.scenePhase) private var scenePhase
 
     /// One onboarding instance across these phases, so a restore's closing
@@ -27,8 +28,10 @@ struct RootView: View {
         }
         // Launch ending in onboarding or a gate drops a link held through it. Initial: the phase swaps this Group's child.
         .onChange(of: model.paymentLinkGate, initial: true) { _, gate in
-            if gate == .ignore { _ = model.paymentLink.take(gate); _ = model.widgetRoute.take(gate) }
+            if gate == .ignore { _ = model.paymentLink.take(gate); _ = model.widgetRoute.take(gate); paymentTap.drop() }
         }
+        // A payment notification tapped behind onboarding or a gate is dropped, as a link would be.
+        .onChange(of: paymentTap.pending) { _, tap in if tap != nil && model.paymentLinkGate == .ignore { paymentTap.drop() } }
         .onReceive(NotificationCenter.default.publisher(for: AppServices.esploraReopened)) { _ in
             Task { await model.walletConfigurationChanged() }
         }
@@ -146,6 +149,7 @@ struct WalletTabs: View {
     @State private var linkBlocked = false
     @State private var selection: Tab
     @State private var settingsRoute = SettingsRoute.shared
+    @State private var paymentTap = PaymentTapRoute.shared
     @State private var window = OnboardingLayout(size: .zero, insets: EdgeInsets())
 
     init(history: HistoryModel? = nil, home: HomeModel? = nil, send: SendModel? = nil, receive: ReceiveModel? = nil,
@@ -202,6 +206,14 @@ struct WalletTabs: View {
         }
         .onChange(of: app.widgetRoute.pending != nil && app.paymentLinkGate == .open, initial: true) { _, ready in
             if ready, let destination = app.widgetRoute.take(.open) { open(destination) }
+        }
+        // A payment notification opens Activity on its payment; like a widget's Home it never leaves a payment under way.
+        .onChange(of: paymentTap.pending != nil && app.paymentLinkGate == .open, initial: true) { _, ready in
+            guard ready, let tap = paymentTap.pending else { return }
+            paymentTap.pending = nil
+            guard WidgetRoute.tab(for: .home, send: send, approvalOpen: app.paymentLink.approvalOpen) != nil else { return }
+            paymentTap.activity = tap
+            selection = .history
         }
         .environment(history)
         .environment(tracker)

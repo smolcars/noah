@@ -1,0 +1,67 @@
+{
+  "cases": [
+    {
+      "name": "an Ark receive opens the payment whose new coins it names",
+      "input": {
+        "data": "{\"notification_type\":\"ark_payment_received\",\"vtxo_ids\":[\"aa:0\",\"bb:1\"]}",
+        "rows": [
+          { "id": "movement-3", "paymentHash": null, "outputVtxos": ["cc:0"] },
+          { "id": "movement-2", "paymentHash": null, "outputVtxos": ["bb:1"] }
+        ]
+      },
+      "expected": { "tap": true, "opens": "movement-2" }
+    },
+    {
+      "name": "an Ark receive waits while no payment has its coins yet",
+      "input": {
+        "data": "{\"notification_type\":\"ark_payment_received\",\"vtxo_ids\":[\"aa:0\"]}",
+        "rows": [{ "id": "movement-3", "paymentHash": null, "outputVtxos": ["cc:0"] }]
+      },
+      "expected": { "tap": true, "opens": null }
+    },
+    {
+      "name": "a payment that spent the coins is not the one that received them",
+      "input": {
+        "data": "{\"notification_type\":\"ark_payment_received\",\"vtxo_ids\":[\"aa:0\"]}",
+        "rows": [{ "id": "movement-9", "paymentHash": null, "inputVtxos": ["aa:0"], "outputVtxos": ["dd:0"] }]
+      },
+      "expected": { "tap": true, "opens": null }
+    },
+    {
+      "name": "a Lightning receive opens the payment with its hash",
+      "input": {
+        "data": "{\"notification_type\":\"lightning_payment_received\",\"payment_hash\":\"0f0f\"}",
+        "rows": [
+          { "id": "movement-5", "paymentHash": "abab", "outputVtxos": [] },
+          { "id": "movement-4", "paymentHash": "0f0f", "outputVtxos": ["ee:0"] }
+        ]
+      },
+      "expected": { "tap": true, "opens": "movement-4" }
+    },
+    {
+      "name": "the empty data of older servers opens nothing",
+      "input": { "data": "{}", "rows": [{ "id": "movement-1", "paymentHash": null, "outputVtxos": ["aa:0"] }] },
+      "expected": { "tap": false, "opens": null }
+    },
+    {
+      "name": "an Ark receive without coins opens nothing",
+      "input": { "data": "{\"notification_type\":\"ark_payment_received\",\"vtxo_ids\":[]}", "rows": [] },
+      "expected": { "tap": false, "opens": null }
+    },
+    {
+      "name": "a Lightning receive without a hash opens nothing",
+      "input": { "data": "{\"notification_type\":\"lightning_payment_received\"}", "rows": [] },
+      "expected": { "tap": false, "opens": null }
+    },
+    {
+      "name": "a background command opens nothing",
+      "input": { "data": "{\"notification_type\":\"maintenance\",\"notification_k1\":\"k1\"}", "rows": [] },
+      "expected": { "tap": false, "opens": null }
+    },
+    {
+      "name": "data that isn't JSON opens nothing",
+      "input": { "data": "not json", "rows": [] },
+      "expected": { "tap": false, "opens": null }
+    }
+  ]
+}

@@ -197,6 +197,47 @@ class PaymentLinksTest {
         assertEquals(warm, restored.get().links.pending)
     }
 
+    private fun tapped(data: String) = Intent().putExtra(com.noahwallet.history.PaymentTap.EXTRA, data)
+    private val arkData = """{"notification_type":"ark_payment_received","vtxo_ids":["aa:0"]}"""
+
+    @Test fun aPaymentNotificationOpensActivityOnceAndNeverOverSend() {
+        val opened = mutableListOf<com.noahwallet.history.PaymentTap>()
+        val expected = com.noahwallet.history.PaymentTap(vtxoIds = listOf("aa:0"))
+        val idle = mutableIntStateOf(0)
+        val links = PaymentLinks()
+        links.receive(tapped("{}"))
+        assertNull("a notification without a payment opens the app as before", links.payment)
+        links.receive(tapped(arkData))
+        // Send hasn't read its saved payment yet: the tap waits.
+        links.deliverPayment(send().apply { invalidateForWalletChange() }, idle, idle) { opened += it }
+        assertEquals(expected, links.payment)
+        links.deliverPayment(send(), idle, idle) { opened += it }
+        links.deliverPayment(send(), idle, idle) { opened += it }
+        assertEquals(listOf(expected), opened)
+        // A payment in flight, Send preparing or reviewing, or a recurring approval: the app stays where it is.
+        for ((controller, busy, approvals) in listOf(Triple(send(SendAttempt(payment = arkPayment)), 0, 0), Triple(send(), 1, 0), Triple(send(), 0, 1))) {
+            links.receive(tapped(arkData))
+            links.deliverPayment(controller, mutableIntStateOf(busy), mutableIntStateOf(approvals)) { opened += it }
+            assertNull(links.payment)
+        }
+        assertEquals(listOf(expected), opened)
+        // Behind a gate it's dropped.
+        links.receive(tapped(arkData)); links.drop()
+        assertNull(links.payment)
+    }
+
+    @Test fun aPaymentNotificationIsTakenOnceAcrossRecreationAndRestore() {
+        val activity = Robolectric.buildActivity(Host::class.java, tapped(arkData)).setup()
+        assertNotNull(activity.get().links.payment)
+        activity.get().links.deliverPayment(send(), mutableIntStateOf(0), mutableIntStateOf(0)) {}
+        activity.recreate()
+        assertNull("a rotation doesn't open it again", activity.get().links.payment)
+        val saved = Bundle().also { activity.saveInstanceState(it) }
+        assertNull(Robolectric.buildActivity(Host::class.java, tapped(arkData)).setup(saved).get().links.payment)
+        assertNull(Robolectric.buildActivity(Host::class.java, tapped(arkData).addFlags(Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY)).setup()
+            .get().links.payment)
+    }
+
     /** The widget's explicit intent: the same URI iOS opens, as the data of an intent to MainActivity. */
     private fun widget(route: String, variant: String = "regtest") =
         Intent(Intent.ACTION_VIEW, Uri.parse("com.noahwallet.$variant://widget/$route")).setClassName("com.noahwallet.regtest", "com.noahwallet.MainActivity")

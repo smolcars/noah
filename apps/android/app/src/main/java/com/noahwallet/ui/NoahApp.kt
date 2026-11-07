@@ -58,6 +58,9 @@ fun NoahApp(model: AppModel, links: PaymentLinks? = null) {
     val selectedTab = tab.value
     val tabState = rememberSaveableStateHolder()
     BackHandler(enabled = selectedTab != Destination.Home) { nav.goBack() }
+    // Leaving Activity forgets a notification's payment it hasn't opened yet; a rotation keeps the tab, and the payment.
+    // The live tab: a tap delivered in this same frame has already moved it to Activity.
+    LaunchedEffect(selectedTab) { if (nav.selectedTab != Destination.History) model.paymentTap = null }
     if (links != null) LinkDelivery(model, links, nav)
     LaunchedEffect(model.recurringNotification) {
         if (model.recurringNotification) { nav.openSettings(SettingsDestination.Recurring); model.recurringNotification = false }
@@ -146,6 +149,9 @@ private fun LinkDelivery(model: AppModel, links: PaymentLinks, nav: AppNavigator
                 WidgetRoute.scan -> { nav.showHome(); nav.backStack.add(QRDestination(true)) }
             }
         }
+    }
+    LaunchedEffect(links.payment, send.loading) {
+        links.deliverPayment(send, model.sendBusy, model.recurringApprovals) { tap -> model.paymentTap = tap; nav.select(Destination.History) }
     }
     if (links.blocked) WalletAlertDialog(onDismissRequest = { links.blocked = false },
         title = { Text(tr("Payment in progress")) }, text = { Text(tr(PaymentLinks.blockedMessage)) },

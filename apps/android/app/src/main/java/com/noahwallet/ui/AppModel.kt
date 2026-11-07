@@ -147,6 +147,8 @@ class AppModel(application: Application, val settings: SettingsStorage = Setting
         rowsShown = { LaunchTiming.shared(application).mark(LaunchTiming.Milestone.historyShown, " ($it rows)") },
     ))
     var recurringNotification by mutableStateOf(false)
+    /** A "Payment received" notification's payment, which Activity opens once its history has it. */
+    var paymentTap by mutableStateOf<com.noahwallet.history.PaymentTap?>(null)
     var autoBoardSuccessBanner by mutableStateOf<Pair<Long, Long>?>(null)
     var scannedDestination by mutableStateOf<String?>(null)
     /** Send reviews and recurring approvals on screen ([ReviewOpen]); an OS link is rejected while any is open. */

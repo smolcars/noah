@@ -1055,9 +1055,11 @@ pub(crate) async fn process_mailbox_message(
 
             // captaind stores each post (all VTXOs of one payment) under one
             // checkpoint, so one arkoor message is one payment and gets one push.
-            let amount = incoming_ark_amount(&arkoor.vtxos)?;
+            let (amount, vtxo_ids) = incoming_ark_payment(&arkoor.vtxos)?;
             let usd_rate = load_notification_usd_rate(app_state).await;
-            if let Some(notification) = build_receive_notification(amount, usd_rate.as_ref()) {
+            if let Some(notification) =
+                build_receive_notification(amount, &vtxo_ids, usd_rate.as_ref())
+            {
                 tracing::info!(
                     service = "mailbox_worker",
                     pubkey = %mailbox.pubkey,
@@ -1147,26 +1149,37 @@ fn build_lightning_claim_notification(
     })
 }
 
-/// Sums the payment (`Pubkey`) VTXOs of one arkoor message. Lightning HTLC
-/// VTXOs are skipped: incoming Lightning payments have their own mailbox event.
-fn incoming_ark_amount(raw_vtxos: &[Vec<u8>]) -> Result<Amount, ApiError> {
-    raw_vtxos.iter().try_fold(Amount::ZERO, |total, raw_vtxo| {
-        let mut cursor = std::io::Cursor::new(raw_vtxo);
-        let vtxo: Vtxo<Full> = Vtxo::decode(&mut cursor).map_err(|e| {
-            ApiError::Anyhow(anyhow::anyhow!("failed to decode mailbox vtxo: {}", e))
-        })?;
+/// One arkoor message's payment (`Pubkey`) VTXOs: their total and IDs. Lightning
+/// HTLC VTXOs are skipped: incoming Lightning payments have their own mailbox event.
+fn incoming_ark_payment(raw_vtxos: &[Vec<u8>]) -> Result<(Amount, Vec<String>), ApiError> {
+    raw_vtxos
+        .iter()
+        .try_fold((Amount::ZERO, Vec::new()), |(total, mut ids), raw_vtxo| {
+            let mut cursor = std::io::Cursor::new(raw_vtxo);
+            let vtxo: Vtxo<Full> = Vtxo::decode(&mut cursor).map_err(|e| {
+                ApiError::Anyhow(anyhow::anyhow!("failed to decode mailbox vtxo: {}", e))
+            })?;
 
-        match vtxo.policy_type() {
-            VtxoPolicyKind::Pubkey => total
-                .checked_add(vtxo.amount())
-                .ok_or_else(|| ApiError::Anyhow(anyhow::anyhow!("mailbox vtxo amounts overflow"))),
-            _ => Ok(total),
-        }
-    })
+            match vtxo.policy_type() {
+                VtxoPolicyKind::Pubkey => {
+                    let total = total.checked_add(vtxo.amount()).ok_or_else(|| {
+                        ApiError::Anyhow(anyhow::anyhow!("mailbox vtxo amounts overflow"))
+                    })?;
+                    ids.push(vtxo.id().to_string());
+                    Ok((total, ids))
+                }
+                _ => Ok((total, ids)),
+            }
+        })
 }
 
+/// The data names a received VTXO so a tap on the notification can open the
+/// payment it arrived in. One is enough: all of a message's VTXOs land in one
+/// payment, and listing them all could push a many-VTXO payment past the
+/// APNs/FCM size limit. Apps that don't know the type ignore it.
 fn build_receive_notification(
     amount: Amount,
+    vtxo_ids: &[String],
     usd_rate: Option<&FiatRate>,
 ) -> Option<PushNotificationData> {
     if amount == Amount::ZERO {
@@ -1182,7 +1195,11 @@ fn build_receive_notification(
     Some(PushNotificationData {
         title: Some("Payment received".to_string()),
         body: Some(format!("You received {amount} via Ark.")),
-        data: "{}".to_string(),
+        data: serde_json::json!({
+            "notification_type": "ark_payment_received",
+            "vtxo_ids": &vtxo_ids[..vtxo_ids.len().min(1)],
+        })
+        .to_string(),
         priority: Priority::High,
         content_available: false,
     })
@@ -1304,8 +1321,8 @@ mod tests {
         usd_rate: Option<&FiatRate>,
     ) -> Option<PushNotificationData> {
         let raw: Vec<Vec<u8>> = vtxos.iter().map(|vtxo| vtxo.serialize()).collect();
-        let amount = incoming_ark_amount(&raw).expect("test vtxos should decode");
-        build_receive_notification(amount, usd_rate)
+        let (amount, vtxo_ids) = incoming_ark_payment(&raw).expect("test vtxos should decode");
+        build_receive_notification(amount, &vtxo_ids, usd_rate)
     }
 
     #[test]
@@ -1318,7 +1335,13 @@ mod tests {
             notification.body.as_deref(),
             Some("You received 8000 sats via Ark.")
         );
-        assert_eq!(notification.data, "{}");
+        assert_eq!(
+            serde_json::from_str::<serde_json::Value>(&notification.data).unwrap(),
+            serde_json::json!({
+                "notification_type": "ark_payment_received",
+                "vtxo_ids": [VTXO_VECTORS.arkoor2_vtxo.id().to_string()],
+            })
+        );
         assert_eq!(notification.priority, Priority::High);
         assert!(!notification.content_available);
     }
@@ -1338,6 +1361,7 @@ mod tests {
                 "notification_type": "visible_notification",
                 "title": "Payment received",
                 "body": "You received 8000 sats (≈ US$8.00) via Ark.",
+                "data": notification.data,
             })
         );
     }
@@ -1393,6 +1417,11 @@ mod tests {
             notification.body.as_deref(),
             Some("You received 8000 sats via Ark.")
         );
+        let data: serde_json::Value = serde_json::from_str(&notification.data).unwrap();
+        assert_eq!(
+            data["vtxo_ids"],
+            serde_json::json!([VTXO_VECTORS.arkoor2_vtxo.id().to_string()])
+        );
     }
 
     #[test]
@@ -1406,9 +1435,9 @@ mod tests {
     }
 
     #[test]
-    fn incoming_ark_amount_fails_when_any_vtxo_fails_to_decode() {
+    fn incoming_ark_payment_fails_when_any_vtxo_fails_to_decode() {
         let raw = vec![VTXO_VECTORS.arkoor2_vtxo.serialize(), vec![0xff; 4]];
-        assert!(incoming_ark_amount(&raw).is_err());
+        assert!(incoming_ark_payment(&raw).is_err());
     }
 
     #[test]

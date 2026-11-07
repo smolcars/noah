@@ -21,7 +21,7 @@ struct PushJobs: Sendable {
         var backup: @Sendable () async throws -> Void
         var reportJob: @Sendable (_ report: Report, _ error: Error?, _ k1: String) async -> Void
         var heartbeat: @Sendable (_ notificationID: String) async throws -> Void
-        var announceReceived: @Sendable (_ sats: Int64, _ usd: String?) async -> Void
+        var announceReceived: @Sendable (_ sats: Int64, _ usd: String?, _ paymentHash: String) async -> Void
         var refreshWidget: @Sendable () async -> Void
         var recurring: @Sendable () async throws -> Void = {}
         /// Pending exits' progress; never throws.
@@ -67,7 +67,7 @@ struct PushJobs: Sendable {
             try BackgroundExecution.checkActive()
             try await d.claimLightning()
             try BackgroundExecution.checkActive()
-            await d.announceReceived(payload.amountSat, payload.amountUsd)
+            await d.announceReceived(payload.amountSat, payload.amountUsd, payload.paymentHash)
             try BackgroundExecution.checkActive()
             await d.refreshWidget()
 
@@ -112,13 +112,15 @@ struct PushJobs: Sendable {
         }
     }
 
-    static func receivedContent(sats: Int64, usd: String?, unit: BitcoinAmountUnit, defaults: UserDefaults = .standard) -> UNMutableNotificationContent {
+    /// A tap opens the payment with `paymentHash` (`PaymentTap`).
+    static func receivedContent(sats: Int64, usd: String?, unit: BitcoinAmountUnit, paymentHash: String,
+                                defaults: UserDefaults = .standard) -> UNMutableNotificationContent {
         let copy = NotificationCopy.received(sats: sats, usd: usd, unit: unit, defaults: defaults)
         let content = UNMutableNotificationContent()
         content.title = copy.title
         content.body = copy.body
         content.sound = .default
-        content.userInfo = ["notification_type": "lightning_payment_received"]
+        content.userInfo = PaymentTap.lightningUserInfo(paymentHash: paymentHash)
         return content
     }
 
@@ -158,9 +160,9 @@ extension PushJobs.Dependencies {
             heartbeat: { id in
                 _ = try await client.heartbeatResponse(body: .json(.init(notificationId: id))).ok
             },
-            announceReceived: { sats, usd in
+            announceReceived: { sats, usd, hash in
                 let unit = SettingsStorage.shared.persistedState(PersistedProfileState.self, key: PersistedProfileState.key)?.amountUnit ?? .bip177
-                let content = PushJobs.receivedContent(sats: sats, usd: usd, unit: unit)
+                let content = PushJobs.receivedContent(sats: sats, usd: usd, unit: unit, paymentHash: hash)
                 try? await UNUserNotificationCenter.current().add(
                     UNNotificationRequest(identifier: UUID().uuidString, content: content, trigger: nil))
             },

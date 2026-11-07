@@ -201,7 +201,8 @@ fun ActivityContent(ui: ActivityUi, actions: ActivityActions, state: ActivitySta
     // A payment that's gone from the wallet's records (a wallet reset) closes; a loading list keeps the selection.
     LaunchedEffect(selected == null, ui.loading) {
         val loaded = !ui.loading && ui.records.isNotEmpty()
-        if (state.selected != null && selected == null && loaded) state.selected = null
+        // The live selection: one set in this same frame (a notification's payment) isn't in `selected` yet.
+        if (state.selected != null && rows.none { it.id == state.selected } && loaded) state.selected = null
     }
     // A pending offboard's record doesn't change at its first confirmation; history reads still come (wallet events,
     // pull to refresh, resume), so the block row re-reads the chain then. No polling.

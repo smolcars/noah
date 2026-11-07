@@ -28,7 +28,7 @@ struct PushJobsTests {
             backup: { recorder.add("backup"); if recorder.failBackup { throw Boom() } },
             reportJob: { report, error, k1 in recorder.add("report \(report.rawValue) \(error == nil ? "success" : "failure") \(k1)") },
             heartbeat: { id in recorder.add("heartbeat \(id)"); if recorder.failHeartbeat { throw Boom() } },
-            announceReceived: { sats, usd in recorder.add("announce \(sats) \(usd ?? "-")") },
+            announceReceived: { sats, usd, _ in recorder.add("announce \(sats) \(usd ?? "-")") },
             refreshWidget: { recorder.add("widget") },
             recurring: { recorder.add("recurring") },
             progressExits: { recorder.add("exits") }))
@@ -108,7 +108,7 @@ struct PushJobsTests {
         try await PushJobs(dependencies: dependencies).handle(decode(#"{"notification_type":"recurring_payment_due","due_count":1}"#))
         #expect(recorder.all == ["open", "recurring", "widget"])
         try await center.add(UNNotificationRequest(identifier: "system-lightning",
-                                                   content: PushJobs.receivedContent(sats: 1234, usd: "1.23", unit: .sats),
+                                                   content: PushJobs.receivedContent(sats: 1234, usd: "1.23", unit: .sats, paymentHash: "00"),
                                                    trigger: UNTimeIntervalNotificationTrigger(timeInterval: 20, repeats: false)))
     }
 

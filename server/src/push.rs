@@ -222,8 +222,8 @@ pub struct PushNotificationData {
 /// The body POSTed to a UnifiedPush endpoint. UnifiedPush has no title or body
 /// beside the data (as Expo/FCM have), and distributors never display messages
 /// themselves, so a notification with a title or body goes as a typed payload
-/// the app shows as-is. Its `data` isn't sent: the only visible notification,
-/// an Ark receive, has none. Background commands are sent unchanged.
+/// the app shows as-is, with `data` (what a tap opens) as the same JSON string
+/// FCM's `body` carries. Background commands are sent unchanged.
 pub(crate) fn unified_push_body(data: &PushNotificationData) -> String {
     if data.title.is_none() && data.body.is_none() {
         return data.data.clone();
@@ -233,6 +233,7 @@ pub(crate) fn unified_push_body(data: &PushNotificationData) -> String {
         "notification_type": "visible_notification",
         "title": data.title,
         "body": data.body,
+        "data": data.data,
     })
     .to_string()
 }
@@ -767,6 +768,7 @@ mod tests {
                 "notification_type": "visible_notification",
                 "title": null,
                 "body": "body",
+                "data": "{}",
             })
         );
     }
