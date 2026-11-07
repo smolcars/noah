@@ -199,7 +199,7 @@
   <string name="gt_84baa61bd34d1b8e">"Check status again"</string>
   <string name="gt_44cb983669c9d0a9">"Check the address. This can’t be undone."</string>
   <string name="gt_c31be569a492274b">"Check the amount, selected VTXOs, and destination. There may not be enough confirmed funds."</string>
-  <string name="gt_4282111188a1f2bd">"Check the words. Noah can only restore a wallet that had backups turned on."</string>
+  <string name="gt_9716fa3d65183825">"Check the words. If they\'re right, Noah can recover your balance from the Ark server, but not your payment history or settings."</string>
   <string name="gt_ff65032d5e881811">"Check this payment\'s outcome before approving it again."</string>
   <string name="gt_6f113ce35347ffe6">"Check this payment\'s outcome before editing it."</string>
   <string name="gt_710d52f182321f4a">"Check word %1$s"</string>
@@ -813,6 +813,7 @@
   <string name="gt_f58c5680c7fa8fe7">"Noah couldn\'t copy the Ark address. Try again while Noah is open."</string>
   <string name="gt_ff4f4291a0ae3c10">"Noah couldn\'t copy the invoice. Try again while Noah is open."</string>
   <string name="gt_e92407ae0cc29539">"Noah couldn\'t finish or undo an interrupted restore. Your wallet files were left as they are. Restart Noah to try again."</string>
+  <string name="gt_d9fcdd34f02053a7">"Noah couldn\'t finish recovering your balance from the Ark server. Check your connection and try again."</string>
   <string name="gt_8ad019accd01ac95">"Noah couldn\'t open the restored wallet safely. Close and restart Noah to continue."</string>
   <string name="gt_5ff18c368e86ed56">"Noah couldn\'t reach the Ark server. Check your connection and try again."</string>
   <string name="gt_55037f1fddcada0f">"Noah couldn\'t remove temporary wallet files. Restart Noah and try again."</string>
@@ -826,6 +827,7 @@
   <string name="gt_f590e31a6eb944e2">"Noah is still finishing a backup. Try again in a moment."</string>
   <string name="gt_338e68cc4323f294">"Noah notifications"</string>
   <string name="gt_08b28eee5b5a6d39">"Noah registers this wallet with the server again. Your wallet stays."</string>
+  <string name="gt_29775aae70149c47">"Noah restores your wallet from its backup. Without one, it can still recover your balance."</string>
   <string name="gt_9e1ac2f586e28294">"Noah sends and fee-bumps the exit’s transactions on its own, including in the background when the system lets it. Fees are estimates."</string>
   <string name="gt_286c0deecb39be99">"Noah sends this payment automatically from your Ark balance. Only this recipient and amount are ever allowed, and you can pause or cancel at any time."</string>
   <string name="gt_ddecc0272120b4ba">"Noah user"</string>
@@ -851,6 +853,7 @@
   <string name="gt_d8da2c49df39d91d">"Note"</string>
   <string name="gt_f9b73e1abc37cf5b">"Note (optional)"</string>
   <string name="gt_045f910e6b3ce120">"Note must be 639 characters or fewer."</string>
+  <string name="gt_9f5cac3cf2edba63">"Nothing found"</string>
   <string name="gt_0ded20d6a749d6bf">"Nothing to send yet"</string>
   <string name="gt_788011833a5a0f22">"Notifications"</string>
   <string name="gt_54ee6b72ca5e79e6">"Notifications are required"</string>
@@ -1002,6 +1005,7 @@
   <string name="gt_3fed24d17905877f">"Recipient verified"</string>
   <string name="gt_c7175fa7a0db0d3c">"Recorded"</string>
   <string name="gt_e4cea0827a11aed0">"Recorded at"</string>
+  <string name="gt_fd396d72e35b19ec">"Recover my balance"</string>
   <string name="gt_41edd3f47328da5a">"Recovery phrase"</string>
   <string name="gt_512d764f27c017d9">"Recovery phrase found"</string>
   <string name="gt_9b40b8e408567040">"Recovery phrase hidden"</string>
@@ -1079,6 +1083,7 @@
   <string name="gt_55d67318211dbda2">"Reset registration"</string>
   <string name="gt_9d5cd4a03ec60322">"Reset registration?"</string>
   <string name="gt_a76e13b9839270eb">"Restore"</string>
+  <string name="gt_1ea70aac7ddff51b">"Restore anyway"</string>
   <string name="gt_758420e6c40b4a1e">"Restore didn\'t finish"</string>
   <string name="gt_293a2b4aba634d76">"Restore wallet"</string>
   <string name="gt_5d06ed14f9744167">"Restored wallet settings can\'t be saved yet. Try Resume again when storage is available. Recurring payments remain stopped."</string>
@@ -1248,6 +1253,7 @@
   <string name="gt_2e48454ee6ef8e0a">"That code didn’t work. Try again."</string>
   <string name="gt_b3a72229e9eb3cc3">"That payment didn’t go through"</string>
   <string name="gt_9a17fe4427faafa5">"That payment didn’t go through."</string>
+  <string name="gt_03ab60037096acb8">"The Ark server has no coins for this recovery phrase. Check the words. If they\'re right, you can restore it anyway."</string>
   <string name="gt_19fe068bbdba00e6">"The Esplora endpoint cannot include a query string or fragment."</string>
   <string name="gt_0ac08a81559f95ee">"The Esplora endpoint cannot include credentials."</string>
   <string name="gt_96100ca2d23b8821">"The Esplora endpoint is for a different Bitcoin network."</string>
@@ -1350,7 +1356,6 @@
   <string name="gt_9dcff98e275f0cb9">"Timeline"</string>
   <string name="gt_e12a2ce4d26b2017">"Timelock"</string>
   <string name="gt_f4b06ef6d3c81436">"To"</string>
-  <string name="gt_31a0a151c58cdcdf">"To restore, Noah needs this phrase and a wallet backup."</string>
   <string name="gt_2b065c7c9ce466e5">"Today"</string>
   <string name="gt_8e5d375aee547cf8">"Too small to exit · under %1$s"</string>
   <string name="gt_168d36c2d331807e">"Took"</string>

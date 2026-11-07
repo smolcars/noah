@@ -34,6 +34,8 @@ struct RestoreTransaction: Sendable {
     static let markerName = ".noah-restore-id"
     /// Until the restored wallet's first on-chain sync has run bark's full scan (`WalletSession.syncOnchain`).
     static let onchainScanName = ".noah-onchain-scan"
+    /// Until the restored wallet's VTXOs have been checked with the server (`RestoredVtxoCheck`).
+    static let vtxoCheckName = ".noah-vtxo-check"
 
     enum Phase: String, Codable, Sendable {
         case installing, committing
@@ -114,6 +116,7 @@ struct RestoreTransaction: Sendable {
 
         try Data(journal.id.uuidString.utf8).write(to: staged.appending(path: Self.markerName))
         try Data().write(to: staged.appending(path: Self.onchainScanName))
+        try Data().write(to: staged.appending(path: Self.vtxoCheckName))
         try Self.syncTree(staged)
         try Self.fullSync(directory)
         try write(journal)

@@ -43,6 +43,15 @@ struct ForegroundPassTests {
         #expect(calls.withLock { $0 } == ["maintenance", "lightning", "exits", "onchain", "sync", "lightning", "exits", "onchain"])
     }
 
+    /// After a backup restore, its VTXO check runs before maintenance could try to refresh a VTXO already spent.
+    @Test func aRestoredWalletsVtxoCheckRunsBeforeMaintenance() async throws {
+        let calls = Locked<[String]>([]), due = Locked(true)
+        var pass = Self.pass(calls, due: due)
+        pass.checkRestoredVtxos = { calls.withLock { $0.append("check") } }
+        try await WalletSync().run(pass.stages)
+        #expect(calls.withLock { $0 } == ["check", "maintenance", "lightning", "exits", "onchain"])
+    }
+
     @Test func aFailingStageDoesNotStopExitProgress() async throws {
         struct Boom: Error {}
         let calls = Locked<[String]>([]), due = Locked(true)

@@ -78,6 +78,9 @@ class RestoreTransactionTest {
     }
     @Test fun swapKeepsPreviousAndJournalContainsOnlySeedTag() = world {
         begin(); assertEquals("new", read()); assertEquals("old", read(tx.previous))
+        // The restored wallet's first passes run the on-chain full scan and check its VTXOs with the server.
+        assertTrue(File(location.directory, RestoreTransaction.onchainScanName).exists())
+        assertTrue(File(location.directory, RestoreTransaction.vtxoCheckName).exists())
         assertEquals(RestoreTransaction.Phase.installing, tx.readJournal().phase)
         assertFalse(tx.journalFile.readText().contains("new seed"))
     }

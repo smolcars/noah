@@ -80,7 +80,7 @@ class RestoreCompletion(
 }
 
 class RestoreFlow(
-    private val restore: suspend (String, (WalletRestorer.Step) -> Unit) -> WalletRestorer.Outcome,
+    private val restore: suspend (String, WalletRestorer.Source, (WalletRestorer.Step) -> Unit) -> WalletRestorer.Outcome,
     private val complete: suspend (WalletRestorer.Outcome) -> Unit,
 ) {
     var running by mutableStateOf(false); private set
@@ -92,7 +92,7 @@ class RestoreFlow(
     fun reject(value: RestoreIssue) { if (canLeave) issue = value }
     fun clearIssue() { if (canLeave) issue = null }
 
-    suspend fun run(phrase: String) {
+    suspend fun run(phrase: String, source: WalletRestorer.Source = WalletRestorer.Source.Backup) {
         if (running || completed || issue?.requiresRestart == true) return
         if (com.noahwallet.services.storage.StoredMnemonic.normalize(phrase) == null) { issue = RestoreIssue.invalidPhrase; return }
         running = true; issue = null
@@ -101,11 +101,11 @@ class RestoreFlow(
             var committed = false
             @Suppress("TooGenericExceptionCaught") // restore boundary: every failure becomes the screen's issue
             try {
-                val outcome = restore(phrase) { step = it }
+                val outcome = restore(phrase, source) { step = it }
                 committed = true
                 complete(outcome)
                 completed = true
-            } catch (failure: Exception) { issue = if (committed) RestoreIssue.committed else RestoreIssue.from(failure) }
+            } catch (failure: Exception) { issue = if (committed) RestoreIssue.committed else RestoreIssue.from(failure, source) }
             finally { running = false; step = null }
         }
     }

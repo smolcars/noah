@@ -105,7 +105,12 @@ internal abstract class WalletSessionFixture {
                 WalletBalance(WalletBalance.Ark(1u, 0u, 0u, 0u, 0u, 0u, 0u, 0u, 0u), WalletBalance.Onchain(0u, 0u, 0u)), 2)
         }
         override suspend fun sync() { assertFalse(closed); calls += "sync" }
-        override suspend fun syncWallet() { assertFalse(closed); calls += "wallet sync" }
+        var syncEntered: CompletableDeferred<Unit>? = null
+        var syncGate: CompletableDeferred<Unit>? = null
+        override suspend fun syncWallet() { syncEntered?.complete(Unit); syncGate?.await(); assertFalse(closed); calls += "wallet sync" }
+        var spendable = emptyList<String>()
+        override suspend fun spendableVtxoIds() = spendable
+        override suspend fun trustAndAdoptServerVtxoStatus(vtxoId: String) { assertFalse(closed); calls += "adopt $vtxoId" }
         override suspend fun syncOnchain() { assertFalse(closed); calls += "on-chain sync" }
         override suspend fun maintenanceDelegated() { assertFalse(closed); calls += "maintenance" }
         override suspend fun bolt11Invoice(amountSats: ULong): String { check(!closed); return "invoice-$amountSats" }

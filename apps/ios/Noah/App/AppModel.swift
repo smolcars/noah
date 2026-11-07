@@ -285,8 +285,9 @@ final class AppModel {
         return mnemonic.split(separator: " ").map(String.init)
     }
 
-    /// Both the Welcome entry and reinstall recovery use this closed-session flow.
-    func restoreWallet(phrase: String? = nil) async {
+    /// Both the Welcome entry and reinstall recovery use this closed-session flow. `source`: the backup, or, when there
+    /// is none, the Ark server (`RestoreIssue.Action`).
+    func restoreWallet(phrase: String? = nil, from source: WalletRestorer.Source = .backup) async {
         guard !isRestoring, restoreIssue?.requiresRestart != true else { return }
         guard phase == .onboarding || phase == .blocked(.seedWithoutWalletData) else { return }
         isRestoring = true
@@ -311,7 +312,7 @@ final class AppModel {
                 seed: KeychainPassword.mnemonic(for: variant),
                 makeClient: { ServerClient.makeRestore(variant: variant, mnemonic: $0) },
                 beginOnboarding: { [settings] in try Self.beginRestore(settings, typedPhrase: phrase != nil) })
-            let outcome = try await restorer.restore(mnemonic: mnemonic) { [weak self] step in
+            let outcome = try await restorer.restore(mnemonic: mnemonic, from: source) { [weak self] step in
                 Task { @MainActor in
                     if self?.isRestoring == true { self?.restoreStep = step }
                 }
@@ -338,7 +339,7 @@ final class AppModel {
             if let failure = error as? StoredSeed.Failure {
                 phase = .blocked(failure == .invalid ? .invalidSeed : .seedConflict)
             }
-            restoreIssue = committed ? .committed : .from(error)
+            restoreIssue = committed ? .committed : .from(error, after: source)
         }
     }
 
@@ -458,6 +459,7 @@ extension AppModel {
             }
             customOpenWait = nil
             LaunchTiming.shared.mark(.walletOpened)
+            await checkRestoredVtxos()
             if let latest = try await session.summary() {
                 summary = latest
                 summaryRevision += 1
@@ -494,6 +496,15 @@ extension AppModel {
         syncOpenedWallet(historyReadsBefore: historyReads)
         await reconcileBackupTriggers()
         await startServerServices()
+    }
+
+    /// A restored backup's coins are checked with the server before its first balance shows: otherwise the restore's
+    /// count-up (and Home) would show coins spent after the backup, then drop. Best effort: the foreground pass retries.
+    private func checkRestoredVtxos() async {
+        let marker = WalletDataLocation(variant: variant).directory.appending(path: RestoreTransaction.vtxoCheckName)
+        guard FileManager.default.fileExists(atPath: marker.path) else { return }
+        do { try await session.withOpenWallet { [session] in try await session.checkRestoredVtxos($0) } }
+        catch { log.w("Couldn't check the restored wallet's coins with the server; the next sync tries again") }
     }
 
     /// Nothing else syncs a wallet just opened until the first foreground tick: one pass now, which also runs the

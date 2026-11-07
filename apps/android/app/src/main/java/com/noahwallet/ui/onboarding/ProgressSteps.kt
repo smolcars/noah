@@ -63,13 +63,17 @@ internal fun RestoringStep(model: AppModel, presentation: OnboardingPresentation
     val storedSeed = model.launchState == LaunchState.seedWithoutWalletData
     // Back from a failed phrase restore (a stored phrase goes back on its own).
     val canGoBack = issue != null && !storedSeed
-    BackHandler { if (canGoBack && flow.canLeave && !model.busy) { flow.clearIssue(); model.step = "restore" } }
+    BackHandler { if (canGoBack && flow.canLeave && !model.busy) { flow.clearIssue(); model.forgetRestorePhrase(); model.step = "restore" } }
     RestoreProgressEffects(model, presentation, storedSeed)
     SceneLayout(clock, SceneMode.restore, welcomeGhost = model.localeIdentifier, below = {
         RestoreProgress(model, presentation, issue?.takeUnless { storedSeed })
     }, bottom = {
-        if (issue != null && !issue.requiresRestart && !storedSeed) PillButton(tr("Back"), Modifier.fillMaxWidth(), enabled = flow.canLeave && !model.busy) {
-            flow.clearIssue(); model.step = "restore"
+        if (issue != null && !issue.requiresRestart && !storedSeed) Column(verticalArrangement = Arrangement.spacedBy(NoahTokens.Space.s)) {
+            // The failed phrase restore's second way forward (recover from the Ark server, or restore anyway).
+            com.noahwallet.ui.RestoreIssueAction(model, typed = true, rememberHaptics())
+            PillButton(tr("Back"), Modifier.fillMaxWidth(), enabled = flow.canLeave && !model.busy) {
+                flow.clearIssue(); model.forgetRestorePhrase(); model.step = "restore"
+            }
         }
     })
 }

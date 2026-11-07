@@ -323,6 +323,7 @@ class AppServices private constructor(private val context: Context) {
         refreshes = { session.movements().count(com.noahwallet.history.HistoryMapping::isRefresh) },
         progressExits = { session.progressPendingExits { AppLog(context, "wallet").w("Foreground exit progress failed: $it") } },
         syncOnchain = session::syncOnchain,
+        checkRestoredVtxos = { session.checkRestoredVtxos(AppLog(context, "restore")::w) },
         log = AppLog(context, "wallet")::i,
     )
 
@@ -399,6 +400,17 @@ class AppServices private constructor(private val context: Context) {
             registration.reportLastLogin()
             started = true
         }
+    }
+
+    /**
+     * A restored backup's coins checked with the server right after the open, before its first balance shows: otherwise
+     * the restore's count-up (and Home) would show coins spent after the backup, then drop. Best effort: the foreground
+     * pass retries. Nothing unless a restore left the marker.
+     */
+    suspend fun checkRestoredVtxosAfterOpen() {
+        try { session.checkRestoredVtxos(AppLog(context, "restore")::w) }
+        catch (cancelled: CancellationException) { throw cancelled }
+        catch (_: Exception) { log.w("Couldn't check the restored wallet's coins with the server; the next sync tries again") }
     }
 
     /** Best effort: server setup sends it again on the next launch. */

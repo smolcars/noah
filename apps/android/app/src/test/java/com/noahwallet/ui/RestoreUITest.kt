@@ -141,7 +141,8 @@ class RestoreIssueTest {
     @Test fun missingBackupCryptoNetworkAndRawErrors() {
         val raw = "sensitive request data"
         val missing = RestoreIssue.from(ServerFailure(raw, 404))
-        assertEquals("No backup found", missing.title); assertTrue(missing.message.contains("backups turned on"))
+        assertEquals("No backup found", missing.title); assertTrue(missing.message.contains("not your payment history"))
+        assertEquals(RestoreIssue.Action.recoverFromArkServer, missing.action)
         assertEquals(missing, RestoreIssue.from(ServerFailure(raw, 401, "USER_NOT_FOUND")))
         assertTrue(RestoreIssue.from(BackupCrypto.Failure(BackupCrypto.Reason.authenticationFailed)).message.contains("unlock the backup"))
         assertTrue(RestoreIssue.from(IOException(raw)).message.contains("Check your connection"))
@@ -238,12 +239,12 @@ class RestoreCompletionTest {
 class RestoreFlowTest {
     private val phrase = List(11) { "abandon" }.plus("about").joinToString(" ")
     @Test fun invalidPhraseNeverCallsEngine() = runBlocking {
-        val flow = RestoreFlow({ _, _ -> error("Unexpected engine call") }, { error("Unexpected completion") })
+        val flow = RestoreFlow({ _, _, _ -> error("Unexpected engine call") }, { error("Unexpected completion") })
         flow.run("wrong"); assertEquals(RestoreIssue.invalidPhrase, flow.issue); assertTrue(flow.canLeave)
     }
     @Test fun progressBlocksLeavingAndDuplicateSubmission() = runBlocking {
         val entered = CompletableDeferred<Unit>(); val release = CompletableDeferred<Unit>(); var calls = 0
-        val flow = RestoreFlow({ _, progress ->
+        val flow = RestoreFlow({ _, _, progress ->
             calls++; progress(WalletRestorer.Step.validating); entered.complete(Unit); release.await(); WalletRestorer.Outcome(null, null)
         }, {})
         val job = launch { flow.run(phrase) }; entered.await()
@@ -255,35 +256,69 @@ class RestoreFlowTest {
     }
     @Test fun precommitFailureAllowsRetry() = runBlocking {
         var calls = 0
-        val flow = RestoreFlow({ _, _ -> calls++; throw ServerFailure("secret", 404) }, {})
+        val flow = RestoreFlow({ _, _, _ -> calls++; throw ServerFailure("secret", 404) }, {})
         flow.run(phrase); assertTrue(flow.canLeave); assertFalse(flow.issue!!.requiresRestart)
         flow.run(phrase); assertEquals(2, calls)
     }
     @Test fun everyPostcommitErrorRequiresRestartAndNeverRetries() = runBlocking {
         for (failure in listOf(Exception("save"), RestoreCompletion.RestartRequired(), IOException("open"))) {
             var calls = 0
-            val flow = RestoreFlow({ _, _ -> calls++; WalletRestorer.Outcome("id", "hash", true) }, { throw failure })
+            val flow = RestoreFlow({ _, _, _ -> calls++; WalletRestorer.Outcome("id", "hash", true) }, { throw failure })
             flow.run(phrase)
             assertEquals(RestoreIssue.committed, flow.issue); assertFalse(flow.canLeave)
             flow.clearIssue(); flow.run(phrase); assertEquals(1, calls)
         }
     }
     @Test fun uncertainSeedNeverOffersRetry() = runBlocking {
-        val flow = RestoreFlow({ _, _ -> throw WalletRestorer.Failure(WalletRestorer.Reason.seedStateUnknown) }, {})
+        val flow = RestoreFlow({ _, _, _ -> throw WalletRestorer.Failure(WalletRestorer.Reason.seedStateUnknown) }, {})
         flow.run(phrase); assertFalse(flow.canLeave); flow.clearIssue(); assertTrue(flow.issue!!.requiresRestart)
     }
     @Test fun cancellationCannotDiscardCommittedOutcome() = runBlocking {
         val entered = CompletableDeferred<Unit>(); val release = CompletableDeferred<Unit>(); var finished = false
-        val flow = RestoreFlow({ _, _ -> entered.complete(Unit); release.await(); WalletRestorer.Outcome(null, null) }, { finished = true })
+        val flow = RestoreFlow({ _, _, _ -> entered.complete(Unit); release.await(); WalletRestorer.Outcome(null, null) }, { finished = true })
         val job = launch { flow.run(phrase) }; entered.await(); job.cancel(); release.complete(Unit); job.join()
         assertTrue(finished); assertTrue(flow.completed)
     }
     @Test fun successfulDeletionResetsFlowForAnotherWallet() = runBlocking {
         var calls = 0
-        val flow = RestoreFlow({ _, _ -> calls++; WalletRestorer.Outcome(null, null) }, {})
+        val flow = RestoreFlow({ _, _, _ -> calls++; WalletRestorer.Outcome(null, null) }, {})
         flow.run(phrase); assertTrue(flow.completed)
         flow.reset(); assertFalse(flow.completed); assertNull(flow.issue)
         flow.run(phrase); assertEquals(2, calls)
+    }
+    /** No backup: the issue offers the Ark server; a recovery from it passes the source through to the engine. */
+    @Test fun noBackupOffersArkServerRecovery() = runBlocking {
+        val sources = mutableListOf<WalletRestorer.Source>()
+        val flow = RestoreFlow({ _, source, _ -> sources += source; throw ServerFailure("secret", 404) }, {})
+        flow.run(phrase)
+        assertEquals(RestoreIssue.noBackup, flow.issue)
+        assertEquals(RestoreIssue.Action.recoverFromArkServer, flow.issue?.action)
+        flow.run(phrase, WalletRestorer.Source.ArkServer(allowEmpty = false))
+        assertEquals(listOf(WalletRestorer.Source.Backup, WalletRestorer.Source.ArkServer(allowEmpty = false)), sources)
+    }
+    /** A damaged or unusable backup never offers to throw its history away for the Ark server. */
+    @Test fun aBackupThatFailsNeverOffersArkServerRecovery() = runBlocking {
+        for (failure in listOf(WalletRestorer.Failure(WalletRestorer.Reason.noUsableBackup), BackupCrypto.Failure(BackupCrypto.Reason.authenticationFailed),
+            WalletRestorer.Failure(WalletRestorer.Reason.downloadMismatch), IOException("offline"))) {
+            val flow = RestoreFlow({ _, _, _ -> throw failure }, {})
+            flow.run(phrase)
+            assertNull(failure.toString(), flow.issue?.action)
+        }
+    }
+    @Test fun anArkServerRecoveryThatFailsCanBeTriedAgainOrForcedWhenNothingWasFound() = runBlocking {
+        val recover = WalletRestorer.Source.ArkServer(allowEmpty = false)
+        for ((failure, action) in listOf(
+            WalletRestorer.Failure(WalletRestorer.Reason.serverRecoveryIncomplete) to RestoreIssue.Action.recoverFromArkServer,
+            IOException("offline") to RestoreIssue.Action.recoverFromArkServer,
+            WalletRestorer.Failure(WalletRestorer.Reason.nothingFoundOnServer) to RestoreIssue.Action.restoreAnyway)) {
+            val flow = RestoreFlow({ _, _, _ -> throw failure }, {})
+            flow.run(phrase, recover)
+            assertEquals(failure.toString(), action, flow.issue?.action)
+        }
+        // A failure that needs a restart offers nothing.
+        val flow = RestoreFlow({ _, _, _ -> throw WalletRestorer.Failure(WalletRestorer.Reason.seedStateUnknown) }, {})
+        flow.run(phrase, recover)
+        assertNull(flow.issue?.action)
     }
     @Test fun journalOrDeletionAlwaysBlocksOnboarding() {
         for (seed in LaunchState.SeedStatus.entries) for (database in listOf(false, true)) {

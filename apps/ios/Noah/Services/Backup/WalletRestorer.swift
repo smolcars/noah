@@ -23,6 +23,22 @@ struct WalletRestorer: Sendable {
         /// A seed write failed and the Keychain can't be read to tell whether
         /// it landed; launch recovery settles it once it can.
         case seedStateUnknown
+        /// Bark's scan of the Ark server failed or left VTXOs undecided. Nothing was committed: bark only scans when it
+        /// creates a wallet, so a partial scan must never become the user's wallet.
+        case serverRecoveryIncomplete
+        /// The Ark server knows of no VTXO for this phrase at all, most likely mistyped words that still pass the
+        /// checksum. Nothing was committed; `.arkServer(allowEmpty: true)` restores it anyway.
+        case nothingFoundOnServer
+    }
+
+    /// Where a restore gets the wallet from.
+    enum Source: Equatable, Sendable {
+        /// The newest usable backup on the Noah server.
+        case backup
+        /// No backup exists: a new wallet from the phrase, whose VTXOs bark rebuilds from the Ark server while creating
+        /// it. Payment history, recurring payments and settings can't come back. `allowEmpty`: the user chose to restore
+        /// a phrase the Ark server knows nothing about.
+        case arkServer(allowEmpty: Bool)
     }
 
     enum Step: Sendable {
@@ -57,11 +73,11 @@ struct WalletRestorer: Sendable {
 
     /// Restores into a closed session and leaves it closed; open the wallet
     /// afterwards as usual.
-    func restore(mnemonic: String, progress: @Sendable (Step) -> Void = { _ in }) async throws -> Outcome {
-        try await mutation.withLock { try await restoreLocked(mnemonic: mnemonic, progress: progress) }
+    func restore(mnemonic: String, from source: Source = .backup, progress: @Sendable (Step) -> Void = { _ in }) async throws -> Outcome {
+        try await mutation.withLock { try await restoreLocked(mnemonic: mnemonic, source: source, progress: progress) }
     }
 
-    private func restoreLocked(mnemonic: String, progress: @Sendable (Step) -> Void) async throws -> Outcome {
+    private func restoreLocked(mnemonic: String, source: Source, progress: @Sendable (Step) -> Void) async throws -> Outcome {
         _ = try StoredSeed.normalized(mnemonic)
         do { try StoredSeed.requireUsable(seed.read()) }
         catch is KeychainPassword.WriteError { throw Failure.secureStorageUnavailable }
@@ -72,7 +88,7 @@ struct WalletRestorer: Sendable {
         if session === WalletSession.shared { try RecurringStore().protectLegacyBeforeReplacement() }
         let reservation = try await session.reserve()
         do {
-            let outcome = try await restore(mnemonic: mnemonic, holding: reservation, progress: progress)
+            let outcome = try await restore(mnemonic: mnemonic, source: source, holding: reservation, progress: progress)
             await walletChanged()
             await session.release(reservation)
             return outcome
@@ -116,14 +132,19 @@ struct WalletRestorer: Sendable {
     }
 
     private func restore(
-        mnemonic: String, holding reservation: WalletSession.Reservation, progress: @Sendable (Step) -> Void) async throws -> Outcome {
+        mnemonic: String, source: Source, holding reservation: WalletSession.Reservation,
+        progress: @Sendable (Step) -> Void) async throws -> Outcome {
         let transaction = RestoreTransaction(location: location)
         if try transaction.recover(seed: seed) == .waitingForKeychain { throw Failure.secureStorageUnavailable }
         if case .unavailable = seed.read() { throw Failure.secureStorageUnavailable }
         try transaction.prepare()
         do {
             progress(.fetching)
-            let outcome = try await fetchAndStage(mnemonic: mnemonic, transaction: transaction, progress: progress)
+            let outcome = switch source {
+            case .backup: try await fetchAndStage(mnemonic: mnemonic, transaction: transaction, progress: progress)
+            case .arkServer(let allowEmpty):
+                try await stageFromArkServer(mnemonic: mnemonic, allowEmpty: allowEmpty, transaction: transaction, holding: reservation)
+            }
             do {
                 try beginOnboarding()
                 try transaction.begin(seed: mnemonic)
@@ -175,6 +196,18 @@ struct WalletRestorer: Sendable {
         } catch {
             throw Failure.rollbackFailed
         }
+    }
+
+    /// Leaves a wallet bark built from the Ark server in `transaction.staged`: created there from the phrase, which runs
+    /// bark's scan, and shut again. From here it goes through the same swap, open check and seed commit as a backup.
+    private func stageFromArkServer(
+        mnemonic: String, allowEmpty: Bool, transaction: RestoreTransaction,
+        holding reservation: WalletSession.Reservation) async throws -> Outcome {
+        try FileManager.default.createDirectory(at: transaction.staged, withIntermediateDirectories: false)
+        let report = try await session.recoverFromArkServer(reservation, mnemonic: mnemonic, datadir: transaction.staged)
+        guard let report, report.isComplete else { throw Failure.serverRecoveryIncomplete }
+        if !allowEmpty && report.foundNothing { throw Failure.nothingFoundOnServer }
+        return Outcome(backupId: nil, snapshotSha256: nil)
     }
 
     /// Leaves the restored datadir in `transaction.staged`.
@@ -267,6 +300,13 @@ struct WalletRestorer: Sendable {
         } catch is BoundedDownload.TooLarge {
             throw Failure.downloadMismatch
         }
+    }
+}
+
+extension RecoveryReport {
+    /// The Ark server knew of no VTXO for the seed, spent or not.
+    var foundNothing: Bool {
+        [recovered, skipped, foreign, failed, exited].allSatisfy(\.vtxoIds.isEmpty)
     }
 }
 

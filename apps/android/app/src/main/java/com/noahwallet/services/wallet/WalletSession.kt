@@ -90,6 +90,11 @@ class WalletSession internal constructor(
         suspend fun syncWallet(): Unit = throw UnsupportedOperationException()
         suspend fun syncOnchain(): Unit = throw UnsupportedOperationException()
         suspend fun initialScan(): Unit = throw UnsupportedOperationException()
+        suspend fun spendableVtxoIds(): List<String> = throw UnsupportedOperationException()
+        /** What bark's scan of the Ark server found when this open created the wallet. */
+        fun recoveryStatus(): io.github.niteshbalusu11.bark.RecoveryStatus = throw UnsupportedOperationException()
+        /** bark's `trust_and_adopt_server_vtxo_status`: asks the server about one VTXO and adopts "spent". */
+        suspend fun trustAndAdoptServerVtxoStatus(vtxoId: String): Unit = throw UnsupportedOperationException()
         suspend fun maintenanceDelegated()
         suspend fun bolt11Invoice(amountSats: ULong): String
         /** A BOLT11 invoice carrying [description], and a fresh Ark address: what voice assistants create. */
@@ -266,8 +271,9 @@ class WalletSession internal constructor(
         if ((state as? State.Reserved)?.reservation === reservation) state = State.Closed
     }
 
+    /** Runs [body] (a scratch sweep) unless a reservation, or quarantined handles still on staged files, may need them. */
     fun unlessReserved(body: () -> Unit): Boolean = synchronized(lock) {
-        if (state is State.Reserved) false else { body(); true }
+        if (state is State.Reserved || state is State.Quarantined) false else { body(); true }
     }
 
     private fun checkHeld(reservation: Reservation) {
@@ -287,6 +293,29 @@ class WalletSession internal constructor(
                 synchronized(lock) { state = State.Quarantined(handles) }
                 throw OpenError(OpenFailure.teardownFailed)
             }
+        }
+    }
+
+    /**
+     * Creates a wallet from [mnemonic] in [datadir], a restore's staging directory (never the live datadir), which runs
+     * bark's scan of the Ark server for its VTXOs, then closes it. Returns the scan's report, or null when the scan failed.
+     * Finishes even if the caller is cancelled, so nothing still runs on the files when the restore moves or removes them.
+     */
+    suspend fun recoverFromArkServer(reservation: Reservation, mnemonic: String, datadir: File): io.github.niteshbalusu11.bark.RecoveryReport? {
+        val caller = currentCoroutineContext()
+        caller.checkWalletAdmission()
+        return withContext(NonCancellable + Dispatchers.IO) {
+            synchronized(lock) { checkHeld(reservation) }
+            caller.checkWalletAdmission()
+            val handles = opener(mnemonic, datadir.path, "restore", true)
+            val status = runCatching { handles.recoveryStatus() }
+            try { handles.close() }
+            catch (_: Throwable) {
+                // Never let the restore move or remove files underneath native work when teardown failed.
+                synchronized(lock) { state = State.Quarantined(handles) }
+                throw OpenError(OpenFailure.teardownFailed)
+            }
+            (status.getOrThrow() as? io.github.niteshbalusu11.bark.RecoveryStatus.Completed)?.report
         }
     }
 
@@ -423,6 +452,23 @@ class WalletSession internal constructor(
             (handles.synchronization ?: syncFlight).run({
                 if (!scan.exists()) handles.syncOnchain() else { handles.initialScan(); handles.syncOnchain(); check(scan.delete()) }
             })
+        }
+    }
+
+    /**
+     * The foreground pass's check of a restored backup's VTXOs ([RestoredVtxoCheck]); nothing unless a restore left its
+     * marker. It waits for a sync in progress rather than being dropped, so the open's check and the pass's run in turn.
+     */
+    suspend fun checkRestoredVtxos(warn: (String) -> Unit) {
+        val marker = File(location.directory, com.noahwallet.services.backup.RestoreTransaction.vtxoCheckName)
+        val caller = currentCoroutineContext()
+        if (isOpen && marker.exists()) withOpen { handles ->
+            (handles.synchronization ?: syncFlight).serialized {
+                // withOpen can't be cancelled: a caller cancelled while this waited doesn't start the check.
+                caller.checkWalletAdmission()
+                RestoredVtxoCheck.run(marker, RestoredVtxoCheck.Steps(handles::syncWallet, handles::spendableVtxoIds,
+                    handles::trustAndAdoptServerVtxoStatus), warn)
+            }
         }
     }
 
@@ -832,6 +878,9 @@ class WalletSession internal constructor(
         override suspend fun syncWallet() { wallet.sync() }
         override suspend fun syncOnchain() { onchain.sync() }
         override suspend fun initialScan() { onchain.initialScan(null) }
+        override suspend fun spendableVtxoIds() = wallet.spendableVtxos().map { it.id }
+        override fun recoveryStatus() = wallet.recoveryStatus()
+        override suspend fun trustAndAdoptServerVtxoStatus(vtxoId: String) { wallet.trustAndAdoptServerVtxoStatus(vtxoId) }
         override suspend fun maintenanceDelegated() { wallet.maintenanceDelegated() }
         override suspend fun bolt11Invoice(amountSats: ULong) = wallet.bolt11Invoice(amountSats, null).invoice
         override suspend fun lightningInvoice(amountSats: ULong, description: String?) = wallet.bolt11Invoice(amountSats, description).invoice

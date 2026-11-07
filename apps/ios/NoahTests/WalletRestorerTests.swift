@@ -161,6 +161,26 @@ struct WalletRestorerTests {
         func deleteWalletSeed() { Issue.record("Locked seed must not be deleted") }
     }
 
+    /// No backup: bark creates the wallet from the phrase in the staging directory, scanning the local Ark server. A phrase
+    /// the server knows nothing about commits nothing until the user restores it anyway; then the usual swap, open check
+    /// and seed commit follow.
+    @Test(.regtestStack) func arkServerRecoveryOfAnUnknownPhraseNeedsConsentThenCommits() async throws {
+        defer { try? FileManager.default.removeItem(at: root) }
+        let seed = FakeSeed(Self.previousSeed)
+        let (restorer, _) = try await setUp(seed: seed)
+        let unused = try generateMnemonic()
+        await #expect(throws: WalletRestorer.Failure.nothingFoundOnServer) {
+            try await restorer.restore(mnemonic: unused, from: .arkServer(allowEmpty: false))
+        }
+        expectPreviousWalletBack(seed)
+        let outcome = try await restorer.restore(mnemonic: unused, from: .arkServer(allowEmpty: true))
+        #expect(outcome == .init(backupId: nil, snapshotSha256: nil))
+        #expect(seed.current == unused)
+        #expect(deviceB.databaseExists && deviceBWallet != "previous wallet")
+        #expect(FileManager.default.fileExists(atPath: deviceB.directory.appending(path: RestoreTransaction.onchainScanName).path))
+        expectNoRestoreLeftovers(settingsPending: true)
+    }
+
     @Test(.regtestStack, arguments: [true, false])
     func stagedDeletionUnlockRestoreAndDeleteUsesRealRestorePipeline(pending: Bool) async throws {
         defer { try? FileManager.default.removeItem(at: root) }

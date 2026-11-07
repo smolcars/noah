@@ -13,6 +13,7 @@ import java.util.concurrent.atomic.AtomicBoolean
  * maintenance don't touch it, and exit progress funds fee children from the confirmed coins the last pass found, as
  * bark's daemon did, whose exit loop never waited for its on-chain sync.
  */
+@Suppress("LongParameterList") // each stage is a seam the tests drive
 internal class ForegroundWalletWork(
     /** bark's wallet sync and Lightning claims, without the on-chain wallet's. */
     private val sync: suspend () -> Unit,
@@ -22,6 +23,11 @@ internal class ForegroundWalletWork(
     /** Never throws but for cancellation; calls bark only while an exit is live. */
     private val progressExits: suspend () -> Unit,
     private val syncOnchain: suspend () -> Unit,
+    /**
+     * After a backup restore, until it's done: sync, then check each spendable VTXO with the server ([RestoredVtxoCheck]),
+     * before maintenance could try to refresh one the server already has as spent. Nothing otherwise.
+     */
+    private val checkRestoredVtxos: suspend () -> Unit = {},
     /** The app log: a pass that runs maintenance (after a launch or a return to the front) logs its stages' timing. */
     private val log: (String) -> Unit = {},
 ) {
@@ -46,13 +52,13 @@ internal class ForegroundWalletWork(
         val timing = if (maintain) com.noahwallet.services.logging.PassTiming(log) else null
         fun timed(stage: String, work: suspend () -> Unit): suspend () -> Unit = timing?.let { { it.run(stage, work) } } ?: work
         try {
-            if (maintain) WalletSync.attemptAll(timed("wallet sync", sync), timed("delegated maintenance") {
+            if (maintain) WalletSync.attemptAll(timed("wallet sync", sync), checkRestoredVtxos, timed("delegated maintenance") {
                 val created = refreshes()
                 var completed = false
                 try { maintenance(); completed = true }
                 finally { settled = completed || refreshes() > created }
             }, timed("exit progress", progressExits), timed("on-chain sync", syncOnchain))
-            else WalletSync.attemptAll(sync, progressExits, syncOnchain)
+            else WalletSync.attemptAll(sync, checkRestoredVtxos, progressExits, syncOnchain)
         } finally {
             if (!settled) maintenanceDue.set(true)
         }

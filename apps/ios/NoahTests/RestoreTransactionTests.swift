@@ -130,6 +130,9 @@ struct RestoreTransactionTests {
         let transaction = try begun()
         #expect(read(location.directory) == "new")
         #expect(read(transaction.previous) == "old")
+        // The restored wallet's first passes run the on-chain full scan and check its VTXOs with the server.
+        #expect(exists(location.directory.appending(path: RestoreTransaction.onchainScanName)))
+        #expect(exists(location.directory.appending(path: RestoreTransaction.vtxoCheckName)))
         let journal = try transaction.readJournal()
         #expect(journal.phase == .installing)
         #expect(journal.hadPreviousData)

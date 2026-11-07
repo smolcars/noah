@@ -36,6 +36,8 @@ class WalletRestorerTest {
         override suspend fun createSnapshot(destination: File): WalletSnapshotInfo = error("unused")
         var closeFails = false
         override fun close() { if (closeFails) throw Boom() }
+        var recovery: RecoveryStatus = RecoveryStatus.NotRun
+        override fun recoveryStatus() = recovery
     }
     private class World {
         val root = Files.createTempDirectory("restorer").toFile()
@@ -54,10 +56,17 @@ class WalletRestorerTest {
         var listFails = false
         var verifyGate: CompletableDeferred<Unit>? = null
         val entered = CompletableDeferred<Unit>()
+        /** Where a creating open (bark's scan of the Ark server) wrote its wallet. */
+        val created = mutableListOf<File>()
+        var backupServerCalls = 0
         val session = WalletSession("regtest", location, inspect = { WalletDatabase.Properties("regtest", "abcd") },
-            opener = { _, _, _, create ->
-                assertFalse(create); entered.complete(Unit); verifyGate?.await()
-                if (openerFails) throw Boom()
+            opener = { _, datadir, _, create ->
+                if (create) {
+                    File(datadir).also { created += it }.resolve("db.sqlite").writeText("recovered wallet")
+                } else {
+                    entered.complete(Unit); verifyGate?.await()
+                    if (openerFails) throw Boom()
+                }
                 handles
             })
         val tx = transaction(location)
@@ -75,7 +84,10 @@ class WalletRestorerTest {
                 """{"backup_id":"b1","created_at":"x","encrypted_sha256":"${reportedHash ?: BackupArchive.sha256(encrypted)}",""" +
                     """"encrypted_size":${reportedSize ?: encrypted.length()},"format_version":2}"""
             return WalletRestorer("regtest", session, location, seed,
-                makeClient = { ServerClient.make("http://fake", engine = MockEngine { request -> serve(request, info, legacyFile) }) },
+                makeClient = {
+                    backupServerCalls++
+                    ServerClient.make("http://fake", engine = MockEngine { request -> serve(request, info, legacyFile) })
+                },
                 transaction = transaction,
                 validate = { _, _ -> if (validationFails) throw Boom() },
                 download = { url, destination, limit -> download(if (url == "http://legacy") legacyFile else encrypted, url, destination, limit) },
@@ -149,6 +161,60 @@ class WalletRestorerTest {
         // A hung restore fails rather than stalling the suite.
         try { withTimeout(60_000) { world.block() } } finally { world.root.deleteRecursively() }
     }
+    private fun bucket(vararg ids: String) = RecoveryBucket(ids.toList(), (ids.size * 1_000).toULong())
+    private fun scanned(recovered: List<String> = listOf("v1"), failed: List<String> = emptyList()) = RecoveryStatus.Completed(
+        RecoveryReport(bucket(*recovered.toTypedArray()), bucket(), bucket(), bucket(*failed.toTypedArray()), bucket(), isComplete = failed.isEmpty()),
+    )
+
+    /** No backup: bark builds the wallet from the Ark server in the staging directory, then the usual swap and seed commit. */
+    @Test fun arkServerRecoveryStagesTheScannedWalletThenCommitsItsSeed() = runBlocking { world {
+        handles.recovery = scanned()
+        val outcome = restorer().restore(validSeed, WalletRestorer.Source.ArkServer(allowEmpty = false))
+        assertEquals(WalletRestorer.Outcome(null, null), outcome)
+        assertEquals(listOf(tx.staged), created)
+        assertEquals(0, backupServerCalls)
+        assertEquals("recovered wallet", location.database.readText())
+        assertTrue("Saved seed differs", seed.value == validSeed)
+        assertTrue(File(location.directory, RestoreTransaction.onchainScanName).exists())
+        assertFalse(tx.isPending)
+    } }
+
+    /** bark only scans when it creates a wallet, so a scan that failed or left VTXOs undecided must never be committed. */
+    @Test fun anArkServerScanThatDidNotFinishCommitsNothing() = runBlocking {
+        for (status in listOf(RecoveryStatus.NotRun, RecoveryStatus.Failed("offline"), scanned(failed = listOf("v2")))) world {
+            handles.recovery = status
+            val failure = runCatching { restorer().restore(validSeed, WalletRestorer.Source.ArkServer(allowEmpty = false)) }.exceptionOrNull()
+            assertEquals(status.toString(), WalletRestorer.Reason.serverRecoveryIncomplete, (failure as? WalletRestorer.Failure)?.reason)
+            previous()
+        }
+    }
+
+    /** A phrase the Ark server knows nothing about (likely mistyped) commits nothing until the user restores it anyway. */
+    @Test fun nothingFoundOnTheArkServerNeedsTheUsersConsent() = runBlocking { world {
+        handles.recovery = scanned(recovered = emptyList())
+        val failure = runCatching { restorer().restore(validSeed, WalletRestorer.Source.ArkServer(allowEmpty = false)) }.exceptionOrNull()
+        assertEquals(WalletRestorer.Reason.nothingFoundOnServer, (failure as? WalletRestorer.Failure)?.reason)
+        previous()
+        restorer().restore(validSeed, WalletRestorer.Source.ArkServer(allowEmpty = true))
+        assertEquals("recovered wallet", location.database.readText())
+        assertTrue("Saved seed differs", seed.value == validSeed)
+    } }
+
+    /** A staged scan whose wallet can't be closed keeps its files, quarantined, until it closes or the process ends. */
+    @Test fun aStagedScanWhoseTeardownFailsKeepsItsFiles() = runBlocking { world {
+        handles.recovery = scanned()
+        handles.closeFails = true
+        val failure = runCatching { restorer().restore(validSeed, WalletRestorer.Source.ArkServer(allowEmpty = false)) }.exceptionOrNull()
+        assertEquals(WalletSession.OpenFailure.teardownFailed, (failure as? WalletSession.OpenError)?.reason)
+        assertTrue("Staged files kept", File(tx.staged, "db.sqlite").exists())
+        assertEquals("old wallet", location.database.readText()); assertTrue("Previous seed differs", seed.value == "old seed")
+        assertFalse(location.restorePending)
+        assertTrue(runCatching { session.reserve() }.isFailure)
+        // A launch recovery in the same process doesn't sweep them from under the quarantined handles either.
+        assertEquals(RestoreTransaction.Recovery.nothingPending, WalletRestorer.recoverInterruptedRestore(session, location, seed, tx))
+        assertTrue("Staged files kept after recovery", File(tx.staged, "db.sqlite").exists())
+    } }
+
     @Test fun stagedDeletionUnlockRestoreAndDeleteUsesRealRestorePipeline() = runBlocking {
         for (pending in listOf(true, false)) world {
             seed.value = validSeed

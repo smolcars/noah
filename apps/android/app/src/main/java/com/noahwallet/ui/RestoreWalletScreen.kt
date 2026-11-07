@@ -105,6 +105,7 @@ private fun StoredSeedRestoreScreen(model: AppModel) {
                     model.action("Couldn't resume recovery. Restart Noah and try again.") { model.resumeRestoreRecovery() }
                 }
             }
+            RestoreIssueAction(model, typed = false, haptics)
             if (flow.issue?.requiresRestart != true) PillButton(tr("Restore wallet"), Modifier.fillMaxWidth(), enabled = model.canRestoreWallet) {
                 // Restoring has no way back until a restore fails, so never enter it for a request restoreWallet would drop.
                 if (!model.canRestoreWallet) return@PillButton
@@ -145,7 +146,7 @@ private fun PhraseRestoreScreen(model: AppModel, clipboard: RestoreClipboard) {
     val blocked = model.busy || !flow.canLeave
     val presentation = androidx.lifecycle.viewmodel.compose.viewModel<OnboardingPresentation>()
     val play = remember { presentation.firstShow("restore") }
-    fun leave() { entry.clear(); flow.clearIssue(); model.step = "welcome" }
+    fun leave() { entry.clear(); flow.clearIssue(); model.forgetRestorePhrase(); model.step = "welcome" }
     BackHandler { if (!blocked) leave() }
     RestoreShield(activity, model.walletLock, clipboard, entry::clear)
     // Read the revision so changes to the non-saveable, redacted input redraw the fields.
@@ -161,8 +162,9 @@ private fun PhraseRestoreScreen(model: AppModel, clipboard: RestoreClipboard) {
             if (!blocked) leave()
         }
     }, headline = { large ->
-        // What restoring needs, up front: it fails with "No backup found" without a wallet backup.
-        Headline(tr("Welcome back"), tr("Enter your recovery phrase.") + " " + tr("To restore, Noah needs this phrase and a wallet backup."), large = large,
+        Headline(tr("Welcome back"),
+            tr("Enter your recovery phrase.") + " " + tr("Noah restores your wallet from its backup. Without one, it can still recover your balance."),
+            large = large,
             modifier = Modifier.entrance(0, play))
     }, form = {
         WordCountControl(words.size, enabled = !blocked, modifier = Modifier.padding(top = formGap(22.dp)).entrance(2, play), select = entry::selectCount)
@@ -170,6 +172,7 @@ private fun PhraseRestoreScreen(model: AppModel, clipboard: RestoreClipboard) {
             WordGrid(entry, words, !blocked, Modifier.padding(top = 18.dp).graphicsLayer { translationX = shake.value * density }.entrance(3, play))
         }
         PhraseMessage(entry, firstBad, flow)
+        RestoreIssueAction(model, typed = true, haptics, Modifier.padding(top = NoahTokens.Space.s))
     }, accessory = true, actions = {
         if (keyboard) Suggestions(entry, entry.focused ?: 0)
         else Row(Modifier.fillMaxWidth().padding(top = NoahTokens.Space.s), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -183,6 +186,20 @@ private fun PhraseRestoreScreen(model: AppModel, clipboard: RestoreClipboard) {
             }
         }
     })
+}
+
+/** The restore issue's second way forward ([RestoreIssue.Action]), when it offers one. [typed]: the phrase screen. */
+@Composable
+internal fun RestoreIssueAction(model: AppModel, typed: Boolean, haptics: Haptics, modifier: Modifier = Modifier) {
+    val action = model.restore.issue?.takeIf { !it.requiresRestart }?.action ?: return
+    PillButton(tr(action.label), modifier.fillMaxWidth().testTag("restore-issue-action"), enabled = model.canRestoreWallet, outlined = true) {
+        haptics.medium()
+        // Restoring has no way back until a restore fails, so enter it only for a restore that started.
+        if (model.takeRestoreIssueAction(typed)) {
+            model.holdRestoreCompletion = true
+            model.step = "restoring"
+        }
+    }
 }
 
 /** The phrase form's state and edits. Held with plain remember, so saved-instance state never holds recovery words. */

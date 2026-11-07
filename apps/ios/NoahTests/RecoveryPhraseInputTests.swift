@@ -208,6 +208,21 @@ struct RestoreIssueTests {
         #expect(RestoreIssue.from(BarkError(message: "Snapshot schema version 9999 is newer than supported version 42")) == .newerBackup)
     }
 
+    /// No backup offers the Ark server; a backup that fails (unusable, damaged, offline) never does, so its history is
+    /// never traded away. A recovery from the Ark server that fails can be tried again, or forced when nothing was found.
+    @Test func onlyAMissingBackupOffersTheArkServer() {
+        #expect(RestoreIssue.from(ServerFailure(message: "secret", statusCode: 404)).action == .recoverFromArkServer)
+        for error: any Error in [WalletRestorer.Failure.noUsableBackup, BackupCrypto.Failure.authenticationFailed,
+                                 WalletRestorer.Failure.downloadMismatch, URLError(.notConnectedToInternet)] {
+            #expect(RestoreIssue.from(error, after: .backup).action == nil)
+        }
+        let recover = WalletRestorer.Source.arkServer(allowEmpty: false)
+        #expect(RestoreIssue.from(WalletRestorer.Failure.serverRecoveryIncomplete, after: recover).action == .recoverFromArkServer)
+        #expect(RestoreIssue.from(URLError(.notConnectedToInternet), after: recover).action == .recoverFromArkServer)
+        #expect(RestoreIssue.from(WalletRestorer.Failure.nothingFoundOnServer, after: recover) == .nothingFound)
+        #expect(RestoreIssue.from(WalletRestorer.Failure.seedStateUnknown, after: recover).action == nil)
+    }
+
     /// Unrelated diagnostics, even a server echoing the schema wording, get the generic message.
     @Test func unrelatedDiagnosticsFallBackToTheGenericMessage() {
         let generic = RestoreIssue.from(BarkError(message: "snapshot is damaged"))
@@ -220,7 +235,7 @@ struct RestoreIssueTests {
 
     @Test(arguments: [
         WalletRestorer.Failure.wrongNetwork, .identityMismatch, .noUsableBackup, .unsupportedFormat(9),
-        .downloadMismatch, .secureStorageUnavailable, .rollbackFailed, .seedStateUnknown,
+        .downloadMismatch, .secureStorageUnavailable, .rollbackFailed, .seedStateUnknown, .serverRecoveryIncomplete, .nothingFoundOnServer,
     ])
     func mapsEveryEngineFailure(_ failure: WalletRestorer.Failure) {
         let issue = RestoreIssue.from(failure)
@@ -563,5 +578,20 @@ struct RestoreFieldPrivacyTests {
         board.string = "replacement before acceptance"
         clipboard.accepted("public test content", change: board.changeCount)
         #expect(board.string == "replacement before acceptance")
+    }
+}
+
+/// A failed restore's phrase serves its issue's action only while the form is untouched: once the user edits, pastes or
+/// switches 12/24, the action must not restore the old words.
+struct RestoreKeptPhraseTests {
+    @Test func anyChangeToTheFormDropsTheKeptPhrase() {
+        var form = RestoreDraft()
+        let kept = RestoreDraft.KeptPhrase("old words", form: form)
+        #expect(kept.phrase(untouched: form) == "old words")
+        form.edits += 1
+        #expect(kept.phrase(untouched: form) == nil)
+        form = RestoreDraft()
+        form.generation += 1
+        #expect(kept.phrase(untouched: form) == nil)
     }
 }

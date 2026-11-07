@@ -8,13 +8,44 @@ struct RestoreIssue: Equatable {
     var title: String?
     let message: String
     var requiresRestart = false
+    /// A second way forward the screen offers under the message.
+    var action: Action?
+
+    enum Action: Equatable {
+        /// Rebuild the balance from the Ark server (`WalletRestorer.Source.arkServer`).
+        case recoverFromArkServer
+        /// The Ark server knows nothing about the phrase; restore it anyway.
+        case restoreAnyway
+
+        var label: String {
+            switch self {
+            case .recoverFromArkServer: "Recover my balance"
+            case .restoreAnyway: "Restore anyway"
+            }
+        }
+    }
 
     static let newerBackup = Self(message: "This backup was created by a newer version of Noah. Update the app, then try restoring again.")
-    static let noBackup = Self(title: "No backup found", message: "Check the words. Noah can only restore a wallet that had backups turned on.")
+    static let noBackup = Self(
+        title: "No backup found",
+        message: "Check the words. If they're right, Noah can recover your balance from the Ark server, but not your payment history or settings.",
+        action: .recoverFromArkServer)
+    static let nothingFound = Self(
+        title: "Nothing found",
+        message: "The Ark server has no coins for this recovery phrase. Check the words. If they're right, you can restore it anyway.",
+        action: .restoreAnyway)
     static let invalidPhrase = Self(message: "Check your recovery phrase. Enter all 12 or 24 words in the correct order.")
     static let committed = Self(
         message: "Your backup was restored, but setup couldn't finish. Do not restore again. Close and restart Noah to continue.",
         requiresRestart: true)
+
+    /// After a restore from `source`: a recovery from the Ark server that failed for any other reason (offline) can be
+    /// tried again.
+    static func from(_ error: Error, after source: WalletRestorer.Source) -> Self {
+        var issue = from(error)
+        if source != .backup, issue.action == nil, !issue.requiresRestart { issue.action = .recoverFromArkServer }
+        return issue
+    }
 
     static func from(_ error: Error) -> Self {
         if let error = error as? ClientError { return from(error.underlyingError) }
@@ -61,6 +92,13 @@ struct RestoreIssue: Equatable {
             return Self(
                 message: "Noah couldn't safely undo the restore. Do not retry. Close and restart Noah so it can recover your wallet.",
                 requiresRestart: true)
+        case .serverRecoveryIncomplete:
+            return Self(
+                title: "Couldn't restore",
+                message: "Noah couldn't finish recovering your balance from the Ark server. Check your connection and try again.",
+                action: .recoverFromArkServer)
+        case .nothingFoundOnServer:
+            return nothingFound
         case .seedStateUnknown:
             return Self(
                 // swiftlint:disable:next line_length - one literal: translations.mjs reads copy as a single string
