@@ -15,6 +15,7 @@ struct TransactionsView: View {
     @State private var path = NavigationPath()
     @State private var detailPath = NavigationPath()
     @State private var selectedID: String?
+    @State private var paymentTap = PaymentTapRoute.shared
     @State private var filter = HistoryFilter.all
     @State private var query = ""
     @State private var searching = false
@@ -43,6 +44,10 @@ struct TransactionsView: View {
         // Back (or a swipe) on the phone closes the payment.
         .onChange(of: path.isEmpty) { _, empty in if empty && !window.wide { selectedID = nil } }
         .onboardingHaptics(haptics)
+        // A notification's payment opens once the history has it; leaving Activity forgets it.
+        .onChange(of: paymentTap.activity, initial: true) { _, _ in openTapped() }
+        .onChange(of: history.revision) { _, _ in openTapped() }
+        .onDisappear { paymentTap.activity = nil }
         // The phone's tab bar hides while a payment is open.
         .preference(key: ActivityHidesTabBar.self, value: !window.wide && !path.isEmpty)
         .task {
@@ -140,6 +145,12 @@ struct TransactionsView: View {
             selectedID = transaction.id
             path = NavigationPath([Route.payment(transaction.id)])
         }
+    }
+
+    private func openTapped() {
+        guard let tap = paymentTap.activity, let row = history.transactions.first(where: tap.matches) else { return }
+        paymentTap.activity = nil
+        select(row)
     }
 
     private func close() {

@@ -195,7 +195,7 @@ struct TranslationsTests {
         defer { defaults.removePersistentDomain(forName: name) }
         for locale in LegacyLocale.supported {
             defaults.set(locale, forKey: LegacyLocale.key)
-            let content = PushJobs.receivedContent(sats: 1234, usd: "1.23", unit: .sats, defaults: defaults)
+            let content = PushJobs.receivedContent(sats: 1234, usd: "1.23", unit: .sats, paymentHash: "00", defaults: defaults)
             let expected = NotificationCopy.received(sats: 1234, usd: "1.23", unit: .sats, defaults: defaults)
             #expect(content.title == expected.title && content.body == expected.body)
             #expect(content.sound != nil)

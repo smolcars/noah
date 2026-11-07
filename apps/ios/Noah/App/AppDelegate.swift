@@ -88,8 +88,12 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
     }
 
     nonisolated func userNotificationCenter(_: UNUserNotificationCenter, didReceive response: UNNotificationResponse) async {
-        guard SettingsRoute.opensSchedules(response.notification.request.content.userInfo) else { return }
-        await MainActor.run { SettingsRoute.shared.page = .recurring }
+        let userInfo = response.notification.request.content.userInfo
+        if SettingsRoute.opensSchedules(userInfo) {
+            await MainActor.run { SettingsRoute.shared.page = .recurring }
+        } else if let tap = PaymentTap.of(userInfo: userInfo) {
+            await MainActor.run { PaymentTapRoute.shared.pending = tap }
+        }
     }
 
     // swiftlint:disable:next async_without_await - UNUserNotificationCenterDelegate's async requirement; a sync one is never called
