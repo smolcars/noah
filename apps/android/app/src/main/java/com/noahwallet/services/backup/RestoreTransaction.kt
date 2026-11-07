@@ -50,6 +50,7 @@ class RestoreTransaction(
             hadPreviousData = datadir.exists(), seedSalt = Base64.encode(salt),
             seedTag = Base64.encode(tag(mnemonic, salt)))
         File(staged, markerName).writeText(journal.id)
+        File(staged, onchainScanName).writeText("")
         syncTree(staged); sync(directory); write(journal)
         // Each rename is durable before the next.
         if (journal.hadPreviousData) { rename(datadir, previous); syncBothSides() }
@@ -134,6 +135,8 @@ class RestoreTransaction(
     private fun remove(file: File) { check(!file.exists() || file.deleteRecursively()) { "Cannot remove restore workspace files" } }
     companion object {
         const val markerName = ".noah-restore-id"
+        /** Until the restored wallet's first on-chain sync has run bark's full scan ([com.noahwallet.services.wallet.WalletSession.syncOnchain]). */
+        const val onchainScanName = ".noah-onchain-scan"
         fun tag(mnemonic: String, salt: ByteArray): ByteArray = Mac.getInstance("HmacSHA256").run {
             init(SecretKeySpec(salt, "HmacSHA256")); doFinal(mnemonic.toByteArray(Charsets.UTF_8))
         }

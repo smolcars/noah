@@ -89,6 +89,7 @@ class WalletSession internal constructor(
         /** [sync]'s two halves, for the foreground pass ([ForegroundWalletWork]), which syncs the on-chain wallet last. */
         suspend fun syncWallet(): Unit = throw UnsupportedOperationException()
         suspend fun syncOnchain(): Unit = throw UnsupportedOperationException()
+        suspend fun initialScan(): Unit = throw UnsupportedOperationException()
         suspend fun maintenanceDelegated()
         suspend fun bolt11Invoice(amountSats: ULong): String
         /** A BOLT11 invoice carrying [description], and a fresh Ark address: what voice assistants create. */
@@ -412,8 +413,17 @@ class WalletSession internal constructor(
         if (isOpen) withOpen { handles -> (handles.synchronization ?: syncFlight).run(handles::syncWallet, handles::claimLightningReceives) }
     }
 
+    /**
+     * The foreground pass's on-chain sync. A restored database misses payments to addresses revealed after its backup, and
+     * handing out each address until it's paid never reveals them, so a restore's first one is bark's full scan.
+     */
     suspend fun syncOnchain() {
-        if (isOpen) withOpen { handles -> (handles.synchronization ?: syncFlight).run(handles::syncOnchain) }
+        val scan = File(location.directory, com.noahwallet.services.backup.RestoreTransaction.onchainScanName)
+        if (isOpen) withOpen { handles ->
+            (handles.synchronization ?: syncFlight).run({
+                if (!scan.exists()) handles.syncOnchain() else { handles.initialScan(); handles.syncOnchain(); check(scan.delete()) }
+            })
+        }
     }
 
     suspend fun transactionHistory(): List<HistoryTransaction> = withOpen { handles ->
@@ -821,6 +831,7 @@ class WalletSession internal constructor(
         override suspend fun sync() { WalletSync.attemptAll({ onchain.sync() }, { wallet.sync() }) }
         override suspend fun syncWallet() { wallet.sync() }
         override suspend fun syncOnchain() { onchain.sync() }
+        override suspend fun initialScan() { onchain.initialScan(null) }
         override suspend fun maintenanceDelegated() { wallet.maintenanceDelegated() }
         override suspend fun bolt11Invoice(amountSats: ULong) = wallet.bolt11Invoice(amountSats, null).invoice
         override suspend fun lightningInvoice(amountSats: ULong, description: String?) = wallet.bolt11Invoice(amountSats, description).invoice

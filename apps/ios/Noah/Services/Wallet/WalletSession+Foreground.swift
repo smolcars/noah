@@ -22,7 +22,7 @@ extension WalletSession {
                 return { try await timing.run(stage, work) }
             }
             return .init(
-                syncOnchain: timed("on-chain sync") { _ = try await handles.onchain.sync() },
+                syncOnchain: timed("on-chain sync") { try await session.syncOnchain(handles) },
                 sync: timed("wallet sync") { try await handles.wallet.sync() },
                 maintenance: timed("delegated maintenance") { try await handles.wallet.maintenanceDelegated() },
                 claimLightning: timed("lightning claims") { _ = try await handles.wallet.tryClaimAllLightningReceives(wait: false) },

@@ -32,6 +32,8 @@ import Foundation
 struct RestoreTransaction: Sendable {
     static let journalName = "journal.json"
     static let markerName = ".noah-restore-id"
+    /// Until the restored wallet's first on-chain sync has run bark's full scan (`WalletSession.syncOnchain`).
+    static let onchainScanName = ".noah-onchain-scan"
 
     enum Phase: String, Codable, Sendable {
         case installing, committing
@@ -111,6 +113,7 @@ struct RestoreTransaction: Sendable {
             seedSalt: salt, seedTag: Self.tag(mnemonic, salt: salt))
 
         try Data(journal.id.uuidString.utf8).write(to: staged.appending(path: Self.markerName))
+        try Data().write(to: staged.appending(path: Self.onchainScanName))
         try Self.syncTree(staged)
         try Self.fullSync(directory)
         try write(journal)
