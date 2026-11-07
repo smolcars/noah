@@ -6,8 +6,9 @@ use tower::ServiceExt;
 use uuid::Uuid;
 
 use crate::db::backup_repo::{BackupRepository, legacy_backup_object_key};
+use crate::db::user_repo::UserRepository;
 use crate::tests::common::{TestUser, create_test_user, setup_test_app};
-use crate::types::{BackupInfo, DownloadUrlResponse, UploadUrlResponse};
+use crate::types::{BackupInfo, DownloadUrlResponse, UploadUrlResponse, UserStatus};
 
 #[tracing_test::traced_test]
 #[tokio::test]
@@ -996,4 +997,49 @@ async fn test_update_backup_settings_disable() {
         .unwrap()
         .unwrap();
     assert!(!backup_enabled);
+}
+
+#[tokio::test]
+async fn test_backup_push_goes_to_active_users_unless_switched_off() {
+    let (_app, app_state, _guard) = setup_test_app().await;
+    let no_setting = TestUser::new_with_key(&[0x11; 32]);
+    let switched_on = TestUser::new_with_key(&[0x12; 32]);
+    let switched_off = TestUser::new_with_key(&[0x13; 32]);
+    let inactive = TestUser::new_with_key(&[0x14; 32]);
+    let mut tx = app_state.db_pool.begin().await.unwrap();
+    for (index, user) in [&no_setting, &switched_on, &switched_off, &inactive]
+        .into_iter()
+        .enumerate()
+    {
+        let ln_address = format!("backup{index}@localhost");
+        UserRepository::create(&mut tx, &user.pubkey().to_string(), &ln_address, None)
+            .await
+            .unwrap();
+    }
+    tx.commit().await.unwrap();
+    let backup_repo = BackupRepository::new(&app_state.db_pool);
+    backup_repo
+        .upsert_settings(&switched_on.pubkey().to_string(), true)
+        .await
+        .unwrap();
+    backup_repo
+        .upsert_settings(&switched_off.pubkey().to_string(), false)
+        .await
+        .unwrap();
+    UserRepository::new(&app_state.db_pool)
+        .set_status(&inactive.pubkey().to_string(), UserStatus::Inactive)
+        .await
+        .unwrap();
+
+    let mut pubkeys = backup_repo
+        .find_pubkeys_with_backup_enabled()
+        .await
+        .unwrap();
+    pubkeys.sort();
+    let mut expected = vec![
+        no_setting.pubkey().to_string(),
+        switched_on.pubkey().to_string(),
+    ];
+    expected.sort();
+    assert_eq!(pubkeys, expected);
 }
