@@ -6,8 +6,8 @@
     "ko",
     "sv"
   ],
-  "catalogEntries": 1572,
-  "sourceKeys": 1615,
+  "catalogEntries": 1575,
+  "sourceKeys": 1618,
   "coverage": {
     "ios": {
       "used": [
@@ -873,6 +873,7 @@
         "Receive anti-DoS",
         "Received",
         "Received on",
+        "Received {amount}",
         "Recent",
         "Recipient amount pending",
         "Recipient receives about {nativeValue1} sats",
@@ -1014,6 +1015,8 @@
         "Sent by someone else",
         "Sent to",
         "Sent {amount}",
+        "Sent {amount} in all, last on {date}.",
+        "Sent {amount} to {recipient}",
         "Server key",
         "Server refreshed",
         "Services",

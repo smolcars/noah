@@ -23,6 +23,8 @@ final class HistoryModel {
         var blockTimeRead: @Sendable (String, Date) -> Void = { _, _ in }
         /// The wallet's rows were published (how many), before enrichment.
         var rowsShown: @Sendable (Int) -> Void = { _ in }
+        /// The rows, for Siri's index (`SiriIndexer`).
+        var indexRows: @Sendable ([HistoryTransaction]) -> Void = { _ in }
 
         static func live(session: WalletSession, client: Client, variant: AppVariant) -> Self {
             Self(
@@ -65,7 +67,8 @@ final class HistoryModel {
                 chainStatus: { try await session.chainTransactionStatus($0) },
                 coin: { try await session.vtxo($0) },
                 blockTimeRead: { WidgetChainDates.shared.record(txid: $0, at: $1) },
-                rowsShown: { LaunchTiming.shared.mark(.historyShown, suffix: " (\($0) rows)") })
+                rowsShown: { LaunchTiming.shared.mark(.historyShown, suffix: " (\($0) rows)") },
+                indexRows: { SiriIndexer.shared.update(history: $0) })
         }
     }
 
@@ -162,6 +165,7 @@ final class HistoryModel {
             error = nil
             revision += 1
             dependencies.rowsShown(transactions.count)
+            dependencies.indexRows(transactions)
             // One worker bounds optional requests without holding up wallet observation.
             enrichment = Task {
                 await previous?.value

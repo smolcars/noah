@@ -366,6 +366,7 @@ extension AppModel {
             }
             summary = latest
             summaryRevision += 1
+            SiriIndexer.shared.update(balance: latest.balance.totalSats)
             walletError = nil
             LaunchTiming.shared.mark(.summaryShown)
         } catch is CancellationError { return }

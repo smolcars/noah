@@ -993,6 +993,7 @@
   <string name="gt_85cf80c2abc7c5f1">"DoS-skydd vid mottagning"</string>
   <string name="gt_49f19beeecf442ef">"Mottaget"</string>
   <string name="gt_076d920ee7b4ec38">"Mottaget på"</string>
+  <string name="gt_c83fb2b89d2238d7">"%1$s mottaget"</string>
   <string name="gt_690dbe9dc0993c42">"Senaste"</string>
   <string name="gt_aa815083375c5f6e">"Mottagarbeloppet är ännu inte fastställt"</string>
   <string name="gt_fdbcd05664b4ce23">"Mottagaren får cirka %1$s sats"</string>
@@ -1160,6 +1161,8 @@
   <string name="gt_4e7201c7b8985a98">"Skickat till"</string>
   <string name="gt_21cfd8fdcf01d5a0">"Skickad till %1$s"</string>
   <string name="gt_fba003c1a141b7a1">"%1$s skickat"</string>
+  <string name="gt_0e9f9136e344eb7d">"%1$s skickat totalt, senast %2$s."</string>
+  <string name="gt_7dc2f77d8a0a618e">"%1$s skickat till %2$s"</string>
   <string name="gt_c653cd477710322c">"Servernyckel"</string>
   <string name="gt_2b93f3e367d004bf">"Servern har uppdaterats"</string>
   <string name="gt_604dce445e326d95">"Tjänster"</string>

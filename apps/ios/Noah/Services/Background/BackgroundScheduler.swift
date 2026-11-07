@@ -109,6 +109,8 @@ extension BackgroundScheduler.Dependencies {
                              let facts = (try? await services.session.widgetFacts()) ?? .init()
                              try BackgroundExecution.checkActive()
                              WidgetDataWriter.write(balance: summary.balance, facts: facts, variant: services.variant, ticket: ticket)
+                             try BackgroundExecution.checkActive()
+                             await SiriIndexer.shared.refresh(balance: summary.balance.totalSats, session: services.session)
                          },
                          progressExits: {
                              await services.session.progressPendingExits { AppLog("backgroundTasks").w("Background exit progress failed: \($0)") }

@@ -38,6 +38,7 @@ struct ActivityRowButton: View {
             onSeen()
         }
         .accessibilityAddTraits(selected ? .isSelected : [])
+        .modifier(SiriPaymentOnScreen(id: transaction.id))
         .accessibilityIdentifier("activity-row-\(transaction.id)")
     }
 }

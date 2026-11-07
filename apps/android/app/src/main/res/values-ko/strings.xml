@@ -993,6 +993,7 @@
   <string name="gt_85cf80c2abc7c5f1">"수신 DoS 방어"</string>
   <string name="gt_49f19beeecf442ef">"받음"</string>
   <string name="gt_076d920ee7b4ec38">"수신 주소"</string>
+  <string name="gt_c83fb2b89d2238d7">"%1$s 받음"</string>
   <string name="gt_690dbe9dc0993c42">"최근"</string>
   <string name="gt_aa815083375c5f6e">"받는 사람의 수령액 미정"</string>
   <string name="gt_fdbcd05664b4ce23">"받는 사람의 수령액은 약 %1$s sats입니다"</string>
@@ -1160,6 +1161,8 @@
   <string name="gt_4e7201c7b8985a98">"수신 대상"</string>
   <string name="gt_21cfd8fdcf01d5a0">"%1$s(으)로 보냄"</string>
   <string name="gt_fba003c1a141b7a1">"%1$s 보냄"</string>
+  <string name="gt_0e9f9136e344eb7d">"총 %1$s를 보냈습니다. 마지막: %2$s."</string>
+  <string name="gt_7dc2f77d8a0a618e">"%2$s에게 %1$s 보냄"</string>
   <string name="gt_c653cd477710322c">"서버 키"</string>
   <string name="gt_2b93f3e367d004bf">"서버 새로 고침 완료"</string>
   <string name="gt_604dce445e326d95">"서비스"</string>

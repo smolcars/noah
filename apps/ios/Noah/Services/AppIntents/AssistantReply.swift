@@ -71,7 +71,7 @@ enum AssistantReply {
         }
     }
 
-    private static func isPayment(_ row: HistoryTransaction) -> Bool {
+    static func isPayment(_ row: HistoryTransaction) -> Bool {
         ["incoming", "outgoing"].contains(row.direction) && !row.isRenewal && !row.isInternalTransfer && row.exitFeeFor == nil
             && !["offboard", "exit"].contains(row.movementKind) && !row.isPending && !row.isFailed && !row.isCanceled
             && row.shownAmount != nil && row.timestamp != nil

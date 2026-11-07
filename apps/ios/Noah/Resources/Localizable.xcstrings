@@ -35137,6 +35137,42 @@
         }
       }
     },
+    "Received {amount}": {
+      "comment": "GT gt_c83fb2b89d2238d7; arguments: amount",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Received %1$@"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ recibido"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@を受け取りました"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ 받음"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ mottaget"
+          }
+        }
+      }
+    },
     "Recent": {
       "comment": "GT gt_690dbe9dc0993c42; arguments: none",
       "extractionState": "manual",
@@ -41049,6 +41085,78 @@
           "stringUnit": {
             "state": "translated",
             "value": "%1$@ skickat"
+          }
+        }
+      }
+    },
+    "Sent {amount} in all, last on {date}.": {
+      "comment": "GT gt_0e9f9136e344eb7d; arguments: amount, date",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sent %1$@ in all, last on %2$@."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ enviados en total, el último el %2$@."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "合計%1$@を送金、最後は%2$@。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "총 %1$@를 보냈습니다. 마지막: %2$@."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ skickat totalt, senast %2$@."
+          }
+        }
+      }
+    },
+    "Sent {amount} to {recipient}": {
+      "comment": "GT gt_7dc2f77d8a0a618e; arguments: amount, recipient",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sent %1$@ to %2$@"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ enviado a %2$@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%2$@に%1$@を送金しました"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%2$@에게 %1$@ 보냄"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ skickat till %2$@"
           }
         }
       }

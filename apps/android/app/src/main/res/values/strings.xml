@@ -993,6 +993,7 @@
   <string name="gt_85cf80c2abc7c5f1">"Receive anti-DoS"</string>
   <string name="gt_49f19beeecf442ef">"Received"</string>
   <string name="gt_076d920ee7b4ec38">"Received on"</string>
+  <string name="gt_c83fb2b89d2238d7">"Received %1$s"</string>
   <string name="gt_690dbe9dc0993c42">"Recent"</string>
   <string name="gt_aa815083375c5f6e">"Recipient amount pending"</string>
   <string name="gt_fdbcd05664b4ce23">"Recipient receives about %1$s sats"</string>
@@ -1160,6 +1161,8 @@
   <string name="gt_4e7201c7b8985a98">"Sent to"</string>
   <string name="gt_21cfd8fdcf01d5a0">"Sent to %1$s"</string>
   <string name="gt_fba003c1a141b7a1">"Sent %1$s"</string>
+  <string name="gt_0e9f9136e344eb7d">"Sent %1$s in all, last on %2$s."</string>
+  <string name="gt_7dc2f77d8a0a618e">"Sent %1$s to %2$s"</string>
   <string name="gt_c653cd477710322c">"Server key"</string>
   <string name="gt_2b93f3e367d004bf">"Server refreshed"</string>
   <string name="gt_604dce445e326d95">"Services"</string>

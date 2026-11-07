@@ -38,6 +38,8 @@ struct WalletLifecycle: Sendable {
         var settleBackground: @Sendable (Duration) async throws -> Void = { _ in }
         var walletChanged: @Sendable () async -> Void = { await SendPaymentController.shared.reloadForWalletChange() }
         var persistAutomationStop: (@Sendable (String) throws -> Void)?
+        /// Removes what Siri's index holds of this wallet.
+        var clearSiriIndex: @Sendable () -> Void = {}
     }
 
     static let automationStopKey = "native-recurring-automation-stop-generation"
@@ -234,6 +236,7 @@ struct WalletLifecycle: Sendable {
         dependencies.authToken.remove()
         try dependencies.settings.removeAllDurably()
         if let appGroup = dependencies.appGroup { WidgetDataWriter.clear(appGroup: appGroup) }
+        dependencies.clearSiriIndex()
     }
 
     private func authority() -> RecurringAutomationAuthority? {
@@ -261,7 +264,8 @@ extension WalletLifecycle.Dependencies {
             scratch: .shared,
             appGroup: services.variant.appGroup,
             deregister: { _ = try await services.client.deregister().ok },
-            settleBackground: { try await services.backupCoordinator.settleForDeletion(timeout: $0) })
+            settleBackground: { try await services.backupCoordinator.settleForDeletion(timeout: $0) },
+            clearSiriIndex: { SiriIndexer.shared.walletDeleted() })
     }
 }
 
