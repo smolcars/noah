@@ -314,6 +314,21 @@ internal class WalletSessionTest : WalletSessionFixture() {
             assertFalse(marker.exists())
         }
     }
+    @Test fun aRestoredVtxoCheckCancelledWhileWaitingNeverStarts() = runBlocking {
+        withLocation { location ->
+            val handles = Handles().apply { syncEntered = CompletableDeferred(); syncGate = CompletableDeferred(); spendable = listOf("a") }
+            val session = WalletSession("regtest", location, opener = { _, _, _, _ -> handles })
+            session.createNew("unused", "test")
+            val marker = File(location.directory, com.noahwallet.services.backup.RestoreTransaction.vtxoCheckName).apply { writeText("") }
+            val syncing = launch { session.syncArk() }
+            handles.syncEntered!!.await()
+            val checking = launch(start = CoroutineStart.UNDISPATCHED) { session.checkRestoredVtxos {} }
+            delay(100); checking.cancel()
+            handles.syncGate!!.complete(Unit); syncing.join(); checking.join()
+            assertEquals(listOf("wallet sync"), handles.calls)
+            assertTrue(marker.exists())
+        }
+    }
     @Test fun canceledHistoryReadCompletesBothReadsBeforeClose() = runBlocking {
         withLocation { location ->
             val handles = Handles().apply { historyEntered = CompletableDeferred(); historyGate = CompletableDeferred() }

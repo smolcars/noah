@@ -435,8 +435,11 @@ class WalletSession internal constructor(
      */
     suspend fun checkRestoredVtxos(warn: (String) -> Unit) {
         val marker = File(location.directory, com.noahwallet.services.backup.RestoreTransaction.vtxoCheckName)
+        val caller = currentCoroutineContext()
         if (isOpen && marker.exists()) withOpen { handles ->
             (handles.synchronization ?: syncFlight).serialized {
+                // withOpen can't be cancelled: a caller cancelled while this waited doesn't start the check.
+                caller.checkWalletAdmission()
                 RestoredVtxoCheck.run(marker, RestoredVtxoCheck.Steps(handles::syncWallet, handles::spendableVtxoIds,
                     handles::trustAndAdoptServerVtxoStatus), warn)
             }
