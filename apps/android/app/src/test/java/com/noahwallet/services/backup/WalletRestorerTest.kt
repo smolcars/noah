@@ -210,6 +210,9 @@ class WalletRestorerTest {
         assertEquals("old wallet", location.database.readText()); assertTrue("Previous seed differs", seed.value == "old seed")
         assertFalse(location.restorePending)
         assertTrue(runCatching { session.reserve() }.isFailure)
+        // A launch recovery in the same process doesn't sweep them from under the quarantined handles either.
+        assertEquals(RestoreTransaction.Recovery.nothingPending, WalletRestorer.recoverInterruptedRestore(session, location, seed, tx))
+        assertTrue("Staged files kept after recovery", File(tx.staged, "db.sqlite").exists())
     } }
 
     @Test fun stagedDeletionUnlockRestoreAndDeleteUsesRealRestorePipeline() = runBlocking {

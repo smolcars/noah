@@ -271,8 +271,9 @@ class WalletSession internal constructor(
         if ((state as? State.Reserved)?.reservation === reservation) state = State.Closed
     }
 
+    /** Runs [body] (a scratch sweep) unless a reservation, or quarantined handles still on staged files, may need them. */
     fun unlessReserved(body: () -> Unit): Boolean = synchronized(lock) {
-        if (state is State.Reserved) false else { body(); true }
+        if (state is State.Reserved || state is State.Quarantined) false else { body(); true }
     }
 
     private fun checkHeld(reservation: Reservation) {
