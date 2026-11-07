@@ -48,7 +48,8 @@ class RestorePhraseScreenTest {
     @Test fun aPhraseRestoreWithNoBackupOffersTheArkServerWhereItFailed() {
         compose.runOnIdle { app.restore.reject(RestoreIssue.noBackup) }
         compose.activity.setContent {
-            NoahTheme { com.noahwallet.ui.onboarding.RestoringStep(app, ViewModelProvider(compose.activity)[com.noahwallet.ui.onboarding.OnboardingPresentation::class.java]) }
+            val presentation = ViewModelProvider(compose.activity)[com.noahwallet.ui.onboarding.OnboardingPresentation::class.java]
+            NoahTheme { com.noahwallet.ui.onboarding.RestoringStep(app, presentation) }
         }
         compose.onNodeWithText("Recover my balance").assertExists()
         compose.onNodeWithText("Back").assertExists()
