@@ -570,6 +570,12 @@ extension AppModel {
         })
         await pushPermission.refresh()
         await reconcileBackupTriggers()
+        await sendBackupSetting()
+    }
+
+    private func sendBackupSetting() async {
+        do { try await server.sendBackupEnabledIfOn() }
+        catch { log.w("Couldn't send the backup setting to the server: \(Self.describe(error))") }
     }
 
     // MARK: Backups (RN `useBackupCoordinator`)
@@ -711,6 +717,7 @@ extension AppModel {
             await reconcileBackupTriggers()
             try await server.reportLastLogin()
             try? await server.refreshMailboxIfNeeded()
+            await sendBackupSetting()
         } catch {
             log.w("Server setup failed; it can be retried from onboarding or Home")
             return

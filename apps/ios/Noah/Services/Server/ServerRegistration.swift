@@ -200,6 +200,13 @@ final class ServerRegistration {
         try update { $0.isBackupEnabled = enabled }
     }
 
+    /// RN `usePushNotifications`: tell the server backups are on, so its backup
+    /// push reaches this wallet even when Noah stays closed.
+    func sendBackupEnabledIfOn() async throws {
+        guard state.isRegisteredWithServer == true, state.isBackupEnabled == true else { return }
+        _ = try await client.updateBackupSettings(body: .json(.init(backupEnabled: true))).ok
+    }
+
     func saveDisplayName(_ name: String) async throws {
         let name = name.trimmingCharacters(in: .whitespacesAndNewlines)
         _ = try await client.updateProfile(body: .json(.init(displayName: name.isEmpty ? nil : name))).ok

@@ -109,6 +109,26 @@ struct ServerRegistrationTests {
         }
     }
 
+    @Test func sendsBackupEnabledOnlyWhenRegisteredWithBackupsOn() async throws {
+        SettingsStorage.bootstrap()
+        // swiftlint:disable:next discouraged_optional_boolean - the stored flag is optional
+        let cases: [(registered: Bool, enabled: Bool?)] = [(true, true), (true, false), (false, true), (true, nil)]
+        for (registered, enabled) in cases {
+            let root = FileManager.default.temporaryDirectory.appending(path: "backup-setting-\(UUID())")
+            defer { try? FileManager.default.removeItem(at: root) }
+            let settings = try SettingsStorage(rootPath: root.path, instanceID: UUID().uuidString)
+            _ = try settings.updateServerState { $0.isRegisteredWithServer = registered; $0.isBackupEnabled = enabled }
+            let transport = Transport()
+            let service = ServerRegistration(variant: .regtest, settings: settings,
+                                             client: Client(serverURL: ServerEndpoint.baseURL(for: .regtest), transport: transport))
+            try await service.sendBackupEnabledIfOn()
+            let sends = registered && enabled == true
+            #expect(await transport.paths == (sends ? ["/v0/backup/settings"] : []), "registered \(registered), enabled \(String(describing: enabled))")
+            let bodies = await transport.bodies.map { try? JSONSerialization.jsonObject(with: Data($0.utf8)) as? [String: Bool] }
+            #expect(bodies == (sends ? [["backup_enabled": true]] : []))
+        }
+    }
+
     @Test func checksVersionBeforeRegisteredFastPathAndOnlyRecordsSuccessfulReports() async throws {
         SettingsStorage.bootstrap()
         let root = FileManager.default.temporaryDirectory.appending(path: "report-login-\(UUID())")

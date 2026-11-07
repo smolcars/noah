@@ -122,6 +122,12 @@ class ServerRegistration(
         storage.update { it.copy(isBackupEnabled = enabled) }
     }
 
+    /** RN `usePushNotifications`: tell the server backups are on, so its backup push reaches this wallet even when Noah stays closed. */
+    suspend fun sendBackupEnabledIfOn() {
+        if (state.isRegisteredWithServer != true || state.isBackupEnabled != true) return
+        V0BackupSettingsClient(client).updateBackupSettings(BackupSettingsPayload(true)).value()
+    }
+
     suspend fun setMailboxEnabled(enabled: Boolean) {
         if (!mailbox.tryLock()) throw ServerFailure("Mailbox update is in progress.")
         try {
