@@ -58,8 +58,8 @@ struct OnboardingFlow: View {
     @State private var restoreStart = Date()
     @State private var restoreCount: OnboardingProgressScreen.Count?
     /// The typed phrase of the last restore, kept only while its issue offers another way forward
-    /// (`RestoreIssue.Action`): the words were cleared from the screen when it started.
-    @State private var issuePhrase: String?
+    /// (`RestoreIssue.Action`) and the words are untouched since.
+    @State private var issuePhrase: RestoreDraft.KeptPhrase?
 
     init(model: AppModel, storedSeed: Bool = false) {
         let first = Step.initial(resuming: model.resumeOnboarding, storedSeed: storedSeed)
@@ -153,7 +153,7 @@ struct OnboardingFlow: View {
             RestoreWalletScreen(layout: layout, draft: $draft, issue: model.restoreIssue, haptics: haptics,
                                 onPaste: { clipboard.accepted($0, change: $1) }, onRestore: restore,
                                 onBack: { draft.focusedWord = nil; issuePhrase = nil; go(.welcome, travel: .back) },
-                                onIssueAction: { takeIssueAction(typed: true) })
+                                onIssueAction: issuePhrase?.phrase(untouched: draft) == nil ? nil : { takeIssueAction(typed: true) })
         case .storedSeed:
             StoredSeedRestoreScreen(layout: layout, issue: model.restoreIssue,
                                     onIssueAction: { takeIssueAction(typed: false) }) {
@@ -365,10 +365,12 @@ struct OnboardingFlow: View {
     /// The issue's second way forward: recover from the Ark server, or restore a phrase it knows nothing about.
     private func takeIssueAction(typed: Bool) {
         guard let action = model.restoreIssue?.action else { return }
-        // The typed words are gone from the screen; without them there is nothing to recover.
-        guard !typed || issuePhrase != nil else { return }
+        // The typed words are gone from the screen; without them, or once the user edits the words, there is nothing to
+        // recover from.
+        let phrase = typed ? issuePhrase?.phrase(untouched: draft) : nil
+        guard !typed || phrase != nil else { return }
         haptics.play(.medium)
-        startRestore(phrase: typed ? issuePhrase : nil, source: .arkServer(allowEmpty: action == .restoreAnyway))
+        startRestore(phrase: phrase, source: .arkServer(allowEmpty: action == .restoreAnyway))
     }
 
     /// One closed-session restore; Restoring follows its steps.
@@ -381,7 +383,7 @@ struct OnboardingFlow: View {
         go(.restoring)
         Task {
             await model.restoreWallet(phrase: phrase, from: source)
-            if model.restoreIssue?.action != nil { issuePhrase = phrase }
+            if model.restoreIssue?.action != nil, let phrase { issuePhrase = .init(phrase, form: draft) }
             if model.phase == .wallet {
                 let total = Int64(clamping: model.summary?.balance.totalSats ?? 0)
                 let lit = total > 0 ? TreeScene.found.map(\.leaf) : [TreeScene.you]

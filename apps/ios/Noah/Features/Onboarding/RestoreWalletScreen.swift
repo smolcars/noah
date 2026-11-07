@@ -27,6 +27,25 @@ struct RestoreDraft {
     }
 
     var firstInvalid: Int? { input.words.indices.first(where: isInvalid) }
+
+    /// The phrase of a restore that failed, kept for its issue's second way forward (`RestoreIssue.Action`). The words
+    /// were cleared from the form when the restore started; any edit, paste or 12/24 switch since means the user is
+    /// fixing them, so the kept phrase is gone and the action must not restore it.
+    struct KeptPhrase {
+        let phrase: String
+        private let generation: Int
+        private let edits: Int
+
+        init(_ phrase: String, form: RestoreDraft) {
+            self.phrase = phrase
+            generation = form.generation
+            edits = form.edits
+        }
+
+        func phrase(untouched form: RestoreDraft) -> String? {
+            form.generation == generation && form.edits == edits ? phrase : nil
+        }
+    }
 }
 
 /// "Welcome back": 12 or 24 words with BIP-39 suggestions above the keyboard.
@@ -40,8 +59,8 @@ struct RestoreWalletScreen: View {
     let onPaste: (String, Int) -> Void
     let onRestore: () -> Void
     let onBack: () -> Void
-    /// The issue's second way forward (`RestoreIssue.Action`).
-    var onIssueAction: () -> Void = {}
+    /// The issue's second way forward (`RestoreIssue.Action`); nil once the words were edited.
+    var onIssueAction: (() -> Void)?
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.locale) private var locale
@@ -107,7 +126,7 @@ struct RestoreWalletScreen: View {
                 }
                 .onboardingAppear(3)
             message.padding(.top, 14)
-            if issue?.action != nil {
+            if issue?.action != nil, let onIssueAction {
                 RestoreIssueAction(issue: issue, action: onIssueAction).padding(.top, NoahTokens.Space.s)
             }
             // Wide windows centre the actions with the words; compact pins them to the bottom.

@@ -580,3 +580,18 @@ struct RestoreFieldPrivacyTests {
         #expect(board.string == "replacement before acceptance")
     }
 }
+
+/// A failed restore's phrase serves its issue's action only while the form is untouched: once the user edits, pastes or
+/// switches 12/24, the action must not restore the old words.
+struct RestoreKeptPhraseTests {
+    @Test func anyChangeToTheFormDropsTheKeptPhrase() {
+        var form = RestoreDraft()
+        let kept = RestoreDraft.KeptPhrase("old words", form: form)
+        #expect(kept.phrase(untouched: form) == "old words")
+        form.edits += 1
+        #expect(kept.phrase(untouched: form) == nil)
+        form = RestoreDraft()
+        form.generation += 1
+        #expect(kept.phrase(untouched: form) == nil)
+    }
+}
