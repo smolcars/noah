@@ -29,11 +29,14 @@ object L10n {
         return if (id == 0) source else if (arguments.isEmpty()) localized.getString(id) else localized.getString(id, *arguments)
     }
 
-    fun plural(context: Context, source: String, count: Int, vararg arguments: Any): String {
+    fun plural(context: Context, source: String, count: Int, vararg arguments: Any): String = plural(context, source, count.toLong(), *arguments)
+
+    /** A count past Int (a balance in sats) takes Int.MAX_VALUE's form, as [trPlural]'s does, and is written in full. */
+    fun plural(context: Context, source: String, count: Long, vararg arguments: Any): String {
         val localized = context(context)
         val id = id(localized.resources, source, "plurals", context.packageName)
         require(id != 0) { """Missing plural resource: $source""" }
-        return localized.resources.getQuantityString(id, count,
+        return localized.resources.getQuantityString(id, count.coerceIn(Int.MIN_VALUE.toLong(), Int.MAX_VALUE.toLong()).toInt(),
             java.text.NumberFormat.getIntegerInstance(localized.resources.configuration.locales[0]).format(count), *arguments)
     }
 }

@@ -549,6 +549,10 @@
   <string name="gt_b79cac926e0b2e34">"Hjälp"</string>
   <string name="gt_90eb91beacd18ab3">"Här är en ny Ark-adress."</string>
   <string name="gt_6772bebdaef128b9">"Här är din Lightning-faktura på %1$s."</string>
+  <plurals name="gt_ff07c924b6ba90db">
+    <item quantity="one">"Här är din Lightning-faktura på %1$s sat."</item>
+    <item quantity="other">"Här är din Lightning-faktura på %1$s sats."</item>
+  </plurals>
   <string name="gt_c41b2bdf4c4d8c50">"Dolt av säkerhetsskäl"</string>
   <string name="gt_62380501bdf8fc5b">"Dolt medan skärmen spelas in eller delas"</string>
   <string name="gt_2ae92318e0d70a21">"Dölj belopp"</string>
@@ -826,6 +830,7 @@
   <string name="gt_ddecc0272120b4ba">"Noah-användare"</string>
   <string name="gt_f802f9f1257fc080">"Noah avbröts medan betalningen skickades. Kontrollera din transaktionshistorik innan du fortsätter."</string>
   <string name="gt_deca5f2b35700ac7">"Noah flyttar inte tillbaka dem till Ark."</string>
+  <string name="gt_b4a094cf754d6bb0">"Noahs plånbok är inte redo. Öppna Noah och försök igen."</string>
   <string name="gt_dc937b59892604f5">"Ingen"</string>
   <string name="gt_5e2edf7902eab86b">"Nostr-nyckel"</string>
   <string name="gt_e3df4eceed29d5f4">"Nostr-nyckel (valfritt)"</string>
@@ -895,6 +900,8 @@
   <string name="gt_762a16c9c74f5e0f">"Öppna plånboken"</string>
   <string name="gt_6be6caff13df7c0f">"Öppna din plånbok innan du ändrar slutpunkten."</string>
   <string name="gt_f4ce6b8f22a13fe1">"Öppna %1$s i webbläsaren"</string>
+  <string name="gt_ad26ddf0111b8ddb">"Öppnar Skicka till %1$s."</string>
+  <string name="gt_eddd11b9cb21269b">"Öppnar Skicka."</string>
   <string name="gt_557d3ad870771176">"Öppnar den medföljande versionen av BTC Map…"</string>
   <string name="gt_eb4bbb3d312d0b21">"Öppnar myntets detaljer"</string>
   <string name="gt_650eb5d460a4e887">"Optic ID"</string>
@@ -1240,6 +1247,7 @@
   <string name="gt_96100ca2d23b8821">"Esplora-slutpunkten är avsedd för ett annat Bitcoin-nätverk."</string>
   <string name="gt_9dc2f0b60de257af">"Lightning-betalningen kunde inte tas emot. Skapa en ny betalningsbegäran och försök igen."</string>
   <string name="gt_f663d0d5c263a46c">"Beloppet som Ark tar emot är lägre än minimibeloppet. Öka insättningsbeloppet."</string>
+  <string name="gt_f15bb847093c717a">"Beloppet måste vara minst en sat."</string>
   <string name="gt_1f7124b49af4bb0c">"Beloppet eller avgiften har ändrats. Granska betalningen igen."</string>
   <string name="gt_d99fbad70ce6933e">"Beloppet som krävs kan variera."</string>
   <string name="gt_d016dcf9ce33d5ac">"De tillgängliga medlen har ändrats. Granska betalningen igen."</string>
@@ -1382,6 +1390,7 @@
   <string name="gt_99e8588dce6a534a">"Lås upp Noah"</string>
   <string name="gt_b126042b7ef8a274">"Lås upp VTXO"</string>
   <string name="gt_3470a00c3bb2d5ca">"Lås upp för att se din plånbok."</string>
+  <string name="gt_a452df12ffd9ffcf">"Lås upp enheten och försök igen."</string>
   <string name="gt_531c7b28abf27600">"Upplåst"</string>
   <string name="gt_38674ce943ca4bc9">"Upplåst vid block %1$s"</string>
   <string name="gt_c5b5f0e95343c511">"Låses upp vid block %1$s"</string>
@@ -1483,12 +1492,32 @@
   <string name="gt_4cd8ef2093993de6">"Du får"</string>
   <string name="gt_9f6549efd14b2751">"Du har %1$s, ungefär %2$s."</string>
   <string name="gt_798f886af0f2bdcf">"Du har %1$s."</string>
+  <plurals name="gt_c761cdf072add0e0">
+    <item quantity="one">"Du har %1$s sat, ungefär %2$s."</item>
+    <item quantity="other">"Du har %1$s sats, ungefär %2$s."</item>
+  </plurals>
+  <plurals name="gt_fa11ee396af9d157">
+    <item quantity="one">"Du har %1$s sat."</item>
+    <item quantity="other">"Du har %1$s sats."</item>
+  </plurals>
   <string name="gt_0e5467ac43335fc4">"Du behåller"</string>
   <string name="gt_69322f7fe4b0cf74">"Du behöver den för att återställa din plånbok"</string>
   <string name="gt_357f1a2fdf17bb53">"Du har fått %1$s"</string>
   <string name="gt_b6e58830ce7247d1">"Du fick %1$s %2$s."</string>
+  <plurals name="gt_154b4cd637251d3f">
+    <item quantity="one">"Du fick %1$s sat %2$s."</item>
+    <item quantity="other">"Du fick %1$s sats %2$s."</item>
+  </plurals>
   <string name="gt_88d7260b755e2a52">"Du skickade %1$s till %2$s %3$s."</string>
   <string name="gt_620eb9c0a2aa2de8">"Du skickade %1$s %2$s."</string>
+  <plurals name="gt_dbd7054168c50d9f">
+    <item quantity="one">"Du skickade %1$s sat till %2$s %3$s."</item>
+    <item quantity="other">"Du skickade %1$s sats till %2$s %3$s."</item>
+  </plurals>
+  <plurals name="gt_8f351033c8ea1233">
+    <item quantity="one">"Du skickade %1$s sat %2$s."</item>
+    <item quantity="other">"Du skickade %1$s sats %2$s."</item>
+  </plurals>
   <string name="gt_723022dbd02fce20">"Du har nått gränsen för antalet återkommande betalningar."</string>
   <string name="gt_3d26c2347422ac51">"Det går inte att överföra hela ditt Ark-saldo till den här plånbokens egen adress på kedjan. Använd en extern Bitcoin-adress."</string>
   <string name="gt_d981ea9469a9b19c">"Din Lightning-adress är %1$s."</string>

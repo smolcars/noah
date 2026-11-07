@@ -19393,6 +19393,102 @@
         }
       }
     },
+    "Here's your Lightning invoice for {sats} sats.": {
+      "comment": "GT gt_ff07c924b6ba90db; arguments: sats",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Here's your Lightning invoice for %1$lld sat."
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Here's your Lightning invoice for %1$lld sats."
+                }
+              }
+            }
+          }
+        },
+        "es": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Aquí tienes tu factura Lightning de %1$lld sat."
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Aquí tienes tu factura Lightning de %1$lld sats."
+                }
+              }
+            }
+          }
+        },
+        "ja": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%1$lld satsのライトニング請求書を作成しました。"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%1$lld satsのライトニング請求書を作成しました。"
+                }
+              }
+            }
+          }
+        },
+        "ko": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%1$lld sats 라이트닝 인보이스를 만들었습니다."
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%1$lld sats 라이트닝 인보이스를 만들었습니다."
+                }
+              }
+            }
+          }
+        },
+        "sv": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Här är din Lightning-faktura på %1$lld sat."
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Här är din Lightning-faktura på %1$lld sats."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "Hidden for your security": {
       "comment": "GT gt_c41b2bdf4c4d8c50; arguments: none",
       "extractionState": "manual",
@@ -29269,6 +29365,42 @@
         }
       }
     },
+    "Noah's wallet isn't ready. Open Noah and try again.": {
+      "comment": "GT gt_b4a094cf754d6bb0; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noah's wallet isn't ready. Open Noah and try again."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "La billetera de Noah no está lista. Abre Noah e inténtalo de nuevo."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noahのウォレットの準備ができていません。Noahを開いて、もう一度お試しください。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noah 지갑이 아직 준비되지 않았습니다. Noah를 열고 다시 시도하세요."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noahs plånbok är inte redo. Öppna Noah och försök igen."
+          }
+        }
+      }
+    },
     "None": {
       "comment": "GT gt_dc937b59892604f5; arguments: none",
       "extractionState": "manual",
@@ -31653,6 +31785,78 @@
           "stringUnit": {
             "state": "translated",
             "value": "Öppna %1$@ i webbläsaren"
+          }
+        }
+      }
+    },
+    "Opening Send to {recipient}.": {
+      "comment": "GT gt_ad26ddf0111b8ddb; arguments: recipient",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Opening Send to %1$@."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Abriendo Enviar a %1$@."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@宛ての「送る」画面を開いています。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@에게 보내는 보내기 화면을 여는 중입니다."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Öppnar Skicka till %1$@."
+          }
+        }
+      }
+    },
+    "Opening Send.": {
+      "comment": "GT gt_eddd11b9cb21269b; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Opening Send."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Abriendo Enviar."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "「送る」画面を開いています。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "보내기 화면을 여는 중입니다."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Öppnar Skicka."
           }
         }
       }
@@ -43981,6 +44185,42 @@
         }
       }
     },
+    "The amount must be at least one sat.": {
+      "comment": "GT gt_f15bb847093c717a; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The amount must be at least one sat."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "El importe debe ser de al menos un sat."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "金額は1 sat以上にしてください。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "금액은 1 sat 이상이어야 합니다."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Beloppet måste vara minst en sat."
+          }
+        }
+      }
+    },
     "The amount or fee changed. Review the payment again.": {
       "comment": "GT gt_1f7124b49af4bb0c; arguments: none",
       "extractionState": "manual",
@@ -49045,6 +49285,42 @@
         }
       }
     },
+    "Unlock your device and try again.": {
+      "comment": "GT gt_a452df12ffd9ffcf; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Unlock your device and try again."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Desbloquea tu dispositivo e inténtalo de nuevo."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "端末のロックを解除して、もう一度お試しください。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "기기 잠금을 해제하고 다시 시도하세요."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lås upp enheten och försök igen."
+          }
+        }
+      }
+    },
     "Unlocked": {
       "comment": "GT gt_531c7b28abf27600; arguments: none",
       "extractionState": "manual",
@@ -52633,6 +52909,198 @@
         }
       }
     },
+    "You have {sats} sats, about {fiat}.": {
+      "comment": "GT gt_c761cdf072add0e0; arguments: sats, fiat",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "You have %1$lld sat, about %2$@."
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "You have %1$lld sats, about %2$@."
+                }
+              }
+            }
+          }
+        },
+        "es": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Tienes %1$lld sat, unos %2$@."
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Tienes %1$lld sats, unos %2$@."
+                }
+              }
+            }
+          }
+        },
+        "ja": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "残高は%1$lld sats（約%2$@）です。"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "残高は%1$lld sats（約%2$@）です。"
+                }
+              }
+            }
+          }
+        },
+        "ko": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "잔액은 %1$lld sats(약 %2$@)입니다."
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "잔액은 %1$lld sats(약 %2$@)입니다."
+                }
+              }
+            }
+          }
+        },
+        "sv": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Du har %1$lld sat, ungefär %2$@."
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Du har %1$lld sats, ungefär %2$@."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "You have {sats} sats.": {
+      "comment": "GT gt_fa11ee396af9d157; arguments: sats",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "You have %1$lld sat."
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "You have %1$lld sats."
+                }
+              }
+            }
+          }
+        },
+        "es": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Tienes %1$lld sat."
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Tienes %1$lld sats."
+                }
+              }
+            }
+          }
+        },
+        "ja": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "残高は%1$lld satsです。"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "残高は%1$lld satsです。"
+                }
+              }
+            }
+          }
+        },
+        "ko": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "잔액은 %1$lld sats입니다."
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "잔액은 %1$lld sats입니다."
+                }
+              }
+            }
+          }
+        },
+        "sv": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Du har %1$lld sat."
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Du har %1$lld sats."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "You keep": {
       "comment": "GT gt_0e5467ac43335fc4; arguments: none",
       "extractionState": "manual",
@@ -52777,6 +53245,102 @@
         }
       }
     },
+    "You received {sats} sats {when}.": {
+      "comment": "GT gt_154b4cd637251d3f; arguments: sats, when",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "You received %1$lld sat %2$@."
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "You received %1$lld sats %2$@."
+                }
+              }
+            }
+          }
+        },
+        "es": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Has recibido %1$lld sat %2$@."
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Has recibido %1$lld sats %2$@."
+                }
+              }
+            }
+          }
+        },
+        "ja": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%2$@、%1$lld satsを受け取りました。"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%2$@、%1$lld satsを受け取りました。"
+                }
+              }
+            }
+          }
+        },
+        "ko": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%2$@ %1$lld sats를 받았습니다."
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%2$@ %1$lld sats를 받았습니다."
+                }
+              }
+            }
+          }
+        },
+        "sv": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Du fick %1$lld sat %2$@."
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Du fick %1$lld sats %2$@."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "You sent {amount} to {counterparty} {when}.": {
       "comment": "GT gt_88d7260b755e2a52; arguments: amount, counterparty, when",
       "extractionState": "manual",
@@ -52845,6 +53409,198 @@
           "stringUnit": {
             "state": "translated",
             "value": "Du skickade %1$@ %2$@."
+          }
+        }
+      }
+    },
+    "You sent {sats} sats to {counterparty} {when}.": {
+      "comment": "GT gt_dbd7054168c50d9f; arguments: sats, counterparty, when",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "You sent %1$lld sat to %2$@ %3$@."
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "You sent %1$lld sats to %2$@ %3$@."
+                }
+              }
+            }
+          }
+        },
+        "es": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Has enviado %1$lld sat a %2$@ %3$@."
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Has enviado %1$lld sats a %2$@ %3$@."
+                }
+              }
+            }
+          }
+        },
+        "ja": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%3$@、%2$@に%1$lld satsを送金しました。"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%3$@、%2$@に%1$lld satsを送金しました。"
+                }
+              }
+            }
+          }
+        },
+        "ko": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%3$@ %2$@에게 %1$lld sats를 보냈습니다."
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%3$@ %2$@에게 %1$lld sats를 보냈습니다."
+                }
+              }
+            }
+          }
+        },
+        "sv": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Du skickade %1$lld sat till %2$@ %3$@."
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Du skickade %1$lld sats till %2$@ %3$@."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "You sent {sats} sats {when}.": {
+      "comment": "GT gt_8f351033c8ea1233; arguments: sats, when",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "You sent %1$lld sat %2$@."
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "You sent %1$lld sats %2$@."
+                }
+              }
+            }
+          }
+        },
+        "es": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Has enviado %1$lld sat %2$@."
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Has enviado %1$lld sats %2$@."
+                }
+              }
+            }
+          }
+        },
+        "ja": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%2$@、%1$lld satsを送金しました。"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%2$@、%1$lld satsを送金しました。"
+                }
+              }
+            }
+          }
+        },
+        "ko": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%2$@ %1$lld sats를 보냈습니다."
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "%2$@ %1$lld sats를 보냈습니다."
+                }
+              }
+            }
+          }
+        },
+        "sv": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Du skickade %1$lld sat %2$@."
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Du skickade %1$lld sats %2$@."
+                }
+              }
+            }
           }
         }
       }

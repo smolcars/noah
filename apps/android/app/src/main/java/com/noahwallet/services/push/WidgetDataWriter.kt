@@ -66,6 +66,11 @@ object WidgetDataWriter {
     /** Home's latest quote in this process, kept whether or not a snapshot exists yet; guarded by [writes]. */
     private var latestQuote: Quote? = null
 
+    /** Home's newest valid quote in [currency], as the next snapshot would carry it; voice assistants' replies read it. */
+    suspend fun quote(context: Context, variant: String, currency: String): Quote? = withContext(Dispatchers.IO) {
+        writes.withLock { quote(currency, WidgetSnapshot.decode(prefs(context, variant).getString(WidgetSnapshot.KEY, null))) }
+    }
+
     /** Tests start without a quote from an earlier one. */
     internal fun forgetQuote() { latestQuote = null }
 

@@ -549,6 +549,10 @@
   <string name="gt_b79cac926e0b2e34">"ヘルプ"</string>
   <string name="gt_90eb91beacd18ab3">"新しいArkアドレスです。"</string>
   <string name="gt_6772bebdaef128b9">"%1$sのライトニング請求書です。"</string>
+  <plurals name="gt_ff07c924b6ba90db">
+    <item quantity="one">"%1$s satsのライトニング請求書を作成しました。"</item>
+    <item quantity="other">"%1$s satsのライトニング請求書を作成しました。"</item>
+  </plurals>
   <string name="gt_c41b2bdf4c4d8c50">"安全のため非表示"</string>
   <string name="gt_62380501bdf8fc5b">"画面の収録中または共有中は非表示"</string>
   <string name="gt_2ae92318e0d70a21">"金額を隠す"</string>
@@ -826,6 +830,7 @@
   <string name="gt_ddecc0272120b4ba">"Noahユーザー"</string>
   <string name="gt_f802f9f1257fc080">"この支払いの送信中にNoahの動作が中断されました。再開する前に取引履歴を確認してください。"</string>
   <string name="gt_deca5f2b35700ac7">"NoahがこれらをArkに戻すことはありません。"</string>
+  <string name="gt_b4a094cf754d6bb0">"Noahのウォレットの準備ができていません。Noahを開いて、もう一度お試しください。"</string>
   <string name="gt_dc937b59892604f5">"なし"</string>
   <string name="gt_5e2edf7902eab86b">"Nostrの鍵"</string>
   <string name="gt_e3df4eceed29d5f4">"Nostrの鍵（任意）"</string>
@@ -895,6 +900,8 @@
   <string name="gt_762a16c9c74f5e0f">"ウォレットを開く"</string>
   <string name="gt_6be6caff13df7c0f">"エンドポイントを変更する前にウォレットを開いてください。"</string>
   <string name="gt_f4ce6b8f22a13fe1">"%1$sをブラウザーで開く"</string>
+  <string name="gt_ad26ddf0111b8ddb">"%1$s宛ての「送る」画面を開いています。"</string>
+  <string name="gt_eddd11b9cb21269b">"「送る」画面を開いています。"</string>
   <string name="gt_557d3ad870771176">"内蔵のBTC Mapを開いています…"</string>
   <string name="gt_eb4bbb3d312d0b21">"コインの詳細を開きます"</string>
   <string name="gt_650eb5d460a4e887">"Optic ID"</string>
@@ -1240,6 +1247,7 @@
   <string name="gt_96100ca2d23b8821">"Esploraエンドポイントが別のBitcoinネットワーク用です。"</string>
   <string name="gt_9dc2f0b60de257af">"Lightning支払いを受け取れませんでした。新しい支払いリクエストを作成して再試行してください。"</string>
   <string name="gt_f663d0d5c263a46c">"Arkが受け取る金額が最低額を下回っています。Arkへの入金額を増やしてください。"</string>
+  <string name="gt_f15bb847093c717a">"金額は1 sat以上にしてください。"</string>
   <string name="gt_1f7124b49af4bb0c">"金額または手数料が変更されました。支払い内容を再確認してください。"</string>
   <string name="gt_d99fbad70ce6933e">"必要額は変動する場合があります。"</string>
   <string name="gt_d016dcf9ce33d5ac">"利用可能な資金が変わりました。支払い内容を再確認してください。"</string>
@@ -1382,6 +1390,7 @@
   <string name="gt_99e8588dce6a534a">"Noahのロックを解除"</string>
   <string name="gt_b126042b7ef8a274">"VTXOのロックを解除"</string>
   <string name="gt_3470a00c3bb2d5ca">"ウォレットを見るにはロックを解除してください。"</string>
+  <string name="gt_a452df12ffd9ffcf">"端末のロックを解除して、もう一度お試しください。"</string>
   <string name="gt_531c7b28abf27600">"ロック解除"</string>
   <string name="gt_38674ce943ca4bc9">"ブロック %1$s でロック解除"</string>
   <string name="gt_c5b5f0e95343c511">"ブロック %1$s でロック解除"</string>
@@ -1483,12 +1492,32 @@
   <string name="gt_4cd8ef2093993de6">"受け取る金額"</string>
   <string name="gt_9f6549efd14b2751">"残高は%1$s（約%2$s）です。"</string>
   <string name="gt_798f886af0f2bdcf">"残高は%1$sです。"</string>
+  <plurals name="gt_c761cdf072add0e0">
+    <item quantity="one">"残高は%1$s sats（約%2$s）です。"</item>
+    <item quantity="other">"残高は%1$s sats（約%2$s）です。"</item>
+  </plurals>
+  <plurals name="gt_fa11ee396af9d157">
+    <item quantity="one">"残高は%1$s satsです。"</item>
+    <item quantity="other">"残高は%1$s satsです。"</item>
+  </plurals>
   <string name="gt_0e5467ac43335fc4">"手元に残る額"</string>
   <string name="gt_69322f7fe4b0cf74">"ウォレットの復元に必要です"</string>
   <string name="gt_357f1a2fdf17bb53">"%1$sを受け取りました"</string>
   <string name="gt_b6e58830ce7247d1">"%2$s、%1$sを受け取りました。"</string>
+  <plurals name="gt_154b4cd637251d3f">
+    <item quantity="one">"%2$s、%1$s satsを受け取りました。"</item>
+    <item quantity="other">"%2$s、%1$s satsを受け取りました。"</item>
+  </plurals>
   <string name="gt_88d7260b755e2a52">"%3$s、%2$sに%1$sを送金しました。"</string>
   <string name="gt_620eb9c0a2aa2de8">"%2$s、%1$sを送金しました。"</string>
+  <plurals name="gt_dbd7054168c50d9f">
+    <item quantity="one">"%3$s、%2$sに%1$s satsを送金しました。"</item>
+    <item quantity="other">"%3$s、%2$sに%1$s satsを送金しました。"</item>
+  </plurals>
+  <plurals name="gt_8f351033c8ea1233">
+    <item quantity="one">"%2$s、%1$s satsを送金しました。"</item>
+    <item quantity="other">"%2$s、%1$s satsを送金しました。"</item>
+  </plurals>
   <string name="gt_723022dbd02fce20">"定期支払いの登録数が上限に達しました。"</string>
   <string name="gt_3d26c2347422ac51">"Ark残高をこのウォレット自身のオンチェーンアドレスに全額送金することはできません。外部のBitcoinアドレスを使用してください。"</string>
   <string name="gt_d981ea9469a9b19c">"あなたのライトニングアドレスは%1$sです。"</string>

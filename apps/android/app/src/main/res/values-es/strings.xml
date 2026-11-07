@@ -556,6 +556,11 @@
   <string name="gt_b79cac926e0b2e34">"Ayuda"</string>
   <string name="gt_90eb91beacd18ab3">"Aquí tienes una dirección de Ark nueva."</string>
   <string name="gt_6772bebdaef128b9">"Aquí tienes tu factura de Lightning por %1$s."</string>
+  <plurals name="gt_ff07c924b6ba90db">
+    <item quantity="one">"Aquí tienes tu factura Lightning de %1$s sat."</item>
+    <item quantity="many">"Aquí tienes tu factura Lightning de %1$s sats."</item>
+    <item quantity="other">"Aquí tienes tu factura Lightning de %1$s sats."</item>
+  </plurals>
   <string name="gt_c41b2bdf4c4d8c50">"Oculto por tu seguridad"</string>
   <string name="gt_62380501bdf8fc5b">"Oculto mientras tu pantalla se graba o se comparte"</string>
   <string name="gt_2ae92318e0d70a21">"Ocultar importes"</string>
@@ -835,6 +840,7 @@
   <string name="gt_ddecc0272120b4ba">"Usuario de Noah"</string>
   <string name="gt_f802f9f1257fc080">"Noah se interrumpió durante el envío de este pago. Revisa tu historial de transacciones antes de reanudarlo."</string>
   <string name="gt_deca5f2b35700ac7">"Noah no los devolverá a Ark."</string>
+  <string name="gt_b4a094cf754d6bb0">"La billetera de Noah no está lista. Abre Noah e inténtalo de nuevo."</string>
   <string name="gt_dc937b59892604f5">"Ninguno"</string>
   <string name="gt_5e2edf7902eab86b">"Clave de Nostr"</string>
   <string name="gt_e3df4eceed29d5f4">"Clave de Nostr (opcional)"</string>
@@ -906,6 +912,8 @@
   <string name="gt_762a16c9c74f5e0f">"Abrir billetera"</string>
   <string name="gt_6be6caff13df7c0f">"Abre tu billetera antes de cambiar el punto de acceso."</string>
   <string name="gt_f4ce6b8f22a13fe1">"Abrir %1$s en el navegador"</string>
+  <string name="gt_ad26ddf0111b8ddb">"Abriendo Enviar a %1$s."</string>
+  <string name="gt_eddd11b9cb21269b">"Abriendo Enviar."</string>
   <string name="gt_557d3ad870771176">"Abriendo BTC Map integrado…"</string>
   <string name="gt_eb4bbb3d312d0b21">"Abre los detalles de la moneda"</string>
   <string name="gt_650eb5d460a4e887">"Optic ID"</string>
@@ -1253,6 +1261,7 @@
   <string name="gt_96100ca2d23b8821">"El punto de acceso de Esplora corresponde a otra red Bitcoin."</string>
   <string name="gt_9dc2f0b60de257af">"No se pudo recibir el pago Lightning. Genera una nueva solicitud de pago e inténtalo de nuevo."</string>
   <string name="gt_f663d0d5c263a46c">"El importe que recibe Ark es inferior al mínimo requerido. Aumenta el importe del depósito."</string>
+  <string name="gt_f15bb847093c717a">"El importe debe ser de al menos un sat."</string>
   <string name="gt_1f7124b49af4bb0c">"El importe o la comisión han cambiado. Revisa el pago de nuevo."</string>
   <string name="gt_d99fbad70ce6933e">"El importe necesario puede variar."</string>
   <string name="gt_d016dcf9ce33d5ac">"Los fondos disponibles han cambiado. Vuelve a revisar el pago."</string>
@@ -1396,6 +1405,7 @@
   <string name="gt_99e8588dce6a534a">"Desbloquear Noah"</string>
   <string name="gt_b126042b7ef8a274">"Desbloquear VTXO"</string>
   <string name="gt_3470a00c3bb2d5ca">"Desbloquea para ver tu billetera."</string>
+  <string name="gt_a452df12ffd9ffcf">"Desbloquea tu dispositivo e inténtalo de nuevo."</string>
   <string name="gt_531c7b28abf27600">"Desbloqueado"</string>
   <string name="gt_38674ce943ca4bc9">"Desbloqueado en el bloque %1$s"</string>
   <string name="gt_c5b5f0e95343c511">"Se desbloquea en el bloque %1$s"</string>
@@ -1498,12 +1508,37 @@
   <string name="gt_4cd8ef2093993de6">"Recibes"</string>
   <string name="gt_9f6549efd14b2751">"Tienes %1$s, unos %2$s."</string>
   <string name="gt_798f886af0f2bdcf">"Tienes %1$s."</string>
+  <plurals name="gt_c761cdf072add0e0">
+    <item quantity="one">"Tienes %1$s sat, unos %2$s."</item>
+    <item quantity="many">"Tienes %1$s sats, unos %2$s."</item>
+    <item quantity="other">"Tienes %1$s sats, unos %2$s."</item>
+  </plurals>
+  <plurals name="gt_fa11ee396af9d157">
+    <item quantity="one">"Tienes %1$s sat."</item>
+    <item quantity="many">"Tienes %1$s sats."</item>
+    <item quantity="other">"Tienes %1$s sats."</item>
+  </plurals>
   <string name="gt_0e5467ac43335fc4">"Conservas"</string>
   <string name="gt_69322f7fe4b0cf74">"La necesitas para restaurar tu billetera"</string>
   <string name="gt_357f1a2fdf17bb53">"Has recibido %1$s"</string>
   <string name="gt_b6e58830ce7247d1">"Recibiste %1$s %2$s."</string>
+  <plurals name="gt_154b4cd637251d3f">
+    <item quantity="one">"Has recibido %1$s sat %2$s."</item>
+    <item quantity="many">"Has recibido %1$s sats %2$s."</item>
+    <item quantity="other">"Has recibido %1$s sats %2$s."</item>
+  </plurals>
   <string name="gt_88d7260b755e2a52">"Enviaste %1$s a %2$s %3$s."</string>
   <string name="gt_620eb9c0a2aa2de8">"Enviaste %1$s %2$s."</string>
+  <plurals name="gt_dbd7054168c50d9f">
+    <item quantity="one">"Has enviado %1$s sat a %2$s %3$s."</item>
+    <item quantity="many">"Has enviado %1$s sats a %2$s %3$s."</item>
+    <item quantity="other">"Has enviado %1$s sats a %2$s %3$s."</item>
+  </plurals>
+  <plurals name="gt_8f351033c8ea1233">
+    <item quantity="one">"Has enviado %1$s sat %2$s."</item>
+    <item quantity="many">"Has enviado %1$s sats %2$s."</item>
+    <item quantity="other">"Has enviado %1$s sats %2$s."</item>
+  </plurals>
   <string name="gt_723022dbd02fce20">"Has alcanzado el número máximo de pagos recurrentes."</string>
   <string name="gt_3d26c2347422ac51">"No puedes transferir todo tu saldo Ark a la dirección en cadena de esta misma billetera. Usa una dirección Bitcoin externa."</string>
   <string name="gt_d981ea9469a9b19c">"Tu dirección de Lightning es %1$s."</string>
