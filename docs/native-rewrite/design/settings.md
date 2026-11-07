@@ -115,7 +115,7 @@ Build each page as the prototype and the notes' "Every current feature" tables d
   - Battery (Android, Decision 6);
   - UnifiedPush, only without Google Play: distributor radio list, endpoint with copy, Register.
   - The launch push gate is unchanged.
-- **Siri (iOS):** one line, Siri's tip for the balance, "Try saying" with a phrase each for Request, Lightning address, Last payment and Scan (as Siri hears them: the system's language, the app's name), and the system's "Noah shortcuts" link. The "Siri & Search" switch joins it later ([`voice-assistants.md`](voice-assistants.md)).
+- **Siri (iOS):** one line, Siri's tip for the balance, the "Siri & Search" switch (on by default; off removes everything Noah indexed), "Try saying" with a phrase each for Request, Lightning address, Last payment, Scan and Pay (as Siri hears them: the system's language, the app's name), and the system's "Noah shortcuts" link ([`voice-assistants.md`](voice-assistants.md)).
 - **Advanced:**
   - Ark server (every row today's Ark info shows, with plainer labels; bitcoind RPC only on regtest);
   - Esplora (test, save, reset, as today);

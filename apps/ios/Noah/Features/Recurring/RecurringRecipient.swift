@@ -41,6 +41,7 @@ extension RecurringExecutor.Dependencies {
                          // No chain tip here: the wave's earlier days and the Renew line stay as they are.
                          let facts = (try? await services.session.widgetFacts(readsTip: false)) ?? .init()
                          WidgetDataWriter.write(balance: summary.balance, facts: facts, variant: services.variant, ticket: ticket)
+                         await SiriIndexer.shared.refresh(balance: summary.balance.totalSats, session: services.session)
                      })
     }
 }

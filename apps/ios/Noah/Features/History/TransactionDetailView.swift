@@ -88,6 +88,7 @@ struct TransactionDetailView: View {
             reads.select(id)
         }
         .onboardingHaptics(haptics)
+        .modifier(SiriPaymentOnScreen(id: transaction.id))
         .accessibilityIdentifier("transaction-detail")
     }
 

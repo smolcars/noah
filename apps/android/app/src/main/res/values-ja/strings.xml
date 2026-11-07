@@ -650,6 +650,7 @@
   <string name="gt_1d78b52b9fdeac1c">"除外: %1$s、出金するには少なすぎます。"</string>
   <string name="gt_6e2d65a1c9f1b6a6">"Noah をバックグラウンドで動かす"</string>
   <string name="gt_e085922bf6346107">"Lightningの受け取りのためにNoahを起動できます"</string>
+  <string name="gt_16b46479b76a48f6">"SiriとSpotlightで残高、支払い、支払い先を見つけられます"</string>
   <string name="gt_17968e6e1b20c79e">"英字と数字"</string>
   <string name="gt_dbcd5e7bb7a0f538">"ライト"</string>
   <string name="gt_41e68f2cdb3806bb">"ライトニング"</string>
@@ -930,6 +931,7 @@
   <string name="gt_2537c82bbce31609">"ウォレットのすべての動作を一時停止します"</string>
   <string name="gt_0468d821ffcacc9e">"もう一度支払う"</string>
   <string name="gt_0e451980296d716f">"それでも再度支払う"</string>
+  <string name="gt_9411da19987facec">"誰かに支払う"</string>
   <string name="gt_fbccc2394f7f77c6">"支払い方法"</string>
   <string name="gt_046aa79048e8f8a5">"Lightningで支払い中"</string>
   <string name="gt_fef5813efef1e50a">"%1$s sat/vBで支払い中 · ブロック %2$s を待っています"</string>
@@ -993,6 +995,7 @@
   <string name="gt_85cf80c2abc7c5f1">"受信時のDoS対策"</string>
   <string name="gt_49f19beeecf442ef">"受取済み"</string>
   <string name="gt_076d920ee7b4ec38">"受取経路"</string>
+  <string name="gt_c83fb2b89d2238d7">"%1$sを受け取りました"</string>
   <string name="gt_690dbe9dc0993c42">"最近"</string>
   <string name="gt_aa815083375c5f6e">"受取人の受取額が未確定"</string>
   <string name="gt_fdbcd05664b4ce23">"受取人の受取額は約%1$s satsです"</string>
@@ -1160,6 +1163,8 @@
   <string name="gt_4e7201c7b8985a98">"送金先"</string>
   <string name="gt_21cfd8fdcf01d5a0">"%1$s に送金済み"</string>
   <string name="gt_fba003c1a141b7a1">"%1$s を送金しました"</string>
+  <string name="gt_0e9f9136e344eb7d">"合計%1$sを送金、最後は%2$s。"</string>
+  <string name="gt_7dc2f77d8a0a618e">"%2$sに%1$sを送金しました"</string>
   <string name="gt_c653cd477710322c">"サーバーの鍵"</string>
   <string name="gt_2b93f3e367d004bf">"サーバーを更新しました"</string>
   <string name="gt_604dce445e326d95">"サービス"</string>
@@ -1184,6 +1189,7 @@
   <string name="gt_99eb08cbad43b0c6">"Signet"</string>
   <string name="gt_4f5664161ec4f520">"Arkと署名中"</string>
   <string name="gt_7cdcbd87852f9d12">"Siri"</string>
+  <string name="gt_efeb70768f0347ae">"Siriと検索"</string>
   <string name="gt_28d03596d24eeb4e">"スキップ"</string>
   <string name="gt_12698ce1ea5cd4ab">"スキップ済み"</string>
   <string name="gt_44d27a286f01669e">"最小移動額"</string>

@@ -58,6 +58,40 @@ struct PaymentLinkTests {
         }
     }
 
+    /// Siri's Pay takes the link's route: held, refused over an approval, handed over once with its amount, and
+    /// filled into Send, which goes on as for a request with an amount. Nothing is sent.
+    @Test func siriPayIsHeldAndHandedOverAsALinkIs() async throws {
+        let route = PaymentLinkRoute()
+        let pay = PaymentLinkRoute.Pay(recipient: "sam@noahwallet.com", sats: 5000)
+        route.receive(pay, gate: .ignore)
+        #expect(route.pending == nil)
+        route.receive(pay, gate: .hold)
+        #expect(route.takeRequest(.hold) == nil && route.pending == pay.recipient && route.pendingSats == 5000)
+        route.approvalOpen = true
+        #expect(route.takeRequest(.open) == nil && route.approvalBlocked && route.pending == nil && route.pendingSats == nil)
+        route.approvalOpen = false
+        // A link arriving later carries no amount of Siri's.
+        route.receive(pay, gate: .open)
+        route.receive(try #require(URL(string: "lightning:\(Self.invoice)")), gate: .open)
+        #expect(try #require(route.takeRequest(.open)).sats == nil)
+        route.receive(pay, gate: .open)
+        let request = try #require(route.takeRequest(.open))
+        #expect(request.link == pay.recipient && request.sats == 5000 && route.pending == nil)
+
+        let model = send(funds: 100_000)
+        #expect(await PaymentLinkRoute.apply(request.link, to: model, sats: request.sats))
+        #expect(model.destination == pay.recipient && model.amount == "5000" && model.error == nil)
+        #expect(model.stage == .review && model.showReview && model.controller.attempt == nil)
+        // Never over the review: the next request waits.
+        #expect(await !PaymentLinkRoute.apply(request.link, to: model, sats: 1))
+        #expect(model.amount == "5000")
+
+        // Without an amount Send asks for one, the recipient already chosen.
+        let asks = send(funds: 100_000)
+        #expect(await PaymentLinkRoute.apply(pay.recipient, to: asks))
+        #expect(asks.stage == .amount && asks.progress.recipientConfirmed && asks.amount.isEmpty)
+    }
+
     @Test func heldThroughLaunchAndTheLockThenAppliedOnceAfterUnlock() async throws {
         var lock = BiometricLockPolicy(enabled: true)
         let route = PaymentLinkRoute()

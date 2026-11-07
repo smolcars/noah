@@ -46,17 +46,19 @@ final class QRHubModel {
 /// Navigation boundary only: reuse Send's draft reset/import, never replace a live payment.
 @MainActor
 enum QRScanRoute {
-    static func apply(_ value: String, to model: SendModel) async -> Bool {
+    /// `sats`: Siri's Pay amount, filled in before the recipient so Send goes on as it would for a request with one.
+    static func apply(_ value: String, to model: SendModel, sats: UInt64? = nil) async -> Bool {
         guard !model.controller.locked, !model.busy else { return false }
         model.reset()
         model.recipientFirst() // A code that isn't a destination shows on To, as today.
+        if let sats { model.amount = String(sats) }
         await model.importRecipient(value)
         return true
     }
 }
 
-/// `bitcoin:`, `lightning:` and `lnurlp:` links from the OS take `QRScanRoute`. A link lives in memory only:
-/// held through launch and the app lock, ignored behind onboarding or a launch gate, and handed over once.
+/// `bitcoin:`, `lightning:` and `lnurlp:` links from the OS, and Siri's Pay, take `QRScanRoute`. A link lives in memory
+/// only: held through launch and the app lock, ignored behind onboarding or a launch gate, and handed over once.
 @MainActor
 @Observable
 final class PaymentLinkRoute {
@@ -75,7 +77,15 @@ final class PaymentLinkRoute {
         }
     }
 
+    /// Siri's Pay someone: an address Send fills in, with an amount or nil for Send to ask.
+    struct Pay: Equatable, Sendable {
+        var recipient: String
+        var sats: UInt64?
+    }
+
     private(set) var pending: String?
+    /// Siri's Pay amount for `pending`; a link carries its own.
+    private(set) var pendingSats: UInt64?
     /// A recurring approval's sheet is open. It shows the alert for a link refused over it:
     /// one from Send's tabs would dismiss the sheet.
     var approvalOpen = false
@@ -85,21 +95,32 @@ final class PaymentLinkRoute {
     func receive(_ url: URL, gate: Gate) {
         guard gate != .ignore, ["bitcoin", "lightning", "lnurlp"].contains(url.scheme?.lowercased()) else { return }
         pending = url.absoluteString
+        pendingSats = nil
+    }
+
+    /// Siri's Pay, held and handed over exactly like a link.
+    func receive(_ pay: Pay, gate: Gate) {
+        guard gate != .ignore else { return }
+        pending = pay.recipient
+        pendingSats = pay.sats
     }
 
     /// The held link once the gate opens; an ignoring gate or an open approval drops it.
-    func take(_ gate: Gate) -> String? {
+    func take(_ gate: Gate) -> String? { takeRequest(gate)?.link }
+
+    /// The held link, with Siri's Pay amount, once the gate opens.
+    func takeRequest(_ gate: Gate) -> (link: String, sats: UInt64?)? {
         guard gate != .hold else { return nil }
-        defer { pending = nil }
-        guard gate == .open, pending != nil else { return nil }
+        defer { pending = nil; pendingSats = nil }
+        guard gate == .open, let pending else { return nil }
         if approvalOpen { approvalBlocked = true; return nil }
-        return pending
+        return (pending, pendingSats)
     }
 
     /// Send takes a link as a scan, but never over a review it is preparing or showing.
-    static func apply(_ link: String, to send: SendModel) async -> Bool {
+    static func apply(_ link: String, to send: SendModel, sats: UInt64? = nil) async -> Bool {
         guard send.stage != .review, !send.showReview else { return false }
         send.scanning = false // The camera would cover the request.
-        return await QRScanRoute.apply(link, to: send)
+        return await QRScanRoute.apply(link, to: send, sats: sats)
     }
 }

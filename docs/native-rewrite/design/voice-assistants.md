@@ -67,8 +67,8 @@ grouping. `fiat` is the already formatted fiat string or null.
 
 - **Phrases** (`NoahAppShortcuts.swift`): every shortcut lists the ways people ask, with the app's name in
   several places ("… in Noah", "Use Noah to …", "Ask Noah …"). Balance leads with phrases that avoid the word
-  "balance" ("How many sats do I have in Noah") to dodge Apple Wallet. The React Native phrases all stay. Seven
-  shortcuts; Pay makes eight.
+  "balance" ("How many sats do I have in Noah") to dodge Apple Wallet. The React Native phrases all stay. Eight
+  shortcuts with Pay.
 - **Translations** (`Resources/AppShortcuts.xcstrings`): hand-translated into es, ja, ko and sv, outside
   `apps/tools/translations.mjs` (phrases are iOS-only, a different table, and must never go to General
   Translation). `AppShortcutPhraseTests` fails when a phrase lacks a locale, loses `${applicationName}`, or two
@@ -94,3 +94,26 @@ and Spotlight can answer questions like "How much bitcoin do I have" or "When di
 - It stays on while the wallet lock is on (user decision 2026-11-06): Siri on device may read it.
 - The index is refreshed after each successful sync and payment, and cleared when the wallet is
   deleted.
+- **What** (`SiriIndex.swift`, iOS 18.4+ for indexing keys): the balance in sats with Siri's balance reply as its
+  summary (fiat only as the reply adds it); settled payments by Last payment's rule, the newest 200 from the last 365
+  days, each with direction, amount, the Lightning address an outgoing payment went to, its note and date; and
+  recipients: Send's recents rule (12, as its To search) plus recurring payments' recipients, each with what you've
+  sent it in all and when you last paid it. Nothing secret, and nothing from a pending, failed or canceled row.
+- **When** (`SiriIndexer`): the balance after each foreground read (every sync) and Activity's rows each time they
+  change; background refresh, push jobs and recurring payments hand over the balance and the session's rows from the
+  pass they already hold. Only what changed is written; a new process replaces the payments and recipients an
+  earlier one left. Updates read before the wallet was deleted are dropped.
+- **Off** removes Noah's balance, payments and recipients from the index and stops indexing; Siri's queries then
+  see nothing, and Pay suggests no one (an address said or typed in full still works). On indexes again from what
+  the app last read.
+- Activity's detail and rows carry `appEntityIdentifier`, so "this payment" is the one on screen.
+
+## Pay someone (iOS)
+
+- The eighth App Shortcut, with a recipient entity (`NoahRecipientEntity`, ID = the address) and an optional amount
+  Siri never asks for. Phrases name the recipient ("Pay Sam with Noah") or let Siri ask who.
+  Suggestions are the index's recipients; `updateAppShortcutParameters()` runs when they change.
+- It opens the app and hands the request to the payment-link route (`PaymentLinkRoute`), so onboarding, launch
+  gates, the app lock, an open recurring approval and a payment under way treat it as a tapped link. Send fills in
+  the recipient and amount and goes on as for a scanned request with one (Method or Review); without an amount it
+  stops on the keypad. Nothing sends until the user holds to send.

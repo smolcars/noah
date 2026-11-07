@@ -22933,6 +22933,42 @@
         }
       }
     },
+    "Lets Siri and Spotlight find your balance, payments and who you pay": {
+      "comment": "GT gt_16b46479b76a48f6; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lets Siri and Spotlight find your balance, payments and who you pay"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Permite que Siri y Spotlight encuentren tu saldo, tus pagos y a quién pagas"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "SiriとSpotlightで残高、支払い、支払い先を見つけられます"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Siri와 Spotlight가 잔액, 결제, 결제 상대를 찾을 수 있어요"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Låter Siri och Spotlight hitta ditt saldo, dina betalningar och vem du betalar"
+          }
+        }
+      }
+    },
     "Letters and numbers": {
       "comment": "GT gt_17968e6e1b20c79e; arguments: none",
       "extractionState": "manual",
@@ -32869,6 +32905,42 @@
         }
       }
     },
+    "Pay someone": {
+      "comment": "GT gt_9411da19987facec; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pay someone"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pagar a alguien"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "誰かに支払う"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "다른 사람에게 결제"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Betala någon"
+          }
+        }
+      }
+    },
     "Pay with": {
       "comment": "GT gt_fbccc2394f7f77c6; arguments: none",
       "extractionState": "manual",
@@ -35133,6 +35205,42 @@
           "stringUnit": {
             "state": "translated",
             "value": "Mottaget på"
+          }
+        }
+      }
+    },
+    "Received {amount}": {
+      "comment": "GT gt_c83fb2b89d2238d7; arguments: amount",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Received %1$@"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ recibido"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@を受け取りました"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ 받음"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ mottaget"
           }
         }
       }
@@ -41053,6 +41161,78 @@
         }
       }
     },
+    "Sent {amount} in all, last on {date}.": {
+      "comment": "GT gt_0e9f9136e344eb7d; arguments: amount, date",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sent %1$@ in all, last on %2$@."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ enviados en total, el último el %2$@."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "合計%1$@を送金、最後は%2$@。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "총 %1$@를 보냈습니다. 마지막: %2$@."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ skickat totalt, senast %2$@."
+          }
+        }
+      }
+    },
+    "Sent {amount} to {recipient}": {
+      "comment": "GT gt_7dc2f77d8a0a618e; arguments: amount, recipient",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sent %1$@ to %2$@"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ enviado a %2$@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%2$@に%1$@を送金しました"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%2$@에게 %1$@ 보냄"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "%1$@ skickat till %2$@"
+          }
+        }
+      }
+    },
     "Server key": {
       "comment": "GT gt_c653cd477710322c; arguments: none",
       "extractionState": "manual",
@@ -41913,6 +42093,42 @@
           "stringUnit": {
             "state": "translated",
             "value": "Siri"
+          }
+        }
+      }
+    },
+    "Siri & Search": {
+      "comment": "GT gt_efeb70768f0347ae; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Siri & Search"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Siri y Búsqueda"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Siriと検索"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Siri 및 검색"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Siri och sökning"
           }
         }
       }

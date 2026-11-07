@@ -650,6 +650,7 @@
   <string name="gt_1d78b52b9fdeac1c">"제외: %1$s, 출금하기에 너무 적음."</string>
   <string name="gt_6e2d65a1c9f1b6a6">"Noah가 백그라운드에서 실행되게 하세요"</string>
   <string name="gt_e085922bf6346107">"라이트닝 결제를 받을 때 Noah가 깨어날 수 있어요"</string>
+  <string name="gt_16b46479b76a48f6">"Siri와 Spotlight가 잔액, 결제, 결제 상대를 찾을 수 있어요"</string>
   <string name="gt_17968e6e1b20c79e">"영문자와 숫자"</string>
   <string name="gt_dbcd5e7bb7a0f538">"밝게"</string>
   <string name="gt_41e68f2cdb3806bb">"Lightning"</string>
@@ -930,6 +931,7 @@
   <string name="gt_2537c82bbce31609">"지갑의 모든 활동을 일시 중지해요"</string>
   <string name="gt_0468d821ffcacc9e">"다시 결제"</string>
   <string name="gt_0e451980296d716f">"그래도 다시 결제"</string>
+  <string name="gt_9411da19987facec">"다른 사람에게 결제"</string>
   <string name="gt_fbccc2394f7f77c6">"결제 수단"</string>
   <string name="gt_046aa79048e8f8a5">"라이트닝으로 결제 중"</string>
   <string name="gt_fef5813efef1e50a">"%1$s sat/vB 지불 중 · 블록 %2$s 대기 중"</string>
@@ -993,6 +995,7 @@
   <string name="gt_85cf80c2abc7c5f1">"수신 DoS 방어"</string>
   <string name="gt_49f19beeecf442ef">"받음"</string>
   <string name="gt_076d920ee7b4ec38">"수신 주소"</string>
+  <string name="gt_c83fb2b89d2238d7">"%1$s 받음"</string>
   <string name="gt_690dbe9dc0993c42">"최근"</string>
   <string name="gt_aa815083375c5f6e">"받는 사람의 수령액 미정"</string>
   <string name="gt_fdbcd05664b4ce23">"받는 사람의 수령액은 약 %1$s sats입니다"</string>
@@ -1160,6 +1163,8 @@
   <string name="gt_4e7201c7b8985a98">"수신 대상"</string>
   <string name="gt_21cfd8fdcf01d5a0">"%1$s(으)로 보냄"</string>
   <string name="gt_fba003c1a141b7a1">"%1$s 보냄"</string>
+  <string name="gt_0e9f9136e344eb7d">"총 %1$s를 보냈습니다. 마지막: %2$s."</string>
+  <string name="gt_7dc2f77d8a0a618e">"%2$s에게 %1$s 보냄"</string>
   <string name="gt_c653cd477710322c">"서버 키"</string>
   <string name="gt_2b93f3e367d004bf">"서버 새로 고침 완료"</string>
   <string name="gt_604dce445e326d95">"서비스"</string>
@@ -1184,6 +1189,7 @@
   <string name="gt_99eb08cbad43b0c6">"Signet"</string>
   <string name="gt_4f5664161ec4f520">"Ark와 서명 중"</string>
   <string name="gt_7cdcbd87852f9d12">"Siri"</string>
+  <string name="gt_efeb70768f0347ae">"Siri 및 검색"</string>
   <string name="gt_28d03596d24eeb4e">"건너뛰기"</string>
   <string name="gt_12698ce1ea5cd4ab">"건너뜀"</string>
   <string name="gt_44d27a286f01669e">"최소 이동 금액"</string>

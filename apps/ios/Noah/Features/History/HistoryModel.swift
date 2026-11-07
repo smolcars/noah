@@ -23,6 +23,8 @@ final class HistoryModel {
         var blockTimeRead: @Sendable (String, Date) -> Void = { _, _ in }
         /// The wallet's rows were published (how many), before enrichment.
         var rowsShown: @Sendable (Int) -> Void = { _ in }
+        /// The rows, for Siri's index (`SiriIndexer`).
+        var indexRows: @Sendable (_ rows: [HistoryTransaction], _ tip: UInt32?) -> Void = { _, _ in }
 
         static func live(session: WalletSession, client: Client, variant: AppVariant) -> Self {
             Self(
@@ -65,7 +67,12 @@ final class HistoryModel {
                 chainStatus: { try await session.chainTransactionStatus($0) },
                 coin: { try await session.vtxo($0) },
                 blockTimeRead: { WidgetChainDates.shared.record(txid: $0, at: $1) },
-                rowsShown: { LaunchTiming.shared.mark(.historyShown, suffix: " (\($0) rows)") })
+                rowsShown: { LaunchTiming.shared.mark(.historyShown, suffix: " (\($0) rows)") },
+                indexRows: { rows, tip in
+                    // Confirmed on-chain rows are dated as Siri's background reads date them (`datedTransactionHistory`).
+                    let chain = Set(rows.filter { $0.source == "onchain-wallet" }.compactMap(\.txid))
+                    SiriIndexer.shared.update(history: AssistantReply.datingChainRows(rows, known: WidgetChainDates.shared.stored(chain), tip: tip))
+                })
         }
     }
 
@@ -164,6 +171,7 @@ final class HistoryModel {
             dependencies.rowsShown(transactions.count)
             // One worker bounds optional requests without holding up wallet observation.
             enrichment = Task {
+                await self.index(latest, generation: generation)
                 await previous?.value
                 await self.enrich(latest, currency: currency, generation: generation)
             }
@@ -178,6 +186,14 @@ final class HistoryModel {
                 log.w("History read failed")
             }
         }
+    }
+
+    /// Siri's index gets this refresh's rows once the chain tip dates their confirmed on-chain payments.
+    private func index(_ rows: [HistoryTransaction], generation: UUID) async {
+        var tip: UInt32?
+        if rows.contains(where: { $0.source == "onchain-wallet" }) { tip = try? await dependencies.chainTip() }
+        guard self.generation == generation else { return }
+        dependencies.indexRows(rows, tip)
     }
 
     /// The cached block time, or a fetch after publishing what's ready (a miss can stall the single worker).

@@ -6,7 +6,10 @@ struct RootView: View {
     private var lock: WalletLock { model.walletLock }
     @State private var showingDelete = false
     @State private var paymentTap = PaymentTapRoute.shared
+    @State private var siriPay: SiriPayRoute
     @Environment(\.scenePhase) private var scenePhase
+
+    init(siriPay: SiriPayRoute = .shared) { _siriPay = State(initialValue: siriPay) }
 
     /// One onboarding instance across these phases, so a restore's closing
     /// moment survives the switch to `.wallet`.
@@ -29,6 +32,12 @@ struct RootView: View {
         // Launch ending in onboarding or a gate drops a link held through it. Initial: the phase swaps this Group's child.
         .onChange(of: model.paymentLinkGate, initial: true) { _, gate in
             if gate == .ignore { _ = model.paymentLink.take(gate); _ = model.widgetRoute.take(gate); paymentTap.drop() }
+        }
+        // Siri's Pay takes the payment-link route, with the gate a link would meet.
+        .onChange(of: siriPay.pending, initial: true) { _, pay in
+            guard let pay else { return }
+            siriPay.pending = nil
+            model.paymentLink.receive(pay, gate: model.paymentLinkGate)
         }
         // A payment notification tapped behind onboarding or a gate is dropped, as a link would be.
         .onChange(of: paymentTap.pending) { _, tap in if tap != nil && model.paymentLinkGate == .ignore { paymentTap.drop() } }
@@ -202,7 +211,7 @@ struct WalletTabs: View {
             Button("OK", role: .cancel) {}
         } message: { Text(Self.blockedMessage(link: linkBlocked)) }
         .onChange(of: app.paymentLink.pending != nil && app.paymentLinkGate == .open, initial: true) { _, ready in
-            if ready, let link = app.paymentLink.take(.open) { open(link, link: true) }
+            if ready, let request = app.paymentLink.takeRequest(.open) { open(request.link, link: true, sats: request.sats) }
         }
         .onChange(of: app.widgetRoute.pending != nil && app.paymentLinkGate == .open, initial: true) { _, ready in
             if ready, let destination = app.widgetRoute.take(.open) { open(destination) }
@@ -240,10 +249,10 @@ struct WalletTabs: View {
 
     private func scanned(_ value: String) { open(value, link: false) }
 
-    private func open(_ value: String, link: Bool) {
+    private func open(_ value: String, link: Bool, sats: UInt64? = nil) {
         selection = .send
         Task {
-            let applied = link ? await PaymentLinkRoute.apply(value, to: send) : await QRScanRoute.apply(value, to: send)
+            let applied = link ? await PaymentLinkRoute.apply(value, to: send, sats: sats) : await QRScanRoute.apply(value, to: send)
             if !applied { linkBlocked = link; scanBlocked = true }
         }
     }

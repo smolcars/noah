@@ -173,6 +173,8 @@ extension PushJobs.Dependencies {
                 let facts = (try? await session.widgetFacts()) ?? .init()
                 guard (try? BackgroundExecution.checkActive()) != nil else { return }
                 WidgetDataWriter.write(balance: summary.balance, facts: facts, variant: services.variant, ticket: ticket)
+                guard (try? BackgroundExecution.checkActive()) != nil else { return }
+                await SiriIndexer.shared.refresh(balance: summary.balance.totalSats, session: session)
             },
             recurring: { await RecurringExecutor.shared.execute() },
             progressExits: { await session.progressPendingExits { AppLog("pushJobs").w("Background exit progress failed: \($0)") } },

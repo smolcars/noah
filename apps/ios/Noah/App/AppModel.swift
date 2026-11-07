@@ -210,6 +210,8 @@ final class AppModel {
             await openExistingWallet()
             if phase == .launching && !customServerUnresponsive { phase = resumeOnboarding ? .onboarding : .wallet }
         case .onboarding:
+            // No wallet: anything an earlier process left in Siri's index (a removal that failed) goes now.
+            SiriIndexer.shared.update()
             phase = .onboarding
         case .seedWithoutWalletData, .walletDataWithoutSeed, .secureStorageUnavailable, .invalidSeed, .seedConflict:
             phase = .blocked(state)
@@ -366,6 +368,7 @@ extension AppModel {
             }
             summary = latest
             summaryRevision += 1
+            SiriIndexer.shared.update(balance: latest.balance.totalSats)
             walletError = nil
             LaunchTiming.shared.mark(.summaryShown)
         } catch is CancellationError { return }
@@ -534,6 +537,7 @@ extension AppModel {
         resumeOnboarding = false
         needsRecoveryPhraseBackup = false
         server.reload()
+        SiriIndexer.shared.update() // Tries again if deletion couldn't remove Siri's index.
         phase = .onboarding
     }
 

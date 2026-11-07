@@ -55,6 +55,23 @@ struct HistoryModelTests {
         #expect(reads.value == ["known": block])
     }
 
+    /// Siri's index gets the wallet's rows with the chain tip that dates confirmed on-chain ones, once per refresh.
+    @Test func siriIndexGetsTheRowsAndTheChainTip() async {
+        final class Indexed: @unchecked Sendable { var value: [(ids: [String], tip: UInt32?)] = [] }
+        let chain = HistoryTransaction(id: "onchain-wallet-aa", type: "Onchain", amount: 21_000, date: "1970-01-01T00:00:00.000Z",
+                                       direction: "incoming", source: "onchain-wallet", txid: "aa", hasConfirmation: true, confirmationHeight: 42)
+        for (rows, tip) in [([transaction(), chain], UInt32(1000)), ([transaction()], nil)] {
+            let indexed = Indexed()
+            var dependencies = dependencies(rows)
+            dependencies.chainTip = { 1000 }
+            dependencies.indexRows = { indexed.value.append((ids: $0.map(\.id), tip: $1)) }
+            let model = HistoryModel(dependencies: dependencies)
+            await model.refresh(currency: "USD"); await model.awaitEnrichment()
+            #expect(indexed.value.count == 1)
+            #expect(indexed.value.first?.ids == rows.map(\.id) && indexed.value.first?.tip == tip)
+        }
+    }
+
     @Test func unavailableMarketDataDoesNotHidePayments() async {
         struct Offline: Error {}
         var dependencies = dependencies([transaction()])
