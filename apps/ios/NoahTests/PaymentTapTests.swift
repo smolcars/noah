@@ -8,7 +8,7 @@ struct PaymentTapTests {
     struct Row: Decodable {
         let id: String
         let paymentHash: String?
-        let outputVtxos: [String]?
+        let outputVtxos: [String]
     }
 
     struct Input: Decodable {

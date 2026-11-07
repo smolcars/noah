@@ -9,37 +9,37 @@ struct PaymentTap: Equatable, Sendable {
     var vtxoIDs: [String] = []
 
     /// Received `outputVtxos`, not spent ones: a later payment that spends the coins isn't this one.
-    func matches(paymentHash: String?, outputVtxos: [String]?) -> Bool {
-        (self.paymentHash != nil && paymentHash == self.paymentHash) || (outputVtxos ?? []).contains(where: vtxoIDs.contains)
+    func matches(paymentHash: String?, outputVtxos: [String]) -> Bool {
+        (self.paymentHash != nil && paymentHash == self.paymentHash) || outputVtxos.contains(where: vtxoIDs.contains)
     }
 
-    func matches(_ row: HistoryTransaction) -> Bool { matches(paymentHash: row.paymentHash, outputVtxos: row.outputVtxos) }
+    func matches(_ row: HistoryTransaction) -> Bool { matches(paymentHash: row.paymentHash, outputVtxos: row.outputVtxos ?? []) }
 
     static func lightningUserInfo(paymentHash: String) -> [String: String] {
         ["notification_type": "lightning_payment_received", "payment_hash": paymentHash]
     }
 
     /// Nil for anything that names no payment: a background command, older servers' `{}` or malformed data.
-    private static func of(record: [AnyHashable: Any]) -> PaymentTap? {
+    private static func of(record: [AnyHashable: Any]) -> Self? {
         switch record["notification_type"] as? String {
         case "lightning_payment_received":
             guard let hash = record["payment_hash"] as? String, !hash.isEmpty else { return nil }
-            return PaymentTap(paymentHash: hash)
+            return Self(paymentHash: hash)
         case "ark_payment_received":
             let ids = (record["vtxo_ids"] as? [Any] ?? []).compactMap { $0 as? String }
-            return ids.isEmpty ? nil : PaymentTap(vtxoIDs: ids)
+            return ids.isEmpty ? nil : Self(vtxoIDs: ids)
         default:
             return nil
         }
     }
 
-    static func of(data: String) -> PaymentTap? {
+    static func of(data: String) -> Self? {
         (try? JSONSerialization.jsonObject(with: Data(data.utf8))).flatMap { $0 as? [AnyHashable: Any] }.flatMap { of(record: $0) }
     }
 
     /// A tapped notification's `userInfo`: the app's own fields, or the push's `body` (a JSON string from APNs, an
     /// object from Expo).
-    static func of(userInfo: [AnyHashable: Any]) -> PaymentTap? {
+    static func of(userInfo: [AnyHashable: Any]) -> Self? {
         if let tap = of(record: userInfo) { return tap }
         if let body = userInfo["body"] as? [AnyHashable: Any] { return of(record: body) }
         if let body = userInfo["body"] as? String { return of(data: body) }

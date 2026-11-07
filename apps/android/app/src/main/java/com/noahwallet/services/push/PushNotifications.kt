@@ -72,20 +72,20 @@ object PushNotifications {
 
     /** The server and Expo send visible receipts as data title/message; FCM also supports a notification envelope. */
     fun remote(context: Context, message: com.google.firebase.messaging.RemoteMessage) = show(context,
-        title = message.notification?.title ?: message.data["title"],
-        body = message.notification?.body ?: message.data["message"],
+        VisiblePush(title = message.notification?.title ?: message.data["title"],
+            body = message.notification?.body ?: message.data["message"], data = message.data["body"]),
         sound = (message.notification?.sound ?: message.data["sound"]) in listOf(null, "default"),
-        tag = message.messageId ?: java.util.UUID.randomUUID().toString(), data = message.data["body"])
+        tag = message.messageId ?: java.util.UUID.randomUUID().toString())
 
     /** UnifiedPush has no notification envelope; the server sends the same receipts as [VisiblePush]. */
-    fun visible(context: Context, push: VisiblePush) =
-        show(context, push.title, push.body, sound = true, tag = java.util.UUID.randomUUID().toString(), data = push.data)
+    fun visible(context: Context, push: VisiblePush) = show(context, push, sound = true, tag = java.util.UUID.randomUUID().toString())
 
-    private fun show(context: Context, title: String?, body: String?, sound: Boolean, tag: String, data: String?) {
+    private fun show(context: Context, push: VisiblePush, sound: Boolean, tag: String) {
+        val (title, body) = push
         if (title.isNullOrEmpty() && body.isNullOrEmpty()) return
         ensureChannels(context)
         if (!permissionGranted(context)) return
-        val intent = open(context, tag, data)
+        val intent = open(context, tag, push.data)
         val notification = NotificationCompat.Builder(context, NotificationChannels.DEFAULT)
             .setSmallIcon(R.drawable.ic_notification).setContentTitle(title).setContentText(body)
             .setContentIntent(intent).setAutoCancel(true).setPriority(NotificationCompat.PRIORITY_HIGH)
