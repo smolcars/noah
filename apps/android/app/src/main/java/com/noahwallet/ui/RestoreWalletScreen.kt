@@ -190,7 +190,7 @@ private fun PhraseRestoreScreen(model: AppModel, clipboard: RestoreClipboard) {
 
 /** The restore issue's second way forward ([RestoreIssue.Action]), when it offers one. [typed]: the phrase screen. */
 @Composable
-private fun RestoreIssueAction(model: AppModel, typed: Boolean, haptics: Haptics, modifier: Modifier = Modifier) {
+internal fun RestoreIssueAction(model: AppModel, typed: Boolean, haptics: Haptics, modifier: Modifier = Modifier) {
     val action = model.restore.issue?.takeIf { !it.requiresRestart }?.action ?: return
     PillButton(tr(action.label), modifier.fillMaxWidth().testTag("restore-issue-action"), enabled = model.canRestoreWallet, outlined = true) {
         haptics.medium()

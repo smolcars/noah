@@ -44,6 +44,16 @@ class RestorePhraseScreenTest {
     private fun clipText() = clipboard.primaryClip?.let { clip -> (0 until clip.itemCount).mapNotNull { clip.getItemAt(it).text } }
         ?.joinToString("").orEmpty()
 
+    /** A phrase restore that found no backup stays on the restoring screen, so that's where it offers the Ark server. */
+    @Test fun aPhraseRestoreWithNoBackupOffersTheArkServerWhereItFailed() {
+        compose.runOnIdle { app.restore.reject(RestoreIssue.noBackup) }
+        compose.activity.setContent {
+            NoahTheme { com.noahwallet.ui.onboarding.RestoringStep(app, ViewModelProvider(compose.activity)[com.noahwallet.ui.onboarding.OnboardingPresentation::class.java]) }
+        }
+        compose.onNodeWithText("Recover my balance").assertExists()
+        compose.onNodeWithText("Back").assertExists()
+    }
+
     @Test fun wordsStayThroughTheBackgroundAndClearOnBack() {
         mount()
         compose.runOnIdle { checkNotNull(field()).setText("abandon") }
