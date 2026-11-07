@@ -129,6 +129,53 @@ struct ServerRegistrationTests {
         }
     }
 
+    /// Holds the first request until released; records each request when it completes.
+    actor HeldTransport: ClientTransport {
+        var applied: [Bool] = []
+        private var holding = true
+        private var arrived = false
+        private var held: CheckedContinuation<Void, Never>?
+        private var arrival: CheckedContinuation<Void, Never>?
+        func send(_: HTTPRequest, body: HTTPBody?, baseURL _: URL, operationID _: String) async throws -> (HTTPResponse, HTTPBody?) {
+            var text = ""
+            if let body { text = try await String(collecting: body, upTo: 65536) }
+            if holding {
+                holding = false
+                arrived = true
+                arrival?.resume()
+                await withCheckedContinuation { held = $0 }
+            }
+            applied.append(text.contains("true"))
+            return (.init(status: .ok), HTTPBody(#"{"success":true}"#))
+        }
+
+        func waitForFirst() async {
+            if !arrived { await withCheckedContinuation { arrival = $0 } }
+        }
+
+        func releaseFirst() { held?.resume() }
+    }
+
+    @Test func launchSendCannotLandAfterTheUserSwitchesBackupsOff() async throws {
+        SettingsStorage.bootstrap()
+        let root = FileManager.default.temporaryDirectory.appending(path: "backup-setting-order-\(UUID())")
+        defer { try? FileManager.default.removeItem(at: root) }
+        let settings = try SettingsStorage(rootPath: root.path, instanceID: UUID().uuidString)
+        _ = try settings.updateServerState { $0.isRegisteredWithServer = true; $0.isBackupEnabled = true }
+        let transport = HeldTransport()
+        let service = ServerRegistration(variant: .regtest, settings: settings,
+                                         client: Client(serverURL: ServerEndpoint.baseURL(for: .regtest), transport: transport))
+        let startup = Task { try await service.sendBackupEnabledIfOn() }
+        await transport.waitForFirst()
+        let toggle = Task { try await service.setBackupEnabled(false) }
+        try await Task.sleep(for: .milliseconds(100)) // room for an unordered toggle to reach the server first
+        await transport.releaseFirst()
+        try await startup.value
+        try await toggle.value
+        #expect(await transport.applied == [true, false])
+        #expect(service.state.isBackupEnabled == false)
+    }
+
     @Test func checksVersionBeforeRegisteredFastPathAndOnlyRecordsSuccessfulReports() async throws {
         SettingsStorage.bootstrap()
         let root = FileManager.default.temporaryDirectory.appending(path: "report-login-\(UUID())")

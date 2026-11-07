@@ -75,6 +75,32 @@ class ServerRegistrationTest {
         }
     }
 
+    @Test fun launchSendCannotLandAfterTheUserSwitchesBackupsOff() = runBlocking {
+        val values = mutableMapOf<String, String>()
+        val storage = ServerStateStorage(values::get, { k, v -> values[k] = v })
+        storage.update { it.copy(isRegisteredWithServer = true, isBackupEnabled = true) }
+        val firstHeld = CompletableDeferred<Unit>()
+        val releaseFirst = CompletableDeferred<Unit>()
+        val applied = java.util.Collections.synchronizedList(mutableListOf<Boolean>())
+        val engine = MockEngine { request ->
+            val enabled = Json.parseToJsonElement((request.body as TextContent).text).jsonObject.getValue("backup_enabled").jsonPrimitive.boolean
+            if (firstHeld.complete(Unit)) releaseFirst.await()
+            applied += enabled
+            respond("""{"success":true}""", headers = headersOf(HttpHeaders.ContentType, "application/json"))
+        }
+        ServerClient.make("https://example.test", engine = engine).use { client ->
+            val service = ServerRegistration(client, storage, { "ark-test" }, { device }, warn = {})
+            val startup = launch { service.sendBackupEnabledIfOn() }
+            firstHeld.await()
+            val toggle = launch { service.setBackupEnabled(false) }
+            delay(100) // room for an unordered toggle to reach the server first
+            releaseFirst.complete(Unit)
+            joinAll(startup, toggle)
+        }
+        assertEquals(listOf(true, false), applied.toList())
+        assertEquals(false, storage.state.isBackupEnabled)
+    }
+
     @Test fun explicitResetRejectsEveryIncompletePushOutcome() {
         for (outcome in com.noahwallet.services.push.PushRegistration.Outcome.entries) {
             assertEquals(outcome == com.noahwallet.services.push.PushRegistration.Outcome.registered,
