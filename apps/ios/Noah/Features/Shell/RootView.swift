@@ -58,14 +58,15 @@ struct RootView: View {
             }
         }
         .sheet(isPresented: $showingDelete) { DeleteWalletSheet().padding(.top, 22).presentationDetents([.medium]) }
-        .modifier(WalletContentProtection(covered: model.phase == .wallet && lock.policy.locked))
+        .modifier(WalletContentProtection(covered: model.showsWallet && lock.policy.locked))
         .environment(lock)
         .environment(\.locale, Locale(identifier: model.localeIdentifier))
-        .background(WalletLockOverlay(lock: lock, visible: model.phase == .wallet && lock.policy.locked,
-                                      protectOnBackground: model.phase == .wallet && lock.policy.enabled))
-        .task {
-            await model.start()
-            if model.phase == .wallet && lock.policy.locked && scenePhase == .active { await lock.unlock() }
+        .background(WalletLockOverlay(lock: lock, visible: model.showsWallet && lock.policy.locked,
+                                      protectOnBackground: model.showsWallet && lock.policy.enabled))
+        .task { await model.start() }
+        // Face ID as soon as the wallet shows, not after launch's server setup and the first sync pass.
+        .onChange(of: model.showsWallet) { _, shown in
+            if shown && lock.policy.locked && scenePhase == .active { Task { await lock.unlock() } }
         }
         .onChange(of: scenePhase) { _, phase in
             if phase != .active { model.appBecameInactive() }
@@ -74,7 +75,7 @@ struct RootView: View {
                 model.localeIdentifier = LegacyLocale.resolved()
                 Task { await lock.refresh() } // Face ID enrolment or permission may have changed in Settings.
                 Task {
-                    if model.phase == .wallet && lock.policy.locked { await lock.unlock() }
+                    if model.showsWallet && lock.policy.locked { await lock.unlock() }
                     await model.appBecameActive()
                 }
             }
@@ -83,6 +84,13 @@ struct RootView: View {
 
     @ViewBuilder private var phaseView: some View {
         switch model.phase {
+        // One branch, so the preview's tabs stay (and Home's entrance plays once) when the open finishes.
+        case .launching where model.showsLaunchPreview, .wallet:
+            if model.pushPermission.blocksWallet(initialized: true) {
+                PushNotificationsRequiredView()
+            } else {
+                WalletTabs()
+            }
         case .launching:
             if model.customServerUnresponsive {
                 VStack(spacing: 16) {
@@ -94,12 +102,6 @@ struct RootView: View {
             } else { NoahColor.background.ignoresSafeArea() }
         case .onboarding:
             EmptyView()
-        case .wallet:
-            if model.pushPermission.blocksWallet(initialized: true) {
-                PushNotificationsRequiredView()
-            } else {
-                WalletTabs()
-            }
         case .blocked(let state):
             LaunchMessageView(state: state)
         case .restoreIncomplete:
@@ -171,11 +173,17 @@ struct WalletTabs: View {
         _selection = State(initialValue: tab)
     }
 
+    /// The launch preview is read-only until the open's identity checks pass: no tab changes, touches or accessibility actions.
+    private var tab: Binding<Tab> {
+        Binding(get: { selection }, set: { if !app.showsLaunchPreview { selection = $0 } })
+    }
+
     var body: some View {
-        TabView(selection: $selection) {
+        TabView(selection: tab) {
             SwiftUI.Tab(Tab.home.title, systemImage: Tab.home.symbol, value: .home) {
                 HomeView(isActive: selection == .home, onScan: scanned, onOpenHistory: { selection = .history },
                          onRepeatPayment: repeatPayment, onReceive: { selection = .receive }, home: home)
+                    .disabled(app.showsLaunchPreview)
                     .onPreferenceChange(ActivityHidesTabBar.self) { homeHidesBar = $0 }
                     .modifier(WideTabContent(wide: window.wide, padsForBar: false, barHidden: homeHidesBar))
             }
@@ -197,12 +205,13 @@ struct WalletTabs: View {
         .tint(NoahTokens.Colors.foreground)
         .overlay(alignment: .bottomLeading) {
             if window.wide {
-                WideTabBar(selection: $selection)
+                WideTabBar(selection: tab)
                     .frame(width: max(0, window.size.width / 2 - window.insets.leading))
                     .padding(.bottom, 18)
                     .ignoresSafeArea(.keyboard)
             }
         }
+        .allowsHitTesting(!app.showsLaunchPreview)
         .onboardingWindow($window)
         .onChange(of: pendingRepeatPayment) { _, _ in consumeRepeatPayment() }
         .onChange(of: send.controller.locked) { _, _ in consumeRepeatPayment() }

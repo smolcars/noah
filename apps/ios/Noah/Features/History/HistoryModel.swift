@@ -28,7 +28,12 @@ final class HistoryModel {
 
         static func live(session: WalletSession, client: Client, variant: AppVariant) -> Self {
             Self(
-                load: { try await session.transactionHistory() }, sync: { try await session.sync() },
+                load: { try await session.transactionHistory() },
+                sync: {
+                    try await session.syncArk()
+                    // On-chain rows follow from the foreground pass's sync; the wallet's change stream reloads them.
+                    Task { @MainActor in await ForegroundExecution.run { await AppServices.shared.syncInForeground() } }
+                },
                 changes: {
                     // Stream adaptation has no wallet handle; the session owns and stops the native wait.
                     let changes = try await session.stateChanges()

@@ -80,6 +80,8 @@ struct HomeView: View {
 
     /// App state, or a screenshot fixture's stand-in for it.
     private var summary: WalletSession.Summary? { fixture.map(\.summary) ?? model.summary }
+    /// The launch preview shows the widget's last balance until the first summary.
+    private var totalSats: UInt64? { summary?.balance.totalSats ?? model.previewBalance }
     private var walletError: String? { fixture.map(\.walletError) ?? model.walletError }
     private var needsRecoveryPhraseBackup: Bool { fixture?.needsRecoveryPhraseBackup ?? model.needsRecoveryPhraseBackup }
     private var updateRequired: Bool { fixture?.updateRequired ?? model.versionCheck.updateRequired }
@@ -242,7 +244,7 @@ struct HomeView: View {
             Text("Last known balance").noahText(NoahTokens.Typography.sub).foregroundStyle(NoahTokens.Colors.muted)
                 .opacity(1 - tuck).padding(.top, 8).accessibilityIdentifier("home-last-known-balance")
         }
-        HomeBalanceView(sats: summary?.balance.totalSats, unit: model.amountUnit, hidden: model.isBalanceHidden,
+        HomeBalanceView(sats: totalSats, unit: model.amountUnit, hidden: model.isBalanceHidden,
                         tuck: tuck, onDetails: openBalance, onToggleHidden: toggleHidden)
             .padding(.top, 8).modifier(appear(1))
         fiat.padding(.top, 10).modifier(appear(2))
@@ -271,7 +273,7 @@ struct HomeView: View {
         Group {
             if model.isBalanceHidden {
                 Text(verbatim: HomeModel.hiddenFiat(currency: model.preferredCurrency))
-            } else if let sats = summary?.balance.totalSats, let price = home.btcPrice {
+            } else if let sats = totalSats, let price = home.btcPrice {
                 Text(verbatim: FiatCurrency.display(sats: Int64(clamping: sats), btcPrice: price,
                                                     currency: model.preferredCurrency, locale: locale))
                     .contentTransition(.numericText())
@@ -281,7 +283,7 @@ struct HomeView: View {
         }
         .noahText(NoahTokens.Typography.sub)
         .foregroundStyle(NoahTokens.Colors.muted)
-        .animation(NoahTokens.Motion.travel(reduceMotion), value: summary?.balance.totalSats)
+        .animation(NoahTokens.Motion.travel(reduceMotion), value: totalSats)
     }
 
     private func topBar(tucked: Bool) -> some View {
@@ -293,7 +295,7 @@ struct HomeView: View {
     }
 
     private var tuckedBalance: String? {
-        guard let sats = summary?.balance.totalSats else { return nil }
+        guard let sats = totalSats else { return nil }
         if model.isBalanceHidden { return model.amountUnit == .bip177 ? "₿••••" : "•••• sats" }
         return BitcoinAmount.format(sats: Int64(clamping: sats), unit: model.amountUnit, locale: locale)
     }
@@ -583,11 +585,15 @@ extension HomeView {
     }
 
     private func pullToRefresh() async {
-        guard !model.isWalletSuspended else { return }
-        await model.sync()
-        guard !model.isWalletSuspended else { return }
-        await history.refresh(currency: model.preferredCurrency)
-        await home.refresh(currency: model.preferredCurrency)
+        // shortcut: SwiftUI cancels Home's refresh task as the pull is released (seen on master too), which cancelled the
+        // sync before it started; the pull's work runs unstructured so it finishes. Upgrade: find what cancels it.
+        await Task {
+            guard !model.isWalletSuspended else { return }
+            await model.sync()
+            guard !model.isWalletSuspended else { return }
+            await history.refresh(currency: model.preferredCurrency)
+            await home.refresh(currency: model.preferredCurrency)
+        }.value
     }
 
     /// The first payment: the receipt shows on the card for about 2.4 s, then the
