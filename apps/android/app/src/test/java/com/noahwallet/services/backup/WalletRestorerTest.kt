@@ -200,6 +200,18 @@ class WalletRestorerTest {
         assertTrue("Saved seed differs", seed.value == validSeed)
     } }
 
+    /** A staged scan whose wallet can't be closed keeps its files, quarantined, until it closes or the process ends. */
+    @Test fun aStagedScanWhoseTeardownFailsKeepsItsFiles() = runBlocking { world {
+        handles.recovery = scanned()
+        handles.closeFails = true
+        val failure = runCatching { restorer().restore(validSeed, WalletRestorer.Source.ArkServer(allowEmpty = false)) }.exceptionOrNull()
+        assertEquals(WalletSession.OpenFailure.teardownFailed, (failure as? WalletSession.OpenError)?.reason)
+        assertTrue("Staged files kept", File(tx.staged, "db.sqlite").exists())
+        assertEquals("old wallet", location.database.readText()); assertTrue("Previous seed differs", seed.value == "old seed")
+        assertFalse(location.restorePending)
+        assertTrue(runCatching { session.reserve() }.isFailure)
+    } }
+
     @Test fun stagedDeletionUnlockRestoreAndDeleteUsesRealRestorePipeline() = runBlocking {
         for (pending in listOf(true, false)) world {
             seed.value = validSeed

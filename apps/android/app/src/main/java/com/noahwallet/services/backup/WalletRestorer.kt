@@ -68,17 +68,23 @@ class WalletRestorer(
                 }
                 transaction.prepare()
                 var installed = false
+                // A staged wallet whose native teardown failed stays quarantined on its files: launch sweeps them later.
+                var keepScratch = false
                 try {
                     progress(Step.fetching)
                     val outcome = when (source) {
                         Source.Backup -> makeClient(mnemonic).use { fetchAndStage(it, mnemonic, progress) }
-                        is Source.ArkServer -> stageFromArkServer(reservation, mnemonic, source.allowEmpty)
+                        is Source.ArkServer -> try { stageFromArkServer(reservation, mnemonic, source.allowEmpty) }
+                        catch (failure: WalletSession.OpenError) {
+                            keepScratch = failure.reason == WalletSession.OpenFailure.teardownFailed
+                            throw failure
+                        }
                     }
                     // Once installation starts, cancellation must not interrupt native verification or seed read-back.
                     withContext(NonCancellable) { install(reservation, mnemonic, outcome, beforeInstall, progress) }
                         .also { installed = true }
                 } finally {
-                    if (!installed) runCatching { transaction.removeScratch() }
+                    if (!installed && !keepScratch) runCatching { transaction.removeScratch() }
                 }
             }
         } finally { session.release(reservation) }
