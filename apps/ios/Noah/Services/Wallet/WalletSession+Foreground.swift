@@ -14,6 +14,9 @@ extension WalletSession {
         var maintenanceFailed: @Sendable () async -> Void
         /// How many refreshes bark has recorded, failed ones included (its `bark.round` refresh movements).
         var refreshes: @Sendable () async throws -> Int
+        /// After a backup restore, until it's done: sync, then check each spendable VTXO with the server
+        /// (`RestoredVtxoCheck`). Nothing otherwise.
+        var checkRestoredVtxos: @Sendable () async throws -> Void = {}
 
         /// With `timing`, each call's start and end go to the app log.
         static func live(_ session: WalletSession, _ handles: Handles, timing: PassTiming? = nil) -> Self {
@@ -31,7 +34,8 @@ extension WalletSession {
                 },
                 takeMaintenance: { await session.takeForegroundMaintenance() },
                 maintenanceFailed: { await session.foregroundMaintenanceFailed() },
-                refreshes: { try await handles.wallet.history().count { HistoryMapping.subsystemID($0) == "bark.round:refresh" } })
+                refreshes: { try await handles.wallet.history().count { HistoryMapping.subsystemID($0) == "bark.round:refresh" } },
+                checkRestoredVtxos: { try await session.checkRestoredVtxos(handles) })
         }
 
         /// RN's foreground stages, each attempted on its own. The first pass after a foreground entry runs bark's
@@ -41,6 +45,9 @@ extension WalletSession {
         /// maintenance does. One that failed after creating its refresh (the server down or refusing it) waits for the
         /// next entry: each try would leave another failed renewal in history. Every pass then moves live exits.
         ///
+        /// A restored backup's VTXO check goes first, so maintenance never tries to refresh a VTXO the server already
+        /// has as spent: its refresh would fail, and fail again on each later pass.
+        ///
         /// The on-chain sync goes last: it holds the on-chain wallet for its whole Esplora round trip, and every read
         /// of that wallet (Home's balance and history) waits meanwhile. Nothing before it needs it fresh: bark's sync
         /// and maintenance don't touch it, and exit progress funds fee children from the confirmed coins the last
@@ -49,6 +56,7 @@ extension WalletSession {
             let sync = sync, maintenance = maintenance, takeMaintenance = takeMaintenance, maintenanceFailed = maintenanceFailed
             let refreshes = refreshes
             return [
+                checkRestoredVtxos,
                 {
                     guard await takeMaintenance() else { return try await sync() }
                     let created = try? await refreshes()

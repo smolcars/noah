@@ -90,6 +90,9 @@ class WalletSession internal constructor(
         suspend fun syncWallet(): Unit = throw UnsupportedOperationException()
         suspend fun syncOnchain(): Unit = throw UnsupportedOperationException()
         suspend fun initialScan(): Unit = throw UnsupportedOperationException()
+        suspend fun spendableVtxoIds(): List<String> = throw UnsupportedOperationException()
+        /** bark's `trust_and_adopt_server_vtxo_status`: asks the server about one VTXO and adopts "spent". */
+        suspend fun trustAndAdoptServerVtxoStatus(vtxoId: String): Unit = throw UnsupportedOperationException()
         suspend fun maintenanceDelegated()
         suspend fun bolt11Invoice(amountSats: ULong): String
         /** A BOLT11 invoice carrying [description], and a fresh Ark address: what voice assistants create. */
@@ -422,6 +425,17 @@ class WalletSession internal constructor(
         if (isOpen) withOpen { handles ->
             (handles.synchronization ?: syncFlight).run({
                 if (!scan.exists()) handles.syncOnchain() else { handles.initialScan(); handles.syncOnchain(); check(scan.delete()) }
+            })
+        }
+    }
+
+    /** The foreground pass's check of a restored backup's VTXOs ([RestoredVtxoCheck]); nothing unless a restore left its marker. */
+    suspend fun checkRestoredVtxos(warn: (String) -> Unit) {
+        val marker = File(location.directory, com.noahwallet.services.backup.RestoreTransaction.vtxoCheckName)
+        if (isOpen && marker.exists()) withOpen { handles ->
+            (handles.synchronization ?: syncFlight).run({
+                RestoredVtxoCheck.run(marker, RestoredVtxoCheck.Steps(handles::syncWallet, handles::spendableVtxoIds,
+                    handles::trustAndAdoptServerVtxoStatus), warn)
             })
         }
     }
@@ -832,6 +846,8 @@ class WalletSession internal constructor(
         override suspend fun syncWallet() { wallet.sync() }
         override suspend fun syncOnchain() { onchain.sync() }
         override suspend fun initialScan() { onchain.initialScan(null) }
+        override suspend fun spendableVtxoIds() = wallet.spendableVtxos().map { it.id }
+        override suspend fun trustAndAdoptServerVtxoStatus(vtxoId: String) { wallet.trustAndAdoptServerVtxoStatus(vtxoId) }
         override suspend fun maintenanceDelegated() { wallet.maintenanceDelegated() }
         override suspend fun bolt11Invoice(amountSats: ULong) = wallet.bolt11Invoice(amountSats, null).invoice
         override suspend fun lightningInvoice(amountSats: ULong, description: String?) = wallet.bolt11Invoice(amountSats, description).invoice

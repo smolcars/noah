@@ -29,6 +29,17 @@ internal class ForegroundWalletWorkTest : WalletSessionFixture() {
         syncOnchain = { calls += "onchain"; if (failing == "onchain") throw Boom() },
     )
 
+    /** After a backup restore, its VTXO check runs before maintenance could try to refresh a VTXO already spent. */
+    @Test fun aRestoredWalletsVtxoCheckRunsBeforeMaintenance() = runBlocking {
+        val calls = mutableListOf<String>()
+        val work = ForegroundWalletWork(sync = { calls += "sync" }, maintenance = { calls += "maintenance" }, refreshes = { 0 },
+            progressExits = { calls += "exits" }, syncOnchain = { calls += "onchain" }, checkRestoredVtxos = { calls += "check" })
+        work.run(open = 1)
+        assertEquals(listOf("sync", "check", "maintenance", "exits", "onchain"), calls)
+        calls.clear(); work.run(1)
+        assertEquals(listOf("sync", "check", "exits", "onchain"), calls)
+    }
+
     @Test fun eachPassSyncsThenMovesExitsAndOnlyAnEntryOrANewOpenRunsMaintenanceOnce() = runBlocking {
         val calls = mutableListOf<String>()
         val work = work(calls)
