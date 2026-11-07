@@ -42,6 +42,11 @@ final class WidgetChainDates: Sendable {
         }
     }
 
+    /// The dates already known for `txids`, read-only (Siri's Last payment reads them; only the widget writers prune).
+    func stored(_ txids: Set<String>) -> [String: Date] {
+        lock.withLock { load().filter { txids.contains($0.key) }.mapValues(\.at) }
+    }
+
     func clear() {
         lock.withLock { try? FileManager.default.removeItem(at: url) }
     }

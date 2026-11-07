@@ -1,0 +1,19 @@
+{
+  "description": "English replies Siri and Gemini actions give. Hand-specified from docs/native-rewrite/design/voice-assistants.md.",
+  "cases": [
+    { "name": "balance zero", "input": { "kind": "balance", "sats": 0, "fiat": null }, "expected": "You have 0 sats." },
+    { "name": "balance one sat", "input": { "kind": "balance", "sats": 1, "fiat": null }, "expected": "You have 1 sat." },
+    { "name": "balance without fiat", "input": { "kind": "balance", "sats": 694375, "fiat": null }, "expected": "You have 694,375 sats." },
+    { "name": "balance with fiat", "input": { "kind": "balance", "sats": 694375, "fiat": "$412.50" }, "expected": "You have 694,375 sats, about $412.50." },
+    { "name": "request", "input": { "kind": "request", "sats": 5000 }, "expected": "Here's your Lightning invoice for 5,000 sats." },
+    { "name": "request one sat", "input": { "kind": "request", "sats": 1 }, "expected": "Here's your Lightning invoice for 1 sat." },
+    { "name": "ark address", "input": { "kind": "arkAddress" }, "expected": "Here's a new Ark address." },
+    { "name": "lightning address", "input": { "kind": "lightningAddress", "address": "sam@noahwallet.com" }, "expected": "Your Lightning address is sam@noahwallet.com." },
+    { "name": "no lightning address", "input": { "kind": "lightningAddress", "address": null }, "expected": "You don't have a Lightning address yet. Open Noah to pick one." },
+    { "name": "last payment incoming", "input": { "kind": "lastPayment", "direction": "incoming", "sats": 5000, "counterparty": null, "when": "2 hours ago" }, "expected": "You received 5,000 sats 2 hours ago." },
+    { "name": "last payment outgoing to someone", "input": { "kind": "lastPayment", "direction": "outgoing", "sats": 21000, "counterparty": "sam@noahwallet.com", "when": "yesterday" }, "expected": "You sent 21,000 sats to sam@noahwallet.com yesterday." },
+    { "name": "last payment outgoing without counterparty", "input": { "kind": "lastPayment", "direction": "outgoing", "sats": 1, "counterparty": null, "when": "3 days ago" }, "expected": "You sent 1 sat 3 days ago." },
+    { "name": "no payments", "input": { "kind": "lastPayment", "direction": null, "sats": 0, "counterparty": null, "when": null }, "expected": "You don't have any payments yet." },
+    { "name": "pay", "input": { "kind": "pay", "recipient": "sam@noahwallet.com" }, "expected": "Opening Send to sam@noahwallet.com." }
+  ]
+}

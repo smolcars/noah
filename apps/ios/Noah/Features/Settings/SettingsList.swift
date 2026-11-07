@@ -180,6 +180,7 @@ struct SettingsList: View {
                 value: notificationsValue,
                 dot: summary.notificationsOn == false ? .failure : .hidden,
                 failure: summary.notificationsOn == false)
+            row("Siri", icon: "waveform", page: .siri, id: "settings-siri")
             row(
                 "Advanced",
                 icon: "slider.horizontal.3",
@@ -645,6 +646,7 @@ struct SettingsPageView: View {
         case .exitClaim: ExitClaimView(model: onchain)
         case .exitList: ExitListView(model: onchain)
         case .notifications: NotificationsPage()
+        case .siri: SiriPage()
         case .advanced: AdvancedPage()
         case .arkServer: ArkInfoView()
         case .esplora: EsploraSettingsScreen()
