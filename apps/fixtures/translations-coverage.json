@@ -6,8 +6,8 @@
     "ko",
     "sv"
   ],
-  "catalogEntries": 1575,
-  "sourceKeys": 1618,
+  "catalogEntries": 1577,
+  "sourceKeys": 1620,
   "coverage": {
     "ios": {
       "used": [
@@ -578,6 +578,7 @@
         "Left out: {amount}, in use right now.",
         "Left out: {amount}, too small to exit.",
         "Lets Noah wake up for Lightning",
+        "Lets Siri and Spotlight find your balance, payments and who you pay",
         "Letters and numbers",
         "Light",
         "Lightning",
@@ -1038,6 +1039,7 @@
         "Signet",
         "Signing with Ark",
         "Siri",
+        "Siri & Search",
         "Skip",
         "Skipped",
         "Smallest move",

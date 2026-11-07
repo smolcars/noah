@@ -22933,6 +22933,42 @@
         }
       }
     },
+    "Lets Siri and Spotlight find your balance, payments and who you pay": {
+      "comment": "GT gt_16b46479b76a48f6; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Lets Siri and Spotlight find your balance, payments and who you pay"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Permite que Siri y Spotlight encuentren tu saldo, tus pagos y a quién pagas"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "SiriとSpotlightで残高、支払い、支払い先を見つけられます"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Siri와 Spotlight가 잔액, 결제, 결제 상대를 찾을 수 있어요"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Låter Siri och Spotlight hitta ditt saldo, dina betalningar och vem du betalar"
+          }
+        }
+      }
+    },
     "Letters and numbers": {
       "comment": "GT gt_17968e6e1b20c79e; arguments: none",
       "extractionState": "manual",
@@ -42021,6 +42057,42 @@
           "stringUnit": {
             "state": "translated",
             "value": "Siri"
+          }
+        }
+      }
+    },
+    "Siri & Search": {
+      "comment": "GT gt_efeb70768f0347ae; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Siri & Search"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Siri y Búsqueda"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Siriと検索"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Siri 및 검색"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Siri och sökning"
           }
         }
       }

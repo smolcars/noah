@@ -650,6 +650,7 @@
   <string name="gt_1d78b52b9fdeac1c">"Left out: %1$s, too small to exit."</string>
   <string name="gt_6e2d65a1c9f1b6a6">"Let Noah run in the background"</string>
   <string name="gt_e085922bf6346107">"Lets Noah wake up for Lightning"</string>
+  <string name="gt_16b46479b76a48f6">"Lets Siri and Spotlight find your balance, payments and who you pay"</string>
   <string name="gt_17968e6e1b20c79e">"Letters and numbers"</string>
   <string name="gt_dbcd5e7bb7a0f538">"Light"</string>
   <string name="gt_41e68f2cdb3806bb">"Lightning"</string>
@@ -1187,6 +1188,7 @@
   <string name="gt_99eb08cbad43b0c6">"Signet"</string>
   <string name="gt_4f5664161ec4f520">"Signing with Ark"</string>
   <string name="gt_7cdcbd87852f9d12">"Siri"</string>
+  <string name="gt_efeb70768f0347ae">"Siri &amp; Search"</string>
   <string name="gt_28d03596d24eeb4e">"Skip"</string>
   <string name="gt_12698ce1ea5cd4ab">"Skipped"</string>
   <string name="gt_44d27a286f01669e">"Smallest move"</string>

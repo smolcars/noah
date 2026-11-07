@@ -650,6 +650,7 @@
   <string name="gt_1d78b52b9fdeac1c">"除外: %1$s、出金するには少なすぎます。"</string>
   <string name="gt_6e2d65a1c9f1b6a6">"Noah をバックグラウンドで動かす"</string>
   <string name="gt_e085922bf6346107">"Lightningの受け取りのためにNoahを起動できます"</string>
+  <string name="gt_16b46479b76a48f6">"SiriとSpotlightで残高、支払い、支払い先を見つけられます"</string>
   <string name="gt_17968e6e1b20c79e">"英字と数字"</string>
   <string name="gt_dbcd5e7bb7a0f538">"ライト"</string>
   <string name="gt_41e68f2cdb3806bb">"ライトニング"</string>
@@ -1187,6 +1188,7 @@
   <string name="gt_99eb08cbad43b0c6">"Signet"</string>
   <string name="gt_4f5664161ec4f520">"Arkと署名中"</string>
   <string name="gt_7cdcbd87852f9d12">"Siri"</string>
+  <string name="gt_efeb70768f0347ae">"Siriと検索"</string>
   <string name="gt_28d03596d24eeb4e">"スキップ"</string>
   <string name="gt_12698ce1ea5cd4ab">"スキップ済み"</string>
   <string name="gt_44d27a286f01669e">"最小移動額"</string>
