@@ -91,7 +91,6 @@ class ExitSubmitDeviceTest {
     private class Handles(override val m6: OnchainWalletAccess) : WalletSession.Handles {
         override fun notifications(): WalletSession.Notifications = error("unused")
         override suspend fun history(): List<Movement> = emptyList()
-        override suspend fun receiveRequest(): ReceiveRequest = error("unused")
         override suspend fun receiveInvoice(request: ReceiveRequest, amountSat: Long, description: String): ReceiveRequest = error("unused")
         override suspend fun initializeAddress() = Unit
         override suspend fun peekPublicKey(index: UInt): String = error("unused")
