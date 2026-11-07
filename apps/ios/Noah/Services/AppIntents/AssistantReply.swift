@@ -56,6 +56,21 @@ enum AssistantReply {
                        when: formatter.localizedString(for: min(date, now), relativeTo: now))
     }
 
+    /// Confirmed on-chain rows carry no time of their own (bark-bolt-ffi gives a height). Date them as Activity and the
+    /// widgets do: the date already known for the txid, else an estimate from the chain tip (tip − height × 10 min).
+    static func datingChainRows(_ rows: [HistoryTransaction], known: [String: Date], tip: UInt32?, now: Date = Date()) -> [HistoryTransaction] {
+        rows.map { row in
+            guard row.source == "onchain-wallet", row.hasConfirmation == true, let txid = row.txid else { return row }
+            let estimate = tip.flatMap { tip in row.confirmationHeight.map { now.addingTimeInterval(-Double(tip > $0 ? tip - $0 : 0) * 600) } }
+            guard let date = known[txid] ?? estimate else { return row }
+            var dated = row
+            dated.date = HistoryRules.isoDate(date)
+            dated.dateLabel = nil
+            dated.sortTimestamp = date.timeIntervalSince1970 * 1000
+            return dated
+        }
+    }
+
     private static func isPayment(_ row: HistoryTransaction) -> Bool {
         ["incoming", "outgoing"].contains(row.direction) && !row.isRenewal && !row.isInternalTransfer && row.exitFeeFor == nil
             && !["offboard", "exit"].contains(row.movementKind) && !row.isPending && !row.isFailed && !row.isCanceled

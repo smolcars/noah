@@ -80,6 +80,26 @@ struct AssistantReplyTests {
         #expect(AssistantReply.lastPayment(in: Array(history.dropFirst(2)), now: now, locale: "en") == nil)
     }
 
+    @Test func confirmedOnchainPaymentsAreDatedBeforeChoosing() throws {
+        let now = try #require(HistoryRules.parseDate("2026-11-06T12:00:00.000Z"))
+        var chain = row("chain", amount: 30000, date: "1970-01-01T00:00:00.000Z", source: "onchain-wallet")
+        chain.txid = "aa"
+        chain.hasConfirmation = true
+        chain.confirmationHeight = 994
+        let ark = row("ark", amount: 1000, date: "2026-11-05T12:00:00.000Z")
+
+        // Undated, the on-chain receive sorts as 1970 and yesterday's Ark payment wins.
+        #expect(AssistantReply.lastPayment(in: [chain, ark], now: now, locale: "en")?.sats == 1000)
+        // Six blocks below the tip: about an hour ago.
+        let estimated = AssistantReply.datingChainRows([chain, ark], known: [:], tip: 1000, now: now)
+        let payment = try #require(AssistantReply.lastPayment(in: estimated, now: now, locale: "en"))
+        #expect(payment == .init(incoming: true, sats: 30000, counterparty: nil, when: "1 hour ago"))
+        // A date History already read wins over the estimate.
+        let known = try #require(HistoryRules.parseDate("2026-11-06T11:58:00.000Z"))
+        let read = AssistantReply.datingChainRows([chain, ark], known: ["aa": known], tip: 1000, now: now)
+        #expect(AssistantReply.lastPayment(in: read, now: now, locale: "en")?.when == "2 minutes ago")
+    }
+
     @Test func failuresSayWhatToDoNext() {
         #expect(AssistantFailure(AppServices.WalletSuspended()) == .suspended)
         #expect(AssistantFailure(AppServices.SeedUnavailable()) == .notReady)

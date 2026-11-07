@@ -41,7 +41,11 @@ struct NoahIntentWallet: Sendable {
                 try await services.ensureWalletOpen()
                 try await services.session.sync()
                 try Task.checkCancellation()
-                return try await services.session.transactionHistory()
+                let rows = try await services.session.transactionHistory()
+                let chain = Set(rows.filter { $0.source == "onchain-wallet" }.compactMap(\.txid))
+                guard !chain.isEmpty else { return rows }
+                let tip = try? await services.session.chainTip()
+                return AssistantReply.datingChainRows(rows, known: WidgetChainDates.shared.stored(chain), tip: tip)
             }
         }, lightningAddress: {
             SettingsStorage.shared.persistedState(PersistedServerState.self, key: PersistedServerState.key)?.lightningAddress
