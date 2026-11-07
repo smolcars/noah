@@ -40,6 +40,8 @@ struct RestoreWalletScreen: View {
     let onPaste: (String, Int) -> Void
     let onRestore: () -> Void
     let onBack: () -> Void
+    /// The issue's second way forward (`RestoreIssue.Action`).
+    var onIssueAction: () -> Void = {}
 
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.locale) private var locale
@@ -54,8 +56,7 @@ struct RestoreWalletScreen: View {
         let column = OnboardingColumn(wide: layout.wide, keyboard: layout.wide || keyboardUp)
         OnboardingPanes(wide: layout.wide, column: .leadingFits, sideInsets: (layout.insets.leading, layout.insets.trailing)) {
             OnboardingHeadline(title: Text("Welcome back"), subtitle: Text("Enter your recovery phrase."), large: layout.wide) {
-                // The requirement up front, not only in the no-backup error.
-                Text("To restore, Noah needs this phrase and a wallet backup.")
+                Text("Noah restores your wallet from its backup. Without one, it can still recover your balance.")
                     .noahText(NoahTokens.Typography.sub).foregroundStyle(NoahTokens.Colors.muted)
                     .onboardingAppear(1)
             }
@@ -106,6 +107,9 @@ struct RestoreWalletScreen: View {
                 }
                 .onboardingAppear(3)
             message.padding(.top, 14)
+            if issue?.action != nil {
+                RestoreIssueAction(issue: issue, action: onIssueAction).padding(.top, NoahTokens.Space.s)
+            }
             // Wide windows centre the actions with the words; compact pins them to the bottom.
             if layout.wide && !keyboardUp && !locked {
                 actions.padding(.top, NoahTokens.Space.screen).onboardingAppear(4)
@@ -398,6 +402,8 @@ private struct WordCountPicker: View {
 struct StoredSeedRestoreScreen: View {
     let layout: OnboardingLayout
     let issue: RestoreIssue?
+    /// The issue's second way forward (`RestoreIssue.Action`).
+    var onIssueAction: () -> Void = {}
     let onRestore: () -> Void
 
     var body: some View {
@@ -421,6 +427,7 @@ struct StoredSeedRestoreScreen: View {
                     }
                 }
                 if issue?.requiresRestart != true {
+                    RestoreIssueAction(issue: issue, action: onIssueAction)
                     Button("Restore wallet", action: onRestore)
                         .buttonStyle(OnboardingPrimaryButtonStyle())
                         .accessibilityIdentifier("restore-wallet-submit")
@@ -429,6 +436,20 @@ struct StoredSeedRestoreScreen: View {
             }
             .padding(.bottom, NoahTokens.Space.l)
             .onboardingPane()
+        }
+    }
+}
+
+/// The issue's second way forward (`RestoreIssue.Action`), when it offers one.
+private struct RestoreIssueAction: View {
+    let issue: RestoreIssue?
+    let action: () -> Void
+
+    var body: some View {
+        if let offered = issue?.action, issue?.requiresRestart != true {
+            Button(LocalizedStringKey(offered.label), action: action)
+                .buttonStyle(OnboardingSecondaryButtonStyle())
+                .accessibilityIdentifier("restore-issue-action")
         }
     }
 }

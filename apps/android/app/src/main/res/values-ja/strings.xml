@@ -199,7 +199,7 @@
   <string name="gt_84baa61bd34d1b8e">"状況を再確認"</string>
   <string name="gt_44cb983669c9d0a9">"アドレスを確認してください。元に戻せません。"</string>
   <string name="gt_c31be569a492274b">"金額、選択したVTXO、送信先を確認してください。確認済みの資金が不足している可能性があります。"</string>
-  <string name="gt_4282111188a1f2bd">"単語を確認してください。Noahで復元できるのは、バックアップを有効にしていたウォレットのみです。"</string>
+  <string name="gt_9716fa3d65183825">"単語を確認してください。正しければ、NoahはArkサーバーから残高を取り戻せますが、支払い履歴と設定は戻りません。"</string>
   <string name="gt_ff65032d5e881811">"再度承認する前に、この支払いの結果を確認してください。"</string>
   <string name="gt_6f113ce35347ffe6">"編集する前に、この支払いの結果を確認してください。"</string>
   <string name="gt_710d52f182321f4a">"%1$s番目の単語を確認してください"</string>
@@ -813,6 +813,7 @@
   <string name="gt_f58c5680c7fa8fe7">"NoahはArkアドレスをコピーできませんでした。Noahを開いた状態でもう一度お試しください。"</string>
   <string name="gt_ff4f4291a0ae3c10">"Noahは請求書をコピーできませんでした。Noahを開いた状態でもう一度お試しください。"</string>
   <string name="gt_e92407ae0cc29539">"Noahは中断された復元を完了することも取り消すこともできませんでした。ウォレットのファイルはそのまま保持されています。Noahを再起動して、もう一度お試しください。"</string>
+  <string name="gt_d9fcdd34f02053a7">"NoahはArkサーバーからの残高の復元を完了できませんでした。接続を確認して、もう一度お試しください。"</string>
   <string name="gt_8ad019accd01ac95">"Noahが復元されたウォレットを安全に開けませんでした。続行するにはNoahを閉じて再起動してください。"</string>
   <string name="gt_5ff18c368e86ed56">"NoahはArkサーバーに接続できませんでした。接続を確認して、もう一度お試しください。"</string>
   <string name="gt_55037f1fddcada0f">"ウォレットの一時ファイルを削除できませんでした。Noahを再起動して、もう一度お試しください。"</string>
@@ -826,6 +827,7 @@
   <string name="gt_f590e31a6eb944e2">"Noahでバックアップ処理が続いています。少し待ってからもう一度お試しください。"</string>
   <string name="gt_338e68cc4323f294">"Noahの通知"</string>
   <string name="gt_08b28eee5b5a6d39">"Noahがこのウォレットをサーバーに再登録します。ウォレットはそのまま残ります。"</string>
+  <string name="gt_29775aae70149c47">"Noahはバックアップからウォレットを復元します。バックアップがなくても、残高は取り戻せます。"</string>
   <string name="gt_9e1ac2f586e28294">"Noahは退出に必要なトランザクションの送信と手数料の引き上げを自動で行います。システムが許可する場合は、バックグラウンドでも処理を続けます。手数料は見積額です。"</string>
   <string name="gt_286c0deecb39be99">"NoahがArk残高からこの支払いを自動で行います。支払いは指定された受取人と金額に限られ、いつでも一時停止やキャンセルができます。"</string>
   <string name="gt_ddecc0272120b4ba">"Noahユーザー"</string>
@@ -851,6 +853,7 @@
   <string name="gt_d8da2c49df39d91d">"メモ"</string>
   <string name="gt_f9b73e1abc37cf5b">"メモ（任意）"</string>
   <string name="gt_045f910e6b3ce120">"メモは639文字以内にしてください。"</string>
+  <string name="gt_9f5cac3cf2edba63">"何も見つかりません"</string>
   <string name="gt_0ded20d6a749d6bf">"まだ送信するものはありません"</string>
   <string name="gt_788011833a5a0f22">"通知"</string>
   <string name="gt_54ee6b72ca5e79e6">"通知が必要です"</string>
@@ -1002,6 +1005,7 @@
   <string name="gt_3fed24d17905877f">"受取人を確認済み"</string>
   <string name="gt_c7175fa7a0db0d3c">"記録済み"</string>
   <string name="gt_e4cea0827a11aed0">"記録時"</string>
+  <string name="gt_fd396d72e35b19ec">"残高を取り戻す"</string>
   <string name="gt_41edd3f47328da5a">"復元フレーズ"</string>
   <string name="gt_512d764f27c017d9">"復元フレーズが見つかりました"</string>
   <string name="gt_9b40b8e408567040">"復元フレーズは非表示です"</string>
@@ -1079,6 +1083,7 @@
   <string name="gt_55d67318211dbda2">"登録をリセット"</string>
   <string name="gt_9d5cd4a03ec60322">"登録をリセットしますか？"</string>
   <string name="gt_a76e13b9839270eb">"復元"</string>
+  <string name="gt_1ea70aac7ddff51b">"このまま復元"</string>
   <string name="gt_758420e6c40b4a1e">"復元が完了しませんでした"</string>
   <string name="gt_293a2b4aba634d76">"ウォレットを復元"</string>
   <string name="gt_5d06ed14f9744167">"復元したウォレットの設定はまだ保存できません。ストレージが利用可能になったら、もう一度「再開」をお試しください。定期支払いは停止したままです。"</string>
@@ -1248,6 +1253,7 @@
   <string name="gt_2e48454ee6ef8e0a">"このコードは使えませんでした。もう一度お試しください。"</string>
   <string name="gt_b3a72229e9eb3cc3">"その支払いは完了しませんでした"</string>
   <string name="gt_9a17fe4427faafa5">"その支払いは完了しませんでした。"</string>
+  <string name="gt_03ab60037096acb8">"Arkサーバーにはこの復元フレーズのコインがありません。単語を確認してください。正しければ、このまま復元できます。"</string>
   <string name="gt_19fe068bbdba00e6">"Esploraエンドポイントにクエリ文字列やフラグメントは含められません。"</string>
   <string name="gt_0ac08a81559f95ee">"Esploraエンドポイントに認証情報は含められません。"</string>
   <string name="gt_96100ca2d23b8821">"Esploraエンドポイントが別のBitcoinネットワーク用です。"</string>
@@ -1350,7 +1356,6 @@
   <string name="gt_9dcff98e275f0cb9">"経過"</string>
   <string name="gt_e12a2ce4d26b2017">"タイムロック"</string>
   <string name="gt_f4b06ef6d3c81436">"送信先"</string>
-  <string name="gt_31a0a151c58cdcdf">"Noahでウォレットを復元するには、このフレーズとウォレットのバックアップが必要です。"</string>
   <string name="gt_2b065c7c9ce466e5">"今日"</string>
   <string name="gt_8e5d375aee547cf8">"少なすぎて出金できません · %1$s未満"</string>
   <string name="gt_168d36c2d331807e">"所要時間"</string>

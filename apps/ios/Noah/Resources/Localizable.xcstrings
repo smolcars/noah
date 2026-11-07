@@ -7081,38 +7081,38 @@
         }
       }
     },
-    "Check the words. Noah can only restore a wallet that had backups turned on.": {
-      "comment": "GT gt_4282111188a1f2bd; arguments: none",
+    "Check the words. If they're right, Noah can recover your balance from the Ark server, but not your payment history or settings.": {
+      "comment": "GT gt_9716fa3d65183825; arguments: none",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Check the words. Noah can only restore a wallet that had backups turned on."
+            "value": "Check the words. If they're right, Noah can recover your balance from the Ark server, but not your payment history or settings."
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Revisa las palabras. Noah solo puede restaurar una billetera que tuviera activadas las copias de seguridad."
+            "value": "Revisa las palabras. Si son correctas, Noah puede recuperar tu saldo desde el servidor de Ark, pero no tu historial de pagos ni tus ajustes."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "単語を確認してください。Noahで復元できるのは、バックアップを有効にしていたウォレットのみです。"
+            "value": "単語を確認してください。正しければ、NoahはArkサーバーから残高を取り戻せますが、支払い履歴と設定は戻りません。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "단어를 확인하세요. Noah에서는 백업 기능이 켜져 있던 지갑만 복원할 수 있습니다."
+            "value": "단어를 확인하세요. 맞다면 Noah가 Ark 서버에서 잔액을 복구할 수 있지만, 결제 내역과 설정은 복구되지 않습니다."
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Kontrollera orden. Noah kan bara återställa en plånbok som hade säkerhetskopiering aktiverad."
+            "value": "Kontrollera orden. Om de stämmer kan Noah återställa ditt saldo från Ark-servern, men inte din betalningshistorik eller dina inställningar."
           }
         }
       }
@@ -28753,6 +28753,42 @@
         }
       }
     },
+    "Noah couldn't finish recovering your balance from the Ark server. Check your connection and try again.": {
+      "comment": "GT gt_d9fcdd34f02053a7; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noah couldn't finish recovering your balance from the Ark server. Check your connection and try again."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noah no pudo terminar de recuperar tu saldo desde el servidor de Ark. Comprueba tu conexión y vuelve a intentarlo."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "NoahはArkサーバーからの残高の復元を完了できませんでした。接続を確認して、もう一度お試しください。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noah가 Ark 서버에서 잔액 복구를 마치지 못했습니다. 연결 상태를 확인하고 다시 시도하세요."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noah kunde inte slutföra återställningen av ditt saldo från Ark-servern. Kontrollera din anslutning och försök igen."
+          }
+        }
+      }
+    },
     "Noah couldn't open the restored wallet safely. Close and restart Noah to continue.": {
       "comment": "GT gt_8ad019accd01ac95; arguments: none",
       "extractionState": "manual",
@@ -29217,6 +29253,42 @@
           "stringUnit": {
             "state": "translated",
             "value": "Noah registrerar plånboken hos servern igen. Din plånbok finns kvar."
+          }
+        }
+      }
+    },
+    "Noah restores your wallet from its backup. Without one, it can still recover your balance.": {
+      "comment": "GT gt_29775aae70149c47; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noah restores your wallet from its backup. Without one, it can still recover your balance."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noah restaura tu billetera desde su copia de seguridad. Sin una, aún puede recuperar tu saldo."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noahはバックアップからウォレットを復元します。バックアップがなくても、残高は取り戻せます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noah는 백업에서 지갑을 복원합니다. 백업이 없어도 잔액은 복구할 수 있습니다."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noah återställer din plånbok från dess säkerhetskopia. Utan en kan Noah ändå återställa ditt saldo."
           }
         }
       }
@@ -30069,6 +30141,42 @@
           "stringUnit": {
             "state": "translated",
             "value": "Anteckningen får vara högst 639 tecken."
+          }
+        }
+      }
+    },
+    "Nothing found": {
+      "comment": "GT gt_9f5cac3cf2edba63; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Nothing found"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "No se encontró nada"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "何も見つかりません"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "아무것도 찾지 못함"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Inget hittades"
           }
         }
       }
@@ -35461,6 +35569,42 @@
         }
       }
     },
+    "Recover my balance": {
+      "comment": "GT gt_fd396d72e35b19ec; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recover my balance"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recuperar mi saldo"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "残高を取り戻す"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "잔액 복구"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Återställ mitt saldo"
+          }
+        }
+      }
+    },
     "Recovery phrase": {
       "comment": "GT gt_41edd3f47328da5a; arguments: none",
       "extractionState": "manual",
@@ -38133,6 +38277,42 @@
           "stringUnit": {
             "state": "translated",
             "value": "Återställ"
+          }
+        }
+      }
+    },
+    "Restore anyway": {
+      "comment": "GT gt_1ea70aac7ddff51b; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Restore anyway"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Restaurar de todos modos"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "このまま復元"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "그래도 복원"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Återställ ändå"
           }
         }
       }
@@ -44221,6 +44401,42 @@
         }
       }
     },
+    "The Ark server has no coins for this recovery phrase. Check the words. If they're right, you can restore it anyway.": {
+      "comment": "GT gt_03ab60037096acb8; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The Ark server has no coins for this recovery phrase. Check the words. If they're right, you can restore it anyway."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "El servidor de Ark no tiene monedas para esta frase de recuperación. Revisa las palabras. Si son correctas, puedes restaurarla de todos modos."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Arkサーバーにはこの復元フレーズのコインがありません。単語を確認してください。正しければ、このまま復元できます。"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ark 서버에 이 복구 문구의 코인이 없습니다. 단어를 확인하세요. 맞다면 그래도 복원할 수 있습니다."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Ark-servern har inga mynt för den här återställningsfrasen. Kontrollera orden. Om de stämmer kan du återställa den ändå."
+          }
+        }
+      }
+    },
     "The Esplora endpoint cannot include a query string or fragment.": {
       "comment": "GT gt_19fe068bbdba00e6; arguments: none",
       "extractionState": "manual",
@@ -47841,42 +48057,6 @@
           "stringUnit": {
             "state": "translated",
             "value": "Till"
-          }
-        }
-      }
-    },
-    "To restore, Noah needs this phrase and a wallet backup.": {
-      "comment": "GT gt_31a0a151c58cdcdf; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "To restore, Noah needs this phrase and a wallet backup."
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Para restaurar la billetera, Noah necesita esta frase y una copia de seguridad."
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Noahでウォレットを復元するには、このフレーズとウォレットのバックアップが必要です。"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Noah에서 지갑을 복원하려면 이 문구와 지갑 백업이 필요합니다."
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "För att återställa plånboken behöver Noah den här frasen och en säkerhetskopia av plånboken."
           }
         }
       }

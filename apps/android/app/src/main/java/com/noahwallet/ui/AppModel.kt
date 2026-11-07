@@ -72,7 +72,7 @@ class AppModel(application: Application, val settings: SettingsStorage = Setting
     @Volatile private var restoringTypedPhrase = false
 
     val restore = RestoreFlow(
-        restore = { phrase, progress ->
+        restore = { phrase, source, progress ->
             val location = WalletDataLocation(getApplication<Application>().filesDir, BuildConfig.APP_VARIANT)
             if (location.restorePending || location.deletionMarker.exists()) throw RestoreCompletion.RestartRequired()
             if (location.hasAnyData) throw WalletSession.OpenError(WalletSession.OpenFailure.walletDatabaseExists)
@@ -80,7 +80,7 @@ class AppModel(application: Application, val settings: SettingsStorage = Setting
             val typed = restoringTypedPhrase
             @Suppress("TooGenericExceptionCaught") // clears the journal of a restore that didn't commit, then rethrows
             try {
-                services.restorer().restore(phrase, beforeInstall = { restoreCompletionJournal.write(it.copy(typedPhrase = typed)) },
+                services.restorer().restore(phrase, source, beforeInstall = { restoreCompletionJournal.write(it.copy(typedPhrase = typed)) },
                     progress = progress).copy(typedPhrase = typed)
             }
             catch (failure: Exception) {
@@ -119,8 +119,30 @@ class AppModel(application: Application, val settings: SettingsStorage = Setting
         isWalletSuspended = false
     }
 
-    fun restoreWallet(phrase: String? = null) {
+    /**
+     * The typed phrase of the last restore, kept only while its issue offers another way forward ([RestoreIssue.Action]):
+     * the words were cleared from the form when it started.
+     */
+    private var issuePhrase: String? = null
+
+    fun forgetRestorePhrase() { issuePhrase = null }
+
+    /**
+     * The restore issue's second way forward: recover from the Ark server, or restore a phrase it knows nothing about.
+     * [typed]: the phrase screen, which needs the words of the restore that failed. Returns whether a restore started.
+     */
+    fun takeRestoreIssueAction(typed: Boolean): Boolean {
+        val action = restore.issue?.action ?: return false
+        val phrase = if (typed) issuePhrase ?: return false else null
+        if (!canRestoreWallet) return false
+        restore.clearIssue() // Restoring would otherwise read the last attempt's error and send us straight back.
+        restoreWallet(phrase, WalletRestorer.Source.ArkServer(allowEmpty = action == RestoreIssue.Action.restoreAnyway))
+        return true
+    }
+
+    fun restoreWallet(phrase: String? = null, source: WalletRestorer.Source = WalletRestorer.Source.Backup) {
         if (!canRestoreWallet) return
+        issuePhrase = null
         busy = true
         viewModelScope.launch {
             @Suppress("TooGenericExceptionCaught") // restore boundary: every failure becomes the restore screen's issue
@@ -136,11 +158,14 @@ class AppModel(application: Application, val settings: SettingsStorage = Setting
                             }
                         }
                         restoringTypedPhrase = phrase != null
-                        restore.run(mnemonic)
+                        restore.run(mnemonic, source)
                     }
                 }
             } catch (failure: Exception) { restore.reject(RestoreIssue.from(failure)) }
-            finally { withContext(Dispatchers.IO) { refreshRecoveryFiles() }; busy = false }
+            finally {
+                if (restore.issue?.action != null) issuePhrase = phrase
+                withContext(Dispatchers.IO) { refreshRecoveryFiles() }; busy = false
+            }
         }
     }
 

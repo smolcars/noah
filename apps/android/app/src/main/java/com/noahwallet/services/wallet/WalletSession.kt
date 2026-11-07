@@ -91,6 +91,8 @@ class WalletSession internal constructor(
         suspend fun syncOnchain(): Unit = throw UnsupportedOperationException()
         suspend fun initialScan(): Unit = throw UnsupportedOperationException()
         suspend fun spendableVtxoIds(): List<String> = throw UnsupportedOperationException()
+        /** What bark's scan of the Ark server found when this open created the wallet. */
+        fun recoveryStatus(): io.github.niteshbalusu11.bark.RecoveryStatus = throw UnsupportedOperationException()
         /** bark's `trust_and_adopt_server_vtxo_status`: asks the server about one VTXO and adopts "spent". */
         suspend fun trustAndAdoptServerVtxoStatus(vtxoId: String): Unit = throw UnsupportedOperationException()
         suspend fun maintenanceDelegated()
@@ -290,6 +292,29 @@ class WalletSession internal constructor(
                 synchronized(lock) { state = State.Quarantined(handles) }
                 throw OpenError(OpenFailure.teardownFailed)
             }
+        }
+    }
+
+    /**
+     * Creates a wallet from [mnemonic] in [datadir], a restore's staging directory (never the live datadir), which runs
+     * bark's scan of the Ark server for its VTXOs, then closes it. Returns the scan's report, or null when the scan failed.
+     * Finishes even if the caller is cancelled, so nothing still runs on the files when the restore moves or removes them.
+     */
+    suspend fun recoverFromArkServer(reservation: Reservation, mnemonic: String, datadir: File): io.github.niteshbalusu11.bark.RecoveryReport? {
+        val caller = currentCoroutineContext()
+        caller.checkWalletAdmission()
+        return withContext(NonCancellable + Dispatchers.IO) {
+            synchronized(lock) { checkHeld(reservation) }
+            caller.checkWalletAdmission()
+            val handles = opener(mnemonic, datadir.path, "restore", true)
+            val status = runCatching { handles.recoveryStatus() }
+            try { handles.close() }
+            catch (_: Throwable) {
+                // Never let the restore move or remove files underneath native work when teardown failed.
+                synchronized(lock) { state = State.Quarantined(handles) }
+                throw OpenError(OpenFailure.teardownFailed)
+            }
+            (status.getOrThrow() as? io.github.niteshbalusu11.bark.RecoveryStatus.Completed)?.report
         }
     }
 
@@ -853,6 +878,7 @@ class WalletSession internal constructor(
         override suspend fun syncOnchain() { onchain.sync() }
         override suspend fun initialScan() { onchain.initialScan(null) }
         override suspend fun spendableVtxoIds() = wallet.spendableVtxos().map { it.id }
+        override fun recoveryStatus() = wallet.recoveryStatus()
         override suspend fun trustAndAdoptServerVtxoStatus(vtxoId: String) { wallet.trustAndAdoptServerVtxoStatus(vtxoId) }
         override suspend fun maintenanceDelegated() { wallet.maintenanceDelegated() }
         override suspend fun bolt11Invoice(amountSats: ULong) = wallet.bolt11Invoice(amountSats, null).invoice

@@ -285,8 +285,9 @@ final class AppModel {
         return mnemonic.split(separator: " ").map(String.init)
     }
 
-    /// Both the Welcome entry and reinstall recovery use this closed-session flow.
-    func restoreWallet(phrase: String? = nil) async {
+    /// Both the Welcome entry and reinstall recovery use this closed-session flow. `source`: the backup, or, when there
+    /// is none, the Ark server (`RestoreIssue.Action`).
+    func restoreWallet(phrase: String? = nil, from source: WalletRestorer.Source = .backup) async {
         guard !isRestoring, restoreIssue?.requiresRestart != true else { return }
         guard phase == .onboarding || phase == .blocked(.seedWithoutWalletData) else { return }
         isRestoring = true
@@ -311,7 +312,7 @@ final class AppModel {
                 seed: KeychainPassword.mnemonic(for: variant),
                 makeClient: { ServerClient.makeRestore(variant: variant, mnemonic: $0) },
                 beginOnboarding: { [settings] in try Self.beginRestore(settings, typedPhrase: phrase != nil) })
-            let outcome = try await restorer.restore(mnemonic: mnemonic) { [weak self] step in
+            let outcome = try await restorer.restore(mnemonic: mnemonic, from: source) { [weak self] step in
                 Task { @MainActor in
                     if self?.isRestoring == true { self?.restoreStep = step }
                 }
@@ -338,7 +339,7 @@ final class AppModel {
             if let failure = error as? StoredSeed.Failure {
                 phase = .blocked(failure == .invalid ? .invalidSeed : .seedConflict)
             }
-            restoreIssue = committed ? .committed : .from(error)
+            restoreIssue = committed ? .committed : .from(error, after: source)
         }
     }
 

@@ -118,7 +118,8 @@ actor WalletSession {
 
     private let variant: AppVariant
     let location: WalletDataLocation
-    private let opener: Opener
+    /// Internal for `WalletSession+Restore`; nothing else opens a wallet past the session.
+    let opener: Opener
     var sendPreparations: [String: SendPreparation] = [:]
     var unsubmittedBoardReviews: [UUID: OnchainQuote] = [:]
     var boardPreparations: [String: BoardPreparation] = [:]
@@ -416,7 +417,7 @@ actor WalletSession {
         }
     }
 
-    private func checkHeld(_ reservation: Reservation) throws {
+    func checkHeld(_ reservation: Reservation) throws {
         try checkAccess()
         guard case .reserved(let id) = state, id == reservation.id else { throw OpenError.busy }
     }

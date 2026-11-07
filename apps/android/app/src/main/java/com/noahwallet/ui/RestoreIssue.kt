@@ -6,10 +6,25 @@ import com.noahwallet.services.wallet.WalletSession
 import io.github.niteshbalusu11.bark.BarkError
 import java.io.IOException
 
-/** Fixed copy only: provider/server exceptions can contain secrets. A [title] is a short red headline over a calm [message]. */
-data class RestoreIssue(val message: String, val requiresRestart: Boolean = false, val title: String? = null) {
+/**
+ * Fixed copy only: provider/server exceptions can contain secrets. A [title] is a short red headline over a calm [message];
+ * an [action] is a second way forward the screen offers under it.
+ */
+data class RestoreIssue(val message: String, val requiresRestart: Boolean = false, val title: String? = null, val action: Action? = null) {
+    enum class Action(val label: String) {
+        /** Rebuild the balance from the Ark server ([WalletRestorer.Source.ArkServer]). */
+        recoverFromArkServer("Recover my balance"),
+        /** The Ark server knows nothing about the phrase; restore it anyway. */
+        restoreAnyway("Restore anyway"),
+    }
+
     companion object {
-        val noBackup = RestoreIssue("Check the words. Noah can only restore a wallet that had backups turned on.", title = "No backup found")
+        val noBackup = RestoreIssue(
+            "Check the words. If they're right, Noah can recover your balance from the Ark server, but not your payment history or settings.",
+            title = "No backup found", action = Action.recoverFromArkServer)
+        val nothingFound = RestoreIssue(
+            "The Ark server has no coins for this recovery phrase. Check the words. If they're right, you can restore it anyway.",
+            title = "Nothing found", action = Action.restoreAnyway)
         val newerBackup = RestoreIssue("This backup was created by a newer version of Noah. Update the app, then try restoring again.")
         val invalidPhrase = RestoreIssue("Check your recovery phrase. Enter all 12 or 24 words in the correct order.")
         val committed = RestoreIssue("Your backup was restored, but setup couldn't finish. Do not restore again. Close and restart Noah to continue.", true)
@@ -26,6 +41,11 @@ data class RestoreIssue(val message: String, val requiresRestart: Boolean = fals
             "Noah couldn't confirm that your recovery phrase was saved. Do not retry. Unlock your device, then close and restart Noah to recover safely.",
             true)
         private val wrongPhrase = RestoreIssue("This phrase couldn't unlock the backup, or the backup is damaged. Check all 12 or 24 words and their order.")
+        /** After a restore from [source]: a recovery from the Ark server that failed for any other reason (offline) can be tried again. */
+        fun from(error: Exception, source: WalletRestorer.Source): RestoreIssue = from(error).let {
+            if (source != WalletRestorer.Source.Backup && it.action == null && !it.requiresRestart) it.copy(action = Action.recoverFromArkServer) else it
+        }
+
         fun from(error: Exception): RestoreIssue = when (error) {
             is WalletRestorer.Failure -> when (error.reason) {
                 WalletRestorer.Reason.wrongNetwork -> RestoreIssue("This backup belongs to a different Bitcoin network. Use the matching version of Noah.")
@@ -36,6 +56,10 @@ data class RestoreIssue(val message: String, val requiresRestart: Boolean = fals
                 WalletRestorer.Reason.secureStorageUnavailable -> RestoreIssue("Noah couldn't access secure storage. Unlock your device and try again.")
                 WalletRestorer.Reason.rollbackFailed -> rollbackFailed
                 WalletRestorer.Reason.seedStateUnknown -> seedStateUnknown
+                WalletRestorer.Reason.serverRecoveryIncomplete -> RestoreIssue(
+                    "Noah couldn't finish recovering your balance from the Ark server. Check your connection and try again.",
+                    title = "Couldn't restore", action = Action.recoverFromArkServer)
+                WalletRestorer.Reason.nothingFoundOnServer -> nothingFound
             }
             is RestoreTransaction.Failure, is RestoreCompletion.RestartRequired -> recovery
             is WalletSession.OpenError -> when (error.reason) {

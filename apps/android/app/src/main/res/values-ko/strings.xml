@@ -199,7 +199,7 @@
   <string name="gt_84baa61bd34d1b8e">"상태 다시 확인"</string>
   <string name="gt_44cb983669c9d0a9">"주소를 확인하세요. 되돌릴 수 없어요."</string>
   <string name="gt_c31be569a492274b">"금액, 선택한 VTXO, 목적지를 확인하세요. 확정된 자금이 부족할 수 있습니다."</string>
-  <string name="gt_4282111188a1f2bd">"단어를 확인하세요. Noah에서는 백업 기능이 켜져 있던 지갑만 복원할 수 있습니다."</string>
+  <string name="gt_9716fa3d65183825">"단어를 확인하세요. 맞다면 Noah가 Ark 서버에서 잔액을 복구할 수 있지만, 결제 내역과 설정은 복구되지 않습니다."</string>
   <string name="gt_ff65032d5e881811">"다시 승인하기 전에 이 결제의 결과를 확인하세요."</string>
   <string name="gt_6f113ce35347ffe6">"수정하기 전에 이 결제의 결과를 확인하세요."</string>
   <string name="gt_710d52f182321f4a">"%1$s번째 단어를 확인하세요"</string>
@@ -813,6 +813,7 @@
   <string name="gt_f58c5680c7fa8fe7">"Noah가 Ark 주소를 복사하지 못했습니다. Noah를 연 상태에서 다시 시도하세요."</string>
   <string name="gt_ff4f4291a0ae3c10">"Noah가 인보이스를 복사하지 못했습니다. Noah를 연 상태에서 다시 시도하세요."</string>
   <string name="gt_e92407ae0cc29539">"Noah가 중단된 복원을 완료하거나 되돌리지 못했습니다. 지갑 파일은 그대로 유지되었습니다. 다시 시도하려면 Noah를 다시 시작하세요."</string>
+  <string name="gt_d9fcdd34f02053a7">"Noah가 Ark 서버에서 잔액 복구를 마치지 못했습니다. 연결 상태를 확인하고 다시 시도하세요."</string>
   <string name="gt_8ad019accd01ac95">"Noah가 복원된 지갑을 안전하게 열지 못했습니다. 계속하려면 Noah를 종료한 후 다시 시작하세요."</string>
   <string name="gt_5ff18c368e86ed56">"Noah가 Ark 서버에 연결하지 못했습니다. 연결 상태를 확인하고 다시 시도하세요."</string>
   <string name="gt_55037f1fddcada0f">"Noah가 임시 지갑 파일을 삭제하지 못했습니다. Noah를 다시 시작한 후 다시 시도하세요."</string>
@@ -826,6 +827,7 @@
   <string name="gt_f590e31a6eb944e2">"Noah에서 백업을 마무리하는 중입니다. 잠시 후 다시 시도하세요."</string>
   <string name="gt_338e68cc4323f294">"Noah 알림"</string>
   <string name="gt_08b28eee5b5a6d39">"Noah가 이 지갑을 서버에 다시 등록해요. 지갑은 그대로 유지돼요."</string>
+  <string name="gt_29775aae70149c47">"Noah는 백업에서 지갑을 복원합니다. 백업이 없어도 잔액은 복구할 수 있습니다."</string>
   <string name="gt_9e1ac2f586e28294">"Noah는 출금 거래를 자동으로 전송하고 수수료를 인상합니다. 시스템이 허용하는 경우 백그라운드에서도 처리합니다. 수수료는 예상 금액입니다."</string>
   <string name="gt_286c0deecb39be99">"Noah가 Ark 잔액에서 자동으로 결제합니다. 지정된 받는 사람에게 정해진 금액만 결제되며, 언제든지 일시 중지하거나 취소할 수 있습니다."</string>
   <string name="gt_ddecc0272120b4ba">"Noah 사용자"</string>
@@ -851,6 +853,7 @@
   <string name="gt_d8da2c49df39d91d">"메모"</string>
   <string name="gt_f9b73e1abc37cf5b">"메모(선택 사항)"</string>
   <string name="gt_045f910e6b3ce120">"메모는 639자 이하여야 합니다."</string>
+  <string name="gt_9f5cac3cf2edba63">"아무것도 찾지 못함"</string>
   <string name="gt_0ded20d6a749d6bf">"아직 보낼 것이 없어요"</string>
   <string name="gt_788011833a5a0f22">"알림"</string>
   <string name="gt_54ee6b72ca5e79e6">"알림이 필요합니다"</string>
@@ -1002,6 +1005,7 @@
   <string name="gt_3fed24d17905877f">"받는 사람 확인됨"</string>
   <string name="gt_c7175fa7a0db0d3c">"기록됨"</string>
   <string name="gt_e4cea0827a11aed0">"기록 시점"</string>
+  <string name="gt_fd396d72e35b19ec">"잔액 복구"</string>
   <string name="gt_41edd3f47328da5a">"복구 문구"</string>
   <string name="gt_512d764f27c017d9">"복구 문구를 찾았습니다"</string>
   <string name="gt_9b40b8e408567040">"복구 문구 숨겨짐"</string>
@@ -1079,6 +1083,7 @@
   <string name="gt_55d67318211dbda2">"등록 초기화"</string>
   <string name="gt_9d5cd4a03ec60322">"등록을 초기화할까요?"</string>
   <string name="gt_a76e13b9839270eb">"복원"</string>
+  <string name="gt_1ea70aac7ddff51b">"그래도 복원"</string>
   <string name="gt_758420e6c40b4a1e">"복원이 완료되지 않았습니다"</string>
   <string name="gt_293a2b4aba634d76">"지갑 복원"</string>
   <string name="gt_5d06ed14f9744167">"복원된 지갑 설정을 아직 저장할 수 없습니다. 저장소를 사용할 수 있게 되면 \'재개\'를 다시 시도하세요. 정기 결제는 중지된 상태로 유지됩니다."</string>
@@ -1248,6 +1253,7 @@
   <string name="gt_2e48454ee6ef8e0a">"코드가 맞지 않습니다. 다시 시도하세요."</string>
   <string name="gt_b3a72229e9eb3cc3">"결제가 완료되지 않았어요"</string>
   <string name="gt_9a17fe4427faafa5">"결제가 완료되지 않았어요."</string>
+  <string name="gt_03ab60037096acb8">"Ark 서버에 이 복구 문구의 코인이 없습니다. 단어를 확인하세요. 맞다면 그래도 복원할 수 있습니다."</string>
   <string name="gt_19fe068bbdba00e6">"Esplora 엔드포인트에는 쿼리 문자열이나 프래그먼트를 포함할 수 없습니다."</string>
   <string name="gt_0ac08a81559f95ee">"Esplora 엔드포인트에는 인증 정보를 포함할 수 없습니다."</string>
   <string name="gt_96100ca2d23b8821">"Esplora 엔드포인트가 다른 Bitcoin 네트워크용입니다."</string>
@@ -1350,7 +1356,6 @@
   <string name="gt_9dcff98e275f0cb9">"진행 기록"</string>
   <string name="gt_e12a2ce4d26b2017">"타임락"</string>
   <string name="gt_f4b06ef6d3c81436">"받는 사람"</string>
-  <string name="gt_31a0a151c58cdcdf">"Noah에서 지갑을 복원하려면 이 문구와 지갑 백업이 필요합니다."</string>
   <string name="gt_2b065c7c9ce466e5">"오늘"</string>
   <string name="gt_8e5d375aee547cf8">"출금하기에 너무 적음 · %1$s 미만"</string>
   <string name="gt_168d36c2d331807e">"걸린 시간"</string>

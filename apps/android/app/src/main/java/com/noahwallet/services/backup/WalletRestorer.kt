@@ -32,14 +32,31 @@ class WalletRestorer(
     private val beginOnboarding: () -> Unit = {},
     private val rounds: Int = BackupCrypto.pbkdf2Rounds,
 ) {
+    /**
+     * [serverRecoveryIncomplete]: bark's scan of the Ark server failed or left VTXOs undecided; nothing was committed, as
+     * bark only scans when it creates a wallet. [nothingFoundOnServer]: the Ark server knows of no VTXO for the phrase at
+     * all, most likely mistyped words that still pass the checksum; nothing was committed.
+     */
     enum class Reason { wrongNetwork, identityMismatch, noUsableBackup, unsupportedFormat, downloadMismatch,
-        secureStorageUnavailable, rollbackFailed, seedStateUnknown }
+        secureStorageUnavailable, rollbackFailed, seedStateUnknown, serverRecoveryIncomplete, nothingFoundOnServer }
+
+    /** Where a restore gets the wallet from. */
+    sealed interface Source {
+        /** The newest usable backup on the Noah server. */
+        data object Backup : Source
+        /**
+         * No backup exists: a new wallet from the phrase, whose VTXOs bark rebuilds from the Ark server while creating it.
+         * Payment history, recurring payments and settings can't come back. [allowEmpty]: the user chose to restore a
+         * phrase the Ark server knows nothing about.
+         */
+        data class ArkServer(val allowEmpty: Boolean) : Source
+    }
     class Failure(val reason: Reason) : Exception(reason.name)
     enum class Step { fetching, validating, loading, finalizing }
     /** [typedPhrase]: the user typed the phrase (not the stored-seed recovery), so the wallet counts as backed up. */
     data class Outcome(val backupId: String?, val snapshotSha256: String?, val cleanupPending: Boolean = false, val typedPhrase: Boolean = false)
 
-    suspend fun restore(mnemonic: String, beforeInstall: (Outcome) -> Unit = {},
+    suspend fun restore(mnemonic: String, source: Source = Source.Backup, beforeInstall: (Outcome) -> Unit = {},
         progress: (Step) -> Unit = {}): Outcome = withContext(Dispatchers.IO) {
         if (StoredMnemonic.normalize(mnemonic) == null) throw SeedItem.Unavailable()
         val reservation = session.reserve()
@@ -53,7 +70,10 @@ class WalletRestorer(
                 var installed = false
                 try {
                     progress(Step.fetching)
-                    val outcome = makeClient(mnemonic).use { fetchAndStage(it, mnemonic, progress) }
+                    val outcome = when (source) {
+                        Source.Backup -> makeClient(mnemonic).use { fetchAndStage(it, mnemonic, progress) }
+                        is Source.ArkServer -> stageFromArkServer(reservation, mnemonic, source.allowEmpty)
+                    }
                     // Once installation starts, cancellation must not interrupt native verification or seed read-back.
                     withContext(NonCancellable) { install(reservation, mnemonic, outcome, beforeInstall, progress) }
                         .also { installed = true }
@@ -96,6 +116,18 @@ class WalletRestorer(
     private fun undo() {
         if (!transaction.isPending) return
         try { transaction.undo() } catch (_: Exception) { throw Failure(Reason.rollbackFailed) }
+    }
+    /**
+     * Leaves a wallet bark built from the Ark server in the transaction's staging directory: created there from the
+     * phrase, which runs bark's scan, and closed again. From here it goes through the same swap, open check and seed
+     * commit as a backup.
+     */
+    private suspend fun stageFromArkServer(reservation: WalletSession.Reservation, mnemonic: String, allowEmpty: Boolean): Outcome {
+        check(transaction.staged.mkdir()) { "Cannot create the restore staging directory" }
+        val report = session.recoverFromArkServer(reservation, mnemonic, transaction.staged)
+        if (report == null || !report.isComplete) throw Failure(Reason.serverRecoveryIncomplete)
+        if (!allowEmpty && report.foundNothing()) throw Failure(Reason.nothingFoundOnServer)
+        return Outcome(backupId = null, snapshotSha256 = null)
     }
     private suspend fun listBackups(client: HttpClient) = try { V0BackupV2ListClient(client).listBackupObjects().value() }
     catch (failure: ServerFailure) { if (failure.status == 404) emptyList() else throw failure }
@@ -171,3 +203,7 @@ class RestoreRecovery(private val recover: suspend () -> RestoreTransaction.Reco
     private val mutex = Mutex()
     suspend fun settle(): RestoreTransaction.Recovery = mutex.withLock { recover() }
 }
+
+/** The Ark server knew of no VTXO for the seed, spent or not. */
+internal fun io.github.niteshbalusu11.bark.RecoveryReport.foundNothing() =
+    listOf(recovered, skipped, foreign, failed, exited).all { it.vtxoIds.isEmpty() }

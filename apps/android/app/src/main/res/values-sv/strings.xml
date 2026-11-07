@@ -199,7 +199,7 @@
   <string name="gt_84baa61bd34d1b8e">"Kontrollera status igen"</string>
   <string name="gt_44cb983669c9d0a9">"Kontrollera adressen. Det här kan inte ångras."</string>
   <string name="gt_c31be569a492274b">"Kontrollera beloppet, valda VTXO:er och destinationen. Det kanske inte finns tillräckligt med bekräftade medel."</string>
-  <string name="gt_4282111188a1f2bd">"Kontrollera orden. Noah kan bara återställa en plånbok som hade säkerhetskopiering aktiverad."</string>
+  <string name="gt_9716fa3d65183825">"Kontrollera orden. Om de stämmer kan Noah återställa ditt saldo från Ark-servern, men inte din betalningshistorik eller dina inställningar."</string>
   <string name="gt_ff65032d5e881811">"Kontrollera resultatet av den här betalningen innan du godkänner den igen."</string>
   <string name="gt_6f113ce35347ffe6">"Kontrollera resultatet av den här betalningen innan du redigerar den."</string>
   <string name="gt_710d52f182321f4a">"Kontrollera ord %1$s"</string>
@@ -813,6 +813,7 @@
   <string name="gt_f58c5680c7fa8fe7">"Noah kunde inte kopiera Ark-adressen. Försök igen medan Noah är öppen."</string>
   <string name="gt_ff4f4291a0ae3c10">"Noah kunde inte kopiera fakturan. Försök igen medan Noah är öppen."</string>
   <string name="gt_e92407ae0cc29539">"Noah kunde inte slutföra eller ångra en avbruten återställning. Dina plånboksfiler har lämnats oförändrade. Starta om Noah för att försöka igen."</string>
+  <string name="gt_d9fcdd34f02053a7">"Noah kunde inte slutföra återställningen av ditt saldo från Ark-servern. Kontrollera din anslutning och försök igen."</string>
   <string name="gt_8ad019accd01ac95">"Noah kunde inte öppna den återställda plånboken på ett säkert sätt. Stäng och starta om Noah för att fortsätta."</string>
   <string name="gt_5ff18c368e86ed56">"Noah kunde inte nå Ark-servern. Kontrollera din anslutning och försök igen."</string>
   <string name="gt_55037f1fddcada0f">"Noah kunde inte ta bort tillfälliga plånboksfiler. Starta om Noah och försök igen."</string>
@@ -826,6 +827,7 @@
   <string name="gt_f590e31a6eb944e2">"Noah håller fortfarande på att slutföra en säkerhetskopiering. Försök igen om en stund."</string>
   <string name="gt_338e68cc4323f294">"Aviseringar från Noah"</string>
   <string name="gt_08b28eee5b5a6d39">"Noah registrerar plånboken hos servern igen. Din plånbok finns kvar."</string>
+  <string name="gt_29775aae70149c47">"Noah återställer din plånbok från dess säkerhetskopia. Utan en kan Noah ändå återställa ditt saldo."</string>
   <string name="gt_9e1ac2f586e28294">"Noah skickar nöduttagets transaktioner och höjer deras avgifter automatiskt, även i bakgrunden när systemet tillåter det. Avgifterna är uppskattningar."</string>
   <string name="gt_286c0deecb39be99">"Noah skickar den här betalningen automatiskt från ditt Ark-saldo. Betalningen får bara skickas till den här mottagaren och med det här beloppet. Du kan pausa eller avsluta den när som helst."</string>
   <string name="gt_ddecc0272120b4ba">"Noah-användare"</string>
@@ -851,6 +853,7 @@
   <string name="gt_d8da2c49df39d91d">"Anteckning"</string>
   <string name="gt_f9b73e1abc37cf5b">"Meddelande (valfritt)"</string>
   <string name="gt_045f910e6b3ce120">"Anteckningen får vara högst 639 tecken."</string>
+  <string name="gt_9f5cac3cf2edba63">"Inget hittades"</string>
   <string name="gt_0ded20d6a749d6bf">"Inget att skicka än"</string>
   <string name="gt_788011833a5a0f22">"Aviseringar"</string>
   <string name="gt_54ee6b72ca5e79e6">"Aviseringar krävs"</string>
@@ -1002,6 +1005,7 @@
   <string name="gt_3fed24d17905877f">"Mottagare verifierad"</string>
   <string name="gt_c7175fa7a0db0d3c">"Registrerad"</string>
   <string name="gt_e4cea0827a11aed0">"Registrerad vid"</string>
+  <string name="gt_fd396d72e35b19ec">"Återställ mitt saldo"</string>
   <string name="gt_41edd3f47328da5a">"Återställningsfras"</string>
   <string name="gt_512d764f27c017d9">"Återställningsfras hittad"</string>
   <string name="gt_9b40b8e408567040">"Återställningsfrasen är dold"</string>
@@ -1079,6 +1083,7 @@
   <string name="gt_55d67318211dbda2">"Återställ registrering"</string>
   <string name="gt_9d5cd4a03ec60322">"Vill du återställa registreringen?"</string>
   <string name="gt_a76e13b9839270eb">"Återställ"</string>
+  <string name="gt_1ea70aac7ddff51b">"Återställ ändå"</string>
   <string name="gt_758420e6c40b4a1e">"Återställningen slutfördes inte"</string>
   <string name="gt_293a2b4aba634d76">"Återställ plånbok"</string>
   <string name="gt_5d06ed14f9744167">"De återställda plånboksinställningarna kan inte sparas ännu. Tryck på Återuppta igen när lagringen är tillgänglig. Återkommande betalningar är fortsatt stoppade."</string>
@@ -1248,6 +1253,7 @@
   <string name="gt_2e48454ee6ef8e0a">"Koden fungerade inte. Försök igen."</string>
   <string name="gt_b3a72229e9eb3cc3">"Betalningen gick inte igenom"</string>
   <string name="gt_9a17fe4427faafa5">"Betalningen gick inte igenom."</string>
+  <string name="gt_03ab60037096acb8">"Ark-servern har inga mynt för den här återställningsfrasen. Kontrollera orden. Om de stämmer kan du återställa den ändå."</string>
   <string name="gt_19fe068bbdba00e6">"Esplora-slutpunkten får inte innehålla en frågesträng eller ett fragment."</string>
   <string name="gt_0ac08a81559f95ee">"Esplora-slutpunkten får inte innehålla inloggningsuppgifter."</string>
   <string name="gt_96100ca2d23b8821">"Esplora-slutpunkten är avsedd för ett annat Bitcoin-nätverk."</string>
@@ -1350,7 +1356,6 @@
   <string name="gt_9dcff98e275f0cb9">"Tidslinje"</string>
   <string name="gt_e12a2ce4d26b2017">"Tidslås"</string>
   <string name="gt_f4b06ef6d3c81436">"Till"</string>
-  <string name="gt_31a0a151c58cdcdf">"För att återställa plånboken behöver Noah den här frasen och en säkerhetskopia av plånboken."</string>
   <string name="gt_2b065c7c9ce466e5">"I dag"</string>
   <string name="gt_8e5d375aee547cf8">"För litet för uttag · under %1$s"</string>
   <string name="gt_168d36c2d331807e">"Tog"</string>
