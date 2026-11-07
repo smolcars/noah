@@ -67,7 +67,7 @@ It is intentionally operational: where code lives, how the runtime behaves, and 
 
 ### Android
 
-- Kotlin, Jetpack Compose, Navigation 3, Gradle with strict dependency verification, JDK 17, compile/target SDK 37, min SDK 24.
+- Kotlin, Jetpack Compose, Navigation 3, Gradle with strict dependency verification, JDK 17 (unit tests run on JDK 21 for Robolectric's Android 16), compile/target SDK 37, min SDK 24.
 - Wallet SDK: bark-bolt-ffi (`io.github.niteshbalusu11:bark-bolt-ffi-android`). Server client generated with Fabrikt.
 - Lint/format: ktlint and detekt (all rules, `Config/detekt/detekt.yml`).
 

@@ -28,7 +28,9 @@ then pull `files/sr-shots/<label>` with `run-as`. `SendHoldTest`, `SendReceiveFo
 
 Use JDK 17 and an Android SDK with platform 37 and build-tools 36.0.0 or newer.
 Set `ANDROID_HOME` (or `sdk.dir` in the ignored `local.properties`). The repo's
-`nix develop` shell provides JDK 17 and the SDK; no newer JDK is required.
+`nix develop` shell provides JDK 17 and the SDK. Unit tests also need a JDK 21
+(Robolectric runs Android 16 only on Java 21): the shell exports it as
+`JAVA21_HOME`; elsewhere set `JAVA21_HOME` to any JDK 21.
 The committed wrapper uses Gradle 9.6.1 with its distribution checksum pinned.
 
 From `apps/android/`:
