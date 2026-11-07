@@ -81,7 +81,10 @@ data class HomeUi(
     /** The top bar's [ActivityGlyph]. */
     val activity: String? = null,
     val backedUpAt: Long? = null,
+    /** The launch preview's balance (the widget's last), until the first summary. */
+    val previewTotal: ULong? = null,
 ) {
+    val totalSats get() = balance?.totalSats ?: previewTotal
     val domain get() = address?.substringAfter('@', "")?.takeIf { it.isNotEmpty() }
     fun amount(sats: ULong) = if (hidden) "••••" else BitcoinAmount.format(sats.toLong(), unit, locale)
 }
@@ -145,7 +148,7 @@ fun HomeContent(ui: HomeUi, actions: HomeActions, memory: HomeMemory, toasts: Ho
     val revealed = rememberElapsed(memory.recentRevealAt, 1_000)
     // While the first payment plays, Home is still the Fresh card turning into the receipt.
     val state = if (payment != null) HomeRules.State.fresh else ui.state
-    val shownTotal = if (payment != null && paymentElapsed < 300) 0uL else ui.balance?.totalSats
+    val shownTotal = if (payment != null && paymentElapsed < 300) 0uL else ui.totalSats
     val (copy, share) = rememberAddressActions(toasts)
     val openSheet = { haptics.light(); sheet = true }
     val toggle = { haptics.medium(); actions.toggleHidden() }
@@ -400,7 +403,7 @@ private fun MiniBalance(ui: HomeUi, tuck: Float) {
     val rise by androidx.compose.animation.core.animateFloatAsState(if (shown || reduceMotion) 0f else 6f,
         androidx.compose.animation.core.tween(300), label = "mini-rise")
     Text(if (ui.hidden) BitcoinAmount.format(0, ui.unit, ui.locale).replace("0",
-        "••••") else ui.balance?.let { BitcoinAmount.format(it.totalSats.toLong(), ui.unit, ui.locale) } ?: "",
+        "••••") else ui.totalSats?.let { BitcoinAmount.format(it.toLong(), ui.unit, ui.locale) } ?: "",
         Modifier.padding(horizontal = 8.dp).graphicsLayer { this.alpha = alpha; translationY = rise * density }.clearAndSetSemantics { },
         style = HomeType.mini, color = palette.foreground, maxLines = 1, overflow = TextOverflow.Ellipsis)
 }

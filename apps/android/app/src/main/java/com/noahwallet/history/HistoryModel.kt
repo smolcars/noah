@@ -53,7 +53,8 @@ class HistoryModel(private val dependencies: Dependencies) {
                 val explorer = OkHttpClient.Builder().callTimeout(10, TimeUnit.SECONDS).build()
                 fun available() { if (suspended()) throw AppServices.WalletSuspended() }
                 return Dependencies(
-                    load = { available(); session.transactionHistory() }, sync = { available(); session.sync() },
+                    // Activity's pull: Ark only; on-chain rows follow the foreground pass's sync it starts after.
+                    load = { available(); session.transactionHistory() }, sync = { available(); session.syncArk() },
                     changes = { flow { available(); emitAll(session.stateChanges().map { it.reason }) } },
                     blockTime = { txid ->
                         esploraEndpoint()?.let { base ->

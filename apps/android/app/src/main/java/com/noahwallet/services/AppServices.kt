@@ -343,7 +343,7 @@ class AppServices private constructor(private val context: Context) {
                     currentCoroutineContext().ensureActive()
                     if (!budget.available || !foregroundSyncAllowed()) return@run
                     reconcileMailboxProcessor()
-                    com.noahwallet.services.wallet.WalletBackgroundActivity.during { foregroundWork.run(session.walletChanges.value) }
+                    com.noahwallet.services.wallet.WalletBackgroundActivity.during(foreground = true) { foregroundWork.run(session.walletChanges.value) }
                 }
             }
         } catch (cancelled: CancellationException) { throw cancelled }

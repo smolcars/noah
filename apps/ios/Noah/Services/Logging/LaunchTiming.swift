@@ -6,6 +6,7 @@ import Synchronization
 /// the process started. Never logs wallet data.
 final class LaunchTiming: Sendable {
     enum Milestone: String, Sendable {
+        case previewShown = "Launch preview shown"
         case walletOpened = "Wallet open done"
         case summaryShown = "First summary shown"
         case historyShown = "First history rows shown"

@@ -11,7 +11,7 @@ import java.util.EnumSet
  */
 internal class LaunchTiming(private val log: (String) -> Unit, private val sinceStart: () -> Long) {
     enum class Milestone(val text: String) {
-        walletOpened("Wallet open done"), summaryShown("First summary shown"), historyShown("First history rows shown"),
+        previewShown("Launch preview shown"), walletOpened("Wallet open done"), summaryShown("First summary shown"), historyShown("First history rows shown"),
     }
     private val logged = EnumSet.noneOf(Milestone::class.java)
 

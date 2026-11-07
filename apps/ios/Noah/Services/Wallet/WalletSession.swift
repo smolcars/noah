@@ -117,7 +117,7 @@ actor WalletSession {
     }
 
     private let variant: AppVariant
-    private let location: WalletDataLocation
+    let location: WalletDataLocation
     private let opener: Opener
     var sendPreparations: [String: SendPreparation] = [:]
     var unsubmittedBoardReviews: [UUID: OnchainQuote] = [:]
@@ -580,15 +580,6 @@ extension WalletSession {
 
     // MARK: Receive
 
-    /// Fresh Ark and onchain addresses, kept paired while an amount is edited.
-    func receiveRequest() async throws -> ReceiveRequest {
-        try await withOpenWallet { handles in
-            let ark = try await handles.wallet.newAddress()
-            let onchain = try await handles.onchain.newAddress()
-            return ReceiveRequest(arkAddress: ark, onchainAddress: onchain)
-        }
-    }
-
     func receiveInvoice(for request: ReceiveRequest, amountSat: Int64, description: String) async throws -> ReceiveRequest {
         let description = description.trimmingCharacters(in: .whitespacesAndNewlines)
         try ReceiveRequest.validate(amountSat: amountSat, description: description)
@@ -702,6 +693,12 @@ extension WalletSession {
         ]
         if includingLightningClaims { stages.append { _ = try await $0.wallet.tryClaimAllLightningReceives(wait: false) } }
         try await sync(stages: stages)
+    }
+
+    /// Pull-to-refresh's sync: Ark only. The on-chain sync (12 s+ on mainnet) follows in the foreground pass,
+    /// with no spinner waiting on it.
+    func syncArk() async throws {
+        try await sync(stages: [{ try await $0.wallet.sync() }])
     }
 
     func sync(stages: [@Sendable (Handles) async throws -> Void]) async throws {

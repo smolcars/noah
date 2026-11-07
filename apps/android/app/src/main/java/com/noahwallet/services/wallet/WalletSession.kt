@@ -75,7 +75,8 @@ class WalletSession internal constructor(
         suspend fun pendingRounds(): List<PendingRoundStatus> = throw UnsupportedOperationException()
         suspend fun history(): List<Movement>
         suspend fun transactions(): List<WalletTransaction> = throw UnsupportedOperationException()
-        suspend fun receiveRequest(): ReceiveRequest
+        suspend fun newAddressWithIndex(): AddressWithIndex = throw UnsupportedOperationException()
+        suspend fun newOnchainAddress(): String = throw UnsupportedOperationException()
         suspend fun receiveInvoice(request: ReceiveRequest, amountSat: Long, description: String): ReceiveRequest
         suspend fun initializeAddress()
         suspend fun peekPublicKey(index: UInt): String
@@ -402,6 +403,11 @@ class WalletSession internal constructor(
         }
     }
 
+    /** Pull to refresh's sync: Ark only; the on-chain sync (12 s+ on mainnet) follows in the foreground pass, with no spinner waiting on it. */
+    suspend fun syncArk() {
+        if (isOpen) withOpen { handles -> (handles.synchronization ?: syncFlight).run(handles::syncWallet) }
+    }
+
     /** The foreground pass's sync before its other stages: bark's wallet and Lightning claims; [syncOnchain] runs last. */
     suspend fun syncWalletAndClaims() {
         if (isOpen) withOpen { handles -> (handles.synchronization ?: syncFlight).run(handles::syncWallet, handles::claimLightningReceives) }
@@ -472,14 +478,17 @@ class WalletSession internal constructor(
         }
     }
 
-    private suspend fun <T> withM6(block: suspend (Handles) -> T): T = withOpen {
-        if (WalletBackgroundActivity.isRunning) throw OnchainException(OnchainFailure.unavailable)
+    /** Reads wait out push, periodic and assistant jobs; [executing] (what takes [onchainMutation]) also the foreground pass. */
+    private fun onchainBlocked(executing: Boolean) =
+        if (executing) WalletBackgroundActivity.isRunning else WalletBackgroundActivity.isJobRunning
+    private suspend fun <T> withM6(executing: Boolean = false, block: suspend (Handles) -> T): T = withOpen {
+        if (onchainBlocked(executing)) throw OnchainException(OnchainFailure.unavailable)
         block(it)
     }
     private val onchainMutation = Mutex()
     val onchainJournal = OnchainOperationJournal(File(location.directory, "noah-onchain-attempt.json"))
-    private fun onchainOperations(handles: Handles) = OnchainOperations(handles.m6, onchainJournal,
-        ready = { !isSuspended() && !WalletBackgroundActivity.isRunning }, refused = com.noahwallet.onchain.ExitErrors.refused)
+    private fun onchainOperations(handles: Handles, executing: Boolean = false) = OnchainOperations(handles.m6, onchainJournal,
+        ready = { !isSuspended() && !onchainBlocked(executing) }, refused = com.noahwallet.onchain.ExitErrors.refused)
     suspend fun onchainOverview(): OnchainOverview = withM6 {
         onchainOperations(it).overview(WalletConfiguration.base(variant).vtxoRefreshExpiryThreshold.toUInt())
     }
@@ -506,17 +515,17 @@ class WalletSession internal constructor(
     suspend fun executeOnchain(quote: OnchainQuote, funding: AutoBoardFunding.Snapshot? = null, renewal: Boolean = false,
         keepOnchain: (Set<String>) -> Unit = {}, kept: (String) -> Set<String> = { emptySet() },
         recordClaim: (com.noahwallet.onchain.ExitClaimRecords.Record) -> Unit = {},
-        newRun: (List<String>) -> Unit = {}, shortOfFunds: (Map<String, Long>) -> Unit = {}): String = withM6 { handles ->
+        newRun: (List<String>) -> Unit = {}, shortOfFunds: (Map<String, Long>) -> Unit = {}): String = withM6(executing = true) { handles ->
         val threshold = if (renewal) WalletConfiguration.base(variant).vtxoRefreshExpiryThreshold.toUInt() else null
         onchainMutation.withLock {
-            onchainOperations(handles).execute(quote, funding, renewalThreshold = threshold, keepOnchain = keepOnchain, kept = kept,
+            onchainOperations(handles, executing = true).execute(quote, funding, renewalThreshold = threshold, keepOnchain = keepOnchain, kept = kept,
                 recordClaim = recordClaim, newRun = newRun, shortOfFunds = shortOfFunds)
         }
     }
     internal suspend fun exitCosts(ids: List<String>): Map<String, com.noahwallet.onchain.ExitCosts.Cost?> = withM6 { onchainOperations(it).exitCosts(ids) }
     internal suspend fun exitExcluded(): Set<String> = withM6 { onchainOperations(it).exitExcluded() }
-    suspend fun abandonUnsubmittedAutoBoard(quote: OnchainQuote): Boolean = withM6 { handles ->
-        onchainMutation.withLock { onchainOperations(handles).abandonUnsubmittedAutoBoard(quote) }
+    suspend fun abandonUnsubmittedAutoBoard(quote: OnchainQuote): Boolean = withM6(executing = true) { handles ->
+        onchainMutation.withLock { onchainOperations(handles, executing = true).abandonUnsubmittedAutoBoard(quote) }
     }
     suspend fun checkOnchainAttempt(id: String): Boolean = withM6 { onchainOperations(it).check(id) }
     /**
@@ -546,7 +555,33 @@ class WalletSession internal constructor(
 
     suspend fun createSnapshot(destination: File): WalletSnapshotInfo = withOpen { it.createSnapshot(destination) }
 
-    suspend fun receiveRequest(): ReceiveRequest = withOpen { it.receiveRequest() }
+    /** Receive's addresses, reused until each is paid: every new on-chain address joins every later on-chain sync. */
+    @kotlinx.serialization.Serializable
+    private data class ReceiveAddresses(val ark: String, val arkIndex: UInt, val onchain: String)
+
+    /**
+     * Kept paired while an amount is edited. Read and saved under the open wallet, in its folder, which a restore
+     * replaces and a deletion removes, so the addresses never outlive the database that derived them.
+     */
+    suspend fun receiveRequest(): ReceiveRequest = withOpen { handles ->
+        val file = File(location.directory, "noah-receive-addresses.json")
+        val saved = runCatching { kotlinx.serialization.json.Json.decodeFromString<ReceiveAddresses>(file.readText()) }.getOrNull()
+        // bark peeks only keys it derived, so a saved index from another database fails here.
+        val ark = saved?.takeIf { s -> runCatching { handles.peekAddress(s.arkIndex) }.getOrNull() == s.ark &&
+            handles.history().none { movement -> movement.receivedOnAddresses.any { it.paymentMethod.value == s.ark } } }
+            ?.let { AddressWithIndex(it.ark, it.arkIndex) } ?: handles.newAddressWithIndex()
+        val onchain = saved?.onchain?.takeIf { address ->
+            handles.transactions().none { (runCatching { SendTransaction.amount(address, it.txHex) }.getOrNull() ?: 0) > 0 }
+        } ?: handles.newOnchainAddress()
+        val next = ReceiveAddresses(ark.address, ark.index, onchain)
+        // A failed save only means fresh addresses next time.
+        if (next != saved) runCatching {
+            val temporary = File(location.directory, ".noah-receive-addresses.tmp")
+            temporary.writeText(kotlinx.serialization.json.Json.encodeToString(next))
+            check(temporary.renameTo(file))
+        }
+        ReceiveRequest(next.ark, next.onchain)
+    }
     suspend fun receiveInvoice(request: ReceiveRequest, amountSat: Long, description: String): ReceiveRequest {
         val note = description.trim()
         ReceiveRequest.validate(amountSat, note)
@@ -786,7 +821,8 @@ class WalletSession internal constructor(
         override suspend fun pendingRounds() = wallet.syncPendingRounds()
         override suspend fun history() = wallet.history()
         override suspend fun transactions() = onchain.transactions()
-        override suspend fun receiveRequest() = ReceiveRequest(wallet.newAddress(), onchain.newAddress())
+        override suspend fun newAddressWithIndex() = wallet.newAddressWithIndex()
+        override suspend fun newOnchainAddress(): String = onchain.newAddress()
         override suspend fun receiveInvoice(request: ReceiveRequest, amountSat: Long, description: String): ReceiveRequest {
             val invoice = wallet.bolt11Invoice(amountSat.toULong(), description.ifEmpty { null })
             return request.copy(amountSat = amountSat, description = description,

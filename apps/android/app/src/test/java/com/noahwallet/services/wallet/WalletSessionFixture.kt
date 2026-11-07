@@ -75,15 +75,22 @@ internal abstract class WalletSessionFixture {
         var historyEntered: CompletableDeferred<Unit>? = null
         var historyGate: CompletableDeferred<Unit>? = null
         var chainRead = false
+        /** bark's movements and the on-chain wallet's transactions, as Receive reads them. */
+        var movements = emptyList<io.github.niteshbalusu11.bark.Movement>()
+        var chainTransactions = emptyList<io.github.niteshbalusu11.bark.WalletTransaction>()
         override suspend fun history(): List<io.github.niteshbalusu11.bark.Movement> {
             historyEntered?.complete(Unit); historyGate?.await(); assertFalse(closed)
-            return emptyList()
+            return movements
         }
         override suspend fun transactions(): List<io.github.niteshbalusu11.bark.WalletTransaction> {
             assertFalse(closed); chainRead = true
-            return emptyList()
+            return chainTransactions
         }
-        override suspend fun receiveRequest() = ReceiveRequest("ark-test", "chain-test")
+        /** Ark keys derived so far ("ark-1", "ark-2"…; bark refuses to peek past them) and the on-chain addresses still to hand out. */
+        var arkDerived = 0u
+        val onchainAddresses = mutableListOf("1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa", "1BvBMSEYstWetqTFn5Au4m4GFg7xJaNVN2")
+        override suspend fun newAddressWithIndex() = io.github.niteshbalusu11.bark.AddressWithIndex("ark-${++arkDerived}", arkDerived)
+        override suspend fun newOnchainAddress() = onchainAddresses.removeAt(0)
         override suspend fun receiveInvoice(request: ReceiveRequest, amountSat: Long, description: String) =
             request.copy(amountSat = amountSat, description = description, lightningInvoice = "invoice", paymentHash = "hash")
         var initialized = false
@@ -93,7 +100,7 @@ internal abstract class WalletSessionFixture {
             initialized = true
         }
         override suspend fun peekPublicKey(index: UInt): String { check(initialized); return "public-key-0" }
-        override suspend fun peekAddress(index: UInt) = "ark-test"
+        override suspend fun peekAddress(index: UInt) = if (index == 0u) "ark-test" else "ark-$index".also { check(index <= arkDerived) }
         var closed = false
         var closeFails = false
         var summaryGate: CompletableDeferred<Unit>? = null
