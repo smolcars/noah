@@ -233,7 +233,7 @@ actor SiriIndexer {
     /// A background pass's balance and Activity's rows, read from the session the pass holds (never a second open).
     nonisolated func refresh(balance: UInt64, session: WalletSession) async {
         guard enabled else { return }
-        let history = try? await session.transactionHistory()
+        let history = try? await session.datedTransactionHistory()
         await update(balance: balance, history: history).value
     }
 
@@ -385,7 +385,7 @@ extension SiriIndexer.Dependencies {
                 try await services.withBackgroundWallet {
                     try await services.ensureWalletOpen()
                     guard let summary = try await services.session.summary() else { throw AppServices.SeedUnavailable() }
-                    return (summary.balance.totalSats, try await services.session.transactionHistory())
+                    return (summary.balance.totalSats, try await services.session.datedTransactionHistory())
                 }
             },
             recipientsChanged: {

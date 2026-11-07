@@ -41,11 +41,7 @@ struct NoahIntentWallet: Sendable {
                 try await services.ensureWalletOpen()
                 try await services.session.sync()
                 try Task.checkCancellation()
-                let rows = try await services.session.transactionHistory()
-                let chain = Set(rows.filter { $0.source == "onchain-wallet" }.compactMap(\.txid))
-                guard !chain.isEmpty else { return rows }
-                let tip = try? await services.session.chainTip()
-                return AssistantReply.datingChainRows(rows, known: WidgetChainDates.shared.stored(chain), tip: tip)
+                return try await services.session.datedTransactionHistory()
             }
         }, lightningAddress: {
             // Through the same admission as the rest: a suspended, missing or half-restored wallet isn't ready.
@@ -60,5 +56,16 @@ struct NoahIntentWallet: Sendable {
                   let quote = WidgetSnapshot.read(from: defaults, variant: variant.rawValue)?.fiat, quote.currency == display.currency else { return nil }
             return FiatCurrency.display(sats: Int64(clamping: sats), btcPrice: quote.btcPrice, currency: quote.currency, locale: Locale(identifier: locale))
         })
+    }
+}
+
+extension WalletSession {
+    /// Activity's rows with confirmed on-chain rows dated (`AssistantReply.datingChainRows`), for Siri's replies and index.
+    func datedTransactionHistory() async throws -> [HistoryTransaction] {
+        let rows = try await transactionHistory()
+        let chain = Set(rows.filter { $0.source == "onchain-wallet" }.compactMap(\.txid))
+        guard !chain.isEmpty else { return rows }
+        let tip = try? await chainTip()
+        return AssistantReply.datingChainRows(rows, known: WidgetChainDates.shared.stored(chain), tip: tip)
     }
 }
