@@ -297,6 +297,23 @@ internal class WalletSessionTest : WalletSessionFixture() {
             assertTrue(handles.sendReviewsDiscarded); assertTrue(handles.closed)
         }
     }
+    /** The open's check of restored VTXOs can overlap the foreground pass's sync: it waits for it instead of being dropped. */
+    @Test fun aRestoredVtxoCheckWaitsForASyncInProgress() = runBlocking {
+        withLocation { location ->
+            val handles = Handles().apply { syncEntered = CompletableDeferred(); syncGate = CompletableDeferred(); spendable = listOf("a") }
+            val session = WalletSession("regtest", location, opener = { _, _, _, _ -> handles })
+            session.createNew("unused", "test")
+            val marker = File(location.directory, com.noahwallet.services.backup.RestoreTransaction.vtxoCheckName).apply { writeText("") }
+            val syncing = launch { session.syncArk() }
+            handles.syncEntered!!.await()
+            val checking = launch(start = CoroutineStart.UNDISPATCHED) { session.checkRestoredVtxos {} }
+            delay(100); val waited = !checking.isCompleted
+            handles.syncGate!!.complete(Unit); syncing.join(); checking.join()
+            assertTrue(waited)
+            assertEquals(listOf("wallet sync", "wallet sync", "adopt a"), handles.calls)
+            assertFalse(marker.exists())
+        }
+    }
     @Test fun canceledHistoryReadCompletesBothReadsBeforeClose() = runBlocking {
         withLocation { location ->
             val handles = Handles().apply { historyEntered = CompletableDeferred(); historyGate = CompletableDeferred() }

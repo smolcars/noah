@@ -429,14 +429,17 @@ class WalletSession internal constructor(
         }
     }
 
-    /** The foreground pass's check of a restored backup's VTXOs ([RestoredVtxoCheck]); nothing unless a restore left its marker. */
+    /**
+     * The foreground pass's check of a restored backup's VTXOs ([RestoredVtxoCheck]); nothing unless a restore left its
+     * marker. It waits for a sync in progress rather than being dropped, so the open's check and the pass's run in turn.
+     */
     suspend fun checkRestoredVtxos(warn: (String) -> Unit) {
         val marker = File(location.directory, com.noahwallet.services.backup.RestoreTransaction.vtxoCheckName)
         if (isOpen && marker.exists()) withOpen { handles ->
-            (handles.synchronization ?: syncFlight).run({
+            (handles.synchronization ?: syncFlight).serialized {
                 RestoredVtxoCheck.run(marker, RestoredVtxoCheck.Steps(handles::syncWallet, handles::spendableVtxoIds,
                     handles::trustAndAdoptServerVtxoStatus), warn)
-            })
+            }
         }
     }
 
