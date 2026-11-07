@@ -460,13 +460,16 @@ impl<'a> BackupRepository<'a> {
         Ok(enabled)
     }
 
-    /// Finds all pubkeys that have backups enabled.
+    /// Finds the active users the backup push goes to. Backups are on unless
+    /// the user switched them off: both apps turn them on at registration, and
+    /// a user with no settings row (the native apps didn't send the setting)
+    /// counts as on.
     pub async fn find_pubkeys_with_backup_enabled(&self) -> Result<Vec<String>> {
         let pubkeys = sqlx::query_scalar::<_, String>(
-            "SELECT bs.pubkey
-             FROM backup_settings bs
-             INNER JOIN users u ON bs.pubkey = u.pubkey
-             WHERE bs.backup_enabled = TRUE
+            "SELECT u.pubkey
+             FROM users u
+             LEFT JOIN backup_settings bs ON bs.pubkey = u.pubkey
+             WHERE COALESCE(bs.backup_enabled, TRUE)
                AND u.status = 'active'",
         )
         .fetch_all(self.pool)

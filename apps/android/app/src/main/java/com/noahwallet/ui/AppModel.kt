@@ -276,6 +276,7 @@ class AppModel(application: Application, val settings: SettingsStorage = Setting
                 .register(serverRegistrationPending = true).requireCompleted()
         })
         services.reconcileBackupTriggers()
+        services.sendBackupSetting()
     }
 
     private var starting = false

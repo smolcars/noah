@@ -15,6 +15,7 @@ final class ServerRegistration {
     private let mailboxAuthorization: ((Int64) async throws -> Components.Schemas.AuthorizeMailboxPayload)?
     private let log = AppLog("serverRegistration")
     @ObservationIgnored private var registration: Task<Void, Error>?
+    @ObservationIgnored private var backupSetting: Task<Void, Error>?
     private var checkedVersion = false
     private var updatingMailbox = false
 
@@ -196,8 +197,28 @@ final class ServerRegistration {
     }
 
     func setBackupEnabled(_ enabled: Bool) async throws {
-        _ = try await client.updateBackupSettings(body: .json(.init(backupEnabled: enabled))).ok
-        try update { $0.isBackupEnabled = enabled }
+        try await oneBackupSettingAtATime {
+            _ = try await self.client.updateBackupSettings(body: .json(.init(backupEnabled: enabled))).ok
+            try self.update { $0.isBackupEnabled = enabled }
+        }
+    }
+
+    /// RN `usePushNotifications`: tell the server backups are on, so its backup
+    /// push reaches this wallet even when Noah stays closed.
+    func sendBackupEnabledIfOn() async throws {
+        try await oneBackupSettingAtATime {
+            guard self.state.isRegisteredWithServer == true, self.state.isBackupEnabled == true else { return }
+            _ = try await self.client.updateBackupSettings(body: .json(.init(backupEnabled: true))).ok
+        }
+    }
+
+    /// In call order, so a slow launch-time `true` can't reach the server after
+    /// the user switched backups off.
+    private func oneBackupSettingAtATime(_ request: @escaping @MainActor () async throws -> Void) async throws {
+        let previous = backupSetting
+        let current = Task { _ = await previous?.result; try await request() }
+        backupSetting = current
+        try await current.value
     }
 
     func saveDisplayName(_ name: String) async throws {

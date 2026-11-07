@@ -395,9 +395,17 @@ class AppServices private constructor(private val context: Context) {
         catch (_: Exception) { log.w("Mailbox authorization failed; it will retry on resume") }
         com.noahwallet.services.push.PushWork.register(context)
         if (!started) {
+            sendBackupSetting()
             registration.reportLastLogin()
             started = true
         }
+    }
+
+    /** Best effort: server setup sends it again on the next launch. */
+    suspend fun sendBackupSetting() {
+        try { registration.sendBackupEnabledIfOn() }
+        catch (cancelled: CancellationException) { throw cancelled }
+        catch (_: Exception) { log.w("Couldn't send the backup setting to the server") }
     }
 
     companion object {

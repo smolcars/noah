@@ -28,6 +28,9 @@ class ServerRegistration(
     private val registration = Mutex()
     private val reporting = Mutex()
     private val mailbox = Mutex()
+
+    /** One backup-setting request at a time, so a slow launch-time `true` can't reach the server after the user switched backups off. */
+    private val backupSetting = Mutex()
     private var checkedVersion = false
 
     suspend fun checkVersionOnce() = versionCheck.withLock {
@@ -118,8 +121,18 @@ class ServerRegistration(
     }
 
     suspend fun setBackupEnabled(enabled: Boolean) {
-        V0BackupSettingsClient(client).updateBackupSettings(BackupSettingsPayload(enabled)).value()
-        storage.update { it.copy(isBackupEnabled = enabled) }
+        backupSetting.withLock {
+            V0BackupSettingsClient(client).updateBackupSettings(BackupSettingsPayload(enabled)).value()
+            storage.update { it.copy(isBackupEnabled = enabled) }
+        }
+    }
+
+    /** RN `usePushNotifications`: tell the server backups are on, so its backup push reaches this wallet even when Noah stays closed. */
+    suspend fun sendBackupEnabledIfOn() {
+        backupSetting.withLock {
+            if (state.isRegisteredWithServer != true || state.isBackupEnabled != true) return
+            V0BackupSettingsClient(client).updateBackupSettings(BackupSettingsPayload(true)).value()
+        }
     }
 
     suspend fun setMailboxEnabled(enabled: Boolean) {
