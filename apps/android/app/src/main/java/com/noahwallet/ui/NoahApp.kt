@@ -147,6 +147,9 @@ private fun LinkDelivery(model: AppModel, links: PaymentLinks, nav: AppNavigator
             }
         }
     }
+    LaunchedEffect(links.payment, send.loading) {
+        links.deliverPayment(send, model.sendBusy, model.recurringApprovals) { tap -> model.paymentTap = tap; nav.select(Destination.History) }
+    }
     if (links.blocked) WalletAlertDialog(onDismissRequest = { links.blocked = false },
         title = { Text(tr("Payment in progress")) }, text = { Text(tr(PaymentLinks.blockedMessage)) },
         confirmButton = { androidx.compose.material3.TextButton({ links.blocked = false }) { Text(tr("OK")) } })

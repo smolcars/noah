@@ -20,6 +20,8 @@ class PaymentLinks : ViewModel() {
     var pending by mutableStateOf<String?>(null); private set
     /** A widget's Home, Receive, Scan or Send (widgets.md, Opening the app from a widget), held and gated like a link. */
     var route by mutableStateOf<WidgetRoute?>(null); private set
+    /** A "Payment received" notification's payment, held and gated like a widget route. */
+    var payment by mutableStateOf<com.noahwallet.history.PaymentTap?>(null); private set
     /** A payment, review or approval was in progress when the last link came. */
     var blocked by mutableStateOf(false)
 
@@ -29,9 +31,22 @@ class PaymentLinks : ViewModel() {
         if (savedState != null || intent.flags and Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY != 0) return
         if (intent.action == Intent.ACTION_VIEW && intent.scheme?.lowercase() in schemes) pending = intent.dataString
         else WidgetRoute.of(intent)?.let { route = it }
+        com.noahwallet.history.PaymentTap.of(intent)?.let { payment = it }
     }
 
-    fun drop() { pending = null; route = null }
+    fun drop() { pending = null; route = null; payment = null }
+
+    /**
+     * Opens Activity on the notification's [payment] once Send has read its saved payment, then forgets it. Like a
+     * widget's Home, it leaves the app where it is while Send is preparing, reviewing or holding a payment, or a
+     * recurring approval is on screen: leaving Send would discard its review.
+     */
+    fun deliverPayment(send: SendController, sendBusy: IntState, approvals: IntState, open: (com.noahwallet.history.PaymentTap) -> Unit) {
+        val next = payment ?: return
+        if (send.loading) return
+        payment = null
+        if (WidgetRoute.target(WidgetRoute.home, sendBusy = send.locked || sendBusy.intValue > 0, approvalOpen = approvals.intValue > 0) != null) open(next)
+    }
 
     /**
      * Opens the widget's [route] once Send has read its saved payment, then forgets it. Nothing is left, discarded or
@@ -74,7 +89,7 @@ enum class LinkStep { wait, open, ignore }
 /** Drops a held link or widget route when the launch gate ignores it, including one that arrives while a gate is showing. */
 @Composable
 internal fun DropIgnoredLinks(links: PaymentLinks, step: LinkStep) {
-    androidx.compose.runtime.LaunchedEffect(step, links.pending, links.route) { if (step == LinkStep.ignore) links.drop() }
+    androidx.compose.runtime.LaunchedEffect(step, links.pending, links.route, links.payment) { if (step == LinkStep.ignore) links.drop() }
 }
 
 /** The widget's routes: `com.noahwallet.<variant>://widget/<route>`, sent as an explicit intent's data. */

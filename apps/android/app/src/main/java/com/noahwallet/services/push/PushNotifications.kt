@@ -14,6 +14,7 @@ import androidx.core.graphics.toColorInt
 import androidx.work.ForegroundInfo
 import com.noahwallet.MainActivity
 import com.noahwallet.R
+import com.noahwallet.history.PaymentTap
 import com.noahwallet.localization.L10n
 import com.noahwallet.localization.NotificationCopy
 import com.noahwallet.notifications.NotificationChannels
@@ -47,8 +48,8 @@ object PushNotifications {
         val profile = com.noahwallet.services.storage.SettingsStorage(context).string("profile-storage")
         val unit = com.noahwallet.services.storage.SettingsPreferences.amountUnit(profile)
         val copy = NotificationCopy.received(context, sats, usd, unit)
-        val intent = PendingIntent.getActivity(context, 0, Intent(context, MainActivity::class.java),
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+        val tag = "lightning-$paymentHash"
+        val intent = open(context, tag, PaymentTap.lightningData(paymentHash))
         val notification = NotificationCompat.Builder(context, NotificationChannels.DEFAULT)
             .setSmallIcon(R.drawable.ic_notification)
             .setContentTitle(copy.title)
@@ -56,7 +57,17 @@ object PushNotifications {
             .setDefaults(android.app.Notification.DEFAULT_SOUND)
             .setContentIntent(intent).setAutoCancel(true).setOnlyAlertOnce(true)
             .setPriority(NotificationCompat.PRIORITY_MAX).build()
-        context.getSystemService(NotificationManager::class.java).notify("lightning-$paymentHash", 1, notification)
+        context.getSystemService(NotificationManager::class.java).notify(tag, 1, notification)
+    }
+
+    /**
+     * Opens the app; [data] (the push's `data`) tells it which payment to show. Each notification gets its own
+     * request code, so tapping an older one doesn't open a newer one's payment (extras don't tell PendingIntents apart).
+     */
+    private fun open(context: Context, tag: String, data: String?): PendingIntent {
+        val intent = Intent(context, MainActivity::class.java)
+        if (PaymentTap.of(data) != null) intent.putExtra(PaymentTap.EXTRA, data)
+        return PendingIntent.getActivity(context, tag.hashCode(), intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
     }
 
     /** The server and Expo send visible receipts as data title/message; FCM also supports a notification envelope. */
@@ -64,18 +75,17 @@ object PushNotifications {
         title = message.notification?.title ?: message.data["title"],
         body = message.notification?.body ?: message.data["message"],
         sound = (message.notification?.sound ?: message.data["sound"]) in listOf(null, "default"),
-        tag = message.messageId ?: java.util.UUID.randomUUID().toString())
+        tag = message.messageId ?: java.util.UUID.randomUUID().toString(), data = message.data["body"])
 
     /** UnifiedPush has no notification envelope; the server sends the same receipts as [VisiblePush]. */
     fun visible(context: Context, push: VisiblePush) =
-        show(context, push.title, push.body, sound = true, tag = java.util.UUID.randomUUID().toString())
+        show(context, push.title, push.body, sound = true, tag = java.util.UUID.randomUUID().toString(), data = push.data)
 
-    private fun show(context: Context, title: String?, body: String?, sound: Boolean, tag: String) {
+    private fun show(context: Context, title: String?, body: String?, sound: Boolean, tag: String, data: String?) {
         if (title.isNullOrEmpty() && body.isNullOrEmpty()) return
         ensureChannels(context)
         if (!permissionGranted(context)) return
-        val intent = PendingIntent.getActivity(context, 0, Intent(context, MainActivity::class.java),
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
+        val intent = open(context, tag, data)
         val notification = NotificationCompat.Builder(context, NotificationChannels.DEFAULT)
             .setSmallIcon(R.drawable.ic_notification).setContentTitle(title).setContentText(body)
             .setContentIntent(intent).setAutoCancel(true).setPriority(NotificationCompat.PRIORITY_HIGH)

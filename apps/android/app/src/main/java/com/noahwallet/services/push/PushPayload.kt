@@ -5,9 +5,12 @@ import com.noahwallet.services.server.ServerClient
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.*
 
-/** A notification the server wrote for UnifiedPush, which (unlike FCM) carries no title or body of its own. */
+/**
+ * A notification the server wrote for UnifiedPush, which (unlike FCM) carries no title or body of its own. [data] is
+ * the JSON string FCM sends as `body`: what a tap opens.
+ */
 @Serializable
-data class VisiblePush(val title: String? = null, val body: String? = null)
+data class VisiblePush(val title: String? = null, val body: String? = null, val data: String? = null)
 
 /** FCM's data.body is a JSON string; UnifiedPush sends the object directly. */
 object PushPayload {

@@ -35,6 +35,41 @@ class PushNotificationsTest {
         assertTrue(posted.extras.getCharSequence(Notification.EXTRA_TEXT).toString().contains("US$1.23"))
         assertNotNull(posted.contentIntent)
         assertEquals("com.noahwallet.MainActivity", org.robolectric.Shadows.shadowOf(posted.contentIntent).savedIntent.component?.className)
+        assertEquals(com.noahwallet.history.PaymentTap(paymentHash = "presentation-test"), tap(posted))
+    }
+
+    private fun tap(posted: Notification) =
+        com.noahwallet.history.PaymentTap.of(org.robolectric.Shadows.shadowOf(posted.contentIntent).savedIntent)
+
+    private val arkData = """{"notification_type":"ark_payment_received","vtxo_ids":["aa:0","bb:1"]}"""
+
+    @Test fun eachNotificationOpensItsOwnPayment() {
+        val context = RuntimeEnvironment.getApplication()
+        PushNotifications.received(context, 1, null, "first")
+        PushNotifications.received(context, 2, null, "second")
+        val taps = context.getSystemService(NotificationManager::class.java).activeNotifications.map { tap(it.notification) }
+        assertEquals(setOf("first", "second"), taps.map { it?.paymentHash }.toSet())
+    }
+
+    @Test fun firebaseArkReceiptOpensItsPayment() {
+        val context = RuntimeEnvironment.getApplication()
+        PushNotifications.remote(context, com.google.firebase.messaging.RemoteMessage.Builder("noah")
+            .setMessageId("ark-tap").addData("title", "Payment received").addData("message", "You received 1 sat via Ark.")
+            .addData("body", arkData).build())
+        val posted = context.getSystemService(NotificationManager::class.java).activeNotifications.single().notification
+        assertEquals(com.noahwallet.history.PaymentTap(vtxoIds = listOf("aa:0", "bb:1")), tap(posted))
+    }
+
+    @Test fun unifiedPushArkReceiptOpensItsPayment() {
+        val service = org.robolectric.Robolectric.buildService(NoahUnifiedPushService::class.java).create().get()
+        val content = kotlinx.serialization.json.JsonObject(mapOf(
+            "notification_type" to kotlinx.serialization.json.JsonPrimitive("visible_notification"),
+            "title" to kotlinx.serialization.json.JsonPrimitive("Payment received"),
+            "body" to kotlinx.serialization.json.JsonPrimitive("You received 1 sat via Ark."),
+            "data" to kotlinx.serialization.json.JsonPrimitive(arkData))).toString()
+        service.onMessage(org.unifiedpush.android.connector.data.PushMessage(content.toByteArray(), false), UnifiedPushRegistration(service).instance)
+        val posted = service.getSystemService(NotificationManager::class.java).activeNotifications.single().notification
+        assertEquals(com.noahwallet.history.PaymentTap(vtxoIds = listOf("aa:0", "bb:1")), tap(posted))
     }
 
     @Test fun firebaseServiceDisplaysExpoArkReceiptWithoutOpeningAWallet() {
@@ -47,6 +82,7 @@ class PushNotificationsTest {
         assertEquals("Payment received", posted.extras.getCharSequence(Notification.EXTRA_TITLE).toString())
         assertEquals("You received 1234 sats via Ark.", posted.extras.getCharSequence(Notification.EXTRA_TEXT).toString())
         assertNotNull(posted.contentIntent)
+        assertNull("older servers' empty data opens the app as before", tap(posted))
     }
 
     @Test fun unifiedPushServiceDisplaysArkReceiptWithoutOpeningAWallet() {
