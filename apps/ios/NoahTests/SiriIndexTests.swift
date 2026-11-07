@@ -213,6 +213,15 @@ struct SiriIndexTests {
         }
     }
 
+    @available(iOS 18.4, *)
+    @Test func payHandsSendTheAddressAndAPositiveAmount() {
+        let sam = NoahRecipientEntity(SiriIndex.recipient("sam@noahwallet.com", ownDomain: "noahwallet.com"))
+        #expect(PayNoahRecipientIntent(recipient: sam, amountSats: 5000).request == .init(recipient: "sam@noahwallet.com", sats: 5000))
+        #expect(PayNoahRecipientIntent(recipient: sam).request.sats == nil)
+        #expect(PayNoahRecipientIntent(recipient: sam, amountSats: 0).request.sats == nil)
+        #expect(AssistantReply.pay(recipient: sam.spoken, locale: "en") == "Opening Send to sam@noahwallet.com.")
+    }
+
     private func waitUntil(_ condition: () -> Bool) async throws {
         for _ in 0..<200 where !condition() { try await Task.sleep(for: .milliseconds(10)) }
         #expect(condition())

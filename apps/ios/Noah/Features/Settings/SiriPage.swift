@@ -31,7 +31,12 @@ struct SiriPage: View {
                 if #available(iOS 26.0, *) { example(SiriExamplePhrase.invoice, L10n.text("Lightning invoice", locale: language)) }
                 example(SiriExamplePhrase.lightningAddress, L10n.text("Lightning address", locale: language))
                 example(SiriExamplePhrase.lastPayment, L10n.text("Last payment", locale: language))
-                example(SiriExamplePhrase.scan, L10n.text("Scan QR code", locale: language), last: true)
+                if #available(iOS 18.4, *) {
+                    example(SiriExamplePhrase.scan, L10n.text("Scan QR code", locale: language))
+                    example(SiriExamplePhrase.pay, L10n.text("Pay someone", locale: language), last: true)
+                } else {
+                    example(SiriExamplePhrase.scan, L10n.text("Scan QR code", locale: language), last: true)
+                }
             }
             ShortcutsLink()
                 .frame(maxWidth: .infinity)

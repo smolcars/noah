@@ -1335,6 +1335,35 @@
         }
       }
     },
+    "Make a payment with ${applicationName}": {
+      "extractionState": "manual",
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Haz un pago con ${applicationName}"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "${applicationName}で支払いをする"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "${applicationName}로 결제해 줘"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Gör en betalning med ${applicationName}"
+          }
+        }
+      }
+    },
     "Make an Ark address with ${applicationName}": {
       "extractionState": "manual",
       "localizations": {
@@ -1679,6 +1708,93 @@
           "stringUnit": {
             "state": "translated",
             "value": "Öppna skannern i ${applicationName}"
+          }
+        }
+      }
+    },
+    "Pay ${recipient} in ${applicationName}": {
+      "extractionState": "manual",
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Paga a ${recipient} en ${applicationName}"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "${applicationName}で${recipient}に払う"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "${applicationName}에서 ${recipient}에게 지불해 줘"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Betala ${recipient} i ${applicationName}"
+          }
+        }
+      }
+    },
+    "Pay ${recipient} with ${applicationName}": {
+      "extractionState": "manual",
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Paga a ${recipient} con ${applicationName}"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "${applicationName}で${recipient}に支払う"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "${applicationName}로 ${recipient}에게 지불해 줘"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Betala ${recipient} med ${applicationName}"
+          }
+        }
+      }
+    },
+    "Pay someone with ${applicationName}": {
+      "extractionState": "manual",
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Paga a alguien con ${applicationName}"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "${applicationName}で誰かに支払う"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "${applicationName}로 다른 사람에게 지불해 줘"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Betala någon med ${applicationName}"
           }
         }
       }
@@ -2118,6 +2234,209 @@
         }
       }
     },
+    "Send bitcoin to ${recipient} with ${applicationName}": {
+      "extractionState": "manual",
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Envía bitcoin a ${recipient} con ${applicationName}"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "${applicationName}で${recipient}にビットコインを送る"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "${applicationName}로 ${recipient}에게 비트코인 보내 줘"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Skicka bitcoin till ${recipient} med ${applicationName}"
+          }
+        }
+      }
+    },
+    "Send bitcoin with ${applicationName}": {
+      "extractionState": "manual",
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Envía bitcoin con ${applicationName}"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "${applicationName}でビットコインを送る"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "${applicationName}로 비트코인 보내 줘"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Skicka bitcoin med ${applicationName}"
+          }
+        }
+      }
+    },
+    "Send money to ${recipient} with ${applicationName}": {
+      "extractionState": "manual",
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Envía dinero a ${recipient} con ${applicationName}"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "${applicationName}で${recipient}にお金を送る"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "${applicationName}로 ${recipient}에게 돈 보내 줘"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Skicka pengar till ${recipient} med ${applicationName}"
+          }
+        }
+      }
+    },
+    "Send money with ${applicationName}": {
+      "extractionState": "manual",
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Envía dinero con ${applicationName}"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "${applicationName}でお金を送る"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "${applicationName}로 돈 보내 줘"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Skicka pengar med ${applicationName}"
+          }
+        }
+      }
+    },
+    "Send sats to ${recipient} in ${applicationName}": {
+      "extractionState": "manual",
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Envía sats a ${recipient} en ${applicationName}"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "${applicationName}で${recipient}にsatsを送る"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "${applicationName}에서 ${recipient}에게 sats 보내 줘"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Skicka sats till ${recipient} i ${applicationName}"
+          }
+        }
+      }
+    },
+    "Send sats to ${recipient} with ${applicationName}": {
+      "extractionState": "manual",
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Envía sats a ${recipient} con ${applicationName}"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "${applicationName}を使って${recipient}にsatsを送る"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "${applicationName}로 ${recipient}에게 sats 보내 줘"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Skicka sats till ${recipient} med ${applicationName}"
+          }
+        }
+      }
+    },
+    "Send sats with ${applicationName}": {
+      "extractionState": "manual",
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Envía sats con ${applicationName}"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "${applicationName}でsatsを送る"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "${applicationName}로 sats 보내 줘"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Skicka sats med ${applicationName}"
+          }
+        }
+      }
+    },
     "Show Receive in ${applicationName}": {
       "extractionState": "manual",
       "localizations": {
@@ -2491,6 +2810,35 @@
           "stringUnit": {
             "state": "translated",
             "value": "Använd ${applicationName} för att få betalt"
+          }
+        }
+      }
+    },
+    "Use ${applicationName} to pay ${recipient}": {
+      "extractionState": "manual",
+      "localizations": {
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Usa ${applicationName} para pagar a ${recipient}"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "${applicationName}を使って${recipient}に支払う"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "${applicationName}를 사용해서 ${recipient}에게 지불해 줘"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Använd ${applicationName} för att betala ${recipient}"
           }
         }
       }

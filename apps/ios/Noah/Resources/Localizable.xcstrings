@@ -32905,6 +32905,42 @@
         }
       }
     },
+    "Pay someone": {
+      "comment": "GT gt_9411da19987facec; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pay someone"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pagar a alguien"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "誰かに支払う"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "다른 사람에게 결제"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Betala någon"
+          }
+        }
+      }
+    },
     "Pay with": {
       "comment": "GT gt_fbccc2394f7f77c6; arguments: none",
       "extractionState": "manual",

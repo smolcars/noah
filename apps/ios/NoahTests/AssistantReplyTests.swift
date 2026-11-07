@@ -12,12 +12,12 @@ struct AssistantReplyTests {
         var direction: String?
         var counterparty: String?
         var when: String?
+        var recipient: String?
     }
 
     @Test func matchesTheSharedFixture() throws {
         let cases = try Fixtures.load("assistant-replies", input: Input.self, expected: String.self)
         #expect(cases.count == 14)
-        var phaseTwo = 0
         for testCase in cases {
             let input = testCase.input
             let reply: String
@@ -32,17 +32,13 @@ struct AssistantReplyTests {
                                            when: try #require(input.when))
                 }
                 reply = AssistantReply.lastPayment(payment, locale: "en")
-            case "pay":
-                // Pay someone arrives with Phase 2.
-                phaseTwo += 1
-                continue
+            case "pay": reply = AssistantReply.pay(recipient: try #require(input.recipient), locale: "en")
             default:
                 Issue.record("Unknown kind \(input.kind) in \(testCase.name)")
                 continue
             }
             #expect(reply == testCase.expected, "\(testCase.name)")
         }
-        #expect(phaseTwo == 1)
     }
 
     @Test func repliesFollowTheAppLanguage() {

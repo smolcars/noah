@@ -77,6 +77,7 @@
     "Optic ID": "platform: iOS names the device's biometric (Face ID, Touch ID or Optic ID)",
     "Override confirmation": "parity-gap (layout): iOS folds an override's audit text into a disclosure; Android lists it",
     "Paste payment request": "parity-gap (layout): iOS's QR hub scan mode has a title, a line and a labelled paste button; Android's opens the camera",
+    "Pay someone": "platform: Settings → Siri (voice-assistants.md); Android has no Siri page",
     "Payment sent": "parity-gap (layout): iOS titles a sent result without a receipt \"Payment sent\"; Android's says \"Sent {amount}\" with the reviewed amount",
     "Playback position": "parity-gap: Android's story player slider has no accessibility label",
     "Possible related payment in History": "parity-gap: iOS's may-have-been-sent result lists history candidates, possible txids and the reviewed amount; Android's doesn't",
@@ -313,7 +314,6 @@
     "You sent {sats} sats to {counterparty} {when}.": "pending (voice-assistants.md, Replies): Gemini's AppFunction replies landed on Android first; iOS's Siri replies use the same English, so remove this entry when they land",
     "You sent {sats} sats {when}.": "pending (voice-assistants.md, Replies): Gemini's AppFunction replies landed on Android first; iOS's Siri replies use the same English, so remove this entry when they land",
     "Opening Send.": "pending (voice-assistants.md, Replies): Gemini's AppFunction replies landed on Android first; iOS's Siri replies use the same English, so remove this entry when they land",
-    "Opening Send to {recipient}.": "pending (voice-assistants.md, Replies): Gemini's AppFunction replies landed on Android first; iOS's Siri replies use the same English, so remove this entry when they land",
     "Unlock your device and try again.": "pending (voice-assistants.md, Replies): Gemini's AppFunction replies landed on Android first; iOS's Siri replies use the same English, so remove this entry when they land",
     "Noah's wallet isn't ready. Open Noah and try again.": "pending (voice-assistants.md, Replies): Gemini's AppFunction replies landed on Android first; iOS's Siri replies use the same English, so remove this entry when they land",
     "The amount must be at least one sat.": "pending (voice-assistants.md, Replies): Gemini's AppFunction replies landed on Android first; iOS's Siri replies use the same English, so remove this entry when they land"

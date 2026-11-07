@@ -3,7 +3,8 @@ import Foundation
 import Testing
 
 /// Siri's phrases (`NoahAppShortcuts`) and their hand translations (`Resources/AppShortcuts.xcstrings`) stay in step:
-/// every phrase in every locale, each keeping the app's name, none said twice. General Translation never sees them.
+/// every phrase in every locale, each keeping the app's name and Pay's recipient, none said twice. General Translation
+/// never sees them.
 struct AppShortcutPhraseTests {
     private struct Catalog: Decodable {
         let sourceLanguage: String
@@ -14,6 +15,7 @@ struct AppShortcutPhraseTests {
     private struct Unit: Decodable { let state: String; let value: String }
 
     private static let name = "${applicationName}"
+    private static let recipient = "${recipient}"
     private static let ios = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent()
 
     /// The phrases in source order, as catalog keys.
@@ -21,7 +23,7 @@ struct AppShortcutPhraseTests {
         let source = try String(contentsOf: ios.appending(path: "Noah/Services/AppIntents/NoahAppShortcuts.swift"), encoding: .utf8)
         return source.components(separatedBy: .newlines).filter { $0.contains(#"\(.applicationName)"#) }.map {
             $0.trimmingCharacters(in: .whitespaces).trimmingCharacters(in: CharacterSet(charactersIn: "\","))
-                .replacingOccurrences(of: #"\(.applicationName)"#, with: name)
+                .replacingOccurrences(of: #"\(.applicationName)"#, with: name).replacingOccurrences(of: #"\(\.$recipient)"#, with: recipient)
         }
     }
 
@@ -36,21 +38,25 @@ struct AppShortcutPhraseTests {
         #expect(catalog.sourceLanguage == "en")
         #expect(Set(catalog.strings.keys) == Set(phrases), "Stale or missing catalog keys")
         for phrase in phrases { #expect(phrase.components(separatedBy: Self.name).count == 2, "\(phrase)") }
+        #expect(phrases.count(where: { $0.contains(Self.recipient) }) >= 7)
         for locale in LegacyLocale.supported where locale != "en" {
             var seen = Set<String>()
             for phrase in phrases {
                 let unit = try #require(catalog.strings[phrase]?.localizations[locale]?.stringUnit, "\(locale): \(phrase)")
                 #expect(unit.state == "translated", "\(locale): \(phrase)")
                 #expect(unit.value.components(separatedBy: Self.name).count == 2, "\(locale): \(unit.value)")
+                #expect(unit.value.components(separatedBy: Self.recipient).count == phrase.components(separatedBy: Self.recipient).count,
+                        "\(locale): \(unit.value)")
                 #expect(seen.insert(unit.value).inserted, "\(locale) says two phrases the same way: \(unit.value)")
             }
         }
     }
 
-    @Test func providerKeepsRoomForPay() throws {
+    @Test func providerStaysWithinTenShortcutsWithPay() throws {
         let source = try String(contentsOf: Self.ios.appending(path: "Noah/Services/AppIntents/NoahAppShortcuts.swift"), encoding: .utf8)
-        // Apple allows 10 App Shortcuts; Phase 2's Pay someone needs one.
-        #expect(source.components(separatedBy: "AppShortcut(\n").count - 1 <= 9)
+        // Apple allows 10 App Shortcuts.
+        #expect(source.components(separatedBy: "AppShortcut(\n").count - 1 == 8)
+        #expect(source.contains("intent: PayNoahRecipientIntent()"))
     }
 
     @Test func settingsShowsPhrasesAsSiriHearsThem() throws {

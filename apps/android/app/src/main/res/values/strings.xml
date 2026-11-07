@@ -931,6 +931,7 @@
   <string name="gt_2537c82bbce31609">"Pauses all wallet activity"</string>
   <string name="gt_0468d821ffcacc9e">"Pay again"</string>
   <string name="gt_0e451980296d716f">"Pay again anyway"</string>
+  <string name="gt_9411da19987facec">"Pay someone"</string>
   <string name="gt_fbccc2394f7f77c6">"Pay with"</string>
   <string name="gt_046aa79048e8f8a5">"Paying over Lightning"</string>
   <string name="gt_fef5813efef1e50a">"Paying %1$s sat/vB · waiting for block %2$s"</string>

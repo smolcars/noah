@@ -153,6 +153,46 @@ struct PaymentLinkLifecycleTests {
         #expect(model.destination == "alice@example.com" && app.paymentLinkGate == .open)
     }
 
+    /// RootView hands Siri's Pay to the link's route with the gate a link meets: held while the permission is unknown,
+    /// dropped behind the gate, and never held once the gate ignores it.
+    @Test func siriPayMeetsTheGateALinkMeets() async throws {
+        let late = LateStatus()
+        let launched = try await walletApp(device(late)), app = launched.app, root = launched.root, finishing = launched.finishing
+        let siri = SiriPayRoute()
+        let window = try mount(RootView(siriPay: siri).environment(app).environment(\.homeFixture, HomeFixture(summary: nil, walletError: nil))
+            .environment(\.scenePhase, .inactive))
+        defer { window.isHidden = true; window.rootViewController = nil; app.appBecameInactive(); try? FileManager.default.removeItem(at: root) }
+        #expect(app.paymentLinkGate == .hold)
+        siri.pending = .init(recipient: "sam@noahwallet.com", sats: 5000)
+        try await SendPaymentTests.waitUntil { siri.pending == nil }
+        #expect(app.paymentLink.pending == "sam@noahwallet.com" && app.paymentLink.pendingSats == 5000)
+        late.answer(.denied)
+        await finishing.value
+        #expect(app.paymentLinkGate == .ignore)
+        try await SendPaymentTests.waitUntil { app.paymentLink.pending == nil }
+        siri.pending = .init(recipient: "sam@noahwallet.com", sats: nil)
+        try await SendPaymentTests.waitUntil { siri.pending == nil }
+        #expect(app.paymentLink.pending == nil)
+    }
+
+    /// The wallet's tabs open Send on Siri's Pay once the gate opens, recipient and amount filled in.
+    @Test func siriPayOpensSendFilledInOnceTheGateOpens() async throws {
+        let late = LateStatus()
+        let launched = try await walletApp(device(late)), app = launched.app, root = launched.root, finishing = launched.finishing
+        let model = send()
+        model.arkBalance = 100_000
+        let window = try mount(tabs(app, send: model))
+        defer { window.isHidden = true; window.rootViewController = nil; app.appBecameInactive(); try? FileManager.default.removeItem(at: root) }
+        app.paymentLink.receive(PaymentLinkRoute.Pay(recipient: "sam@noahwallet.com", sats: 5000), gate: app.paymentLinkGate)
+        try await settle()
+        #expect(app.paymentLink.pending == "sam@noahwallet.com" && model.destination.isEmpty)
+        late.answer(.granted)
+        await finishing.value
+        try await SendPaymentTests.waitUntil { model.destination == "sam@noahwallet.com" && !model.busy }
+        #expect(model.amount == "5000" && model.showReview && model.controller.attempt == nil)
+        #expect(app.paymentLink.pending == nil && app.paymentLink.pendingSats == nil)
+    }
+
     @Test func notificationsTurnedOffInSettingsDropAHeldLinkThatUnlockCameFirstFor() async throws {
         let late = LateStatus(), center = NotificationCenter()
         let (app, root) = try await lockedDevice(late, center)

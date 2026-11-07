@@ -931,6 +931,7 @@
   <string name="gt_2537c82bbce31609">"ウォレットのすべての動作を一時停止します"</string>
   <string name="gt_0468d821ffcacc9e">"もう一度支払う"</string>
   <string name="gt_0e451980296d716f">"それでも再度支払う"</string>
+  <string name="gt_9411da19987facec">"誰かに支払う"</string>
   <string name="gt_fbccc2394f7f77c6">"支払い方法"</string>
   <string name="gt_046aa79048e8f8a5">"Lightningで支払い中"</string>
   <string name="gt_fef5813efef1e50a">"%1$s sat/vBで支払い中 · ブロック %2$s を待っています"</string>

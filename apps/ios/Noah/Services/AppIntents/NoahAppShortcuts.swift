@@ -2,8 +2,9 @@ import AppIntents
 
 /// What Siri listens for. Siri only runs a shortcut when the sentence is close to one of these, so each one lists
 /// the ways people ask, with the app's name in several places; balance phrases that avoid "balance" dodge Apple
-/// Wallet. Phrases can't hold amounts (only entities and enums), so Request asks for one. At most 10 shortcuts:
-/// keep room for Pay. Translations: `Resources/AppShortcuts.xcstrings`, kept in step by `AppShortcutPhraseTests`.
+/// Wallet. Phrases can't hold amounts (only entities and enums), so Request asks for one and Pay takes only a
+/// recipient. At most 10 shortcuts. Translations: `Resources/AppShortcuts.xcstrings`, kept in step by
+/// `AppShortcutPhraseTests`.
 @available(iOS 17.4, *)
 struct NoahAppShortcuts: AppShortcutsProvider {
     @AppShortcutsBuilder
@@ -168,6 +169,28 @@ struct NoahAppShortcuts: AppShortcutsProvider {
             ],
             shortTitle: "Scan QR Code",
             systemImageName: "qrcode.viewfinder")
+
+        // The recipient's names come from `NoahRecipientQuery.suggestedEntities`; without one Siri asks who.
+        if #available(iOS 18.4, *) {
+            AppShortcut(
+                intent: PayNoahRecipientIntent(),
+                phrases: [
+                    "Pay \(\.$recipient) with \(.applicationName)",
+                    "Pay \(\.$recipient) in \(.applicationName)",
+                    "Send sats to \(\.$recipient) in \(.applicationName)",
+                    "Send sats to \(\.$recipient) with \(.applicationName)",
+                    "Send money to \(\.$recipient) with \(.applicationName)",
+                    "Send bitcoin to \(\.$recipient) with \(.applicationName)",
+                    "Use \(.applicationName) to pay \(\.$recipient)",
+                    "Pay someone with \(.applicationName)",
+                    "Send money with \(.applicationName)",
+                    "Send sats with \(.applicationName)",
+                    "Send bitcoin with \(.applicationName)",
+                    "Make a payment with \(.applicationName)",
+                ],
+                shortTitle: "Pay Someone",
+                systemImageName: "arrow.up.right")
+        }
     }
 }
 
@@ -177,5 +200,6 @@ enum SiriExamplePhrase {
     static let lightningAddress = "What's my Lightning address in ${applicationName}"
     static let lastPayment = "What was my last payment in ${applicationName}"
     static let scan = "Scan a QR code with ${applicationName}"
-    static let all = [invoice, lightningAddress, lastPayment, scan]
+    static let pay = "Pay someone with ${applicationName}"
+    static let all = [invoice, lightningAddress, lastPayment, scan, pay]
 }
