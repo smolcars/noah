@@ -68,6 +68,20 @@ struct RestoredVtxoCheckTests {
         #expect(!FileManager.default.fileExists(atPath: marker.path))
     }
 
+    /// A cancelled pass isn't an unanswered one: it stops there and doesn't count toward `maxPasses`.
+    @Test func aCancelledPassLeavesTheMarkerAsItWas() async throws {
+        defer { try? FileManager.default.removeItem(at: root) }
+        try leaveMarker("2")
+        let calls = Locked<[String]>([])
+        let steps = RestoredVtxoCheck.Steps(sync: {}, spendableIDs: { ["a", "b"] }, adopt: { id in
+            calls.withLock { $0.append(id) }
+            throw CancellationError()
+        })
+        await #expect(throws: CancellationError.self) { try await RestoredVtxoCheck.run(marker: marker, steps) }
+        #expect(calls.withLock { $0 } == ["a"])
+        #expect(try String(contentsOf: marker, encoding: .utf8) == "2")
+    }
+
     /// The open (before its first balance read) and the foreground pass can both start a check: the second joins the first.
     @Test func checksStartedTogetherShareOneRun() async throws {
         let runs = Locked(0)

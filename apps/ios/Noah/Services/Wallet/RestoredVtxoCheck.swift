@@ -37,7 +37,7 @@ enum RestoredVtxoCheck {
         try await steps.sync()
         var unanswered = 0
         for id in try await steps.spendableIDs() {
-            do { try await steps.adopt(id) } catch { unanswered += 1 }
+            do { try await steps.adopt(id) } catch let cancelled as CancellationError { throw cancelled } catch { unanswered += 1 }
         }
         let passes = ((try? String(contentsOf: marker, encoding: .utf8)).flatMap { Int($0) } ?? 0) + 1
         if unanswered == 0 || passes >= maxPasses {
