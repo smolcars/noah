@@ -366,7 +366,14 @@ class AppModel(application: Application, val settings: SettingsStorage = Setting
     }
 
     /** A custom server's open that outlived its wait and has now finished, one way or the other. */
-    private suspend fun lateOpen(success: Boolean) = withContext(Dispatchers.Main) {
+    private suspend fun lateOpen(success: Boolean) {
+        // As the open on time does, a restored backup's coins are checked before its first balance shows. Launch stays
+        // blocked meanwhile (customServerUnresponsive), so a return to the front can't open and show the wallet first.
+        if (success) withContext(Dispatchers.IO) { services.checkRestoredVtxosAfterOpen() }
+        withContext(Dispatchers.Main) { publishLateOpen(success) }
+    }
+
+    private suspend fun publishLateOpen(success: Boolean) {
         customServerUnresponsive = false; switchingToDefaultServer = false; customOpenWait = null
         if (success) {
             open = true; onboarded = services.isOnboarded()
