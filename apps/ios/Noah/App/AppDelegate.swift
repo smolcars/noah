@@ -87,12 +87,21 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
         BackgroundExecution.foregroundWillEnter()
     }
 
-    nonisolated func userNotificationCenter(_: UNUserNotificationCenter, didReceive response: UNNotificationResponse) async {
+    /// A tapped notification. iOS wants the completion back on the main thread: the async form returned it on a
+    /// background thread, and UIKit's snapshot update then stopped the app on a cold launch from a notification.
+    nonisolated func userNotificationCenter(_: UNUserNotificationCenter, didReceive response: UNNotificationResponse,
+                                            withCompletionHandler completionHandler: @escaping () -> Void) {
         let userInfo = response.notification.request.content.userInfo
-        if SettingsRoute.opensSchedules(userInfo) {
-            await MainActor.run { SettingsRoute.shared.page = .recurring }
-        } else if let tap = PaymentTap.of(userInfo: userInfo) {
-            await MainActor.run { PaymentTapRoute.shared.pending = tap }
+        let schedules = SettingsRoute.opensSchedules(userInfo)
+        let tap = schedules ? nil : PaymentTap.of(userInfo: userInfo)
+        let completion = MainThreadCompletion(call: completionHandler)
+        Task { @MainActor in
+            if schedules {
+                SettingsRoute.shared.page = .recurring
+            } else if let tap {
+                PaymentTapRoute.shared.pending = tap
+            }
+            completion.call()
         }
     }
 
@@ -152,4 +161,9 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
 enum RecurringExecutionBudget {
     @TaskLocal static var deadline: ContinuousClock.Instant?
     static var available: Bool { deadline.map { ContinuousClock.now < $0 } ?? true }
+}
+
+/// iOS's completion for a tapped notification, called once from the main actor.
+private struct MainThreadCompletion: @unchecked Sendable {
+    let call: () -> Void
 }
