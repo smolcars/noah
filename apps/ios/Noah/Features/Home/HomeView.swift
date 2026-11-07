@@ -80,7 +80,6 @@ struct HomeView: View {
 
     /// App state, or a screenshot fixture's stand-in for it.
     private var summary: WalletSession.Summary? { fixture.map(\.summary) ?? model.summary }
-    /// The launch preview shows the widget's last balance until the first summary.
     private var totalSats: UInt64? { summary?.balance.totalSats ?? model.previewBalance }
     private var walletError: String? { fixture.map(\.walletError) ?? model.walletError }
     private var needsRecoveryPhraseBackup: Bool { fixture?.needsRecoveryPhraseBackup ?? model.needsRecoveryPhraseBackup }
@@ -168,7 +167,7 @@ struct HomeView: View {
         }
         .modifier(HomeScrollKeeper(area: .compact, memory: scrollMemory) { scrollY = $0 })
         .tabBarScrollEdge()
-        .refreshable { await pullToRefresh() }
+        .refreshable { await Task { await pullToRefresh() }.value }
         .modifier(HomeTopBarInset(scrolled: scrollY > 2) {
             topBar(tucked: true).padding(.horizontal, 16).padding(.top, 4).padding(.bottom, 6).modifier(appear(0))
         })
@@ -195,7 +194,7 @@ struct HomeView: View {
                     .frame(maxWidth: .infinity)
                 }
                 .modifier(HomeScrollKeeper(area: .leading, memory: scrollMemory))
-                .refreshable { await pullToRefresh() }
+                .refreshable { await Task { await pullToRefresh() }.value }
             }
             .frame(width: leadingWidth)
             trailingPane
@@ -228,7 +227,7 @@ struct HomeView: View {
                         .frame(maxWidth: .infinity)
                 }
                 .modifier(HomeScrollKeeper(area: .activity, memory: scrollMemory, rows: history.transactions.map(\.id)))
-                .refreshable { await pullToRefresh() }
+                .refreshable { await Task { await pullToRefresh() }.value }
                 .modifier(appear(5))
                 .transition(.homeRise(reduceMotion))
             case .loading, .suspended:
@@ -584,16 +583,13 @@ extension HomeView {
         Task { await history.refresh(currency: model.preferredCurrency) }
     }
 
+    // shortcut: SwiftUI cancels Home's refresh task as the pull is released (also on master), before its sync starts, so each `.refreshable` runs this unstructured; upgrade once we know what cancels it.
     private func pullToRefresh() async {
-        // shortcut: SwiftUI cancels Home's refresh task as the pull is released (seen on master too), which cancelled the
-        // sync before it started; the pull's work runs unstructured so it finishes. Upgrade: find what cancels it.
-        await Task {
-            guard !model.isWalletSuspended else { return }
-            await model.sync()
-            guard !model.isWalletSuspended else { return }
-            await history.refresh(currency: model.preferredCurrency)
-            await home.refresh(currency: model.preferredCurrency)
-        }.value
+        guard !model.isWalletSuspended else { return }
+        await model.sync()
+        guard !model.isWalletSuspended else { return }
+        await history.refresh(currency: model.preferredCurrency)
+        await home.refresh(currency: model.preferredCurrency)
     }
 
     /// The first payment: the receipt shows on the card for about 2.4 s, then the
