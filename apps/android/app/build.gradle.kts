@@ -8,6 +8,7 @@ plugins {
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.google.services)
+    alias(libs.plugins.ksp)
 }
 
 abstract class SentryMappingMetadata : DefaultTask() {
@@ -250,6 +251,9 @@ dependencies {
     implementation("${libs.bark.bolt.get()}@aar")
     implementation(libs.datastore.preferences)
     implementation(libs.security.crypto)
+    implementation(libs.appfunctions)
+    ksp(libs.appfunctions.compiler)
+    testImplementation(libs.appfunctions.testing)
     testImplementation(libs.work.testing)
     testImplementation(libs.robolectric)
     testImplementation(platform(libs.compose.bom))
