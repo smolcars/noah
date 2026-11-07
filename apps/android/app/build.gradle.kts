@@ -8,6 +8,7 @@ plugins {
     alias(libs.plugins.kotlin.compose)
     alias(libs.plugins.kotlin.serialization)
     alias(libs.plugins.google.services)
+    alias(libs.plugins.ksp)
 }
 
 abstract class SentryMappingMetadata : DefaultTask() {
@@ -80,6 +81,12 @@ android {
         unitTests.isIncludeAndroidResources = true
         // Three forks halve the JVM suite (93 s to about 45 s) with no flakes in three runs (2026-10-24).
         unitTests.all { it.maxHeapSize = "2g"; it.maxParallelForks = 3 }
+        // Robolectric runs Android 16 (API 36, which AppFunctions need) only on Java 21, with jdk.internal.access open. The
+        // build stays on JDK 17; gradle.properties says where Java 21 is (the Nix shell's JAVA21_HOME, setup-java's).
+        unitTests.all {
+            it.javaLauncher.set(javaToolchains.launcherFor { languageVersion.set(JavaLanguageVersion.of(21)) })
+            it.jvmArgs("--add-opens=java.base/jdk.internal.access=ALL-UNNAMED")
+        }
     }
     namespace = "com.noahwallet"
     compileSdk = 37
@@ -250,6 +257,9 @@ dependencies {
     implementation("${libs.bark.bolt.get()}@aar")
     implementation(libs.datastore.preferences)
     implementation(libs.security.crypto)
+    implementation(libs.appfunctions)
+    ksp(libs.appfunctions.compiler)
+    testImplementation(libs.appfunctions.testing)
     testImplementation(libs.work.testing)
     testImplementation(libs.robolectric)
     testImplementation(platform(libs.compose.bom))

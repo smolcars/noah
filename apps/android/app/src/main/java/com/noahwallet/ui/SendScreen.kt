@@ -107,6 +107,13 @@ private fun SendInputs(app: AppModel, presentation: SendPresentation, closeScann
     LaunchedEffect(controller.state, app.repeatPayment) {
         app.repeatPayment?.let { if (!controller.locked) { model.prefill(it, app.preferredCurrency); app.repeatPayment = null } }
     }
+    LaunchedEffect(controller.state, app.sendPrefill) {
+        // Cleared only once the import finishes: clearing first changes this effect's key and cancels the import mid-lookup.
+        app.sendPrefill?.let { prefill -> if (!controller.locked) {
+            closeScanner(); model.importPayment(prefill.recipient, prefill.amountSats)
+            app.sendPrefill = app.sendPrefill.takeUnless { it === prefill }
+        } }
+    }
     LaunchedEffect(controller.state, app.scannedDestination) {
         app.scannedDestination?.let { if (!controller.locked) {
             // Send's own scanner would cover the request it now shows.

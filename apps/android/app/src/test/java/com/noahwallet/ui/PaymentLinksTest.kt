@@ -331,4 +331,70 @@ class PaymentLinksTest {
         assertNull(Robolectric.buildActivity(Host::class.java, widget("send")).setup(saved).get().links.route)
         assertNull(Robolectric.buildActivity(Host::class.java, widget("send").addFlags(Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY)).setup().get().links.route)
     }
+
+    /** A recent recipient's shortcut or an assistant's Pay, as [routeIntent] sends it. */
+    private fun pay(route: PayRoute) = routeIntent(org.robolectric.RuntimeEnvironment.getApplication(), route.uri())
+    private fun PaymentLinks.pay(send: SendController, reviews: Int = 0): List<PayRoute> =
+        mutableListOf<PayRoute>().also { opened -> deliverPay(send, mutableIntStateOf(reviews)) { opened += it } }
+
+    @Test fun aPayRouteCarriesAnyRecipientAndIsNeverAWidgetRouteOrLink() {
+        val request = "bitcoin:bcrt1q5mq29kaq9kq660m3eepqy8pkv7jhefd69klc22?amount=0.0001&ark=tark1x+y"
+        for (route in listOf(PayRoute("sam@noahwallet.com", 21_000), PayRoute(request), PayRoute("lnbcrt1u1p5abc", null))) {
+            val links = PaymentLinks()
+            links.receive(pay(route))
+            assertEquals(route, links.pay); assertNull(links.route); assertNull(links.pending)
+            assertEquals(listOf(route), links.pay(send()))
+            assertNull("used up", links.pay)
+        }
+        assertEquals("com.noahwallet.regtest://pay?to=sam%40noahwallet.com&amount=21000", PayRoute("sam@noahwallet.com", 21_000).uri().toString())
+        // Another variant, no recipient, a widget's host or another action stays out; a bad amount is dropped, not the route.
+        val links = PaymentLinks()
+        for (other in listOf(view("com.noahwallet.mainnet://pay?to=sam%40noahwallet.com"), view("com.noahwallet.regtest://pay?amount=5"),
+            view("com.noahwallet.regtest://pay?to=%20"), view("com.noahwallet.regtest://widget/pay?to=sam%40noahwallet.com"),
+            Intent(Intent.ACTION_MAIN, Uri.parse("com.noahwallet.regtest://pay?to=sam%40noahwallet.com"))))
+            links.receive(other)
+        assertNull(links.pay); assertNull(links.route); assertNull(links.pending)
+        for (amount in listOf("0", "-5", "lots")) {
+            links.receive(view("com.noahwallet.regtest://pay?to=sam%40noahwallet.com&amount=$amount"))
+            assertEquals(amount, PayRoute("sam@noahwallet.com"), links.pay)
+        }
+    }
+
+    /** Gated like a payment link (deep-links.md): held through App lock, dropped behind a gate, blocked by a payment or review. */
+    @Test fun aPayRouteIsGatedLikeALink() {
+        val route = PayRoute("sam@noahwallet.com", 21_000)
+        val held = PaymentLinks()
+        held.receive(pay(route))
+        assertEquals(LinkStep.wait, linkStep(LaunchRoute.app, true, false, wallet, false, false))
+        assertEquals(route, held.pay)
+        assertEquals(listOf(route), held.pay(send()))
+        val ignored = PaymentLinks()
+        ignored.receive(pay(route))
+        if (linkStep(LaunchRoute.onboarding, true, false, LaunchState.onboarding, false, false) == LinkStep.ignore) ignored.drop()
+        assertNull(ignored.pay)
+        // Send still reading its saved payment: it waits. A payment in flight or a review on screen: blocked, never applied.
+        val links = PaymentLinks()
+        links.receive(pay(route))
+        assertEquals(emptyList<PayRoute>(), links.pay(send().apply { invalidateForWalletChange() }))
+        assertEquals(route, links.pay)
+        assertEquals(emptyList<PayRoute>(), links.pay(send(SendAttempt(payment = arkPayment))))
+        assertTrue(links.blocked); assertNull(links.pay)
+        links.blocked = false; links.receive(pay(route))
+        assertEquals(emptyList<PayRoute>(), links.pay(send(), reviews = 1))
+        assertTrue(links.blocked); assertNull(links.pay)
+    }
+
+    @Test fun aPayRouteOpensAsAWidgetTapDoes() {
+        val intent = pay(PayRoute("sam@noahwallet.com"))
+        assertEquals("com.noahwallet.MainActivity", intent.component?.className)
+        assertEquals(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP, intent.flags)
+        // Applied once across recreation, never again from Recents or a restore.
+        val ready = send()
+        val activity = Robolectric.buildActivity(Host::class.java, intent).setup()
+        activity.recreate()
+        assertEquals(listOf(PayRoute("sam@noahwallet.com")), activity.get().links.pay(ready))
+        activity.recreate()
+        assertNull(activity.get().links.pay)
+        assertNull(Robolectric.buildActivity(Host::class.java, Intent(intent).addFlags(Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY)).setup().get().links.pay)
+    }
 }

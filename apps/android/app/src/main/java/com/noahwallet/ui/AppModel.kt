@@ -158,6 +158,8 @@ class AppModel(application: Application, val settings: SettingsStorage = Setting
     /** A recurring payment's approval on screen ([ReviewOpen]); widget routes move nothing meanwhile. */
     val recurringApprovals = mutableIntStateOf(0)
     var repeatPayment by mutableStateOf<com.noahwallet.history.RepeatPayment?>(null)
+    /** A recent recipient's shortcut or an assistant's Pay, for Send to fill in. */
+    var sendPrefill by mutableStateOf<PayRoute?>(null)
     /** The expiring VTXOs Home's Renew nudge hands to today's VTXO refresh review; consumed once. */
     var renewVtxos by mutableStateOf<List<String>?>(null)
     /** Home's in-memory presentation state; never persisted. */
@@ -250,7 +252,7 @@ class AppModel(application: Application, val settings: SettingsStorage = Setting
             }
             throw failure
         }
-        history.clear(); repeatPayment = null; scannedDestination = null; autoBoardSuccessBanner = null; renewVtxos = null
+        history.clear(); repeatPayment = null; sendPrefill = null; scannedDestination = null; autoBoardSuccessBanner = null; renewVtxos = null
         homeMemory = com.noahwallet.ui.home.HomeMemory()
         walletLock.reset(); restore.reset()
         open = false; onboarded = false; isWalletSuspended = false; summary = null; recoveryPhraseBackedUp = false

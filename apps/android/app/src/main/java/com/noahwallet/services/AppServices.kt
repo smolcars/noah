@@ -151,7 +151,10 @@ class AppServices private constructor(private val context: Context) {
             backupCoordinator.reloadStatus()
             check(context.getSharedPreferences("gt_store", Context.MODE_PRIVATE).commitEdit { clear() })
         },
-        clearWidget = { com.noahwallet.services.push.WidgetDataWriter.clear(context, variant) },
+        clearWidget = {
+            com.noahwallet.services.push.WidgetDataWriter.clear(context, variant)
+            com.noahwallet.assistant.LauncherShortcuts.clear(context)
+        },
         sweepScratch = {
             scratch.sweepForWalletDeletion()
             com.noahwallet.services.sharing.SettingsShareFiles.live(context).deleteAll()

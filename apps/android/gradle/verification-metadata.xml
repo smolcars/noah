@@ -4,7 +4,7 @@
       <verify-metadata>false</verify-metadata>
       <verify-signatures>false</verify-signatures>
       <trusted-artifacts>
-         <trust group="^(?!io[.]github[.]niteshbalusu11$|io[.]ktor$|org[.]jetbrains[.]kotlinx$|org[.]slf4j$|androidx[.]camera$|androidx[.]work$|androidx[.]biometric$|androidx[.]fragment$|androidx[.]room$|androidx[.]sqlite$|androidx[.]concurrent$|org[.]unifiedpush[.]android$|org[.]apache[.]commons$|commons-io$|commons-codec$|com[.]google[.]zxing$|org[.]maplibre[.]gl$|com[.]jakewharton[.]timber$|com[.]google[.]code[.]gson$|io[.]sentry$).*" regex="true" reason="Verify the wallet AAR, backup extraction, server networking, push connector, WorkManager, biometric and map dependencies; retain the scaffold trust policy for other groups."/>
+         <trust group="^(?!io[.]github[.]niteshbalusu11$|io[.]ktor$|org[.]jetbrains[.]kotlinx$|org[.]slf4j$|androidx[.]camera$|androidx[.]work$|androidx[.]biometric$|androidx[.]fragment$|androidx[.]room$|androidx[.]sqlite$|androidx[.]concurrent$|org[.]unifiedpush[.]android$|org[.]apache[.]commons$|commons-io$|commons-codec$|com[.]google[.]zxing$|org[.]maplibre[.]gl$|com[.]jakewharton[.]timber$|com[.]google[.]code[.]gson$|io[.]sentry$|androidx[.]appfunctions$|androidx[.]appsearch$|com[.]google[.]devtools[.]ksp$).*" file="^(?!(?:annotation-jvm-1[.]7[.]0[.]jar|auto-service-annotations-1[.]0-rc6[.]jar|failureaccess-1[.]0[.]1[.]jar|guava-32[.]0[.]1-android[.]jar|j2objc-annotations-2[.]8[.]jar|kotlinpoet-jvm-2[.]0[.]0[.]jar|checker-qual-3[.]33[.]0[.]jar|kotlin-reflect-2[.]0[.]10[.]jar|kotlin-stdlib-2[.]2[.]20[.]jar)$).*" regex="true" reason="Verify the wallet AAR, backup extraction, server networking, push connector, WorkManager, biometric and map dependencies, and AppFunctions with KSP and every artifact they brought in (the file names excluded here); retain the scaffold trust policy for other groups."/>
       </trusted-artifacts>
    </configuration>
    <components>
@@ -384,6 +384,111 @@
       <component group="androidx.work" name="work-testing" version="2.9.1">
          <artifact name="work-testing-2.9.1.aar">
             <sha256 value="e9f7f54d8907f58912cb2020319351c43ea34e34c6f5eabd2433c531e9cde329" origin="Google Maven artifact, independently downloaded"/>
+         </artifact>
+      </component>
+      <component group="androidx.annotation" name="annotation-jvm" version="1.7.0">
+         <artifact name="annotation-jvm-1.7.0.jar">
+            <sha256 value="e36b8e4b8393a4adc74e3d4ab22ad5a36396f0cea2e40b5734eae14937dfd224" origin="Google Maven artifact, independently downloaded for AppFunctions and KSP"/>
+         </artifact>
+      </component>
+      <component group="androidx.appfunctions" name="appfunctions" version="1.0.0-rc01">
+         <artifact name="appfunctions-1.0.0-rc01.aar">
+            <sha256 value="8fc96d4d693e3a9a38f2184202f9578c89d3de51cb6a79a8aa2a793b946ce36a" origin="Google Maven artifact, independently downloaded for AppFunctions and KSP"/>
+         </artifact>
+      </component>
+      <component group="androidx.appfunctions" name="appfunctions-compiler" version="1.0.0-rc01">
+         <artifact name="appfunctions-compiler-1.0.0-rc01.jar">
+            <sha256 value="80567b085a3201ca3dd02a865123a7f182a3d03f47d18e32972ccfa600803237" origin="Google Maven artifact, independently downloaded for AppFunctions and KSP"/>
+         </artifact>
+      </component>
+      <component group="androidx.appfunctions" name="appfunctions-testing" version="1.0.0-rc01">
+         <artifact name="appfunctions-testing-1.0.0-rc01.aar">
+            <sha256 value="d18b65b351ae4368081e98d0ce75aa8bc5bf493027279f4869ec64c3e9eda0ea" origin="Google Maven artifact, independently downloaded for AppFunctions and KSP"/>
+         </artifact>
+      </component>
+      <component group="androidx.appsearch" name="appsearch" version="1.1.0">
+         <artifact name="appsearch-1.1.0.aar">
+            <sha256 value="4fe4effbbc71a701e81a287d7420e10a1c264a62397976fe1e4db5b0351e736f" origin="Google Maven artifact, independently downloaded for AppFunctions and KSP"/>
+         </artifact>
+      </component>
+      <component group="androidx.appsearch" name="appsearch-platform-storage" version="1.1.0">
+         <artifact name="appsearch-platform-storage-1.1.0.aar">
+            <sha256 value="bedcf7adefa467e662ab656eb42c63a8015a3e1a608db1038db52935b80494d6" origin="Google Maven artifact, independently downloaded for AppFunctions and KSP"/>
+         </artifact>
+      </component>
+      <component group="com.google.auto.service" name="auto-service-annotations" version="1.0-rc6">
+         <artifact name="auto-service-annotations-1.0-rc6.jar">
+            <sha256 value="f55aee753b45bb49464d3aaa998ff0c48e4bf99240ab381842fa490d1d644e48" origin="Maven Central artifact, independently downloaded for AppFunctions and KSP"/>
+         </artifact>
+      </component>
+      <component group="com.google.devtools.ksp" name="symbol-processing-aa-embeddable" version="2.3.13">
+         <artifact name="symbol-processing-aa-embeddable-2.3.13.jar">
+            <sha256 value="e82cbde824645d930daeeb38fe0b701051ff9c44bf1734920668deb3de385854" origin="Maven Central artifact, independently downloaded for AppFunctions and KSP"/>
+         </artifact>
+      </component>
+      <component group="com.google.devtools.ksp" name="symbol-processing-api" version="2.0.10-1.0.24">
+         <artifact name="symbol-processing-api-2.0.10-1.0.24.jar">
+            <sha256 value="dd7dde070be54de66c7bdd4de04c43fb429e0c62bb132a6448cfa33653afb229" origin="Maven Central artifact, independently downloaded for AppFunctions and KSP"/>
+         </artifact>
+      </component>
+      <component group="com.google.devtools.ksp" name="symbol-processing-api" version="2.3.13">
+         <artifact name="symbol-processing-api-2.3.13.jar">
+            <sha256 value="f3f2c28ce46d4b390c0a6ccdb468c4636448c454ff47bf50d46aaf808b8ff688" origin="Maven Central artifact, independently downloaded for AppFunctions and KSP"/>
+         </artifact>
+      </component>
+      <component group="com.google.devtools.ksp" name="symbol-processing-common-deps" version="2.3.13">
+         <artifact name="symbol-processing-common-deps-2.3.13.jar">
+            <sha256 value="0f12165cc06d2cf7bce4012224933785875940712db2d7576efd3ff5eec2ff28" origin="Maven Central artifact, independently downloaded for AppFunctions and KSP"/>
+         </artifact>
+      </component>
+      <component group="com.google.devtools.ksp" name="symbol-processing-gradle-plugin" version="2.3.13">
+         <artifact name="symbol-processing-gradle-plugin-2.3.13.jar">
+            <sha256 value="da549c45cb45ff4738b3d6e654d3f83a8ee64a0d05cb94ddf7da1ea20fcdff7a" origin="Maven Central artifact, independently downloaded for AppFunctions and KSP"/>
+         </artifact>
+      </component>
+      <component group="com.google.guava" name="failureaccess" version="1.0.1">
+         <artifact name="failureaccess-1.0.1.jar">
+            <sha256 value="a171ee4c734dd2da837e4b16be9df4661afab72a41adaf31eb84dfdaf936ca26" origin="Maven Central artifact, independently downloaded for AppFunctions and KSP"/>
+         </artifact>
+      </component>
+      <component group="com.google.guava" name="guava" version="32.0.1-android">
+         <artifact name="guava-32.0.1-android.jar">
+            <sha256 value="12429ff9ac33b7afd8b1a5071179757cf4d3c47f0f4099bc0384e644ecbf82dd" origin="Maven Central artifact, independently downloaded for AppFunctions and KSP"/>
+         </artifact>
+      </component>
+      <component group="com.google.j2objc" name="j2objc-annotations" version="2.8">
+         <artifact name="j2objc-annotations-2.8.jar">
+            <sha256 value="f02a95fa1a5e95edb3ed859fd0fb7df709d121a35290eff8b74dce2ab7f4d6ed" origin="Maven Central artifact, independently downloaded for AppFunctions and KSP"/>
+         </artifact>
+      </component>
+      <component group="com.squareup" name="kotlinpoet-jvm" version="2.0.0">
+         <artifact name="kotlinpoet-jvm-2.0.0.jar">
+            <sha256 value="65e2d5e1c7844861d134635692791f7dbac808adb060da7329c18c4bd88d2acb" origin="Maven Central artifact, independently downloaded for AppFunctions and KSP"/>
+         </artifact>
+      </component>
+      <component group="org.checkerframework" name="checker-qual" version="3.33.0">
+         <artifact name="checker-qual-3.33.0.jar">
+            <sha256 value="e316255bbfcd9fe50d165314b85abb2b33cb2a66a93c491db648e498a82c2de1" origin="Maven Central artifact, independently downloaded for AppFunctions and KSP"/>
+         </artifact>
+      </component>
+      <component group="org.jetbrains.kotlin" name="kotlin-reflect" version="2.0.10">
+         <artifact name="kotlin-reflect-2.0.10.jar">
+            <sha256 value="77ff5b0a597ba697c97556d661f68991a019ca71d40c49e8ccb6991f4f93e308" origin="Maven Central artifact, independently downloaded for AppFunctions and KSP"/>
+         </artifact>
+      </component>
+      <component group="org.jetbrains.kotlin" name="kotlin-stdlib" version="2.2.20">
+         <artifact name="kotlin-stdlib-2.2.20.jar">
+            <sha256 value="8836ccffd3585fadda9901244b20d42901d2f3cd581058d8434e2ffabcf3a3e7" origin="Maven Central artifact, independently downloaded for AppFunctions and KSP"/>
+         </artifact>
+      </component>
+      <component group="org.jetbrains.kotlinx" name="kotlinx-coroutines-core-jvm" version="1.10.2">
+         <artifact name="kotlinx-coroutines-core-jvm-1.10.2.jar">
+            <sha256 value="5ca175b38df331fd64155b35cd8cae1251fa9ee369709b36d42e0a288ccce3fd" origin="Maven Central artifact, independently downloaded for AppFunctions and KSP"/>
+         </artifact>
+      </component>
+      <component group="org.jetbrains.kotlinx" name="kotlinx-coroutines-guava" version="1.11.0">
+         <artifact name="kotlinx-coroutines-guava-1.11.0.jar">
+            <sha256 value="82d3993130a494d6fab8b64705c8e10a61decd8af3d2e9274cfd8a3a5d80591f" origin="Maven Central artifact, independently downloaded for AppFunctions and KSP"/>
          </artifact>
       </component>
    </components>

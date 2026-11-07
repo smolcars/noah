@@ -549,6 +549,10 @@
   <string name="gt_b79cac926e0b2e34">"Help"</string>
   <string name="gt_90eb91beacd18ab3">"Here\'s a new Ark address."</string>
   <string name="gt_6772bebdaef128b9">"Here\'s your Lightning invoice for %1$s."</string>
+  <plurals name="gt_ff07c924b6ba90db">
+    <item quantity="one">"Here\'s your Lightning invoice for %1$s sat."</item>
+    <item quantity="other">"Here\'s your Lightning invoice for %1$s sats."</item>
+  </plurals>
   <string name="gt_c41b2bdf4c4d8c50">"Hidden for your security"</string>
   <string name="gt_62380501bdf8fc5b">"Hidden while your screen is recorded or shared"</string>
   <string name="gt_2ae92318e0d70a21">"Hide amounts"</string>
@@ -826,6 +830,7 @@
   <string name="gt_ddecc0272120b4ba">"Noah user"</string>
   <string name="gt_f802f9f1257fc080">"Noah was interrupted while sending this payment. Check your transaction history before resuming."</string>
   <string name="gt_deca5f2b35700ac7">"Noah won’t move these back to Ark."</string>
+  <string name="gt_b4a094cf754d6bb0">"Noah\'s wallet isn\'t ready. Open Noah and try again."</string>
   <string name="gt_dc937b59892604f5">"None"</string>
   <string name="gt_5e2edf7902eab86b">"Nostr key"</string>
   <string name="gt_e3df4eceed29d5f4">"Nostr key (optional)"</string>
@@ -895,6 +900,8 @@
   <string name="gt_762a16c9c74f5e0f">"Open wallet"</string>
   <string name="gt_6be6caff13df7c0f">"Open your wallet before changing the endpoint."</string>
   <string name="gt_f4ce6b8f22a13fe1">"Open %1$s in browser"</string>
+  <string name="gt_ad26ddf0111b8ddb">"Opening Send to %1$s."</string>
+  <string name="gt_eddd11b9cb21269b">"Opening Send."</string>
   <string name="gt_557d3ad870771176">"Opening the bundled BTC Map…"</string>
   <string name="gt_eb4bbb3d312d0b21">"Opens coin details"</string>
   <string name="gt_650eb5d460a4e887">"Optic ID"</string>
@@ -1240,6 +1247,7 @@
   <string name="gt_96100ca2d23b8821">"The Esplora endpoint is for a different Bitcoin network."</string>
   <string name="gt_9dc2f0b60de257af">"The Lightning payment could not be received. Generate a new payment request and try again."</string>
   <string name="gt_f663d0d5c263a46c">"The amount Ark receives is below its minimum. Increase the boarding amount."</string>
+  <string name="gt_f15bb847093c717a">"The amount must be at least one sat."</string>
   <string name="gt_1f7124b49af4bb0c">"The amount or fee changed. Review the payment again."</string>
   <string name="gt_d99fbad70ce6933e">"The amount required may vary."</string>
   <string name="gt_d016dcf9ce33d5ac">"The available funds changed. Review the payment again."</string>
@@ -1382,6 +1390,7 @@
   <string name="gt_99e8588dce6a534a">"Unlock Noah"</string>
   <string name="gt_b126042b7ef8a274">"Unlock VTXO"</string>
   <string name="gt_3470a00c3bb2d5ca">"Unlock to see your wallet."</string>
+  <string name="gt_a452df12ffd9ffcf">"Unlock your device and try again."</string>
   <string name="gt_531c7b28abf27600">"Unlocked"</string>
   <string name="gt_38674ce943ca4bc9">"Unlocked at block %1$s"</string>
   <string name="gt_c5b5f0e95343c511">"Unlocks at block %1$s"</string>
@@ -1483,12 +1492,32 @@
   <string name="gt_4cd8ef2093993de6">"You get"</string>
   <string name="gt_9f6549efd14b2751">"You have %1$s, about %2$s."</string>
   <string name="gt_798f886af0f2bdcf">"You have %1$s."</string>
+  <plurals name="gt_c761cdf072add0e0">
+    <item quantity="one">"You have %1$s sat, about %2$s."</item>
+    <item quantity="other">"You have %1$s sats, about %2$s."</item>
+  </plurals>
+  <plurals name="gt_fa11ee396af9d157">
+    <item quantity="one">"You have %1$s sat."</item>
+    <item quantity="other">"You have %1$s sats."</item>
+  </plurals>
   <string name="gt_0e5467ac43335fc4">"You keep"</string>
   <string name="gt_69322f7fe4b0cf74">"You need it to restore your wallet"</string>
   <string name="gt_357f1a2fdf17bb53">"You received %1$s"</string>
   <string name="gt_b6e58830ce7247d1">"You received %1$s %2$s."</string>
+  <plurals name="gt_154b4cd637251d3f">
+    <item quantity="one">"You received %1$s sat %2$s."</item>
+    <item quantity="other">"You received %1$s sats %2$s."</item>
+  </plurals>
   <string name="gt_88d7260b755e2a52">"You sent %1$s to %2$s %3$s."</string>
   <string name="gt_620eb9c0a2aa2de8">"You sent %1$s %2$s."</string>
+  <plurals name="gt_dbd7054168c50d9f">
+    <item quantity="one">"You sent %1$s sat to %2$s %3$s."</item>
+    <item quantity="other">"You sent %1$s sats to %2$s %3$s."</item>
+  </plurals>
+  <plurals name="gt_8f351033c8ea1233">
+    <item quantity="one">"You sent %1$s sat %2$s."</item>
+    <item quantity="other">"You sent %1$s sats %2$s."</item>
+  </plurals>
   <string name="gt_723022dbd02fce20">"You\'ve reached the maximum number of recurring payments."</string>
   <string name="gt_3d26c2347422ac51">"Your Ark balance cannot be swept to this wallet\'s own onchain address. Use an external Bitcoin address."</string>
   <string name="gt_d981ea9469a9b19c">"Your Lightning address is %1$s."</string>

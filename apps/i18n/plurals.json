@@ -158,5 +158,29 @@
   "{n} sats": {
     "one": "{n} sat",
     "other": "{n} sats"
+  },
+  "You have {sats} sats.": {
+    "one": "You have {sats} sat.",
+    "other": "You have {sats} sats."
+  },
+  "You have {sats} sats, about {fiat}.": {
+    "one": "You have {sats} sat, about {fiat}.",
+    "other": "You have {sats} sats, about {fiat}."
+  },
+  "Here's your Lightning invoice for {sats} sats.": {
+    "one": "Here's your Lightning invoice for {sats} sat.",
+    "other": "Here's your Lightning invoice for {sats} sats."
+  },
+  "You received {sats} sats {when}.": {
+    "one": "You received {sats} sat {when}.",
+    "other": "You received {sats} sats {when}."
+  },
+  "You sent {sats} sats to {counterparty} {when}.": {
+    "one": "You sent {sats} sat to {counterparty} {when}.",
+    "other": "You sent {sats} sats to {counterparty} {when}."
+  },
+  "You sent {sats} sats {when}.": {
+    "one": "You sent {sats} sat {when}.",
+    "other": "You sent {sats} sats {when}."
   }
 }

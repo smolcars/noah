@@ -91,6 +91,9 @@ class WalletSession internal constructor(
         suspend fun syncOnchain(): Unit = throw UnsupportedOperationException()
         suspend fun maintenanceDelegated()
         suspend fun bolt11Invoice(amountSats: ULong): String
+        /** A BOLT11 invoice carrying [description], and a fresh Ark address: what voice assistants create. */
+        suspend fun lightningInvoice(amountSats: ULong, description: String?): String = throw UnsupportedOperationException()
+        suspend fun newArkAddress(): String = throw UnsupportedOperationException()
         suspend fun claimLightningReceives()
         suspend fun createSnapshot(destination: File): WalletSnapshotInfo
         /** Bark's mailbox processor: Ark payments land as they arrive instead of on the next sync. */
@@ -421,6 +424,8 @@ class WalletSession internal constructor(
 
     suspend fun maintenanceDelegated() = withOpen { it.maintenanceDelegated() }
     suspend fun bolt11Invoice(amountSats: ULong): String = withOpen { it.bolt11Invoice(amountSats) }
+    suspend fun lightningInvoice(amountSats: ULong, description: String?): String = withOpen { it.lightningInvoice(amountSats, description) }
+    suspend fun newArkAddress(): String = withOpen { it.newArkAddress() }
     suspend fun claimLightningReceives() = withOpen { it.claimLightningReceives() }
     /**
      * Runs bark's mailbox processor exactly while [inFront] holds: starts or stops it, then repeats if the answer changed
@@ -809,6 +814,8 @@ class WalletSession internal constructor(
         override suspend fun syncOnchain() { onchain.sync() }
         override suspend fun maintenanceDelegated() { wallet.maintenanceDelegated() }
         override suspend fun bolt11Invoice(amountSats: ULong) = wallet.bolt11Invoice(amountSats, null).invoice
+        override suspend fun lightningInvoice(amountSats: ULong, description: String?) = wallet.bolt11Invoice(amountSats, description).invoice
+        override suspend fun newArkAddress(): String = wallet.newAddress()
         override suspend fun claimLightningReceives() { wallet.tryClaimAllLightningReceives(false) }
         override suspend fun createSnapshot(destination: File) = wallet.createSnapshot(destination.path)
         override suspend fun startMailboxProcessor() { wallet.startMailboxProcessor() }

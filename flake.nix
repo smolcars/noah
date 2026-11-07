@@ -179,6 +179,8 @@
             export LC_ALL=en_US.UTF-8
             export LANG=en_US.UTF-8
             export JAVA_HOME="${pkgs.jdk17.home}"
+            # The native Android unit tests run on Java 21 (Robolectric's Android 16); Gradle finds it here.
+            export JAVA21_HOME="${pkgs.jdk21.home}"
 
             unset SDKROOT
 

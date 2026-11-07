@@ -71,7 +71,31 @@
                 <data android:scheme="lnurlp" />
                 <data android:scheme="LNURLP" tools:ignore="AppLinkUrlError" />
             </intent-filter>
+            <!-- Receive, Scan and Send on a long press of the icon; each flavor's res/xml/shortcuts.xml names its own package. -->
+            <meta-data android:name="android.app.shortcuts" android:resource="@xml/shortcuts" />
         </activity>
+        <!-- Static shortcuts always clear the task; this passes their route on as a widget tap does, from a task of its own. -->
+        <activity
+            android:name="com.noahwallet.ShortcutActivity"
+            android:exported="false"
+            android:taskAffinity=""
+            android:excludeFromRecents="true"
+            android:noHistory="true"
+            android:theme="@android:style/Theme.NoDisplay" />
+        <!-- Gemini and other agents (voice-assistants.md). KSP generates the class and assets/noah_app_functions.xml. -->
+        <service
+            android:name="com.noahwallet.assistant.NoahAppFunctionService"
+            android:enabled="@bool/app_functions_enabled"
+            android:exported="true"
+            android:permission="android.permission.BIND_APP_FUNCTION_SERVICE"
+            tools:targetApi="36">
+            <property android:name="android.app.appfunctions.schema" android:value="app_functions_schema.xsd" />
+            <property android:name="android.app.appfunctions.v2" android:value="noah_app_functions.xml" />
+            <intent-filter>
+                <action android:name="android.app.appfunctions.AppFunctionService" />
+            </intent-filter>
+        </service>
+        <property android:name="android.app.appfunctions.app_metadata" android:resource="@xml/app_metadata" />
         <receiver android:name=".recurring.RecurringTimeReceiver" android:exported="false">
             <intent-filter>
                 <action android:name="android.intent.action.TIMEZONE_CHANGED" />

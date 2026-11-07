@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- AppFunctions run on Android 16 and newer (values-v36); older Android never sees the service. -->
+    <bool name="app_functions_enabled">false</bool>
+</resources>
