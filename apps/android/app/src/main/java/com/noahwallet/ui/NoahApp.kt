@@ -130,6 +130,8 @@ private class AppNavigator(private val model: AppModel, val backStack: NavBackSt
         SettingsRoutes.open(backStack, settingsStack, page)
     }
     fun repeat(payment: com.noahwallet.history.RepeatPayment) { model.repeatPayment = payment; showSend() }
+    /** A recent recipient's shortcut or an assistant's Pay: Send fills it in once no payment holds it. */
+    fun pay(route: PayRoute) { model.sendPrefill = route; showSend() }
 }
 
 /** OS payment links go to Send once no payment holds it; a held one says so. */
@@ -138,6 +140,7 @@ private fun LinkDelivery(model: AppModel, links: PaymentLinks, nav: AppNavigator
     val context = androidx.compose.ui.platform.LocalContext.current
     val send = remember(context) { com.noahwallet.send.SendRuntime.shared(context).controller }
     LaunchedEffect(links.pending, send.loading) { links.deliver(send, model.openReviews, nav::scanned) }
+    LaunchedEffect(links.pay, send.loading) { links.deliverPay(send, model.openReviews, nav::pay) }
     LaunchedEffect(links.route, send.loading) {
         links.deliverRoute(send, model.sendBusy, model.recurringApprovals) { route ->
             when (route) {

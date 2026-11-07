@@ -233,6 +233,16 @@ class SendModel(val controller: SendController, private val network: String,
         amount = prefill.amountInput; useFiat = prefill.amountMode == "FIAT"; comment = repeat.comment
         progress = SendProgress(entry = "recipient-first"); stage = SendStage.recipient
     }
+    /**
+     * A recent recipient's shortcut or an assistant's Pay: [recipient] taken as a scan takes it and, with [sats], the
+     * amount already confirmed, so Send goes on as far as its review. Only holding to send pays.
+     */
+    suspend fun importPayment(recipient: String, sats: Long?) {
+        if (controller.locked) return
+        reset()
+        if (sats != null) { amount = sats.toString(); progress = SendProgress(entry = "recipient-first"); stage = SendStage.recipient }
+        importRecipient(recipient)
+    }
     fun toggleCurrency() {
         val price = btcPrice ?: return; val value = sats
         amount = if (useFiat) value.toString() else FiatCurrency.satsToFiat(value, price, fiatCurrency); useFiat = !useFiat

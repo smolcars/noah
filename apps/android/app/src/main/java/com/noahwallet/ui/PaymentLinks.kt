@@ -22,6 +22,8 @@ class PaymentLinks : ViewModel() {
     var route by mutableStateOf<WidgetRoute?>(null); private set
     /** A "Payment received" notification's payment, held and gated like a widget route. */
     var payment by mutableStateOf<com.noahwallet.history.PaymentTap?>(null); private set
+    /** A recent recipient's launcher shortcut or an assistant's Pay ([PayRoute]), held and gated like a link. */
+    var pay by mutableStateOf<PayRoute?>(null); private set
     /** A payment, review or approval was in progress when the last link came. */
     var blocked by mutableStateOf(false)
 
@@ -30,11 +32,11 @@ class PaymentLinks : ViewModel() {
         // Recents relaunches a finished task with the intent that first opened it.
         if (savedState != null || intent.flags and Intent.FLAG_ACTIVITY_LAUNCHED_FROM_HISTORY != 0) return
         if (intent.action == Intent.ACTION_VIEW && intent.scheme?.lowercase() in schemes) pending = intent.dataString
-        else WidgetRoute.of(intent)?.let { route = it }
+        else PayRoute.of(intent)?.let { pay = it } ?: WidgetRoute.of(intent)?.let { route = it }
         com.noahwallet.history.PaymentTap.of(intent)?.let { payment = it }
     }
 
-    fun drop() { pending = null; route = null; payment = null }
+    fun drop() { pending = null; route = null; payment = null; pay = null }
 
     /**
      * Opens Activity on the notification's [payment] once Send has read its saved payment, then forgets it. Like a
@@ -71,6 +73,14 @@ class PaymentLinks : ViewModel() {
         if (send.locked || reviews.intValue > 0) blocked = true else scan(link)
     }
 
+    /** Gives [pay] to [open] once Send has read its saved payment, under [deliver]'s rule: nothing in flight or in review moves. */
+    fun deliverPay(send: SendController, reviews: IntState, open: (PayRoute) -> Unit) {
+        val next = pay ?: return
+        if (send.loading) return
+        pay = null
+        if (send.locked || reviews.intValue > 0) blocked = true else open(next)
+    }
+
     companion object {
         val schemes = setOf("bitcoin", "lightning", "lnurlp")
         const val blockedMessage = "Finish the current payment before opening another payment request."
@@ -89,7 +99,7 @@ enum class LinkStep { wait, open, ignore }
 /** Drops a held link or widget route when the launch gate ignores it, including one that arrives while a gate is showing. */
 @Composable
 internal fun DropIgnoredLinks(links: PaymentLinks, step: LinkStep) {
-    androidx.compose.runtime.LaunchedEffect(step, links.pending, links.route, links.payment) { if (step == LinkStep.ignore) links.drop() }
+    androidx.compose.runtime.LaunchedEffect(step, links.pending, links.route, links.payment, links.pay) { if (step == LinkStep.ignore) links.drop() }
 }
 
 /** The widget's routes: `com.noahwallet.<variant>://widget/<route>`, sent as an explicit intent's data. */
@@ -116,3 +126,28 @@ enum class WidgetRoute {
         }
     }
 }
+
+/**
+ * Send filled in (voice-assistants.md): `com.noahwallet.<variant>://pay?to=<recipient>&amount=<sats>`, sent as an
+ * explicit intent's data by a recent recipient's launcher shortcut or an assistant's Pay. Send stops at its review at
+ * the latest; nothing pays until the user holds to send.
+ */
+data class PayRoute(val recipient: String, val amountSats: Long? = null) {
+    fun uri(variant: String = com.noahwallet.BuildConfig.APP_VARIANT): android.net.Uri = android.net.Uri.Builder()
+        .scheme("com.noahwallet.$variant").authority("pay").appendQueryParameter("to", recipient)
+        .apply { amountSats?.let { appendQueryParameter("amount", it.toString()) } }.build()
+
+    companion object {
+        fun of(intent: Intent, variant: String = com.noahwallet.BuildConfig.APP_VARIANT): PayRoute? {
+            val data = intent.data ?: return null
+            if (intent.action != Intent.ACTION_VIEW || data.scheme != "com.noahwallet.$variant" || data.host != "pay") return null
+            val recipient = data.getQueryParameter("to")?.trim()?.takeIf { it.isNotEmpty() } ?: return null
+            return PayRoute(recipient, data.getQueryParameter("amount")?.toLongOrNull()?.takeIf { it > 0 })
+        }
+    }
+}
+
+/** Opens [uri] in [com.noahwallet.MainActivity] the way a widget tap does: the app keeps its place (singleTask, no task reset). */
+fun routeIntent(context: android.content.Context, uri: android.net.Uri): Intent =
+    Intent(Intent.ACTION_VIEW, uri, context, com.noahwallet.MainActivity::class.java)
+        .addFlags(Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP)

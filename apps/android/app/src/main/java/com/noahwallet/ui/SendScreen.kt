@@ -107,6 +107,9 @@ private fun SendInputs(app: AppModel, presentation: SendPresentation, closeScann
     LaunchedEffect(controller.state, app.repeatPayment) {
         app.repeatPayment?.let { if (!controller.locked) { model.prefill(it, app.preferredCurrency); app.repeatPayment = null } }
     }
+    LaunchedEffect(controller.state, app.sendPrefill) {
+        app.sendPrefill?.let { if (!controller.locked) { app.sendPrefill = null; closeScanner(); model.importPayment(it.recipient, it.amountSats) } }
+    }
     LaunchedEffect(controller.state, app.scannedDestination) {
         app.scannedDestination?.let { if (!controller.locked) {
             // Send's own scanner would cover the request it now shows.
