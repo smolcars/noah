@@ -10,8 +10,8 @@ struct NoahIntentWallet: Sendable {
     var refreshBalance: @Sendable () async throws -> UInt64
     /// Activity's rows after a sync.
     var history: @Sendable () async throws -> [HistoryTransaction] = { [] }
-    /// The Lightning address the server gave this wallet, as Settings shows it.
-    var lightningAddress: @Sendable () async -> String? = { nil }
+    /// The Lightning address the server gave this wallet, as Settings shows it; only for a wallet that can open.
+    var lightningAddress: @Sendable () async throws -> String? = { nil }
     /// The balance in the user's currency, only when the app already has a price and amounts aren't hidden.
     var fiat: @Sendable (_ sats: UInt64, _ locale: String) -> String? = { _, _ in nil }
 
@@ -48,7 +48,11 @@ struct NoahIntentWallet: Sendable {
                 return AssistantReply.datingChainRows(rows, known: WidgetChainDates.shared.stored(chain), tip: tip)
             }
         }, lightningAddress: {
-            SettingsStorage.shared.persistedState(PersistedServerState.self, key: PersistedServerState.key)?.lightningAddress
+            // Through the same admission as the rest: a suspended, missing or half-restored wallet isn't ready.
+            try await services.withBackgroundWallet {
+                try await services.ensureWalletOpen()
+                return SettingsStorage.shared.persistedState(PersistedServerState.self, key: PersistedServerState.key)?.lightningAddress
+            }
         }, fiat: { sats, locale in
             // Home's latest quote, which the widgets also show; Siri never fetches one.
             let display = WidgetDataWriter.Display(settings: .shared), variant = AppVariant.current

@@ -8,8 +8,9 @@ struct GetNoahLightningAddressIntent: AppIntent {
     static let description = IntentDescription("Returns your Noah Lightning address.")
     static let authenticationPolicy: IntentAuthenticationPolicy = .requiresAuthentication
 
-    func perform() async -> some IntentResult & ReturnsValue<String?> & ProvidesDialog {
-        let address = await NoahIntentWallet.current.lightningAddress()
+    func perform() async throws -> some IntentResult & ReturnsValue<String?> & ProvidesDialog {
+        let address: String?
+        do { address = try await NoahIntentWallet.current.lightningAddress() } catch { throw AssistantFailure(error) }
         return .result(value: address, dialog: "\(AssistantReply.lightningAddress(address))")
     }
 }

@@ -82,31 +82,33 @@ import Testing
         #expect(balance == 694_375)
     }
 
-    @Test func lightningAddressIsOptional() async {
+    @Test func lightningAddressIsOptional() async throws {
         func wallet(_ address: String?) -> NoahIntentWallet {
             NoahIntentWallet(newAddress: { Issue.record("Unexpected wallet access"); return "" },
                              bolt11Invoice: { _, _ in Issue.record("Unexpected wallet access"); return .init(paymentRequest: "") },
                              refreshBalance: { Issue.record("Unexpected wallet access"); return 0 }, lightningAddress: { address })
         }
-        await NoahIntentWallet.$current.withValue(wallet("sam@noahwallet.com")) {
-            #expect(await GetNoahLightningAddressIntent().perform().value == "sam@noahwallet.com")
+        let found = try await NoahIntentWallet.$current.withValue(wallet("sam@noahwallet.com")) {
+            try await GetNoahLightningAddressIntent().perform().value
         }
-        await NoahIntentWallet.$current.withValue(wallet(nil)) {
-            #expect(await GetNoahLightningAddressIntent().perform().value == String?.none)
-        }
+        #expect(found == "sam@noahwallet.com")
+        let none = try await NoahIntentWallet.$current.withValue(wallet(nil)) { try await GetNoahLightningAddressIntent().perform().value }
+        #expect(none == String?.none)
     }
 
     @Test func walletFailuresSayWhatToDoNext() async {
         let wallet = NoahIntentWallet(newAddress: { throw AppServices.WalletSuspended() },
                                       bolt11Invoice: { _, _ in throw WalletSession.OpenError.busy },
                                       refreshBalance: { throw URLError(.notConnectedToInternet) },
-                                      history: { throw AppServices.SeedUnavailable() })
+                                      history: { throw AppServices.SeedUnavailable() },
+                                      lightningAddress: { throw AppServices.WalletSuspended() })
         await NoahIntentWallet.$current.withValue(wallet) {
             await #expect(throws: AssistantFailure.suspended) { _ = try await CreateNoahArkAddressIntent().perform() }
             let invoice = CreateNoahLightningInvoiceIntent(); invoice.amountSats = 1
             await #expect(throws: AssistantFailure.busy) { _ = try await invoice.perform() }
             await #expect(throws: AssistantFailure.unreachable) { _ = try await GetNoahBalanceIntent().perform() }
             await #expect(throws: AssistantFailure.notReady) { _ = try await GetNoahLastPaymentIntent().perform() }
+            await #expect(throws: AssistantFailure.suspended) { _ = try await GetNoahLightningAddressIntent().perform() }
         }
     }
 
