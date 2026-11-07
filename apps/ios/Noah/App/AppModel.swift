@@ -458,6 +458,7 @@ extension AppModel {
             }
             customOpenWait = nil
             LaunchTiming.shared.mark(.walletOpened)
+            await checkRestoredVtxos()
             if let latest = try await session.summary() {
                 summary = latest
                 summaryRevision += 1
@@ -494,6 +495,15 @@ extension AppModel {
         syncOpenedWallet(historyReadsBefore: historyReads)
         await reconcileBackupTriggers()
         await startServerServices()
+    }
+
+    /// A restored backup's coins are checked with the server before its first balance shows: otherwise the restore's
+    /// count-up (and Home) would show coins spent after the backup, then drop. Best effort: the foreground pass retries.
+    private func checkRestoredVtxos() async {
+        let marker = WalletDataLocation(variant: variant).directory.appending(path: RestoreTransaction.vtxoCheckName)
+        guard FileManager.default.fileExists(atPath: marker.path) else { return }
+        do { try await session.withOpenWallet { [session] in try await session.checkRestoredVtxos($0) } }
+        catch { log.w("Couldn't check the restored wallet's coins with the server; the next sync tries again") }
     }
 
     /// Nothing else syncs a wallet just opened until the first foreground tick: one pass now, which also runs the

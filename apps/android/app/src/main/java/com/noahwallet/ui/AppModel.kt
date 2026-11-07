@@ -92,7 +92,10 @@ class AppModel(application: Application, val settings: SettingsStorage = Setting
         },
         complete = { outcome ->
             restoreCompletion {
-                withContext(Dispatchers.IO) { services.openWalletInForeground(walletMutationHeld = true) }
+                withContext(Dispatchers.IO) {
+                    services.openWalletInForeground(walletMutationHeld = true)
+                    services.checkRestoredVtxosAfterOpen()
+                }
                 open = true; onboarded = true; launchState = LaunchState.existingWallet
                 refresh(walletMutationHeld = true); services.startServerServices()
             }.finish(outcome)
@@ -351,6 +354,7 @@ class AppModel(application: Application, val settings: SettingsStorage = Setting
                 val wait = EsploraOpenWait(); customOpenWait = wait
                 services.openWalletInForeground(walletMutationHeld = true, customWait = wait, lateCompletion = ::lateOpen)
                 customOpenWait = null
+                services.checkRestoredVtxosAfterOpen()
             }
             LaunchTiming.shared(getApplication()).mark(LaunchTiming.Milestone.walletOpened)
             open = true

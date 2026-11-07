@@ -402,6 +402,17 @@ class AppServices private constructor(private val context: Context) {
         }
     }
 
+    /**
+     * A restored backup's coins checked with the server right after the open, before its first balance shows: otherwise
+     * the restore's count-up (and Home) would show coins spent after the backup, then drop. Best effort: the foreground
+     * pass retries. Nothing unless a restore left the marker.
+     */
+    suspend fun checkRestoredVtxosAfterOpen() {
+        try { session.checkRestoredVtxos(AppLog(context, "restore")::w) }
+        catch (cancelled: CancellationException) { throw cancelled }
+        catch (_: Exception) { log.w("Couldn't check the restored wallet's coins with the server; the next sync tries again") }
+    }
+
     /** Best effort: server setup sends it again on the next launch. */
     suspend fun sendBackupSetting() {
         try { registration.sendBackupEnabledIfOn() }

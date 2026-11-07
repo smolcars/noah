@@ -68,6 +68,23 @@ struct RestoredVtxoCheckTests {
         #expect(!FileManager.default.fileExists(atPath: marker.path))
     }
 
+    /// The open (before its first balance read) and the foreground pass can both start a check: the second joins the first.
+    @Test func checksStartedTogetherShareOneRun() async throws {
+        let runs = Locked(0)
+        let flight = RestoredVtxoCheck.Flight()
+        async let first = flight.run(marker) {
+            runs.withLock { $0 += 1 }
+            try await Task.sleep(for: .milliseconds(300))
+            return 0
+        }
+        async let second: Int = {
+            try await Task.sleep(for: .milliseconds(50))
+            return try await flight.run(marker) { runs.withLock { $0 += 1 }; return 0 }
+        }()
+        _ = try await (first, second)
+        #expect(runs.withLock { $0 } == 1)
+    }
+
     @Test func aFailedSyncKeepsTheCheckWithoutCountingAPass() async throws {
         defer { try? FileManager.default.removeItem(at: root) }
         try leaveMarker()

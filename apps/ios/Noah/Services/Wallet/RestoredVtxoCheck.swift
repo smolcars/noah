@@ -8,6 +8,21 @@ import Foundation
 enum RestoredVtxoCheck {
     static let maxPasses = 5
 
+    /// One check at a time per datadir: the open before the first balance read and the foreground pass can both start
+    /// one, and the second joins the first.
+    actor Flight {
+        static let shared = Flight()
+        private var running: [URL: Task<Int, Error>] = [:]
+
+        func run(_ marker: URL, _ check: @escaping @Sendable () async throws -> Int) async throws -> Int {
+            if let running = running[marker] { return try await running.value }
+            let task = Task { try await check() }
+            running[marker] = task
+            defer { running[marker] = nil }
+            return try await task.value
+        }
+    }
+
     struct Steps: Sendable {
         var sync: @Sendable () async throws -> Void
         var spendableIDs: @Sendable () async throws -> [String]
@@ -36,12 +51,15 @@ enum RestoredVtxoCheck {
 }
 
 extension WalletSession {
-    /// The foreground pass's first stage; does nothing unless a restore left `RestoreTransaction.vtxoCheckName`.
+    /// The foreground pass's first stage, and the open's before the first balance read (`AppModel.openExistingWallet`);
+    /// does nothing unless a restore left `RestoreTransaction.vtxoCheckName`.
     nonisolated func checkRestoredVtxos(_ handles: Handles) async throws {
         let marker = location.directory.appending(path: RestoreTransaction.vtxoCheckName)
-        try await RestoredVtxoCheck.run(marker: marker, .init(
-            sync: { try await handles.wallet.sync() },
-            spendableIDs: { try await handles.wallet.spendableVtxos().map(\.id) },
-            adopt: { _ = try await handles.wallet.trustAndAdoptServerVtxoStatus(vtxoId: $0) }))
+        _ = try await RestoredVtxoCheck.Flight.shared.run(marker) {
+            try await RestoredVtxoCheck.run(marker: marker, .init(
+                sync: { try await handles.wallet.sync() },
+                spendableIDs: { try await handles.wallet.spendableVtxos().map(\.id) },
+                adopt: { _ = try await handles.wallet.trustAndAdoptServerVtxoStatus(vtxoId: $0) }))
+        }
     }
 }
