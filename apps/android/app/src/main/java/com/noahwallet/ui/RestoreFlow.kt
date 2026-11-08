@@ -82,6 +82,7 @@ class RestoreCompletion(
 class RestoreFlow(
     private val restore: suspend (String, WalletRestorer.Source, (WalletRestorer.Step) -> Unit) -> WalletRestorer.Outcome,
     private val complete: suspend (WalletRestorer.Outcome) -> Unit,
+    private val log: (String) -> Unit = {},
 ) {
     var running by mutableStateOf(false); private set
     var step by mutableStateOf<WalletRestorer.Step?>(null); private set
@@ -90,6 +91,11 @@ class RestoreFlow(
     val canLeave get() = !running && issue?.requiresRestart != true
     fun reset() { check(!running); issue = null; step = null; completed = false }
     fun reject(value: RestoreIssue) { if (canLeave) issue = value }
+    fun reject(failure: Exception) { logFailure(failure, false); reject(RestoreIssue.from(failure)) }
+    private fun logFailure(failure: Exception, committed: Boolean) {
+        val stage = if (committed) """ after commit""" else ""
+        log("""Restore failed$stage: ${RestoreIssue.logDescription(failure)}""")
+    }
     fun clearIssue() { if (canLeave) issue = null }
 
     suspend fun run(phrase: String, source: WalletRestorer.Source = WalletRestorer.Source.Backup) {
@@ -105,7 +111,10 @@ class RestoreFlow(
                 committed = true
                 complete(outcome)
                 completed = true
-            } catch (failure: Exception) { issue = if (committed) RestoreIssue.committed else RestoreIssue.from(failure, source) }
+            } catch (failure: Exception) {
+                logFailure(failure, committed)
+                issue = if (committed) RestoreIssue.committed else RestoreIssue.from(failure, source)
+            }
             finally { running = false; step = null }
         }
     }

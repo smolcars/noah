@@ -1,12 +1,24 @@
 import SwiftUI
 
 /// Owns a scratch folder until the activity controller is dismissed.
-final class SharedFile: Sendable {
+final class SharedFile: Sendable, Identifiable {
     let url: URL
     private let folder: URL
     init(url: URL, folder: URL) { self.url = url; self.folder = folder }
     func discard() { ScratchSpace.shared.discard(folder) }
     deinit { discard() }
+
+    /// The redacted app log as `noah.log`, snapshotted so sharing cannot race rotation.
+    static func appLogs() async throws -> SharedFile {
+        try await ScratchSpace.shared.withOperation {
+            let folder = try ScratchSpace.shared.makeFolder("share-logs")
+            do {
+                let url = folder.appending(path: "noah.log")
+                try await LogFile.shared.checkedLinesForExport().joined(separator: "\n").write(to: url, atomically: true, encoding: .utf8)
+                return SharedFile(url: url, folder: folder)
+            } catch { ScratchSpace.shared.discard(folder); throw error }
+        }
+    }
 }
 
 struct FileShareSheet: UIViewControllerRepresentable {
@@ -77,15 +89,7 @@ struct LogView: View {
     private func share() {
         Task {
             do {
-                file = try await ScratchSpace.shared.withOperation {
-                    let folder = try ScratchSpace.shared.makeFolder("share-logs")
-                    do {
-                        let url = folder.appending(path: "noah.log")
-                        // Snapshot the redacted rotating files, so sharing cannot race rotation.
-                        try await LogFile.shared.checkedLinesForExport().joined(separator: "\n").write(to: url, atomically: true, encoding: .utf8)
-                        return SharedFile(url: url, folder: folder)
-                    } catch { ScratchSpace.shared.discard(folder); throw error }
-                }
+                file = try await SharedFile.appLogs()
                 sharing = true
             } catch { self.error = "Couldn't prepare the file for sharing. Please try again." }
         }

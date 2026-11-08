@@ -74,6 +74,20 @@ struct RestoreIssue: Equatable {
         return Self(title: "Couldn't restore", message: "Please try again later.")
     }
 
+    /// For the log only: Noah's own failure cases by name, otherwise `SafeErrorDescription` (never a client error's text).
+    static func logDescription(_ error: Error) -> String {
+        if let error = error as? ClientError { return logDescription(error.underlyingError) }
+        return switch error {
+        case let error as WalletSession.OpenError: "OpenError.\(error)"
+        case let error as WalletRestorer.Failure: "WalletRestorer.\(error)"
+        case let error as RestoreTransaction.Failure: "RestoreTransaction.\(error)"
+        case let error as BackupCrypto.Failure: "BackupCrypto.\(error)"
+        case let error as BackupArchive.Failure: "BackupArchive.\(error)"
+        case let error as ServerFailure: "ServerFailure(\(error.statusCode.map(String.init) ?? "nil"), \(error.code ?? "nil"))"
+        default: SafeErrorDescription.forLogging(error)
+        }
+    }
+
     private static func from(_ failure: WalletRestorer.Failure) -> Self {
         switch failure {
         case .wrongNetwork:

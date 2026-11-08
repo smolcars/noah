@@ -1,6 +1,7 @@
 package com.noahwallet.ui
 
 import com.noahwallet.services.backup.*
+import com.noahwallet.services.logging.SafeErrorDescription
 import com.noahwallet.services.server.ServerFailure
 import com.noahwallet.services.wallet.WalletSession
 import io.github.niteshbalusu11.bark.BarkError
@@ -84,5 +85,21 @@ data class RestoreIssue(val message: String, val requiresRestart: Boolean = fals
         // A short red headline over a calm body; only a connection failure says to check the connection.
         private val connectivity = RestoreIssue("Check your connection and try again.", title = "Couldn't restore")
         private val generic = RestoreIssue("Please try again later.", title = "Couldn't restore")
+
+        /** For the log only: typed reason names and exception types (with causes), never free-form messages. */
+        fun logDescription(error: Throwable): String {
+            val reason = when (error) {
+                is WalletSession.OpenError -> "OpenError.${error.reason}"
+                is WalletRestorer.Failure -> "WalletRestorer.${error.reason}"
+                is RestoreTransaction.Failure -> "RestoreTransaction.${error.reason}"
+                is BackupCrypto.Failure -> "BackupCrypto.${error.reason}"
+                is BackupArchive.Failure -> "BackupArchive.${error.reason}"
+                is ServerFailure -> "ServerFailure(${error.kind}, ${error.status}, ${error.code})"
+                else -> SafeErrorDescription.of(error)
+            }
+            val causes = generateSequence(error.cause) { it.cause }.take(maxLoggedCauses).map(SafeErrorDescription::of)
+            return (sequenceOf(reason) + causes).joinToString(" <- ")
+        }
+        private const val maxLoggedCauses = 3
     }
 }

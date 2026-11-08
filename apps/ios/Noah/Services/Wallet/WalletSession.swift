@@ -429,6 +429,7 @@ actor WalletSession {
         do {
             properties = try WalletDatabase.properties(at: location.database)
         } catch {
+            AppLog("wallet").w(#"Wallet database check failed: \#(error)"#)
             throw OpenError.notABarkWallet
         }
         let expectedNetwork = WalletConfiguration.base(for: variant).networkName

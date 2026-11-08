@@ -127,6 +127,16 @@ class RestoreIssueTest {
         }
     }
 
+    @Test fun logDescriptionNamesTypedReasonsButNotMessages() {
+        val inspection = WalletSession.OpenError(WalletSession.OpenFailure.notABarkWallet,
+            cause = com.noahwallet.services.wallet.WalletDatabase.InspectionError(IOException("/data/user/0/secret")))
+        assertEquals("OpenError.notABarkWallet <- InspectionError <- IOException", RestoreIssue.logDescription(inspection))
+        assertEquals("WalletRestorer.downloadMismatch",
+            RestoreIssue.logDescription(WalletRestorer.Failure(WalletRestorer.Reason.downloadMismatch)))
+        assertEquals("ServerFailure(request, 500, null)", RestoreIssue.logDescription(ServerFailure("https://example.com/?sig=secret", 500)))
+        assertEquals("IOException", RestoreIssue.logDescription(IOException("https://example.com/?sig=secret")))
+    }
+
     @Test fun everyEngineReasonMapsToActionableFixedCopy() {
         WalletRestorer.Reason.entries.forEach { reason ->
             val issue = RestoreIssue.from(WalletRestorer.Failure(reason))

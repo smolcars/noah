@@ -8,7 +8,7 @@ import java.io.File
 /** Read-only check before opening; OnchainWallet.openExisting repeats it in the SDK (defence in depth). */
 object WalletDatabase {
     data class Properties(val network: String, val fingerprint: String)
-    class InspectionError : Exception("""Cannot read bark wallet properties""")
+    class InspectionError(cause: Throwable? = null) : Exception("""Cannot read bark wallet properties""", cause)
 
     /** The framework's default handler deletes a database it finds corrupt. Never on a wallet. */
     private val keepDatabase = DatabaseErrorHandler { }
@@ -19,6 +19,7 @@ object WalletDatabase {
     fun sweepForWalletDeletion() = scratch.sweepForWalletDeletion()
 
     /** Callers (the session's open path) inspect one database at a time. */
+    @Suppress("TooGenericExceptionCaught") // any failure means unreadable; the cause is kept for the log
     fun properties(database: File): Properties = try {
         val wal = File(database.path + "-wal").exists()
         val shm = File(database.path + "-shm").exists()
@@ -31,8 +32,8 @@ object WalletDatabase {
         // connection sees the committed frames and creates nothing.
         val hasSidecar = wal || File(database.path + "-journal").exists()
         if (hasSidecar) read(database) else inspectCopy(database)
-    } catch (_: Exception) {
-        throw InspectionError()
+    } catch (failure: Exception) {
+        throw failure as? InspectionError ?: InspectionError(failure)
     }
 
     private fun inspectCopy(database: File): Properties {

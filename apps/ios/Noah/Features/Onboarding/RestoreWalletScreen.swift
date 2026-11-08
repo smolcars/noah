@@ -126,6 +126,7 @@ struct RestoreWalletScreen: View {
                 }
                 .onboardingAppear(3)
             message.padding(.top, 14)
+            if issue != nil { ShareLogsLink().padding(.top, NoahTokens.Space.s) }
             if issue?.action != nil, let onIssueAction {
                 RestoreIssueAction(issue: issue, action: onIssueAction).padding(.top, NoahTokens.Space.s)
             }
@@ -445,6 +446,7 @@ struct StoredSeedRestoreScreen: View {
                             .accessibilityIdentifier("restore-error")
                     }
                 }
+                if issue != nil { ShareLogsLink() }
                 if issue?.requiresRestart != true {
                     RestoreIssueAction(issue: issue, action: onIssueAction)
                     Button("Restore wallet", action: onRestore)
@@ -455,6 +457,37 @@ struct StoredSeedRestoreScreen: View {
             }
             .padding(.bottom, NoahTokens.Space.l)
             .onboardingPane()
+        }
+    }
+}
+
+/// Under a failed restore: its log says why it failed, and a stuck restore has no Settings to reach Logs from.
+private struct ShareLogsLink: View {
+    @State private var file: SharedFile?
+    @State private var failed = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            Button(action: share) {
+                Label("Share app logs", systemImage: "square.and.arrow.up")
+            }
+            .buttonStyle(OnboardingSecondaryButtonStyle())
+            .accessibilityIdentifier("restore-share-logs")
+            if failed {
+                Text("Couldn't prepare the file for sharing. Please try again.")
+                    .noahText(NoahTokens.Typography.sub).foregroundStyle(NoahTokens.Colors.failure)
+            }
+        }
+        // The item, not a flag, so the sheet never renders before its file exists. Releasing it discards the file.
+        .sheet(item: $file) { FileShareSheet(file: $0) }
+    }
+
+    private func share() {
+        Task {
+            do {
+                file = try await SharedFile.appLogs()
+                failed = false
+            } catch { failed = true }
         }
     }
 }

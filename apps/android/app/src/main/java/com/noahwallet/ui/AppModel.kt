@@ -100,6 +100,7 @@ class AppModel(application: Application, val settings: SettingsStorage = Setting
                 refresh(walletMutationHeld = true); services.startServerServices()
             }.finish(outcome)
         },
+        log = com.noahwallet.services.logging.AppLog(application, "restore")::e,
     )
 
     private var recoveryFilesClear by mutableStateOf(false)
@@ -161,7 +162,7 @@ class AppModel(application: Application, val settings: SettingsStorage = Setting
                         restore.run(mnemonic, source)
                     }
                 }
-            } catch (failure: Exception) { restore.reject(RestoreIssue.from(failure)) }
+            } catch (failure: Exception) { restore.reject(failure) }
             finally {
                 if (restore.issue?.action != null) issuePhrase = phrase
                 withContext(Dispatchers.IO) { refreshRecoveryFiles() }; busy = false

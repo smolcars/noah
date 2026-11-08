@@ -67,6 +67,8 @@ internal fun RestoringStep(model: AppModel, presentation: OnboardingPresentation
     RestoreProgressEffects(model, presentation, storedSeed)
     SceneLayout(clock, SceneMode.restore, welcomeGhost = model.localeIdentifier, below = {
         RestoreProgress(model, presentation, issue?.takeUnless { storedSeed })
+        // Under the error: the bottom area only fits two buttons on a phone.
+        if (issue != null && !storedSeed) com.noahwallet.ui.ShareLogsLink(model, Modifier.padding(top = NoahTokens.Space.l))
     }, bottom = {
         if (issue != null && !issue.requiresRestart && !storedSeed) Column(verticalArrangement = Arrangement.spacedBy(NoahTokens.Space.s)) {
             // The failed phrase restore's second way forward (recover from the Ark server, or restore anyway).

@@ -280,27 +280,34 @@ internal fun LogsPage(model: AppModel, nav: SettingsNav) {
     suspend fun load() { snapshot.load(read = { withContext(Dispatchers.IO) { LogFile.shared(context).lines() } }) }
     LaunchedEffect(Unit) { load() }
     LaunchedEffect(snapshot.updatedAt) { if (snapshot.lines.isNotEmpty()) listState.scrollToItem(snapshot.lines.lastIndex) }
-    val share = rememberFileShare(model, tr("Share app logs"), "text/plain")
+    val shareLogs = rememberLogShare(model)
     val updated = snapshot.updatedAt?.let { tr("Updated at {time}", DateFormat.getTimeInstance(DateFormat.SHORT).format(Date(it))) }
     SettingsFrame(tr("Logs"), nav.back, line = updated, scroll = null, actions = {
         BarButton(SettingsIcons.refresh, tr("Refresh app logs"), Modifier.testTag("logs-refresh")) { haptics.light(); scope.launch { load() } }
-        BarButton(SettingsIcons.share, tr("Share app logs"), Modifier.testTag("logs-share")) {
-            haptics.light()
-            share {
-                val scratch = model.services.scratch
-                val folder = scratch.makeFolder("share")
-                runCatching {
-                    val file = java.io.File(folder, "noah.log").apply { writeText(LogFile.shared(context).lines().joinToString("\n")) }
-                    SharedFile(file) { scratch.discard(folder) }
-                }.onFailure { scratch.discard(folder) }.getOrThrow()
-            }
-        }
+        BarButton(SettingsIcons.share, tr("Share app logs"), Modifier.testTag("logs-share")) { haptics.light(); shareLogs() }
     }) {
         snapshot.error?.let { FinePrint(tr(it), failed = true) }
         if (!snapshot.loading && snapshot.error == null && snapshot.lines.isEmpty()) FinePrint(tr("No logs found."))
         LazyColumn(Modifier.weight(1f).fillMaxWidth().padding(top = 14.dp).testTag("logs-list"), state = listState) {
             items(snapshot.lines) { line -> SelectionContainer { Text(logLine(line, palette), style = SettingsType.log, color = palette.foreground) } }
             item { FinePrint(tr("Shared logs never include your phrase or keys."), Modifier.padding(bottom = 24.dp)) }
+        }
+    }
+}
+
+/** The app log as a file in the share sheet; a failed restore offers it too, since it has no Settings. */
+@Composable
+internal fun rememberLogShare(model: AppModel): () -> Unit {
+    val context = LocalContext.current
+    val share = rememberFileShare(model, tr("Share app logs"), "text/plain")
+    return {
+        share {
+            val scratch = model.services.scratch
+            val folder = scratch.makeFolder("share")
+            runCatching {
+                val file = java.io.File(folder, "noah.log").apply { writeText(LogFile.shared(context).lines().joinToString("\n")) }
+                SharedFile(file) { scratch.discard(folder) }
+            }.onFailure { scratch.discard(folder) }.getOrThrow()
         }
     }
 }
