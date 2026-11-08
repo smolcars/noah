@@ -154,7 +154,8 @@ jobs:
           # List the PR's commits under its title; a merge commit on master names the PR on its first line.
           PR_NUMBER=${PR_NUMBER:-$(sed -n '1s/^Merge pull request #\([0-9]*\) from .*/\1/p' <<<"$COMMIT_MESSAGE")}
           if [[ -n "$PR_NUMBER" ]]; then
-            PR_COMMITS=$(gh api "repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER/commits" --paginate --jq '.[].commit.message | split("\n")[0] | "• " + .')
+            # A failed lookup still posts the title.
+            PR_COMMITS=$(gh api "repos/$GITHUB_REPOSITORY/pulls/$PR_NUMBER/commits" --paginate --jq '.[].commit.message | split("\n")[0] | "• " + .' || true)
             export PR_COMMITS
           fi
           python3 <<'PY'
@@ -173,8 +174,9 @@ jobs:
                       pr_title, pr_number = body.strip(), merge[1]
               if not pr_title:
                   return message or "(no commit message)"
-              # A single commit titled like the PR adds nothing.
-              commits = [line for line in os.environ.get("PR_COMMITS", "").splitlines() if line[2:] != pr_title]
+              commits = os.environ.get("PR_COMMITS", "").splitlines()
+              if commits == [f"• {pr_title}"]:  # a single commit titled like the PR adds nothing
+                  commits = []
               return "\n".join([f"{pr_title} (#{pr_number})", *commits])
 
           def fit(head, change, footer, limit):
