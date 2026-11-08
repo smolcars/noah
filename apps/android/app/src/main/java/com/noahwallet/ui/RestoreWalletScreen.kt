@@ -115,6 +115,7 @@ private fun StoredSeedRestoreScreen(model: AppModel) {
                 model.step = "restoring"
                 model.restoreWallet(null)
             }
+            if (flow.issue != null) ShareLogsLink(model)
             Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) { DeleteWalletFallback(model, palette.failure, NoahTokens.Typography.body) }
         }
     })
@@ -186,6 +187,17 @@ private fun PhraseRestoreScreen(model: AppModel, clipboard: RestoreClipboard) {
             }
         }
     })
+}
+
+/** Under a failed restore: its log says why it failed, and a stuck restore has no Settings to reach Logs from. */
+@Composable
+internal fun ShareLogsLink(model: AppModel, modifier: Modifier = Modifier) {
+    val share = com.noahwallet.ui.settings.rememberLogShare(model)
+    val tint = LocalPalette.current.foreground
+    PillButton(tr("Share app logs"), modifier.fillMaxWidth().testTag("restore-share-logs"), enabled = !model.busy, outlined = true, icon = {
+        androidx.compose.material3.Icon(androidx.compose.ui.res.painterResource(com.noahwallet.R.drawable.ic_activity_share), null,
+            Modifier.size(18.dp), tint = tint)
+    }, onClick = share)
 }
 
 /** The restore issue's second way forward ([RestoreIssue.Action]), when it offers one. [typed]: the phrase screen. */
