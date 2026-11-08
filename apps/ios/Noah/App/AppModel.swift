@@ -335,7 +335,7 @@ final class AppModel {
                     await self.openExistingWallet()
                 }).finish(outcome)
         } catch {
-            log.e("Restore failed: \(SafeErrorDescription.forLogging(error))")
+            log.e("Restore failed\(committed ? " after commit" : ""): \(RestoreIssue.logDescription(error))")
             if let failure = error as? StoredSeed.Failure {
                 phase = .blocked(failure == .invalid ? .invalidSeed : .seedConflict)
             }

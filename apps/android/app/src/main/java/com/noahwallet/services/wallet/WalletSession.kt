@@ -47,7 +47,7 @@ class WalletSession internal constructor(
     enum class OpenFailure {
         walletDatabaseMissing, notABarkWallet, networkMismatch, busy, walletDatabaseExists, restorePending, teardownFailed, suspended, seedConflict,
     }
-    class OpenError(val reason: OpenFailure, val found: String? = null) : Exception(reason.name)
+    class OpenError(val reason: OpenFailure, val found: String? = null, cause: Throwable? = null) : Exception(reason.name, cause)
     class SessionError : Exception("Wallet not open")
 
     data class Summary(val network: Network, val fingerprint: String, val balance: WalletBalance, val movementCount: Int) {
@@ -419,8 +419,9 @@ class WalletSession internal constructor(
         }
     }
 
-    private fun inspectDatabase() = try { inspect(location.database) } catch (_: Exception) {
-        throw OpenError(OpenFailure.notABarkWallet)
+    @Suppress("TooGenericExceptionCaught") // any failure means unreadable; the cause is kept for the log
+    private fun inspectDatabase() = try { inspect(location.database) } catch (failure: Exception) {
+        throw OpenError(OpenFailure.notABarkWallet, cause = failure)
     }
 
     suspend fun summary(): Summary? = if (isOpen) withOpen { it.summary() } else null

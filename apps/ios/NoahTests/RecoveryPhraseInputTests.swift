@@ -193,6 +193,16 @@ struct RestoreCompletionTests {
 }
 
 struct RestoreIssueTests {
+    @Test func logDescriptionNamesCasesButNotClientText() {
+        #expect(RestoreIssue.logDescription(WalletSession.OpenError.notABarkWallet) == "OpenError.notABarkWallet")
+        #expect(RestoreIssue.logDescription(WalletRestorer.Failure.unsupportedFormat(3)) == "WalletRestorer.unsupportedFormat(3)")
+        #expect(RestoreIssue.logDescription(ServerFailure(message: "https://example.com/?sig=secret", statusCode: 500))
+            == "ServerFailure(500, nil)")
+        let client = ClientError(operationID: "backup", operationInput: "https://example.com/?sig=secret",
+                                 causeDescription: "secret", underlyingError: WalletSession.OpenError.busy)
+        #expect(RestoreIssue.logDescription(client) == "OpenError.busy")
+    }
+
     /// Future envelopes (any version byte), manifests and bark schemas all ask for an update.
     @Test func futureVersionsExplainUpdateRequired() throws {
         for version in [UInt8(3), 255] {
