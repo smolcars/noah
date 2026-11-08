@@ -24,6 +24,8 @@ import Testing
             send.amount = "2000"
             send.consumeRepeatPayment(&pending, currency: "USD")
             #expect(send.amount == "2000")
+            // As To does on screen: its preview shows the note field before Next.
+            await send.previewRecipient()
             await send.acceptRecipient()
             #expect(send.matchingRoute?.arkAddress == "fresh-ark")
             #expect(send.progress.selectedRail == (comment.isEmpty ? .ark : .lightning))

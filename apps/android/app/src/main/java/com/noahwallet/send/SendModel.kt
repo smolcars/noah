@@ -132,13 +132,19 @@ class SendModel(val controller: SendController, private val network: String,
             fixed?.let { parsed = parsed.copy(amount = it.toBigDecimal(), isAmountEditable = false) }
         }
         applyRequestAmount()
-        if (parsed.destinationType == "lnurl" && matchingRoute == null) {
-            val resolved = resolveRecipient(SendDestination.cleaned(destination).lowercase())
-            if (!unchanged()) return false
-            route = resolved; requireSend(matchingRoute != null)
-        }
+        if (!lnurlResolved(unchanged)) return false
         progress = progress.copy(recipientConfirmed = true, amountConfirmed = progress.amountConfirmed || (sats > 0 && !keypad),
             selectedRail = if (isMax) SendRail.onchain else SendFlow.recommend(rails, availability))
+        return true
+    }
+    /** A Lightning address not looked up yet; false when the recipient changed meanwhile, or when it takes a note To hasn't
+     *  shown yet (a scan, paste or tapped result): then it stops on To so a note can be added. */
+    private suspend fun lnurlResolved(unchanged: () -> Boolean): Boolean {
+        if (parsed.destinationType != "lnurl" || matchingRoute != null) return true
+        val resolved = resolveRecipient(SendDestination.cleaned(destination).lowercase())
+        if (!unchanged()) return false
+        route = resolved; requireSend(matchingRoute != null)
+        if (resolved.commentAllowed > 0 && comment.isEmpty()) { stage = SendStage.recipient; return false }
         return true
     }
     suspend fun continueStage() {

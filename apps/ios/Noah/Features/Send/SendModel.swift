@@ -180,10 +180,13 @@ import Observation
     func previewRecipient() async {
         let candidate = destination
         let revision = recipientRevision
-        guard SendDestination.parse(candidate).destinationType == "lnurl" else {
+        let preview = SendDestination.parse(candidate)
+        guard preview.destinationType == "lnurl" else {
             resolvingRecipient = false
             return
         }
+        // The note field needs the type as well as the route.
+        parsed = preview
         resolvingRecipient = true
         defer { if revision == recipientRevision { resolvingRecipient = false } }
         let resolved = try? await resolveRecipient(SendDestination.cleaned(candidate).lowercased())
@@ -252,6 +255,11 @@ import Observation
             } catch {
                 guard revision == recipientRevision else { return }
                 self.error = "Unable to resolve this recipient. Please check the address."
+                return
+            }
+            // A scan, paste or tapped result hasn't shown the note field yet: stop on To so a note can be added.
+            if (matchingRoute?.commentAllowed ?? 0) > 0, comment.isEmpty {
+                stage = .recipient
                 return
             }
         }

@@ -115,9 +115,10 @@ private fun SendInputs(app: AppModel, presentation: SendPresentation, closeScann
         } }
     }
     LaunchedEffect(controller.state, app.scannedDestination) {
-        app.scannedDestination?.let { if (!controller.locked) {
-            // Send's own scanner would cover the request it now shows.
-            app.scannedDestination = null; closeScanner(); model.reset(); model.importRecipient(it)
+        app.scannedDestination?.let { scanned -> if (!controller.locked) {
+            // Send's own scanner would cover the request it now shows. Cleared only once the import finishes, as the prefill above.
+            closeScanner(); model.reset(); model.importRecipient(scanned)
+            app.scannedDestination = app.scannedDestination.takeUnless { it === scanned }
         } }
     }
     LaunchedEffect(model.destination) { suggestRecipients(app, model) }

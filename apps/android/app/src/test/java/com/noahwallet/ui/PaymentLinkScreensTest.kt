@@ -18,6 +18,7 @@ import com.noahwallet.recurring.ScheduleScreen
 import com.noahwallet.send.*
 import com.noahwallet.ui.settings.SettingsNav
 import kotlinx.coroutines.*
+import okhttp3.HttpUrl.Companion.toHttpUrl
 import org.junit.Assert.*
 import org.junit.Rule
 import org.junit.Test
@@ -59,9 +60,9 @@ class PaymentLinkScreensTest {
     }
 
     private var quote: suspend () -> SendQuote = { FakeSendWallet.quote }
-    private fun mountSend(): SendModel {
+    private fun mountSend(resolve: suspend (String) -> SendRecipientRoute = { error("Not used") }): SendModel {
         val controller = SendController(SendController.Dependencies(read = { null }, write = {}, reservation = { it(FakeSendWallet()) }))
-        val model = SendModel(controller, "regtest", { error("Not used") }, { quote() }, {}).apply { arkBalance = 10_000 }
+        val model = SendModel(controller, "regtest", resolve, { quote() }, {}).apply { arkBalance = 10_000 }
         compose.activityRule.scenario.onActivity { activity ->
             ViewModelProvider(activity, object : ViewModelProvider.Factory {
                 override fun <T : ViewModel> create(modelClass: Class<T>): T {
@@ -190,5 +191,20 @@ class PaymentLinkScreensTest {
         compose.waitForIdle()
         compose.onNodeWithText("Scan QR code").assertDoesNotExist()
         compose.runOnIdle { assertEquals(link, model.destination) }
+    }
+
+    @Test fun aScannedLightningAddressResolvesAndOffersItsNote() {
+        val lookup = CompletableDeferred<Unit>()
+        val model = mountSend { lookup.await(); SendRecipientRoute(it, 1000, 10_000_000, 10, null, "https://example.com/cb".toHttpUrl(), "[]") }
+        compose.runOnIdle { app.scannedDestination = "game@example.com" }
+        // Send redraws while the lookup is still out; that must not cancel the import.
+        compose.waitForIdle()
+        lookup.complete(Unit)
+        compose.waitForIdle()
+        compose.runOnIdle {
+            assertNull(model.error); assertNull(app.scannedDestination)
+            assertEquals(SendStage.recipient, model.stage); assertEquals(10, model.matchingRoute?.commentAllowed)
+        }
+        compose.onNodeWithTag("send-note").assertIsDisplayed()
     }
 }

@@ -130,6 +130,35 @@ import Testing
         #expect(model.stage == .amount && model.error == nil && !model.showReview && !model.busy)
     }
 
+    @Test func noteTakingAddressStopsOnToBeforeReview() async {
+        var reviewed: SendPayment?
+        let model = SendModel(
+            controller: freshController(),
+            resolveRecipient: { .init(destination: $0, minMsat: 1000, maxMsat: 1_000_000_000, commentAllowed: 10) },
+            quotePayment: { payment in
+                reviewed = payment
+                return .init(amount: payment.amount, fee: 0, total: payment.amount)
+            })
+        model.amount = "1000"
+        model.arkBalance = 10000
+        // Scanned or pasted from Amount: To shows the note field instead of going on to Review.
+        await model.importRecipient("game@example.com")
+        #expect(model.stage == .recipient && !model.progress.recipientConfirmed && reviewed == nil)
+        #expect(model.matchingRoute?.commentAllowed == 10)
+        model.comment = "Carlos"
+        await model.continueStage()
+        #expect(reviewed?.comment == "Carlos" && model.showReview)
+    }
+
+    @Test func previewOffersTheNoteWhileTyping() async {
+        let model = SendModel(
+            controller: freshController(),
+            resolveRecipient: { .init(destination: $0, minMsat: 1000, maxMsat: 1_000_000_000, commentAllowed: 10) })
+        model.destination = "game@example.com"
+        await model.previewRecipient()
+        #expect(model.matchingRoute?.commentAllowed == 10)
+    }
+
     @Test func onchainMaxRequiresConfirmedCoins() async {
         let model = SendModel(controller: freshController())
         model.onchainBalance = 0
