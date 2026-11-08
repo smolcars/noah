@@ -19,10 +19,10 @@ Operate Noah's local Ark regtest stack from the repository root. Use the `just` 
 - `just setup-everything` will fund all necessary wallets and set up the stack.
 - Lifecycle commands (`up`, `stop`, `down`, `setup-everything`) refuse to run from a checkout other than the one that started the stack, because captaind and postgres bind-mount files by host path. Run them from that checkout, or set `NOAH_STACK_ANY_CHECKOUT=1` to take the stack over. Pass-through commands work from any checkout.
 - Use `just up` when an initialized stack is merely stopped. Use `just stop` when services should stop without deleting data.
+- `just create-barkd-wallet` is idempotent: it creates the server-side barkd wallet used for forwarding tests only when none exists.
 - Obtain explicit confirmation before running any state-resetting command unless the user directly requested that reset:
   - `just down` removes the stack's Docker volumes.
   - `just create-bark-wallet` deletes the existing Bark wallet data before creating a wallet.
-  - `just create-barkd-wallet` recreates the server-side barkd wallet used for forwarding tests.
 
 ## Establish readiness
 

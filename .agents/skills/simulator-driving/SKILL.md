@@ -17,7 +17,7 @@ In T3 Code, call `device_open` and run the `agent-device` path it returns. It is
 2. Act on refs or selectors from that snapshot. Chain confident steps with `&&`, or put them in one `batch`:
 
    ```sh
-   agent-device press 'label="Activity"' && agent-device press 'label="See all"' --settle
+   agent-device press 'label="Receive"' && agent-device press 'id="receive-amount-button"' --settle
    agent-device batch --steps '[{"command":"press","input":{"target":{"kind":"selector","selector":"label=\"Receive\""}}},{"command":"snapshot","input":{"interactiveOnly":true}}]'
    ```
 
@@ -45,7 +45,7 @@ It clears the app's state first, so run it only on a disposable simulator or emu
 ## Reaching a state without tapping
 
 - Deep links: `agent-device open com.noahwallet.regtest 'bitcoin:...?amount=...'` lands on Send review. `apps/maestro/` shows the forms in use.
-- Rendered states without a device walk: the `*ShotTests` in `apps/ios/NoahTests` (Home, Send/Receive, Settings, Exit, Activity, Onboarding, Widget) render fixture states to PNGs. See their READMEs and `apps/ios/OnboardingTests/README.md`.
+- Rendered states without a device walk: the opt-in `*ShotTests` in `apps/ios/NoahTests` (Home, Send/Receive, Settings, Exit, Activity, Onboarding, Widget) show the real screens with scripted data and no wallet or server. Each runs as a test host you keep alive: write a state name to the file it watches in the app's Documents (for example `sr-shot`), wait for its `-ready` file, take the screenshot, then write `stop`. The states are listed in each test's header comment; `apps/ios/SendTests/README.md` and `apps/ios/OnboardingTests/README.md` describe the protocol. agent-device taps do not reach a shot host, so put the interaction state in the fixture.
 - Funding and payments, only when the task needs them: `apps/maestro/subflows/fund-wallet.yml` onboards and copies a 10,000 sat request, `scripts/test-maestro-native.sh` shows how the invoice is paid from LND, and `apps/maestro/funded/ark-send.yml` sends 5,000 sats to an `ARK` address through a deep link. From the stack side, `just bark send <ark-address> "5000 sats"` and `just send-to <bitcoin-address> 0.01` need no UI; the `ark-regtest-controller` skill covers those recipes. A single stitched fund-and-pay command is a follow-up once a regtest launch hook makes the wallet's addresses known in advance.
 
 ## Keep devices warm
