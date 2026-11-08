@@ -92,8 +92,10 @@ class RestoreFlow(
     fun reset() { check(!running); issue = null; step = null; completed = false }
     fun reject(value: RestoreIssue) { if (canLeave) issue = value }
     fun reject(failure: Exception) { logFailure(failure, false); reject(RestoreIssue.from(failure)) }
-    private fun logFailure(failure: Exception, committed: Boolean) =
-        log("Restore failed${if (committed) " after commit" else ""}: ${RestoreIssue.logDescription(failure)}")
+    private fun logFailure(failure: Exception, committed: Boolean) {
+        val stage = if (committed) """ after commit""" else ""
+        log("""Restore failed$stage: ${RestoreIssue.logDescription(failure)}""")
+    }
     fun clearIssue() { if (canLeave) issue = null }
 
     suspend fun run(phrase: String, source: WalletRestorer.Source = WalletRestorer.Source.Backup) {
