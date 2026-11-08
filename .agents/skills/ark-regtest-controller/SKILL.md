@@ -1,6 +1,6 @@
 ---
 name: ark-regtest-controller
-description: Control Noah's Docker-backed Ark regtest environment for local app and simulator testing. Use when Codex needs to generate Ark or Bitcoin addresses, create or pay Lightning invoices, send Ark or on-chain regtest funds between a Noah simulator and the local Bark or Bitcoin Core wallets, mine blocks, inspect transaction state, or run Bark, ASP, bitcoin-cli, LND, or CLN commands through the repository's just recipes.
+description: Control Noah's Docker-backed Ark regtest environment for local app and simulator testing. Use when an agent needs to generate Ark or Bitcoin addresses, create or pay Lightning invoices, send Ark or on-chain regtest funds between a Noah simulator and the local Bark or Bitcoin Core wallets, mine blocks, inspect transaction state, or run Bark, ASP, bitcoin-cli, LND, or CLN commands through the repository's just recipes.
 ---
 
 # Ark Regtest Controller
@@ -13,11 +13,13 @@ Operate Noah's local Ark regtest stack from the repository root. Use the `just` 
 - Inspect service state before changing it:
 
   ```bash
-  docker-compose -f scripts/docker-compose.yml ps
+  docker compose -f scripts/docker-compose.yml ps
   ```
 
 - `just setup-everything` will fund all necessary wallets and set up the stack.
+- Lifecycle commands (`up`, `stop`, `down`, `setup-everything`) refuse to run from a checkout other than the one that started the stack, because captaind and postgres bind-mount files by host path. Run them from that checkout, or set `NOAH_STACK_ANY_CHECKOUT=1` to take the stack over. Pass-through commands work from any checkout.
 - Use `just up` when an initialized stack is merely stopped. Use `just stop` when services should stop without deleting data.
+- `just create-barkd-wallet` is idempotent: it creates the server-side barkd wallet used for forwarding tests only when none exists.
 - Obtain explicit confirmation before running any state-resetting command unless the user directly requested that reset:
   - `just down` removes the stack's Docker volumes.
   - `just create-bark-wallet` deletes the existing Bark wallet data before creating a wallet.
@@ -61,7 +63,7 @@ Copy dynamic addresses and invoices exactly. Confirm the destination and amount 
 2. Pay it from the Bark wallet:
 
    ```bash
-   just bark send-to "<ark-address>" "1234 sats"
+   just bark send "<ark-address>" "1234 sats"
    ```
 
 3. Verify the command result and the simulator's balance or activity entry.
@@ -83,7 +85,7 @@ Copy dynamic addresses and invoices exactly. Confirm the destination and amount 
 2. Pay it:
 
    ```bash
-   just bark ln pay "<bolt11-invoice>"
+   just bark send "<bolt11-invoice>"
    ```
 
 3. Verify the terminal result and the simulator's received-payment state.
@@ -99,7 +101,7 @@ Copy dynamic addresses and invoices exactly. Confirm the destination and amount 
 2. Copy the returned invoice into the simulator and pay it.
 3. Verify the simulator result and Bark's resulting payment state.
 
-Do not mine blocks for a normal Lightning payment. Mine only when a test explicitly needs chain progress or channel confirmation.
+Do not mine blocks for a normal Lightning payment. Mine only when a test explicitly needs chain progress or channel confirmation, or when a Lightning receive into the app fails with `vtxo pool is empty` in the captaind logs: captaind pays Lightning receives from a pool of ten 10,000 sat VTXOs and refills it only after a block confirms its issue, so `just generate 1` restores it.
 
 ### Send on-chain bitcoin from Bitcoin Core to the simulator
 
@@ -141,11 +143,12 @@ just generate <number>
 
 ## Use advanced pass-through commands
 
-- Run Bark CLI commands with `just bark <args...>`.
+- Run Bark CLI commands with `just bark <args...>`. `bark send <destination> "<amount> sats"` takes an Ark address, BOLT11 invoice, BOLT12 offer, Lightning address, Bitcoin address or BIP-321 URI; `bark ln` is the alias of `bark lightning` (`pay`, `invoice`, `invoices`, `claim`).
 - Run Ark service-provider (`captaind`) commands with `just aspd <args...>`. The actual recipe is `aspd`, even if a request calls it “asp.”
 - Run Bitcoin Core CLI commands against the `dev-wallet` with `just bcli <args...>`.
 - Run LND commands on regtest with `just lncli <args...>`.
 - Run Core Lightning commands on regtest with `just cln <args...>`.
+- The stack also runs `noah-server` (the Rust backend on `http://localhost:3000`) and `barkd`; `just bark` runs a one-off container, so a stuck one is `docker rm`-safe.
 
 Prefer the higher-level payment recipes above for routine simulator flows. Use these pass-through commands for inspection, diagnostics, or operations the wrappers do not expose directly.
 

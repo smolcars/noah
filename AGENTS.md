@@ -92,6 +92,7 @@ It is intentionally operational: where code lives, how the runtime behaves, and 
 ### Mobile app execution policy for autonomous agents
 
 - Feel free to run simulator/emulator commands.
+- Drive the simulator or emulator with agent-device as described in `.agents/skills/simulator-driving/SKILL.md` (also linked from `.claude/skills/`): batch taps, verify with waits or snapshot diffs, and onboard a fresh wallet with one Maestro replay instead of tapping through it.
 - If the Nix shell is available, run commands inside it.
 - iOS: `just ios-native-generate` after changing `project.yml`, then build/test with `just ios-native-build <Variant>` / `just ios-native-test <Variant>`, or `xcodebuild` against `apps/ios/Noah.xcodeproj` with schemes `Noah`, `Noah-Signet`, `Noah-Regtest`.
 - Android: `just android-native-build <Variant>`, `just android-native-install <Variant>`, `just android-native-test`, or `./gradlew` from `apps/android`.
