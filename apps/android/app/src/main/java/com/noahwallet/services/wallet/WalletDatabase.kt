@@ -1,7 +1,7 @@
 package com.noahwallet.services.wallet
 
-import android.database.DatabaseErrorHandler
-import android.database.sqlite.SQLiteDatabase
+import androidx.sqlite.driver.bundled.BundledSQLiteDriver
+import androidx.sqlite.driver.bundled.SQLITE_OPEN_READONLY
 import com.noahwallet.services.backup.ScratchSpace
 import java.io.File
 
@@ -9,9 +9,6 @@ import java.io.File
 object WalletDatabase {
     data class Properties(val network: String, val fingerprint: String)
     class InspectionError(cause: Throwable? = null) : Exception("""Cannot read bark wallet properties""", cause)
-
-    /** The framework's default handler deletes a database it finds corrupt. Never on a wallet. */
-    private val keepDatabase = DatabaseErrorHandler { }
 
     /** Plaintext copies live only here; every inspection empties it first (crash leftovers). */
     private val scratch = ScratchSpace(File(System.getProperty("java.io.tmpdir"), "noah-preflight"))
@@ -24,9 +21,9 @@ object WalletDatabase {
         val wal = File(database.path + "-wal").exists()
         val shm = File(database.path + "-shm").exists()
         // A WAL without its index needs recovery by a writer; like the SDK, refuse rather than
-        // let Android's SQLite recreate files next to the wallet.
+        // let SQLite recreate files next to the wallet.
         if (wal && !shm) throw InspectionError()
-        // Android's SQLite creates -shm next to a WAL database even for a read-only connection.
+        // SQLite creates -shm next to a WAL database even for a read-only connection.
         // With no -wal/-journal sidecar nothing is mid-transaction, so read a private copy and
         // leave the wallet's folder exactly as it was. With both WAL files present a read-only
         // connection sees the committed frames and creates nothing.
@@ -45,11 +42,15 @@ object WalletDatabase {
         }
     }
 
+    /**
+     * A bundled SQLite, as bark has: Android 13 and older ship SQLite before 3.37, which can't parse the STRICT tables
+     * bark's on-chain wallet (BDK) creates and reports every wallet as corrupt.
+     */
     private fun read(file: File): Properties =
-        SQLiteDatabase.openDatabase(file.path, null, SQLiteDatabase.OPEN_READONLY, keepDatabase).use { db ->
-            db.rawQuery("SELECT network, fingerprint FROM bark_properties LIMIT 1", null).use { row ->
-                if (!row.moveToFirst() || row.isNull(0) || row.isNull(1)) throw InspectionError()
-                Properties(row.getString(0), row.getString(1))
+        BundledSQLiteDriver().open(file.path, SQLITE_OPEN_READONLY).use { db ->
+            db.prepare("SELECT network, fingerprint FROM bark_properties LIMIT 1").use { row ->
+                if (!row.step() || row.isNull(0) || row.isNull(1)) throw InspectionError()
+                Properties(row.getText(0), row.getText(1))
             }
         }
 }

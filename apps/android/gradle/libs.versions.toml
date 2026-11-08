@@ -15,6 +15,7 @@ firebase-bom = "35.0.2"
 google-services = "4.5.0"
 unifiedpush = "3.3.5"
 work = "2.9.1"
+sqlite = "2.7.1"
 bark-bolt = "0.10.0"
 sentry = "8.57.0"
 junit = "4.13.2"
@@ -66,6 +67,7 @@ firebase-bom = { module = "com.google.firebase:firebase-bom", version.ref = "fir
 work-testing = { module = "androidx.work:work-testing", version.ref = "work" }
 robolectric = { module = "org.robolectric:robolectric", version = "4.17" }
 work-runtime = { module = "androidx.work:work-runtime-ktx", version.ref = "work" }
+sqlite-bundled = { module = "androidx.sqlite:sqlite-bundled", version.ref = "sqlite" }
 firebase-messaging = { module = "com.google.firebase:firebase-messaging" }
 unifiedpush = { module = "org.unifiedpush.android:connector", version.ref = "unifiedpush" }
 bark-bolt = { module = "io.github.niteshbalusu11:bark-bolt-ffi-android", version.ref = "bark-bolt" }

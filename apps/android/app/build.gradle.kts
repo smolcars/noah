@@ -251,6 +251,7 @@ dependencies {
     implementation(platform(libs.firebase.bom))
     implementation(libs.firebase.messaging)
     implementation(libs.work.runtime)
+    implementation(libs.sqlite.bundled)
     // Same exclusion as RN's noah-tools: use AndroidX Security's Android Tink distribution.
     implementation(libs.unifiedpush) { exclude(group = "com.google.crypto.tink", module = "tink") }
     // GitHub's Ivy artifact has no transitive metadata; coroutines-core is explicit above.
