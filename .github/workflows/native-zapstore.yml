@@ -34,9 +34,8 @@ jobs:
           fi
           echo "filter=^${RELEASE_TAG//./\\.}\$" >> "$GITHUB_OUTPUT"
 
+      # The workflow's own revision: older tags have no zapstore.yaml.
       - uses: actions/checkout@v6
-        with:
-          ref: refs/tags/${{ inputs.tag }}
 
       # Pinned and checksum-checked: it signs with the Zapstore key.
       - name: Install zsp
@@ -59,8 +58,8 @@ jobs:
         run: |
           set -uo pipefail
           : "${SIGN_WITH:?Missing ZAPSTORE_SIGN_WITH}"
-          zsp publish -q --json --release-filter "$RELEASE_FILTER" > "$RUNNER_TEMP/zsp.out" 2> "$RUNNER_TEMP/zsp.err"
-          status=$?
+          status=0
+          zsp publish -q --json --release-filter "$RELEASE_FILTER" > "$RUNNER_TEMP/zsp.out" 2> "$RUNNER_TEMP/zsp.err" || status=$?
           cat "$RUNNER_TEMP/zsp.err" >&2
           if [[ $status -eq 0 ]]; then
             jq -r '"Zapstore: \(.version_name) (version code \(.version_code)) is \(.status). Release event `\(.id)`."' "$RUNNER_TEMP/zsp.out" | tee -a "$GITHUB_STEP_SUMMARY"
