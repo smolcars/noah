@@ -1,0 +1,4 @@
+# Zapstore listing for the Mainnet app. `Native Zapstore` publishes it from the GitHub Release.
+repository: https://github.com/smolcars/noah
+release_filter: '^v[0-9]+\.[0-9]+\.[0-9]+$'
+match: '^noah-mainnet\.apk$'

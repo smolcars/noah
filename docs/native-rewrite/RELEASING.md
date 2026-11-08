@@ -1,9 +1,10 @@
 # Releasing the native apps
 
 GitHub Actions builds the Android releases from `apps/android` and archives the
-iOS releases from `apps/ios`; store uploads are manual. One `vX.Y.Z` tag
-releases both Signet and Mainnet. Variant-specific tags such as `v1.0.0.signet`
-are not supported by the native release workflow.
+iOS releases from `apps/ios`. Google Play and App Store uploads are manual;
+Zapstore publishing is automatic. One `vX.Y.Z` tag releases both Signet and
+Mainnet. Variant-specific tags such as `v1.0.0.signet` are not supported by
+the native release workflow.
 
 ## Prepare the release
 
@@ -59,6 +60,23 @@ Before the first native release, verify the signed artifacts' versions,
 package IDs and certificate against the released app, and test an in-place
 upgrade without uninstalling or clearing app data.
 
+## Zapstore
+
+After the GitHub Release exists, `Native Zapstore` publishes `noah-mainnet.apk`
+from it to [Zapstore](https://zapstore.dev) with `zsp`, using the root
+`zapstore.yaml`. Signet is not published there. It signs with the
+`ZAPSTORE_SIGN_WITH` secret, a NIP-46 `bunker://` URL (or an `nsec`).
+
+One-time setup, done by hand: run the `zsp` wizard with the release keystore to
+link the signing certificate to Noah's Nostr key (the C1 proof). If the CI key
+is not that Nostr key, name it as a delegate under CI/CD publishing. Then add
+the `ZAPSTORE_SIGN_WITH` secret. Until then the Zapstore job fails; the GitHub
+Release is unaffected.
+
+To publish an existing release, such as one made before setup, run `Native
+Zapstore` manually with its `vX.Y.Z` tag. A version code Zapstore already has
+is reported and skipped.
+
 ## iOS and migration setup
 
 `Native Release` also archives `Noah` (Release-Mainnet) and `Noah-Signet`
@@ -82,7 +100,7 @@ checks separately. React Native source and shared assets remain in the repo.
 ```sh
 bun test scripts/native_release.test.ts
 bun scripts/check_native_release.ts v1.0.0 # use the committed native version
-actionlint .github/workflows/native-release.yml .github/workflows/native-android-artifacts.yml .github/workflows/native-release-checks.yml
+actionlint .github/workflows/native-release.yml .github/workflows/native-android-artifacts.yml .github/workflows/native-release-checks.yml .github/workflows/native-zapstore.yml
 ```
 
 `Native Release Checks` runs these version tests and workflow validation on PRs.
