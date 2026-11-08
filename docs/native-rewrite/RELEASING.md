@@ -64,8 +64,10 @@ upgrade without uninstalling or clearing app data.
 
 After the GitHub Release exists, `Native Zapstore` publishes `noah-mainnet.apk`
 from it to [Zapstore](https://zapstore.dev) with `zsp`, using the root
-`zapstore.yaml`. Signet is not published there. It signs with the
-`ZAPSTORE_SIGN_WITH` secret, a NIP-46 `bunker://` URL (or an `nsec`).
+`zapstore.yaml`. That file also holds the listing's summary, description,
+website and tags; the icon and name come from the APK. Signet is not published
+there. It signs with the `ZAPSTORE_SIGN_WITH` secret, a NIP-46 `bunker://` URL
+(or an `nsec`).
 
 One-time setup, done by hand: run the `zsp` wizard with the release keystore to
 link the signing certificate to Noah's Nostr key (the C1 proof). If the CI key
