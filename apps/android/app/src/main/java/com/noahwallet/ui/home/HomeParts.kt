@@ -158,7 +158,7 @@ private fun RollingDigit(target: Int, style: TextStyle, color: Color, widths: Li
         .then(if (Build.VERSION.SDK_INT >= 31 && blur > .05f) Modifier.blur(blur.dp, BlurredEdgeTreatment.Unbounded) else Modifier)) {
         // Unbounded: the ten-digit column is taller than the one-line window it rolls through.
         Column(Modifier.align(Alignment.TopCenter).wrapContentHeight(Alignment.Top, unbounded = true).requiredWidth(widths.max())
-            .offset { IntOffset(0, -(position.value * lineHeight.toPx()).roundToInt()) }) {
+            .offset { IntOffset(0, -(position.value * lineHeight.roundToPx()).roundToInt()) }) {
             for (digit in 0..9) Text("$digit", Modifier.height(lineHeight).fillMaxWidth(), style = style, color = color,
                 textAlign = TextAlign.Center)
         }
