@@ -109,6 +109,9 @@ class SendRecipientTest {
         assertEquals(SendStage.recipient, m.stage); assertFalse(m.progress.recipientConfirmed); assertNull(reviewed)
         assertEquals(10, m.matchingRoute?.commentAllowed)
         m.comment = "Carlos"; m.continueStage()
+        // The typed amount still waits for Amount's own Next, as it would have after the paste.
+        assertEquals(SendStage.amount, m.stage); assertEquals("1000", m.amount); assertTrue(m.progress.recipientConfirmed); assertNull(reviewed)
+        m.continueStage()
         assertEquals("Carlos", reviewed?.comment); assertTrue(m.showReview)
     }
     @Test fun lnurlValidatesExactAmountNetworkAndExpiry() {

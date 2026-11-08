@@ -146,6 +146,9 @@ import Testing
         #expect(model.stage == .recipient && !model.progress.recipientConfirmed && reviewed == nil)
         #expect(model.matchingRoute?.commentAllowed == 10)
         model.comment = "Carlos"
+        // The typed amount still waits for Amount's own Next, as it would have after the paste.
+        await model.continueStage()
+        #expect(model.stage == .amount && model.amount == "1000" && model.progress.recipientConfirmed && reviewed == nil)
         await model.continueStage()
         #expect(reviewed?.comment == "Carlos" && model.showReview)
     }

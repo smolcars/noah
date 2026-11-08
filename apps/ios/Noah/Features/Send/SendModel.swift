@@ -12,6 +12,7 @@ import Observation
         didSet {
             guard destination != oldValue else { return }
             recipientRevision += 1
+            keypadAfterNote = false
             if parsed.amount != nil { amount = ""; progress.amountConfirmed = false }
             parsed = SendDestination()
             route = nil
@@ -31,6 +32,8 @@ import Observation
         }
     }
     private var recipientRevision = 0
+    /// Stopped on To for a note after Amount's paste or scan: To's Next then keeps the keypad's turn, as the paste would have.
+    private var keypadAfterNote = false
     private var reviewGeneration = 0
     var comment = ""
     var useFiat = false
@@ -210,8 +213,9 @@ import Observation
         }
     }
 
-    func acceptRecipient(keepingKeypad: Bool = false) async {
+    func acceptRecipient(keepingKeypad fromKeypad: Bool = false) async {
         guard !busy, !controller.locked else { return }
+        let keepingKeypad = fromKeypad || keypadAfterNote
         busy = true
         error = nil
         defer { busy = false }
@@ -259,11 +263,13 @@ import Observation
             }
             // A scan, paste or tapped result hasn't shown the note field yet: stop on To so a note can be added.
             if (matchingRoute?.commentAllowed ?? 0) > 0, comment.isEmpty {
+                keypadAfterNote = keepingKeypad
                 stage = .recipient
                 return
             }
         }
         progress.recipientConfirmed = true
+        keypadAfterNote = false
         if keepingKeypad { progress.amountConfirmed = parsed.amount != nil } else if sats > 0 { progress.amountConfirmed = true }
         progress.selectedRail = isMax ? .onchain : SendFlow.recommend(rails, availability: availability)
         await advance()
