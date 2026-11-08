@@ -115,3 +115,11 @@ jobs:
             echo 'For manual Google Play publishing, download the AABs from **native-android-signet** and **native-android-mainnet** in this run.'
             echo 'iOS archives are in **noah-ios-signet** and **noah-ios-mainnet** in this run; upload them from Xcode Organizer.'
           } >> "$GITHUB_STEP_SUMMARY"
+
+  zapstore:
+    name: Zapstore
+    needs: release
+    uses: ./.github/workflows/native-zapstore.yml
+    with:
+      tag: ${{ github.ref_name }}
+    secrets: inherit
