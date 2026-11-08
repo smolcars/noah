@@ -21,6 +21,8 @@ class SendModel(val controller: SendController, private val network: String,
     var destination by mutableStateOf("")
         private set
     private var recipientRevision = 0
+    /** Stopped on To for a note after Amount's paste or scan: To's Next then keeps the keypad's turn, as the paste would have. */
+    private var keypadAfterNote = false
     private var reviewGeneration = 0
     var comment by mutableStateOf("")
     var useFiat by mutableStateOf(false)
@@ -63,7 +65,7 @@ class SendModel(val controller: SendController, private val network: String,
         if (isMax) balance > 0 else sats > 0 && balance >= sats
     }
     fun setRecipient(value: String) {
-        destination = value; recipientRevision++
+        destination = value; recipientRevision++; keypadAfterNote = false
         if (parsed.amount != null) amount = ""
         parsed = SendDestination(); route = null; comment = ""; suggestions = emptyList(); error = null; resolvingRecipient = false
         progress = progress.copy(recipientConfirmed = false, railConfirmed = false, selectedRail = null, rails = emptyList(), selectedRailAvailable = null,
@@ -103,7 +105,7 @@ class SendModel(val controller: SendController, private val network: String,
         val revision = recipientRevision; val reviewAtStart = reviewGeneration
         val unchanged = { revision == recipientRevision && reviewAtStart == reviewGeneration }
         try {
-            if (!recipientAccepted(keypad, unchanged)) return
+            if (!recipientAccepted(keypad || keypadAfterNote, unchanged)) return
         } catch (_: Exception) {
             if (revision == recipientRevision) {
                 error = "Unable to resolve this recipient. Please check the address."
@@ -132,13 +134,20 @@ class SendModel(val controller: SendController, private val network: String,
             fixed?.let { parsed = parsed.copy(amount = it.toBigDecimal(), isAmountEditable = false) }
         }
         applyRequestAmount()
-        if (parsed.destinationType == "lnurl" && matchingRoute == null) {
-            val resolved = resolveRecipient(SendDestination.cleaned(destination).lowercase())
-            if (!unchanged()) return false
-            route = resolved; requireSend(matchingRoute != null)
-        }
+        if (!lnurlResolved(keypad, unchanged)) return false
+        keypadAfterNote = false
         progress = progress.copy(recipientConfirmed = true, amountConfirmed = progress.amountConfirmed || (sats > 0 && !keypad),
             selectedRail = if (isMax) SendRail.onchain else SendFlow.recommend(rails, availability))
+        return true
+    }
+    /** A Lightning address not looked up yet; false when the recipient changed meanwhile, or when it takes a note To hasn't
+     *  shown yet (a scan, paste or tapped result): then it stops on To so a note can be added. */
+    private suspend fun lnurlResolved(keypad: Boolean, unchanged: () -> Boolean): Boolean {
+        if (parsed.destinationType != "lnurl" || matchingRoute != null) return true
+        val resolved = resolveRecipient(SendDestination.cleaned(destination).lowercase())
+        if (!unchanged()) return false
+        route = resolved; requireSend(matchingRoute != null)
+        if (resolved.commentAllowed > 0 && comment.isEmpty()) { keypadAfterNote = keypad; stage = SendStage.recipient; return false }
         return true
     }
     suspend fun continueStage() {

@@ -99,6 +99,21 @@ class SendRecipientTest {
         val m = model(this); m.prefill(com.noahwallet.history.RepeatPayment("alice@example.com", "note", "SATS", "1000", 1000), "USD")
         assertEquals(SendStage.recipient, m.stage); assertNull(m.route); assertNull(m.quote); assertFalse(m.progress.recipientConfirmed)
     }
+    @Test fun noteTakingAddressStopsOnToBeforeReview() = runBlocking {
+        var reviewed: SendPayment? = null
+        val m = model(this, resolve = { SendRecipientRoute(it, 1000, 10_000_000, 10, null, "https://example.com/callback".toHttpUrl(), "metadata") },
+            quote = { reviewed = it; FakeSendWallet.quote })
+        m.amount = "1000"; m.arkBalance = 10000
+        // Scanned or pasted from Amount: To shows the note field instead of going on to Review.
+        m.importRecipient("game@example.com", stay = true)
+        assertEquals(SendStage.recipient, m.stage); assertFalse(m.progress.recipientConfirmed); assertNull(reviewed)
+        assertEquals(10, m.matchingRoute?.commentAllowed)
+        m.comment = "Carlos"; m.continueStage()
+        // The typed amount still waits for Amount's own Next, as it would have after the paste.
+        assertEquals(SendStage.amount, m.stage); assertEquals("1000", m.amount); assertTrue(m.progress.recipientConfirmed); assertNull(reviewed)
+        m.continueStage()
+        assertEquals("Carlos", reviewed?.comment); assertTrue(m.showReview)
+    }
     @Test fun lnurlValidatesExactAmountNetworkAndExpiry() {
         val value = invoice()
         assertTrue(runCatching { SendRecipientService.validateInvoice(value, 1000, "regtest") }.isFailure)
