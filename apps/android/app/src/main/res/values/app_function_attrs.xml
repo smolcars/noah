@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- AppFunctions renamed this to instructions; retain it for older metadata readers. -->
+    <attr name="description" format="string" />
+</resources>
