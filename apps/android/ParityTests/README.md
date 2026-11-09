@@ -32,8 +32,7 @@ JVM tests and APK, from the repository root:
 nix develop --command sh -c 'cd apps/android && ./gradlew --max-workers=2 :app:testRegtestDebugUnitTest :app:assembleRegtestDebug'
 ```
 
-Regenerate `home-status.json` from RN source with
-`node apps/fixtures/tools/generate-home-status.mjs`.
+`home-status.json` is frozen from the React Native app and edited by hand; keep both platforms' tests passing.
 
 For device checks, use only a disposable emulator you own, launched on an explicit
 port. Build both APKs (`:app:assembleRegtestDebug :app:assembleRegtestDebugAndroidTest`),

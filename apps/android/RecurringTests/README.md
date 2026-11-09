@@ -44,9 +44,8 @@ timed reminder delivery, real power loss and external LNURL providers are not.
 ## Fixtures
 
 The shared fixtures are `apps/fixtures/recurring-*.json`, read through
-`SharedFixtures` and also used by iOS. Regenerate the calendar, policy,
-zone-change and storage fixtures from RN's unmodified code with
-`bun --tsconfig-override client/tsconfig.json apps/fixtures/tools/generate-recurring.ts`.
+`SharedFixtures` and also used by iOS. The calendar, policy, zone-change and storage
+fixtures came from RN's unmodified code; they are frozen from the React Native app and edited by hand; keep both platforms' tests passing.
 `app/src/test/resources/recurring-rn-range.json` holds rows written by RN's real
 validator and store; the one-off script that produced it is not in the repo.
 

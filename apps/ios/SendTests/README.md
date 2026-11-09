@@ -21,11 +21,7 @@ and VTXOs are in [ExitTests](../ExitTests/README.md); Android's counterpart is
 
 `SendFixtureTests` reads `send-flow.json`, `send-utils.json`, `onchain-send.json` and
 `lightning-invoice.json` from [apps/fixtures](../../fixtures/README.md). They come from RN's
-own implementations; regenerate them from the repository root:
-
-```sh
-bun --tsconfig-override client/tsconfig.json apps/fixtures/tools/generate-send.ts
-```
+own implementations and are frozen from the React Native app and edited by hand; keep both platforms' tests passing.
 
 Some invoices in `send-utils.json` have altered headers for decoder tests. Their
 signatures are invalid: never submit them as payments.

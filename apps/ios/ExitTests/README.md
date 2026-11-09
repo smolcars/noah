@@ -21,11 +21,7 @@ off unless `NOAH_M6_LIVE_STAGE` is set. Android's counterpart is
 - Boarding and VTXOs: `BoardPreparedTests`, `BoardReviewLifetimeTests`,
   `RenewSubmissionTests`, `VtxoListTests`.
 
-The fixtures come from RN's own sources. Regenerate them from the repository root:
-
-```sh
-bun --tsconfig-override client/tsconfig.json apps/fixtures/tools/generate-exits.ts
-```
+The fixtures come from RN's own sources. They are frozen from the React Native app and edited by hand; keep both platforms' tests passing.
 
 ## Running
 

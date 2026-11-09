@@ -24,13 +24,8 @@ xcodebuild -project apps/ios/Noah.xcodeproj -scheme Noah-Regtest \
 
 Environment-gated integration suites report as skipped unless their variables are set.
 
-The shared URI and fiat fixtures execute RN's real TypeScript implementations.
-Regenerate them with:
-
-```sh
-nix develop --command bun --tsconfig-override client/tsconfig.json \
-  apps/fixtures/tools/generate-receive.ts
-```
+The shared URI and fiat fixtures came from RN's real TypeScript implementations. They
+are frozen from the React Native app and edited by hand; keep both platforms' tests passing.
 
 ## Manual regtest check
 

@@ -18,8 +18,7 @@ is skipped unless its argument is passed. iOS's counterpart is
   rules, folds, recreation), `ExitSubmitDeviceTest` (start and claim reach a fake bark
   once, across a posture change and process death) and `RenewReviewTest`.
 
-The fixtures come from RN's sources. Regenerate them with
-`bun --tsconfig-override client/tsconfig.json apps/fixtures/tools/generate-exits.ts`.
+The fixtures come from RN's sources. They are frozen from the React Native app and edited by hand; keep both platforms' tests passing.
 
 ## Running
 

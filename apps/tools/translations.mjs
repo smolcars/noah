@@ -1,5 +1,5 @@
 #!/usr/bin/env bun
-// Native English is extracted offline. Only translate contacts GT; seed optionally reads RN.
+// Native English is extracted offline. Only translate contacts GT.
 import { createHash } from 'node:crypto';
 import { mkdtemp, readFile, writeFile, readdir, mkdir, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
@@ -13,72 +13,12 @@ const json = value => JSON.stringify(value, null, 2) + '\n';
 const variablePattern = /\{([\w]+)\}/g;
 export const variables = text => [...new Set([...text.matchAll(variablePattern)].map(match => match[1]))];
 
-export function flatten(node, category = 'other') {
-  if (typeof node === 'string') return node;
-  if (node == null) return '';
-  if (Array.isArray(node)) return node.map(child => flatten(child, category)).join('');
-  if (node.v === 'v') return `{${node.k}}`;
-  if (node.d?.t === 'p') return flatten(node.d.b[category] ?? node.d.b.other, category);
-  if ('c' in node) return flatten(node.c, category);
-  throw new Error(`Unsupported GT node: ${JSON.stringify(node)}`);
-}
-function plural(node) {
-  if (!node || typeof node !== 'object') return null;
-  if (node.d?.t === 'p') return node.d.b;
-  for (const child of Array.isArray(node) ? node : Object.values(node)) {
-    const found = plural(child);
-    if (found) return found;
-  }
-  return null;
-}
 export function format(text, names, platform, quantity) {
   return (names.length ? text.replaceAll('%', '%%') : text).replace(variablePattern, (_, name) => {
     const index = names.indexOf(name);
     if (index < 0) throw new Error(`Unknown placeholder ${name}: ${text}`);
     return `%${index + 1}$${platform === 'ios' ? (name === quantity ? 'lld' : '@') : 's'}`;
   });
-}
-export async function extractRN() {
-  const temporary = await mkdtemp(resolve(tmpdir(), 'noah-native-translations-'));
-  try {
-    const config = JSON.parse(await readFile(resolve(root, 'client/gt.config.json'), 'utf8'));
-    const configPath = resolve(temporary, 'gt.config.json');
-    await writeFile(configPath, json({ ...config, src: config.src.map(path => resolve(root, 'client', path)), files: { gt: { output: resolve(temporary, '[locale].json') } } }));
-    const cli = resolve(root, 'node_modules/gt/bin/main.js');
-    const process = Bun.spawn([Bun.argv[0], cli, 'generate', '--config', configPath, '--omit-config-ids'], {
-      cwd: resolve(root, 'client'), stdout: 'ignore', stderr: 'pipe',
-    });
-    const error = await new Response(process.stderr).text();
-    if (await process.exited) throw new Error(error);
-    const catalogs = { en: JSON.parse(await readFile(resolve(temporary, 'en.json'), 'utf8')) };
-    for (const locale of locales.slice(1)) catalogs[locale] = JSON.parse(await readFile(resolve(root, `client/src/_gt/${locale}.json`), 'utf8'));
-    return catalogs;
-  } finally { await rm(temporary, { recursive: true, force: true }); }
-}
-export function entries(catalogs) {
-  const result = new Map();
-  // A source-keyed platform cannot distinguish GT context IDs. Lowest hash wins, consistently.
-  for (const id of Object.keys(catalogs.en).sort()) {
-    const source = flatten(catalogs.en[id]);
-    const forms = plural(catalogs.en[id]);
-    const names = variables(source);
-    const quantity = forms ? variables(flatten(forms.other))[0] : undefined;
-    if (forms && !quantity) throw new Error(`Plural without count: ${id}`);
-    if (quantity) names.sort((a, b) => a === quantity ? -1 : b === quantity ? 1 : 0);
-    const translations = {};
-    for (const locale of locales) {
-      const node = catalogs[locale]?.[id];
-      if (node == null) throw new Error(`Missing ${locale} translation: ${id}`);
-      const categories = forms ? [...new Set(['other', ...Object.keys(plural(node) ?? forms)])] : ['other'];
-      translations[locale] = Object.fromEntries(categories.map(category => {
-        const text = flatten(node, category);
-        if (variables(text).some(name => !names.includes(name)) || (category === 'other' && names.some(name => !variables(text).includes(name)))) throw new Error(`Placeholder drift: ${locale}/${id}`);
-        return [category, text];
-      }));
-    }
-    if (!result.has(source)) result.set(source, { id, source, names, quantity, translations });
-  }
-  return [...result.values()].sort((a, b) => a.source < b.source ? -1 : a.source > b.source ? 1 : 0);
 }
 export async function filesBelow(directory, extension) {
   const files = [];
@@ -283,32 +223,6 @@ async function localeFiles(base) {
     JSON.parse(await readFile(resolve(base, `apps/i18n/${locale}/native.json`), 'utf8').catch(error => { if (error.code === 'ENOENT') return '{}'; throw error; })),
   ])));
 }
-export function seedTranslations(all, rn, existing, force = false) {
-  const seeded = {}, counts = {};
-  const bySource = new Map(rn.map(entry => [entry.source, entry]));
-  for (const locale of locales.slice(1)) {
-    const catalog = { ...existing[locale] };
-    let count = 0;
-    for (const entry of all) {
-      const match = bySource.get(entry.source);
-      if (!match || Boolean(match.quantity) !== Boolean(entry.quantity)) continue;
-      for (const [category, text] of Object.entries(match.translations[locale])) {
-        const key = translationKey(entry, category);
-        if (!force && Object.hasOwn(catalog, key)) continue;
-        catalog[key] = toI18next(text); count++;
-      }
-    }
-    seeded[locale] = sorted(catalog); counts[locale] = count;
-  }
-  return { catalogs: seeded, counts };
-}
-export async function seed(force = false) {
-  const { all } = await extractFile();
-  const { catalogs, counts } = seedTranslations(all, entries(await extractRN()), await localeFiles(root), force);
-  await outputFiles(new Map(locales.slice(1).map(locale => [`apps/i18n/${locale}/native.json`, json(catalogs[locale])])), false, root);
-  console.log(JSON.stringify({ seededKeys: counts }));
-  return counts;
-}
 /** Copy one platform uses alone must be listed for that platform with a reason; a listed entry must still be that platform's alone. */
 export function platformOnly(used, allowlist = {}) {
   const problems = [];
@@ -429,7 +343,6 @@ if (import.meta.main) {
   const command = Bun.argv[2] ?? 'generate';
   if (command === '--check') console.log(JSON.stringify(await generate(true)));
   else if (command === 'extract') await extractFile();
-  else if (command === 'seed') await seed(Bun.argv.includes('--force'));
   else if (command === 'translate') console.log(JSON.stringify(await translate(root, { dryRun: Bun.argv.includes('--dry-run') })));
   else if (command === 'reuse') {
     if (!Bun.argv[3]) throw new Error('Usage: reuse <directory containing apps/i18n>');

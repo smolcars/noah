@@ -34,11 +34,12 @@ Regenerate the fixtures from RN source, from the repository root:
 
 ```sh
 node apps/fixtures/tools/generate-push-gate.mjs
-node apps/fixtures/tools/generate-home-status.mjs
 node apps/fixtures/tools/generate-home-parity.mjs
 node apps/fixtures/tools/generate-qr-hub.mjs
 node apps/fixtures/tools/generate-app-version.mjs
 ```
+
+`home-status.json` is frozen from the React Native app and edited by hand; keep both platforms' tests passing.
 
 ## Manual checks and limits
 

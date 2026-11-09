@@ -30,8 +30,7 @@ From the repository root:
 nix develop --command sh -c 'cd apps/android && ./gradlew :app:testRegtestDebugUnitTest :app:assembleRegtestDebug'
 ```
 
-Regenerate the RN-derived fixtures with
-`bun --tsconfig-override client/tsconfig.json apps/fixtures/tools/generate-btc-map.ts`.
+The RN-derived fixtures (`btc-map.json`, `city-search.json`) are frozen from the React Native app and edited by hand; keep both platforms' tests passing.
 
 ## Manual checks
 

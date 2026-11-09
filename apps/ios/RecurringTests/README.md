@@ -39,12 +39,8 @@ APNs/Expo delivery and 24-hour reminder delivery are not tested here.
 ## Fixtures
 
 The shared fixtures are `apps/fixtures/recurring-*.json`, also read by Android.
-The calendar, execution-policy, zone-change and storage fixtures are generated
-by running RN's unmodified recurring code:
-
-```sh
-bun --tsconfig-override client/tsconfig.json apps/fixtures/tools/generate-recurring.ts
-```
+The calendar, execution-policy, zone-change and storage fixtures came from RN's
+unmodified recurring code; they are frozen from the React Native app and edited by hand; keep both platforms' tests passing.
 
 ## Running the deterministic suites
 

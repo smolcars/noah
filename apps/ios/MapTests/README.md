@@ -21,11 +21,7 @@ The map uses the committed assets by resource reference, without copying them:
 
 ## Running
 
-Regenerate the RN-derived fixtures (`btc-map.json`, `city-search.json`):
-
-```sh
-bun --tsconfig-override client/tsconfig.json apps/fixtures/tools/generate-btc-map.ts
-```
+The RN-derived fixtures (`btc-map.json`, `city-search.json`) are frozen from the React Native app and edited by hand; keep both platforms' tests passing.
 
 Run the suites on your own simulator (enter `nix develop` for the repository toolchain):
 

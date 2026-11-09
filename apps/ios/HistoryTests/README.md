@@ -22,15 +22,11 @@ nix develop --command xcodebuild -project apps/ios/Noah.xcodeproj -scheme Noah-R
   test -skip-testing:NoahTests/UpgradeCompatibilityTests
 ```
 
-Regenerate the RN-derived fixtures without native wallet dependencies:
+The RN-derived fixtures (`transaction-history.json`, `bark-movement.json`) are frozen from the React Native app and edited by hand; keep both platforms' tests passing.
 
-```sh
-bun --tsconfig-override client/tsconfig.json apps/fixtures/tools/generate-history.ts
-```
-
-The generator executes `transactionHistory.ts`, `barkMovement.ts`, `repeatPayment.ts`
-and the pure transforms in `useTransactions.ts`; React/native/network imports are
-removed from the latter, and the transform code itself is not copied. It writes
+Their generator executed `transactionHistory.ts`, `barkMovement.ts`, `repeatPayment.ts`
+and the pure transforms in `useTransactions.ts`; React/native/network imports were
+removed from the latter, and the transform code itself was not copied. It wrote
 `transaction-history.json` and `bark-movement.json`, not `history-regressions.json`.
 
 ## Manual regtest check

@@ -166,13 +166,8 @@ Android keeps valid raw full envelopes in its native store and merges typed writ
 a corrupt envelope disables the prompt. The codec does not rewrite RN data on read.
 
 `rn-store-compatibility.json` is the same raw-envelope fixture iOS consumes.
-One deterministic generator executes the eight actual RN stores, the transaction
-v0 migration and profile merge. Run from the repository root:
-
-```sh
-NODE_PATH=<installed-repo>/node_modules bun --tsconfig-override client/tsconfig.json \
-  apps/fixtures/tools/generate-rn-store-compatibility.ts
-```
+One deterministic generator executed the eight actual RN stores, the transaction
+v0 migration and profile merge. The fixture is frozen from the React Native app and edited by hand; keep both platforms' tests passing.
 
 Its 196 cases cover unknown numeric-token preservation, exact versions, malformed
 envelopes, nullability and profile fallback. Tests pass `input.raw` directly to
