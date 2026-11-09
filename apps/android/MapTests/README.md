@@ -1,14 +1,14 @@
 # BTC Map checks (Android)
 
 MapLibre Native Android is pinned in the version catalog, and Gradle verifies its
-SHA-256 checksums. Gradle packages the committed RN assets by source-directory
-reference: `client/assets/btcmap/places.btcmap` and
-`client/assets/geonames/cities.geonames` (GeoNames, CC BY 4.0).
+SHA-256 checksums. Gradle packages the committed assets by source-directory
+reference: `apps/assets/btcmap/places.btcmap` and
+`apps/assets/geonames/cities.geonames` (GeoNames, CC BY 4.0).
 
 ## Coverage
 
-The test resource directories reference `apps/fixtures`, `client/assets/btcmap` and
-`client/assets/geonames` directly; no fixture is forked.
+The test resource directories reference `apps/fixtures`, `apps/assets/btcmap` and
+`apps/assets/geonames` directly; no fixture is forked.
 
 - `BtcMapFixtureTest` runs the shared cases as individual JUnit tests: RN-generated
   `btc-map.json` / `city-search.json`, `btc-map-review.json` (web/phone validation
@@ -30,8 +30,7 @@ From the repository root:
 nix develop --command sh -c 'cd apps/android && ./gradlew :app:testRegtestDebugUnitTest :app:assembleRegtestDebug'
 ```
 
-Regenerate the RN-derived fixtures with
-`bun --tsconfig-override client/tsconfig.json apps/fixtures/tools/generate-btc-map.ts`.
+The RN-derived fixtures (`btc-map.json`, `city-search.json`) are frozen from the React Native app and edited by hand; keep both platforms' tests passing.
 
 ## Manual checks
 

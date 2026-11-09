@@ -72,8 +72,8 @@ current working directory. See [the shared format](../fixtures/README.md).
 - Version code **100** deliberately exceeds RN's **37**. Version name is **0.2.0**
   with `-signet` / `-regtest` suffixes. Release managers must increase the code
   beyond the latest published RN/native build before shipping and adjust the name.
-- Debug signing references `../../client/android/app/debug.keystore` relative to
-  the Android project root, alias `androiddebugkey`, store/key passwords `android`.
+- Debug signing uses `app/debug.keystore`, the React Native app's debug keystore
+  moved here unchanged, alias `androiddebugkey`, store/key passwords `android`.
   It does not generate or commit another keystore.
 - Release signing reads `MYAPP_RELEASE_STORE_FILE`, `MYAPP_RELEASE_STORE_PASSWORD`,
   `MYAPP_RELEASE_KEY_ALIAS`, `MYAPP_RELEASE_KEY_PASSWORD` from
@@ -295,8 +295,8 @@ set `EMULATOR_PROTO_DIR` to the host SDK's `emulator/lib` if the Nix SDK differs
 `clipboard.py` discovers only that serial's authenticated gRPC endpoint.
 
 ```sh
-nix develop --command apps/android/UpgradeTests/run.sh emulator-5594
-# Or reuse an RN regtest release APK built from the current client:
+# The RN regtest release APK is built from tag v1.0.2 (see UpgradeTests/README.md).
+nix develop --command apps/android/UpgradeTests/run.sh emulator-5594 /absolute/path/to/RN.apk
 FUNDED=1 nix develop --command apps/android/UpgradeTests/run.sh emulator-5594 /absolute/path/to/RN.apk
 ```
 

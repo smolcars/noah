@@ -1,7 +1,7 @@
 # Native Noah apps
 
 The native apps in [ios](ios/README.md) and [android](android/README.md) replace
-the React Native wallet in `client/` through an in-place update.
+the React Native wallet (last in the tree at tag `v1.0.2`) through an in-place update.
 
 ## Signet and mainnet test builds
 
@@ -27,8 +27,7 @@ workflow land on `master`, GitHub Actions distributes:
   artifacts.
 
 Maintainers can also use **Run workflow** (`workflow_dispatch`) on either
-workflow. Feature-branch pushes do not distribute builds. RN workflows remain
-unchanged and continue distributing their builds separately.
+workflow. Feature-branch pushes do not distribute builds.
 
 ## CI credentials and signing
 

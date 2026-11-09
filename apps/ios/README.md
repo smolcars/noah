@@ -1,6 +1,6 @@
 # Noah iOS (native)
 
-SwiftUI app that replaces the React Native client in `client/` as an in-place update. Plan and checklist: [docs/native-rewrite](../../docs/native-rewrite/PLAN.md).
+SwiftUI app that replaces the React Native app (last in the tree at tag `v1.0.2`) as an in-place update. Plan and checklist: [docs/native-rewrite](../../docs/native-rewrite/PLAN.md).
 
 ## Requirements
 
@@ -50,7 +50,7 @@ Don't install native builds onto a simulator that holds an RN Noah install you c
 
 ## Upgrade test (React Native → native)
 
-Needs the regtest stack (`just setup-everything`), Maestro, and a Release simulator build of the RN app (`client/`, scheme `Noah-Regtest`):
+Needs the regtest stack (`just setup-everything`), Maestro, and a Release simulator build of the RN app (scheme `Noah-Regtest`), built from a checkout of tag `v1.0.2`, the last tag that contains `client/` ([UpgradeTests/README.md](UpgradeTests/README.md)):
 
 ```sh
 apps/ios/UpgradeTests/run.sh <dedicated-simulator-udid> /path/to/Noah-Regtest.app

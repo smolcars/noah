@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # Fresh GMS emulator: RN release -> native debug, same certificate and sandbox.
-# Usage: run.sh emulator-5594 [path/to/prebuilt-RN-regtest-release.apk]
+# Usage: run.sh emulator-5594 path/to/prebuilt-RN-regtest-release.apk (built from tag v1.0.2; see README.md)
 # FUNDED=1: Ark receive/send, confirmed onchain funds, paused recurring rule and settings.
 # Use a root-capable Google APIs image so the release app's data can be
 # hashed before replacement. Native replacement never uninstalls or clears data.
@@ -14,7 +14,7 @@ HERE="$(cd "$(dirname "$0")" && pwd)"
 ANDROID="$(dirname "$HERE")"
 ROOT="$(cd "$ANDROID/../.." && pwd)"
 BUNDLE=com.noahwallet.regtest
-RN_APK="${2:-$ROOT/client/android/app/build/outputs/apk/regtest/release/app-regtest-release.apk}"
+RN_APK="${2:?Pass the prebuilt RN regtest release APK (built from tag v1.0.2)}"
 NATIVE_APK="$ANDROID/app/build/outputs/apk/regtest/debug/app-regtest-debug.apk"
 TEST_APK="$ANDROID/app/build/outputs/apk/androidTest/regtest/debug/app-regtest-debug-androidTest.apk"
 RN_BASELINE_APK="$ANDROID/app/build/outputs/apk/rn-upgrade-baseline.apk"
@@ -51,16 +51,6 @@ PY_DISK
 ARTIFACTS="$(mktemp -d)"
 trap 'if [[ -n "${writer_pid:-}" ]]; then kill "$writer_pid" 2>/dev/null || true; wait "$writer_pid" 2>/dev/null || true; fi; rm -r "$ARTIFACTS"' EXIT
 check_disk
-if [[ $# -lt 2 ]]; then
-    if ! (cd "$ROOT" && bun install --frozen-lockfile > "$ARTIFACTS/install.log" 2>&1); then
-        echo 'Dependency install failed; output withheld because asset download URLs may contain credentials.'
-        exit 1
-    fi
-    check_disk
-    (cd "$ROOT/client/android" && CI_DEBUG_SIGNING=true SENTRY_DISABLE_AUTO_UPLOAD=true CMAKE_BUILD_PARALLEL_LEVEL=2 ./gradlew assembleRegtestRelease -PreactNativeArchitectures=arm64-v8a --max-workers=2 --no-parallel \
-        -Pkotlin.compiler.execution.strategy=in-process -Dorg.gradle.jvmargs="-Xmx3g -XX:MaxMetaspaceSize=768m")
-fi
-check_disk
 (cd "$ANDROID" && ./gradlew --max-workers=2 -PnoahRNUpgradeBaseline=true :app:assembleRegtestDebugAndroidTest)
 cp "$TEST_APK" "$RN_BASELINE_APK"
 (cd "$ANDROID" && ./gradlew --max-workers=2 :app:assembleRegtestDebug :app:assembleRegtestDebugAndroidTest)
@@ -87,7 +77,7 @@ PY_READY
 run_flow() {
     maestro --device "$SERIAL" test --debug-output "$ARTIFACTS" --test-output-dir "$ARTIFACTS" "$1"
 }
-# Keep client sources unchanged; standalone post-onboarding flows need to wait
+# Keep the RN flows unchanged; standalone post-onboarding flows need to wait
 # for RN's cold-start icon/wallet loading screen on the emulator.
 run_ready_rn_flow() {
     local prepared="$ARTIFACTS/$(basename "$1")"
@@ -107,7 +97,7 @@ PY_READY_RN
 bark() { docker compose -f "$ROOT/scripts/docker-compose.yml" run --rm --no-deps bark bark --quiet --no-logfile "$@"; }
 if [[ "${FUNDED:-0}" == 1 ]]; then
     python3 "$HERE/clipboard.py" "$SERIAL" get >/dev/null
-    run_flow "$ROOT/client/.maestro/subflows/prepare-funded-send.yml"
+    run_flow "$ROOT/apps/maestro/rn/prepare-funded-send.yml"
     rn_ark_address="$(python3 "$HERE/clipboard.py" "$SERIAL" get | tr -d '\r\n')"
     [[ "$rn_ark_address" =~ ^tark1 ]] || { echo 'RN Ark address missing from clipboard'; exit 1; }
     bark send --wait "$rn_ark_address" "100000 sats"
@@ -117,8 +107,8 @@ if [[ "${FUNDED:-0}" == 1 ]]; then
     printf '%s' "$bark_address" | python3 "$HERE/clipboard.py" "$SERIAL" set
     maestro --device "$SERIAL" test --debug-output "$ARTIFACTS" --test-output-dir "$ARTIFACTS" -e "DESTINATION=$bark_address" "$ROOT/apps/ios/UpgradeTests/rn-send-funded.yml"
     run_flow "$HERE/rn-finish-send.yml"
-    run_ready_rn_flow "$ROOT/client/.maestro/subflows/android-upgrade-settings-recurring.yml"
-    run_ready_rn_flow "$ROOT/client/.maestro/subflows/android-upgrade-onchain-address.yml"
+    run_ready_rn_flow "$ROOT/apps/maestro/rn/android-upgrade-settings-recurring.yml"
+    run_ready_rn_flow "$ROOT/apps/maestro/rn/android-upgrade-onchain-address.yml"
     onchain_address="$(python3 "$HERE/clipboard.py" "$SERIAL" get | tr -d '\r\n')"
     [[ "$onchain_address" =~ ^bcrt1 ]] || { echo 'RN onchain address missing'; exit 1; }
     (cd "$ROOT" && just bcli sendtoaddress "$onchain_address" 0.00030000)

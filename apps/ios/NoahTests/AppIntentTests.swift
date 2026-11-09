@@ -17,9 +17,10 @@ import Testing
             #expect(CopyNoahLightningInvoiceIntent.persistentIdentifier == "CopyNoahLightningInvoiceIntent")
         }
         // Source contract catches a renamed type or parameter, including hidden snippets, and a dropped RN Siri phrase.
+        // The fixture holds the contract lines of the RN app's NoahAppIntents.swift, frozen when `client/` was removed.
         let repo = URL(fileURLWithPath: #filePath).deletingLastPathComponent().deletingLastPathComponent().deletingLastPathComponent()
             .deletingLastPathComponent()
-        let rn = try String(contentsOf: repo.appending(path: "client/ios/SharedAppIntents/NoahAppIntents.swift"), encoding: .utf8)
+        let rn = try String(contentsOf: repo.appending(path: "apps/fixtures/app-intents-contract.txt"), encoding: .utf8)
         let native = try ["NoahAppIntents.swift", "NoahAppShortcuts.swift"].map {
             try String(contentsOf: repo.appending(path: "apps/ios/Noah/Services/AppIntents/\($0)"), encoding: .utf8)
         }.joined(separator: "\n")

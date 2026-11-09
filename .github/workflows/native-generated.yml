@@ -11,7 +11,6 @@ on:
       - "apps/fixtures/**"
       - "apps/i18n/**"
       - "apps/tools/**"
-      - "client/gt.config.json"
       - "package.json"
       - "bun.lock"
       - "api/**"

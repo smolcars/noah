@@ -2,35 +2,25 @@ import { test, expect } from 'bun:test';
 import { mkdtemp, mkdir, readFile, writeFile, rm, copyFile, chmod } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { resolve, dirname } from 'node:path';
-import { flatten, format, entries, iosCatalog, androidCatalog, resourceName, locales, sourceEntries, translationJSON, readTranslations, seedTranslations, extract, generate, root, translate, reuse, missingGroups, platformOnly } from './translations.mjs';
+import { format, iosCatalog, androidCatalog, resourceName, locales, sourceEntries, translationJSON, readTranslations, extract, generate, root, translate, reuse, missingGroups, platformOnly } from './translations.mjs';
 
-const text = { t: 'Text', c: ['Hello ', { t: 'strong', c: { v: 'v', k: 'name' } }, '!'] };
-test('rich text keeps text and variables in reading order', () => {
-  expect(flatten(text)).toBe('Hello {name}!');
-  expect(() => flatten({ unexpected: true })).toThrow('Unsupported GT node');
-});
 test('placeholder indices follow source order even when translations reorder them', () => {
   expect(format('{recipient}: {amount} (100%)', ['amount', 'recipient'], 'ios')).toBe('%2$@: %1$@ (100%%)');
   expect(format('{recipient}: {amount}', ['amount', 'recipient'], 'android')).toBe('%2$s: %1$s');
   expect(() => format('{unknown}', [], 'ios')).toThrow();
 });
 test('plural selection stays numeric while Android display counts are strings', () => {
-  const node = { t: 'Plural', d: { t: 'p', b: { one: 'One place', other: [{ v: 'v', k: 'count' }, ' places'] } } };
-  const catalogs = Object.fromEntries(['en', 'es', 'ja', 'ko', 'sv'].map(locale => [locale, { id: node }]));
-  const all = entries(catalogs);
+  const source = '{count} places';
+  const english = sourceEntries({ ios: new Map([[source, new Set()]]) }, { [source]: { one: 'One place', other: source } });
+  const all = readTranslations(english, Object.fromEntries(locales.slice(1).map(locale => [locale, translationJSON(english)])));
   expect(all[0].quantity).toBe('count');
-  const catalog = JSON.parse(iosCatalog(all, []));
+  const catalog = JSON.parse(iosCatalog(all));
   expect(catalog.strings['{count} places'].localizations.en.variations.plural.other.stringUnit.value).toBe('%1$lld places');
   expect(androidCatalog(all, 'en')).toContain('<item quantity="other">"%1$s places"</item>');
   // Android requires Spanish's "many"; it reuses "other", and iOS keeps only the catalog's forms.
   expect(androidCatalog(all, 'es')).toContain('<item quantity="many">"%1$s places"</item>');
   expect(catalog.strings['{count} places'].localizations.es.variations.plural.many).toBeUndefined();
   expect(resourceName('Cancel')).toBe(resourceName('Cancel'));
-});
-test('missing translations and unknown variables fail generation', () => {
-  expect(() => entries({ en: { id: 'Hello' } })).toThrow('Missing');
-  const catalogs = Object.fromEntries(['en', 'es', 'ja', 'ko', 'sv'].map(locale => [locale, { id: locale === 'en' ? '{name}' : '{wrong}' }]));
-  expect(() => entries(catalogs)).toThrow('Placeholder drift');
 });
 
 test('native templates and literal percent signs round trip through JSON', () => {
@@ -78,24 +68,6 @@ test('i18next variables and all source plural categories survive both native for
   expect(() => readTranslations(all, catalogs)).toThrow('Placeholder drift');
   const pluralUse = new Set(); pluralUse.plural = true;
   expect(() => sourceEntries({ ios: new Map([[source, pluralUse]]) })).toThrow('Missing plural forms');
-});
-
-test('RN seeds preserve exact flattened text, never overwrite native translations, and support force', () => {
-  const source = '{count} places';
-  const node = { t: 'Plural', d: { t: 'p', b: { one: 'One place', other: [{ v: 'v', k: 'count' }, ' places'] } } };
-  const catalogs = Object.fromEntries(locales.map(locale => [locale, { id: node, rich: locale === 'en' ? text : { c: ['¡', { v: 'v', k: 'name' }, '!\n100%'] } }]));
-  const rn = entries(catalogs);
-  const all = sourceEntries({ ios: new Map([[source, new Set()], ['Hello {name}!', new Set()], ['Native only', new Set()]]) }, { [source]: { one: 'One place', other: source } });
-  const key = `${resourceName(source)}_one`;
-  const existing = { es: { [key]: 'Native translation' } };
-  const result = seedTranslations(all, rn, existing);
-  expect(result.catalogs.es[key]).toBe('Native translation');
-  expect(result.catalogs.es[resourceName('Hello {name}!')]).toBe('¡{{name}}!\n100%');
-  expect(result.catalogs.es[resourceName('Native only')]).toBeUndefined();
-  expect(existing.es).toEqual({ [key]: 'Native translation' });
-  expect(result.counts).toEqual({ es: 2, ja: 3, ko: 3, sv: 3 });
-  expect(seedTranslations(all, rn, result.catalogs).counts).toEqual({ es: 0, ja: 0, ko: 0, sv: 0 });
-  expect(seedTranslations(all, rn, existing, true).catalogs.es[key]).toBe('One place');
 });
 
 async function fixture(run) {

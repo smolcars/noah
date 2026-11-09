@@ -3,12 +3,6 @@
 # dependencies
 node_modules/
 
-# Expo
-.expo/
-dist/
-web-build/
-expo-env.d.ts
-
 # Native
 .kotlin/
 *.orig.*
@@ -17,12 +11,6 @@ expo-env.d.ts
 *.p12
 *.key
 *.mobileprovision
-ios/vendor/
-ios/.bundle
-client/build
-
-# Metro
-.metro-health-check*
 
 # debug
 npm-debug.*
@@ -43,9 +31,6 @@ yarn-error.*
 # Android Studio and IntelliJ
 .idea
 
-# Noah temp
-temp_ark_downloads
-
 # Bark
 bark/
 
@@ -62,8 +47,6 @@ noah-regtest.db
 config.toml
 .lnd-data
 
-client/android/app/release.keystore
 local.properties
 report.html
 .ngrok-domain
-client/maestro-debug-output/

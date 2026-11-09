@@ -24,4 +24,4 @@ appId: com.noahwallet.regtest
 - tapOn: "Toggle balance details"
 - tapOn: "Hide wallet balance"
 - assertVisible: "Show wallet balance"
-- runFlow: ../../../client/.maestro/subflows/android-upgrade-account-settings.yml
+- runFlow: ../../maestro/rn/android-upgrade-account-settings.yml

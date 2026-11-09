@@ -240,7 +240,7 @@ const updateSnapshot = async () => {
   const scriptDirectory = path.dirname(fileURLToPath(import.meta.url));
   const outputDirectory = path.resolve(
     scriptDirectory,
-    "../client/assets/geonames",
+    "../apps/assets/geonames",
   );
   const outputPath = path.join(outputDirectory, "cities.geonames");
   fs.mkdirSync(outputDirectory, { recursive: true });

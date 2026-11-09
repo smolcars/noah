@@ -72,11 +72,6 @@ build number is the repository's `CURRENT_PROJECT_VERSION`.
 The GitHub Release does not wait for the iOS archives.
 The existing server workflow still reacts to `v*` tags as before.
 
-The React Native workflows are preserved as `.yml.bak` files and do not run.
-Remove the old required `client_gate` check from branch protection before
-merging this migration. Native CI remains active; choose replacement required
-checks separately. React Native source and shared assets remain in the repo.
-
 ## Local release-tool checks
 
 ```sh

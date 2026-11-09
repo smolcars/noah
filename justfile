@@ -6,104 +6,25 @@ set positional-arguments := true
 default:
     @just --list
 
-# Run type checking and linting
-check:
-    bun run check
-
-# Format client TypeScript and server Rust code
+# Format server Rust code
 fmt:
-    bun client format
     cargo fmt --all
 
 # Install dependencies
 install:
     bun install
 
-# Start Expo dev server
-start:
-    bun start
-
-# Bump client version numbers
-bump *args:
-    bun scripts/bump_client_version.ts {{ args }}
-
 # Bump native Android and iOS versions and build numbers
 bump-native *args:
     bun scripts/bump_native_version.ts {{ args }}
 
-# Refresh the BTC Map snapshot bundled with the client
+# Refresh the BTC Map snapshot bundled with the apps
 btcmap-snapshot:
     bun run btcmap:snapshot
 
-# Refresh the GeoNames city index bundled with the client
+# Refresh the GeoNames city index bundled with the apps
 geonames-snapshot:
     bun run geonames:snapshot
-
-# Android builds (regtest)
-android:
-    bun run android:regtest:debug
-
-android-regtest:
-    bun run android:regtest:debug
-
-android-regtest-release:
-    bun client build:android:regtest:release
-
-# Android builds (signet)
-android-signet:
-    bun run android:signet:debug
-
-android-signet-release:
-    bun client build:android:signet:release
-
-# Android builds (mainnet)
-android-mainnet:
-    bun run android:mainnet:debug
-
-android-mainnet-release:
-    bun client build:android:mainnet:release
-
-# iOS builds (regtest)
-ios:
-    bun client ios:regtest:debug
-
-ios-regtest:
-    bun client ios:regtest:debug
-
-ios-regtest-release:
-    bun client ios:regtest:release
-
-# iOS builds (signet)
-ios-signet:
-    bun client ios:signet:debug
-
-ios-signet-release:
-    bun client ios:signet:release
-
-# iOS builds (mainnet)
-ios-mainnet:
-    bun client ios:mainnet:debug
-
-ios-mainnet-release:
-    bun client ios:mainnet:release
-
-# iOS pod install
-ios-prebuild:
-    bun run ios:prebuild
-
-# Install iOS Pods and force a spec repository update
-ios-prebuild-repo-update:
-    bun run ios:prebuild --repo-update
-
-# Clean commands
-android-clean:
-    bun run android:clean
-
-ios-clean:
-    bun run ios:clean
-
-clean-all:
-    bun client clean:all
 
 # Native iOS app (apps/ios). variant: Regtest | Signet | Mainnet
 ios-native-generate:
@@ -176,9 +97,6 @@ load-test-regtest users="30" time="2m" host="http://localhost:3000":
 # Load testing (requires server running on localhost:3000)
 load-test-signet users="30" time="2m" host="https://signet.noahwallet.io":
     LOADTEST_SCENARIO=all LOADTEST_HOST={{ host }} cargo run --bin loadtest --features loadtest --release -- --users {{ users }} --run-time {{ time }} --host {{ host }} --report-file report.html
-
-# Combined checks
-check-all: check server-check
 
 # Run tests
 test:

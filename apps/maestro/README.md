@@ -1,6 +1,9 @@
 # Native Maestro tests (Android)
 
-These flows target **only** `com.noahwallet.regtest`, installed from `apps/android`, on one phone profile. They clear the app's data. Use a dedicated, disposable emulator, never a personal wallet or a physical device. The RN flows under `client/` are separate. iOS has no Maestro flows here; its onboarding checks live in `apps/ios/OnboardingTests`.
+These flows target **only** `com.noahwallet.regtest`, installed from `apps/android`, on one phone profile. They clear the app's data. Use a dedicated, disposable emulator, never a personal wallet or a physical device. iOS has no Maestro flows here; its onboarding checks live in `apps/ios/OnboardingTests`.
+
+`rn/` holds the React Native app's flows that the upgrade and backup interop harnesses (`apps/*/UpgradeTests`, `apps/BackupTests`) run against a prebuilt RN app.
+`config.yaml` selects only `smoke/` and `funded/`, so the native suite never runs them.
 
 ## Flows
 

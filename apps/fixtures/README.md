@@ -40,10 +40,9 @@ resolution refuses before any request. `error` is the English message. The RN-ge
 `send-utils.json` and `send-amount-safety.json` have no vectors for these inputs and pass
 unchanged, so no RN vector is overridden.
 
-M6 boarding/exits: run `bun --tsconfig-override client/tsconfig.json
-apps/fixtures/tools/generate-exits.ts` from the repository root. The generator imports
+M6 boarding/exits: the fixtures are frozen from the React Native app and edited by hand; keep both platforms' tests passing. Their generator imported
 RN's `exitFeeEstimate`, `exitTimeline`, `useExitOverview`, and `buildAutoBoardPlan`;
-only platform/network dependencies are mocked. `exit-fee-estimate` (82),
+only platform/network dependencies were mocked. `exit-fee-estimate` (82),
 `exit-cancellation` (56), `exit-timeline` (12), `exit-overview-coordination` (16),
 and `auto-boarding` (21) contain 187 portable cases. Swift runs these in
 `ExitFixtureTests`; Android can reuse the files without running React Native.
@@ -134,18 +133,11 @@ iOS PBKDF2 receives its UTF-8 bytes; Android receives its original character arr
 The four decorated crypto vectors exercise original-password backup round trips;
 iOS uses real SDK auth and offline open, Android checks SDK argument boundaries.
 
-RN store envelopes: from the repository root, run:
-
-```sh
-NODE_PATH=<installed-repo>/node_modules bun --tsconfig-override client/tsconfig.json \
-  apps/fixtures/tools/generate-rn-store-compatibility.ts
-```
-
-`rn-store-compatibility.json` (196 cases) is the **single** generated contract for
-both platforms. The generator executes all eight actual RN Zustand stores with
-`persist`/`createJSONStorage`, the real transaction v0→v1 migration, and profile
-merge/fallback. Only MMKV, logging and unused formatting are mocked; the clock is
-fixed. It preserves the complete `input: {key, raw}` string. Native tests never
+RN store envelopes: `rn-store-compatibility.json` (196 cases) is the **single** generated
+contract for both platforms, frozen from the React Native app and edited by hand; keep both platforms' tests passing. Its generator executed all eight actual RN Zustand
+stores with `persist`/`createJSONStorage`, the real transaction v0→v1 migration, and
+profile merge/fallback. Only MMKV, logging and unused formatting were mocked; the clock
+was fixed. It preserves the complete `input: {key, raw}` string. Native tests never
 parse/stringify the envelope before passing it to the codec, so `-0`, `0e5`,
 `1e-400` and `0.0` retain their spelling. Native version/type/envelope probes are
 labelled separately from actual RN writes.
@@ -214,3 +206,8 @@ The decrypt tool fixture/security checks run from the repo root with either
 `bun test scripts/decrypt_backup.test.js` or
 `node --test scripts/decrypt_backup.test.js` (Node 22.2+). They check both native
 exports as well as the independent crypto/archive vectors.
+
+`app-intents-contract.txt` holds the lines of the React Native app's
+`client/ios/SharedAppIntents/NoahAppIntents.swift` that iOS `AppIntentTests` compares
+the native intents against: type and parameter names, authentication policies and Siri
+phrases, which users' saved Shortcuts depend on. It is frozen from tag `v1.0.2`.

@@ -12,7 +12,7 @@ It is intentionally operational: where code lives, how the runtime behaves, and 
   - `apps/ios/`: Swift 6 + SwiftUI app and widget.
   - `apps/android/`: Kotlin + Jetpack Compose app and widgets.
   - `server/`: Rust Axum backend.
-- `client/` is the previous React Native app. It is no longer released; don't change it unless asked.
+- The previous React Native app has been removed from the tree; its last copy is at tag `v1.0.2`. Comments in the native code that cite `client/...` paths refer to it.
 
 ## Monorepo map
 
@@ -20,7 +20,7 @@ It is intentionally operational: where code lives, how the runtime behaves, and 
   - `justfile`: primary dev command surface.
   - `flake.nix`: Nix development environments (JDK 17, Android SDK, SwiftFormat/SwiftLint, ktlint/detekt).
   - `Cargo.toml`: workspace root (member: `server`).
-  - `package.json`: Bun workspace for repository scripts and translation tooling.
+  - `package.json`: Bun dependencies for repository scripts and translation tooling.
   - `api/openapi.json`: the server's exported API contract; both apps' clients are generated from it.
   - `.github/workflows/`: CI/CD pipelines (`native-*.yml` for the apps, `server*.yml` and `mainnet-railway-deploy.yml` for the server).
   - `SECURITY.md`: vulnerability reporting.
@@ -168,7 +168,6 @@ It is intentionally operational: where code lives, how the runtime behaves, and 
 
 - Source of truth for shared API types: `server/src/types.rs` (with `utoipa` schemas).
 - After an intentional API change, run `just generate-api` to rewrite `api/openapi.json`, then regenerate both app clients and check both apps compile. The `Native API drift` workflow fails when any of these are stale.
-- Server tests also rewrite the legacy `client/src/types/serverTypes.ts` through `ts-rs`; commit it with the change and never hand-edit it.
 
 ## Required coding standards
 

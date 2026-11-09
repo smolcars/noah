@@ -156,7 +156,7 @@ android {
 
     signingConfigs {
         getByName("debug") {
-            storeFile = rootProject.file("../../client/android/app/debug.keystore")
+            storeFile = file("debug.keystore")
             storePassword = "android"
             keyAlias = "androiddebugkey"
             keyPassword = "android"
@@ -201,9 +201,9 @@ android {
         warningsAsErrors = true
         abortOnError = true
     }
-    // Share the exact RN/iOS snapshots; do not copy 7 MB into another source tree.
-    sourceSets.getByName("main").assets.directories += listOf("../../../client/assets/btcmap", "../../../client/assets/geonames")
-    sourceSets.getByName("test").resources.directories += listOf("../../../client/assets/btcmap", "../../../client/assets/geonames")
+    // Share the exact iOS snapshots; do not copy 7 MB into another source tree.
+    sourceSets.getByName("main").assets.directories += listOf("../../assets/btcmap", "../../assets/geonames")
+    sourceSets.getByName("test").resources.directories += listOf("../../assets/btcmap", "../../assets/geonames")
     sourceSets.getByName("test").resources.directories += "../../fixtures"
     sourceSets.getByName("test").resources.directories += "../../../api"
     sourceSets.getByName("androidTest").assets.directories += "../../fixtures"

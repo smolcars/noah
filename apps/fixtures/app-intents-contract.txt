@@ -1,0 +1,44 @@
+  var errorDescription: String? {
+struct CreateNoahArkAddressIntent: AppIntent {
+  static let authenticationPolicy: IntentAuthenticationPolicy = .requiresAuthentication
+struct CreateNoahArkAddressWithSnippetIntent: AppIntent {
+  static let authenticationPolicy: IntentAuthenticationPolicy = .requiresAuthentication
+struct NoahArkAddressSnippetIntent: SnippetIntent {
+  var address: String
+struct CopyNoahArkAddressIntent: AppIntent {
+  static let authenticationPolicy: IntentAuthenticationPolicy = .requiresAuthentication
+  var address: String
+  var body: some View {
+struct GetNoahBalanceIntent: AppIntent {
+  static let authenticationPolicy: IntentAuthenticationPolicy = .requiresAuthentication
+struct CreateNoahLightningInvoiceIntent: AppIntent {
+  static let authenticationPolicy: IntentAuthenticationPolicy = .requiresAuthentication
+  var amountSats: Int
+  var invoiceDescription: String?
+struct CreateNoahLightningInvoiceWithSnippetIntent: AppIntent {
+  static let authenticationPolicy: IntentAuthenticationPolicy = .requiresAuthentication
+  var amountSats: Int
+  var invoiceDescription: String?
+struct NoahLightningInvoiceSnippetIntent: SnippetIntent {
+  var invoice: String
+  var amountSats: Int
+struct CopyNoahLightningInvoiceIntent: AppIntent {
+  static let authenticationPolicy: IntentAuthenticationPolicy = .requiresAuthentication
+  var invoice: String
+  var body: some View {
+struct NoahAppShortcuts: AppShortcutsProvider {
+          "Create an Ark address with \(.applicationName)",
+          "Get an Ark address from \(.applicationName)",
+          "Generate an Ark address with \(.applicationName)",
+          "Make an Ark address with \(.applicationName)",
+          "Show me an Ark address from \(.applicationName)",
+          "Receive with Ark in \(.applicationName)",
+        "What's my balance in \(.applicationName)",
+        "Check my \(.applicationName) balance",
+        "How many sats are in \(.applicationName)",
+          "Create a Lightning invoice with \(.applicationName)",
+          "Request sats with \(.applicationName)",
+          "Generate an invoice with \(.applicationName)",
+          "Make a Lightning invoice with \(.applicationName)",
+          "Create a payment request with \(.applicationName)",
+          "Receive sats with \(.applicationName)",

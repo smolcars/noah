@@ -2,25 +2,21 @@
 """Check RN/native widget identity for all variants and both installed products."""
 import pathlib
 import plistlib
-import re
 import sys
 
 repo = pathlib.Path(__file__).resolve().parents[3]
-project = (repo / "client/ios/Noah.xcodeproj/project.pbxproj").read_text()
-for name in ("Mainnet", "Signet", "Regtest"):
-    variant = name.lower()
-    kind = "NoahWidget" + name
-    bundle = f"com.noahwallet.{variant}.{kind}"
-    source = (repo / f"client/ios/{kind}/{kind}.swift").read_text()
-    assert re.search(r'let kind: String = "' + kind + '"', source), name
-    assert f'PRODUCT_BUNDLE_IDENTIFIER = {bundle};' in project, name
+# The RN app's widget kinds, extension bundle IDs and app groups (client/ios at tag v1.0.2).
+RN_WIDGETS = {
+    "Mainnet": ("NoahWidgetMainnet", "com.noahwallet.mainnet.NoahWidgetMainnet", "group.com.noahwallet.mainnet"),
+    "Signet": ("NoahWidgetSignet", "com.noahwallet.signet.NoahWidgetSignet", "group.com.noahwallet.signet"),
+    "Regtest": ("NoahWidgetRegtest", "com.noahwallet.regtest.NoahWidgetRegtest", "group.com.noahwallet.regtest"),
+}
+for name, (kind, bundle, group) in RN_WIDGETS.items():
     config = (repo / f"apps/ios/Config/{name}.xcconfig").read_text()
     assert f"NOAH_WIDGET_KIND = {kind}" in config, name
     assert f"NOAH_WIDGET_BUNDLE_ID = {bundle}" in config, name
-    assert f'group.com.noahwallet.{variant}' in source, name
-    for file in (repo / f"client/ios/{kind}Extension.entitlements",
-                 repo / f"apps/ios/NoahWidget/Entitlements/{name}.entitlements"):
-        assert f"group.com.noahwallet.{variant}" in plistlib.loads(file.read_bytes())["com.apple.security.application-groups"]
+    file = repo / f"apps/ios/NoahWidget/Entitlements/{name}.entitlements"
+    assert group in plistlib.loads(file.read_bytes())["com.apple.security.application-groups"], name
 
 if len(sys.argv) == 3:
     rn, native = map(pathlib.Path, sys.argv[1:])

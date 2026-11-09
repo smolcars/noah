@@ -15,7 +15,7 @@ The command extracts the union of strings used by both native platforms into `ap
 
 GT's `upload` treats each uploaded locale file as complete, even when keys are missing. The tool therefore groups locales with identical gaps, batches about 100 keys at a time (keeping plural siblings together), and writes just those English keys into an isolated temporary JSON workspace with the same config/project and relative filename, runs `gt translate`, and merges the returned keys. Existing native translations are never replaced. After validation it uploads the complete catalogs from `apps/i18n/` and keeps GT's `gt-lock.json`. Do not run bare `gt translate` over partially seeded catalogs; use the command above. Temporary files are removed on completion or failure; seeded files survive failed GT runs.
 
-Offline commands (no GT calls, credentials, RN source, or RN catalogs needed):
+Offline commands (no GT calls or credentials needed):
 
 ```sh
 bun apps/tools/translations.mjs extract   # Write English JSON only
@@ -27,15 +27,6 @@ bun test apps/tools/translations.test.mjs
 
 `--check` fails if English is stale against native code, or catalogs/coverage differ from the JSON. It also fails on copy only one platform uses unless `apps/i18n/platform-only.json` lists it for that platform with a reason, and on listed entries that both platforms (or neither) now use. Prefer the same English on both platforms; see `docs/native-rewrite/copy-unification.md`. Coverage lists all used source strings per platform and missing JSON keys per locale. Missing translations fall back to English and remain visible in that inventory. An unchanged English product name counts as translated when its locale key exists.
 
-Optional migration only, while RN is available:
-
-```sh
-bun apps/tools/translations.mjs seed           # Fill missing keys from RN; never overwrite native text
-bun apps/tools/translations.mjs seed --force   # Explicitly replace matching keys with RN translations
-```
-
-Only `seed` runs GT's offline RN extractor and reads `client/src/_gt/{locale}.json`. RN files stay read-only. Rich text is flattened in reading order, variables become i18next `{{name}}`, and the lowest sorted RN GT hash wins contextual duplicates deterministically. Seeding preserves the existing translated text, including whitespace and punctuation, apart from the placeholder representation.
-
 * iOS: `Noah/Resources/Localizable.xcstrings`, included by XcodeGen in the app and the widget extension (which also compiles `L10n` and `LegacyLocale`, and reads the language the app copies to its app group). Source text remains the lookup key. Static SwiftUI literals localize normally; dynamic strings use `L10n`.
 * Android: `res/values{,-es,-ja,-ko,-sv}/strings.xml`. Hashed resource IDs remain unchanged. `native.xml` retains existing non-generated IDs; generated localized aliases cover tabs, the launch gate, and the widget's layout text and picker descriptions.
 * Variables retain their names (`{name}`, `{nativeValueN}`, `{_gt_value_N}`) and become `{{name}}` in JSON. Native formatting uses source argument order, `%1$@` on iOS and `%1$s` on Android. Translations may reorder indices. Unknown/missing arguments fail generation. Literal percent signs and XML/newline escaping remain native-safe.
@@ -46,7 +37,7 @@ Language preference stays `generaltranslation.locale`: iOS UserDefaults.standard
 
 Siri's App Shortcut phrases are not part of this tool: `apps/ios/Noah/Resources/AppShortcuts.xcstrings` is hand-translated (iOS-only, and it must never reach GT), and `AppShortcutPhraseTests` checks every phrase in `NoahAppShortcuts.swift` has every locale with `${applicationName}` kept.
 
-`TranslationsTests` / `TranslationsTest` check compiled resources for every used native key in all five locales, the 25-case RN resolver oracle, active plural forms (including zero and grouped millions on Android), live preference re-resolution, and translated native-only notification templates. The frozen RN oracle in `apps/fixtures/translations.json` remains independent of native generation. Its optional RN-only regeneration command is `bun apps/tools/generate-translations-fixture.ts`.
+`TranslationsTests` / `TranslationsTest` check compiled resources for every used native key in all five locales, the 25-case RN resolver oracle, active plural forms (including zero and grouped millions on Android), live preference re-resolution, and translated native-only notification templates. The RN oracle in `apps/fixtures/translations.json` remains independent of native generation; it is frozen from the React Native app and edited by hand, so keep both platforms' tests passing.
 
 ## CI bot
 
