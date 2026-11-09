@@ -62,13 +62,14 @@ databases. Phrases never appear in command arguments or evidence.
 
 ### iOS
 
-Prepare RN dependencies with `bun install --frozen-lockfile`. Save the tracked
+Build the React Native app from a checkout of tag `v1.0.2`, the last tag that contains
+`client/`. In that checkout, prepare RN dependencies with `bun install --frozen-lockfile`. Save the tracked
 `client/ios/Podfile.lock` outside the checkout, run `nix develop --command just
 ios-prebuild`, keep the generated lock until the RN build finishes, then restore the
 original. Use private DerivedData paths:
 
 ```sh
-# From client/, inside Nix; Release embeds JS and needs no Metro server.
+# From client/ of the v1.0.2 checkout, inside Nix; Release embeds JS and needs no Metro server.
 SENTRY_DISABLE_AUTO_UPLOAD=true EXPO_PUBLIC_REGTEST_URL=127.0.0.1 \
 EXPO_PUBLIC_REGTEST_SERVER_URL=http://localhost:3100 \
 xcodebuild build -workspace ios/noah.xcworkspace -scheme Noah-Regtest \
@@ -97,7 +98,8 @@ remove your own build directory afterwards. Public evidence defaults to
 
 ### Android
 
-Build the RN release from `client/android/` inside Nix with `CI_DEBUG_SIGNING=true`,
+Build the RN release from `client/android/` of a checkout of tag `v1.0.2` (the last tag
+that contains `client/`) inside Nix with `CI_DEBUG_SIGNING=true`,
 `SENTRY_DISABLE_AUTO_UPLOAD=true`, `EXPO_PUBLIC_REGTEST_URL=10.0.2.2` and
 `EXPO_PUBLIC_REGTEST_SERVER_URL=http://10.0.2.2:3100`, using
 `./gradlew --max-workers=2 --no-daemon :app:assembleRegtestRelease

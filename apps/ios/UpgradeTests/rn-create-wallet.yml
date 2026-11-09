@@ -5,6 +5,6 @@ appId: com.noahwallet.regtest
 - launchApp:
     clearState: true
     clearKeychain: true
-- runFlow: ../../../client/.maestro/subflows/start-wallet-onboarding.yml
-- runFlow: ../../../client/.maestro/subflows/complete-wallet-onboarding-without-email.yml
+- runFlow: ../../maestro/rn/start-wallet-onboarding.yml
+- runFlow: ../../maestro/rn/complete-wallet-onboarding-without-email.yml
 - stopApp

@@ -12,8 +12,9 @@ package between RN and native. The automated emulator version is
 1. Check the regtest stack and Noah server are healthy without restarting them.
    Forward the stack to the phone: `adb -s <serial> reverse tcp:<port> tcp:<port>`
    for the Noah server, Ark (3535) and Bitcoin RPC (18443).
-2. `bun install --frozen-lockfile`, then build the RN release inside Nix, from
-   `client/android`, with `CI_DEBUG_SIGNING=true SENTRY_DISABLE_AUTO_UPLOAD=true
+2. Build the React Native app from a checkout of tag `v1.0.2`, the last tag that
+   contains `client/`: `bun install --frozen-lockfile`, then build the RN release
+   inside Nix, from `client/android`, with `CI_DEBUG_SIGNING=true SENTRY_DISABLE_AUTO_UPLOAD=true
    EXPO_PUBLIC_REGTEST_URL=127.0.0.1 EXPO_PUBLIC_REGTEST_SERVER_URL=http://127.0.0.1:<port>
    ./gradlew assembleRegtestRelease -PreactNativeArchitectures=arm64-v8a --max-workers=2`.
 3. In `apps/android`, build native and its tests, pointing them at the forwarded

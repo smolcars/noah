@@ -43,14 +43,17 @@ Prerequisites:
 - `ANDROID_HOME` set (`apksigner` from build-tools 37.0.0, or set `APKSIGNER`).
 - The regtest stack running: host ports 18443, 3535 and 3000 must answer.
 - At least 12 GiB of free disk.
-- Optionally a prebuilt RN regtest release APK. Without one, the runner runs
-  `bun install --frozen-lockfile` and builds it with debug signing.
+- A prebuilt, debug-signed RN regtest release APK. Build the React Native app from a
+  checkout of tag `v1.0.2`, the last tag that contains `client/`: run
+  `bun install --frozen-lockfile`, then inside Nix, from `client/android`,
+  `CI_DEBUG_SIGNING=true SENTRY_DISABLE_AUTO_UPLOAD=true ./gradlew assembleRegtestRelease -PreactNativeArchitectures=arm64-v8a`.
+  The APK is `client/android/app/build/outputs/apk/regtest/release/app-regtest-release.apk`.
 
 Run from the repository root, inside Nix:
 
 ```sh
-FUNDED=1 INSTALL_WHILE_RUNNING=0 apps/android/UpgradeTests/run.sh emulator-5594 [RN-regtest-release.apk]
-FUNDED=1 INSTALL_WHILE_RUNNING=1 apps/android/UpgradeTests/run.sh emulator-5594 [RN-regtest-release.apk]
+FUNDED=1 INSTALL_WHILE_RUNNING=0 apps/android/UpgradeTests/run.sh emulator-5594 RN-regtest-release.apk
+FUNDED=1 INSTALL_WHILE_RUNNING=1 apps/android/UpgradeTests/run.sh emulator-5594 RN-regtest-release.apk
 ```
 
 Run both modes, each on a fresh emulator, for the full acceptance check.

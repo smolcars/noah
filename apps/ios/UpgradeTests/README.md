@@ -22,8 +22,9 @@ native Home shows a one-time recurring notice, and the server sync sends
 - A simulator you created for this run. The runner wipes **only** that simulator's
   regtest app and keychain before RN setup, and refuses the protected shared
   simulator names listed in `run.sh`.
-- A Release RN regtest `.app` for the simulator. Build it from the repository root,
-  inside Nix:
+- A Release RN regtest `.app` for the simulator. Build the React Native app from a
+  checkout of tag `v1.0.2`, the last tag that contains `client/`: from that
+  checkout's root, inside Nix:
 
   ```sh
   bun install --frozen-lockfile
@@ -117,8 +118,8 @@ settings and resumes onboarding. That is an RN bug, not an upgrade failure.
 
 ## Widgets
 
-`check-widgets.py` compares RN and native widget kinds, extension bundle IDs and
-app-group entitlements for every variant. Given the RN and native `.app` paths, it
+`check-widgets.py` checks the native widget kinds, extension bundle IDs and
+app-group entitlements for every variant against the RN values below. Given the RN and native `.app` paths, it
 also checks the built regtest products. These identifiers must not change:
 
 - Mainnet: `NoahWidgetMainnet`, `com.noahwallet.mainnet.NoahWidgetMainnet`.
