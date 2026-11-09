@@ -12,7 +12,7 @@ It is intentionally operational: where code lives, how the runtime behaves, and 
   - `apps/ios/`: Swift 6 + SwiftUI app and widget.
   - `apps/android/`: Kotlin + Jetpack Compose app and widgets.
   - `server/`: Rust Axum backend.
-- `client/` is the previous React Native app. It is no longer released; don't change it unless asked.
+- The previous React Native app has been removed from the tree; its last copy is at tag `v1.0.2`. Comments in the native code that cite `client/...` paths refer to it.
 
 ## Monorepo map
 
@@ -20,7 +20,7 @@ It is intentionally operational: where code lives, how the runtime behaves, and 
   - `justfile`: primary dev command surface.
   - `flake.nix`: Nix development environments (JDK 17, Android SDK, SwiftFormat/SwiftLint, ktlint/detekt).
   - `Cargo.toml`: workspace root (member: `server`).
-  - `package.json`: Bun workspace for repository scripts and translation tooling.
+  - `package.json`: Bun dependencies for repository scripts and translation tooling.
   - `api/openapi.json`: the server's exported API contract; both apps' clients are generated from it.
   - `.github/workflows/`: CI/CD pipelines (`native-*.yml` for the apps, `server*.yml` and `mainnet-railway-deploy.yml` for the server).
   - `SECURITY.md`: vulnerability reporting.

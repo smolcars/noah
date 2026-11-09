@@ -295,8 +295,8 @@ set `EMULATOR_PROTO_DIR` to the host SDK's `emulator/lib` if the Nix SDK differs
 `clipboard.py` discovers only that serial's authenticated gRPC endpoint.
 
 ```sh
-nix develop --command apps/android/UpgradeTests/run.sh emulator-5594
-# Or reuse an RN regtest release APK built from the current client:
+# The RN regtest release APK is built from tag v1.0.2 (see UpgradeTests/README.md).
+nix develop --command apps/android/UpgradeTests/run.sh emulator-5594 /absolute/path/to/RN.apk
 FUNDED=1 nix develop --command apps/android/UpgradeTests/run.sh emulator-5594 /absolute/path/to/RN.apk
 ```
 

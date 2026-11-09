@@ -50,7 +50,7 @@
 - [`.railway`](.railway/README.md): server deployment configuration and operations notes.
 - [`docs`](docs): design and operations write-ups, including the [native release runbook](docs/native-rewrite/RELEASING.md).
 
-`client/` holds the previous React Native app. It is no longer released.
+The previous React Native app was removed from the tree; its last copy is at tag `v1.0.2`.
 
 ---
 

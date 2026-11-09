@@ -18,9 +18,8 @@ Use this file as the first-step runbook for autonomous work in this repository.
 
 ## 3) Pick the correct validation path
 
-- Client task:
-  - Do not start Android/iOS simulators or emulators locally.
-  - Validate with static checks: `just check`
+- Native app task:
+  - Validate with `just native-lint` and the platform's unit tests (`just ios-native-test Regtest`, `just android-native-test`)
 - Server task:
   - Validate with local checks: `cargo fmt --check` and `cargo test`
 - Integration/regtest task:
@@ -30,7 +29,7 @@ Use this file as the first-step runbook for autonomous work in this repository.
 
 1. Locate existing implementation before adding new files.
 2. Keep changes local to the relevant layer:
-   - UI/hooks/lib in `client/src`
+   - App code in `apps/ios` and `apps/android`
    - API handlers in `server/src/routes`
    - SQL in `server/src/db`
 3. Preserve existing auth, middleware, and background coordination behavior.
@@ -40,17 +39,17 @@ Use this file as the first-step runbook for autonomous work in this repository.
 
 Run the smallest valid check set for the changed surface:
 
-- Client-only edits:
-  - `bun client check`
+- Native app edits:
+  - `just native-lint`
+  - the platform's unit tests
 - Server-only edits:
   - `cargo fmt --check`
   - `cargo test`
 - Cross-cutting edits:
   - both sets above
 
-If server payload types changed, verify generated TS contract changes in:
-
-- `client/src/types/serverTypes.ts`
+If server payload types changed, run `just generate-api`, then regenerate both app clients
+(`just generate-api-ios`, `just generate-api-android`).
 
 ## 6) Commit and PR protocol
 

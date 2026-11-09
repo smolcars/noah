@@ -1,6 +1,6 @@
 # Noah iOS (native)
 
-SwiftUI app that replaces the React Native client in `client/` as an in-place update. Plan and checklist: [docs/native-rewrite](../../docs/native-rewrite/PLAN.md).
+SwiftUI app that replaces the React Native app (last in the tree at tag `v1.0.2`) as an in-place update. Plan and checklist: [docs/native-rewrite](../../docs/native-rewrite/PLAN.md).
 
 ## Requirements
 
