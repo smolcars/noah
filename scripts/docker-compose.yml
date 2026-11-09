@@ -58,7 +58,8 @@ services:
       - "6379:6379"
 
   cln:
-    image: niteshbalusu/bark-cln:latest
+    # CLN v26.06.10 with Bark 0.8.1's hold plugin; captaind 0.8.1 needs CLN v26.06+.
+    image: niteshbalusu/bark-cln@sha256:d353f88e8922f597ad8865b27275e873d51a533095c867218fd5bd3906f2f613
     restart: on-failure
     volumes:
       - bitcoind:/root/.bitcoin
@@ -74,7 +75,8 @@ services:
 
   # Local regtest intentionally runs without a watchman.
   captaind:
-    image: niteshbalusu/captaind:nightly-2026-10-22@sha256:1edd39d4518f30c6a3e5bb005bfe2f374cf7a208ad69a0500b44d31a80dcd2e6
+    # Reports 0.8.1+303682063ed7 (the lib-0.8.1 tag).
+    image: niteshbalusu/captaind:nightly-2026-11-06@sha256:086ea30166e8add6846ec2b9179ad44c25ce15d8defd5de3825cea0ba39c8b01
     volumes:
       - captaind:/data/captaind
       - ./captaind.toml:/data/captaind/captaind.toml
@@ -93,7 +95,7 @@ services:
         condition: service_healthy
 
   bark:
-    image: niteshbalusu/bark:nightly-2026-10-22@sha256:47f1b83beb8cd6d78a8d63e4147ee47c0b66438c39a04f877ccf0a145aa65ecc
+    image: niteshbalusu/bark:nightly-2026-11-06@sha256:a87c65526943916a63aba4df1778dd5d99fbf57caa829aa8cd02b52017602257
     volumes:
       - bark:/root
     depends_on:
