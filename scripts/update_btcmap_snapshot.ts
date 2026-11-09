@@ -128,7 +128,7 @@ const updateSnapshot = async () => {
   const scriptDirectory = path.dirname(fileURLToPath(import.meta.url));
   const outputDirectory = path.resolve(
     scriptDirectory,
-    "../client/assets/btcmap",
+    "../apps/assets/btcmap",
   );
   const outputPath = path.join(outputDirectory, "places.btcmap");
   fs.mkdirSync(outputDirectory, { recursive: true });

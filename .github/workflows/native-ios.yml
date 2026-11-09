@@ -6,9 +6,8 @@ on:
       - "apps/ios/**"
       - "apps/fixtures/**"
       - "api/openapi.json"
-      - "client/assets/btcmap/places.btcmap"
-      - "client/assets/geonames/cities.geonames"
-      - "client/ios/SharedAppIntents/NoahAppIntents.swift" # AppIntentTests compares against it
+      - "apps/assets/btcmap/places.btcmap"
+      - "apps/assets/geonames/cities.geonames"
       - ".github/workflows/native-ios.yml"
       - "!**/*.md"
   # Merges only compile the tests, to save the compilation cache PRs restore; they don't run them.
@@ -19,9 +18,8 @@ on:
       - "apps/ios/**"
       - "apps/fixtures/**"
       - "api/openapi.json"
-      - "client/assets/btcmap/places.btcmap"
-      - "client/assets/geonames/cities.geonames"
-      - "client/ios/SharedAppIntents/NoahAppIntents.swift" # AppIntentTests compares against it
+      - "apps/assets/btcmap/places.btcmap"
+      - "apps/assets/geonames/cities.geonames"
       - ".github/workflows/native-ios.yml"
       - "!**/*.md"
   workflow_dispatch:

@@ -79,9 +79,9 @@ targets:
       # Siri's App Shortcut phrases, hand-translated (AppShortcutPhraseTests keeps them in step).
       - path: Noah/Resources/AppShortcuts.xcstrings
         buildPhase: resources
-      - path: ../../client/assets/btcmap/places.btcmap
+      - path: ../assets/btcmap/places.btcmap
         buildPhase: resources
-      - path: ../../client/assets/geonames/cities.geonames
+      - path: ../assets/geonames/cities.geonames
         buildPhase: resources
     settings:
       base:

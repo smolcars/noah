@@ -214,3 +214,8 @@ The decrypt tool fixture/security checks run from the repo root with either
 `bun test scripts/decrypt_backup.test.js` or
 `node --test scripts/decrypt_backup.test.js` (Node 22.2+). They check both native
 exports as well as the independent crypto/archive vectors.
+
+`app-intents-contract.txt` holds the lines of the React Native app's
+`client/ios/SharedAppIntents/NoahAppIntents.swift` that iOS `AppIntentTests` compares
+the native intents against: type and parameter names, authentication policies and Siri
+phrases, which users' saved Shortcuts depend on. It is frozen from tag `v1.0.2`.

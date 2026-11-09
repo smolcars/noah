@@ -1,7 +1,7 @@
 # BTC Map checks (iOS)
 
-The map uses the committed RN assets by resource reference, without copying them:
-`client/assets/btcmap/places.btcmap` and `client/assets/geonames/cities.geonames`
+The map uses the committed assets by resource reference, without copying them:
+`apps/assets/btcmap/places.btcmap` and `apps/assets/geonames/cities.geonames`
 (GeoNames, CC BY 4.0).
 
 ## Coverage
