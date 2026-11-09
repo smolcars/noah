@@ -1,6 +1,0 @@
-export const COLORS = {
-  BITCOIN_ORANGE: "#c98a3c",
-  TAB_BAR_BACKGROUND: "#1C1C1E",
-  TAB_BAR_INACTIVE: "#8e8e93",
-  SUCCESS: "#22c55e",
-};
