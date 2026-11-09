@@ -206,10 +206,10 @@ fn every_mounted_operation_and_auth_gate_matches() {
 }
 
 #[test]
-fn all_ts_exports_and_unsigned_fields_have_schemas() {
+fn all_schema_types_and_unsigned_fields_have_schemas() {
     let doc = document();
     let schemas = &doc["components"]["schemas"];
-    let mut exports = 0;
+    let mut schema_types = 0;
     for file in [
         include_str!("types.rs"),
         include_str!("routes/public_api_v0.rs"),
@@ -220,9 +220,15 @@ fn all_ts_exports_and_unsigned_fields_have_schemas() {
                 Item::Enum(item) => (item.ident.to_string(), item.attrs, None),
                 _ => continue,
             };
-            if attributes.iter().any(|attr| attr.path().is_ident("ts")) {
-                exports += 1;
-                assert!(schemas.get(&name).is_some(), "missing TS export: {name}");
+            if attributes.iter().any(|attr| {
+                attr.path().is_ident("derive")
+                    && attr
+                        .meta
+                        .require_list()
+                        .is_ok_and(|list| list.tokens.to_string().contains("ToSchema"))
+            }) {
+                schema_types += 1;
+                assert!(schemas.get(&name).is_some(), "missing schema: {name}");
             }
             if let Some(fields) = fields {
                 for field in fields {
@@ -257,7 +263,7 @@ fn all_ts_exports_and_unsigned_fields_have_schemas() {
             }
         }
     }
-    assert_eq!(exports, 60);
+    assert_eq!(schema_types, 67);
     let amount = &doc["paths"]["/.well-known/lnurlp/{username}"]["get"]["parameters"][1]["schema"];
     assert_eq!(amount["format"], "int64");
     assert_eq!(amount["minimum"].as_f64(), Some(0.0));

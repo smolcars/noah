@@ -168,7 +168,6 @@ It is intentionally operational: where code lives, how the runtime behaves, and 
 
 - Source of truth for shared API types: `server/src/types.rs` (with `utoipa` schemas).
 - After an intentional API change, run `just generate-api` to rewrite `api/openapi.json`, then regenerate both app clients and check both apps compile. The `Native API drift` workflow fails when any of these are stale.
-- Server tests also rewrite the legacy `client/src/types/serverTypes.ts` through `ts-rs`; commit it with the change and never hand-edit it.
 
 ## Required coding standards
 

@@ -14,7 +14,7 @@ Accept an intentional contract change:
 UPDATE_OPENAPI=1 cargo test -p server --bin server openapi::export_openapi -- --exact
 ```
 
-The export sorts all object keys, uses stable pretty JSON with a trailing newline, and fails on a missing or differing snapshot unless `UPDATE_OPENAPI=1`. It runs in the existing server test suite. ts-rs continues to regenerate `client/src/types/serverTypes.ts` through its existing tests.
+The export sorts all object keys, uses stable pretty JSON with a trailing newline, and fails on a missing or differing snapshot unless `UPDATE_OPENAPI=1`. It runs in the existing server test suite.
 
 On this macOS environment, server checks run inside `nix develop .#server`; the shell also needs `PROTOC` pointing to an installed protobuf compiler.
 

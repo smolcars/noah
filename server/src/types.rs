@@ -3,7 +3,6 @@ use serde::{Deserialize, Serialize};
 use std::collections::BTreeMap;
 use std::str::FromStr;
 use std::sync::OnceLock;
-use ts_rs::TS;
 use validator::{Validate, ValidationError};
 
 fn ln_username_regex() -> &'static Regex {
@@ -61,8 +60,7 @@ fn validate_lightning_address(value: &str) -> Result<(), ValidationError> {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, TS, utoipa::ToSchema)]
-#[ts(export, export_to = "../../client/src/types/serverTypes.ts")]
+#[derive(Serialize, Deserialize, Debug, Clone, utoipa::ToSchema)]
 pub struct AuthLoginPayload {
     pub key: String,
     pub sig: String,
@@ -74,19 +72,16 @@ pub struct AuthenticatedUser {
     pub key: String,
 }
 
-#[derive(Serialize, Deserialize, TS, utoipa::ToSchema)]
-#[ts(export, export_to = "../../client/src/types/serverTypes.ts")]
+#[derive(Serialize, Deserialize, utoipa::ToSchema)]
 pub struct AuthLoginResponse {
     pub access_token: String,
     pub token_type: String,
     pub expires_at: String,
-    #[ts(type = "number")]
     pub expires_in_seconds: u64,
 }
 
 /// Represents a structured API error response.
-#[derive(Serialize, Deserialize, TS, utoipa::ToSchema)]
-#[ts(export, export_to = "../../client/src/types/serverTypes.ts")]
+#[derive(Serialize, Deserialize, utoipa::ToSchema)]
 pub struct ApiErrorResponse {
     /// Always "ERROR" for error responses.
     pub status: String,
@@ -99,17 +94,15 @@ pub struct ApiErrorResponse {
 }
 
 /// Represents events that can occur during LNURL-auth.
-#[derive(Serialize, Deserialize, TS, utoipa::ToSchema)]
+#[derive(Serialize, Deserialize, utoipa::ToSchema)]
 #[serde(rename_all = "UPPERCASE")]
-#[ts(export, export_to = "../../client/src/types/serverTypes.ts")]
 pub enum AuthEvent {
     /// Indicates that a user has been successfully registered.
     Registered,
 }
 
 /// Represents the response for an user registration.
-#[derive(Serialize, Deserialize, TS, utoipa::ToSchema)]
-#[ts(export, export_to = "../../client/src/types/serverTypes.ts")]
+#[derive(Serialize, Deserialize, utoipa::ToSchema)]
 pub struct RegisterResponse {
     /// The status of the request, either "OK" or "ERROR".
     pub status: String,
@@ -131,9 +124,8 @@ pub struct RegisterResponse {
     pub user_status: UserStatus,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, TS, utoipa::ToSchema)]
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, utoipa::ToSchema)]
 #[serde(rename_all = "lowercase")]
-#[ts(export, export_to = "../../client/src/types/serverTypes.ts")]
 pub enum UserStatus {
     Active,
     Inactive,
@@ -170,8 +162,7 @@ impl std::str::FromStr for UserStatus {
 }
 
 /// Defines device information reported by the client.
-#[derive(Serialize, Deserialize, TS, Debug, Clone, utoipa::ToSchema)]
-#[ts(export, export_to = "../../client/src/types/serverTypes.ts")]
+#[derive(Serialize, Deserialize, Debug, Clone, utoipa::ToSchema)]
 pub struct DeviceInfo {
     pub device_manufacturer: Option<String>,
     pub device_model: Option<String>,
@@ -182,8 +173,7 @@ pub struct DeviceInfo {
 }
 
 /// Defines the payload for a user registration request.
-#[derive(Serialize, Deserialize, TS, Validate, utoipa::ToSchema)]
-#[ts(export, export_to = "../../client/src/types/serverTypes.ts")]
+#[derive(Serialize, Deserialize, Validate, utoipa::ToSchema)]
 pub struct RegisterPayload {
     /// User chosen lightning address
     #[validate(custom(function = "validate_lightning_address"))]
@@ -195,9 +185,8 @@ pub struct RegisterPayload {
 }
 
 /// The service that delivers to a raw device token.
-#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, TS, utoipa::ToSchema)]
+#[derive(Serialize, Deserialize, Debug, Clone, Copy, PartialEq, Eq, utoipa::ToSchema)]
 #[serde(rename_all = "lowercase")]
-#[ts(export, export_to = "../../client/src/types/serverTypes.ts")]
 pub enum PushProvider {
     Apns,
     Fcm,
@@ -213,31 +202,26 @@ impl PushProvider {
 }
 
 /// Defines the payload for registering a push notification token.
-#[derive(Serialize, Deserialize, TS, utoipa::ToSchema)]
-#[ts(export, export_to = "../../client/src/types/serverTypes.ts")]
+#[derive(Serialize, Deserialize, utoipa::ToSchema)]
 pub struct RegisterPushToken {
     /// A raw APNs or FCM device token when `provider` is set. Otherwise an Expo push
     /// token or a UnifiedPush endpoint.
     pub push_token: String,
     /// Which service delivers to a raw device token. Omitted by Expo and UnifiedPush clients.
     #[serde(default)]
-    #[ts(optional)]
     pub provider: Option<PushProvider>,
     /// Whether an APNs token belongs to the sandbox environment. Defaults to false.
     #[serde(default)]
-    #[ts(optional)]
     pub apns_sandbox: Option<bool>,
 }
 
 /// Defines the payload for granting mailbox authorization to the server.
-#[derive(Serialize, Deserialize, TS, Validate, utoipa::ToSchema)]
-#[ts(export, export_to = "../../client/src/types/serverTypes.ts")]
+#[derive(Serialize, Deserialize, Validate, utoipa::ToSchema)]
 pub struct AuthorizeMailboxPayload {
     /// Ark mailbox identifier scoped to the loaded wallet.
     #[validate(length(min = 1))]
     pub mailbox_id: String,
     /// Authorization expiry as a Unix timestamp in seconds.
-    #[ts(type = "number")]
     pub expiry: i64,
     /// Hex-encoded mailbox authorization.
     #[validate(length(min = 1))]
@@ -245,8 +229,7 @@ pub struct AuthorizeMailboxPayload {
 }
 
 /// Represents the response for a user's information.
-#[derive(Serialize, Deserialize, TS, utoipa::ToSchema)]
-#[ts(export, export_to = "../../client/src/types/serverTypes.ts")]
+#[derive(Serialize, Deserialize, utoipa::ToSchema)]
 pub struct UserInfoResponse {
     /// The user's lightning address.
     pub lightning_address: String,
@@ -261,8 +244,7 @@ pub struct UserInfoResponse {
 }
 
 /// Defines the payload for submitting a BOLT11 invoice.
-#[derive(Serialize, Deserialize, TS, utoipa::ToSchema)]
-#[ts(export, export_to = "../../client/src/types/serverTypes.ts")]
+#[derive(Serialize, Deserialize, utoipa::ToSchema)]
 pub struct SubmitInvoicePayload {
     /// The BOLT11 invoice to be paid.
     pub invoice: String,
@@ -271,8 +253,7 @@ pub struct SubmitInvoicePayload {
 }
 
 /// Defines the payload for atomically configuring a hosted Lightning identity.
-#[derive(Serialize, Deserialize, TS, utoipa::ToSchema)]
-#[ts(export, export_to = "../../client/src/types/serverTypes.ts")]
+#[derive(Serialize, Deserialize, utoipa::ToSchema)]
 pub struct UpdateLightningIdentityPayload {
     /// The local part of the user's hosted Lightning address and optional NIP-05 identifier.
     pub username: String,
@@ -281,8 +262,7 @@ pub struct UpdateLightningIdentityPayload {
 }
 
 /// Represents a configured hosted Lightning identity.
-#[derive(Serialize, Deserialize, TS, utoipa::ToSchema)]
-#[ts(export, export_to = "../../client/src/types/serverTypes.ts")]
+#[derive(Serialize, Deserialize, utoipa::ToSchema)]
 pub struct LightningIdentityResponse {
     /// The hosted Lightning address and optional NIP-05 identifier.
     pub lightning_address: String,
@@ -291,8 +271,7 @@ pub struct LightningIdentityResponse {
 }
 
 /// Defines the payload for updating a user's profile.
-#[derive(Serialize, Deserialize, TS, Validate, utoipa::ToSchema)]
-#[ts(export, export_to = "../../client/src/types/serverTypes.ts")]
+#[derive(Serialize, Deserialize, Validate, utoipa::ToSchema)]
 pub struct UpdateProfilePayload {
     /// The user's optional display name. Null or empty clears the name.
     #[validate(length(max = 80))]
@@ -300,170 +279,139 @@ pub struct UpdateProfilePayload {
 }
 
 /// Defines the payload for querying lightning address suggestions.
-#[derive(Serialize, Deserialize, TS, utoipa::ToSchema)]
-#[ts(export, export_to = "../../client/src/types/serverTypes.ts")]
+#[derive(Serialize, Deserialize, utoipa::ToSchema)]
 pub struct LightningAddressSuggestionsPayload {
     /// Partial lightning address typed in the send screen.
     pub query: String,
 }
 
 /// Represents autocomplete suggestions for lightning addresses.
-#[derive(Serialize, Deserialize, TS, utoipa::ToSchema)]
-#[ts(export, export_to = "../../client/src/types/serverTypes.ts")]
+#[derive(Serialize, Deserialize, utoipa::ToSchema)]
 pub struct LightningAddressSuggestionsResponse {
     /// Ordered suggestion list.
     pub suggestions: Vec<String>,
 }
 
-#[derive(Serialize, Deserialize, TS, utoipa::ToSchema)]
-#[ts(export, export_to = "../../client/src/types/serverTypes.ts")]
+#[derive(Serialize, Deserialize, utoipa::ToSchema)]
 pub struct FiatPricesPayload {}
 
-#[derive(Serialize, Deserialize, TS, utoipa::ToSchema)]
-#[ts(export, export_to = "../../client/src/types/serverTypes.ts")]
+#[derive(Serialize, Deserialize, utoipa::ToSchema)]
 pub struct FiatPricesResponse {
-    #[ts(type = "number")]
     pub time: i64,
     pub rates: BTreeMap<String, f64>,
 }
 
-#[derive(Serialize, Deserialize, TS, utoipa::ToSchema)]
-#[ts(export, export_to = "../../client/src/types/serverTypes.ts")]
+#[derive(Serialize, Deserialize, utoipa::ToSchema)]
 pub struct HistoricalFiatPricePayload {
     pub currency: String,
-    #[ts(type = "number")]
     pub timestamp: i64,
 }
 
-#[derive(Serialize, Deserialize, TS, utoipa::ToSchema)]
-#[ts(export, export_to = "../../client/src/types/serverTypes.ts")]
+#[derive(Serialize, Deserialize, utoipa::ToSchema)]
 pub struct HistoricalFiatPriceResponse {
     pub currency: String,
-    #[ts(type = "number")]
     pub time: i64,
     pub rate: f64,
 }
 
-#[derive(Serialize, Deserialize, TS, utoipa::ToSchema)]
-#[ts(export, export_to = "../../client/src/types/serverTypes.ts")]
+#[derive(Serialize, Deserialize, utoipa::ToSchema)]
 pub struct GetUploadUrlPayload {
     pub backup_version: i32, // 1 or 2 (rolling)
 }
 
-#[derive(Serialize, Deserialize, TS, utoipa::ToSchema)]
-#[ts(export, export_to = "../../client/src/types/serverTypes.ts")]
+#[derive(Serialize, Deserialize, utoipa::ToSchema)]
 pub struct UploadUrlResponse {
     pub upload_url: String, // Pre-signed S3 URL
     pub s3_key: String,     // S3 object key
 }
 
-#[derive(Serialize, Deserialize, TS, utoipa::ToSchema)]
-#[ts(export, export_to = "../../client/src/types/serverTypes.ts")]
+#[derive(Serialize, Deserialize, utoipa::ToSchema)]
 pub struct CompleteUploadPayload {
     pub s3_key: String,
     pub backup_version: i32,
-    #[ts(type = "number")]
     pub backup_size: u64,
 }
 
-#[derive(Serialize, Deserialize, TS, utoipa::ToSchema)]
-#[ts(export, export_to = "../../client/src/types/serverTypes.ts")]
+#[derive(Serialize, Deserialize, utoipa::ToSchema)]
 pub struct BackupInfo {
     pub backup_version: i32,
     pub created_at: String,
-    #[ts(type = "number")]
     pub backup_size: u64,
 }
 
-#[derive(Serialize, Deserialize, TS, utoipa::ToSchema)]
-#[ts(export, export_to = "../../client/src/types/serverTypes.ts")]
+#[derive(Serialize, Deserialize, utoipa::ToSchema)]
 pub struct GetDownloadUrlPayload {
     pub backup_version: Option<i32>, // None = latest
 }
 
-#[derive(Serialize, Deserialize, TS, utoipa::ToSchema)]
-#[ts(export, export_to = "../../client/src/types/serverTypes.ts")]
+#[derive(Serialize, Deserialize, utoipa::ToSchema)]
 pub struct DownloadUrlResponse {
     pub download_url: String, // Pre-signed S3 URL
-    #[ts(type = "number")]
     pub backup_size: u64,
 }
 
-#[derive(Serialize, Deserialize, TS, utoipa::ToSchema)]
-#[ts(export, export_to = "../../client/src/types/serverTypes.ts")]
+#[derive(Serialize, Deserialize, utoipa::ToSchema)]
 pub struct DeleteBackupPayload {
     pub backup_version: i32,
 }
 
-#[derive(Serialize, Deserialize, TS, utoipa::ToSchema)]
-#[ts(export, export_to = "../../client/src/types/serverTypes.ts")]
+#[derive(Serialize, Deserialize, utoipa::ToSchema)]
 pub struct BackupSettingsPayload {
     pub backup_enabled: bool,
 }
 
-#[derive(Serialize, Deserialize, TS, utoipa::ToSchema)]
-#[ts(export, export_to = "../../client/src/types/serverTypes.ts")]
+#[derive(Serialize, Deserialize, utoipa::ToSchema)]
 pub struct InitiateBackupUploadPayload {
     pub format_version: i32,
-    #[ts(type = "number")]
     pub encrypted_size: u64,
     pub encrypted_sha256: String,
 }
 
-#[derive(Serialize, Deserialize, TS, utoipa::ToSchema)]
-#[ts(export, export_to = "../../client/src/types/serverTypes.ts")]
+#[derive(Serialize, Deserialize, utoipa::ToSchema)]
 pub struct InitiateBackupUploadResponse {
     pub backup_id: String,
     pub upload_url: String,
     pub checksum_sha256: String,
 }
 
-#[derive(Serialize, Deserialize, TS, utoipa::ToSchema)]
-#[ts(export, export_to = "../../client/src/types/serverTypes.ts")]
+#[derive(Serialize, Deserialize, utoipa::ToSchema)]
 pub struct CompleteBackupUploadPayload {
     pub backup_id: String,
 }
 
-#[derive(Serialize, Deserialize, TS, utoipa::ToSchema)]
-#[ts(export, export_to = "../../client/src/types/serverTypes.ts")]
+#[derive(Serialize, Deserialize, utoipa::ToSchema)]
 pub struct BackupObjectInfo {
     pub backup_id: String,
     pub format_version: i32,
     pub created_at: String,
-    #[ts(type = "number")]
     pub encrypted_size: u64,
     pub encrypted_sha256: String,
 }
 
-#[derive(Serialize, Deserialize, TS, utoipa::ToSchema)]
-#[ts(export, export_to = "../../client/src/types/serverTypes.ts")]
+#[derive(Serialize, Deserialize, utoipa::ToSchema)]
 pub struct GetBackupObjectDownloadPayload {
     pub backup_id: Option<String>,
 }
 
-#[derive(Serialize, Deserialize, TS, utoipa::ToSchema)]
-#[ts(export, export_to = "../../client/src/types/serverTypes.ts")]
+#[derive(Serialize, Deserialize, utoipa::ToSchema)]
 pub struct BackupObjectDownloadResponse {
     pub backup: BackupObjectInfo,
     pub download_url: String,
 }
 
-#[derive(Serialize, Deserialize, TS, utoipa::ToSchema)]
-#[ts(export, export_to = "../../client/src/types/serverTypes.ts")]
+#[derive(Serialize, Deserialize, utoipa::ToSchema)]
 pub struct DeleteBackupObjectPayload {
     pub backup_id: String,
 }
 
-#[derive(Debug, Serialize, Deserialize, TS, utoipa::ToSchema)]
-#[ts(export, export_to = "../../client/src/types/serverTypes.ts")]
+#[derive(Debug, Serialize, Deserialize, utoipa::ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub enum ReportType {
     Maintenance,
     Backup,
 }
 
-#[derive(Debug, Serialize, Deserialize, TS, utoipa::ToSchema)]
-#[ts(export, export_to = "../../client/src/types/serverTypes.ts")]
+#[derive(Debug, Serialize, Deserialize, utoipa::ToSchema)]
 #[serde(rename_all = "camelCase")]
 pub enum ReportStatus {
     Pending,
@@ -502,39 +450,31 @@ impl std::str::FromStr for HeartbeatStatus {
     }
 }
 
-#[derive(Debug, Serialize, Deserialize, TS, Clone, utoipa::ToSchema)]
-#[ts(export, export_to = "../../client/src/types/serverTypes.ts")]
+#[derive(Debug, Serialize, Deserialize, Clone, utoipa::ToSchema)]
 pub struct MaintenanceNotification {
     pub notification_k1: String,
 }
 
-#[derive(Debug, Serialize, Deserialize, TS, Clone, utoipa::ToSchema)]
-#[ts(export, export_to = "../../client/src/types/serverTypes.ts")]
+#[derive(Debug, Serialize, Deserialize, Clone, utoipa::ToSchema)]
 pub struct LightningInvoiceRequestNotification {
     pub transaction_id: String,
-    #[ts(type = "number")]
     pub amount: u64,
 }
 
-#[derive(Debug, Serialize, Deserialize, TS, Clone, utoipa::ToSchema)]
-#[ts(export, export_to = "../../client/src/types/serverTypes.ts")]
+#[derive(Debug, Serialize, Deserialize, Clone, utoipa::ToSchema)]
 pub struct LightningClaimRequestNotification {
     pub payment_hash: String,
-    #[ts(type = "number")]
     pub amount_sat: u64,
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    #[ts(optional)]
     pub amount_usd: Option<String>,
 }
 
-#[derive(Debug, Serialize, Deserialize, TS, Clone, utoipa::ToSchema)]
-#[ts(export, export_to = "../../client/src/types/serverTypes.ts")]
+#[derive(Debug, Serialize, Deserialize, Clone, utoipa::ToSchema)]
 pub struct BackupTriggerNotification {
     pub notification_k1: String,
 }
 
-#[derive(Debug, Serialize, Deserialize, TS, Clone, utoipa::ToSchema)]
-#[ts(export, export_to = "../../client/src/types/serverTypes.ts")]
+#[derive(Debug, Serialize, Deserialize, Clone, utoipa::ToSchema)]
 pub struct HeartbeatNotification {
     pub notification_id: String,
 }
@@ -542,27 +482,22 @@ pub struct HeartbeatNotification {
 /// Silent push asking the device to execute its locally stored recurring
 /// payments that are due. Carries no amounts or recipients: the device checks
 /// its own schedules and only pays within the policy the user approved.
-#[derive(Debug, Serialize, Deserialize, TS, Clone, utoipa::ToSchema)]
-#[ts(export, export_to = "../../client/src/types/serverTypes.ts")]
+#[derive(Debug, Serialize, Deserialize, Clone, utoipa::ToSchema)]
 pub struct RecurringPaymentDueNotification {
-    #[ts(type = "number")]
     pub due_count: u32,
 }
 
 /// One active recurring payment schedule, as known to the server.
-#[derive(Debug, Serialize, Deserialize, TS, Clone, utoipa::ToSchema)]
-#[ts(export, export_to = "../../client/src/types/serverTypes.ts")]
+#[derive(Debug, Serialize, Deserialize, Clone, utoipa::ToSchema)]
 pub struct RecurringPaymentScheduleEntry {
     /// Opaque, client-generated id (`[A-Za-z0-9_-]{1,64}`).
     pub schedule_id: String,
     /// Next due time as a unix timestamp in seconds.
-    #[ts(type = "number")]
     pub next_run_at: i64,
 }
 
 /// Replaces the full set of active recurring payment schedules for the user.
-#[derive(Debug, Serialize, Deserialize, TS, Clone, utoipa::ToSchema)]
-#[ts(export, export_to = "../../client/src/types/serverTypes.ts")]
+#[derive(Debug, Serialize, Deserialize, Clone, utoipa::ToSchema)]
 pub struct SyncRecurringPaymentsPayload {
     pub schedules: Vec<RecurringPaymentScheduleEntry>,
 }
@@ -633,8 +568,7 @@ impl NotificationRequestData {
 }
 
 // Enum wrapper for all notification types
-#[derive(Debug, Serialize, Deserialize, TS, Clone, utoipa::ToSchema)]
-#[ts(export, export_to = "../../client/src/types/serverTypes.ts")]
+#[derive(Debug, Serialize, Deserialize, Clone, utoipa::ToSchema)]
 #[serde(tag = "notification_type", rename_all = "snake_case")]
 pub enum NotificationData {
     Maintenance(MaintenanceNotification),
@@ -692,14 +626,12 @@ impl NotificationData {
     }
 }
 
-#[derive(Debug, Deserialize, Validate, TS, utoipa::ToSchema)]
-#[ts(export, export_to = "../../client/src/types/serverTypes.ts")]
+#[derive(Debug, Deserialize, Validate, utoipa::ToSchema)]
 pub struct HeartbeatResponsePayload {
     pub notification_id: String,
 }
 
-#[derive(Debug, Serialize, Deserialize, TS, utoipa::ToSchema)]
-#[ts(export, export_to = "../../client/src/types/serverTypes.ts")]
+#[derive(Debug, Serialize, Deserialize, utoipa::ToSchema)]
 pub struct ReportJobStatusPayload {
     pub notification_k1: String,
     pub report_type: ReportType,
@@ -707,30 +639,25 @@ pub struct ReportJobStatusPayload {
     pub error_message: Option<String>,
 }
 
-#[derive(Serialize, Deserialize, TS, utoipa::ToSchema)]
-#[ts(export, export_to = "../../client/src/types/serverTypes.ts")]
+#[derive(Serialize, Deserialize, utoipa::ToSchema)]
 pub struct DefaultSuccessPayload {
     pub success: bool,
 }
 
-#[derive(Serialize, Deserialize, TS, utoipa::ToSchema)]
-#[ts(export, export_to = "../../client/src/types/serverTypes.ts")]
+#[derive(Serialize, Deserialize, utoipa::ToSchema)]
 pub struct ReportLastLoginPayload {
     #[serde(default, skip_serializing_if = "Option::is_none")]
-    #[ts(optional)]
     pub device_info: Option<DeviceInfo>,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, TS, utoipa::ToSchema)]
-#[ts(export, export_to = "../../client/src/types/serverTypes.ts")]
+#[derive(Serialize, Deserialize, Debug, Clone, utoipa::ToSchema)]
 pub struct SupportTicketAttachment {
     pub filename: String,
     pub content_type: String,
     pub base64_data: String,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, TS, utoipa::ToSchema)]
-#[ts(export, export_to = "../../client/src/types/serverTypes.ts")]
+#[derive(Serialize, Deserialize, Debug, Clone, utoipa::ToSchema)]
 pub struct SubmitSupportTicketPayload {
     pub subject: String,
     pub body: String,
@@ -740,44 +667,38 @@ pub struct SubmitSupportTicketPayload {
     pub device_info: Option<DeviceInfo>,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone, TS, utoipa::ToSchema)]
-#[ts(export, export_to = "../../client/src/types/serverTypes.ts")]
+#[derive(Serialize, Deserialize, Debug, Clone, utoipa::ToSchema)]
 pub struct SubmitSupportTicketResponse {
     pub ticket_id: String,
     pub ticket_number: Option<String>,
 }
 
-#[derive(Serialize, Deserialize, TS, utoipa::ToSchema)]
-#[ts(export, export_to = "../../client/src/types/serverTypes.ts")]
+#[derive(Serialize, Deserialize, utoipa::ToSchema)]
 pub struct AppVersionCheckPayload {
     pub client_version: String,
 }
 
-#[derive(Serialize, Deserialize, TS, utoipa::ToSchema)]
-#[ts(export, export_to = "../../client/src/types/serverTypes.ts")]
+#[derive(Serialize, Deserialize, utoipa::ToSchema)]
 pub struct AppVersionInfo {
     pub minimum_required_version: String,
     pub update_required: bool,
 }
 
 /// Defines the payload for requesting an email verification code.
-#[derive(Serialize, Deserialize, TS, Validate, utoipa::ToSchema)]
-#[ts(export, export_to = "../../client/src/types/serverTypes.ts")]
+#[derive(Serialize, Deserialize, Validate, utoipa::ToSchema)]
 pub struct SendEmailVerificationPayload {
     #[validate(email)]
     pub email: String,
 }
 
 /// Defines the payload for verifying an email with a code.
-#[derive(Serialize, Deserialize, TS, utoipa::ToSchema)]
-#[ts(export, export_to = "../../client/src/types/serverTypes.ts")]
+#[derive(Serialize, Deserialize, utoipa::ToSchema)]
 pub struct VerifyEmailPayload {
     pub code: String,
 }
 
 /// Represents the response for email verification requests.
-#[derive(Serialize, Deserialize, TS, utoipa::ToSchema)]
-#[ts(export, export_to = "../../client/src/types/serverTypes.ts")]
+#[derive(Serialize, Deserialize, utoipa::ToSchema)]
 pub struct EmailVerificationResponse {
     pub success: bool,
     pub message: Option<String>,

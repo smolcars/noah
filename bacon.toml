@@ -6,7 +6,3 @@ need_stdout = true
 background = false
 on_change_strategy = "kill_then_restart"
 kill = ["kill", "-s", "INT"]
-
-[jobs.types]
-command = ["cargo", "test", "export_bindings"]
-need_stdout = true
