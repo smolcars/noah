@@ -21,12 +21,15 @@ struct SendLiveActivity: Widget {
         } dynamicIsland: { context in
             let phase = context.state.phase
             return DynamicIsland {
-                DynamicIslandExpandedRegion(.leading) { SendActivityCoin(size: 28).padding(.leading, 4) }
-                DynamicIslandExpandedRegion(.center) {
-                    SendActivityText(phase: phase, stale: context.isStale, language: Self.language)
-                        .frame(maxWidth: .infinity, alignment: .leading)
+                // One block, as on the Lock Screen: the coin is on the track, not beside the text as well.
+                DynamicIslandExpandedRegion(.bottom) {
+                    VStack(alignment: .leading, spacing: 10) {
+                        SendActivityText(phase: phase, stale: context.isStale, language: Self.language)
+                        SendActivityTrack(phase: phase)
+                    }
+                    .padding(.horizontal, 8)
+                    .padding(.bottom, 4)
                 }
-                DynamicIslandExpandedRegion(.bottom) { SendActivityTrack(phase: phase).padding(.horizontal, 4) }
             } compactLeading: {
                 SendActivityCoin(size: 20)
             } compactTrailing: {

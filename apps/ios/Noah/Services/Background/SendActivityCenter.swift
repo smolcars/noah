@@ -75,12 +75,17 @@ import UserNotifications
         guard phase.ended else { await show(phase, attempt: attempt, inFront: inFront); return }
         guard announced != attempt?.startedAt else { return }
         announced = attempt?.startedAt
-        if Self.showing {
-            // In front, Send shows the result itself.
-            await Self.end(Self.content(phase), dismissal: inFront ? .immediate : .after(Date().addingTimeInterval(900)))
-        } else if !inFront {
-            await notify(phase)
+        guard Self.showing else {
+            if !inFront { await notify(phase) }
+            return
         }
+        // In front, Send shows the result itself.
+        guard !inFront else { await Self.end(nil, dismissal: .immediate); return }
+        // The Dynamic Island drops an ended activity at once, so it shows the result for a moment first; the Lock
+        // Screen then keeps it for a quarter of an hour. If Noah is suspended meanwhile, this ends on its return.
+        await Self.update(Self.content(phase))
+        try? await Task.sleep(for: SendBackgroundWindow.resultLinger - .seconds(1))
+        await Self.end(Self.content(phase), dismissal: .after(Date().addingTimeInterval(900)))
     }
 
     private func show(_ phase: SendActivityPhase, attempt: SendPaymentController.Attempt?, inFront: Bool) async {
@@ -97,7 +102,10 @@ import UserNotifications
     }
 
     private typealias Content = ActivityContent<SendActivityAttributes.ContentState>
-    private static var showing: Bool { !Activity<SendActivityAttributes>.activities.isEmpty }
+    /// An ended activity stays listed until iOS removes it; only a live one can be updated.
+    private static var showing: Bool {
+        Activity<SendActivityAttributes>.activities.contains { $0.activityState == .active || $0.activityState == .stale }
+    }
 
     private nonisolated static func update(_ content: Content) async {
         for activity in Activity<SendActivityAttributes>.activities { await activity.update(content) }

@@ -7,7 +7,6 @@ import android.app.PendingIntent
 import android.content.Context
 import android.os.Build
 import androidx.core.app.NotificationCompat
-import androidx.core.graphics.drawable.IconCompat
 import androidx.core.net.toUri
 import com.noahwallet.BuildConfig
 import com.noahwallet.R
@@ -39,7 +38,7 @@ internal object SendPendingNotifications {
 
     /**
      * The ongoing notification while the service runs, on its own quiet channel. [slow]: the payment has run past
-     * "Paying". Android 16 draws it as a Live Update: three steps (locked, paying, done) with the bolt at paying.
+     * "Paying". Android 16 draws it as a Live Update: three steps (locked, paying, done) with the first filled.
      */
     fun sending(context: Context, slow: Boolean = false): Notification {
         ensureChannel(context)
@@ -48,18 +47,17 @@ internal object SendPendingNotifications {
             .setOngoing(true).setSilent(true).setOnlyAlertOnce(true)
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.BAKLAVA) {
             val step = NotificationCompat.ProgressStyle.Segment(1)
-            notification.setStyle(NotificationCompat.ProgressStyle().setProgressSegments(listOf(step, step, step)).setProgress(1)
-                .setProgressTrackerIcon(IconCompat.createWithResource(context, R.drawable.ic_notification)))
+            notification.setStyle(NotificationCompat.ProgressStyle().setProgressSegments(listOf(step, step, step)).setProgress(1))
                 .setShortCriticalText(L10n.text(context, "Sending")).setRequestPromotedOngoing(true)
         } else notification.setProgress(0, 0, true)
         return notification.build()
     }
 
-    /** Importance DEFAULT, without sound: lower would keep Android 16 from promoting it. */
+    /** Importance DEFAULT, without sound: lower would keep Android 16 from promoting it. Creating it again only
+     *  renames it, so its name follows the app's language. */
     private fun ensureChannel(context: Context) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return
         val manager = context.getSystemService(NotificationManager::class.java)
-        if (manager.getNotificationChannel(NotificationChannels.PAYMENTS) != null) return
         manager.createNotificationChannel(NotificationChannel(NotificationChannels.PAYMENTS, L10n.text(context, "Payments in progress"),
             NotificationManager.IMPORTANCE_DEFAULT).apply { setSound(null, null); enableVibration(false) })
     }

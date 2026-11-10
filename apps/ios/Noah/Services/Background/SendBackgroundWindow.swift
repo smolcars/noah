@@ -7,6 +7,8 @@ import UIKit
     static let shared = SendBackgroundWindow()
     /// iOS grants "about 30 seconds" (26 s measured); stopping short leaves time to stop the mailbox processor.
     static let limit = Duration.seconds(22)
+    /// After the payment ends, long enough for its Live Activity to show the result before ending.
+    static let resultLinger = Duration.seconds(5)
     private(set) var isOpen = false
     private var work: Task<Void, Never>?
     private var timer: Task<Void, Never>?
@@ -20,6 +22,7 @@ import UIKit
         isOpen = true
         work = Task {
             await SendPendingWatch.run(controller: controller, driveEvery: 10) { try await session.pendingSendLightningHashes() }
+            do { try await Task.sleep(for: Self.resultLinger) } catch { return }
             self.close()
         }
         timer = Task {
