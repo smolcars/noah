@@ -774,6 +774,7 @@ private fun SourceStep(presentation: SendPresentation, env: SendEnv) {
 
 @Composable
 private fun ReviewStep(presentation: SendPresentation, env: SendEnv) {
+    val context = LocalContext.current
     val model = presentation.model
     val controller = model.controller
     val haptics = rememberHaptics()
@@ -790,7 +791,9 @@ private fun ReviewStep(presentation: SendPresentation, env: SendEnv) {
             controller.message?.let { ErrorLine(it) }
         }) {
         if (ready) HoldToSend(formatted(amount, env), enabled = !controller.locked, sending = controller.locked, modifier = Modifier.padding(bottom = 6.dp)) {
-            presentation.confirm(payment, quote)
+            // A Lightning payment can outlast the screen: its service starts here, while Noah is visible.
+            if (presentation.confirm(payment, quote) && SendRoute.of(payment) == SendRoute.lightning)
+                com.noahwallet.services.background.SendPendingService.start(context)
         } else SendPill(if (model.busy) tr("Preparing…") else tr("Next"), Modifier.fillMaxWidth().padding(bottom = 6.dp).testTag("send-continue"),
             enabled = !model.busy) {
             haptics.light(); scope.launch { model.continueStage() }

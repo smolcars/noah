@@ -74,6 +74,7 @@ class MainActivity : FragmentActivity() {
 
     override fun onStart() {
         com.noahwallet.services.background.PeriodicExecution.foreground(true)
+        com.noahwallet.services.background.SendPendingNotifications.clear(this)
         super.onStart()
     }
 

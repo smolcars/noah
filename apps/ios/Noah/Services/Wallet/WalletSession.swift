@@ -725,21 +725,21 @@ extension WalletSession {
         }
     }
 
-    /// Runs bark's mailbox processor exactly while the app is in front, so an Ark payment lands (and Receive plays it)
-    /// at once, not on the next pass. Repeats if the app moved meanwhile, so a stale start or stop never wins. Counted
-    /// like a call (close waits for it) but without the call gates: leaving the front must stop it even mid-send.
+    /// Runs bark's mailbox processor exactly while the app is in front (or a payment's background window is open), so
+    /// an Ark payment lands (and Receive plays it) at once. Repeats if the app moved meanwhile, so a stale start or stop
+    /// never wins. Counted like a call (close waits for it) but without the call gates: it must stop even mid-send.
     func reconcileMailboxProcessor() async {
         guard case .open(let handles) = state else { return }
         runningCalls += 1
         defer { callFinished() }
-        var active = await ForegroundExecution.isActive
+        var active = await ForegroundExecution.wantsMailbox
         while case .open = state {
             do {
                 try await Task { [active] in
                     if active { try await handles.wallet.startMailboxProcessor() } else { try await handles.wallet.stopMailboxProcessor() }
                 }.value
             } catch { AppLog("mailbox").w(#"Mailbox processor update failed (\#(String(describing: type(of: error))))"#); return }
-            let now = await ForegroundExecution.isActive
+            let now = await ForegroundExecution.wantsMailbox
             if now == active { return }
             active = now
         }

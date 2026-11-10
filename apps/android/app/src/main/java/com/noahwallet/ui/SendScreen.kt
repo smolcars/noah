@@ -198,12 +198,8 @@ private fun SendAutoRefresh(app: AppModel, presentation: SendPresentation) {
     LaunchedEffect(pending, app.isWalletSuspended) {
         if (pending == null || app.isWalletSuspended) return@LaunchedEffect
         lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
-            // Bark's mailbox settles a send without telling the app. Its pending list is a local read: once the send
-            // leaves it, the status check records the outcome. The 30 s refresh below still drives it.
-            while (isActive) {
-                delay(1_000)
-                if (runCatching { app.session.pendingSendHashes() }.getOrNull()?.contains(pending) == false) controller.checkStatus()
-            }
+            // The 30 s refresh below still drives it.
+            com.noahwallet.send.SendPendingWatch.run(controller) { app.session.pendingSendHashes() }
         }
     }
     val unsettled = txid != null || onchain || pending != null
@@ -308,16 +304,17 @@ internal class SendPresentation(val model: SendModel) : ViewModel() {
     var tip by mutableStateOf<Long?>(null)
 
     /** Holding to send confirms exactly as today's confirm button did: once, for the reviewed quote only. */
-    fun confirm(payment: SendPayment, quote: SendQuote) {
+    fun confirm(payment: SendPayment, quote: SendQuote): Boolean {
         val controller = model.controller
-        if (controller.locked || !model.showReview) return
-        if (model.quote !== quote || model.payment !== payment) return
-        val job = controller.submit(payment, quote) ?: return
+        if (controller.locked || !model.showReview) return false
+        if (model.quote !== quote || model.payment !== payment) return false
+        val job = controller.submit(payment, quote) ?: return false
         model.showReview = false
         motion = SendMotion(SendRoute.of(payment), SystemClock.elapsedRealtime())
         hapticsAt = 0L
         submitting = true
         viewModelScope.launch { try { job.await() } catch (_: Exception) { } finally { submitting = false } }
+        return true
     }
     fun leave() { if (!model.controller.locked) model.reset() }
     override fun onCleared() { if (!model.controller.locked) model.discardReview() }

@@ -2,6 +2,8 @@
     xmlns:tools="http://schemas.android.com/tools">
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <!-- A Lightning payment's short foreground service (SendPendingService). -->
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
     <!-- Kept from the RN app so grants survive the update. Like the RN app, the camera stays a required feature. -->
     <uses-permission android:name="android.permission.CAMERA" tools:ignore="PermissionImpliesUnsupportedChromeOsHardware" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
@@ -40,6 +42,9 @@
                 <action android:name="com.google.firebase.MESSAGING_EVENT" />
             </intent-filter>
         </service>
+        <!-- Keeps a Lightning payment moving for up to two minutes after Noah leaves the front. -->
+        <service android:name=".services.background.SendPendingService" android:exported="false"
+            android:foregroundServiceType="shortService" tools:targetApi="34" />
         <service android:name=".services.push.NoahUnifiedPushService" android:exported="false">
             <intent-filter>
                 <action android:name="org.unifiedpush.android.connector.PUSH_EVENT" />

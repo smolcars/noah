@@ -117,6 +117,43 @@ class SendLightningPendingTest {
         assertFalse(later.attempt!!.isPaying()); assertTrue(later.canOverride)
     }
 
+    /** The watch behind Send's pending result and the pending-payment service: it reads bark's pending list and asks for checks. */
+    @Test fun aCheckFollowsTheSendLeavingBarksPendingList() = runBlocking {
+        val bark = Bark()
+        val subject = send(bark)
+        var slept = 0; var reads = 0
+        // bark settles it during the third second; nothing drives it meanwhile.
+        SendPendingWatch.run(subject, pause = { if (++slept == 3) bark.finish("successful", -1079) }) {
+            reads++
+            if (bark.checkpoint == null) emptySet() else setOf(hash)
+        }
+        assertEquals(SendController.State.succeeded, subject.state)
+        // It stopped by itself once the payment ended, and the pay call ran once.
+        assertEquals(4, slept); assertEquals(4, reads); assertEquals(1, bark.calls)
+    }
+
+    @Test fun theServiceAlsoChecksOnATimerAndIdlesInFront() = runBlocking {
+        val bark = Bark()
+        val subject = send(bark)
+        var slept = 0; var inFront = true
+        // The pending list never changes (say the mailbox is down), but bark's records do: only a check finds out.
+        SendPendingWatch.run(subject, driveEvery = 10, active = { !inFront }, pause = {
+            slept++
+            if (slept == 5) bark.finish("failed", 0)
+            // Send's own screen was watching until now.
+            if (slept == 12) inFront = false
+        }) { setOf(hash) }
+        assertEquals(SendController.State.failed, subject.state)
+        // In front it left the failure at 5 s alone; out of sight, the 20 s check found it.
+        assertEquals(21, slept)
+    }
+
+    @Test fun nothingToWatchEndsAtOnce() = runBlocking {
+        var slept = 0
+        SendPendingWatch.run(controller(FakeSendWallet(), TestJournal(), this), pause = { slept++ }) { emptySet() }
+        assertEquals(0, slept)
+    }
+
     /** A cancelled caller (a screen's refresh ending as the payment settles) is not reported as a failed check. */
     @Test fun aCancelledCheckIsNotAFailure() = runBlocking {
         val bark = Bark()

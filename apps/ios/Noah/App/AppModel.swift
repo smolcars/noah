@@ -663,10 +663,12 @@ extension AppModel {
     }
 
     func appEnteredBackground() {
+        SendBackgroundWindow.shared.open()
         Task { await session.reconcileMailboxProcessor() }
     }
 
     func appBecameActive() async {
+        SendBackgroundWindow.shared.close()
         await session.appBecameActive()
         guard UIApplication.shared.applicationState == .active else { return }
         foregroundActivation?.revoke()
