@@ -352,7 +352,7 @@ class AppServices private constructor(private val context: Context) {
         finally { cancellation.dispose() }
     }
 
-    /** The app left the front: stop processing the mailbox until the next foreground pass. */
+    /** The app left the front, or a payment's service started or stopped: the mailbox processor follows what holds now. */
     fun stopMailboxProcessor() { scope.launch { reconcileMailboxProcessor() } }
 
     /** Runs the mailbox processor exactly while the app is visible ([com.noahwallet.services.background.PeriodicExecution])

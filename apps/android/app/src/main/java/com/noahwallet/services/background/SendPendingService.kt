@@ -39,6 +39,8 @@ class SendPendingService : Service() {
         ServiceCompat.startForeground(this, SendPendingNotifications.ID, SendPendingNotifications.sending(this), type)
         if (watch == null) {
             running = true
+            // Leaving Noah right after the hold can stop the mailbox processor before this service counts as running.
+            AppServices.shared(this).stopMailboxProcessor()
             val controller = SendRuntime.shared(this).controller
             val session = WalletSession.shared(this)
             watch = scope.launch {
