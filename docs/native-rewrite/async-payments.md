@@ -10,7 +10,8 @@ Two things changed since the design: bark 0.8.1 (bark-bolt-ffi 0.11.0, which bot
 | --- | --- | --- |
 | 0. Proof | LND hold invoices paid with `wait: false` through the FFI on regtest: the call returns in 150–350 ms; the mailbox alone settles or refunds in about 260 ms; checks alone, a plain sync, and a new process after a kill all reach the same result; a second pay on a pending invoice returns it in progress without paying again. | Done |
 | 1. Pending state | Send's Lightning payments use `wait: false`; a send still paying is a normal state, tracked until bark's records end it. | Built |
-| 2. Background window and system UI | iOS background task and Live Activity; Android short foreground service and progress notification; the mailbox processor stays on for that window. | Next |
+| 2a. Background window | iOS background task; Android short foreground service with a plain ongoing notification; the mailbox processor stays on and the payment is checked for that window. | Built |
+| 2b. System UI | iOS Live Activity (and a result notification when Live Activities are off); Android progress notification (`ProgressStyle`, Live Update) on its own channel, with amounts when hide-balance is off. | Next |
 | 3. Server push | Silent `lightning_send_finished` push for a closed app. | Later |
 
 Cut for now: recurring payments stay on `wait: true`; on-chain progress outside the app (phase 5); raw APNs Live Activity updates (phase 6).
@@ -24,6 +25,12 @@ Cut for now: recurring payments stay on `wait: true`; on-chain progress outside 
 - **Who notices.** While Send shows the payment, a 1 s read of bark's pending list (local, no network) triggers a status check when the send leaves it; the 30 s automatic check and the check on entering Send remain.
 - **What it looks like.** The stage keeps "Sending" until "Still paying" is due, then the "Still sending" result, as a slow payment always has. The override ("Pay again anyway") waits 90 s (`retry_for` + 30 s). Send stays locked while pending, across restarts.
 - **Not built:** parking an overridden attempt, the `Finishing`/`Stuck` lines, and time-to-result telemetry.
+
+**Step 2a as built.** One watch (`SendPendingWatch`) serves Send's pending result and the window: the 1 s read of bark's pending list, plus a status check every 10 s when nothing else checks. The window only keeps that watch and bark's mailbox processor running; it never pays.
+
+- **iOS.** Entering the background with a payment in flight (pending, or its pay call still running) opens `SendBackgroundWindow`: a `beginBackgroundTask` held for at most 22 s (iOS gave 26 s on the simulator), closed early when the payment ends or Noah returns. Closing lets the mailbox processor follow the app's state again, then ends the task. No UI yet.
+- **Android.** Hold-to-send on the Lightning rail starts `SendPendingService` while Noah is visible: `shortService` on Android 14+, capped at 120 s (`retry_for` + 60 s) everywhere. Its watch idles while Noah is in front, where Send's own screen watches. The notification uses the existing "Noah notifications" channel, silent and amount-free: "Sending" while it runs; when it stops out of sight, "Sent", "Payment failed", or a quiet "Sending · Still paying" left behind at the cap. Opening Noah clears it. Android defers a foreground service's notification for 10 s, so a quick payment shows none, except within two minutes of a previous deferred one, when Android shows it at once.
+- **Seen on regtest.** A payment settled or cancelled inside the window is in the journal about a second later, and Send shows the result at first look on return. One cancel in six reached the app only after the window: the Ark server answered "still paying" for about 20 s. Whatever misses the window is picked up on return, as in step 1.
 
 **Scope:**
 - Lightning sends that outlast the screen.
