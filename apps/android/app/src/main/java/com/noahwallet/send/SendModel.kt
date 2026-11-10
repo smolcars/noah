@@ -184,7 +184,8 @@ class SendModel(val controller: SendController, private val network: String,
         if (stage == SendStage.review) review()
     }
     suspend fun review() {
-        discardReview(); busy = true; val generation = reviewGeneration
+        // The previous rail's payment would show its target while this one is quoted.
+        discardReview(); payment = null; busy = true; val generation = reviewGeneration
         try {
             val rail = progress.selectedRail ?: throw SendFailure(SendFailure.Reason.invalid)
             val payment = reviewedPayment(rail)

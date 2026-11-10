@@ -183,9 +183,9 @@ internal object SendWhoRules {
     data class Recipient(val title: String, val detail: String?, val full: String?)
     fun recipient(destination: String, method: String?, ownDomain: String?, payment: SendPayment? = null): Recipient {
         val value = SendDestination.cleaned(destination)
-        // A payment request shows only the method you picked, as iOS does, not the whole request.
-        if (method == "bip321" && payment != null) {
-            return recipient(payment.destination, payment.method, ownDomain).let { Recipient("Payment request", it.detail, it.full) }
+        // A payment request shows only the method you picked, as iOS does, and no card until it is prepared.
+        if (method == "bip321") {
+            return payment?.let { recipient(it.destination, it.method, ownDomain) }.let { Recipient("Payment request", it?.detail, it?.full) }
         }
         return when (method) {
             "lnurl" -> of(destination, method, ownDomain).name.let { name -> Recipient(name, value.lowercase(Locale.ROOT).takeIf { it != name }, null) }

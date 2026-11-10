@@ -222,7 +222,7 @@ class SendMotionTest {
         assertEquals("Bitcoin address", SendWhoRules.kind("onchain", "bcrt1q", "localhost.com"))
         // A payment request's review shows only the picked method's target, as iOS does.
         val request = "bitcoin:bcrt1qaddr?lightning=lnbcrt1invoice"
-        assertEquals(SendWhoRules.Recipient("Payment request", null, request), SendWhoRules.recipient(request, "bip321", null))
+        assertEquals(SendWhoRules.Recipient("Payment request", null, null), SendWhoRules.recipient(request, "bip321", null))
         assertEquals(SendWhoRules.Recipient("Payment request", null, "bcrt1qaddr"),
             SendWhoRules.recipient(request, "bip321", null, com.noahwallet.send.SendPayment("bcrt1qaddr", "onchain", 1000)))
     }
