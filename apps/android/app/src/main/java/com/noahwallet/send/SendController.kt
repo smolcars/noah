@@ -29,7 +29,7 @@ class SendController(private val dependencies: Dependencies,
     val loading get() = state == State.storageBlocked && message == null
     val canOverride get() = !checking && (unboundJournal != null || unreadableJournal ||
         (attempt != null && (state in listOf(State.uncertain, State.storageBlocked) ||
-            (state == State.succeeded && attempt?.receipt?.broadcastRetryPending == true))))
+            (state == State.succeeded && attempt?.receipt?.broadcastRetryPending == true)))) && attempt?.isPaying() != true
 
     fun invalidateForWalletChange() {
         recurringEvidenceDurable = false
@@ -238,6 +238,8 @@ class SendController(private val dependencies: Dependencies,
         val current = generation
         checking = true
         try { dependencies.reservation { wallet -> if (current == generation) reconcile(wallet) } }
+        // A caller that stopped waiting (a screen's refresh ending) is not a failed check: the reservation finished it.
+        catch (cancelled: CancellationException) { throw cancelled }
         catch (_: Exception) { if (current == generation) showRefreshFailure() }
         finally { if (current == generation) checking = false }
     }

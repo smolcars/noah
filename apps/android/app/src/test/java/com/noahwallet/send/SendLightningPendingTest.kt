@@ -31,8 +31,12 @@ class SendLightningPendingTest {
             calls++
             throw SendLightningSubmission.handedOver(checkpoint!!, payment.amount)
         }
-        override suspend fun reconcile(attempt: SendAttempt): SendResolution =
-            attempt.pending?.let { SendReconciliation.pending(attempt, it, state, listOfNotNull(movement)) } ?: SendResolution.Uncertain
+        /** Holds a status check inside the reservation until completed. */
+        var gate: CompletableDeferred<Unit>? = null
+        override suspend fun reconcile(attempt: SendAttempt): SendResolution {
+            gate?.await()
+            return attempt.pending?.let { SendReconciliation.pending(attempt, it, state, listOfNotNull(movement)) } ?: SendResolution.Uncertain
+        }
         /** bark ending the send a moment after it started. */
         fun finish(status: String, effective: Long) {
             checkpoint = null
@@ -87,6 +91,42 @@ class SendLightningPendingTest {
         restarted.checkStatus()
         assertEquals(SendController.State.succeeded, restarted.state)
         assertEquals(1, bark.calls)
+    }
+
+    /**
+     * The app stopped (or the call failed) after bark took the payment but before the journal recorded it: the next
+     * check finds a send for the reviewed amount where none was in progress at review, and tracks it as its own.
+     */
+    @Test fun aSendBarkTookBeforeTheAppStoppedIsTracked() {
+        val attempt = SendAttempt(payment = payment, paymentHash = hash)
+        assertEquals(SendResolution.Pending(SendCheckpoint(send())), SendReconciliation.inProgress(attempt, send()))
+        // A send for another amount, or one already shown as someone else's, was never reviewed here.
+        assertEquals(SendResolution.InProgress(SendLightningProgress(2000, 79)), SendReconciliation.inProgress(attempt, send(amount = 2000)))
+        assertEquals(SendResolution.InProgress(SendLightningProgress(1000, 79)),
+            SendReconciliation.inProgress(attempt.copy(existingLightning = SendLightningProgress(1000, 79)), send()))
+    }
+
+    /** While the server may still be retrying, a pending send offers no override; once overdue it does. */
+    @Test fun overrideWaitsUntilThePaymentIsOverdue() = runBlocking {
+        val bark = Bark(); val journal = TestJournal()
+        val subject = send(bark, journal)
+        assertTrue(subject.attempt!!.isPaying()); assertFalse(subject.canOverride)
+        journal.attempt = journal.attempt!!.copy(startedAt = System.currentTimeMillis() - SendLightningSubmission.overdueMillis - 1)
+        val later = controller(bark, journal, this)
+        later.reloadForWalletChange()
+        assertFalse(later.attempt!!.isPaying()); assertTrue(later.canOverride)
+    }
+
+    /** A cancelled caller (a screen's refresh ending as the payment settles) is not reported as a failed check. */
+    @Test fun aCancelledCheckIsNotAFailure() = runBlocking {
+        val bark = Bark()
+        val subject = send(bark)
+        bark.finish("successful", -1079)
+        bark.gate = CompletableDeferred()
+        val check = launch(start = CoroutineStart.UNDISPATCHED) { subject.checkStatus() }
+        check.cancel(); bark.gate!!.complete(Unit); check.join()
+        assertEquals(SendController.State.succeeded, subject.state)
+        assertNull(subject.message)
     }
 
     /** A send bark ended without a record this attempt can read is "may have been sent", never "still sending". */

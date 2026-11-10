@@ -73,6 +73,42 @@ import Testing
         #expect(bark.calls == 1)
     }
 
+    /// The app stopped (or the call failed) after bark took the payment but before the journal recorded it: the
+    /// next check finds a send for the reviewed amount where none was in progress at review, and tracks it as its own.
+    @Test func aSendBarkTookBeforeTheAppStoppedIsTracked() async throws {
+        let bark = paying(), storage = SendPaymentTests.Storage()
+        let taken = send()
+        bark.onPay = { bark in
+            bark.movement = bark.template
+            bark.checkpoint = taken
+            throw SendLightningRetryTests.Died()
+        }
+        let subject = retry.controller(bark, storage)
+        try await retry.send(subject)
+        #expect(subject.state == .uncertain && subject.attempt?.pending == SendLightningCheckpoint(send()))
+        #expect(subject.attempt?.existingLightning == nil)
+        let restarted = try retry.restart(bark, storage)
+        bark.checkpoint = nil
+        bark.finish("successful", effective: -1079)
+        await restarted.checkStatus()
+        guard case .succeeded = restarted.state else { Issue.record("Expected Sent, got \(restarted.state)"); return }
+        #expect(bark.calls == 1)
+        // A send for another amount was never reviewed here.
+        let attempt = SendPaymentController.Attempt(payment: payment, snapshot: .init(movementIDs: []))
+        #expect(SendReconciliation.inProgress(attempt, send: send(amount: 2000)) == .inProgress(.init(amount: 2000, fee: 79)))
+    }
+
+    /// While the server may still be retrying, a pending send offers no override; once overdue it does.
+    @Test func overrideWaitsUntilThePaymentIsOverdue() async throws {
+        let bark = paying(), storage = SendPaymentTests.Storage()
+        let subject = retry.controller(bark, storage)
+        try await retry.send(subject)
+        #expect(subject.attempt?.isPaying() == true && !subject.canOverride)
+        storage.attempt?.startedAt = Date().addingTimeInterval(-SendLightningSubmission.overdueAfter - 1)
+        let later = try retry.restart(bark, storage)
+        #expect(later.attempt?.isPaying() == false && later.canOverride)
+    }
+
     /// A send bark ended without a record this attempt can read is "may have been sent", never "still sending".
     @Test func aSendThatEndedWithoutProofIsUncertain() async throws {
         let bark = paying()

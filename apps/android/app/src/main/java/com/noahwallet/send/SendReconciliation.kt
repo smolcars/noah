@@ -88,6 +88,12 @@ object SendReconciliation {
         }
         return failedAttempt(movement, actual, amount, completedSince)
     }
+    /** A send in progress on the hash of an attempt whose journal doesn't record it as its own. Nothing was in progress
+     *  when the attempt was prepared (its snapshot has no checkpoint), so a send for its amount is the one its pay call
+     *  started before the app stopped or the call failed: tracked as its own. Any other is only shown. */
+    fun inProgress(attempt: SendAttempt, send: LightningSend): SendResolution =
+        if (attempt.existingLightning == null && send.amountSats.toLong() == attempt.payment.amount) SendResolution.Pending(SendCheckpoint(send))
+        else SendResolution.InProgress(SendLightningProgress(send.amountSats.toLong(), send.feeSats.toLong()))
     /** An attempt whose own send bark was still paying ([SendAttempt.pending]), from bark's state and movements now.
      *  A send that ended leaves no checkpoint, so the outcome is read from its hash's movement like any attempt's. */
     fun pending(attempt: SendAttempt, checkpoint: SendCheckpoint, state: LightningSendStatus, movements: List<Movement>): SendResolution {

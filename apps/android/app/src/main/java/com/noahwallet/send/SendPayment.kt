@@ -76,7 +76,10 @@ import kotlinx.serialization.json.*
     val possibleTxids: List<String> = emptyList(), val candidates: List<UInt> = emptyList(),
     /** This attempt's own Lightning send while bark reports it in progress. Status checks may drive it; they never pay.
      *  Cleared by every other resolution. */
-    val pending: SendCheckpoint? = null)
+    val pending: SendCheckpoint? = null) {
+    /** Bark is paying this attempt's send and the server may still be retrying: nothing to check or override yet. */
+    fun isPaying(now: Long = System.currentTimeMillis()) = pending != null && now - startedAt < SendLightningSubmission.overdueMillis
+}
 @Serializable data class SendLightningProgress(val amount: Long, val fee: Long) {
     val message get() = "A payment of $amount sats for this invoice is already in progress. Do not pay again."
 }

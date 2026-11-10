@@ -539,7 +539,9 @@ extension SendOutcomeView {
 
     private var actions: some View {
         VStack(spacing: 10) {
-            ForEach(Self.actions(kind: kind, uncertain: controller.state == .uncertain, resultShown: resultShown), id: \.self) { action in
+            // A send bark is still paying offers what a slow payment always has: Done.
+            let unresolved = controller.state == .uncertain && attempt?.isPaying() != true
+            ForEach(Self.actions(kind: kind, uncertain: unresolved, resultShown: resultShown), id: \.self) { action in
                 switch action {
                 case .check: checkButton
                 case .acknowledge: pill("Done", id: "send-success-done", action: acknowledge)
@@ -556,8 +558,7 @@ extension SendOutcomeView {
                 case .close: pill("Done", id: "send-leave", prominent: false) { onLeave() }
                 }
             }
-            // A payment bark has only just taken is uncertain too, but still "Sending": nothing to override yet.
-            if controller.canOverride, kind != .sending { overrideAction }
+            if controller.canOverride { overrideAction }
         }
         .animation(NoahTokens.Motion.travel(reduceMotion), value: resultShown)
     }

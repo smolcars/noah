@@ -388,9 +388,7 @@ extension WalletSession {
                                            handles: Handles) async throws -> SendPaymentController.Resolution {
         // Status checks must not drive an inherited checkpoint with an unreviewed amount.
         let state = try await handles.wallet.lightningSendState(paymentHash: hash)
-        if case .inProgress(let send) = state {
-            return .inProgress(.init(amount: send.amountSats, fee: send.feeSats))
-        }
+        if case .inProgress(let send) = state { return SendReconciliation.inProgress(attempt, send: send) }
         if let existing = attempt.existingLightning, existing.amount != attempt.payment.amount {
             return .inProgress(existing)
         }
@@ -489,6 +487,8 @@ enum SendOnchainSubmission {
 enum SendLightningSubmission {
     /// 60 s is today's server default, set explicitly; the server caps it (5 min by default).
     static func options(wait: Bool) -> LightningSendOptions { .init(wait: wait, retryForSecs: 60) }
+    /// The server's retry time and a margin (async-payments.md, "Long"): until then a pending send is simply paying.
+    static let overdueAfter: TimeInterval = 90
     /// What a payment made without waiting throws when bark returns it still paying. A send for another amount
     /// was never this attempt's: it is shown, not tracked.
     static func handedOver(_ send: LightningSend, amount: UInt64) -> any Error {

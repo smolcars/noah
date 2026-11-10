@@ -138,6 +138,14 @@ enum SendReconciliation {
         return completedSince == true ? .failed : .uncertain
     }
 
+    /// A send in progress on the hash of an attempt whose journal doesn't record it as its own. Nothing was in
+    /// progress when the attempt was prepared (its snapshot has no checkpoint), so a send for its amount is the one
+    /// its pay call started before the app stopped or the call failed: tracked as its own. Any other is only shown.
+    static func inProgress(_ attempt: SendPaymentController.Attempt, send: LightningSend) -> SendPaymentController.Resolution {
+        attempt.existingLightning == nil && send.amountSats == attempt.payment.amount
+            ? .pending(.init(send)) : .inProgress(.init(amount: send.amountSats, fee: send.feeSats))
+    }
+
     /// An attempt whose own send bark was still paying (`Attempt.pending`), from bark's state and movements now.
     /// A send that ended leaves no checkpoint, so the outcome is read from its hash's movement like any attempt's.
     static func pending(_ attempt: SendPaymentController.Attempt, checkpoint: SendLightningCheckpoint,

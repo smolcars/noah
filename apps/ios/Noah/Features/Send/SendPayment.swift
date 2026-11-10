@@ -178,6 +178,11 @@ struct SendLightningProgress: Codable, Equatable, Sendable {
         var pending: SendLightningCheckpoint?
         // swiftlint:disable:next discouraged_optional_collection - persisted send journal fields; older records lack them
         var possibleTxids: [String]?
+
+        /// Bark is paying this attempt's send and the server may still be retrying: nothing to check or override yet.
+        func isPaying(at now: Date = Date()) -> Bool {
+            pending != nil && now.timeIntervalSince(startedAt ?? .distantPast) < SendLightningSubmission.overdueAfter
+        }
     }
     struct Dependencies {
         var prepare: @Sendable (SendPayment, SendQuote) async throws -> SendSnapshot
@@ -502,7 +507,7 @@ struct SendLightningProgress: Codable, Equatable, Sendable {
     var canOverride: Bool {
         if unboundJournal != nil { return !checking }
         guard !checking, attempt != nil else { return false }
-        if state == .uncertain || state == .storageBlocked { return true }
+        if state == .uncertain || state == .storageBlocked { return attempt?.isPaying() != true }
         if case .succeeded(let receipt) = state { return receipt.broadcastRetryPending == true }
         return false
     }

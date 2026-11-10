@@ -51,6 +51,8 @@ import kotlinx.serialization.Serializable
 object SendLightningSubmission {
     /** 60 s is today's server default, set explicitly; the server caps it (5 min by default). */
     fun options(wait: Boolean) = LightningSendOptions(wait = wait, retryForSecs = 60u)
+    /** The server's retry time and a margin (async-payments.md, "Long"): until then a pending send is simply paying. */
+    const val overdueMillis = 90_000L
     /** What a payment made without waiting throws when bark returns it still paying. A send for another amount was
      *  never this attempt's: it is shown, not tracked. */
     fun handedOver(send: LightningSend, amount: Long): Exception =

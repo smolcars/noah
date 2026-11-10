@@ -254,9 +254,7 @@ internal class SdkSendWallet(private val wallet: Wallet, private val onchain: On
     }
     private suspend fun reconcileLightning(attempt: SendAttempt, hash: String): SendResolution {
         val state = wallet.lightningSendState(hash)
-        if (state is LightningSendStatus.InProgress) {
-            return SendResolution.InProgress(SendLightningProgress(state.send.amountSats.toLong(), state.send.feeSats.toLong()))
-        }
+        if (state is LightningSendStatus.InProgress) return SendReconciliation.inProgress(attempt, state.send)
         val existing = attempt.existingLightning
         if (existing != null && existing.amount != attempt.payment.amount) return SendResolution.InProgress(existing)
         val movements = wallet.history()
