@@ -130,8 +130,11 @@ internal class SdkSendWallet(private val wallet: Wallet, private val onchain: On
     override suspend fun pay(payment: SendPayment, quote: SendQuote, snapshot: SendSnapshot) = payInternal(payment, quote, snapshot, null)
     override suspend fun payGuarded(payment: SendPayment, quote: SendQuote, snapshot: SendSnapshot, beforeSubmit: () -> Unit) = payInternal(payment, quote,
         snapshot, beforeSubmit)
+    /** [beforeSubmit] marks an unattended payment, whose Lightning send waits for its outcome. Send's own don't
+     *  (async-payments.md): bark hands them to the server and [SendLightningPending] reports one still paying. */
     private suspend fun payInternal(payment: SendPayment, quote: SendQuote, snapshot: SendSnapshot, beforeSubmit: (() -> Unit)?): SendReceipt {
         requireSend(snapshot.walletIdentity == identity(), SendFailure.Reason.unresolved)
+        val options = SendLightningSubmission.options(wait = beforeSubmit != null)
         var receipt = SendReceipt(quote.amount)
         val lightning: LightningSendStatus? = when (payment.method) {
             // Persist the SDK's success result and the payment's movement id, never infer them from history candidates.
@@ -139,10 +142,13 @@ internal class SdkSendWallet(private val wallet: Wallet, private val onchain: On
                 proof = SendReceipt.Proof.submitReturnedArkSuccess); null }
             "lightning", "lnurl" -> payInvoice(payment, quote, snapshot, beforeSubmit)
             "offer" -> SendLightningSubmission.offer(wallet.pendingLightningSends()) { beforeSubmit?.invoke(); wallet.payLightningOffer(payment.destination,
-                payment.amount.toULong(), SendLightningSubmission.options) }
+                payment.amount.toULong(), options) }
             "onchain" -> { receipt = payOnchain(payment, quote); null }
             else -> throw SendFailure(SendFailure.Reason.invalid)
         }
+        // A reviewed checkpoint (snapshot.checkpoint) was only advanced, never paid here: it stays today's path.
+        if (!options.wait && snapshot.checkpoint == null && lightning is LightningSendStatus.InProgress)
+            throw SendLightningSubmission.handedOver(lightning.send, payment.amount)
         if (lightning != null) receipt = lightningReceipt(lightning, payment, quote, snapshot)
         // Metadata failure is never a payment failure and must never enable resubmission.
         if (payment.repeatMetadata != null) SendReconciliation.metadataMovementID(receipt, snapshot)?.let { id ->
@@ -163,7 +169,7 @@ internal class SdkSendWallet(private val wallet: Wallet, private val onchain: On
         return SendLightningSubmission.submit(resolved, state, wallet.history(), snapshot.checkpoint, quote,
             check = { beforeSubmit?.invoke(); wallet.checkLightningPayment(it, false) },
             pay = { beforeSubmit?.invoke(); wallet.payLightningInvoice(invoice,
-                if ((decoded.sats?.signum() ?: 0) > 0) null else payment.amount.toULong(), SendLightningSubmission.options) })
+                if ((decoded.sats?.signum() ?: 0) > 0) null else payment.amount.toULong(), SendLightningSubmission.options(wait = beforeSubmit != null)) })
     }
     private suspend fun payOnchain(payment: SendPayment, quote: SendQuote): SendReceipt {
         if (payment.source == SendSource.onchain) return broadcastPrepared(payment, quote)
@@ -210,6 +216,7 @@ internal class SdkSendWallet(private val wallet: Wallet, private val onchain: On
         requireSend(attempt.walletIdentity == identity(), SendFailure.Reason.unresolved)
         if (attempt.inspectionPending) return SendResolution.Uncertain
         attempt.snapshot.checkpoint?.let { return reconcileCheckpoint(attempt, it) }
+        attempt.pending?.let { return reconcilePending(attempt, it) }
         return when {
             attempt.payment.method == "onchain" && (attempt.payment.source == SendSource.onchain || attempt.receipt?.txid != null) ->
                 SendReconciliation.onchainStatus(attempt, sync = { synchronization.serialized { onchain.sync() } },
@@ -230,17 +237,30 @@ internal class SdkSendWallet(private val wallet: Wallet, private val onchain: On
         val status = checkpoint.advance(payment, quote, wallet.lightningSendState(checkpoint.paymentHash)) { wallet.checkLightningPayment(it, false) }
         return SendResolution.Paid(checkpoint.receipt(status, wallet.history(), payment, quote))
     }
+    /** This attempt's own send, still paying when last seen. Bark's mailbox and sync settle it too; this drives it once
+     *  (a status poll, never a payment) and reads what bark then records. */
+    private suspend fun reconcilePending(attempt: SendAttempt, checkpoint: SendCheckpoint): SendResolution {
+        val hash = checkpoint.paymentHash
+        // Its error proves nothing about the send (async-payments.md, "Errors"): the state is read again either way.
+        if (checkpoint.drives(wallet.lightningSendState(hash))) runCatching { wallet.checkLightningPayment(hash, false) }
+        return SendReconciliation.pending(attempt, checkpoint, wallet.lightningSendState(hash), wallet.history()).also { saveRepeatMetadata(it, attempt) }
+    }
+    /** A payment proven only on a later check still gets its repeat metadata; failing to save it changes nothing else. */
+    private suspend fun saveRepeatMetadata(resolution: SendResolution, attempt: SendAttempt) {
+        val (id, patch) = SendReconciliation.repeatMetadata(resolution, attempt) ?: return
+        try { wallet.updateHistoryMetadata(id, patch) }
+        catch (_: Exception) { warn("""Reconciled payment; repeat metadata could not be saved""") }
+    }
     private suspend fun reconcileLightning(attempt: SendAttempt, hash: String): SendResolution {
         val state = wallet.lightningSendState(hash)
-        if (state is LightningSendStatus.InProgress) {
-            return SendResolution.InProgress(SendLightningProgress(state.send.amountSats.toLong(), state.send.feeSats.toLong()))
-        }
+        if (state is LightningSendStatus.InProgress) return SendReconciliation.inProgress(attempt, state.send)
         val existing = attempt.existingLightning
         if (existing != null && existing.amount != attempt.payment.amount) return SendResolution.InProgress(existing)
         val movements = wallet.history()
         val widened = if (existing != null) attempt.copy(snapshot = attempt.snapshot.copy(movementIDs = attempt.snapshot.movementIDs + movements.map { it.id }))
         else attempt
-        return SendReconciliation.ark(widened, movements)
+        // Also the path of a send that finished before a relaunch could record it as pending.
+        return SendReconciliation.ark(widened, movements).also { saveRepeatMetadata(it, widened) }
     }
     override suspend fun discard(quote: SendQuote, includingClaimed: Boolean) {
         quote.prepared?.let { preparations.discard(it.id, includingClaimed) }

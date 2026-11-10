@@ -35,6 +35,21 @@ struct SendLightningCheckpoint: Codable, Equatable, Sendable {
             && amount == payment.amount && amount == quote.amount && fee <= quote.fee && total <= quote.total
     }
 
+    /// Whether the send bark reports in progress is still the one this checkpoint recorded.
+    func isSame(_ send: LightningSend) -> Bool {
+        send.paymentHash == paymentHash && send.amountSats == amount && (movementID == nil || send.movementId == movementID)
+    }
+
+    /// Whether a status check may drive bark for this attempt's own send (`Attempt.pending`): while it is still
+    /// that send, and once paid, where a drive finishes a settlement that was interrupted.
+    func drives(_ state: LightningSendStatus) -> Bool {
+        switch state {
+        case .inProgress(let send): isSame(send)
+        case .paid: true
+        case .unknown: false
+        }
+    }
+
     func advance(
         invoice: String, payment: SendPayment, quote: SendQuote, state: LightningSendStatus,
         check: @Sendable (String) async throws -> LightningSendStatus) async throws -> LightningSendStatus {

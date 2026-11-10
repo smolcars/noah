@@ -896,6 +896,7 @@
   <string name="gt_4831cbdad7ad0bb6">"ウォレットに関する緊急の通知にのみ使います。"</string>
   <string name="gt_1c307fc3ba1249c9">"これらのコインから差し引かれるのは、受け取り手数料のみです。"</string>
   <string name="gt_4de503f8d4f0bcbc">"利用可能なのは %1$s のみ"</string>
+  <string name="gt_70fddf8df1a561da">"Noahを開いて確認"</string>
   <string name="gt_e2abf2ae09785e85">"Noahを開いて%2$sに%1$sを送金してください。"</string>
   <string name="gt_f9d77f6cb2f252e8">"プロフィールを開く"</string>
   <string name="gt_3f940108cb1ecd9c">"設定を開く"</string>
@@ -952,6 +953,7 @@
   <string name="gt_2b79ccf58c27d73a">"支払い状況を取得できません"</string>
   <string name="gt_006fbb3905701e15">"支払いを受け付けました"</string>
   <string name="gt_f905e55761fc8b3a">"支払いは成功しましたが、再実行用のメタデータを保存できませんでした"</string>
+  <string name="gt_2f4dc9ff32daa792">"支払い処理中"</string>
   <string name="gt_331551b0de4157c9">"保留中"</string>
   <string name="gt_beb7d5eb6ac8b5fb">"Arkoor送信が保留中"</string>
   <string name="gt_92cbb83dfd8fe0d2">"Arkへの入金待ち"</string>

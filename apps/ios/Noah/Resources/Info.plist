@@ -69,6 +69,8 @@
 	<string>Allow $(NOAH_DISPLAY_NAME) to use your location to find nearby places that accept bitcoin.</string>
 	<key>NSPhotoLibraryUsageDescription</key>
 	<string>Allow $(NOAH_DISPLAY_NAME) to access your photos so that you can pick screenshots to share feedback.</string>
+	<key>NSSupportsLiveActivities</key>
+	<true/>
 	<key>NoahAppGroup</key>
 	<string>$(NOAH_APP_GROUP)</string>
 	<key>NoahAppVariant</key>

@@ -13,6 +13,16 @@ import kotlinx.serialization.Serializable
             quote.amount >= 0 && quote.fee >= 0 && quote.amount <= Long.MAX_VALUE - quote.fee &&
             this.invoice == SendDestination.cleaned(invoice).lowercase() && paymentHash == PaymentEncoding.invoice(invoice)?.hash &&
             amount == payment.amount && amount == quote.amount && fee <= quote.fee && amount + fee <= quote.total
+    /** Whether the send bark reports in progress is still the one this checkpoint recorded. */
+    fun isSame(send: LightningSend) =
+        send.paymentHash == paymentHash && send.amountSats.toLong() == amount && (movementID == null || send.movementId == movementID)
+    /** Whether a status check may drive bark for this attempt's own send ([SendAttempt.pending]): while it is still that
+     *  send, and once paid, where a drive finishes a settlement that was interrupted. */
+    fun drives(state: LightningSendStatus) = when (state) {
+        is LightningSendStatus.InProgress -> isSame(state.send)
+        is LightningSendStatus.Paid -> true
+        LightningSendStatus.Unknown -> false
+    }
     suspend fun advance(payment: SendPayment, quote: SendQuote, state: LightningSendStatus,
         check: suspend (String) -> LightningSendStatus): LightningSendStatus {
         if (!matches(payment.destination, payment, quote)) throw SendExistingLightning(SendLightningProgress(amount, fee))
@@ -39,9 +49,15 @@ import kotlinx.serialization.Serializable
     }
 }
 object SendLightningSubmission {
-    /** Every send waits for its outcome (wait = false is a later phase, see async-payments.md).
-     *  60 s is today's server default, set explicitly; the server caps it (5 min by default). */
-    val options = LightningSendOptions(wait = true, retryForSecs = 60u)
+    /** 60 s is today's server default, set explicitly; the server caps it (5 min by default). */
+    fun options(wait: Boolean) = LightningSendOptions(wait = wait, retryForSecs = 60u)
+    /** The server's retry time and a margin (async-payments.md, "Long"): until then a pending send is simply paying. */
+    const val overdueMillis = 90_000L
+    /** What a payment made without waiting throws when bark returns it still paying. A send for another amount was
+     *  never this attempt's: it is shown, not tracked. */
+    fun handedOver(send: LightningSend, amount: Long): Exception =
+        if (send.amountSats.toLong() == amount) SendLightningPending(SendCheckpoint(send))
+        else SendExistingLightning(SendLightningProgress(send.amountSats.toLong(), send.feeSats.toLong()))
     suspend fun offer(pending: List<LightningSend>, pay: suspend () -> LightningSendStatus): LightningSendStatus {
         requireSend(pending.isEmpty(), SendFailure.Reason.lightningInProgress)
         return pay()

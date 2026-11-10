@@ -896,6 +896,7 @@
   <string name="gt_4831cbdad7ad0bb6">"Only for urgent alerts about your wallet."</string>
   <string name="gt_1c307fc3ba1249c9">"Only the claim fee is deducted from these coins."</string>
   <string name="gt_4de503f8d4f0bcbc">"Only %1$s available"</string>
+  <string name="gt_70fddf8df1a561da">"Open Noah to check"</string>
   <string name="gt_e2abf2ae09785e85">"Open Noah to send %1$s to %2$s."</string>
   <string name="gt_f9d77f6cb2f252e8">"Open Profile"</string>
   <string name="gt_3f940108cb1ecd9c">"Open Settings"</string>
@@ -952,6 +953,7 @@
   <string name="gt_2b79ccf58c27d73a">"Payment status unavailable"</string>
   <string name="gt_006fbb3905701e15">"Payment submitted"</string>
   <string name="gt_f905e55761fc8b3a">"Payment succeeded; repeat metadata could not be saved"</string>
+  <string name="gt_2f4dc9ff32daa792">"Payments in progress"</string>
   <string name="gt_331551b0de4157c9">"Pending"</string>
   <string name="gt_beb7d5eb6ac8b5fb">"Pending Arkoor Send"</string>
   <string name="gt_92cbb83dfd8fe0d2">"Pending Board"</string>

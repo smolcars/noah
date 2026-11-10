@@ -151,6 +151,13 @@ import Observation
         if controller.attempt != nil || controller.state == .storageBlocked { lastAutomaticCheck = now }
         await controller.checkStatus()
     }
+    /// This attempt's Lightning send while bark is still paying it.
+    var pendingHash: String? { controller.attempt?.pending?.paymentHash }
+
+    /// While Send shows a payment bark is still paying; the 30 s automatic check still drives it.
+    func watchPending() async {
+        await SendPendingWatch.run(controller: controller) { [session] in try await session.pendingSendLightningHashes() }
+    }
     func maxSend() {
         guard !controller.locked else { return }
         discardReview()

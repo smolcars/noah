@@ -29,7 +29,7 @@ class SendController(private val dependencies: Dependencies,
     val loading get() = state == State.storageBlocked && message == null
     val canOverride get() = !checking && (unboundJournal != null || unreadableJournal ||
         (attempt != null && (state in listOf(State.uncertain, State.storageBlocked) ||
-            (state == State.succeeded && attempt?.receipt?.broadcastRetryPending == true))))
+            (state == State.succeeded && attempt?.receipt?.broadcastRetryPending == true)))) && attempt?.isPaying() != true
 
     fun invalidateForWalletChange() {
         recurringEvidenceDurable = false
@@ -200,8 +200,9 @@ class SendController(private val dependencies: Dependencies,
             val receipt = submitPayment(wallet, s)
             if (current != generation) return
             if (finish(SendResolution.Paid(receipt)) && receipt.txid != null) refreshPaid(wallet, s, receipt)
-        } catch (failure: SendAlreadyPaid) { if (current == generation) finish(SendResolution.AlreadyPaid(failure.receipt))
-        } catch (failure: SendExistingLightning) { if (current == generation) finish(SendResolution.InProgress(failure.progress))
+        } catch (failure: SendLightningPending) { finish(current, SendResolution.Pending(failure.checkpoint))
+        } catch (failure: SendAlreadyPaid) { finish(current, SendResolution.AlreadyPaid(failure.receipt))
+        } catch (failure: SendExistingLightning) { finish(current, SendResolution.InProgress(failure.progress))
         } catch (failure: SendNotSubmitted) {
             if (current != generation) return
             attempt = attempt?.copy(failureMessage = failure.reason.message); message = failure.reason.message; finish(SendResolution.Failed)
@@ -237,6 +238,8 @@ class SendController(private val dependencies: Dependencies,
         val current = generation
         checking = true
         try { dependencies.reservation { wallet -> if (current == generation) reconcile(wallet) } }
+        // A caller that stopped waiting (a screen's refresh ending) is not a failed check: the reservation finished it.
+        catch (cancelled: CancellationException) { throw cancelled }
         catch (_: Exception) { if (current == generation) showRefreshFailure() }
         finally { if (current == generation) checking = false }
     }
@@ -254,10 +257,12 @@ class SendController(private val dependencies: Dependencies,
         message = "Couldn't check the latest status. Showing the last known status." +
             if (attempt?.receipt == null || attempt?.receipt?.broadcastRetryPending == true) " This payment may still complete. Do not pay again." else ""
     }
+    /** Records what a submission's error proves, unless a newer submission or wallet superseded it. */
+    private fun finish(current: Int, resolution: SendResolution) { if (current == generation) finish(resolution) }
     private fun finish(resolution: SendResolution): Boolean {
         val current = attempt ?: return false
         if (resolution == SendResolution.Failed && current.receipt != null) return false
-        val (saved, outcome) = resolved(current, resolution)
+        val (saved, outcome) = resolved(current.copy(pending = null), resolution)
         attempt = saved
         val durable = try { dependencies.write(saved); true } catch (_: Exception) {
             message = "Payment status could not be saved. Check status again after restarting Noah."
@@ -278,6 +283,9 @@ class SendController(private val dependencies: Dependencies,
         }
         is SendResolution.AlreadyPaid -> saved.copy(alreadyPaid = resolution.receipt) to State.alreadyPaid
         is SendResolution.InProgress -> saved.copy(existingLightning = resolution.progress) to State.uncertain
+        // An offer's hash is first known from the send bark made for it.
+        is SendResolution.Pending ->
+            saved.copy(pending = resolution.checkpoint, paymentHash = saved.paymentHash ?: resolution.checkpoint.paymentHash) to State.uncertain
         is SendResolution.Candidates -> saved.copy(candidates = resolution.ids) to State.uncertain
         is SendResolution.PossibleTransactions -> saved.copy(possibleTxids = (saved.possibleTxids + resolution.ids).distinct()) to State.uncertain
         SendResolution.Failed -> saved.copy(failed = true) to State.failed

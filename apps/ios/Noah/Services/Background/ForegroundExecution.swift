@@ -9,6 +9,9 @@ enum ForegroundExecution {
             UIApplication.shared.connectedScenes.contains { $0.activationState == .foregroundActive }
     }
 
+    /// Whether bark's mailbox processor should run: Noah is in front, or a payment's background window is open.
+    @MainActor static var wantsMailbox: Bool { isActive || SendBackgroundWindow.shared.isOpen }
+
     @MainActor static func run(budget: RecurringSubmissionBudget = .init(),
                                isActive: @escaping @MainActor @Sendable () -> Bool = { Self.isActive },
                                _ operation: () async -> Void) async {

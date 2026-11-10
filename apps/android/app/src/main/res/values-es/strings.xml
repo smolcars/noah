@@ -908,6 +908,7 @@
   <string name="gt_4831cbdad7ad0bb6">"Solo para alertas urgentes sobre tu billetera."</string>
   <string name="gt_1c307fc3ba1249c9">"De estas monedas solo se descuenta la comisión de reclamación."</string>
   <string name="gt_4de503f8d4f0bcbc">"Solo %1$s disponible"</string>
+  <string name="gt_70fddf8df1a561da">"Abre Noah para comprobarlo"</string>
   <string name="gt_e2abf2ae09785e85">"Abre Noah para enviar %1$s a %2$s."</string>
   <string name="gt_f9d77f6cb2f252e8">"Abrir perfil"</string>
   <string name="gt_3f940108cb1ecd9c">"Abrir ajustes"</string>
@@ -964,6 +965,7 @@
   <string name="gt_2b79ccf58c27d73a">"Estado del pago no disponible"</string>
   <string name="gt_006fbb3905701e15">"Pago iniciado"</string>
   <string name="gt_f905e55761fc8b3a">"El pago se realizó correctamente; no se pudieron guardar los metadatos para repetirlo"</string>
+  <string name="gt_2f4dc9ff32daa792">"Pagos en curso"</string>
   <string name="gt_331551b0de4157c9">"Pendiente"</string>
   <string name="gt_beb7d5eb6ac8b5fb">"Envío Arkoor pendiente"</string>
   <string name="gt_92cbb83dfd8fe0d2">"Incorporación pendiente"</string>

@@ -54,9 +54,8 @@ class SendLightningRetryTest {
             }
         }
         override suspend fun reconcile(attempt: SendAttempt): SendResolution {
-            (state as? LightningSendStatus.InProgress)?.let {
-                return SendResolution.InProgress(SendLightningProgress(it.send.amountSats.toLong(), it.send.feeSats.toLong()))
-            }
+            (state as? LightningSendStatus.InProgress)?.let { return SendReconciliation.inProgress(attempt, it.send) }
+            attempt.pending?.let { return SendReconciliation.pending(attempt, it, state, movements) }
             if (attempt.existingLightning != null && attempt.existingLightning.amount != attempt.payment.amount)
                 return SendResolution.InProgress(attempt.existingLightning)
             return SendReconciliation.ark(if (attempt.existingLightning != null)
@@ -244,8 +243,9 @@ class SendLightningRetryTest {
         bark.checkpoint = LightningSend(hash, emptyList(), 1u, invoice(), 1000u, 79u, 5u, false)
         restarted.checkStatus()
         assertEquals(SendController.State.uncertain, restarted.state)
-        assertEquals(SendLightningProgress(1000, 79), journal.attempt!!.existingLightning)
-        assertEquals(SendEnding.pending, SendEnding.of(restarted.state, restarted.attempt, null, false))
+        // A send for the reviewed amount where none was in progress at review is this attempt's own.
+        assertEquals(hash, journal.attempt!!.pending!!.paymentHash); assertNull(journal.attempt!!.existingLightning)
+        assertEquals(SendEnding.pending, SendEnding.of(restarted.state, restarted.attempt, null, true))
         // It pays: Sent, with this attempt's receipt and fee.
         bark.checkpoint = null; bark.finish("successful", -1079)
         restarted.checkStatus()

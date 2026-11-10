@@ -180,6 +180,8 @@ internal object SendProgressRules {
         SendController.State.uncertain -> when {
             !finished -> SendMilestone.paying.takeIf { attempt != null && !attempt.inspectionPending }
             attempt?.existingLightning != null && attempt.payment.method in lightningMethods -> SendMilestone.pending
+            // Paid without waiting: bark returns in a moment, so the bolt keeps looping until "Still paying" is due.
+            attempt?.pending != null -> SendMilestone.paying
             else -> SendMilestone.stopped
         }
         SendController.State.alreadyPaid, SendController.State.storageBlocked -> if (finished) SendMilestone.stopped else null

@@ -13,6 +13,11 @@ object SendReconciliation {
     /** The exact movement for history metadata, never a destination/amount/time match.
      *  Movements that predate the attempt (an inherited Lightning checkpoint) are left untouched. */
     fun metadataMovementID(receipt: SendReceipt, snapshot: SendSnapshot): UInt? = receipt.movementID?.takeIf { it !in snapshot.movementIDs }
+    /** What a status check that proves this attempt paid still owes its movement: the payment's repeat metadata. */
+    fun repeatMetadata(resolution: SendResolution, attempt: SendAttempt): Pair<UInt, String>? {
+        val patch = attempt.payment.repeatMetadata ?: return null
+        return (resolution as? SendResolution.Paid)?.let { metadataMovementID(it.receipt, attempt.snapshot) }?.let { it to patch }
+    }
     fun isLightning(movement: Movement,
         hash: String) = movement.subsystemName == "bark.lightning_send" && movement.subsystemKind == "send" && movement.paymentHash == hash
     fun matches(movement: Movement, payment: SendPayment, hash: String?): Boolean {
@@ -87,6 +92,24 @@ object SendReconciliation {
             }
         }
         return failedAttempt(movement, actual, amount, completedSince)
+    }
+    /** A send in progress on the hash of an attempt whose journal doesn't record it as its own. Nothing was in progress
+     *  when the attempt was prepared (its snapshot has no checkpoint), so a send for its amount is the one its pay call
+     *  started before the app stopped or the call failed: tracked as its own. Any other is only shown. */
+    fun inProgress(attempt: SendAttempt, send: LightningSend): SendResolution =
+        if (attempt.existingLightning == null && send.amountSats.toLong() == attempt.payment.amount) SendResolution.Pending(SendCheckpoint(send))
+        else SendResolution.InProgress(SendLightningProgress(send.amountSats.toLong(), send.feeSats.toLong()))
+    /** An attempt whose own send bark was still paying ([SendAttempt.pending]), from bark's state and movements now.
+     *  A send that ended leaves no checkpoint, so the outcome is read from its hash's movement like any attempt's. */
+    fun pending(attempt: SendAttempt, checkpoint: SendCheckpoint, state: LightningSendStatus, movements: List<Movement>): SendResolution {
+        if (state is LightningSendStatus.InProgress) {
+            // Another send on this hash was never reviewed here: shown, not driven.
+            return if (checkpoint.isSame(state.send)) SendResolution.Pending(checkpoint)
+            else SendResolution.InProgress(SendLightningProgress(state.send.amountSats.toLong(), state.send.feeSats.toLong()))
+        }
+        val hash = checkpoint.paymentHash
+        return lightningAttempt(movements.filter { isLightning(it, hash) }, hash, attempt.payment.amount, attempt.snapshot, attempt.startedAt,
+            fixesAmount(attempt.snapshot.resolvedInvoice ?: attempt.payment.destination))
     }
     /** Failed only when the movement for this amount failed and completed after this attempt started. */
     private fun failedAttempt(movement: Movement, actual: Long, amount: Long, completedSince: Boolean?): SendResolution {

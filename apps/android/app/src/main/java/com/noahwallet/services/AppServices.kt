@@ -352,12 +352,17 @@ class AppServices private constructor(private val context: Context) {
         finally { cancellation.dispose() }
     }
 
-    /** The app left the front: stop processing the mailbox until the next foreground pass. */
+    /** The app left the front, or a payment's service started or stopped: the mailbox processor follows what holds now. */
     fun stopMailboxProcessor() { scope.launch { reconcileMailboxProcessor() } }
 
-    /** Runs the mailbox processor exactly while the app is visible ([com.noahwallet.services.background.PeriodicExecution]). */
+    /** Runs the mailbox processor exactly while the app is visible ([com.noahwallet.services.background.PeriodicExecution])
+     *  or a payment's background window is open ([com.noahwallet.services.background.SendPendingService]). */
     private suspend fun reconcileMailboxProcessor() {
-        try { session.reconcileMailboxProcessor(com.noahwallet.services.background.PeriodicExecution::isForeground) }
+        try {
+            session.reconcileMailboxProcessor {
+                com.noahwallet.services.background.PeriodicExecution.isForeground || com.noahwallet.services.background.SendPendingService.running
+            }
+        }
         catch (cancelled: CancellationException) { throw cancelled }
         catch (@Suppress("TooGenericExceptionCaught") failure: Exception) { // the next foreground pass tries again
             AppLog(context, "mailbox").w("Mailbox processor update failed (${failure::class.simpleName})")

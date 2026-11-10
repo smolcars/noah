@@ -19,6 +19,14 @@ enum SendReconciliation {
         return id
     }
 
+    /// What a status check that proves this attempt paid still owes its movement: the payment's repeat metadata.
+    static func repeatMetadata(_ resolution: SendPaymentController.Resolution,
+                               attempt: SendPaymentController.Attempt) -> (movementID: UInt32, patch: String)? {
+        guard case .paid(let receipt) = resolution, let patch = attempt.payment.repeatMetadata,
+              let id = metadataMovementID(receipt, snapshot: attempt.snapshot) else { return nil }
+        return (id, patch)
+    }
+
     static func matches(_ movement: Movement, payment: SendPayment, hash: String?) -> Bool {
         guard payment.source != .onchain else { return false }
         let subsystem = movement.subsystemName.lowercased()
@@ -136,6 +144,29 @@ enum SendReconciliation {
         }
         guard actual == amount, ["failed", "canceled"].contains(movement.status) else { return .uncertain }
         return completedSince == true ? .failed : .uncertain
+    }
+
+    /// A send in progress on the hash of an attempt whose journal doesn't record it as its own. Nothing was in
+    /// progress when the attempt was prepared (its snapshot has no checkpoint), so a send for its amount is the one
+    /// its pay call started before the app stopped or the call failed: tracked as its own. Any other is only shown.
+    static func inProgress(_ attempt: SendPaymentController.Attempt, send: LightningSend) -> SendPaymentController.Resolution {
+        attempt.existingLightning == nil && send.amountSats == attempt.payment.amount
+            ? .pending(.init(send)) : .inProgress(.init(amount: send.amountSats, fee: send.feeSats))
+    }
+
+    /// An attempt whose own send bark was still paying (`Attempt.pending`), from bark's state and movements now.
+    /// A send that ended leaves no checkpoint, so the outcome is read from its hash's movement like any attempt's.
+    static func pending(_ attempt: SendPaymentController.Attempt, checkpoint: SendLightningCheckpoint,
+                        state: LightningSendStatus, movements: [Movement]) -> SendPaymentController.Resolution {
+        if case .inProgress(let send) = state {
+            // Another send on this hash was never reviewed here: shown, not driven.
+            return checkpoint.isSame(send) ? .pending(checkpoint) : .inProgress(.init(amount: send.amountSats, fee: send.feeSats))
+        }
+        let hash = checkpoint.paymentHash
+        return lightningAttempt(
+            movements.filter { $0.subsystemName == "bark.lightning_send" && $0.subsystemKind == "send" && $0.paymentHash == hash },
+            paying: .init(hash: hash, amount: attempt.payment.amount), snapshot: attempt.snapshot, startedAt: attempt.startedAt,
+            fixed: fixesAmount(attempt.snapshot.resolvedInvoice ?? attempt.payment.destination))
     }
 
     /// The hash's one Lightning send movement and what it sent, if its amounts add up.

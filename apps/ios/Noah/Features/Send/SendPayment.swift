@@ -137,6 +137,8 @@ enum SendFailure: LocalizedError {
 struct SendNotSubmitted: Error { let reason: SendFailure }
 struct SendAlreadyPaid: Error { let receipt: SendReceipt }
 struct SendExistingLightning: Error { let progress: SendLightningProgress }
+/// Paid without waiting (async-payments.md): bark took this attempt's send and is still paying it.
+struct SendLightningPending: Error { let checkpoint: SendLightningCheckpoint }
 struct SendLightningProgress: Codable, Equatable, Sendable {
     var amount: UInt64
     var fee: UInt64
@@ -171,8 +173,16 @@ struct SendLightningProgress: Codable, Equatable, Sendable {
         var candidates: [SendCandidate]?
         var failureMessage: String?
         var existingLightning: SendLightningProgress?
+        /// This attempt's own Lightning send while bark reports it in progress. Status checks may drive it; they
+        /// never pay. Cleared by every other resolution.
+        var pending: SendLightningCheckpoint?
         // swiftlint:disable:next discouraged_optional_collection - persisted send journal fields; older records lack them
         var possibleTxids: [String]?
+
+        /// Bark is paying this attempt's send and the server may still be retrying: nothing to check or override yet.
+        func isPaying(at now: Date = Date()) -> Bool {
+            pending != nil && now.timeIntervalSince(startedAt ?? .distantPast) < SendLightningSubmission.overdueAfter
+        }
     }
     struct Dependencies {
         var prepare: @Sendable (SendPayment, SendQuote) async throws -> SendSnapshot
@@ -194,6 +204,7 @@ struct SendLightningProgress: Codable, Equatable, Sendable {
         case alreadyPaid(SendReceipt)
         case candidates([SendCandidate])
         case inProgress(SendLightningProgress)
+        case pending(SendLightningCheckpoint)
         case possibleTransactions([String])
         case failed
     }
@@ -383,7 +394,9 @@ struct SendLightningProgress: Codable, Equatable, Sendable {
     }
     /// A submission that threw: what its error proves, or a status check when it proves nothing.
     private func submitFailed(_ error: any Error) async {
-        if let error = error as? SendExistingLightning {
+        if let error = error as? SendLightningPending {
+            finish(.pending(error.checkpoint))
+        } else if let error = error as? SendExistingLightning {
             finish(.inProgress(error.progress))
         } else if let error = error as? SendAlreadyPaid {
             finish(.alreadyPaid(error.receipt))
@@ -436,8 +449,14 @@ struct SendLightningProgress: Codable, Equatable, Sendable {
     private func finish(_ resolution: Resolution) {
         guard var attempt else { return }
         attempt.safetyVersion = 3
+        attempt.pending = nil
         var outcome = state
         switch resolution {
+        case .pending(let checkpoint):
+            attempt.pending = checkpoint
+            // An offer's hash is first known from the send bark made for it.
+            attempt.paymentHash = attempt.paymentHash ?? checkpoint.paymentHash
+            outcome = .uncertain
         case .uncertain:
             if attempt.receipt?.txid != nil { attempt.receipt?.status = .unlocated }
             outcome = .uncertain
@@ -468,24 +487,27 @@ struct SendLightningProgress: Codable, Equatable, Sendable {
         do { try dependencies.write(attempt) } catch {
             message = "Payment status could not be saved. Check status again after restarting Noah."
         }
-        if attempt.recurringOccurrenceKey != nil {
-            do {
-                guard let persistRecurringEvidence else { throw SendFailure.unresolved }
-                try persistRecurringEvidence(attempt, generation, walletGeneration, outcome, message)
-                recurringEvidenceDurable = true
-            } catch {
-                recurringEvidenceDurable = false
-                state = .storageBlocked
-                message = "Payment status could not be saved. Check status again after restarting Noah."
-                return
-            }
-        }
+        if attempt.recurringOccurrenceKey != nil, !persistRecurring(attempt, outcome) { return }
         state = outcome
+    }
+    /// False, with Send storage-blocked, when the recurring journal can't record this outcome.
+    private func persistRecurring(_ attempt: Attempt, _ outcome: State) -> Bool {
+        do {
+            guard let persistRecurringEvidence else { throw SendFailure.unresolved }
+            try persistRecurringEvidence(attempt, generation, walletGeneration, outcome, message)
+            recurringEvidenceDurable = true
+            return true
+        } catch {
+            recurringEvidenceDurable = false
+            state = .storageBlocked
+            message = "Payment status could not be saved. Check status again after restarting Noah."
+            return false
+        }
     }
     var canOverride: Bool {
         if unboundJournal != nil { return !checking }
         guard !checking, attempt != nil else { return false }
-        if state == .uncertain || state == .storageBlocked { return true }
+        if state == .uncertain || state == .storageBlocked { return attempt?.isPaying() != true }
         if case .succeeded(let receipt) = state { return receipt.broadcastRetryPending == true }
         return false
     }
@@ -578,6 +600,6 @@ extension SendPaymentController.Dependencies {
                     .record(attempt, generations: .init(generation: generation, walletGeneration: walletGeneration),
                             message: message, binding: RecurringStore.binding(location: location), now: RecurringPayment.now)
             },
-            guardedPay: { try await session.submitSend($0, quote: $1, snapshot: $2, beforeSubmit: $3) })
+            guardedPay: { try await session.submitSend($0, quote: $1, snapshot: $2, wait: true, beforeSubmit: $3) })
     }
 }

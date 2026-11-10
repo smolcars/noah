@@ -59,6 +59,9 @@ import Testing
                     try self.onPay(self)
                     return self.state
                 }
+            if snapshot.checkpoint == nil, case .inProgress(let send) = status {
+                throw SendLightningSubmission.handedOver(send, amount: payment.amount)
+            }
             guard case .paid(let paidHash, let preimage) = status, !preimage.isEmpty else { throw SendFailure.unresolved }
             switch SendReconciliation.lightningAttempt(
                 movements,
@@ -73,7 +76,10 @@ import Testing
         }
 
         func reconcile(_ attempt: SendPaymentController.Attempt) -> SendPaymentController.Resolution {
-            if case .inProgress(let send) = state { return .inProgress(.init(amount: send.amountSats, fee: send.feeSats)) }
+            if let pending = attempt.pending {
+                return SendReconciliation.pending(attempt, checkpoint: pending, state: state, movements: movements)
+            }
+            if case .inProgress(let send) = state { return SendReconciliation.inProgress(attempt, send: send) }
             if let existing = attempt.existingLightning, existing.amount != attempt.payment.amount { return .inProgress(existing) }
             var tracked = attempt
             if attempt.existingLightning != nil { tracked.snapshot.movementIDs.formUnion(movements.map(\.id)) }
@@ -356,8 +362,10 @@ import Testing
                                         amountSats: 1000, feeSats: 79, htlcVtxoCount: 1, hasFailedRevocation: false)
         await restarted.checkStatus()
         #expect(restarted.state == .uncertain)
-        #expect(storage.attempt?.existingLightning == .init(amount: 1000, fee: 79))
-        #expect(SendMotion.outcome(state: restarted.state, attempt: restarted.attempt, checking: false, refund: nil) == .pending)
+        // A send for the reviewed amount where none was in progress at review is this attempt's own.
+        #expect(storage.attempt?.pending?.paymentHash == hash && storage.attempt?.existingLightning == nil)
+        #expect(SendMotion.outcome(state: restarted.state, attempt: restarted.attempt, checking: false, refund: nil,
+                                   now: Date().addingTimeInterval(60)) == .pending)
         // It pays: Sent, with this attempt's receipt and fee.
         bark.checkpoint = nil
         bark.finish("successful", effective: -1079)

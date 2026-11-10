@@ -1,6 +1,42 @@
 # Background payments: design
 
-**Status:** draft for review, revised after three reviews on 2026-10-22. Design only; no app or server code changes.
+**Status:** design reviewed 2026-10-22. Step 1 of the revised plan below is built (2026-11-10); the sections after it are the original design and still describe the later steps.
+
+## Revised plan (user, 2026-11-10)
+
+Two things changed since the design: bark 0.8.1 (bark-bolt-ffi 0.11.0, which both apps pin) carries bark change 2, and the apps no longer run bark's daemon (`runDaemon: false`), so nothing but the app's own calls, its foreground sync and the mailbox processor drives a send.
+
+| Step | What | State |
+| --- | --- | --- |
+| 0. Proof | LND hold invoices paid with `wait: false` through the FFI on regtest: the call returns in 150–350 ms; the mailbox alone settles or refunds in about 260 ms; checks alone, a plain sync, and a new process after a kill all reach the same result; a second pay on a pending invoice returns it in progress without paying again. | Done |
+| 1. Pending state | Send's Lightning payments use `wait: false`; a send still paying is a normal state, tracked until bark's records end it. | Built |
+| 2a. Background window | iOS background task; Android short foreground service with a plain ongoing notification; the mailbox processor stays on and the payment is checked for that window. | Built |
+| 2b. System UI | iOS Live Activity (and a result notification when Live Activities are off); Android progress notification (`ProgressStyle`, Live Update) on its own channel. | Built |
+| 3. Server push | Silent `lightning_send_finished` push for a closed app. | Later |
+
+Cut for now: recurring payments stay on `wait: true`; on-chain progress outside the app (phase 5); raw APNs Live Activity updates (phase 6).
+
+**Step 1 as built.** It is smaller than "Payment watch" below, and replaces it for sends from the Send screen:
+
+- **One record.** The send journal's attempt gains `pending`: the send bark returned in progress from this attempt's own pay call. Offers learn their payment hash from it. There is no separate watch store or coordinator; the Send controller stays the one writer.
+- **Adopted after a stop.** If the app stops, or the call fails, after bark took the payment but before the journal recorded it, the next status check finds a send in progress for the reviewed amount where none was at review (the snapshot has no checkpoint) and tracks it as the attempt's own. A send for another amount is only shown, as before.
+- **Ends on bark's records only.** In progress stays pending. Otherwise the hash's movement decides, by the existing rules: successful is Sent, failed or canceled is Failed (bark reports a refunded send as `Unknown`, so the status alone never says failed), anything else is "may have been sent".
+- **Who drives.** While Noah is in front, bark's mailbox processor settles the send and the 60 s sync drives it. A status check also drives it once (`checkLightningPayment`, never a payment) and reads the result; a check's error proves nothing and the state is read again.
+- **Who notices.** While Send shows the payment, a 1 s read of bark's pending list (local, no network) triggers a status check when the send leaves it; the 30 s automatic check and the check on entering Send remain.
+- **What it looks like.** The stage keeps "Sending" until "Still paying" is due, then the "Still sending" result, as a slow payment always has. The override ("Pay again anyway") waits 90 s (`retry_for` + 30 s). Send stays locked while pending, across restarts.
+- **Not built:** parking an overridden attempt, the `Finishing`/`Stuck` lines, and time-to-result telemetry.
+
+**Step 2a as built.** One watch (`SendPendingWatch`) serves Send's pending result and the window: the 1 s read of bark's pending list, plus a status check every 10 s when nothing else checks. The window only keeps that watch and bark's mailbox processor running; it never pays.
+
+- **iOS.** Entering the background with a payment in flight (pending, or its pay call still running) opens `SendBackgroundWindow`: a `beginBackgroundTask` held for at most 22 s (iOS gave 26 s on the simulator), closed early when the payment ends or Noah returns. Closing lets the mailbox processor follow the app's state again, then ends the task. No UI yet.
+- **Android.** Hold-to-send on the Lightning rail starts `SendPendingService` while Noah is visible: `shortService` on Android 14+, capped at 120 s (`retry_for` + 60 s) everywhere. Its watch idles while Noah is in front, where Send's own screen watches. The notification uses the existing "Noah notifications" channel, silent and amount-free: "Sending" while it runs; when it stops out of sight, "Sent", "Payment failed", or a quiet "Sending · Still paying" left behind at the cap. Opening Noah clears it. Android defers a foreground service's notification for 10 s, so a quick payment shows none, except within two minutes of a previous deferred one, when Android shows it at once.
+**Step 2b as built.** Nothing in it shows an amount, a recipient or an identifier, on either platform; amounts in Android's notifications (decision 5's counterpart) are not built.
+
+- **iOS Live Activity.** `SendActivityCenter` follows the send journal from the moment Noah first comes to the front. A Lightning payment of Send's own (never a recurring one) gets an activity as it is submitted: "Sending · Paying over Lightning", then "Still paying" from 12 s, each update good for 3 minutes, after which it reads "Open Noah to check". A result reached in front removes it; one reached out of sight is shown in the Dynamic Island for about 4 s (the window stays open 5 s for it), then the activity ends and stays on the Lock Screen for 15 minutes. "Back in your wallet" appears only with the recorded refund. ActivityKit is the only record of a running activity, so nothing is stored. With Live Activities off, a result reached out of sight is a local notification with the same title and line.
+- **Android.** The ongoing notification has its own channel, "Payments in progress" (importance DEFAULT, no sound or vibration; renamed with the app's language each time it is built), and says "Still paying" from 10 s. On Android 16 it is a `ProgressStyle` of three segments with the first filled and asks to be promoted; below, an indeterminate bar. Results stay on "Noah notifications". At the cap the notification left behind reads "Sending · Open Noah to check".
+- **Not seen on a device.** Android 16's promotion (the emulator image has no Live Updates), the iOS fallback notification (the simulator never grants notification permission), and the minimal Dynamic Island.
+
+- **Seen on regtest.** A payment settled or cancelled inside the window is in the journal about a second later, and Send shows the result at first look on return. One cancel in six reached the app only after the window: the Ark server answered "still paying" for about 20 s. Whatever misses the window is picked up on return, as in step 1.
 
 **Scope:**
 - Lightning sends that outlast the screen.
