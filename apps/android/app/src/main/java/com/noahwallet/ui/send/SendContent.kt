@@ -122,7 +122,11 @@ enum class SendEnding { sending, arkSent, lightningSent, chainSent, pending, ref
                 SendController.State.succeeded -> sent(route)
                 SendController.State.failed -> failed(route, refund)
                 SendController.State.alreadyPaid -> alreadyPaid
-                SendController.State.uncertain -> if (route == SendRoute.lightning && attempt.existingLightning != null) pending else unknown
+                SendController.State.uncertain -> when {
+                    route == SendRoute.lightning && attempt.existingLightning != null -> pending
+                    attempt?.pending != null -> if (stillPaying) pending else sending
+                    else -> unknown
+                }
                 SendController.State.storageBlocked -> unavailable
             }
         }
@@ -945,7 +949,9 @@ private fun SendingStep(presentation: SendPresentation, env: SendEnv, actions: S
     val live = presentation.motion?.takeIf { it.route == route }
     val waitingForBlock = receipt?.chainStatus?.kind != com.noahwallet.services.wallet.ChainStatus.Kind.confirmed
     val elapsed by rememberSendClock(live, waitingForBlock, reduceMotion)
-    val ending = SendEnding.of(controller.state, attempt, env.refund, live?.let { SendTimeline.stillPaying(it, elapsed, reduceMotion) } ?: false)
+    // Without a live motion (a saved attempt), a send bark is still paying shows its pending result at once.
+    val ending = SendEnding.of(controller.state, attempt, env.refund,
+        live?.let { SendTimeline.stillPaying(it, elapsed, reduceMotion) } ?: (attempt?.pending != null))
     val motion = live ?: SendMotion(route, 0, staticMilestones(ending, receipt?.broadcastRetryPending == true))
     MotionHaptics(presentation, live, SendTimeline.started(motion, elapsed, reduceMotion), elapsed)
     val amount = sentAmount(receipt, attempt, payment)

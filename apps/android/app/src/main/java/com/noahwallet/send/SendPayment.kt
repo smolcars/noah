@@ -73,7 +73,10 @@ import kotlinx.serialization.json.*
     val snapshot: SendSnapshot = SendSnapshot(), val receipt: SendReceipt? = null, val alreadyPaid: SendReceipt? = null,
     val failed: Boolean = false, val startedAt: Long = System.currentTimeMillis(), val paymentHash: String? = null,
     val quote: SendQuote? = null, val failureMessage: String? = null, val existingLightning: SendLightningProgress? = null,
-    val possibleTxids: List<String> = emptyList(), val candidates: List<UInt> = emptyList())
+    val possibleTxids: List<String> = emptyList(), val candidates: List<UInt> = emptyList(),
+    /** This attempt's own Lightning send while bark reports it in progress. Status checks may drive it; they never pay.
+     *  Cleared by every other resolution. */
+    val pending: SendCheckpoint? = null)
 @Serializable data class SendLightningProgress(val amount: Long, val fee: Long) {
     val message get() = "A payment of $amount sats for this invoice is already in progress. Do not pay again."
 }
@@ -95,11 +98,14 @@ internal fun requireSend(value: Boolean, reason: SendFailure.Reason = SendFailur
 class SendNotSubmitted(val reason: SendFailure.Reason) : Exception()
 class SendAlreadyPaid(val receipt: SendReceipt) : Exception()
 class SendExistingLightning(val progress: SendLightningProgress) : Exception()
+/** Paid without waiting (async-payments.md): bark took this attempt's send and is still paying it. */
+class SendLightningPending(val checkpoint: SendCheckpoint) : Exception()
 sealed interface SendResolution {
     data object Uncertain : SendResolution
     data class Paid(val receipt: SendReceipt) : SendResolution
     data class AlreadyPaid(val receipt: SendReceipt) : SendResolution
     data class InProgress(val progress: SendLightningProgress) : SendResolution
+    data class Pending(val checkpoint: SendCheckpoint) : SendResolution
     data class Candidates(val ids: List<UInt>) : SendResolution
     data class PossibleTransactions(val ids: List<String>) : SendResolution
     data object Failed : SendResolution

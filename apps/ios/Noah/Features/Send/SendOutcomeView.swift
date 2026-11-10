@@ -556,7 +556,8 @@ extension SendOutcomeView {
                 case .close: pill("Done", id: "send-leave", prominent: false) { onLeave() }
                 }
             }
-            if controller.canOverride { overrideAction }
+            // A payment bark has only just taken is uncertain too, but still "Sending": nothing to override yet.
+            if controller.canOverride, kind != .sending { overrideAction }
         }
         .animation(NoahTokens.Motion.travel(reduceMotion), value: resultShown)
     }

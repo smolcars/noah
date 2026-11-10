@@ -35,7 +35,7 @@ struct SendView: View {
     }
 
     private var visible: Bool { isActive && scenePhase == .active && !app.isWalletSuspended }
-    private var receiptRefreshID: String? { visible ? model.controller.attempt?.receipt?.txid : nil }
+    private var receiptRefreshID: String? { visible ? model.controller.attempt?.receipt?.txid ?? model.pendingHash : nil }
     private var screen: SendScreen { SendScreen.of(model) }
     private var wide: Bool { window.wide }
     private var ownDomain: String { LightningIdentity.domain(for: .current) }
@@ -73,12 +73,13 @@ struct SendView: View {
         }
         .task(id: receiptRefreshID) {
             guard receiptRefreshID != nil else { return }
-            // The block row's tip on returning, without waiting for the next check.
-            if chainTip == nil, let next = try? await WalletSession.shared.chainTip(), !Task.isCancelled { chainTip = next }
+            // The block row's tip on returning, without waiting for the next check. Only a transaction has one.
+            if model.pendingHash == nil, chainTip == nil, let next = try? await WalletSession.shared.chainTip(), !Task.isCancelled { chainTip = next }
             await SendReceiptRefresh.observe(wait: { model.untilAutomaticCheck() }, tip: {
-                if let next = try? await WalletSession.shared.chainTip(), !Task.isCancelled { chainTip = next }
+                if model.pendingHash == nil, let next = try? await WalletSession.shared.chainTip(), !Task.isCancelled { chainTip = next }
             }, check: { await model.automaticStatusCheck() })
         }
+        .task(id: visible ? model.pendingHash : nil) { if visible { await model.watchPending() } }
         .onChange(of: app.summary) { _, summary in
             model.arkBalance = summary?.balance.ark.spendable ?? 0
             model.onchainBalance = summary?.balance.onchain.confirmed ?? 0

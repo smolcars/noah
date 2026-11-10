@@ -151,6 +151,18 @@ import Observation
         if controller.attempt != nil || controller.state == .storageBlocked { lastAutomaticCheck = now }
         await controller.checkStatus()
     }
+    /// This attempt's Lightning send while bark is still paying it.
+    var pendingHash: String? { controller.attempt?.pending?.paymentHash }
+
+    /// Bark's mailbox settles a send without telling the app. Its pending list is a local read: once the send
+    /// leaves it, the status check records the outcome. The 30 s automatic check still drives it.
+    func watchPending() async {
+        guard let hash = pendingHash else { return }
+        while !Task.isCancelled {
+            do { try await Task.sleep(for: .seconds(1)) } catch { return }
+            if let pending = try? await session.pendingSendLightningHashes(), !pending.contains(hash) { await controller.checkStatus() }
+        }
+    }
     func maxSend() {
         guard !controller.locked else { return }
         discardReview()

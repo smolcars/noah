@@ -138,6 +138,21 @@ enum SendReconciliation {
         return completedSince == true ? .failed : .uncertain
     }
 
+    /// An attempt whose own send bark was still paying (`Attempt.pending`), from bark's state and movements now.
+    /// A send that ended leaves no checkpoint, so the outcome is read from its hash's movement like any attempt's.
+    static func pending(_ attempt: SendPaymentController.Attempt, checkpoint: SendLightningCheckpoint,
+                        state: LightningSendStatus, movements: [Movement]) -> SendPaymentController.Resolution {
+        if case .inProgress(let send) = state {
+            // Another send on this hash was never reviewed here: shown, not driven.
+            return checkpoint.isSame(send) ? .pending(checkpoint) : .inProgress(.init(amount: send.amountSats, fee: send.feeSats))
+        }
+        let hash = checkpoint.paymentHash
+        return lightningAttempt(
+            movements.filter { $0.subsystemName == "bark.lightning_send" && $0.subsystemKind == "send" && $0.paymentHash == hash },
+            paying: .init(hash: hash, amount: attempt.payment.amount), snapshot: attempt.snapshot, startedAt: attempt.startedAt,
+            fixed: fixesAmount(attempt.snapshot.resolvedInvoice ?? attempt.payment.destination))
+    }
+
     /// The hash's one Lightning send movement and what it sent, if its amounts add up.
     private static func sent(_ candidates: [Movement], hash: String) -> (Movement, UInt64)? {
         guard candidates.count == 1, let movement = candidates.first,

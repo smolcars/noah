@@ -59,6 +59,9 @@ import Testing
                     try self.onPay(self)
                     return self.state
                 }
+            if snapshot.checkpoint == nil, case .inProgress(let send) = status {
+                throw SendLightningSubmission.handedOver(send, amount: payment.amount)
+            }
             guard case .paid(let paidHash, let preimage) = status, !preimage.isEmpty else { throw SendFailure.unresolved }
             switch SendReconciliation.lightningAttempt(
                 movements,
@@ -73,6 +76,9 @@ import Testing
         }
 
         func reconcile(_ attempt: SendPaymentController.Attempt) -> SendPaymentController.Resolution {
+            if let pending = attempt.pending {
+                return SendReconciliation.pending(attempt, checkpoint: pending, state: state, movements: movements)
+            }
             if case .inProgress(let send) = state { return .inProgress(.init(amount: send.amountSats, fee: send.feeSats)) }
             if let existing = attempt.existingLightning, existing.amount != attempt.payment.amount { return .inProgress(existing) }
             var tracked = attempt

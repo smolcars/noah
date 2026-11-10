@@ -64,7 +64,7 @@ enum SendMotion {
     /// refund evidence for a failed Lightning send is still being read.
     static func outcome(state: SendPaymentController.State, attempt: SendPaymentController.Attempt?,
                         // swiftlint:disable:next discouraged_optional_boolean - nil: the refund is not known yet
-                        checking: Bool, refund: Bool?) -> Outcome {
+                        checking: Bool, refund: Bool?, now: Date = Date()) -> Outcome {
         let lightning = attempt.map { Rail($0.payment) == .lightning } ?? false
         switch state {
         case .ready, .submitting: return .inFlight
@@ -73,6 +73,11 @@ enum SendMotion {
             return receipt.broadcastRetryPending == true ? .stopped : .succeeded
         case .uncertain:
             if lightning, attempt?.existingLightning != nil { return .pending }
+            // Paid without waiting: bark returns in a moment, so the stage keeps its in-flight phases until
+            // "Still paying" is due. A saved attempt older than that shows its pending result at once.
+            if lightning, let attempt, attempt.pending != nil {
+                return now.timeIntervalSince(attempt.startedAt ?? .distantPast) >= payingStart + stillPayingAfter ? .pending : .inFlight
+            }
             // The status check right after a thrown submission: hold the phase until it answers.
             if checking, attempt?.receipt == nil, attempt?.candidates == nil, attempt?.possibleTxids == nil {
                 return .inFlight
@@ -219,7 +224,7 @@ enum SendResultKind: Equatable, Sendable {
         case .uncertain:
             switch outcome {
             case .pending: return .stillSending
-            case .inFlight: return .sending
+            case .inFlight: return slow ? .stillSending : .sending
             default: return .uncertain
             }
         case .failed:

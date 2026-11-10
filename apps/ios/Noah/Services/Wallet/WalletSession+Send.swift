@@ -138,7 +138,9 @@ extension WalletSession {
                                 walletIdentity: try await Self.sendIdentity(handles), checkpoint: checkpoint, invoicePaid: invoicePaid)
         }
     }
-    func submitSend(_ payment: SendPayment, quote: SendQuote, snapshot: SendSnapshot,
+    /// `wait`: whether a Lightning send blocks until its outcome. Send's own payments don't (async-payments.md): bark
+    /// hands them to the server and `SendLightningPending` reports one still paying. Unattended payments wait.
+    func submitSend(_ payment: SendPayment, quote: SendQuote, snapshot: SendSnapshot, wait: Bool = false,
                     // swiftlint:disable:next unneeded_escaping - checkSubmission captures it in an escaping closure
                     beforeSubmit: @escaping @Sendable () throws -> Void = {}) async throws -> SendReceipt {
         do { try SendMaxValidation.available(payment) }
@@ -150,11 +152,17 @@ extension WalletSession {
         }
         return try await withOpenWallet { handles in
             guard snapshot.walletIdentity == (try await Self.sendIdentity(handles)) else { throw SendFailure.unresolved }
-            let run = SendRun(payment: payment, quote: quote, snapshot: snapshot, handles: handles, check: checkSubmission)
+            let run = SendRun(payment: payment, quote: quote, snapshot: snapshot, handles: handles, wait: wait, check: checkSubmission)
             var receipt = SendReceipt(amount: quote.amount)
             var lightning: LightningSendStatus?
             try await Self.submit(run, session: self, receipt: &receipt, lightning: &lightning)
-            if let lightning { receipt = try await Self.lightningReceipt(lightning, run: run) }
+            if let lightning {
+                // A reviewed checkpoint (snapshot.checkpoint) was only advanced, never paid here: it stays today's path.
+                if !wait, snapshot.checkpoint == nil, case .inProgress(let send) = lightning {
+                    throw SendLightningSubmission.handedOver(send, amount: payment.amount)
+                }
+                receipt = try await Self.lightningReceipt(lightning, run: run)
+            }
             return await Self.finished(receipt, run: run)
         }
     }
@@ -165,6 +173,7 @@ extension WalletSession {
         let quote: SendQuote
         let snapshot: SendSnapshot
         let handles: Handles
+        let wait: Bool
         let check: @Sendable () async throws -> Void
     }
 
@@ -195,13 +204,13 @@ extension WalletSession {
                 check: { try await handles.wallet.checkLightningPayment(paymentHash: $0, wait: false) }) {
                     try await checkSubmission()
                     return try await handles.wallet.payLightningInvoice(
-                        invoice: invoice, amountSats: fixed ? nil : payment.amount, options: SendLightningSubmission.options)
+                        invoice: invoice, amountSats: fixed ? nil : payment.amount, options: SendLightningSubmission.options(wait: run.wait))
                 }
         case "offer":
             lightning = try await SendLightningSubmission.offer(pending: try await handles.wallet.pendingLightningSends()) {
                 try await checkSubmission()
                 return try await handles.wallet.payLightningOffer(
-                    offer: payment.destination, amountSats: payment.amount, options: SendLightningSubmission.options)
+                    offer: payment.destination, amountSats: payment.amount, options: SendLightningSubmission.options(wait: run.wait))
             }
         case "onchain": try await submitOnchain(run, session: session, receipt: &receipt)
         default: throw SendFailure.invalid
@@ -307,6 +316,7 @@ extension WalletSession {
             guard attempt.walletIdentity == (try await Self.sendIdentity(handles)) else { throw SendFailure.unresolved }
             guard attempt.inspectionPending != true else { return .uncertain }
             if let checkpoint = attempt.snapshot.checkpoint { return try await Self.reconcileCheckpoint(attempt, checkpoint, handles: handles) }
+            if let pending = attempt.pending { return try await Self.reconcilePending(attempt, pending, handles: handles) }
             if attempt.payment.method == "onchain", attempt.payment.source == .onchain || attempt.receipt?.txid != nil {
                 return try await Self.reconcileOnchain(attempt, handles: handles, flight: flight)
             }
@@ -328,6 +338,31 @@ extension WalletSession {
             state: try await handles.wallet.lightningSendState(paymentHash: checkpoint.paymentHash),
             check: { try await handles.wallet.checkLightningPayment(paymentHash: $0, wait: false) })
         return .paid(try checkpoint.receipt(status: status, movements: try await handles.wallet.history(), payment: payment, quote: quote))
+    }
+
+    /// This attempt's own send, still paying when last seen. Bark's mailbox and sync settle it too; this drives it
+    /// once (a status poll, never a payment) and reads what bark then records.
+    private static func reconcilePending(_ attempt: SendPaymentController.Attempt, _ checkpoint: SendLightningCheckpoint,
+                                         handles: Handles) async throws -> SendPaymentController.Resolution {
+        let hash = checkpoint.paymentHash
+        if checkpoint.drives(try await handles.wallet.lightningSendState(paymentHash: hash)) {
+            // Its error proves nothing about the send (async-payments.md, "Errors"): the state is read again either way.
+            _ = try? await handles.wallet.checkLightningPayment(paymentHash: hash, wait: false)
+        }
+        let resolution = SendReconciliation.pending(
+            attempt, checkpoint: checkpoint, state: try await handles.wallet.lightningSendState(paymentHash: hash),
+            movements: try await handles.wallet.history())
+        await saveRepeatMetadata(resolution, attempt: attempt, handles: handles)
+        return resolution
+    }
+
+    /// A payment proven only on a later check still gets its repeat metadata; failing to save it changes nothing else.
+    private static func saveRepeatMetadata(_ resolution: SendPaymentController.Resolution, attempt: SendPaymentController.Attempt,
+                                           handles: Handles) async {
+        guard case .paid(let receipt) = resolution, let patch = attempt.payment.repeatMetadata,
+              let id = SendReconciliation.metadataMovementID(receipt, snapshot: attempt.snapshot) else { return }
+        do { try await handles.wallet.updateHistoryMetadata(movementId: id, patchJson: patch) }
+        catch { AppLog("send").w(#"Reconciled payment; repeat metadata could not be saved"#) }
     }
 
     private static func reconcileOnchain(_ attempt: SendPaymentController.Attempt, handles: Handles,
@@ -371,11 +406,7 @@ extension WalletSession {
                                      flight: WalletSync) async throws -> SendPaymentController.Resolution {
         try await flight.serialized { try await handles.wallet.sync() }
         let resolution = SendReconciliation.ark(attempt, movements: try await handles.wallet.history())
-        if case .paid(let receipt) = resolution, let patch = attempt.payment.repeatMetadata,
-           let id = SendReconciliation.metadataMovementID(receipt, snapshot: attempt.snapshot) {
-            do { try await handles.wallet.updateHistoryMetadata(movementId: id, patchJson: patch) }
-            catch { AppLog("send").w(#"Reconciled payment; repeat metadata could not be saved"#) }
-        }
+        await saveRepeatMetadata(resolution, attempt: attempt, handles: handles)
         return resolution
     }
     private static func sendIdentity(_ handles: Handles) async throws -> SendWalletIdentity {
@@ -456,9 +487,14 @@ enum SendOnchainSubmission {
 
 /// The pinned Bark resumes checkpoints without checking the newly supplied amount.
 enum SendLightningSubmission {
-    /// Every send waits for its outcome (wait: false is a later phase, see async-payments.md).
     /// 60 s is today's server default, set explicitly; the server caps it (5 min by default).
-    static let options = LightningSendOptions(wait: true, retryForSecs: 60)
+    static func options(wait: Bool) -> LightningSendOptions { .init(wait: wait, retryForSecs: 60) }
+    /// What a payment made without waiting throws when bark returns it still paying. A send for another amount
+    /// was never this attempt's: it is shown, not tracked.
+    static func handedOver(_ send: LightningSend, amount: UInt64) -> any Error {
+        send.amountSats == amount ? SendLightningPending(checkpoint: .init(send))
+            : SendExistingLightning(progress: .init(amount: send.amountSats, fee: send.feeSats))
+    }
     static func offer(pending: [LightningSend], pay: @Sendable () async throws -> LightningSendStatus) async throws -> LightningSendStatus {
         // The SDK resolves offers internally, so their hash cannot be inspected before Bark resumes a checkpoint.
         guard pending.isEmpty else { throw SendFailure.lightningInProgress }
