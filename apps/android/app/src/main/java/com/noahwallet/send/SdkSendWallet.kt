@@ -243,14 +243,15 @@ internal class SdkSendWallet(private val wallet: Wallet, private val onchain: On
         val hash = checkpoint.paymentHash
         // Its error proves nothing about the send (async-payments.md, "Errors"): the state is read again either way.
         if (checkpoint.drives(wallet.lightningSendState(hash))) runCatching { wallet.checkLightningPayment(hash, false) }
-        val resolution = SendReconciliation.pending(attempt, checkpoint, wallet.lightningSendState(hash), wallet.history())
-        // A payment proven only on a later check still gets its repeat metadata; failing to save it changes nothing else.
+        return SendReconciliation.pending(attempt, checkpoint, wallet.lightningSendState(hash), wallet.history()).also { saveRepeatMetadata(it, attempt) }
+    }
+    /** A payment proven only on a later check still gets its repeat metadata; failing to save it changes nothing else. */
+    private suspend fun saveRepeatMetadata(resolution: SendResolution, attempt: SendAttempt) {
         val patch = attempt.payment.repeatMetadata
         if (resolution is SendResolution.Paid && patch != null) SendReconciliation.metadataMovementID(resolution.receipt, attempt.snapshot)?.let { id ->
             try { wallet.updateHistoryMetadata(id, patch) }
             catch (_: Exception) { warn("""Reconciled payment; repeat metadata could not be saved""") }
         }
-        return resolution
     }
     private suspend fun reconcileLightning(attempt: SendAttempt, hash: String): SendResolution {
         val state = wallet.lightningSendState(hash)
@@ -260,7 +261,8 @@ internal class SdkSendWallet(private val wallet: Wallet, private val onchain: On
         val movements = wallet.history()
         val widened = if (existing != null) attempt.copy(snapshot = attempt.snapshot.copy(movementIDs = attempt.snapshot.movementIDs + movements.map { it.id }))
         else attempt
-        return SendReconciliation.ark(widened, movements)
+        // Also the path of a send that finished before a relaunch could record it as pending.
+        return SendReconciliation.ark(widened, movements).also { saveRepeatMetadata(it, widened) }
     }
     override suspend fun discard(quote: SendQuote, includingClaimed: Boolean) {
         quote.prepared?.let { preparations.discard(it.id, includingClaimed) }

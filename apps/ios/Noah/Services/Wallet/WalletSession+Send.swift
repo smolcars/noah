@@ -397,7 +397,10 @@ extension WalletSession {
         if attempt.existingLightning != nil {
             tracked.snapshot.movementIDs.formUnion(movements.map(\.id))
         }
-        return SendReconciliation.ark(tracked, movements: movements)
+        // Also the path of a send that finished before a relaunch could record it as pending.
+        let resolution = SendReconciliation.ark(tracked, movements: movements)
+        await saveRepeatMetadata(resolution, attempt: tracked, handles: handles)
+        return resolution
     }
 
     private static func reconcileArk(_ attempt: SendPaymentController.Attempt, handles: Handles,

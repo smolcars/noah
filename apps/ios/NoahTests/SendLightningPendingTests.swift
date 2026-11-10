@@ -159,7 +159,7 @@ import Testing
         #expect(subject.state == .succeeded(receipt))
     }
 
-    /// The stage keeps "Sending" while a fresh payment is paying, then shows it pending; a saved one is pending at once.
+    /// The stage keeps "Sending" while a payment is young, then shows it pending; an older saved one is pending at once.
     @Test func aFreshPendingSendStillLooksInFlight() {
         let started = Date()
         var attempt = SendPaymentController.Attempt(payment: payment, snapshot: .init(movementIDs: []), pending: .init(send()))
