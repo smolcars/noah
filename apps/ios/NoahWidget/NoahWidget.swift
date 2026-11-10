@@ -48,6 +48,7 @@ struct NoahWidget: Widget {
 struct NoahWidgetBundle: WidgetBundle {
     var body: some Widget {
         NoahWidget()
+        SendLiveActivity()
     }
 }
 

@@ -31645,6 +31645,42 @@
         }
       }
     },
+    "Open Noah to check": {
+      "comment": "GT gt_70fddf8df1a561da; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Open Noah to check"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Abre Noah para comprobarlo"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noahを開いて確認"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Noah를 열어 확인하세요"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Öppna Noah för att se efter"
+          }
+        }
+      }
+    },
     "Open Noah to send {amount} to {recipient}.": {
       "comment": "GT gt_e2abf2ae09785e85; arguments: amount, recipient",
       "extractionState": "manual",
@@ -33657,6 +33693,42 @@
           "stringUnit": {
             "state": "translated",
             "value": "Betalningen lyckades; metadata för att upprepa den kunde inte sparas"
+          }
+        }
+      }
+    },
+    "Payments in progress": {
+      "comment": "GT gt_2f4dc9ff32daa792; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Payments in progress"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pagos en curso"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "支払い処理中"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "결제 진행 중"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pågående betalningar"
           }
         }
       }

@@ -18,7 +18,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 
@@ -29,8 +29,10 @@ import kotlinx.coroutines.withTimeoutOrNull
  * payment is on its way and, if Noah isn't in front when the service stops, how far it got.
  */
 class SendPendingService : Service() {
-    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main)
+    private val job = SupervisorJob()
+    private val scope = CoroutineScope(job + Dispatchers.Main)
     private var watch: Job? = null
+    private var slow: Job? = null
 
     override fun onBind(intent: Intent?): IBinder? = null
 
@@ -43,6 +45,8 @@ class SendPendingService : Service() {
             AppServices.shared(this).stopMailboxProcessor()
             val controller = SendRuntime.shared(this).controller
             val session = WalletSession.shared(this)
+            // "Still paying" is due at the same moment as on Send's stage.
+            slow = scope.launch { delay(SLOW_MILLIS); SendPendingNotifications.slow(this@SendPendingService) }
             watch = scope.launch {
                 // In front, Send's own screen watches the payment.
                 withTimeoutOrNull(CAP_MILLIS) {
@@ -59,6 +63,7 @@ class SendPendingService : Service() {
     override fun onTimeout(startId: Int) = finish(SendRuntime.shared(this).controller)
 
     private fun finish(controller: SendController) {
+        slow?.cancel()
         ServiceCompat.stopForeground(this, ServiceCompat.STOP_FOREGROUND_REMOVE)
         // In front, Send shows the result itself.
         if (!PeriodicExecution.isForeground) SendPendingNotifications.finished(this, controller.state, controller.attempt?.pending != null)
@@ -67,7 +72,7 @@ class SendPendingService : Service() {
 
     override fun onDestroy() {
         running = false
-        scope.cancel()
+        job.cancel()
         // The mailbox processor now follows the app's visibility again.
         AppServices.shared(this).stopMailboxProcessor()
         super.onDestroy()
@@ -76,6 +81,7 @@ class SendPendingService : Service() {
     companion object {
         /** `retry_for` and a minute: the server has stopped retrying by then, and a stuck payment can take hours. */
         const val CAP_MILLIS = 120_000L
+        private const val SLOW_MILLIS = 10_000L
 
         /** True from the first start until the service is destroyed. */
         @Volatile var running = false

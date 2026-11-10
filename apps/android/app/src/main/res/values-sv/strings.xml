@@ -896,6 +896,7 @@
   <string name="gt_4831cbdad7ad0bb6">"Bara för brådskande varningar om din plånbok."</string>
   <string name="gt_1c307fc3ba1249c9">"Endast inlösenavgiften dras från dessa mynt."</string>
   <string name="gt_4de503f8d4f0bcbc">"Bara %1$s tillgängligt"</string>
+  <string name="gt_70fddf8df1a561da">"Öppna Noah för att se efter"</string>
   <string name="gt_e2abf2ae09785e85">"Öppna Noah för att skicka %1$s till %2$s."</string>
   <string name="gt_f9d77f6cb2f252e8">"Öppna profil"</string>
   <string name="gt_3f940108cb1ecd9c">"Öppna inställningar"</string>
@@ -952,6 +953,7 @@
   <string name="gt_2b79ccf58c27d73a">"Betalningsstatus är inte tillgänglig"</string>
   <string name="gt_006fbb3905701e15">"Betalning inskickad"</string>
   <string name="gt_f905e55761fc8b3a">"Betalningen lyckades; metadata för att upprepa den kunde inte sparas"</string>
+  <string name="gt_2f4dc9ff32daa792">"Pågående betalningar"</string>
   <string name="gt_331551b0de4157c9">"Väntande"</string>
   <string name="gt_beb7d5eb6ac8b5fb">"Väntande Arkoor-överföring"</string>
   <string name="gt_92cbb83dfd8fe0d2">"Väntar på att sättas in"</string>

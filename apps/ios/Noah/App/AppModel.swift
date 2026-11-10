@@ -669,6 +669,7 @@ extension AppModel {
 
     func appBecameActive() async {
         SendBackgroundWindow.shared.close()
+        SendActivityCenter.shared.start()
         await session.appBecameActive()
         guard UIApplication.shared.applicationState == .active else { return }
         foregroundActivation?.revoke()

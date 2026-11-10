@@ -4,6 +4,8 @@
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <!-- A Lightning payment's short foreground service (SendPendingService). -->
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <!-- Android 16 shows that service's notification as a Live Update. -->
+    <uses-permission android:name="android.permission.POST_PROMOTED_NOTIFICATIONS" />
     <!-- Kept from the RN app so grants survive the update. Like the RN app, the camera stays a required feature. -->
     <uses-permission android:name="android.permission.CAMERA" tools:ignore="PermissionImpliesUnsupportedChromeOsHardware" />
     <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />

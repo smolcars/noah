@@ -6,8 +6,8 @@
     "ko",
     "sv"
   ],
-  "catalogEntries": 1583,
-  "sourceKeys": 1626,
+  "catalogEntries": 1585,
+  "sourceKeys": 1628,
   "coverage": {
     "ios": {
       "used": [
@@ -788,6 +788,7 @@
         "Only for urgent alerts about your wallet.",
         "Only the claim fee is deducted from these coins.",
         "Only {amount} available",
+        "Open Noah to check",
         "Open Noah to send {amount} to {recipient}.",
         "Open Profile",
         "Open Settings",
@@ -2223,6 +2224,7 @@
         "Only for urgent alerts about your wallet.",
         "Only the claim fee is deducted from these coins.",
         "Only {amount} available",
+        "Open Noah to check",
         "Open Noah to send {amount} to {recipient}.",
         "Open Profile",
         "Open Settings",
@@ -2272,6 +2274,7 @@
         "Payment status unavailable",
         "Payment submitted",
         "Payment succeeded; repeat metadata could not be saved",
+        "Payments in progress",
         "Pending",
         "Pending Arkoor Send",
         "Pending Board",
