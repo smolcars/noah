@@ -141,6 +141,27 @@ import Testing
         #expect(!checkpoint.drives(.unknown))
     }
 
+    /// A Lightning address payment gets its receipt on a later check now, so that check owes it the repeat metadata.
+    @Test func aPaymentProvenOnACheckKeepsItsRepeatMetadata() {
+        let address = SendPayment(destination: "alice@example.com", method: "lnurl", amount: 1000, repeatMetadata: "{\"noah\":{}}")
+        let checkpoint = SendLightningCheckpoint(send())
+        let paid = LightningSendStatus.paid(paymentHash: hash, preimage: "proof")
+        let movement = retry.reused("successful", effective: -1079, completedAt: Date().addingTimeInterval(1), fee: 79, outputs: [])
+        func owed(_ payment: SendPayment, before: Set<UInt32> = []) -> UInt32? {
+            let attempt = SendPaymentController.Attempt(
+                payment: payment, snapshot: .init(movementIDs: before, resolvedInvoice: self.payment.destination, invoicePaid: false),
+                pending: checkpoint)
+            let resolution = SendReconciliation.pending(attempt, checkpoint: checkpoint, state: paid, movements: [movement])
+            return SendReconciliation.repeatMetadata(resolution, attempt: attempt)?.movementID
+        }
+        #expect(owed(address) == 5)
+        // Never a movement from before the attempt, a payment without metadata, or one that failed.
+        #expect(owed(address, before: [5]) == nil)
+        #expect(owed(SendPayment(destination: "alice@example.com", method: "lnurl", amount: 1000)) == nil)
+        let attempt = SendPaymentController.Attempt(payment: address, snapshot: .init(movementIDs: []), pending: checkpoint)
+        #expect(SendReconciliation.repeatMetadata(.failed, attempt: attempt) == nil)
+    }
+
     /// An offer's hash is known only from the send bark made for it.
     @Test func aPendingOfferLearnsItsHash() async throws {
         let offer = SendPayment(destination: "lno1offer", method: "offer", amount: 1000)

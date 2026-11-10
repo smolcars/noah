@@ -247,11 +247,9 @@ internal class SdkSendWallet(private val wallet: Wallet, private val onchain: On
     }
     /** A payment proven only on a later check still gets its repeat metadata; failing to save it changes nothing else. */
     private suspend fun saveRepeatMetadata(resolution: SendResolution, attempt: SendAttempt) {
-        val patch = attempt.payment.repeatMetadata
-        if (resolution is SendResolution.Paid && patch != null) SendReconciliation.metadataMovementID(resolution.receipt, attempt.snapshot)?.let { id ->
-            try { wallet.updateHistoryMetadata(id, patch) }
-            catch (_: Exception) { warn("""Reconciled payment; repeat metadata could not be saved""") }
-        }
+        val (id, patch) = SendReconciliation.repeatMetadata(resolution, attempt) ?: return
+        try { wallet.updateHistoryMetadata(id, patch) }
+        catch (_: Exception) { warn("""Reconciled payment; repeat metadata could not be saved""") }
     }
     private suspend fun reconcileLightning(attempt: SendAttempt, hash: String): SendResolution {
         val state = wallet.lightningSendState(hash)

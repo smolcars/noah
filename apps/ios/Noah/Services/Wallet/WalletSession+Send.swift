@@ -359,8 +359,7 @@ extension WalletSession {
     /// A payment proven only on a later check still gets its repeat metadata; failing to save it changes nothing else.
     private static func saveRepeatMetadata(_ resolution: SendPaymentController.Resolution, attempt: SendPaymentController.Attempt,
                                            handles: Handles) async {
-        guard case .paid(let receipt) = resolution, let patch = attempt.payment.repeatMetadata,
-              let id = SendReconciliation.metadataMovementID(receipt, snapshot: attempt.snapshot) else { return }
+        guard let (id, patch) = SendReconciliation.repeatMetadata(resolution, attempt: attempt) else { return }
         do { try await handles.wallet.updateHistoryMetadata(movementId: id, patchJson: patch) }
         catch { AppLog("send").w(#"Reconciled payment; repeat metadata could not be saved"#) }
     }

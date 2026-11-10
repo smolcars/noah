@@ -13,6 +13,11 @@ object SendReconciliation {
     /** The exact movement for history metadata, never a destination/amount/time match.
      *  Movements that predate the attempt (an inherited Lightning checkpoint) are left untouched. */
     fun metadataMovementID(receipt: SendReceipt, snapshot: SendSnapshot): UInt? = receipt.movementID?.takeIf { it !in snapshot.movementIDs }
+    /** What a status check that proves this attempt paid still owes its movement: the payment's repeat metadata. */
+    fun repeatMetadata(resolution: SendResolution, attempt: SendAttempt): Pair<UInt, String>? {
+        val patch = attempt.payment.repeatMetadata ?: return null
+        return (resolution as? SendResolution.Paid)?.let { metadataMovementID(it.receipt, attempt.snapshot) }?.let { it to patch }
+    }
     fun isLightning(movement: Movement,
         hash: String) = movement.subsystemName == "bark.lightning_send" && movement.subsystemKind == "send" && movement.paymentHash == hash
     fun matches(movement: Movement, payment: SendPayment, hash: String?): Boolean {

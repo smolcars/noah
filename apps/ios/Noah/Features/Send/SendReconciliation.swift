@@ -19,6 +19,14 @@ enum SendReconciliation {
         return id
     }
 
+    /// What a status check that proves this attempt paid still owes its movement: the payment's repeat metadata.
+    static func repeatMetadata(_ resolution: SendPaymentController.Resolution,
+                               attempt: SendPaymentController.Attempt) -> (movementID: UInt32, patch: String)? {
+        guard case .paid(let receipt) = resolution, let patch = attempt.payment.repeatMetadata,
+              let id = metadataMovementID(receipt, snapshot: attempt.snapshot) else { return nil }
+        return (id, patch)
+    }
+
     static func matches(_ movement: Movement, payment: SendPayment, hash: String?) -> Bool {
         guard payment.source != .onchain else { return false }
         let subsystem = movement.subsystemName.lowercased()

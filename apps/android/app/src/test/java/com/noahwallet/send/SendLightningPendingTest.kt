@@ -158,6 +158,24 @@ class SendLightningPendingTest {
         assertFalse(checkpoint.drives(LightningSendStatus.Unknown))
     }
 
+    /** A Lightning address payment gets its receipt on a later check now, so that check owes it the repeat metadata. */
+    @Test fun aPaymentProvenOnACheckKeepsItsRepeatMetadata() {
+        val address = SendPayment("alice@example.com", "lnurl", 1000, repeatMetadata = """{"noah":{}}""")
+        val checkpoint = SendCheckpoint(send())
+        val paid = LightningSendStatus.Paid(hash, "proof")
+        val movement = movement(id = 5u).copy(effectiveBalanceSats = -1079)
+        fun owed(payment: SendPayment, before: Set<UInt> = emptySet()): UInt? {
+            val attempt = SendAttempt(payment = payment, pending = checkpoint,
+                snapshot = SendSnapshot(before, resolvedInvoice = invoice(), invoicePaid = false))
+            return SendReconciliation.repeatMetadata(SendReconciliation.pending(attempt, checkpoint, paid, listOf(movement)), attempt)?.first
+        }
+        assertEquals(5u, owed(address))
+        // Never a movement from before the attempt, a payment without metadata, or one that failed.
+        assertNull(owed(address, before = setOf(5u)))
+        assertNull(owed(address.copy(repeatMetadata = null)))
+        assertNull(SendReconciliation.repeatMetadata(SendResolution.Failed, SendAttempt(payment = address, pending = checkpoint)))
+    }
+
     /** An offer's hash is known only from the send bark made for it. */
     @Test fun aPendingOfferLearnsItsHash() = runBlocking {
         val offer = SendPayment("lno1offer", "offer", 1000)
