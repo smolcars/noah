@@ -1,0 +1,15 @@
+# Zapstore listing for the Mainnet app. `Native Zapstore` publishes it from the GitHub Release.
+repository: https://github.com/smolcars/noah
+release_filter: '^v[0-9]+\.[0-9]+\.[0-9]+$'
+match: '^noah-mainnet\.apk$'
+
+# The icon and name come from the APK, the license from GitHub.
+summary: A trust minimized Bitcoin and Ark Wallet
+description: |
+  Noah is a modern, self-custodial mobile wallet for Ark, a Bitcoin Layer 2 protocol.
+
+  Send and receive bitcoin over Ark, Lightning and onchain. Your keys stay on your device.
+
+  Noah is in beta. Only deposit funds you are ok with losing.
+website: https://beta.noahwallet.io
+tags: [bitcoin, wallet, lightning, ark]
