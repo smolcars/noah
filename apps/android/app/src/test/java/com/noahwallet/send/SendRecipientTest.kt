@@ -80,6 +80,17 @@ class SendRecipientTest {
             assertNull(m.quote); assertNull(m.payment); assertFalse(m.showReview); assertFalse(m.busy); assertNull(m.error)
         }
     }
+    @Test fun reviewingAnotherRailDropsThePreviousPayment() = runBlocking {
+        val gate = CompletableDeferred<Unit>(); var calls = 0
+        val m = model(this, quote = { calls++; gate.takeIf { calls > 1 }?.await(); FakeSendWallet.quote }); m.amount = "1000"; m.arkBalance = 10000
+        m.setRecipient("bitcoin:bcrt1qaddr?lightning=lnbcrt1invoice")
+        m.parsed = SendDestination("bip321", bip321 = mapOf("onchainAddress" to "bcrt1qaddr", "lightningInvoice" to "lnbcrt1invoice"))
+        m.progress = m.progress.copy(selectedRail = SendRail.lightning); m.review(); assertEquals("lightning", m.payment!!.method)
+        m.source = SendSource.offchain; m.progress = m.progress.copy(selectedRail = SendRail.onchain)
+        val job = launch { m.review() }; yield()
+        assertNull(m.payment)
+        gate.complete(Unit); job.join(); assertEquals("onchain", m.payment!!.method)
+    }
     @Test fun stalePreparationErrorDoesNotChangeNewFlow() = runBlocking {
         val gate = CompletableDeferred<Unit>()
         val m = model(this, quote = { gate.await(); error("late") })

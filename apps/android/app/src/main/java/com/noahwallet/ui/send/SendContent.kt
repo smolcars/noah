@@ -181,8 +181,12 @@ internal object SendWhoRules {
      * name or an invoice's own description ([detail]), and the [full] address, invoice or request to compare.
      */
     data class Recipient(val title: String, val detail: String?, val full: String?)
-    fun recipient(destination: String, method: String?, ownDomain: String?): Recipient {
+    fun recipient(destination: String, method: String?, ownDomain: String?, payment: SendPayment? = null): Recipient {
         val value = SendDestination.cleaned(destination)
+        // A payment request shows only the method you picked, as iOS does, and no card until it is prepared.
+        if (method == "bip321") {
+            return payment?.let { recipient(it.destination, it.method, ownDomain) }.let { Recipient("Payment request", it?.detail, it?.full) }
+        }
         return when (method) {
             "lnurl" -> of(destination, method, ownDomain).name.let { name -> Recipient(name, value.lowercase(Locale.ROOT).takeIf { it != name }, null) }
             "lightning" -> Recipient("Lightning invoice · recipient not named",
@@ -802,7 +806,7 @@ private fun ReviewPanes(amount: Long, fiat: String?, destination: String, method
         Text(tr("Send {amount}", formatted(amount, env)), Modifier.padding(top = 18.dp).semantics { heading() }.testTag("send-review-title"),
             style = SendType.big, color = palette.foreground)
         (fiat ?: satsLine(amount, env))?.let { Text(it, Modifier.padding(top = 6.dp), style = SendType.body, color = palette.muted) }
-        RecipientBlock(destination, method, env, Modifier.padding(top = 20.dp))
+        RecipientBlock(destination, method, env, Modifier.padding(top = 20.dp), payment)
         if (tabletop) rows()
     }, trailing = {
         if (!tabletop) rows()
@@ -818,10 +822,10 @@ private fun ReviewPanes(amount: Long, fiat: String?, destination: String, method
  * before sending (and after, on the result). A long invoice shows its first lines and expands in place.
  */
 @Composable
-private fun RecipientBlock(destination: String, method: String?, env: SendEnv, modifier: Modifier = Modifier) {
+private fun RecipientBlock(destination: String, method: String?, env: SendEnv, modifier: Modifier = Modifier, payment: SendPayment? = null) {
     val palette = LocalPalette.current
     val who = SendWhoRules.of(destination, method, env.ownDomain)
-    val recipient = SendWhoRules.recipient(destination, method, env.ownDomain)
+    val recipient = SendWhoRules.recipient(destination, method, env.ownDomain, payment)
     Column(modifier.fillMaxWidth().testTag("send-review-recipient")) {
         Text(tr("To"), Modifier.semantics { heading() }, style = SendType.section, color = palette.muted)
         Row(Modifier.padding(top = 8.dp), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -831,7 +835,7 @@ private fun RecipientBlock(destination: String, method: String?, env: SendEnv, m
                 recipient.detail?.let { Text(it, style = SendType.line, color = palette.muted) }
             }
         }
-        recipient.full?.let { DestinationCard(it, collapses = method == "lightning", Modifier.padding(top = 12.dp)) }
+        recipient.full?.let { DestinationCard(it, collapses = (payment?.method ?: method) == "lightning", Modifier.padding(top = 12.dp)) }
     }
 }
 
