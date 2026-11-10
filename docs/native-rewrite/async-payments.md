@@ -1,6 +1,29 @@
 # Background payments: design
 
-**Status:** draft for review, revised after three reviews on 2026-10-22. Design only; no app or server code changes.
+**Status:** design reviewed 2026-10-22. Step 1 of the revised plan below is built (2026-11-10); the sections after it are the original design and still describe the later steps.
+
+## Revised plan (user, 2026-11-10)
+
+Two things changed since the design: bark 0.8.1 (bark-bolt-ffi 0.11.0, which both apps pin) carries bark change 2, and the apps no longer run bark's daemon (`runDaemon: false`), so nothing but the app's own calls, its foreground sync and the mailbox processor drives a send.
+
+| Step | What | State |
+| --- | --- | --- |
+| 0. Proof | LND hold invoices paid with `wait: false` through the FFI on regtest: the call returns in 150–350 ms; the mailbox alone settles or refunds in about 260 ms; checks alone, a plain sync, and a new process after a kill all reach the same result; a second pay on a pending invoice returns it in progress without paying again. | Done |
+| 1. Pending state | Send's Lightning payments use `wait: false`; a send still paying is a normal state, tracked until bark's records end it. | Built |
+| 2. Background window and system UI | iOS background task and Live Activity; Android short foreground service and progress notification; the mailbox processor stays on for that window. | Next |
+| 3. Server push | Silent `lightning_send_finished` push for a closed app. | Later |
+
+Cut for now: recurring payments stay on `wait: true`; on-chain progress outside the app (phase 5); raw APNs Live Activity updates (phase 6).
+
+**Step 1 as built.** It is smaller than "Payment watch" below, and replaces it for sends from the Send screen:
+
+- **One record.** The send journal's attempt gains `pending`: the send bark returned in progress from this attempt's own pay call. Offers learn their payment hash from it. There is no separate watch store or coordinator; the Send controller stays the one writer.
+- **Adopted after a stop.** If the app stops, or the call fails, after bark took the payment but before the journal recorded it, the next status check finds a send in progress for the reviewed amount where none was at review (the snapshot has no checkpoint) and tracks it as the attempt's own. A send for another amount is only shown, as before.
+- **Ends on bark's records only.** In progress stays pending. Otherwise the hash's movement decides, by the existing rules: successful is Sent, failed or canceled is Failed (bark reports a refunded send as `Unknown`, so the status alone never says failed), anything else is "may have been sent".
+- **Who drives.** While Noah is in front, bark's mailbox processor settles the send and the 60 s sync drives it. A status check also drives it once (`checkLightningPayment`, never a payment) and reads the result; a check's error proves nothing and the state is read again.
+- **Who notices.** While Send shows the payment, a 1 s read of bark's pending list (local, no network) triggers a status check when the send leaves it; the 30 s automatic check and the check on entering Send remain.
+- **What it looks like.** The stage keeps "Sending" until "Still paying" is due, then the "Still sending" result, as a slow payment always has. The override ("Pay again anyway") waits 90 s (`retry_for` + 30 s). Send stays locked while pending, across restarts.
+- **Not built:** parking an overridden attempt, the `Finishing`/`Stuck` lines, and time-to-result telemetry.
 
 **Scope:**
 - Lightning sends that outlast the screen.

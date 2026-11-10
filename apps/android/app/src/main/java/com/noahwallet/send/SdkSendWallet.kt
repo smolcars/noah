@@ -248,7 +248,7 @@ internal class SdkSendWallet(private val wallet: Wallet, private val onchain: On
         val patch = attempt.payment.repeatMetadata
         if (resolution is SendResolution.Paid && patch != null) SendReconciliation.metadataMovementID(resolution.receipt, attempt.snapshot)?.let { id ->
             try { wallet.updateHistoryMetadata(id, patch) }
-            catch (_: Exception) { warn("Reconciled payment; repeat metadata could not be saved") }
+            catch (_: Exception) { warn("""Reconciled payment; repeat metadata could not be saved""") }
         }
         return resolution
     }
