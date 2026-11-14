@@ -132,6 +132,36 @@ class SendLightningPendingTest {
         assertEquals(4, slept); assertEquals(4, reads); assertEquals(1, bark.calls)
     }
 
+    /** A push's check waits out a check already under way (or the journal's load), then checks once itself. */
+    @Test fun aPushCheckWaitsForWorkUnderWay() = runBlocking {
+        val bark = Bark()
+        val subject = send(bark)
+        bark.gate = CompletableDeferred()
+        val earlier = launch { subject.checkStatus() }
+        while (!subject.checking) yield()
+        var waits = 0
+        val pushed = async { SendPendingWatch.checkOnce(subject, admitted = {}, pause = { waits++; yield() }) }
+        while (waits == 0) yield()
+        bark.finish("successful", -1079)
+        bark.gate!!.complete(Unit)
+        earlier.join()
+        assertTrue(pushed.await())
+        assertEquals(SendController.State.succeeded, subject.state)
+        assertEquals(1, bark.calls)
+
+        // Opening the wallet reloads the journal, and a check meanwhile would only load it: the push waits for the load.
+        val later = Bark(); val journal = TestJournal()
+        send(later, journal)
+        val reloaded = controller(later, journal, this)
+        reloaded.invalidateForWalletChange()
+        assertTrue(reloaded.loading)
+        later.finish("failed", 0)
+        var pauses = 0
+        assertTrue(SendPendingWatch.checkOnce(reloaded, admitted = {}, pause = { if (pauses++ == 0) reloaded.reloadForWalletChange() }))
+        assertEquals(SendController.State.failed, reloaded.state)
+        assertEquals(1, later.calls)
+    }
+
     @Test fun theServiceAlsoChecksOnATimerAndIdlesInFront() = runBlocking {
         val bark = Bark()
         val subject = send(bark)

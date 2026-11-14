@@ -25,6 +25,8 @@ class SendController(private val dependencies: Dependencies,
     private var unboundJournal: SendAttempt? = null
     private var unreadableJournal = false
     val locked get() = state != State.ready
+    /** A Lightning payment of Send's own (never a recurring one) that bark was still paying: what a `lightning_send_finished` push checks. */
+    val lightningSendPending get() = state == State.uncertain && attempt?.pending != null && attempt?.recurringOccurrenceKey == null
     /** This wallet's saved payment isn't read yet (every settled storageBlocked carries a message): Send is neither free nor holding one. */
     val loading get() = state == State.storageBlocked && message == null
     val canOverride get() = !checking && (unboundJournal != null || unreadableJournal ||

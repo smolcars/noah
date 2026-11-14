@@ -11,7 +11,7 @@ class NotificationDataTest {
 
     @Test fun allServerFixturesDecodeAndRoundTrip() {
         val cases = SharedFixtures.load("server-notification-data")
-        assertEquals(7, cases.size)
+        assertEquals(8, cases.size)
         val types = mutableSetOf<String>()
         for (case in cases) {
             val value = json.decodeFromJsonElement<NotificationData>(case.input)
@@ -22,12 +22,13 @@ class NotificationDataTest {
                 is NotificationDataBackupTrigger -> "backup_trigger"
                 is NotificationDataHeartbeat -> "heartbeat"
                 is NotificationDataRecurringPaymentDue -> "recurring_payment_due"
+                is NotificationDataLightningSendFinished -> "lightning_send_finished"
             }
             assertEquals(case.name, case.expected.jsonPrimitive.content, type)
             assertEquals(case.name, case.input, json.encodeToJsonElement<NotificationData>(value))
             types += type
         }
-        assertEquals(6, types.size)
+        assertEquals(7, types.size)
     }
 
     @Test fun preservesIntegerBoundariesAndOptionalUsd() {

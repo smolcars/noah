@@ -1,11 +1,28 @@
 package com.noahwallet.services.push
 
 import com.noahwallet.api.generated.models.*
+import com.noahwallet.history.HistoryRules
 import com.noahwallet.recurring.RecurringBudget
+import com.noahwallet.send.FakeSendWallet
+import com.noahwallet.send.PaymentEncoding
+import com.noahwallet.send.SendController
+import com.noahwallet.send.SendLightningSubmission
+import com.noahwallet.send.SendPayment
+import com.noahwallet.send.SendPendingWatch
+import com.noahwallet.send.SendReconciliation
+import com.noahwallet.send.SendSnapshot
+import com.noahwallet.send.TestJournal
+import com.noahwallet.send.controller
+import com.noahwallet.send.invoice
+import com.noahwallet.send.movement
+import com.noahwallet.services.background.SendPendingNotifications
 import com.noahwallet.services.wallet.WalletExecutionBudget
+import io.github.niteshbalusu11.bark.LightningSend
+import io.github.niteshbalusu11.bark.LightningSendStatus
 import kotlinx.coroutines.*
 import org.junit.Assert.*
 import org.junit.Test
+import java.util.Date
 
 class PushJobsTest {
     private val events = mutableListOf<String>()
@@ -16,6 +33,9 @@ class PushJobsTest {
     private var afterBackup: () -> Unit = {}
     private var reportBackupWait: suspend () -> Unit = {}
     private var reportAllowance = PushJobs.REPORT_ALLOWANCE_MILLIS
+    private var sendPending: suspend () -> Boolean = { false }
+    private var checkSend: suspend (() -> Unit) -> Boolean = { events += "check"; true }
+    private var showSend: () -> Unit = { events += "show" }
     private val jobs get() = PushJobs(PushJobs.Dependencies(
         ensureWalletOpen = {
             events += "open"
@@ -34,6 +54,7 @@ class PushJobsTest {
         heartbeat = { events += "heartbeat:$it"; error("offline") },
         announceReceived = { sats, usd, hash -> events += "announce:$sats:$usd:$hash" },
         refreshWidget = { events += "widget" }, log = { events += "log" }, progressExits = { events += "exits" },
+        lightningSendPending = { sendPending() }, checkLightningSend = { checkSend(it) }, showLightningSend = { showSend() },
     ), reportAllowance)
     @Test fun maintenanceReportsSuccessThenRefreshes() = runBlocking {
         jobs.handle(NotificationDataMaintenance("correlation"))
@@ -56,6 +77,56 @@ class PushJobsTest {
     @Test fun claimAnnouncesAfterSuccessAndUpdatesWidget() = runBlocking {
         jobs.handle(PushPayload.decode("""{"notification_type":"lightning_claim_request","amount_sat":42,"amount_usd":"0.10","payment_hash":"hash"}"""))
         assertEquals(listOf("open", "claim", "announce:42:0.10:hash", "widget"), events)
+    }
+    @Test fun sendFinishedWithNothingPendingOpensNothing() = runBlocking {
+        jobs.handle(PushPayload.decode("""{"notification_type":"lightning_send_finished","notification_id":"f1"}"""))
+        assertTrue(events.isEmpty())
+    }
+    @Test fun sendFinishedChecksThenShowsTheResult() = runBlocking {
+        sendPending = { true }
+        jobs.handle(NotificationDataLightningSendFinished("f1"))
+        assertEquals(listOf("open", "check", "show", "widget"), events)
+        // Still paying: the service's notification stands.
+        events.clear()
+        checkSend = { events += "check"; false }
+        jobs.handle(NotificationDataLightningSendFinished("f2"))
+        assertEquals(listOf("open", "check"), events)
+    }
+    /**
+     * Against Send's own controller, wired as the live job is: the push records bark's result, the notification is
+     * given that result, and nothing pays. A second push finds nothing pending.
+     */
+    @Test fun sendFinishedRecordsTheResultWithoutPaying() = runBlocking {
+        for ((status, outcome) in listOf("successful" to SendPendingNotifications.Outcome.sent, "failed" to SendPendingNotifications.Outcome.failed)) {
+            events.clear()
+            val hash = PaymentEncoding.invoice(invoice())!!.hash
+            val send = LightningSend(hash, emptyList(), 5u, invoice(), 1000u, 79u, 1u, false)
+            // bark took the payment and returned it in progress, as SendLightningPendingTest's bark does.
+            var paying: LightningSend? = send
+            var moved = movement(status = "pending", id = 5u).copy(effectiveBalanceSats = -1079)
+            val wallet = FakeSendWallet()
+            wallet.prepareBlock = { SendSnapshot(walletIdentity = wallet.owner, invoicePaid = false) }
+            wallet.payBlock = { throw SendLightningSubmission.handedOver(send, 1000) }
+            wallet.reconciliation = { attempt ->
+                SendReconciliation.pending(attempt, attempt.pending!!,
+                    paying?.let { LightningSendStatus.InProgress(it) } ?: LightningSendStatus.Unknown, listOf(moved))
+            }
+            val subject = controller(wallet, TestJournal(), this)
+            subject.submit(SendPayment(invoice(), "lightning", 1000), FakeSendWallet.quote.copy(fee = 79, total = 1079))!!.await()
+            assertTrue(subject.lightningSendPending)
+            paying = null
+            moved = moved.copy(status = status, effectiveBalanceSats = if (status == "successful") -1079 else 0,
+                completedAt = HistoryRules.isoDate(Date(System.currentTimeMillis() + 1_000)))
+
+            sendPending = { subject.lightningSendPending }
+            checkSend = { SendPendingWatch.checkOnce(subject, it) }
+            showSend = { events += "show:${SendPendingNotifications.Outcome.of(subject.state, subject.attempt?.pending != null)}" }
+            jobs.handle(NotificationDataLightningSendFinished("f1"))
+            jobs.handle(NotificationDataLightningSendFinished("f2"))
+            assertEquals(listOf("open", "show:$outcome", "widget"), events)
+            assertEquals(if (status == "successful") SendController.State.succeeded else SendController.State.failed, subject.state)
+            assertEquals("a push never pays", 1, wallet.calls)
+        }
     }
     @Test fun heartbeatSwallowsFailureWithoutOpeningWallet() = runBlocking {
         jobs.handle(NotificationDataHeartbeat("id"))

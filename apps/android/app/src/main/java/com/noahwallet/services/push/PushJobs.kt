@@ -35,6 +35,12 @@ class PushJobs(private val dependencies: Dependencies, private val reportAllowan
         val recurring: suspend (com.noahwallet.recurring.RecurringBudget) -> Unit = {},
         /** Pending exits' progress; never throws but for cancellation. */
         val progressExits: suspend () -> Unit = {},
+        /** Send's journal holds a Lightning payment of Send's own that bark was still paying. Opens nothing. */
+        val lightningSendPending: suspend () -> Boolean = { false },
+        /** Checks that payment's status once; never pays. True once it is no longer pending. [admitted] as for [refreshWidget]. */
+        val checkLightningSend: suspend (admitted: () -> Unit) -> Boolean = { false },
+        /** Shows the payment's result in place of the pending-payment service's notification. */
+        val showLightningSend: () -> Unit = {},
     )
 
     suspend fun handle(notification: NotificationData) = withContext(
@@ -55,6 +61,7 @@ class PushJobs(private val dependencies: Dependencies, private val reportAllowan
             }
             is NotificationDataBackupTrigger -> backupTrigger(caller, notification)
             is NotificationDataRecurringPaymentDue -> recurringDue(caller)
+            is NotificationDataLightningSendFinished -> lightningSendFinished(caller)
         }
     }
 
@@ -130,6 +137,17 @@ class PushJobs(private val dependencies: Dependencies, private val reportAllowan
                 requireBudget(budget)
             }
         }
+    }
+
+    private suspend fun lightningSendFinished(caller: CoroutineContext) {
+        val d = dependencies
+        // Nothing of Send's own is being paid (a recurring payment, or a result already recorded).
+        if (!d.lightningSendPending()) return
+        d.ensureWalletOpen()
+        caller.checkWalletAdmission()
+        if (!d.checkLightningSend { caller.checkWalletAdmission() }) return
+        bestEffort("Failed to show the payment result") { d.showLightningSend() }
+        bestEffort("Failed to refresh widget") { d.refreshWidget { caller.checkWalletAdmission() } }
     }
 
     private fun requireBudget(budget: com.noahwallet.recurring.RecurringBudget) {
