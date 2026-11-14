@@ -233,8 +233,8 @@ fn export_openapi() {
 fn export_notification_fixtures() {
     use crate::types::{
         BackupTriggerNotification, HeartbeatNotification, LightningClaimRequestNotification,
-        LightningInvoiceRequestNotification, MaintenanceNotification,
-        RecurringPaymentDueNotification,
+        LightningInvoiceRequestNotification, LightningSendFinishedNotification,
+        MaintenanceNotification, RecurringPaymentDueNotification,
     };
 
     let notifications = [
@@ -283,6 +283,12 @@ fn export_notification_fixtures() {
             "recurring payment due",
             NotificationData::RecurringPaymentDue(RecurringPaymentDueNotification {
                 due_count: u32::MAX,
+            }),
+        ),
+        (
+            "lightning send finished",
+            NotificationData::LightningSendFinished(LightningSendFinishedNotification {
+                notification_id: "send-finished-1".into(),
             }),
         ),
     ];

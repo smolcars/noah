@@ -263,7 +263,7 @@ fn all_schema_types_and_unsigned_fields_have_schemas() {
             }
         }
     }
-    assert_eq!(schema_types, 67);
+    assert_eq!(schema_types, 68);
     let amount = &doc["paths"]["/.well-known/lnurlp/{username}"]["get"]["parameters"][1]["schema"];
     assert_eq!(amount["format"], "int64");
     assert_eq!(amount["minimum"].as_f64(), Some(0.0));
@@ -330,6 +330,7 @@ fn notification_variants_match_flat_wire_objects() {
         json!({"notification_type":"recurring_payment_due", "due_count":u32::MAX}),
         json!({"notification_type":"lightning_invoice_request", "transaction_id":"id", "amount":i64::MAX}),
         json!({"notification_type":"lightning_claim_request", "payment_hash":"hash", "amount_sat":1u64 << 53}),
+        json!({"notification_type":"lightning_send_finished", "notification_id":"id"}),
     ];
     assert_eq!(union["oneOf"].as_array().unwrap().len(), fixtures.len());
     for fixture in fixtures {

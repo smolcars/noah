@@ -134,7 +134,8 @@ impl<'a> NotificationTrackingRepository<'a> {
                 .await?
             }
             NotificationData::LightningInvoiceRequest(_)
-            | NotificationData::LightningClaimRequest(_) => None,
+            | NotificationData::LightningClaimRequest(_)
+            | NotificationData::LightningSendFinished(_) => None,
         };
 
         Ok(last_sent)
