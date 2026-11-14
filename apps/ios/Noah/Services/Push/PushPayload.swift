@@ -10,7 +10,7 @@ enum PushPayload {
 
     static let knownTypes: Set<String> = [
         "maintenance", "lightning_invoice_request", "lightning_claim_request",
-        "backup_trigger", "heartbeat", "recurring_payment_due",
+        "backup_trigger", "heartbeat", "recurring_payment_due", "lightning_send_finished",
     ]
 
     static func parse(_ userInfo: [AnyHashable: Any]) -> NotificationData? {

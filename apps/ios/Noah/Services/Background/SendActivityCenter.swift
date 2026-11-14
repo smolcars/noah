@@ -45,6 +45,15 @@ import UserNotifications
         follow()
     }
 
+    /// For a push that checked the payment with Noah out of sight: shows the journal's state now and returns once it
+    /// is shown (the result, then the activity ended, or the notification posted), because iOS can suspend Noah as
+    /// soon as the push completes. iOS may have launched Noah in the background for the push, where `start` was
+    /// never called, so this follows the journal from now on too.
+    func showNow() async {
+        if started { refresh() } else { start() }
+        await work?.value
+    }
+
     /// Re-armed on every change: `withObservationTracking` reports one.
     private func follow() {
         withObservationTracking { _ = controller.state; _ = controller.attempt } onChange: { [weak self] in

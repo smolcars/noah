@@ -221,6 +221,9 @@ struct SendLightningProgress: Codable, Equatable, Sendable {
     private(set) var generation = 0
     private var walletGeneration = 0
     var locked: Bool { state != .ready }
+    /// A Lightning payment of Send's own (never a recurring one) that bark was still paying: what a
+    /// `lightning_send_finished` push checks.
+    var lightningSendPending: Bool { state == .uncertain && attempt?.pending != nil && attempt?.recurringOccurrenceKey == nil }
 
     init(dependencies: Dependencies) {
         self.dependencies = dependencies

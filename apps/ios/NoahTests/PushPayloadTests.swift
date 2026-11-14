@@ -30,6 +30,7 @@ struct PushPayloadTests {
         case .backupTrigger: "backup_trigger"
         case .heartbeat: "heartbeat"
         case .recurringPaymentDue: "recurring_payment_due"
+        case .lightningSendFinished: "lightning_send_finished"
         }
     }
 
