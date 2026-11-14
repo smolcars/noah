@@ -45,6 +45,15 @@ import UserNotifications
         follow()
     }
 
+    /// For a push that checked the payment with Noah out of sight: shows the journal's state now and returns once it
+    /// is shown (the result, then the activity ended, or the notification posted), because iOS can suspend Noah as
+    /// soon as the push completes. iOS may have launched Noah in the background for the push, where `start` was
+    /// never called, so this follows the journal from now on too.
+    func showNow() async {
+        if started { refresh() } else { start() }
+        await work?.value
+    }
+
     /// Re-armed on every change: `withObservationTracking` reports one.
     private func follow() {
         withObservationTracking { _ = controller.state; _ = controller.attempt } onChange: { [weak self] in
@@ -84,8 +93,17 @@ import UserNotifications
         // The Dynamic Island drops an ended activity at once, so it shows the result for a moment first; the Lock
         // Screen then keeps it for a quarter of an hour. If Noah is suspended meanwhile, this ends on its return.
         await Self.update(Self.content(phase))
-        try? await Task.sleep(for: SendBackgroundWindow.resultLinger - .seconds(1))
+        try? await Task.sleep(for: Self.linger(before: RecurringExecutionBudget.deadline))
         await Self.end(Self.content(phase), dismissal: .after(Date().addingTimeInterval(900)))
+    }
+
+    /// How long a result shows before its activity ends. Work a push sets off, here through `showNow` or the
+    /// journal changing under it, runs under the push's deadline; the activity is then ended a second before that
+    /// deadline at the latest, as iOS can suspend Noah once the push completes.
+    static func linger(before deadline: ContinuousClock.Instant?, now: ContinuousClock.Instant = .now) -> Duration {
+        let linger = SendBackgroundWindow.resultLinger - .seconds(1)
+        guard let deadline else { return linger }
+        return max(.zero, min(linger, now.duration(to: deadline) - .seconds(1)))
     }
 
     private func show(_ phase: SendActivityPhase, attempt: SendPaymentController.Attempt?, inFront: Bool) async {

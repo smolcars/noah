@@ -1,6 +1,6 @@
 # Background payments: design
 
-**Status:** design reviewed 2026-10-22. Step 1 of the revised plan below is built (2026-11-10); the sections after it are the original design and still describe the later steps.
+**Status:** design reviewed 2026-10-22. Steps 1 to 3 of the revised plan below are built (step 1 on 2026-11-10, step 3 on 2026-11-14); the sections after it are the original design and still describe the later steps.
 
 ## Revised plan (user, 2026-11-10)
 
@@ -12,7 +12,7 @@ Two things changed since the design: bark 0.8.1 (bark-bolt-ffi 0.11.0, which bot
 | 1. Pending state | Send's Lightning payments use `wait: false`; a send still paying is a normal state, tracked until bark's records end it. | Built |
 | 2a. Background window | iOS background task; Android short foreground service with a plain ongoing notification; the mailbox processor stays on and the payment is checked for that window. | Built |
 | 2b. System UI | iOS Live Activity (and a result notification when Live Activities are off); Android progress notification (`ProgressStyle`, Live Update) on its own channel. | Built |
-| 3. Server push | Silent `lightning_send_finished` push for a closed app. | Later |
+| 3. Server push | Silent `lightning_send_finished` push for a closed app. | Built |
 
 Cut for now: recurring payments stay on `wait: true`; on-chain progress outside the app (phase 5); raw APNs Live Activity updates (phase 6).
 
@@ -37,6 +37,14 @@ Cut for now: recurring payments stay on `wait: true`; on-chain progress outside 
 - **Not seen on a device.** Android 16's promotion (the emulator image has no Live Updates), the iOS fallback notification (the simulator never grants notification permission), and the minimal Dynamic Island.
 
 - **Seen on regtest.** A payment settled or cancelled inside the window is in the journal about a second later, and Send shows the result at first look on return. One cancel in six reached the app only after the window: the Ark server answered "still paying" for about 20 s. Whatever misses the window is picked up on return, as in step 1.
+
+**Step 3 as built.** The Ark server posts `LightningSendFinished` to the sender's wallet mailbox (the one Noah's server already streams) for every send that succeeds or fails. Noah's server answers it with a silent push that only asks the app to check; Send's controller stays the one writer, and nothing in the job pays.
+
+- **Server.** `process_mailbox_message` sends `lightning_send_finished` to every route (direct APNs and FCM, Expo, UnifiedPush): no title or body, `content_available`, normal priority (APNs `background` at 5, FCM `NORMAL`, Expo `normal`). The payload is the type and a random `notification_id`, nothing else. Catch-up replays send nothing, as for the other mailbox pushes. Apps that don't know the type ignore it: native 1.0.x and the React Native app drop unknown types, and the React Native UnifiedPush service logs "Unsupported notification type".
+- **Both apps.** Unless Send's journal holds a Lightning payment of Send's own that is still pending (never a recurring one), the job does nothing and opens no wallet. Otherwise it opens the wallet through the usual background admission and runs one status check. Still in progress stays pending; a result also refreshes the widget.
+- **iOS.** The job starts `SendActivityCenter` (iOS may have launched Noah for the push, where it never ran) and waits for it, so the Live Activity shows the result and ends, or the fallback notification is posted, before the push completes, inside its 25 s.
+- **Android.** Opening the wallet makes the runtime load the journal and check it, so the job waits out that work around its own check. A result replaces the service's "Sending · Open Noah to check" with "Sent" or "Payment failed". With Noah in front Send shows it, and a service still running posts it itself.
+- **Not built:** WorkManager checks for a send still pending, raw APNs Live Activity updates (phase 6), and anything for recurring payments. Not yet seen on a device.
 
 **Scope:**
 - Lightning sends that outlast the screen.

@@ -315,6 +315,59 @@ struct PushJobsTests {
         #expect(recorder.all == ["open", "backup", "report backup success k2", "settled"])
     }
 
+    private func sendFinished() throws -> PushPayload.NotificationData {
+        try decode(#"{"notification_type":"lightning_send_finished","notification_id":"f1"}"#)
+    }
+
+    @Test func sendFinishedWithNothingPendingOpensNothing() async throws {
+        let recorder = Recorder()
+        var dependencies = jobs(recorder).dependencies
+        dependencies.checkLightningSend = { recorder.add("check"); return true }
+        dependencies.showLightningSend = { recorder.add("show") }
+        try await PushJobs(dependencies: dependencies).handle(sendFinished())
+        #expect(recorder.all.isEmpty)
+    }
+
+    /// The result is shown before the job returns; a payment still in progress is shown as it is, with no widget.
+    @Test(arguments: [true, false])
+    func sendFinishedChecksThenShowsBeforeReturning(finished: Bool) async throws {
+        let recorder = Recorder()
+        var dependencies = jobs(recorder).dependencies
+        dependencies.lightningSendPending = { true }
+        dependencies.checkLightningSend = { recorder.add("check"); return finished }
+        dependencies.showLightningSend = { recorder.add("show") }
+        try await PushJobs(dependencies: dependencies).handle(sendFinished())
+        #expect(recorder.all == ["open", "check", "show"] + (finished ? ["widget"] : []))
+    }
+
+    /// Against Send's own controller, wired as the live job is: the push records bark's result, the activity is
+    /// shown that result, and bark is never asked to pay. A second push finds nothing pending.
+    @MainActor @Test(arguments: ["successful", "failed"])
+    func sendFinishedRecordsTheResultWithoutPaying(status: String) async throws {
+        let pending = try SendLightningPendingTests()
+        let bark = pending.paying()
+        let subject = pending.retry.controller(bark, .init())
+        try await pending.retry.send(subject)
+        #expect(subject.lightningSendPending && bark.calls == 1)
+        bark.checkpoint = nil
+        bark.finish(status, effective: status == "successful" ? -1079 : 0)
+
+        let recorder = Recorder()
+        var dependencies = jobs(recorder).dependencies
+        dependencies.lightningSendPending = { @MainActor in subject.lightningSendPending }
+        dependencies.checkLightningSend = { @MainActor in try await SendPendingWatch.checkOnce(controller: subject) }
+        dependencies.showLightningSend = { @MainActor in
+            let phase = SendActivityCenter.phase(state: subject.state, attempt: subject.attempt, refunded: false)
+            recorder.add("show \(phase.map { String(describing: $0) } ?? "nothing")")
+        }
+        let jobs = PushJobs(dependencies: dependencies)
+        try await jobs.handle(sendFinished())
+        #expect(recorder.all == ["open", "show \(status == "successful" ? "sent" : "failed")", "widget"])
+        try await jobs.handle(sendFinished())
+        #expect(recorder.all.count == 3)
+        #expect(bark.calls == 1, "a push never pays")
+    }
+
     @Test func heartbeatFailureDoesNotFailTheJob() async throws {
         let recorder = Recorder()
         recorder.failHeartbeat = true

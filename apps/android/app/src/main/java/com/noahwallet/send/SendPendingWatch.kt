@@ -22,4 +22,17 @@ internal object SendPendingWatch {
             pause()
         }
     }
+
+    /**
+     * A push's one status check. Opening the wallet makes the runtime load Send's journal and check it, and a check
+     * asked for meanwhile returns at once, so this waits out work under way before and after its own check. True once
+     * the payment is no longer pending.
+     */
+    suspend fun checkOnce(controller: SendController, admitted: () -> Unit, pause: suspend () -> Unit = { delay(100) }): Boolean {
+        suspend fun settled() { while (controller.loading || controller.checking) { admitted(); pause() } }
+        settled()
+        controller.checkStatus()
+        settled()
+        return !controller.lightningSendPending
+    }
 }

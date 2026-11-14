@@ -7,11 +7,18 @@ import com.google.firebase.messaging.FirebaseMessaging
 import com.noahwallet.BuildConfig
 import com.noahwallet.api.generated.client.*
 import com.noahwallet.api.generated.models.*
+import com.noahwallet.send.SendPendingWatch
+import com.noahwallet.send.SendRuntime
 import com.noahwallet.services.AppServices
+import com.noahwallet.services.background.PeriodicExecution
+import com.noahwallet.services.background.SendPendingNotifications
+import com.noahwallet.services.background.SendPendingService
 import com.noahwallet.services.logging.AppLog
 import com.noahwallet.services.server.*
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.suspendCancellableCoroutine
+import kotlinx.coroutines.withContext
 import kotlin.coroutines.resume
 import kotlin.coroutines.resumeWithException
 
@@ -23,6 +30,20 @@ class PushRuntime(private val context: Context, private val services: AppService
         recurring = { com.noahwallet.recurring.RecurringRuntime.shared(context).execute(it) },
         maintenance = services.session::maintenanceDelegated,
         progressExits = { services.session.progressPendingExits { log.w("Background exit progress failed: $it") } },
+        lightningSendPending = {
+            val saved = withContext(Dispatchers.IO) { runCatching { SendRuntime.shared(context).journal.read() }.getOrNull() }
+            saved?.pending != null && saved.recurringOccurrenceKey == null
+        },
+        checkLightningSend = { admitted ->
+            withContext(Dispatchers.Main) { SendPendingWatch.checkOnce(SendRuntime.shared(context).controller, admitted) }
+        },
+        showLightningSend = {
+            val controller = SendRuntime.shared(context).controller
+            // In front, Send shows the result itself; a running service posts it as it stops.
+            if (!PeriodicExecution.isForeground && !SendPendingService.running) {
+                SendPendingNotifications.finished(context, controller.state, controller.attempt?.pending != null)
+            }
+        },
         backup = { services.backupCoordinator.flush(com.noahwallet.services.backup.BackupCoordinator.Reason.push, requireEnabled = false) },
         reportBackup = { k1, success ->
             val payload = ReportJobStatusPayload(errorMessage = if (success) null else "Wallet backup failed",

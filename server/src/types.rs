@@ -479,6 +479,15 @@ pub struct HeartbeatNotification {
     pub notification_id: String,
 }
 
+/// Silent push telling the device that a Lightning payment it sent has finished,
+/// so it can check its own pending send and record the result. Carries only a
+/// random id: no payment hash, amount, outcome or preimage. The id also keeps
+/// two pushes from being merged into one job.
+#[derive(Debug, Serialize, Deserialize, Clone, utoipa::ToSchema)]
+pub struct LightningSendFinishedNotification {
+    pub notification_id: String,
+}
+
 /// Silent push asking the device to execute its locally stored recurring
 /// payments that are due. Carries no amounts or recipients: the device checks
 /// its own schedules and only pays within the policy the user approved.
@@ -577,6 +586,7 @@ pub enum NotificationData {
     BackupTrigger(BackupTriggerNotification),
     Heartbeat(HeartbeatNotification),
     RecurringPaymentDue(RecurringPaymentDueNotification),
+    LightningSendFinished(LightningSendFinishedNotification),
 }
 
 impl NotificationData {
@@ -602,6 +612,7 @@ impl NotificationData {
             NotificationData::BackupTrigger(_) => "backup_trigger",
             NotificationData::Heartbeat(_) => "heartbeat",
             NotificationData::RecurringPaymentDue(_) => "recurring_payment_due",
+            NotificationData::LightningSendFinished(_) => "lightning_send_finished",
         }
     }
 
@@ -621,7 +632,8 @@ impl NotificationData {
             NotificationData::Heartbeat(_)
             | NotificationData::RecurringPaymentDue(_)
             | NotificationData::LightningInvoiceRequest(_)
-            | NotificationData::LightningClaimRequest(_) => {}
+            | NotificationData::LightningClaimRequest(_)
+            | NotificationData::LightningSendFinished(_) => {}
         }
     }
 }

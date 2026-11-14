@@ -56,4 +56,16 @@ import Testing
         #expect(SendActivityPhase.failed.line(locale: "en") == nil && SendActivityPhase.refunded.line(locale: "en") == "Back in your wallet")
         #expect(SendActivityPhase.sent.progress == 1 && SendActivityPhase.paying.progress == 0.5 && SendActivityPhase.failed.progress == 0)
     }
+
+    /// ActivityKit can't be faked here, so this covers how long a result shows before its activity ends: the usual
+    /// moment, or under a push's deadline what is left of it, so the activity is ended before iOS can suspend Noah.
+    @Test func aResultReachedNearThePushDeadlineEndsTheActivityBeforeIt() {
+        let now = ContinuousClock.now
+        let usual = SendBackgroundWindow.resultLinger - .seconds(1)
+        #expect(SendActivityCenter.linger(before: nil, now: now) == usual)
+        #expect(SendActivityCenter.linger(before: now + .seconds(20), now: now) == usual)
+        #expect(SendActivityCenter.linger(before: now + .seconds(3), now: now) == .seconds(2))
+        #expect(SendActivityCenter.linger(before: now + .milliseconds(500), now: now) == .zero)
+        #expect(SendActivityCenter.linger(before: now - .seconds(1), now: now) == .zero)
+    }
 }

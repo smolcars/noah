@@ -44,7 +44,9 @@ use crate::{
     },
     errors::ApiError,
     push::{PushNotificationData, send_push_notification},
-    types::{LightningClaimRequestNotification, NotificationData},
+    types::{
+        LightningClaimRequestNotification, LightningSendFinishedNotification, NotificationData,
+    },
 };
 
 #[derive(Debug, Clone)]
@@ -1044,6 +1046,25 @@ pub(crate) async fn process_mailbox_message(
             )
             .await?;
         }
+        Some(Message::LightningSendFinished(finished)) if send_notifications => {
+            tracing::info!(
+                service = "mailbox_worker",
+                pubkey = %mailbox.pubkey,
+                checkpoint = message.checkpoint,
+                succeeded = finished.preimage.is_some(),
+                notification_kind = "lightning_send_finished",
+                silent = true,
+                content_available = true,
+                "mailbox lightning send finished; sending push notification"
+            );
+
+            send_push_notification(
+                app_state.clone(),
+                build_lightning_send_finished_notification()?,
+                Some(mailbox.pubkey.to_string()),
+            )
+            .await?;
+        }
         Some(Message::Arkoor(arkoor)) if send_notifications && !arkoor.vtxos.is_empty() => {
             tracing::info!(
                 service = "mailbox_worker",
@@ -1145,6 +1166,27 @@ fn build_lightning_claim_notification(
         body: None,
         data,
         priority: Priority::High,
+        content_available: true,
+    })
+}
+
+/// Wakes a sender's app to record a Lightning payment the Ark server finished. Normal
+/// priority: Apple wants background pushes at 5, and Android deprioritises apps whose
+/// high-priority messages show nothing. The app checks its own pending send, so the
+/// payload is only a random id.
+fn build_lightning_send_finished_notification() -> Result<PushNotificationData, ApiError> {
+    let data = serde_json::to_string(&NotificationData::LightningSendFinished(
+        LightningSendFinishedNotification {
+            notification_id: Uuid::new_v4().to_string(),
+        },
+    ))
+    .map_err(|e| ApiError::SerializeErr(e.to_string()))?;
+
+    Ok(PushNotificationData {
+        title: None,
+        body: None,
+        data,
+        priority: Priority::Normal,
         content_available: true,
     })
 }

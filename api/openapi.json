@@ -645,6 +645,18 @@
         ],
         "type": "object"
       },
+      "LightningSendFinishedNotification": {
+        "description": "Silent push telling the device that a Lightning payment it sent has finished,\nso it can check its own pending send and record the result. Carries only a\nrandom id: no payment hash, amount, outcome or preimage. The id also keeps\ntwo pushes from being merged into one job.",
+        "properties": {
+          "notification_id": {
+            "type": "string"
+          }
+        },
+        "required": [
+          "notification_id"
+        ],
+        "type": "object"
+      },
       "LnurlpDefaultResponse": {
         "description": "Represents the first response in the LNURL-pay protocol.\n\nThis response provides the necessary details for a wallet to make a payment,\nsuch as the callback URL, sendable amounts, and metadata.",
         "properties": {
@@ -802,6 +814,7 @@
             "heartbeat": "#/components/schemas/NotificationDataHeartbeat",
             "lightning_claim_request": "#/components/schemas/NotificationDataLightningClaimRequest",
             "lightning_invoice_request": "#/components/schemas/NotificationDataLightningInvoiceRequest",
+            "lightning_send_finished": "#/components/schemas/NotificationDataLightningSendFinished",
             "maintenance": "#/components/schemas/NotificationDataMaintenance",
             "recurring_payment_due": "#/components/schemas/NotificationDataRecurringPaymentDue"
           },
@@ -825,6 +838,9 @@
           },
           {
             "$ref": "#/components/schemas/NotificationDataRecurringPaymentDue"
+          },
+          {
+            "$ref": "#/components/schemas/NotificationDataLightningSendFinished"
           }
         ]
       },
@@ -916,6 +932,25 @@
         "required": [
           "transaction_id",
           "amount",
+          "notification_type"
+        ],
+        "type": "object"
+      },
+      "NotificationDataLightningSendFinished": {
+        "description": "Silent push telling the device that a Lightning payment it sent has finished,\nso it can check its own pending send and record the result. Carries only a\nrandom id: no payment hash, amount, outcome or preimage. The id also keeps\ntwo pushes from being merged into one job.",
+        "properties": {
+          "notification_id": {
+            "type": "string"
+          },
+          "notification_type": {
+            "enum": [
+              "lightning_send_finished"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "notification_id",
           "notification_type"
         ],
         "type": "object"

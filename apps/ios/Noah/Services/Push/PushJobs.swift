@@ -26,6 +26,12 @@ struct PushJobs: Sendable {
         var recurring: @Sendable () async throws -> Void = {}
         /// Pending exits' progress; never throws.
         var progressExits: @Sendable () async -> Void = {}
+        /// Send's journal holds a Lightning payment of Send's own that bark was still paying. Opens nothing.
+        var lightningSendPending: @Sendable () async -> Bool = { false }
+        /// Checks that payment's status once, after any check already under way; never pays. True once it is no longer pending.
+        var checkLightningSend: @Sendable () async throws -> Bool = { false }
+        /// Shows Send's journal outside the app and returns once it is shown.
+        var showLightningSend: @Sendable () async -> Void = {}
         var withWalletAccess: @Sendable (@escaping @Sendable () async throws -> Void) async throws -> Void = { try await $0() }
     }
 
@@ -98,6 +104,19 @@ struct PushJobs: Sendable {
             try await d.recurring()
             try BackgroundExecution.checkActive()
             await d.refreshWidget()
+
+        case .lightningSendFinished:
+            // Nothing of Send's own is being paid (a recurring payment, or a result already recorded).
+            guard await d.lightningSendPending() else { return }
+            try await d.ensureWalletOpen()
+            try BackgroundExecution.checkActive()
+            let finished = try await d.checkLightningSend()
+            try BackgroundExecution.checkActive()
+            // Before returning: iOS can suspend Noah as soon as the push completes.
+            await d.showLightningSend()
+            guard finished else { return }
+            try BackgroundExecution.checkActive()
+            await d.refreshWidget()
         }
     }
 
@@ -109,6 +128,7 @@ struct PushJobs: Sendable {
         case .backupTrigger: "backup_trigger"
         case .heartbeat: "heartbeat"
         case .recurringPaymentDue: "recurring_payment_due"
+        case .lightningSendFinished: "lightning_send_finished"
         }
     }
 
@@ -178,6 +198,9 @@ extension PushJobs.Dependencies {
             },
             recurring: { await RecurringExecutor.shared.execute() },
             progressExits: { await session.progressPendingExits { AppLog("pushJobs").w("Background exit progress failed: \($0)") } },
+            lightningSendPending: { @MainActor in SendPaymentController.shared.lightningSendPending },
+            checkLightningSend: { @MainActor in try await SendPendingWatch.checkOnce(controller: .shared) },
+            showLightningSend: { await SendActivityCenter.shared.showNow() },
             withWalletAccess: { try await services.withBackgroundWallet($0) })
     }
 }

@@ -37,12 +37,13 @@ struct ServerNotificationDataTests {
         case .backupTrigger: "backup_trigger"
         case .heartbeat: "heartbeat"
         case .recurringPaymentDue: "recurring_payment_due"
+        case .lightningSendFinished: "lightning_send_finished"
         }
     }
 
     @Test func decodesAndRoundTripsEveryServerVariant() throws {
         let all = try cases()
-        #expect(all.count == 7)
+        #expect(all.count == 8)
         for testCase in all {
             let decoded = try JSONDecoder().decode(NotificationData.self, from: testCase.input)
             #expect(notificationType(decoded) == testCase.expected, "\(testCase.name)")

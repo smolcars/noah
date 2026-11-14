@@ -18,4 +18,17 @@ import Foundation
             do { try await sleep(.seconds(1)) } catch { return }
         }
     }
+
+    /// A push's one status check. A check asked for while another is under way returns at once, so this waits out a
+    /// check under way before and after its own, until cancelled. True once the payment is no longer pending.
+    static func checkOnce(controller: SendPaymentController,
+                          sleep: (Duration) async throws -> Void = { try await Task.sleep(for: $0) }) async throws -> Bool {
+        func settled() async throws {
+            while controller.checking { try Task.checkCancellation(); try await sleep(.milliseconds(100)) }
+        }
+        try await settled()
+        await controller.checkStatus()
+        try await settled()
+        return !controller.lightningSendPending
+    }
 }

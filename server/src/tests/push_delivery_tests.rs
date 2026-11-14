@@ -1,21 +1,27 @@
-use std::{sync::Arc, time::Duration};
+use std::{collections::HashSet, sync::Arc, time::Duration};
 
 use chrono::Utc;
 use expo_push_notification_client::Priority;
-use server_rpc::protos::mailbox_server::{
-    ArkoorMessage, IncomingLightningPaymentMessage, MailboxMessage, mailbox_message::Message,
+use serde_json::Value;
+use server_rpc::protos::{
+    core::{LightningFailureReason, LightningPaymentFailure},
+    mailbox_server::{
+        ArkoorMessage, IncomingLightningPaymentMessage, LightningSendFinishedMessage,
+        MailboxMessage, mailbox_message::Message,
+    },
 };
 use tokio_util::sync::CancellationToken;
+use uuid::Uuid;
 
 use crate::{
-    AppStruct,
+    AppState, AppStruct,
     db::{
-        mailbox_authorization_repo::MailboxAuthorizationRepository,
+        mailbox_authorization_repo::{ActiveMailboxAuthorization, MailboxAuthorizationRepository},
         push_token_repo::PushTokenRepository,
     },
     mailbox_worker::{MailboxSessionContext, process_mailbox_message},
     tests::common::{TestUser, create_test_user, setup_test_app},
-    types::NotificationData,
+    types::{NotificationData, PushProvider},
 };
 
 #[tokio::test]
@@ -190,6 +196,165 @@ async fn mailbox_arkoor_payment_sends_one_push_for_all_its_vtxos() {
             .unwrap()
             .last_checkpoint,
         43
+    );
+}
+
+fn mailbox_session() -> MailboxSessionContext {
+    MailboxSessionContext {
+        worker_id: "transport-test".to_string(),
+        stream_idle_reconnect: Duration::from_secs(10),
+        cancellation_token: CancellationToken::new(),
+    }
+}
+
+/// Authorizes `pubkey`'s mailbox again and claims it for `session`'s worker.
+async fn claim_mailbox(
+    state: &AppState,
+    pubkey: &str,
+    session: &MailboxSessionContext,
+) -> ActiveMailboxAuthorization {
+    let repo = MailboxAuthorizationRepository::new(&state.db_pool);
+    repo.upsert(
+        pubkey,
+        "deadbeef",
+        "cafebabe",
+        Utc::now().timestamp() + 3600,
+    )
+    .await
+    .unwrap();
+    repo.claim_runnable(
+        Utc::now(),
+        &session.worker_id,
+        Utc::now() + chrono::Duration::minutes(1),
+        1,
+    )
+    .await
+    .unwrap()
+    .remove(0)
+}
+
+/// What the Ark server posts to the sender's mailbox when a Lightning send ends.
+fn lightning_send_finished(checkpoint: u64, succeeded: bool) -> MailboxMessage {
+    MailboxMessage {
+        checkpoint,
+        message: Some(Message::LightningSendFinished(
+            LightningSendFinishedMessage {
+                payment_hash: vec![0x12; 32],
+                preimage: succeeded.then(|| vec![0x34; 32]),
+                failure: (!succeeded).then_some(LightningPaymentFailure {
+                    reason: LightningFailureReason::LightningFailureNoRoute as i32,
+                }),
+            },
+        )),
+    }
+}
+
+/// Every route gets one silent, normal-priority push per finished send, success or
+/// failure, carrying only its type and a random id.
+#[tokio::test]
+async fn mailbox_lightning_send_finished_wakes_the_sender_on_every_route() {
+    let (_, state, _guard) = setup_test_app().await;
+    let (sender, mut deliveries) = tokio::sync::mpsc::unbounded_channel();
+    let state = Arc::new(AppStruct {
+        push_deliveries: Some(sender),
+        ..(*state).clone()
+    });
+    let user = TestUser::new();
+    create_test_user(&state, &user, None).await;
+    let pubkey = user.pubkey().to_string();
+    let tokens = PushTokenRepository::new(&state.db_pool);
+    let repo = MailboxAuthorizationRepository::new(&state.db_pool);
+    let session = mailbox_session();
+    let apns_token = "ab".repeat(32);
+    let routes = [
+        ("ExpoPushToken[test-token]", None),
+        ("https://1.1.1.1/up/native", None),
+        (apns_token.as_str(), Some(PushProvider::Apns)),
+        ("fcm-device:APA91b", Some(PushProvider::Fcm)),
+    ];
+
+    let mut checkpoint = 0;
+    let mut ids = HashSet::new();
+    for (token, provider) in routes {
+        tokens
+            .upsert_with_provider(&pubkey, token, provider, false)
+            .await
+            .unwrap();
+        for succeeded in [true, false] {
+            checkpoint += 1;
+            let mailbox = claim_mailbox(&state, &pubkey, &session).await;
+            let message = lightning_send_finished(checkpoint, succeeded);
+            assert!(
+                process_mailbox_message(&state, &mailbox, &session, &message, true)
+                    .await
+                    .unwrap()
+            );
+
+            let (target, notification) = deliveries.try_recv().expect("expected one push");
+            assert_eq!(target, token);
+            assert_eq!(notification.priority, Priority::Normal);
+            assert!(notification.content_available);
+            assert!(notification.title.is_none() && notification.body.is_none());
+            let payload: Value = serde_json::from_str(&notification.data).unwrap();
+            let fields = payload.as_object().unwrap();
+            assert_eq!(fields.len(), 2, "only the type and an id: {payload}");
+            assert_eq!(fields["notification_type"], "lightning_send_finished");
+            let id = fields["notification_id"].as_str().unwrap();
+            assert!(Uuid::parse_str(id).is_ok());
+            assert!(ids.insert(id.to_string()), "each push has its own id");
+            assert!(
+                deliveries.try_recv().is_err(),
+                "one finished send sends one push"
+            );
+            assert_eq!(
+                repo.find_by_pubkey(&pubkey)
+                    .await
+                    .unwrap()
+                    .unwrap()
+                    .last_checkpoint,
+                checkpoint as i64
+            );
+        }
+    }
+}
+
+/// A first catch-up replays old messages; those sends ended long ago and wake nobody.
+#[tokio::test]
+async fn mailbox_catch_up_sends_no_lightning_send_finished_push() {
+    let (_, state, _guard) = setup_test_app().await;
+    let (sender, mut deliveries) = tokio::sync::mpsc::unbounded_channel();
+    let state = Arc::new(AppStruct {
+        push_deliveries: Some(sender),
+        ..(*state).clone()
+    });
+    let user = TestUser::new();
+    create_test_user(&state, &user, None).await;
+    let pubkey = user.pubkey().to_string();
+    PushTokenRepository::new(&state.db_pool)
+        .upsert(&pubkey, "ExpoPushToken[test-token]")
+        .await
+        .unwrap();
+    let session = mailbox_session();
+    let mailbox = claim_mailbox(&state, &pubkey, &session).await;
+
+    for (checkpoint, succeeded) in [(7, true), (8, false)] {
+        let message = lightning_send_finished(checkpoint, succeeded);
+        assert!(
+            process_mailbox_message(&state, &mailbox, &session, &message, false)
+                .await
+                .unwrap()
+        );
+    }
+
+    assert!(deliveries.try_recv().is_err());
+    assert_eq!(
+        MailboxAuthorizationRepository::new(&state.db_pool)
+            .find_by_pubkey(&pubkey)
+            .await
+            .unwrap()
+            .unwrap()
+            .last_checkpoint,
+        8
     );
 }
 
@@ -1348,6 +1513,55 @@ lwIDAQAB
 
         assert!(logs_contain("APNs credentials are not configured"));
         assert!(logs_contain("FCM credentials are not configured"));
+    }
+
+    /// A finished Lightning send reaches APNs as a background push at priority 5, and FCM
+    /// as a normal-priority data message, with nothing for the system to show.
+    #[tokio::test]
+    async fn lightning_send_finished_is_a_normal_priority_background_push() {
+        let (_, state, _guard) = setup_test_app().await;
+        let provider = Provider::default();
+        let state = state_using(&state, &provider).await;
+        let session = mailbox_session();
+        for (key, token, kind) in [
+            (1, APNS_TOKEN, PushProvider::Apns),
+            (2, FCM_TOKEN, PushProvider::Fcm),
+        ] {
+            let pubkey = user_with_target(&state, key, token, kind, false).await;
+            let mailbox = claim_mailbox(&state, &pubkey, &session).await;
+            let message = lightning_send_finished(key.into(), key == 1);
+            assert!(
+                process_mailbox_message(&state, &mailbox, &session, &message, true)
+                    .await
+                    .unwrap()
+            );
+        }
+
+        let received = provider.received();
+        assert_eq!(received.len(), 2);
+        let (apns, fcm) = (&received[0], &received[1]);
+        assert_eq!(apns.path, format!("/production/3/device/{APNS_TOKEN}"));
+        assert_eq!(header(apns, "apns-push-type"), "background");
+        assert_eq!(header(apns, "apns-priority"), "5");
+        assert_eq!(apns.body["aps"], json!({ "content-available": 1 }));
+        assert!(
+            apns.body["body"]
+                .as_str()
+                .unwrap()
+                .contains("lightning_send_finished")
+        );
+
+        assert_eq!(fcm.path, "/v1/projects/noah-test/messages:send");
+        assert_eq!(fcm.body["message"]["android"]["priority"], "NORMAL");
+        assert!(fcm.body["message"].get("notification").is_none());
+        let data = fcm.body["message"]["data"].as_object().unwrap();
+        assert_eq!(data.keys().collect::<Vec<_>>(), ["body"]);
+        assert!(
+            data["body"]
+                .as_str()
+                .unwrap()
+                .contains("lightning_send_finished")
+        );
     }
 
     #[test]
