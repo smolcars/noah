@@ -903,6 +903,26 @@ extension Components {
                 case transactionId = "transaction_id"
             }
         }
+        /// Silent push telling the device that a Lightning payment it sent has finished,
+        /// so it can check its own pending send and record the result. Carries only a
+        /// random id: no payment hash, amount, outcome or preimage. The id also keeps
+        /// two pushes from being merged into one job.
+        ///
+        /// - Remark: Generated from `#/components/schemas/LightningSendFinishedNotification`.
+        internal struct LightningSendFinishedNotification: Codable, Hashable, Sendable {
+            /// - Remark: Generated from `#/components/schemas/LightningSendFinishedNotification/notification_id`.
+            internal var notificationId: Swift.String
+            /// Creates a new `LightningSendFinishedNotification`.
+            ///
+            /// - Parameters:
+            ///   - notificationId:
+            internal init(notificationId: Swift.String) {
+                self.notificationId = notificationId
+            }
+            internal enum CodingKeys: String, CodingKey {
+                case notificationId = "notification_id"
+            }
+        }
         /// Represents the first response in the LNURL-pay protocol.
         ///
         /// This response provides the necessary details for a wallet to make a payment,
@@ -1151,6 +1171,8 @@ extension Components {
             case lightningClaimRequest(Components.Schemas.NotificationDataLightningClaimRequest)
             /// - Remark: Generated from `#/components/schemas/NotificationData/NotificationDataLightningInvoiceRequest`.
             case lightningInvoiceRequest(Components.Schemas.NotificationDataLightningInvoiceRequest)
+            /// - Remark: Generated from `#/components/schemas/NotificationData/NotificationDataLightningSendFinished`.
+            case lightningSendFinished(Components.Schemas.NotificationDataLightningSendFinished)
             /// - Remark: Generated from `#/components/schemas/NotificationData/NotificationDataMaintenance`.
             case maintenance(Components.Schemas.NotificationDataMaintenance)
             /// - Remark: Generated from `#/components/schemas/NotificationData/NotificationDataRecurringPaymentDue`.
@@ -1173,6 +1195,8 @@ extension Components {
                     self = .lightningClaimRequest(try .init(from: decoder))
                 case "lightning_invoice_request":
                     self = .lightningInvoiceRequest(try .init(from: decoder))
+                case "lightning_send_finished":
+                    self = .lightningSendFinished(try .init(from: decoder))
                 case "maintenance":
                     self = .maintenance(try .init(from: decoder))
                 case "recurring_payment_due":
@@ -1194,6 +1218,8 @@ extension Components {
                 case let .lightningClaimRequest(value):
                     try value.encode(to: encoder)
                 case let .lightningInvoiceRequest(value):
+                    try value.encode(to: encoder)
+                case let .lightningSendFinished(value):
                     try value.encode(to: encoder)
                 case let .maintenance(value):
                     try value.encode(to: encoder)
@@ -1330,6 +1356,38 @@ extension Components {
                 case amount
                 case notificationType = "notification_type"
                 case transactionId = "transaction_id"
+            }
+        }
+        /// Silent push telling the device that a Lightning payment it sent has finished,
+        /// so it can check its own pending send and record the result. Carries only a
+        /// random id: no payment hash, amount, outcome or preimage. The id also keeps
+        /// two pushes from being merged into one job.
+        ///
+        /// - Remark: Generated from `#/components/schemas/NotificationDataLightningSendFinished`.
+        internal struct NotificationDataLightningSendFinished: Codable, Hashable, Sendable {
+            /// - Remark: Generated from `#/components/schemas/NotificationDataLightningSendFinished/notification_id`.
+            internal var notificationId: Swift.String
+            /// - Remark: Generated from `#/components/schemas/NotificationDataLightningSendFinished/notification_type`.
+            internal enum NotificationTypePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                case lightningSendFinished = "lightning_send_finished"
+            }
+            /// - Remark: Generated from `#/components/schemas/NotificationDataLightningSendFinished/notification_type`.
+            internal var notificationType: Components.Schemas.NotificationDataLightningSendFinished.NotificationTypePayload
+            /// Creates a new `NotificationDataLightningSendFinished`.
+            ///
+            /// - Parameters:
+            ///   - notificationId:
+            ///   - notificationType:
+            internal init(
+                notificationId: Swift.String,
+                notificationType: Components.Schemas.NotificationDataLightningSendFinished.NotificationTypePayload
+            ) {
+                self.notificationId = notificationId
+                self.notificationType = notificationType
+            }
+            internal enum CodingKeys: String, CodingKey {
+                case notificationId = "notification_id"
+                case notificationType = "notification_type"
             }
         }
         /// - Remark: Generated from `#/components/schemas/NotificationDataMaintenance`.
