@@ -93,8 +93,17 @@ import UserNotifications
         // The Dynamic Island drops an ended activity at once, so it shows the result for a moment first; the Lock
         // Screen then keeps it for a quarter of an hour. If Noah is suspended meanwhile, this ends on its return.
         await Self.update(Self.content(phase))
-        try? await Task.sleep(for: SendBackgroundWindow.resultLinger - .seconds(1))
+        try? await Task.sleep(for: Self.linger(before: RecurringExecutionBudget.deadline))
         await Self.end(Self.content(phase), dismissal: .after(Date().addingTimeInterval(900)))
+    }
+
+    /// How long a result shows before its activity ends. Work a push sets off, here through `showNow` or the
+    /// journal changing under it, runs under the push's deadline; the activity is then ended a second before that
+    /// deadline at the latest, as iOS can suspend Noah once the push completes.
+    static func linger(before deadline: ContinuousClock.Instant?, now: ContinuousClock.Instant = .now) -> Duration {
+        let linger = SendBackgroundWindow.resultLinger - .seconds(1)
+        guard let deadline else { return linger }
+        return max(.zero, min(linger, now.duration(to: deadline) - .seconds(1)))
     }
 
     private func show(_ phase: SendActivityPhase, attempt: SendPaymentController.Attempt?, inFront: Bool) async {
