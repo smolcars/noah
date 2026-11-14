@@ -28,8 +28,8 @@ struct PushJobs: Sendable {
         var progressExits: @Sendable () async -> Void = {}
         /// Send's journal holds a Lightning payment of Send's own that bark was still paying. Opens nothing.
         var lightningSendPending: @Sendable () async -> Bool = { false }
-        /// Checks that payment's status once; never pays. True once it is no longer pending.
-        var checkLightningSend: @Sendable () async -> Bool = { false }
+        /// Checks that payment's status once, after any check already under way; never pays. True once it is no longer pending.
+        var checkLightningSend: @Sendable () async throws -> Bool = { false }
         /// Shows Send's journal outside the app and returns once it is shown.
         var showLightningSend: @Sendable () async -> Void = {}
         var withWalletAccess: @Sendable (@escaping @Sendable () async throws -> Void) async throws -> Void = { try await $0() }
@@ -110,7 +110,7 @@ struct PushJobs: Sendable {
             guard await d.lightningSendPending() else { return }
             try await d.ensureWalletOpen()
             try BackgroundExecution.checkActive()
-            let finished = await d.checkLightningSend()
+            let finished = try await d.checkLightningSend()
             try BackgroundExecution.checkActive()
             // Before returning: iOS can suspend Noah as soon as the push completes.
             await d.showLightningSend()
@@ -199,10 +199,7 @@ extension PushJobs.Dependencies {
             recurring: { await RecurringExecutor.shared.execute() },
             progressExits: { await session.progressPendingExits { AppLog("pushJobs").w("Background exit progress failed: \($0)") } },
             lightningSendPending: { @MainActor in SendPaymentController.shared.lightningSendPending },
-            checkLightningSend: { @MainActor in
-                await SendPaymentController.shared.checkStatus()
-                return !SendPaymentController.shared.lightningSendPending
-            },
+            checkLightningSend: { @MainActor in try await SendPendingWatch.checkOnce(controller: .shared) },
             showLightningSend: { await SendActivityCenter.shared.showNow() },
             withWalletAccess: { try await services.withBackgroundWallet($0) })
     }

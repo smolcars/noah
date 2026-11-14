@@ -54,6 +54,48 @@ import Testing
         #expect(checks == 12 && clock.slept == 21)
     }
 
+    /// A push's check waits out a check already under way (one the Send screen or the background window started): it
+    /// reports what that check found, not the paying state from before it, and stops waiting once cancelled.
+    @Test(.timeLimit(.minutes(1))) func aPushCheckWaitsForACheckUnderWay() async throws {
+        let bark = pending.paying(), storage = SendPaymentTests.Storage()
+        let (release, open) = AsyncStream<Void>.makeStream()
+        defer { open.finish() }
+        let subject = SendPaymentController(dependencies: .init(
+            prepare: { _, _ in await bark.prepare() },
+            pay: { try await bark.pay($0, $1, $2) },
+            reconcile: { attempt in
+                for await _ in release { break }
+                return await bark.reconcile(attempt)
+            },
+            read: { storage.attempt }, write: { try storage.write($0) }))
+        try await pending.retry.send(subject)
+        let earlier = Task { await subject.checkStatus() }
+        try await SendPaymentTests.waitUntil { subject.checking }
+        // bark settles it while that check is under way.
+        bark.checkpoint = nil
+        bark.finish("successful", effective: -1079)
+
+        // Cancelled (the push's deadline), it stops waiting and checks nothing itself.
+        let clock = Clock()
+        let cancelled = Task { try await SendPendingWatch.checkOnce(controller: subject) { _ in clock.slept += 1; await Task.yield() } }
+        try await SendPaymentTests.waitUntil { clock.slept > 0 }
+        cancelled.cancel()
+        await #expect(throws: CancellationError.self) { try await cancelled.value }
+        #expect(subject.checking && subject.lightningSendPending)
+
+        // Otherwise it waits for that check to end and reports what it found.
+        clock.slept = 0
+        let finished = try await SendPendingWatch.checkOnce(controller: subject) { _ in
+            clock.slept += 1
+            if clock.slept == 1 { open.finish() }
+            await Task.yield()
+        }
+        await earlier.value
+        #expect(finished && clock.slept > 0)
+        guard case .succeeded = subject.state else { Issue.record("Expected Sent, got \(subject.state)"); return }
+        #expect(bark.calls == 1)
+    }
+
     @Test func nothingToWatchEndsAtOnce() async {
         let subject = pending.retry.controller(pending.retry.bark(), .init())
         var slept = 0

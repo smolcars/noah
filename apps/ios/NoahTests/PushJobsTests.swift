@@ -355,10 +355,7 @@ struct PushJobsTests {
         let recorder = Recorder()
         var dependencies = jobs(recorder).dependencies
         dependencies.lightningSendPending = { @MainActor in subject.lightningSendPending }
-        dependencies.checkLightningSend = { @MainActor in
-            await subject.checkStatus()
-            return !subject.lightningSendPending
-        }
+        dependencies.checkLightningSend = { @MainActor in try await SendPendingWatch.checkOnce(controller: subject) }
         dependencies.showLightningSend = { @MainActor in
             let phase = SendActivityCenter.phase(state: subject.state, attempt: subject.attempt, refunded: false)
             recorder.add("show \(phase.map { String(describing: $0) } ?? "nothing")")
