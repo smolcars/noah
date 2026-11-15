@@ -2,7 +2,9 @@ use deadpool_redis::redis::AsyncCommands;
 
 use super::redis_client::RedisClient;
 
-const INVOICE_PREFIX: &str = "invoice:";
+// Not "invoice:": a server from before the payee binding writes `invoice:<transaction_id>` with an
+// ID the submitter chooses, and must not be able to write a key this one trusts during a deploy.
+const INVOICE_PREFIX: &str = "lnurl_invoice:";
 const INVOICE_TTL_SECONDS: u64 = 60;
 
 #[derive(Clone)]
