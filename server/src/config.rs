@@ -62,6 +62,14 @@ fn validate_barkd_url(network: Network, url: &reqwest::Url) -> Result<()> {
     Ok(())
 }
 
+/// Dev mode accepts a fixed verification code for any address, so it never runs on mainnet.
+fn validate_email_dev_mode(network: Network) -> Result<()> {
+    if network == Network::Bitcoin {
+        anyhow::bail!("EMAIL_DEV_MODE must not be enabled on mainnet");
+    }
+    Ok(())
+}
+
 /// Configuration for the Noah server
 ///
 /// All config fields are set via environment variables:
@@ -259,6 +267,9 @@ impl Config {
         if self.auth_jwt_secret.is_empty() {
             anyhow::bail!("AUTH_JWT_SECRET is required");
         }
+        if self.email_dev_mode {
+            validate_email_dev_mode(self.network()?)?;
+        }
         if self.barkd_forwarded_invoices_enabled {
             let barkd_url = self
                 .barkd_url
@@ -401,6 +412,13 @@ mod tests {
     use bitcoin::Network;
 
     use super::validate_barkd_url;
+
+    #[test]
+    fn email_dev_mode_is_refused_on_mainnet_only() {
+        assert!(super::validate_email_dev_mode(Network::Bitcoin).is_err());
+        assert!(super::validate_email_dev_mode(Network::Signet).is_ok());
+        assert!(super::validate_email_dev_mode(Network::Regtest).is_ok());
+    }
 
     fn validate(network: Network, url: &str) -> bool {
         validate_barkd_url(network, &reqwest::Url::parse(url).unwrap()).is_ok()

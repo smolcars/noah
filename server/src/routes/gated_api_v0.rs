@@ -306,7 +306,7 @@ pub async fn revoke_mailbox_authorization(
 )]
 pub async fn submit_invoice(
     State(state): State<AppState>,
-    Extension(_auth_payload): Extension<AuthenticatedUser>,
+    Extension(auth_payload): Extension<AuthenticatedUser>,
     event: Option<Extension<WideEventHandle>>,
     Json(payload): Json<SubmitInvoicePayload>,
 ) -> anyhow::Result<Json<DefaultSuccessPayload>, ApiError> {
@@ -316,7 +316,7 @@ pub async fn submit_invoice(
 
     state
         .invoice_store
-        .store(&payload.transaction_id, &payload.invoice)
+        .store(&auth_payload.key, &payload.transaction_id, &payload.invoice)
         .await
         .map_err(|e| {
             tracing::error!("Failed to store invoice in Redis: {}", e);
