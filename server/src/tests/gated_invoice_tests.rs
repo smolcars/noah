@@ -55,7 +55,7 @@ async fn test_submit_invoice_stores_in_redis() {
 
     let stored_invoice = app_state
         .invoice_store
-        .get(transaction_id)
+        .get(&user.pubkey().to_string(), transaction_id)
         .await
         .expect("failed to get invoice from Redis");
 
@@ -106,20 +106,20 @@ async fn test_submit_invoice_can_be_retrieved() {
 
     let retrieved = app_state
         .invoice_store
-        .get(transaction_id)
+        .get(&user.pubkey().to_string(), transaction_id)
         .await
         .expect("failed to retrieve invoice");
     assert_eq!(retrieved, Some(invoice.to_string()));
 
     app_state
         .invoice_store
-        .remove(transaction_id)
+        .remove(&user.pubkey().to_string(), transaction_id)
         .await
         .expect("failed to remove invoice");
 
     let after_removal = app_state
         .invoice_store
-        .get(transaction_id)
+        .get(&user.pubkey().to_string(), transaction_id)
         .await
         .expect("failed to check invoice after removal");
     assert_eq!(after_removal, None);
@@ -205,7 +205,7 @@ async fn test_submit_invoice_overwrites_existing() {
 
     app_state
         .invoice_store
-        .store(transaction_id, first_invoice)
+        .store(&user.pubkey().to_string(), transaction_id, first_invoice)
         .await
         .expect("failed to store first invoice");
 
@@ -235,7 +235,7 @@ async fn test_submit_invoice_overwrites_existing() {
 
     let stored_invoice = app_state
         .invoice_store
-        .get(transaction_id)
+        .get(&user.pubkey().to_string(), transaction_id)
         .await
         .expect("failed to get invoice from Redis");
 

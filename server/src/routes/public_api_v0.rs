@@ -9,6 +9,7 @@ use axum::{
 };
 use chrono::{TimeZone, Utc};
 use expo_push_notification_client::Priority;
+use lightning_invoice::Bolt11Invoice;
 use rand::RngExt;
 use uuid::Uuid;
 
@@ -639,10 +640,14 @@ pub async fn lnurlp_request(
     let start = std::time::Instant::now();
 
     let invoice = loop {
-        match state.invoice_store.get(&transaction_id).await {
+        match state.invoice_store.get(&user.pubkey, &transaction_id).await {
             Ok(Some(inv)) => {
                 // Clean up after successful retrieval
-                if let Err(e) = state.invoice_store.remove(&transaction_id).await {
+                if let Err(e) = state
+                    .invoice_store
+                    .remove(&user.pubkey, &transaction_id)
+                    .await
+                {
                     tracing::warn!(
                         "Failed to remove invoice for transaction_id {}: {}",
                         transaction_id,
@@ -670,6 +675,23 @@ pub async fn lnurlp_request(
             }
         }
     };
+
+    // The payee's device made this invoice, so check it before the payer sees it.
+    // The apps truncate msat to whole sats.
+    let network = state.config.network()?;
+    let expected_msat = amount / 1000 * 1000;
+    if !invoice.parse::<Bolt11Invoice>().is_ok_and(|parsed| {
+        parsed.network() == network && parsed.amount_milli_satoshis() == Some(expected_msat)
+    }) {
+        tracing::warn!(
+            pubkey = %user.pubkey,
+            amount_msats = amount,
+            "Device invoice rejected: not a valid invoice for the requested amount and network"
+        );
+        return Err(ApiError::ServerErr(
+            "Failed to retrieve invoice".to_string(),
+        ));
+    }
 
     let response = LnurlpInvoiceResponse {
         pr: invoice,

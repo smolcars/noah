@@ -1074,6 +1074,7 @@ async fn test_lnurlp_any_push_token_gate_and_invoice_delivery() {
     let user = TestUser::new();
     let pubkey = user.pubkey().to_string();
     create_test_user(&state, &user, None).await;
+    let device_invoice = crate::tests::common::test_invoice(bitcoin::Network::Regtest, 330_000, 1);
     let tokens = PushTokenRepository::new(&state.db_pool);
     let mailbox = MailboxAuthorizationRepository::new(&state.db_pool);
     // First exercise no registration, then each transport independently.
@@ -1117,7 +1118,7 @@ async fn test_lnurlp_any_push_token_gate_and_invoice_delivery() {
                 assert_eq!(invoice.amount, 330000);
                 state
                     .invoice_store
-                    .store(&invoice.transaction_id, "lnbcrt-test-invoice")
+                    .store(&pubkey, &invoice.transaction_id, &device_invoice)
                     .await
                     .unwrap();
             };
@@ -1126,7 +1127,7 @@ async fn test_lnurlp_any_push_token_gate_and_invoice_delivery() {
             assert_eq!(response.status(), StatusCode::OK);
             let body = response.into_body().collect().await.unwrap().to_bytes();
             let invoice: LnurlpInvoiceResponse = serde_json::from_slice(&body).unwrap();
-            assert_eq!(invoice.pr, "lnbcrt-test-invoice");
+            assert_eq!(invoice.pr, device_invoice);
         } else {
             let response = app.clone().oneshot(request).await.unwrap();
             assert_eq!(response.status(), StatusCode::BAD_REQUEST);
@@ -1166,4 +1167,104 @@ async fn test_lnurlp_any_push_token_gate_and_invoice_delivery() {
         "Lightning payments require mailbox notifications to be enabled."
     );
     assert!(deliveries.try_recv().is_err());
+}
+
+#[tokio::test]
+async fn test_lnurlp_device_invoice_must_come_from_the_payee_and_match_the_request() {
+    use crate::routes::gated_api_v0::submit_invoice;
+    use crate::tests::common::{setup_public_test_app_with_push, test_invoice};
+    use crate::types::{AuthenticatedUser, NotificationData, SubmitInvoicePayload};
+    use axum::{Extension, Json, extract::State};
+    use bitcoin::Network::{Bitcoin, Regtest};
+    use std::time::Duration;
+
+    let (sender, mut deliveries) = tokio::sync::mpsc::unbounded_channel();
+    let (app, state, _guard) = setup_public_test_app_with_push(None, Some(sender)).await;
+    let payee = TestUser::new().pubkey().to_string();
+    let other = TestUser::new_with_key(&[7; 32]).pubkey().to_string();
+    create_test_user(&state, &TestUser::new(), None).await;
+    PushTokenRepository::new(&state.db_pool)
+        .upsert(&payee, "ExpoPushToken[test-token]")
+        .await
+        .unwrap();
+    MailboxAuthorizationRepository::new(&state.db_pool)
+        .upsert(
+            &payee,
+            "deadbeef",
+            "cafebabe",
+            Utc::now().timestamp() + 3600,
+        )
+        .await
+        .unwrap();
+
+    let good = test_invoice(Regtest, 330_000, 1);
+    // (requested msat, who answers with what, the invoice the payer should get)
+    let cases = [
+        // Another account that learned the transaction ID answers first.
+        (
+            330_000,
+            vec![
+                (&other, test_invoice(Regtest, 330_000, 2)),
+                (&payee, good.clone()),
+            ],
+            Some(&good),
+        ),
+        // The apps truncate msat to whole sats.
+        (330_999, vec![(&payee, good.clone())], Some(&good)),
+        (
+            330_000,
+            vec![(&payee, test_invoice(Regtest, 331_000, 1))],
+            None,
+        ),
+        (
+            330_000,
+            vec![(&payee, test_invoice(Bitcoin, 330_000, 1))],
+            None,
+        ),
+        (330_000, vec![(&payee, "not-an-invoice".to_string())], None),
+    ];
+    for (amount, answers, served) in cases {
+        let request = Request::builder()
+            .uri(format!("/.well-known/lnurlp/test?amount={amount}"))
+            .body(Body::empty())
+            .unwrap();
+        let reply = async {
+            let (_, push) = tokio::time::timeout(Duration::from_secs(3), deliveries.recv())
+                .await
+                .unwrap()
+                .unwrap();
+            let NotificationData::LightningInvoiceRequest(wanted) =
+                serde_json::from_str(&push.data).unwrap()
+            else {
+                panic!("expected invoice request");
+            };
+            for (key, invoice) in answers {
+                let _ = submit_invoice(
+                    State(state.clone()),
+                    Extension(AuthenticatedUser { key: key.clone() }),
+                    None,
+                    Json(SubmitInvoicePayload {
+                        invoice,
+                        transaction_id: wanted.transaction_id.clone(),
+                    }),
+                )
+                .await
+                .unwrap();
+                // Longer than one poll, so an answer the server accepts is served before the next.
+                tokio::time::sleep(Duration::from_millis(700)).await;
+            }
+        };
+        let (response, ()) = tokio::join!(app.clone().oneshot(request), reply);
+        let response = response.unwrap();
+        let status = response.status();
+        let body = response.into_body().collect().await.unwrap().to_bytes();
+        match served {
+            Some(invoice) => {
+                assert_eq!(status, StatusCode::OK, "amount {amount}");
+                let reply: LnurlpInvoiceResponse = serde_json::from_slice(&body).unwrap();
+                assert_eq!(&reply.pr, invoice, "amount {amount}");
+            }
+            None => assert_eq!(status, StatusCode::INTERNAL_SERVER_ERROR),
+        }
+    }
 }

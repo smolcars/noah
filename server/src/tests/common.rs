@@ -88,7 +88,7 @@ impl TestUser {
             apns_topic: None,
             fcm_service_account_json: None,
             ark_server_url: "http://localhost:8081".to_string(),
-            server_network: "test-network".to_string(),
+            server_network: "regtest".to_string(),
             sentry_url: Some("http://localhost:8082".to_string()),
             backup_cron: "0 0 * * *".to_string(),
             maintenance_interval_rounds: 10,
@@ -314,6 +314,25 @@ pub async fn setup_public_test_app_with_push(
 }
 
 // Helper function to create a test user in the database
+/// A signed BOLT11 invoice; `seed` sets the payment hash, so two seeds give two invoices.
+pub fn test_invoice(network: bitcoin::Network, amount_msat: u64, seed: u8) -> String {
+    use bitcoin::hashes::{Hash, sha256};
+    use bitcoin::secp256k1::{Secp256k1, SecretKey};
+    use lightning_invoice::{Currency, InvoiceBuilder, PaymentSecret};
+
+    let private_key = SecretKey::from_slice(&[3; 32]).unwrap();
+    InvoiceBuilder::new(Currency::from(network))
+        .description("Test invoice".to_string())
+        .payment_hash(sha256::Hash::from_byte_array([seed; 32]))
+        .payment_secret(PaymentSecret([2; 32]))
+        .current_timestamp()
+        .min_final_cltv_expiry_delta(18)
+        .amount_milli_satoshis(amount_msat)
+        .build_signed(|hash| Secp256k1::new().sign_ecdsa_recoverable(hash, &private_key))
+        .unwrap()
+        .to_string()
+}
+
 pub async fn create_test_user(app_state: &AppState, user: &TestUser, ark_address: Option<&str>) {
     sqlx::query("INSERT INTO users (pubkey, lightning_address, ark_address) VALUES ($1, $2, $3)")
         .bind(user.pubkey().to_string())
