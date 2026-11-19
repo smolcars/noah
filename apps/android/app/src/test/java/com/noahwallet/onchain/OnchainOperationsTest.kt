@@ -356,7 +356,7 @@ internal class OnchainOperationsTest : OnchainOperationsFixture() {
         wallet.fundingTransactions = listOf(WalletTransaction("child-1", "", null, -1_215, null, false),
             WalletTransaction("unrelated", "", 99u, -99, null, false))
         val waiting = ExitState.Processing(101u,
-            listOf(ExitTx("root", ExitTxStatus.Confirmed("child-1", BlockRef(101u, "h"), ExitTxOrigin.Wallet(BlockRef(101u, "h")))),
+            listOf(ExitTx("root", ExitTxStatus.Confirmed(BlockRef(101u, "h"))),
                 ExitTx("leaf", ExitTxStatus.AwaitingCpfpBroadcast)))
         wallet.states["a"] = waiting
         val hex = wallet.claimTransaction("")

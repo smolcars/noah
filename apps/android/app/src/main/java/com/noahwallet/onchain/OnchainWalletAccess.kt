@@ -133,7 +133,7 @@ private fun exitTxStatus(s: ExitTxStatus) = when (s) {
     is ExitTxStatus.AwaitingInputConfirmation -> ExitDetails.Status("awaiting-input-confirmation")
     ExitTxStatus.AwaitingCpfpBroadcast -> ExitDetails.Status("awaiting-cpfp-broadcast")
     is ExitTxStatus.AwaitingConfirmation -> ExitDetails.Status("awaiting-confirmation", s.childTxid, origin = exitOrigin(s.origin))
-    is ExitTxStatus.Confirmed -> ExitDetails.Status("confirmed", s.childTxid, block(s.block), exitOrigin(s.origin))
+    is ExitTxStatus.Confirmed -> ExitDetails.Status("confirmed", block = block(s.block))
 }
 internal fun exitState(value: ExitState): Pair<String, ExitDetails> = when (value) {
     is ExitState.Start -> "Start" to ExitDetails(kind = "start", tip_height = value.tipHeight.toLong())

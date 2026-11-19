@@ -269,7 +269,7 @@ extension WalletSession {
             expiring: expiring.contains(value.id), tip: tip)
     }
 
-    static func exitState(_ value: ExitState) -> (String, ExitDetails) {
+    static func exitState(_ value: ExitState, packages: [ExitTransactionPackage] = []) -> (String, ExitDetails) {
         func block(_ value: BlockRef) -> ExitDetails.Block {
             .init(height: value.height, hash: value.hash)
         }
@@ -295,8 +295,10 @@ extension WalletSession {
                         case .awaitingCpfpBroadcast: status = .init(kind: "awaiting-cpfp-broadcast")
                         case .awaitingConfirmation(let child, let from):
                             status = .init(kind: "awaiting-confirmation", child_txid: child, origin: origin(from))
-                        case .confirmed(let child, let ref, let from):
-                            status = .init(kind: "confirmed", child_txid: child, block: block(ref), origin: origin(from))
+                        case .confirmed(let ref):
+                            let package = packages.first { $0.parentTxid == tx.txid }
+                            status = .init(kind: "confirmed", child_txid: package?.childTxid, block: block(ref),
+                                           origin: package?.childOrigin.map(origin))
                         }
                         return .init(txid: tx.txid, status: status)
                     }))

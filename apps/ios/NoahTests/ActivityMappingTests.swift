@@ -164,11 +164,24 @@ struct ActivityMappingTests {
     /// An exit's fee children are named by the txids bark recorded in its states, history included,
     /// never by amount; a send for the same amount stays a plain on-chain row.
     @Test func exitFeeChildrenShowAsExitFees() {
-        typealias Exit = ExitProgressTests
-        let earlier = Exit.processing([Exit.tx("root", "awaiting-confirmation", child: "child-1")])
-        let current = Exit.processing([Exit.tx("root", "confirmed", height: 101, child: "child-2"), Exit.tx("leaf", "awaiting-cpfp-broadcast")])
-        let fees = HistoryMapping.exitFees([Exit.exit("Processing", current, history: [earlier], id: "vtxo-a"),
-                                            Exit.exit("Start", .init(kind: "start", tip_height: 100), id: "vtxo-b")])
+        let block = BlockRef(height: 101, hash: "h101")
+        let earlier = ExitState.processing(tipHeight: 100, transactions: [
+            .init(txid: "root", status: .awaitingConfirmation(childTxid: "child-1", origin: .mempool)),
+        ])
+        let current = ExitState.processing(tipHeight: 101, transactions: [
+            .init(txid: "root", status: .confirmed(block: block)),
+            .init(txid: "leaf", status: .confirmed(block: block)),
+        ])
+        let packages = [
+            ExitTransactionPackage(parentTxid: "root", parentTxHex: "", childTxid: "child-2",
+                                   childTxHex: "", childOrigin: .wallet(confirmedIn: block), status: nil),
+        ]
+        let exit = WalletSession.exitModel(.init(vtxoId: "vtxo-a", amountSats: 40_000,
+                                                 state: .awaitingDelta(tipHeight: 101, confirmedBlock: block, claimableHeight: 113),
+                                                 history: [earlier, current], transactionCount: 2, transactions: packages))
+        #expect(exit.path.map(\.status.child_txid) == ["child-2", nil])
+        #expect(exit.path.map(\.status.block?.height) == [101, 101])
+        let fees = HistoryMapping.exitFees([exit])
         #expect(fees == ["child-1": "vtxo-a", "child-2": "vtxo-a"])
 
         func chain(_ txid: String) -> HistoryTransaction {

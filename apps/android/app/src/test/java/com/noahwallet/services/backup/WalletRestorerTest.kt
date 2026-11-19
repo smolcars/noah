@@ -163,7 +163,7 @@ class WalletRestorerTest {
     }
     private fun bucket(vararg ids: String) = RecoveryBucket(ids.toList(), (ids.size * 1_000).toULong())
     private fun scanned(recovered: List<String> = listOf("v1"), failed: List<String> = emptyList()) = RecoveryStatus.Completed(
-        RecoveryReport(bucket(*recovered.toTypedArray()), bucket(), bucket(), bucket(*failed.toTypedArray()), bucket(), isComplete = failed.isEmpty()),
+        RecoveryReport(bucket(*recovered.toTypedArray()), bucket(), bucket(), bucket(*failed.toTypedArray()), bucket(), bucket(), isComplete = failed.isEmpty()),
     )
 
     /** No backup: bark builds the wallet from the Ark server in the staging directory, then the usual swap and seed commit. */
@@ -181,7 +181,9 @@ class WalletRestorerTest {
 
     /** bark only scans when it creates a wallet, so a scan that failed or left VTXOs undecided must never be committed. */
     @Test fun anArkServerScanThatDidNotFinishCommitsNothing() = runBlocking {
-        for (status in listOf(RecoveryStatus.NotRun, RecoveryStatus.Failed("offline"), scanned(failed = listOf("v2")))) world {
+        val incomplete = scanned(failed = listOf("v2"))
+        val statuses = listOf(RecoveryStatus.NotRun, RecoveryStatus.Failed("offline"), RecoveryStatus.InProgress(incomplete.report), incomplete)
+        for (status in statuses) world {
             handles.recovery = status
             val failure = runCatching { restorer().restore(validSeed, WalletRestorer.Source.ArkServer(allowEmpty = false)) }.exceptionOrNull()
             assertEquals(status.toString(), WalletRestorer.Reason.serverRecoveryIncomplete, (failure as? WalletRestorer.Failure)?.reason)

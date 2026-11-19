@@ -14,7 +14,7 @@ extension WalletSession {
                 Self.vtxoModel($0, tip: tip, expiring: expiring)
             }
             let runs = Self.exitRuns(handles)
-            let models = try await handles.wallet.listAllExits(includeHistory: true, includeTransactions: false)
+            let models = try await handles.wallet.listAllExits(includeHistory: true, includeTransactions: true)
                 .map { Self.exitModel($0, runs: runs) }
             var overview = OnchainOverview(
                 walletID: handles.wallet.fingerprint(), vtxos: vtxos, exits: models,
@@ -113,14 +113,20 @@ extension WalletSession {
 
     func exitDetail(_ id: String) async throws -> ExitModel? {
         try await withOpenWallet { handles in
-            try await handles.wallet.getExitStatus(vtxoId: id, includeHistory: true, includeTransactions: false)
+            try await handles.wallet.getExitStatus(vtxoId: id, includeHistory: true, includeTransactions: true)
                 .map { Self.exitModel($0, runs: Self.exitRuns(handles)) }
         }
     }
 
     static func exitModel(_ status: ExitTransactionStatus, runs: [String: String] = [:]) -> ExitModel {
-        let current = Self.exitState(status.state)
-        let history = (status.history ?? []).map(Self.exitState)
+        let states = (status.history ?? []) + [status.state]
+        // The packages describe the latest fee children. Earlier states keep their own recorded children.
+        let latestPath = states.lastIndex { if case .processing = $0 { true } else { false } }
+        let records = states.enumerated().map { index, state in
+            Self.exitState(state, packages: index == latestPath ? status.transactions : [])
+        }
+        let current = records[states.count - 1]
+        let history = records.dropLast()
         return .init(id: status.vtxoId, amount: status.amountSats, state: current.0, details: current.1,
                      history: history.map(\.0), historyDetails: history.map(\.1), claimable: current.0 == "Claimable",
                      run: runs[status.vtxoId] ?? "")
