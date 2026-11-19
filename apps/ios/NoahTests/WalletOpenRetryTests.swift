@@ -26,6 +26,22 @@ import Testing
         #expect(!retry.isRunning)
     }
 
+    /// A try can end long after it opened the wallet (its server setup is slow). If the wallet was closed again
+    /// meanwhile and a newer open failed, that failure's request must outlive the old try's success.
+    @Test func aStartDuringATryKeepsTheLoopGoing() async {
+        var attempts = 0
+        let retry = WalletOpenRetry(sleep: { _ in })
+        await withCheckedContinuation { opened in
+            retry.start {
+                attempts += 1
+                guard attempts > 1 else { retry.start { true }; return true }
+                opened.resume()
+                return true
+            }
+        }
+        #expect(attempts == 2)
+    }
+
     /// A return to the front starts the loop inside its pass, whose budget is revoked when the pass ends. A try
     /// that kept that budget would be refused as cancelled every time (`BackgroundExecution.checkActive`).
     @Test func aTryDoesNotKeepTheBudgetOfThePassThatStartedIt() async {

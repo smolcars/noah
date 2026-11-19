@@ -12,15 +12,12 @@ final class EsploraOpenWait: @unchecked Sendable {
     private var deadline = ContinuousClock.now
 
     var timedOut: Bool { lock.withLock { expired } }
-    private var ran = false
-    /// `run` was called: the open went to a custom chain server.
-    var started: Bool { lock.withLock { ran } }
 
     func run(timeout: Duration = .seconds(12),
              operation: @escaping @Sendable (EsploraOpenWait) async throws -> Void,
              lateCompletion: @escaping @Sendable (Bool) async -> Void = { _ in }) async throws {
         try await withCheckedThrowingContinuation { continuation in
-            lock.withLock { waiter = continuation; deadline = .now + timeout; ran = true }
+            lock.withLock { waiter = continuation; deadline = .now + timeout }
             let timer = Task {
                 do { try await Task.sleep(for: timeout) } catch { return }
                 self.expire()

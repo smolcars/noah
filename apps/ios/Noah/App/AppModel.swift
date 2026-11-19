@@ -477,7 +477,6 @@ extension AppModel {
             customServerUnresponsive = customOpenWait != nil
             return false
         } catch {
-            let custom = customOpenWait?.started == true
             customOpenWait = nil
             if let failure = error as? StoredSeed.Failure {
                 phase = .blocked(failure == .invalid ? .invalidSeed : .seedConflict)
@@ -495,9 +494,10 @@ extension AppModel {
             case .busy, .failed:
                 log.e("Failed to open wallet: \(Self.describe(error))")
                 // One failure is often a connection still coming up: Home says so only once a second try fails too.
-                // shortcut: no automatic retry with a custom chain server, so its failure shows at once: its open can
-                // outlast its deadline and then waits for "Use default server", which only launch offers; upgrade when
-                // that prompt shows over the wallet.
+                // shortcut: no automatic retry while a custom chain server may be used, so that failure shows at once:
+                // its open can outlast its deadline and then waits for "Use default server", which only launch offers;
+                // upgrade when that prompt shows over the wallet. Nothing selects one while the wallet is closed.
+                let custom = EsploraSettings(storage: settings).mayUseCustom(for: variant)
                 if custom || openRetry.isRunning { walletError = L10n.text("Couldn't open your wallet. Please try again.") }
                 if !custom { retryOpen() }
             }
@@ -517,10 +517,10 @@ extension AppModel {
             guard let self, phase == .wallet, !isWalletSuspended else { return true }
             var opened = false
             // Under its own foreground budget: away from the front nothing is tried, and leaving it revokes a try
-            // (also one waiting for a push to let go of the wallet). The loop outlives both, so an open that leaving
-            // interrupted still gets its first balance and its startup work once Noah is back.
-            await ForegroundExecution.run { opened = await openExistingWallet() }
-            // A try can finish after a suspend and resume whose own open failed: only an open wallet ends the loop.
+            // (also one waiting for a push to let go of the wallet). A try Noah left during doesn't count, even if it
+            // got to the end: its balance read or startup work may have been cut short, and the loop outlives it.
+            await ForegroundExecution.run { opened = await openExistingWallet() && RecurringSubmissionBudget.available }
+            // The wallet can have been closed again since (a suspension): only an open one ends the loop.
             guard opened else { return false }
             return await session.isOpen
         }
