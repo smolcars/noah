@@ -542,6 +542,20 @@ struct WalletSessionTests {
         await #expect(throws: OpenerFailed.self) { try await open.value }
     }
 
+    /// Suspend persists its flag inside `closeSettled(beforeClose:)`; the foreground open checks it here, on the
+    /// actor and with no suspension before the open starts, so neither can slip past the other.
+    @Test func aClosedSessionAsksAdmissionBeforeItOpens() async throws {
+        defer { try? FileManager.default.removeItem(at: documents) }
+        try writeBarkProperties(network: "regtest")
+        struct Refused: Error {}
+        let gate = Gate()
+        let session = session(gate: gate)
+        await #expect(throws: Refused.self) {
+            try await session.ensureOpen(mnemonic: "unused", appVersion: "test") { throw Refused() }
+        }
+        #expect(await gate.calls == 0)
+    }
+
     @Test func ensureOpenWaitsForAnOpenInProgress() async throws {
         try writeBarkProperties(network: "regtest")
         let gate = Gate()

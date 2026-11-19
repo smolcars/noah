@@ -431,7 +431,8 @@ extension AppModel {
 
     /// Why an existing wallet's open failed. Only `failed` (and `busy` that outlasts background work) tells the user.
     enum OpenFailure: Equatable {
-        /// Cancelled because the app left the foreground or a newer foreground pass took over.
+        /// Cancelled because the app left the foreground or a newer foreground pass took over, or refused because
+        /// the wallet was suspended meanwhile.
         case interrupted
         /// A push, background task or another lifecycle step holds the wallet.
         case busy
@@ -439,7 +440,8 @@ extension AppModel {
     }
 
     nonisolated static func openFailure(_ error: Error) -> OpenFailure {
-        if error is CancellationError { return .interrupted }
+        // A suspension persisted just before the open was admitted (`openWalletInForeground`) is no failure either.
+        if error is CancellationError || error is AppServices.WalletSuspended { return .interrupted }
         if (error as? WalletSession.OpenError) == .busy { return .busy }
         return .failed
     }
@@ -475,6 +477,7 @@ extension AppModel {
             customServerUnresponsive = customOpenWait != nil
             return false
         } catch {
+            let custom = customOpenWait?.started == true
             customOpenWait = nil
             if let failure = error as? StoredSeed.Failure {
                 phase = .blocked(failure == .invalid ? .invalidSeed : .seedConflict)
@@ -492,8 +495,11 @@ extension AppModel {
             case .busy, .failed:
                 log.e("Failed to open wallet: \(Self.describe(error))")
                 // One failure is often a connection still coming up: Home says so only once a second try fails too.
-                if openRetry.isRunning { walletError = L10n.text("Couldn't open your wallet. Please try again.") }
-                retryOpen()
+                // shortcut: no automatic retry with a custom chain server, so its failure shows at once: its open can
+                // outlast its deadline and then waits for "Use default server", which only launch offers; upgrade when
+                // that prompt shows over the wallet.
+                if custom || openRetry.isRunning { walletError = L10n.text("Couldn't open your wallet. Please try again.") }
+                if !custom { retryOpen() }
             }
             return false
         }
@@ -504,20 +510,19 @@ extension AppModel {
         return true
     }
 
-    /// Keeps trying a failed open while the wallet is on screen and Noah is in front; a return to the front tries at
-    /// once (`refreshOnForeground`) and starts this again. Only `.wallet`: after a deletion there is no wallet to open.
-    /// Suspension is read from storage too, where it is written before the model hears of it.
+    /// Keeps trying a failed open for as long as the wallet is on screen. Only `.wallet`: after a deletion there is
+    /// no wallet to open. A return to the front also tries at once (`refreshOnForeground`).
     private func retryOpen() {
         openRetry.start { [weak self] in
-            guard let self, phase == .wallet, !isWalletSuspended, ForegroundExecution.isActive,
-                  settings.persistedState(PersistedWalletState.self, key: PersistedWalletState.key)?.isWalletSuspended != true,
-                  // shortcut: no automatic retry with a custom chain server: its open can outlast its deadline and then
-                  // waits for "Use default server", which only launch offers; upgrade when that prompt shows over the wallet.
-                  EsploraSettings(storage: settings).selection(for: variant).endpoint == nil else { return true }
+            guard let self, phase == .wallet, !isWalletSuspended else { return true }
             var opened = false
-            // Under its own foreground budget, so leaving the front (even while a push holds the wallet) revokes the try.
+            // Under its own foreground budget: away from the front nothing is tried, and leaving it revokes a try
+            // (also one waiting for a push to let go of the wallet). The loop outlives both, so an open that leaving
+            // interrupted still gets its first balance and its startup work once Noah is back.
             await ForegroundExecution.run { opened = await openExistingWallet() }
-            return opened
+            // A try can finish after a suspend and resume whose own open failed: only an open wallet ends the loop.
+            guard opened else { return false }
+            return await session.isOpen
         }
     }
 

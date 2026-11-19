@@ -239,7 +239,8 @@ actor WalletSession {
     /// Opens the existing wallet unless it is already open (RN's
     /// `loadWalletIfNeeded`). Still rejects overlapping open/close.
     /// Waits for an open already in progress instead of failing.
-    func ensureOpen(mnemonic: String, appVersion: String) async throws {
+    /// `admit` runs on the actor as a closed session starts its open: it and `closeSettled(beforeClose:)` can't pass each other.
+    func ensureOpen(mnemonic: String, appVersion: String, admit: @Sendable () throws -> Void = {}) async throws {
         try checkAccess()
         try BackgroundExecution.checkActive()
         switch state {
@@ -250,7 +251,7 @@ actor WalletSession {
         case .closing, .reserved, .quarantined:
             throw OpenError.busy
         case .closed:
-            try await openExisting(mnemonic: mnemonic, appVersion: appVersion)
+            try admit(); try await openExisting(mnemonic: mnemonic, appVersion: appVersion)
         }
     }
 
