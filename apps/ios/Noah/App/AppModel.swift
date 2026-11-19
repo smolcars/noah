@@ -141,6 +141,7 @@ final class AppModel {
     @ObservationIgnored private var backupTriggers: (id: UUID, task: Task<Void, Never>)?
     @ObservationIgnored private let lifecycle = WalletLifecycle(dependencies: .live())
     @ObservationIgnored private var summaryRefresh = UUID()
+    @ObservationIgnored private let openRetry = WalletOpenRetry()
 
     init(settings: SettingsStorage = .shared, readLaunchState: @escaping () -> LaunchState = { .current() },
          settleRestore: @escaping @MainActor () async throws -> RestoreTransaction.Recovery = { try await AppServices.shared.restoreRecovery.settle() },
@@ -488,7 +489,9 @@ extension AppModel {
                 await openExistingWallet(afterBackgroundWork: true)
             case .busy, .failed:
                 log.e("Failed to open wallet: \(Self.describe(error))")
-                walletError = L10n.text("Couldn't open your wallet. Please try again.")
+                // One failure is often a connection still coming up: Home says so only once a second try fails too.
+                if openRetry.isRunning { walletError = L10n.text("Couldn't open your wallet. Please try again.") }
+                retryOpen()
             }
             return
         }
@@ -496,6 +499,17 @@ extension AppModel {
         syncOpenedWallet(historyReadsBefore: historyReads)
         await reconcileBackupTriggers()
         await startServerServices()
+    }
+
+    /// Keeps trying a failed open while the wallet is on screen and Noah is in front; a return to the front tries at
+    /// once (`refreshOnForeground`) and starts this again. Only `.wallet`: after a deletion there is no wallet to open.
+    private func retryOpen() {
+        openRetry.start { [weak self] in
+            guard let self, phase == .wallet, !isWalletSuspended, !customServerUnresponsive, ForegroundExecution.isActive else { return true }
+            // Open, but its first balance read failed: read it again rather than leave Home without one.
+            if await session.isOpen { await refresh() } else { await openExistingWallet() }
+            return await session.isOpen
+        }
     }
 
     /// A restored backup's coins are checked with the server before its first balance shows: otherwise the restore's
