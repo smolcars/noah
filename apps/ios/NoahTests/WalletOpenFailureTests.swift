@@ -11,6 +11,10 @@ struct WalletOpenFailureTests {
         #expect(AppModel.openFailure(CancellationError()) == .interrupted)
     }
 
+    @Test func aSuspensionThatGotInFirstIsNotAFailure() {
+        #expect(AppModel.openFailure(AppServices.WalletSuspended()) == .interrupted)
+    }
+
     @Test func busyWaitsForBackgroundWork() {
         #expect(AppModel.openFailure(WalletSession.OpenError.busy) == .busy)
     }

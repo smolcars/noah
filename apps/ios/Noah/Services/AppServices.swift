@@ -158,7 +158,11 @@ final class AppServices: Sendable {
                                 lateCompletion: @escaping @Sendable (Bool) async -> Void) async throws {
         let store = EsploraSettings()
         guard variant != .regtest, let endpoint = try await store.resolve(for: variant), !(await session.isOpen) else {
-            try await session.ensureOpen(mnemonic: mnemonic, appVersion: appVersion)
+            // Suspend persists its flag before it closes the session, and the model hears of it only afterwards.
+            try await session.ensureOpen(mnemonic: mnemonic, appVersion: appVersion) {
+                let wallet = SettingsStorage.shared.persistedState(PersistedWalletState.self, key: PersistedWalletState.key)
+                if wallet?.isWalletSuspended == true { throw WalletSuspended() }
+            }
             return
         }
         let selection = EsploraSettings.Selection(endpoint: endpoint, variant: variant.rawValue)

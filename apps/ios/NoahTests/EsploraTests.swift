@@ -171,6 +171,19 @@ struct EsploraTests {
         #expect(!LogFile(directory: logs).lines().joined().contains("coldOpaqueRestart88"))
     }
 
+    /// The open retry stays off (and its failure shows at once) whenever an open may reach a custom endpoint.
+    @Test func anOpenMayUseACustomEndpointWhenOneIsSavedOrAnImportIsUnsettled() throws {
+        let memory = Memory()
+        #expect(!memory.store.mayUseCustom(for: .signet))
+        try memory.imported("https://imported.example/api")
+        #expect(memory.store.mayUseCustom(for: .signet)) // `resolve` may still adopt it.
+        try memory.store.save(.init(active: .init(variant: "signet")))
+        #expect(!memory.store.mayUseCustom(for: .signet)) // Settled: the default.
+        try memory.store.save(.init(active: Self.previous))
+        #expect(memory.store.mayUseCustom(for: .signet))
+        #expect(!memory.store.mayUseCustom(for: .mainnet)) // Another variant's selection is never used.
+    }
+
     @Test func regtestNeverFetchesOrAppliesImportedEndpoint() async throws {
         let memory = Memory(); try memory.imported("custom.example")
         let endpoint = try await memory.store.resolve(for: .regtest) { _ in Issue.record("regtest fetched Esplora"); return "" }

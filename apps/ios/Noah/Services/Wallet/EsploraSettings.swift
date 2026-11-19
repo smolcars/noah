@@ -78,6 +78,11 @@ struct EsploraSettings: Sendable {
         }
         return record.active
     }
+    /// Whether an open may go to a custom endpoint: one is saved, or an imported one `resolve` hasn't settled yet.
+    func mayUseCustom(for variant: AppVariant) -> Bool {
+        guard let record = try? record() else { return importedInput != nil }
+        return record.active.variant == variant.rawValue && record.active.endpoint != nil
+    }
     func resolve(for variant: AppVariant, fetch: EsploraEndpoint.Fetch = EsploraEndpoint.fetch) async throws -> String? {
         if let record = try record() {
             if record.pending != nil { try? save(Record(active: record.active)) }
