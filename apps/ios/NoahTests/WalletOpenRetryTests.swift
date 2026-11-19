@@ -31,14 +31,12 @@ import Testing
     @Test func aStartDuringATryKeepsTheLoopGoing() async {
         var attempts = 0
         let retry = WalletOpenRetry(sleep: { _ in })
-        await withCheckedContinuation { opened in
-            retry.start {
-                attempts += 1
-                guard attempts > 1 else { retry.start { true }; return true }
-                opened.resume()
-                return true
-            }
+        retry.start {
+            attempts += 1
+            if attempts == 1 { retry.start { true } }
+            return true
         }
+        while retry.isRunning { await Task.yield() }
         #expect(attempts == 2)
     }
 

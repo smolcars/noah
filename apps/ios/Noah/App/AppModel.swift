@@ -511,10 +511,12 @@ extension AppModel {
     }
 
     /// Keeps trying a failed open for as long as the wallet is on screen. Only `.wallet`: after a deletion there is
-    /// no wallet to open. A return to the front also tries at once (`refreshOnForeground`).
+    /// no wallet to open. A return to the front also tries at once (`refreshOnForeground`). The chain server is read
+    /// again before every try: a loop still waiting out its pause can outlive an open, and a server chosen since.
     private func retryOpen() {
         openRetry.start { [weak self] in
-            guard let self, phase == .wallet, !isWalletSuspended else { return true }
+            guard let self, phase == .wallet, !isWalletSuspended,
+                  !EsploraSettings(storage: settings).mayUseCustom(for: variant) else { return true }
             var opened = false
             // Under its own foreground budget: away from the front nothing is tried, and leaving it revokes a try
             // (also one waiting for a push to let go of the wallet). A try Noah left during doesn't count, even if it
