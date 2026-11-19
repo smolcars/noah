@@ -318,17 +318,24 @@ class AppModel(application: Application, val settings: SettingsStorage = Setting
     private val launchBlocked get() =
         starting || busy || customServerUnresponsive || !restore.canLeave || open || (isWalletSuspended && onboarded)
 
-    /** The launch's open, which runs on its own; null when launch is blocked (already open, or another launch runs). */
-    fun start(): kotlinx.coroutines.Job? {
+    /** The last launch's open of the wallet on disk failed, and not over a wrong recovery phrase: [retryFailedOpen] tries again. */
+    var retriesOpen = false; private set
+
+    /**
+     * The launch's open, which runs on its own; null when launch is blocked (already open, or another launch runs).
+     * [retry]: the try after a failed open, which leaves that failure on screen until the wallet opens.
+     */
+    fun start(retry: Boolean = false): kotlinx.coroutines.Job? {
         if (launchBlocked) return null
         starting = true
         return viewModelScope.launch {
             var recovering = true
+            retriesOpen = false
             @Suppress("TooGenericExceptionCaught") // launch boundary: any open failure becomes the launch screen's state
             try {
                 withContext(Dispatchers.IO) {
                     com.noahwallet.services.background.PeriodicExecution.awaitIdle()
-                    services.lifecycle.withWalletMutation { recoverAndOpen { recovering = false } }
+                    services.lifecycle.withWalletMutation { recoverAndOpen(retry) { recovering = false } }
                 }
             } catch (_: EsploraOpenWait.Timeout) {
                 customServerUnresponsive = customOpenWait != null
@@ -337,7 +344,9 @@ class AppModel(application: Application, val settings: SettingsStorage = Setting
                 customOpenWait = null
                 if (recovering) launchState = LaunchState.restoreIncomplete
                 else if (launchState == LaunchState.existingWallet) launchState = LaunchState.openFailure(failure)
-                error = lifecycleMessage(failure)
+                retriesOpen = !recovering && launchState == LaunchState.secureStorageUnavailable
+                // A retry that fails says nothing new: its alert would come back each time it was dismissed.
+                if (!(retry && retriesOpen)) error = lifecycleMessage(failure)
                     ?: if (recovering) "Couldn't finish wallet recovery. Your wallet files have been kept. Please try again."
                     else "Couldn't open your wallet. Please try again."
             }
@@ -346,7 +355,7 @@ class AppModel(application: Application, val settings: SettingsStorage = Setting
     }
 
     /** Launch under the wallet mutation: finish an interrupted restore, read the launch state, then open the wallet. */
-    private suspend fun recoverAndOpen(recovered: () -> Unit) {
+    private suspend fun recoverAndOpen(retry: Boolean, recovered: () -> Unit) {
         val recovery = services.recoverRestore(walletMutationHeld = true)
         if (recovery == com.noahwallet.services.backup.RestoreTransaction.Recovery.waitingForSecret) {
             launchState = LaunchState.secureStorageUnavailable
@@ -358,17 +367,19 @@ class AppModel(application: Application, val settings: SettingsStorage = Setting
         recovered()
         isWalletSuspended = persistedSuspended()
         recoveryPhraseBackedUp = RecoveryPhraseBackup.isBackedUp(settings)
+        val state = withContext(Dispatchers.IO) { LaunchState.current(getApplication()) }
         // A stored phrase without wallet data opens onboarding at its own recovery step, set first so Welcome never flashes.
-        launchState = withContext(Dispatchers.IO) { LaunchState.current(getApplication()) }
-            .also { if (it == LaunchState.seedWithoutWalletData) step = "storedSeed" }
-        if (launchState == LaunchState.existingWallet) openExistingWallet()
+        if (state == LaunchState.seedWithoutWalletData) step = "storedSeed"
+        // A retry leaves the failed open on screen until the wallet opens.
+        if (!retry || state != LaunchState.existingWallet) launchState = state
+        if (state == LaunchState.existingWallet) openExistingWallet(retry)
     }
 
     /** Launch's open of the wallet on disk, under the wallet mutation [start] holds; suspended wallets stay closed. */
-    private suspend fun openExistingWallet() {
+    private suspend fun openExistingWallet(retry: Boolean) {
         onboarded = services.isOnboarded()
         if (isWalletSuspended) return
-        if (onboarded) {
+        if (onboarded && !retry) {
             // The open waits on the network (~1.4 s on mainnet); the wallet shows read-only until then.
             launchBalance = com.noahwallet.services.push.WidgetDataWriter.shownBalance(getApplication(), BuildConfig.APP_VARIANT)?.toULong()
             previewsLaunch = true
@@ -377,18 +388,32 @@ class AppModel(application: Application, val settings: SettingsStorage = Setting
         // Ends after the first summary, so Home's balance never blanks between the preview's and the wallet's.
         try {
             withContext(Dispatchers.IO) {
-                val wait = EsploraOpenWait(); customOpenWait = wait
-                services.openWalletInForeground(walletMutationHeld = true, customWait = wait, lateCompletion = ::lateOpen)
-                customOpenWait = null
+                if (retry) openInForeground() else openInForegroundTwice()
                 services.checkRestoredVtxosAfterOpen()
             }
             LaunchTiming.shared(getApplication()).mark(LaunchTiming.Milestone.walletOpened)
+            launchState = LaunchState.existingWallet
             open = true
             onboarded = services.isOnboarded()
             if (!onboarded) step = OnboardingNavigation.resumeStep
             refresh(walletMutationHeld = true)
         } finally { previewsLaunch = false }
         services.startServerServices()
+    }
+
+    private suspend fun openInForeground() {
+        val wait = EsploraOpenWait(); customOpenWait = wait
+        services.openWalletInForeground(walletMutationHeld = true, customWait = wait, lateCompletion = ::lateOpen)
+        customOpenWait = null
+    }
+
+    /** One failure is often a connection still coming up: the launch tries once more, 2 s later, before it says so. */
+    private suspend fun openInForegroundTwice() {
+        @Suppress("TooGenericExceptionCaught") // any failure but a custom server's timeout gets the second try
+        try { openInForeground() }
+        catch (cancelled: CancellationException) { throw cancelled }
+        catch (timeout: EsploraOpenWait.Timeout) { throw timeout }
+        catch (_: Exception) { delay(FIRST_RETRY_MILLIS); openInForeground() }
     }
 
     /** A custom server's open that outlived its wait and has now finished, one way or the other. */
@@ -567,4 +592,16 @@ internal suspend fun loadAppModel(activity: androidx.fragment.app.FragmentActivi
             return prepared as T
         }
     })[AppModel::class.java]
+}
+
+private const val FIRST_RETRY_MILLIS = 2_000L
+private const val LONGEST_RETRY_MILLIS = 30_000L
+
+/**
+ * bark's open asks the chain server which network it serves, so it fails whenever that request does. While the app is in
+ * front a failed open is tried again: after 4 s (the launch itself tried twice, 2 s apart), doubling to 30 s.
+ */
+internal suspend fun retryFailedOpen(failed: () -> Boolean, pause: suspend (Long) -> Unit = { delay(it) }, start: suspend () -> Unit) {
+    var wait = FIRST_RETRY_MILLIS * 2
+    while (failed()) { pause(wait); start(); wait = minOf(wait * 2, LONGEST_RETRY_MILLIS) }
 }
