@@ -348,9 +348,9 @@ class AppModel(application: Application, val settings: SettingsStorage = Setting
                 }
                 retriesOpen = false
             } catch (_: EsploraOpenWait.Timeout) {
-                retriesOpen = false
                 customServerUnresponsive = customOpenWait != null
-                if (customServerUnresponsive) error = null
+                // Not pending any more: its late result got here first and has already said whether to retry.
+                if (customServerUnresponsive) { error = null; retriesOpen = false }
             } catch (failure: Exception) {
                 customOpenWait = null
                 if (recovering) launchState = LaunchState.restoreIncomplete
