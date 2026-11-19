@@ -163,7 +163,10 @@ class WalletRestorerTest {
     }
     private fun bucket(vararg ids: String) = RecoveryBucket(ids.toList(), (ids.size * 1_000).toULong())
     private fun scanned(recovered: List<String> = listOf("v1"), failed: List<String> = emptyList()) = RecoveryStatus.Completed(
-        RecoveryReport(bucket(*recovered.toTypedArray()), bucket(), bucket(), bucket(*failed.toTypedArray()), bucket(), bucket(), isComplete = failed.isEmpty()),
+        RecoveryReport(
+            bucket(*recovered.toTypedArray()), bucket(), bucket(), bucket(*failed.toTypedArray()),
+            bucket(), bucket(), isComplete = failed.isEmpty(),
+        ),
     )
 
     /** No backup: bark builds the wallet from the Ark server in the staging directory, then the usual swap and seed commit. */
