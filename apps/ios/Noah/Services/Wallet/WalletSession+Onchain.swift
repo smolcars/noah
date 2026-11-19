@@ -40,7 +40,7 @@ extension WalletSession {
 
     /// Fee children and claims this wallet paid for or received, from its own transactions.
     private static func addChildFees(_ handles: Handles, models: [ExitModel], to overview: inout OnchainOverview) async {
-        let children = Set(models.flatMap { $0.path.compactMap(\.status.child_txid) })
+        let children = Set(models.flatMap(\.feeChildren.values))
         let claims = Set(models.compactMap(\.details.claimTxid))
         for transaction in (try? await handles.onchain.transactions()) ?? [] {
             // BDK can't price a fee child (its anchor input isn't the wallet's); what left the wallet is its fee.
@@ -119,17 +119,13 @@ extension WalletSession {
     }
 
     static func exitModel(_ status: ExitTransactionStatus, runs: [String: String] = [:]) -> ExitModel {
-        let states = (status.history ?? []) + [status.state]
-        // The packages describe the latest fee children. Earlier states keep their own recorded children.
-        let latestPath = states.lastIndex { if case .processing = $0 { true } else { false } }
-        let records = states.enumerated().map { index, state in
-            Self.exitState(state, packages: index == latestPath ? status.transactions : [])
-        }
-        let current = records[states.count - 1]
-        let history = records.dropLast()
+        let current = Self.exitState(status.state)
+        let history = (status.history ?? []).map(Self.exitState)
+        var packageChildren: [String: String] = [:]
+        for package in status.transactions { packageChildren[package.parentTxid] = package.childTxid }
         return .init(id: status.vtxoId, amount: status.amountSats, state: current.0, details: current.1,
                      history: history.map(\.0), historyDetails: history.map(\.1), claimable: current.0 == "Claimable",
-                     run: runs[status.vtxoId] ?? "")
+                     run: runs[status.vtxoId] ?? "", packageChildren: packageChildren)
     }
 
     static func exitRuns(_ handles: Handles) -> [String: String] {

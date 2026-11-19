@@ -42,6 +42,8 @@ struct ExitModel: Identifiable, Equatable, Sendable {
     var claimable: Bool
     /// Noah's id for this run of the exit (`ExitRuns`); empty for exits started before Noah kept one.
     var run = ""
+    /// Bark's latest fee child per parent, even if the exit advanced before recording the child in its state.
+    var packageChildren: [String: String] = [:]
     var cancelable: Bool {
         ExitRules.cancelable(
             state: state, finalTransactionKind: details.transactions?.last?.status.kind)
