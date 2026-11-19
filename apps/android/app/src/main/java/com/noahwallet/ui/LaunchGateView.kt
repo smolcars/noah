@@ -194,7 +194,7 @@ private fun ForegroundStart(model: AppModel) {
         lifecycleOwner.lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
             // A cold launch opens here: sync once it's open, as bark's daemon did at startup before Noah stopped running it.
             model.start()?.join()
-            retryFailedOpen(failed = { model.retriesOpen }) { model.start(retry = true)?.join() }
+            retryFailedOpen(failed = { model.awaitsOpen }) { model.start(retry = true)?.join() }
             if (model.open) {
                 model.services.startServerServices()
                 model.catchUpInForeground {

@@ -318,8 +318,14 @@ class AppModel(application: Application, val settings: SettingsStorage = Setting
     private val launchBlocked get() =
         starting || busy || customServerUnresponsive || !restore.canLeave || open || (isWalletSuspended && onboarded)
 
-    /** The last launch's open of the wallet on disk failed, and not over a wrong recovery phrase: [retryFailedOpen] tries again. */
-    var retriesOpen = false; private set
+    /**
+     * The last launch to settle failed to open the wallet on disk, and not over a wrong recovery phrase. Only a settled
+     * launch changes it, so a launch still running leaves the last failure standing.
+     */
+    private var retriesOpen = false
+
+    /** The foreground keeps trying the open ([retryFailedOpen]): it failed, or a custom server's open is still out. */
+    val awaitsOpen get() = !open && (retriesOpen || customServerUnresponsive)
 
     private var launch: kotlinx.coroutines.Job? = null
 
@@ -334,14 +340,15 @@ class AppModel(application: Application, val settings: SettingsStorage = Setting
         starting = true
         return viewModelScope.launch {
             var recovering = true
-            retriesOpen = false
             @Suppress("TooGenericExceptionCaught") // launch boundary: any open failure becomes the launch screen's state
             try {
                 withContext(Dispatchers.IO) {
                     com.noahwallet.services.background.PeriodicExecution.awaitIdle()
                     services.lifecycle.withWalletMutation { recoverAndOpen(retry) { recovering = false } }
                 }
+                retriesOpen = false
             } catch (_: EsploraOpenWait.Timeout) {
+                retriesOpen = false
                 customServerUnresponsive = customOpenWait != null
                 if (customServerUnresponsive) error = null
             } catch (failure: Exception) {
@@ -435,7 +442,7 @@ class AppModel(application: Application, val settings: SettingsStorage = Setting
             open = true; onboarded = services.isOnboarded()
             if (!onboarded) step = OnboardingNavigation.resumeStep
             refresh(); services.startServerServices()
-        } else { error = "Couldn't open your wallet. Please try again." }
+        } else { error = "Couldn't open your wallet. Please try again."; retriesOpen = true } // the default server's open: retried
     }
 
     /** The message of a lifecycle failure that explains itself to the user; null for every other failure. */
