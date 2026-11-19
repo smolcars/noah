@@ -321,11 +321,15 @@ class AppModel(application: Application, val settings: SettingsStorage = Setting
     /** The last launch's open of the wallet on disk failed, and not over a wrong recovery phrase: [retryFailedOpen] tries again. */
     var retriesOpen = false; private set
 
+    private var launch: kotlinx.coroutines.Job? = null
+
     /**
-     * The launch's open, which runs on its own; null when launch is blocked (already open, or another launch runs).
-     * [retry]: the try after a failed open, which leaves that failure on screen until the wallet opens.
+     * The launch's open, which runs on its own: the launch already running if there is one, null when launch is
+     * blocked otherwise (the wallet is open, say). [retry]: the try after a failed open, which leaves that failure on
+     * screen until the wallet opens.
      */
     fun start(retry: Boolean = false): kotlinx.coroutines.Job? {
+        if (starting) return launch
         if (launchBlocked) return null
         starting = true
         return viewModelScope.launch {
@@ -351,7 +355,7 @@ class AppModel(application: Application, val settings: SettingsStorage = Setting
                     else "Couldn't open your wallet. Please try again."
             }
             finally { withContext(Dispatchers.IO) { refreshRecoveryFiles() }; starting = false }
-        }
+        }.also { launch = it }
     }
 
     /** Launch under the wallet mutation: finish an interrupted restore, read the launch state, then open the wallet. */
@@ -427,6 +431,7 @@ class AppModel(application: Application, val settings: SettingsStorage = Setting
     private suspend fun publishLateOpen(success: Boolean) {
         customServerUnresponsive = false; switchingToDefaultServer = false; customOpenWait = null
         if (success) {
+            launchState = LaunchState.existingWallet
             open = true; onboarded = services.isOnboarded()
             if (!onboarded) step = OnboardingNavigation.resumeStep
             refresh(); services.startServerServices()
