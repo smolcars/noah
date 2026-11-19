@@ -161,28 +161,45 @@ struct ActivityMappingTests {
         #expect(HomeActivityRow(row, ownDomain: "x").title == "Sent")
     }
 
-    /// An exit's fee children are named by the txids bark recorded in its states, history included,
-    /// never by amount; a send for the same amount stays a plain on-chain row.
+    /// A child can be in the package even when the exit advances past Processing before recording its broadcast.
     @Test func exitFeeChildrenShowAsExitFees() {
-        typealias Exit = ExitProgressTests
-        let earlier = Exit.processing([Exit.tx("root", "awaiting-confirmation", child: "child-1")])
-        let current = Exit.processing([Exit.tx("root", "confirmed", height: 101, child: "child-2"), Exit.tx("leaf", "awaiting-cpfp-broadcast")])
-        let fees = HistoryMapping.exitFees([Exit.exit("Processing", current, history: [earlier], id: "vtxo-a"),
-                                            Exit.exit("Start", .init(kind: "start", tip_height: 100), id: "vtxo-b")])
-        #expect(fees == ["child-1": "vtxo-a", "child-2": "vtxo-a"])
+        let block = BlockRef(height: 101, hash: "h101")
+        let earlier = ExitState.processing(tipHeight: 100, transactions: [
+            .init(txid: "root", status: .awaitingConfirmation(childTxid: "child-1", origin: .mempool)),
+        ])
+        let current = ExitState.processing(tipHeight: 101, transactions: [
+            .init(txid: "root", status: .confirmed(block: block)),
+            .init(txid: "leaf", status: .awaitingCpfpBroadcast),
+        ])
+        let packages = [
+            ExitTransactionPackage(parentTxid: "root", parentTxHex: "", childTxid: "child-2",
+                                   childTxHex: "", childOrigin: .wallet(confirmedIn: block), status: nil),
+            ExitTransactionPackage(parentTxid: "leaf", parentTxHex: "", childTxid: "child-3",
+                                   childTxHex: "", childOrigin: .wallet(confirmedIn: block), status: nil),
+        ]
+        let exit = WalletSession.exitModel(.init(vtxoId: "vtxo-a", amountSats: 40_000,
+                                                 state: .awaitingDelta(tipHeight: 101, confirmedBlock: block, claimableHeight: 113),
+                                                 history: [earlier, current], transactionCount: 2, transactions: packages))
+        #expect(exit.path.map(\.status.block?.height) == [101, nil])
+        #expect(exit.feeChildren == ["root": "child-2", "leaf": "child-3"])
+        let fees = HistoryMapping.exitFees([exit])
+        #expect(fees == ["child-1": "vtxo-a", "child-2": "vtxo-a", "child-3": "vtxo-a"])
+        let childFees: [String: UInt64] = ["child-2": 234, "child-3": 1_234]
+        #expect(ExitFees.total([exit], childFees: childFees) == 1_468)
+        #expect(ExitFees.paid(exit, among: [exit], childFees: childFees) == (1_468, 0))
 
         func chain(_ txid: String) -> HistoryTransaction {
             HistoryMapping.transaction(WalletTransaction(txid: txid, txHex: "", onchainFeeSats: nil, balanceChangeSats: -1_234,
                                                          confirmation: .init(height: 101, hash: "h101"), isCpfp: true),
                                        exitFeeFor: fees[txid])
         }
-        let fee = chain("child-2"), plain = chain("other")
+        let fee = chain("child-3"), plain = chain("other")
         let row = HomeActivityRow(fee, ownDomain: "")
         #expect(fee.exitFeeFor == "vtxo-a" && fee.displayLabel == "Exit fee")
         #expect(row.title == "Exit fee" && !row.titleIsVerbatim && row.avatar == .exit && row.kind == .onchain)
         #expect(row.sign == "−" && row.sats == 1_234 && row.status == .done)
         let detail = ActivityDetail(fee, ownDomain: "")
-        #expect(detail.status == "Sent" && detail.rail == .onchain && detail.fee == nil && detail.chainTxid == "child-2")
+        #expect(detail.status == "Sent" && detail.rail == .onchain && detail.fee == nil && detail.chainTxid == "child-3")
         let other = HomeActivityRow(plain, ownDomain: "")
         #expect(plain.exitFeeFor == nil && other.title == "Sent" && other.avatar == .chain)
     }

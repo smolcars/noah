@@ -126,11 +126,12 @@ enum HistoryMapping {
         .init(destination: value.paymentMethod.value, amount_sat: Int64(value.amountSats), paymentMethod: value.paymentMethod.methodType)
     }
 
-    /// Each fee child bark recorded for an exit, in any of its states, by txid: the exit's VTXO ID. Exact, never by amount;
+    /// Each fee child bark recorded for an exit, in its packages or states, by txid: the exit's VTXO ID. Exact, never by amount;
     /// BDK lists a child only when it moved this wallet's coins.
     static func exitFees(_ exits: [ExitModel]) -> [String: String] {
         var fees: [String: String] = [:]
         for exit in exits {
+            for child in exit.packageChildren.values { fees[child] = exit.id }
             for child in exit.records.flatMap({ $0.transactions ?? [] }).compactMap(\.status.child_txid) { fees[child] = exit.id }
         }
         return fees

@@ -212,4 +212,4 @@ class RestoreRecovery(private val recover: suspend () -> RestoreTransaction.Reco
 
 /** The Ark server knew of no VTXO for the seed, spent or not. */
 internal fun io.github.niteshbalusu11.bark.RecoveryReport.foundNothing() =
-    listOf(recovered, skipped, foreign, failed, exited).all { it.vtxoIds.isEmpty() }
+    listOf(recovered, skipped, foreign, failed, exited, abandoned).all { it.vtxoIds.isEmpty() }

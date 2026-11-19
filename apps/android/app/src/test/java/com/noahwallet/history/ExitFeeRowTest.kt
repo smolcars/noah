@@ -12,7 +12,7 @@ class ExitFeeRowTest {
 
     @Test fun childTxidsFromCurrentAndPastExitRecordsMapToTheirExit() {
         val replaced = ExitState.Processing(100u, listOf(ExitTx("root", ExitTxStatus.AwaitingConfirmation("child-0", ExitTxOrigin.Mempool))))
-        val current = ExitState.Processing(101u, listOf(ExitTx("root", ExitTxStatus.Confirmed("child-1", block, ExitTxOrigin.Wallet(block))),
+        val current = ExitState.Processing(101u, listOf(ExitTx("root", ExitTxStatus.Confirmed(block)),
             ExitTx("leaf", ExitTxStatus.AwaitingCpfpBroadcast)))
         val packages = listOf(ExitTransactionPackage("root", "", "child-1", "", ExitTxOrigin.Wallet(block), current.transactions[0].status),
             ExitTransactionPackage("leaf", "", null, null, null, ExitTxStatus.AwaitingCpfpBroadcast))

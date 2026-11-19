@@ -142,19 +142,16 @@ struct ExitProgress: Equatable, Sendable {
 enum ExitFees {
     /// `exit`'s whole path, and the part of it for steps another of `exits` also has.
     static func paid(_ exit: ExitModel, among exits: [ExitModel], childFees: [String: UInt64]) -> (total: UInt64, shared: UInt64) {
-        let others = Set(exits.filter { $0.id != exit.id }.flatMap { $0.path.map(\.txid) })
-        var seen = Set<String>(), total: UInt64 = 0, shared: UInt64 = 0
-        for tx in exit.path {
-            guard let child = tx.status.child_txid, seen.insert(child).inserted, let fee = childFees[child] else { continue }
-            total += fee
-            if others.contains(tx.txid) { shared += fee }
-        }
-        return (total, shared)
+        let others = Set(exits.filter { $0.id != exit.id }.flatMap { $0.path.map(\.txid) + $0.packageChildren.keys })
+        let children = exit.feeChildren
+        let shared = Set(children.filter { others.contains($0.key) }.values)
+        return (Set(children.values).reduce(0) { $0 + (childFees[$1] ?? 0) },
+                shared.reduce(0) { $0 + (childFees[$1] ?? 0) })
     }
 
     /// Every exit's children, each once: what Activity's "Exit fee" rows add up to.
     static func total(_ exits: [ExitModel], childFees: [String: UInt64]) -> UInt64 {
-        Set(exits.flatMap { $0.path.compactMap(\.status.child_txid) }).reduce(0) { $0 + (childFees[$1] ?? 0) }
+        Set(exits.flatMap(\.feeChildren.values)).reduce(0) { $0 + (childFees[$1] ?? 0) }
     }
 }
 
@@ -166,6 +163,12 @@ extension ExitModel {
     /// (later states don't carry them).
     var path: [ExitDetails.Transaction] {
         records.last { $0.transactions?.isEmpty == false }?.transactions ?? []
+    }
+
+    var feeChildren: [String: String] {
+        var children = packageChildren
+        for tx in path where children[tx.txid] == nil { children[tx.txid] = tx.status.child_txid }
+        return children
     }
 
     /// The transaction to open in an explorer: the claim once there is one, else the furthest step that's been sent.

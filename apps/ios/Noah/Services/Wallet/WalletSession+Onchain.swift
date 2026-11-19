@@ -14,7 +14,7 @@ extension WalletSession {
                 Self.vtxoModel($0, tip: tip, expiring: expiring)
             }
             let runs = Self.exitRuns(handles)
-            let models = try await handles.wallet.listAllExits(includeHistory: true, includeTransactions: false)
+            let models = try await handles.wallet.listAllExits(includeHistory: true, includeTransactions: true)
                 .map { Self.exitModel($0, runs: runs) }
             var overview = OnchainOverview(
                 walletID: handles.wallet.fingerprint(), vtxos: vtxos, exits: models,
@@ -40,7 +40,7 @@ extension WalletSession {
 
     /// Fee children and claims this wallet paid for or received, from its own transactions.
     private static func addChildFees(_ handles: Handles, models: [ExitModel], to overview: inout OnchainOverview) async {
-        let children = Set(models.flatMap { $0.path.compactMap(\.status.child_txid) })
+        let children = Set(models.flatMap(\.feeChildren.values))
         let claims = Set(models.compactMap(\.details.claimTxid))
         for transaction in (try? await handles.onchain.transactions()) ?? [] {
             // BDK can't price a fee child (its anchor input isn't the wallet's); what left the wallet is its fee.
@@ -113,7 +113,7 @@ extension WalletSession {
 
     func exitDetail(_ id: String) async throws -> ExitModel? {
         try await withOpenWallet { handles in
-            try await handles.wallet.getExitStatus(vtxoId: id, includeHistory: true, includeTransactions: false)
+            try await handles.wallet.getExitStatus(vtxoId: id, includeHistory: true, includeTransactions: true)
                 .map { Self.exitModel($0, runs: Self.exitRuns(handles)) }
         }
     }
@@ -121,9 +121,11 @@ extension WalletSession {
     static func exitModel(_ status: ExitTransactionStatus, runs: [String: String] = [:]) -> ExitModel {
         let current = Self.exitState(status.state)
         let history = (status.history ?? []).map(Self.exitState)
+        var packageChildren: [String: String] = [:]
+        for package in status.transactions { packageChildren[package.parentTxid] = package.childTxid }
         return .init(id: status.vtxoId, amount: status.amountSats, state: current.0, details: current.1,
                      history: history.map(\.0), historyDetails: history.map(\.1), claimable: current.0 == "Claimable",
-                     run: runs[status.vtxoId] ?? "")
+                     run: runs[status.vtxoId] ?? "", packageChildren: packageChildren)
     }
 
     static func exitRuns(_ handles: Handles) -> [String: String] {

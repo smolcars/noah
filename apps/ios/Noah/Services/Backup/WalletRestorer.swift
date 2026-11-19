@@ -306,7 +306,7 @@ struct WalletRestorer: Sendable {
 extension RecoveryReport {
     /// The Ark server knew of no VTXO for the seed, spent or not.
     var foundNothing: Bool {
-        [recovered, skipped, foreign, failed, exited].allSatisfy(\.vtxoIds.isEmpty)
+        [recovered, skipped, foreign, failed, exited, abandoned].allSatisfy(\.vtxoIds.isEmpty)
     }
 }
 

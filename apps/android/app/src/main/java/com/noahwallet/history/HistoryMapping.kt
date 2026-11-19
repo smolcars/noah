@@ -90,8 +90,7 @@ object HistoryMapping {
      */
     fun exitFees(exits: List<ExitTransactionStatus>): Map<String, String> = exits.flatMap { exit ->
         val past = (exit.history.orEmpty() + exit.state).filterIsInstance<ExitState.Processing>().flatMap { it.transactions }.mapNotNull { tx ->
-            when (val status = tx.status) { is ExitTxStatus.AwaitingConfirmation -> status.childTxid; is ExitTxStatus.Confirmed -> status.childTxid
-                else -> null }
+            (tx.status as? ExitTxStatus.AwaitingConfirmation)?.childTxid
         }
         (exit.transactions.mapNotNull { it.childTxid } + past).map { it to exit.vtxoId }
     }.toMap()

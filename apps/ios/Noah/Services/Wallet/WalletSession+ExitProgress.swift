@@ -295,8 +295,8 @@ extension WalletSession {
                         case .awaitingCpfpBroadcast: status = .init(kind: "awaiting-cpfp-broadcast")
                         case .awaitingConfirmation(let child, let from):
                             status = .init(kind: "awaiting-confirmation", child_txid: child, origin: origin(from))
-                        case .confirmed(let child, let ref, let from):
-                            status = .init(kind: "confirmed", child_txid: child, block: block(ref), origin: origin(from))
+                        case .confirmed(let ref):
+                            status = .init(kind: "confirmed", block: block(ref))
                         }
                         return .init(txid: tx.txid, status: status)
                     }))
