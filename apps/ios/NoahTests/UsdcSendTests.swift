@@ -86,12 +86,12 @@ import Testing
         + "f8c52y2stc300gl6s4xswtjpc37hrnnr3c9wvtgjfuvqmpm35evq9qyyssqy4lgd8tj637qcjp05rdpxxykjenthxftej7a2zzmwrmrl70fyj9hvj0rewhzj7jfyuwk"
         + "wcg9g2jpwtk3wkjtwnkdks84hsnu8xps5vsq4gj5hs"
     private nonisolated static let quote = SatoraQuote(protocolFeeSats: 50, protocolFeeRate: 0.005, networkFeeSats: 20, gaslessClaimFeeSats: 3,
-                                           exchangeRate: "100000", targetUsdc: "5873384", netTargetUsdc: "5839905", minSats: 356,
-                                           maxSats: 20_000_000)
+                                                       exchangeRate: "100000", targetUsdc: "5873384", netTargetUsdc: "5839905", minSats: 356,
+                                                       maxSats: 20_000_000)
     private static let sendQuote = SendQuote(amount: 1500, fee: 2, total: 1502)
 
     private nonisolated static func swap(_ id: String, status: String = "pending", terminal: Bool = false, claimTx: String? = nil,
-                             invoice: String = "") -> SatoraSwap {
+                                         invoice: String = "") -> SatoraSwap {
         SatoraSwap(id: id, status: status, terminal: terminal, bolt11Invoice: invoice, sourceSats: "1500", targetUsdc: "0", feeSats: 0,
                    destination: address, createdAt: "2026-11-20T00:00:00Z", invoiceExpiresAt: nil, claimDeadline: 0,
                    serverFundTx: nil, claimTx: claimTx, claimUserOpHash: nil, claimStarted: false)
