@@ -289,6 +289,7 @@ class AppModel(application: Application, val settings: SettingsStorage = Setting
             }
             throw failure
         }
+        com.noahwallet.send.UsdcSwaps.close()
         history.clear(); repeatPayment = null; sendPrefill = null; scannedDestination = null; autoBoardSuccessBanner = null; renewVtxos = null
         homeMemory = com.noahwallet.ui.home.HomeMemory()
         walletLock.reset(); restore.reset()

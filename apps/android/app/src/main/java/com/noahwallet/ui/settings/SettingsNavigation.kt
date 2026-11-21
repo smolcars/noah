@@ -10,7 +10,7 @@ import kotlinx.serialization.Serializable
 @Serializable
 enum class SettingsDestination : NavKey {
     Settings, Profile, Lightning, Email, Seed, Backup, Vtxos, Board, Recurring, Exits,
-    Notifications, UnifiedPush, Advanced, Ark, Esplora, Logs, Debug, Feedback, About,
+    Notifications, UnifiedPush, Advanced, Ark, Esplora, Logs, Debug, Feedback, About, Beta, SwapPhrase,
 }
 
 /** One VTXO (Activity's VTXO links open it). */
@@ -35,7 +35,7 @@ enum class SettingsDestination : NavKey {
 
 internal object SettingsRoutes {
     private val parents = listOf(SettingsDestination.Lightning, SettingsDestination.Email).associateWith { SettingsDestination.Profile } +
-        (SettingsDestination.UnifiedPush to SettingsDestination.Notifications) +
+        (SettingsDestination.UnifiedPush to SettingsDestination.Notifications) + (SettingsDestination.SwapPhrase to SettingsDestination.Beta) +
         listOf(SettingsDestination.Ark, SettingsDestination.Esplora, SettingsDestination.Logs,
             SettingsDestination.Debug).associateWith { SettingsDestination.Advanced }
 

@@ -75,10 +75,10 @@ internal object PhraseClip {
  * Recovery phrase (prototype `SCR.recovery`): until authentication the grid shows bars and Show — the words aren't in the
  * screen. Authentication is always required ("No screen lock" asks first instead). Copy marks the clip sensitive and
  * clears it after 2 minutes; "I wrote it down" clears Home's nudge. Screenshots are blocked here. [fixture] shows sample
- * words for the screenshot gallery only.
+ * words for the screenshot gallery only. [swap]: Beta's swap phrase (Satora's, for USDC claims) instead, with no "I wrote it down".
  */
 @Composable
-internal fun RecoveryPhrasePage(model: AppModel, nav: SettingsNav, fixture: List<String>? = null) {
+internal fun RecoveryPhrasePage(model: AppModel, nav: SettingsNav, fixture: List<String>? = null, swap: Boolean = false) {
     val context = LocalContext.current
     val activity = context as? Activity
     val haptics = rememberHaptics()
@@ -93,7 +93,7 @@ internal fun RecoveryPhrasePage(model: AppModel, nav: SettingsNav, fixture: List
     PhraseShield(model, holder, activity.takeIf { fixture == null }, clear)
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     val scope = rememberCoroutineScope()
-    val reveal = remember(holder, activity, lifecycle) { PhraseReveal(model, holder, activity, lifecycle, haptics) }
+    val reveal = remember(holder, activity, lifecycle) { PhraseReveal(model, holder, activity, lifecycle, haptics, swap) }
     var prompted by rememberSaveable { mutableStateOf(false) }
     val words = fixture ?: holder.words
     // Opening the page asks once, as today; after that, Show asks.
@@ -104,12 +104,14 @@ internal fun RecoveryPhrasePage(model: AppModel, nav: SettingsNav, fixture: List
         lifecycle.currentStateFlow.first { it.isAtLeast(Lifecycle.State.RESUMED) }
         reveal.reveal()
     }
-    SettingsFrame(tr("Recovery phrase"), nav.back,
-        line = if (words.isEmpty()) tr("The words that restore your wallet.") else tr("{n} words that restore your wallet.", words.size),
-        foot = if (words.isEmpty()) null else ({ PhraseActions(model, nav, words, holder) { clipboard.setPrimaryClip(PhraseClip.clip(label, it)) } })) {
+    val (title, line, warning) = phraseCopy(swap, words.size)
+    SettingsFrame(title, nav.back, line = line,
+        foot = if (words.isEmpty()) null else ({
+            PhraseActions(model, nav, words, holder, confirm = !swap) { clipboard.setPrimaryClip(PhraseClip.clip(label, it)) }
+        })) {
         PhraseGrid(words, holder.shownAt, authenticating = model.walletLock.authenticating) { scope.launch { reveal.reveal() } }
         model.walletLock.error?.let { FinePrint(tr(it), failed = true) }
-        Warning(tr("Never share them. Anyone with these words can take your bitcoin."))
+        Warning(warning)
     }
     reveal.warning?.let { started ->
         SettingsSheet({ reveal.warning = null }, tr("No screen lock"),
@@ -161,17 +163,19 @@ private fun PhraseShield(model: AppModel, holder: RevealedPhrase, activity: Acti
  */
 @Stable
 private class PhraseReveal(private val model: AppModel, private val holder: RevealedPhrase, private val activity: Activity?,
-    private val lifecycle: Lifecycle, private val haptics: com.noahwallet.ui.onboarding.Haptics) {
+    private val lifecycle: Lifecycle, private val haptics: com.noahwallet.ui.onboarding.Haptics, private val swap: Boolean) {
     var warning by mutableStateOf<Int?>(null)
     private val resumed get() = lifecycle.currentState.isAtLeast(Lifecycle.State.RESUMED)
+    private val reason get() = if (swap) "View your swap phrase" else "View your seed phrase"
+    private suspend fun load() = if (swap) swapWords(checkNotNull(activity)) else model.mnemonic()
 
     suspend fun reveal() {
         val fragment = activity as? androidx.fragment.app.FragmentActivity ?: return
         val started = model.walletLock.generation
         if (WalletLock.hasNoScreenLock(fragment)) {
             if (resumed) warning = started
-        } else if (model.walletLock.authenticate(fragment, "View your seed phrase")) {
-            val loaded = model.mnemonic()
+        } else if (model.walletLock.authenticate(fragment, reason)) {
+            val loaded = load()
             if (started == model.walletLock.generation && resumed) { holder.show(loaded, started)
                 haptics.success() }
         }
@@ -181,15 +185,30 @@ private class PhraseReveal(private val model: AppModel, private val holder: Reve
         val fragment = activity as? androidx.fragment.app.FragmentActivity ?: return
         if (started != model.walletLock.generation || !resumed) return
         if (WalletLock.hasNoScreenLock(fragment)) {
-            val loaded = model.mnemonic()
+            val loaded = load()
             if (started == model.walletLock.generation && resumed) holder.show(loaded, started)
         } else reveal()
     }
 }
 
+/** The page's title, line and warning: the recovery phrase's, or the swap phrase's. */
+@Composable
+private fun phraseCopy(swap: Boolean, count: Int): Triple<String, String, String> = if (swap) Triple(tr("Swap phrase"),
+    tr("The words that sign your USDC claims."), tr(
+        "They only sign USDC claims for swaps in progress and hold no funds between swaps. They are not your wallet's recovery phrase. Never share them."
+    ))
+else Triple(tr("Recovery phrase"), if (count == 0) tr("The words that restore your wallet.") else tr("{n} words that restore your wallet.", count),
+    tr("Never share them. Anyone with these words can take your bitcoin."))
+
+/** The swap phrase's words; never logged. */
+private suspend fun swapWords(context: Context): List<String> = kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+    com.noahwallet.send.UsdcSwaps.open(context.applicationContext).mnemonic().split(" ")
+}
+
 /** Copy (the clip clears in two minutes) and "I wrote it down". [copy] puts the words on the clipboard under our label. */
 @Composable
-private fun RowScope.PhraseActions(model: AppModel, nav: SettingsNav, words: List<String>, holder: RevealedPhrase, copy: (String) -> Unit) {
+private fun RowScope.PhraseActions(model: AppModel, nav: SettingsNav, words: List<String>, holder: RevealedPhrase, confirm: Boolean,
+    copy: (String) -> Unit) {
     val haptics = rememberHaptics()
     val toasts = LocalSettingsToasts.current
     val copied = tr("Copied · clears in 2 minutes")
@@ -199,7 +218,7 @@ private fun RowScope.PhraseActions(model: AppModel, nav: SettingsNav, words: Lis
         holder.clipDeadline = SystemClock.elapsedRealtime() + PhraseClip.clearAfterMillis
         haptics.success(); toasts.show(copied)
     }
-    if (!model.recoveryPhraseBackedUp) FootPill(tr("I wrote it down"), Modifier.testTag("recovery-saved"), enabled = !model.busy) {
+    if (confirm && !model.recoveryPhraseBackedUp) FootPill(tr("I wrote it down"), Modifier.testTag("recovery-saved"), enabled = !model.busy) {
         nav.save(model, "Couldn't save your preference.") { model.confirmRecoveryPhraseBackup(); haptics.success(); toasts.show(backedUp); nav.pop() }
     }
 }

@@ -88,7 +88,7 @@ internal class SdkSendWallet(private val wallet: Wallet, private val onchain: On
         var ids: List<String>? = null
         val estimate = when (payment.method) {
             "ark" -> wallet.estimateArkoorPaymentFee(payment.amount.toULong())
-            "lightning", "offer" -> wallet.estimateLightningSendFee(payment.amount.toULong())
+            "lightning", "offer", "usdc" -> wallet.estimateLightningSendFee(payment.amount.toULong())
             "onchain" -> {
                 requireSend(payment.source == SendSource.offchain)
                 if (payment.max) {

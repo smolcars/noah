@@ -16,6 +16,10 @@
     <issue id="InvalidPackage">
         <ignore regexp="ktor-utils-jvm" />
     </issue>
+    <!-- Generated BoltFFI bindings (apps/satora-ffi): its desktop fallback loads an extracted library; Android uses loadLibrary. -->
+    <issue id="UnsafeDynamicallyLoadedCode">
+        <ignore path="**/satora-ffi/android/kotlin/**" />
+    </issue>
     <!-- Generated, machine-translated values-*/ resources. -->
     <issue id="UnusedQuantity">
         <ignore path="src/main/res/values-*/strings.xml" />
