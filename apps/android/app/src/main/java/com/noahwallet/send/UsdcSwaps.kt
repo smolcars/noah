@@ -37,6 +37,12 @@ private class LiveSatora(val client: SatoraClient) : SatoraSwaps {
     override suspend fun claim(id: String) = client.claim(id)
 }
 
+/** Rust checks certificates through Android's trust manager, which needs a Context before the first HTTPS call. */
+private object SatoraTls {
+    init { System.loadLibrary("satora_ffi") }
+    @JvmStatic external fun init(context: Context)
+}
+
 class UsdcFailure(message: String, val argument: String? = null) : Exception(message)
 
 /**
@@ -66,6 +72,7 @@ object UsdcSwaps {
     @Synchronized fun open(context: Context): SatoraSwaps = client ?: run {
         val directory = directory(context)
         check(directory.isDirectory || directory.mkdirs()) { """Cannot create the Satora directory""" }
+        SatoraTls.init(context.applicationContext)
         LiveSatora(SatoraClient.open(directory.path, null)).also { client = it }
     }
 

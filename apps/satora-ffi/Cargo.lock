@@ -3721,6 +3721,8 @@ version = "0.1.0"
 dependencies = [
  "boltffi",
  "http",
+ "jni",
+ "rustls-platform-verifier",
  "satora-rust-sdk",
  "serde",
  "serde_json",

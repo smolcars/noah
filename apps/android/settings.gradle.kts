@@ -24,6 +24,15 @@ dependencyResolutionManagement {
             }
             filter { includeGroup("io.github.niteshbalusu11") }
         }
+        exclusiveContent {
+            forRepository {
+                maven {
+                    name = "RustlsPlatformVerifier"
+                    url = uri("https://github.com/rustls/rustls-platform-verifier/raw/maven-archive/android-release-support/maven/")
+                }
+            }
+            filter { includeGroup("org.rustls") }
+        }
     }
 }
 

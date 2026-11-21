@@ -201,6 +201,20 @@ pub struct SatoraClient {
     client: Arc<Client>,
 }
 
+/// Android only: rustls checks certificates through Android's trust manager, and the first
+/// HTTPS call panics unless it has been given the app's Context. Call once before `open`,
+/// as `com.noahwallet.send.SatoraTls.init(context)`.
+#[cfg(target_os = "android")]
+#[jni::jni_mangle("com.noahwallet.send.SatoraTls")]
+pub fn init<'caller>(
+    mut env: jni::EnvUnowned<'caller>,
+    _class: jni::objects::JClass<'caller>,
+    context: jni::objects::JObject<'caller>,
+) {
+    env.with_env(|env| rustls_platform_verifier::android::init_with_env(env, context))
+        .resolve::<jni::errors::ThrowRuntimeExAndDefault>();
+}
+
 #[boltffi::export]
 impl SatoraClient {
     /// Open the Satora client in `data_dir`, which must exist. The SDK keeps its

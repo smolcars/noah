@@ -216,6 +216,8 @@ kotlin {
 }
 
 dependencies {
+    // The Kotlin half of the Rust crate the Satora library checks certificates with.
+    implementation(libs.rustls.platform.verifier)
     implementation(libs.window)
     implementation(libs.window.core)
     androidTestImplementation(platform(libs.compose.bom))

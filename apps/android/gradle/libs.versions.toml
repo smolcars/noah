@@ -40,6 +40,8 @@ camera-camera2 = { module = "androidx.camera:camera-camera2", version = "1.4.2" 
 camera-lifecycle = { module = "androidx.camera:camera-lifecycle", version = "1.4.2" }
 camera-view = { module = "androidx.camera:camera-view", version = "1.4.2" }
 biometric = { module = "androidx.biometric:biometric", version = "1.1.0" }
+# Must equal rustls-platform-verifier-android in apps/satora-ffi/Cargo.lock.
+rustls-platform-verifier = { module = "org.rustls:rustls-platform-verifier", version = "0.2.0" }
 fragment = { module = "androidx.fragment:fragment", version = "1.8.9" }
 maplibre = { module = "org.maplibre.gl:android-sdk", version = "13.7.1" }
 commons-compress = { module = "org.apache.commons:commons-compress", version = "1.28.0" }

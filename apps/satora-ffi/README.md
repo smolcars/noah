@@ -63,3 +63,7 @@ own build does.
 2. `cargo update -p satora-rust-sdk`, then `cargo test` and
    `cargo test -- --ignored quote_mainnet` (a read-only mainnet quote).
 3. Rebuild both platforms and rerun the link check.
+4. If `rustls-platform-verifier-android` changed in `Cargo.lock`, set the same version for
+   `rustls-platform-verifier` in `apps/android/gradle/libs.versions.toml` and its checksum in
+   `verification-metadata.xml`, and read its `network_security_config.xml`: the Android app
+   uses it as its own.
