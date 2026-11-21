@@ -1313,6 +1313,7 @@
   <string name="gt_708398a18d2f5dfe">"No se pudo guardar la posición del mapa."</string>
   <string name="gt_bc71b743861782dc">"Es posible que la operación se haya iniciado. Comprueba su estado antes de repetirla. Las demás operaciones de recuperación siguen disponibles."</string>
   <string name="gt_58031d0ba8c82f55">"Aún no se conoce el resultado. Esta acción comprueba el estado del pago sin volver a enviarlo."</string>
+  <string name="gt_28fcb68134e5e9bb">"The rate changed. The recipient now gets about %1$s USDC. Hold to send again."</string>
   <string name="gt_b0186376f1dac3ea">"El destinatario ya no acepta este importe. Actualiza o cancela el pago recurrente."</string>
   <string name="gt_0d09cc372ee7f6aa">"Se encontró la transacción registrada. Revisa su estado en la red."</string>
   <string name="gt_75b3d8381b514e22">"La ronda,"</string>

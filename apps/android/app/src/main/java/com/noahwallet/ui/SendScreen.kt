@@ -321,13 +321,14 @@ internal class SendPresentation(val model: SendModel, private val satora: () -> 
      * the controller with the reviewed quote, then the swap is watched until claimed. [submitted]: the invoice is paying.
      */
     fun confirmUsdc(payment: SendPayment, quote: SendQuote, submitted: () -> Unit) {
-        if (!reviewed(payment, quote) || model.busy) return
+        val reviewedUsdc = model.usdcQuote?.netTargetUsdc
+        if (reviewedUsdc == null || !reviewed(payment, quote) || model.busy) return
         model.busy = true
         viewModelScope.launch {
             val started = try {
                 val swaps = withContext(Dispatchers.IO) { satora() }
-                swaps to UsdcSwaps.start(swaps, payment.amount, payment.destination) { reviewed(payment, quote) && submit(it, quote) }
-            } catch (failure: UsdcFailure) { model.error = failure.message; null
+                swaps to UsdcSwaps.start(swaps, payment.amount, payment.destination, reviewedUsdc) { reviewed(payment, quote) && submit(it, quote) }
+            } catch (failure: UsdcFailure) { model.usdcFailed(failure); null
             } catch (cancelled: CancellationException) { throw cancelled
             } catch (@Suppress("TooGenericExceptionCaught") _: Exception) { model.error = UsdcSwaps.notStarted; null
             } finally { model.busy = false }

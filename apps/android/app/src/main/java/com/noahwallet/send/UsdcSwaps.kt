@@ -43,7 +43,8 @@ private object SatoraTls {
     @JvmStatic external fun init(context: Context)
 }
 
-class UsdcFailure(message: String, val argument: String? = null) : Exception(message)
+/** [usdc]: what a swap refused for paying less than review showed would pay, in base units. */
+class UsdcFailure(message: String, val argument: String? = null, val usdc: String? = null) : Exception(message)
 
 /**
  * USDC sends (beta): pay a Lightning invoice from Satora's swap service, which sends USDC on Arbitrum, then claim it.
@@ -59,6 +60,7 @@ object UsdcSwaps {
     const val quoteFailed = "Couldn't get a USDC quote. Try again."
     const val notStarted = "Couldn't start the USDC swap. Nothing was sent."
     const val paused = "USDC sends are paused until you update Noah."
+    const val rateChanged = "The rate changed. The recipient now gets about {amount} USDC. Hold to send again."
 
     /** One Satora operation at a time: the send's watch and the foreground pass. */
     private val operations = Mutex()
@@ -91,8 +93,19 @@ object UsdcSwaps {
 
     /** Review's fine print: USDC due (base units floored to cents) and Satora's fees in sats. */
     fun fineprint(quote: SatoraQuote): Pair<String, String> =
-        BigDecimal(quote.netTargetUsdc).movePointLeft(6).setScale(2, RoundingMode.DOWN).toPlainString() to
-            (quote.protocolFeeSats + quote.networkFeeSats + quote.gaslessClaimFeeSats).toString()
+        cents(quote.netTargetUsdc) to (quote.protocolFeeSats + quote.networkFeeSats + quote.gaslessClaimFeeSats).toString()
+
+    private fun cents(usdc: String) = BigDecimal(usdc).movePointLeft(6).setScale(2, RoundingMode.DOWN).toPlainString()
+
+    /**
+     * Review's amount is a quote, and the rate moves before the swap is created: a swap paying at least 99% of it is
+     * paid, anything less is refused (apps/fixtures/usdc-payout.json).
+     */
+    fun accepts(swapUsdc: String, reviewedUsdc: String): Boolean {
+        val swap = swapUsdc.toULongOrNull() ?: return false
+        val reviewed = reviewedUsdc.toULongOrNull() ?: return false
+        return swap * 100u >= reviewed * 99u
+    }
 
     /** The failure to show for a Satora quote that keeps [sats] from being sent; null when it can be. */
     fun failure(sats: Long, total: Long, spendable: Long, quote: SatoraQuote): UsdcFailure? =
@@ -105,10 +118,11 @@ object UsdcSwaps {
 
     /**
      * Creates the swap, which Satora's SDK stores before anything is paid, then hands its invoice to [submit] as a plain
-     * Lightning payment of [sats]. Throws [UsdcFailure] when nothing was submitted.
+     * Lightning payment of [sats]. Throws [UsdcFailure] when nothing was submitted. [reviewedUsdc]: review's amount.
      */
-    suspend fun start(swaps: SatoraSwaps, sats: Long, address: String, submit: (SendPayment) -> Boolean): SatoraSwap {
+    suspend fun start(swaps: SatoraSwaps, sats: Long, address: String, reviewedUsdc: String, submit: (SendPayment) -> Boolean): SatoraSwap {
         val swap = create(swaps, sats, address)
+        if (!accepts(swap.targetUsdc, reviewedUsdc)) throw UsdcFailure(rateChanged, cents(swap.targetUsdc), swap.targetUsdc)
         val amount = PaymentEncoding.invoice(swap.bolt11Invoice)?.sats
         if (amount?.compareTo(sats.toBigDecimal()) != 0 || !submit(SendPayment(swap.bolt11Invoice, "lightning", sats))) throw UsdcFailure(notStarted)
         return swap

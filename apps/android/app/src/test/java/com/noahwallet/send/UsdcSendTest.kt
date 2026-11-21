@@ -37,10 +37,26 @@ class UsdcSendTest {
         assertEquals("1234.50" to "73", UsdcSwaps.fineprint(quote("1234500000")))
     }
 
+    @Test fun payoutFixture() {
+        for (case in SharedFixtures.load("usdc-payout")) {
+            val input = case.input.jsonObject
+            assertEquals(case.name, case.expected.jsonObject.getValue("accepted").jsonPrimitive.boolean,
+                UsdcSwaps.accepts(input.getValue("swapUsdc").jsonPrimitive.content, input.getValue("reviewedUsdc").jsonPrimitive.content))
+        }
+    }
+
+    @Test fun nothingIsSubmittedForASwapThatPaysLessThanReviewed() = runBlocking {
+        val swaps = FakeSatora(listOf(swap("a", invoice = invoice1500).copy(targetUsdc = "900000")))
+        val failure = runCatching { UsdcSwaps.start(swaps, 1500, address, "1000000") { fail("submitted"); true } }.exceptionOrNull() as? UsdcFailure
+        assertEquals(UsdcSwaps.rateChanged, failure?.message)
+        assertEquals("0.90", failure?.argument)
+        assertEquals("900000", failure?.usdc)
+    }
+
     @Test fun swapIsCreatedBeforeItsInvoiceIsSubmitted() = runBlocking {
         val swaps = FakeSatora(listOf(swap("a", invoice = invoice1500)))
         var submitted: SendPayment? = null
-        val swap = UsdcSwaps.start(swaps, 1500, address) { payment ->
+        val swap = UsdcSwaps.start(swaps, 1500, address, "0") { payment ->
             assertEquals(listOf("create 1500 $address"), swaps.calls)
             submitted = payment; true
         }
@@ -50,7 +66,7 @@ class UsdcSendTest {
 
     @Test fun nothingIsSubmittedForAnInvoiceOfAnotherAmount() = runBlocking {
         val swaps = FakeSatora(listOf(swap("a", invoice = invoice1500)))
-        val failure = runCatching { UsdcSwaps.start(swaps, 1501, address) { fail("submitted"); true } }.exceptionOrNull()
+        val failure = runCatching { UsdcSwaps.start(swaps, 1501, address, "0") { fail("submitted"); true } }.exceptionOrNull()
         assertEquals(UsdcSwaps.notStarted, failure?.message)
     }
 

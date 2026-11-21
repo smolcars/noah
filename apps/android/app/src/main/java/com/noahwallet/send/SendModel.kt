@@ -209,6 +209,11 @@ class SendModel(val controller: SendController, private val network: String,
             reviewFailed(generation, null)
         } finally { busy = false }
     }
+    /** Hold to send paid nothing. A swap refused for paying less than review showed becomes review's amount: the next hold accepts it. */
+    fun usdcFailed(failure: UsdcFailure) {
+        failure.usdc?.let { usdcQuote = usdcQuote?.copy(netTargetUsdc = it) }
+        error = failure.message; errorArgument = failure.argument
+    }
     private suspend fun usdcPrice(sats: Long) = try {
         quoteUsdc(sats)
     } catch (cancelled: CancellationException) { throw cancelled

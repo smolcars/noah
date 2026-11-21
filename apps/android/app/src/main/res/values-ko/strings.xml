@@ -1299,6 +1299,7 @@
   <string name="gt_708398a18d2f5dfe">"지도 위치를 저장하지 못했습니다."</string>
   <string name="gt_bc71b743861782dc">"작업이 이미 제출되었을 수 있습니다. 다시 실행하기 전에 상태를 확인하세요. 다른 복구 작업은 계속 사용할 수 있습니다."</string>
   <string name="gt_58031d0ba8c82f55">"아직 결제 결과를 알 수 없습니다. 상태만 확인하며, 결제를 다시 보내지는 않습니다."</string>
+  <string name="gt_28fcb68134e5e9bb">"The rate changed. The recipient now gets about %1$s USDC. Hold to send again."</string>
   <string name="gt_b0186376f1dac3ea">"수신자가 더 이상 이 금액을 받지 않습니다. 정기 결제를 수정하거나 취소해 주세요."</string>
   <string name="gt_0d09cc372ee7f6aa">"기록된 거래를 찾았습니다. 해당 거래의 네트워크 상태를 확인하세요."</string>
   <string name="gt_75b3d8381b514e22">"라운드는"</string>

@@ -46057,6 +46057,42 @@
         }
       }
     },
+    "The rate changed. The recipient now gets about {amount} USDC. Hold to send again.": {
+      "comment": "GT gt_28fcb68134e5e9bb; arguments: amount",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The rate changed. The recipient now gets about %1$@ USDC. Hold to send again."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The rate changed. The recipient now gets about %1$@ USDC. Hold to send again."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The rate changed. The recipient now gets about %1$@ USDC. Hold to send again."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The rate changed. The recipient now gets about %1$@ USDC. Hold to send again."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The rate changed. The recipient now gets about %1$@ USDC. Hold to send again."
+          }
+        }
+      }
+    },
     "The recipient no longer accepts this amount. Update or cancel the recurring payment.": {
       "comment": "GT gt_b0186376f1dac3ea; arguments: none",
       "extractionState": "manual",

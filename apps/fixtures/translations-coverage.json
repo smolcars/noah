@@ -6,8 +6,8 @@
     "ko",
     "sv"
   ],
-  "catalogEntries": 1606,
-  "sourceKeys": 1649,
+  "catalogEntries": 1607,
+  "sourceKeys": 1650,
   "coverage": {
     "ios": {
       "used": [
@@ -1145,6 +1145,7 @@
         "The lock is open. Claim it to another wallet or to this phone’s on-chain wallet.",
         "The operation may have been submitted. Check its status before repeating it. Other recovery operations remain available.",
         "The outcome isn't known yet. This checks the payment. It won't send it again.",
+        "The rate changed. The recipient now gets about {amount} USDC. Hold to send again.",
         "The recipient no longer accepts this amount. Update or cancel the recurring payment.",
         "The recorded transaction was found. Review its network status.",
         "The round,",
@@ -1452,6 +1453,7 @@
       "untranslated": {
         "es": [
           "gt_0a58d8ed4f77229a",
+          "gt_28fcb68134e5e9bb",
           "gt_34d630d63bba53a3",
           "gt_459862131f0e7414",
           "gt_4fb600762e963173",
@@ -1475,6 +1477,7 @@
         ],
         "ja": [
           "gt_0a58d8ed4f77229a",
+          "gt_28fcb68134e5e9bb",
           "gt_34d630d63bba53a3",
           "gt_459862131f0e7414",
           "gt_4fb600762e963173",
@@ -1498,6 +1501,7 @@
         ],
         "ko": [
           "gt_0a58d8ed4f77229a",
+          "gt_28fcb68134e5e9bb",
           "gt_34d630d63bba53a3",
           "gt_459862131f0e7414",
           "gt_4fb600762e963173",
@@ -1521,6 +1525,7 @@
         ],
         "sv": [
           "gt_0a58d8ed4f77229a",
+          "gt_28fcb68134e5e9bb",
           "gt_34d630d63bba53a3",
           "gt_459862131f0e7414",
           "gt_4fb600762e963173",
@@ -2686,6 +2691,7 @@
         "The map position could not be saved.",
         "The operation may have been submitted. Check its status before repeating it. Other recovery operations remain available.",
         "The outcome isn't known yet. This checks the payment. It won't send it again.",
+        "The rate changed. The recipient now gets about {amount} USDC. Hold to send again.",
         "The recipient no longer accepts this amount. Update or cancel the recurring payment.",
         "The recorded transaction was found. Review its network status.",
         "The round,",
@@ -3009,6 +3015,7 @@
       "untranslated": {
         "es": [
           "gt_0a58d8ed4f77229a",
+          "gt_28fcb68134e5e9bb",
           "gt_34d630d63bba53a3",
           "gt_459862131f0e7414",
           "gt_4fb600762e963173",
@@ -3032,6 +3039,7 @@
         ],
         "ja": [
           "gt_0a58d8ed4f77229a",
+          "gt_28fcb68134e5e9bb",
           "gt_34d630d63bba53a3",
           "gt_459862131f0e7414",
           "gt_4fb600762e963173",
@@ -3055,6 +3063,7 @@
         ],
         "ko": [
           "gt_0a58d8ed4f77229a",
+          "gt_28fcb68134e5e9bb",
           "gt_34d630d63bba53a3",
           "gt_459862131f0e7414",
           "gt_4fb600762e963173",
@@ -3078,6 +3087,7 @@
         ],
         "sv": [
           "gt_0a58d8ed4f77229a",
+          "gt_28fcb68134e5e9bb",
           "gt_34d630d63bba53a3",
           "gt_459862131f0e7414",
           "gt_4fb600762e963173",

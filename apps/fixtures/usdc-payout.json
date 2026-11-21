@@ -1,0 +1,85 @@
+{
+  "description": "Whether a created swap may be paid, given the USDC review showed. Both are USDC base units (6 decimals) as strings: swapUsdc from the swap, reviewedUsdc from the quote on review. The swap is accepted when it pays at least 99% of the reviewed amount; an unreadable amount is refused. Shared by Android and iOS.",
+  "cases": [
+    {
+      "name": "the same amount",
+      "input": {
+        "swapUsdc": "5839905",
+        "reviewedUsdc": "5839905"
+      },
+      "expected": {
+        "accepted": true
+      }
+    },
+    {
+      "name": "more than review showed",
+      "input": {
+        "swapUsdc": "5900000",
+        "reviewedUsdc": "5839905"
+      },
+      "expected": {
+        "accepted": true
+      }
+    },
+    {
+      "name": "exactly 1% less",
+      "input": {
+        "swapUsdc": "990000",
+        "reviewedUsdc": "1000000"
+      },
+      "expected": {
+        "accepted": true
+      }
+    },
+    {
+      "name": "just over 1% less",
+      "input": {
+        "swapUsdc": "989999",
+        "reviewedUsdc": "1000000"
+      },
+      "expected": {
+        "accepted": false
+      }
+    },
+    {
+      "name": "a small payout, one unit under the floor",
+      "input": {
+        "swapUsdc": "98",
+        "reviewedUsdc": "100"
+      },
+      "expected": {
+        "accepted": false
+      }
+    },
+    {
+      "name": "nothing",
+      "input": {
+        "swapUsdc": "0",
+        "reviewedUsdc": "5839905"
+      },
+      "expected": {
+        "accepted": false
+      }
+    },
+    {
+      "name": "an unreadable swap amount",
+      "input": {
+        "swapUsdc": "",
+        "reviewedUsdc": "5839905"
+      },
+      "expected": {
+        "accepted": false
+      }
+    },
+    {
+      "name": "an unreadable reviewed amount",
+      "input": {
+        "swapUsdc": "5839905",
+        "reviewedUsdc": "about 5.83"
+      },
+      "expected": {
+        "accepted": false
+      }
+    }
+  ]
+}

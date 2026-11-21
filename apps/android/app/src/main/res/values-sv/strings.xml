@@ -1299,6 +1299,7 @@
   <string name="gt_708398a18d2f5dfe">"Kartpositionen kunde inte sparas."</string>
   <string name="gt_bc71b743861782dc">"Åtgärden kan ha skickats in. Kontrollera dess status innan du upprepar den. Andra återställningsåtgärder är fortfarande tillgängliga."</string>
   <string name="gt_58031d0ba8c82f55">"Det är ännu oklart om betalningen har gått igenom. Detta kontrollerar bara betalningen – den skickas inte igen."</string>
+  <string name="gt_28fcb68134e5e9bb">"The rate changed. The recipient now gets about %1$s USDC. Hold to send again."</string>
   <string name="gt_b0186376f1dac3ea">"Mottagaren accepterar inte längre detta belopp. Uppdatera eller avbryt den återkommande betalningen."</string>
   <string name="gt_0d09cc372ee7f6aa">"Den registrerade transaktionen hittades. Granska dess nätverksstatus."</string>
   <string name="gt_75b3d8381b514e22">"Rundan,"</string>

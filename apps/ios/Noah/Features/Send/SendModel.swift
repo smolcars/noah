@@ -426,12 +426,12 @@ import SatoraFFI
     }
     /// Hold to send on a USDC review: the swap first, then its invoice through Send's journal, then the claim.
     private func confirmUsdc(_ payment: SendPayment, quote: SendQuote, onSubmit: @escaping () -> Void) {
-        guard !usdcStarting else { return }
+        guard !usdcStarting, let reviewedUsdc = usdcQuote?.netTargetUsdc else { return }
         usdcStarting = true
         usdcError = nil
         Task {
             do {
-                let swap = try await UsdcSend.start(sats: payment.amount, destination: payment.destination, quote: quote, client: usdc()) {
+                let swap = try await UsdcSend.start(payment, reviewedUsdc: reviewedUsdc, quote: quote, client: usdc()) {
                     onSubmit()
                     controller.submit($0, quote: $1)
                 }
@@ -439,6 +439,8 @@ import SatoraFFI
                 await UsdcSwaps.shared.watch(swap)
             } catch {
                 usdcStarting = false
+                // Review now shows what that swap offered, and the next hold accepts it.
+                if let changed = error as? UsdcSend.RateChanged { usdcQuote?.netTargetUsdc = changed.usdc }
                 usdcError = UsdcSend.createFailure(error, locale: LegacyLocale.resolved())
             }
         }

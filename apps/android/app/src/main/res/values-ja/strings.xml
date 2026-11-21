@@ -1299,6 +1299,7 @@
   <string name="gt_708398a18d2f5dfe">"地図の表示位置を保存できませんでした。"</string>
   <string name="gt_bc71b743861782dc">"操作は受け付けられた可能性があります。再実行する前に状況を確認してください。ほかの復旧操作は引き続き利用できます。"</string>
   <string name="gt_58031d0ba8c82f55">"支払いの結果はまだ不明です。この操作では支払い状況の確認のみを行い、再送信はしません。"</string>
+  <string name="gt_28fcb68134e5e9bb">"The rate changed. The recipient now gets about %1$s USDC. Hold to send again."</string>
   <string name="gt_b0186376f1dac3ea">"受取人は現在、この金額を受け付けていません。定期支払いを変更するか取り消してください。"</string>
   <string name="gt_0d09cc372ee7f6aa">"記録された取引が見つかりました。ネットワーク上の状況を確認してください。"</string>
   <string name="gt_75b3d8381b514e22">"ラウンドは"</string>

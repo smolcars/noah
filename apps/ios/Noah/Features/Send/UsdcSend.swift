@@ -77,17 +77,32 @@ enum UsdcSend {
         }
     }
 
+    /// The swap would pay less than review showed: nothing was paid. `usdc`: what it would pay, in base units.
+    struct RateChanged: Error { let usdc: String }
+
+    /// Review's amount is a quote, and the rate moves before the swap is created: a swap paying at least 99% of it is
+    /// paid, anything less is refused (`apps/fixtures/usdc-payout.json`).
+    static func accepts(swapUsdc: String, reviewedUsdc: String) -> Bool {
+        guard let swap = UInt64(swapUsdc), let reviewed = UInt64(reviewedUsdc) else { return false }
+        return swap * 100 >= reviewed * 99
+    }
+
     static func createFailure(_ error: any Error, locale: String) -> String {
-        (error as? SatoraError)?.code == .unknownContract
+        if let changed = error as? RateChanged {
+            return L10n.text("The rate changed. The recipient now gets about {amount} USDC. Hold to send again.", usdc(changed.usdc), locale: locale)
+        }
+        return (error as? SatoraError)?.code == .unknownContract
             ? L10n.text("USDC sends are paused until you update Noah.", locale: locale)
             : L10n.text("Couldn't start the USDC swap. Nothing was sent.", locale: locale)
     }
 
     /// Creates the swap (stored by the SDK before anything is paid), then hands its invoice to Send's journal as an
-    /// ordinary Lightning payment. Returns the swap id, or throws with nothing paid.
-    @MainActor static func start(sats: UInt64, destination: String, quote: SendQuote, client: UsdcSwapClient,
+    /// ordinary Lightning payment. Returns the swap id, or throws with nothing paid. `reviewedUsdc`: review's amount.
+    @MainActor static func start(_ payment: SendPayment, reviewedUsdc: String, quote: SendQuote, client: UsdcSwapClient,
                                  submit: (SendPayment, SendQuote) -> Void) async throws -> SatoraSwap {
-        let swap = try await client.createSwap(sats, destination)
+        let sats = payment.amount
+        let swap = try await client.createSwap(sats, payment.destination)
+        guard accepts(swapUsdc: swap.targetUsdc, reviewedUsdc: reviewedUsdc) else { throw RateChanged(usdc: swap.targetUsdc) }
         guard let invoice = PaymentEncoding.invoice(swap.bolt11Invoice), invoice.sats == Decimal(sats) else {
             throw SatoraError(message: "invoice amount differs", code: .invalidInput)
         }

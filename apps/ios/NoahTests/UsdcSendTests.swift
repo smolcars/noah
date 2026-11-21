@@ -10,6 +10,8 @@ import Testing
     struct AddressExpected: Decodable { let destinationType: String? }
     struct AmountInput: Decodable { let sats, total, spendable, min, max: UInt64 }
     struct AmountExpected: Decodable { let error: String? }
+    struct PayoutInput: Decodable { let swapUsdc, reviewedUsdc: String }
+    struct PayoutExpected: Decodable { let accepted: Bool }
 
     @Test func recognizesArbitrumAddresses() throws {
         for fixture in try Fixtures.load("usdc-address", input: AddressInput.self, expected: AddressExpected.self) {
@@ -39,11 +41,34 @@ import Testing
         #expect(UsdcSend.reviewLine(Self.quote, locale: "en") == "Recipient gets about 5.83 USDC on Arbitrum · Swap fee 73 sats")
     }
 
+    @Test func acceptsPayoutsNearTheReviewedAmount() throws {
+        for fixture in try Fixtures.load("usdc-payout", input: PayoutInput.self, expected: PayoutExpected.self) {
+            let accepted = UsdcSend.accepts(swapUsdc: fixture.input.swapUsdc, reviewedUsdc: fixture.input.reviewedUsdc)
+            #expect(accepted == fixture.expected.accepted, "\(fixture.name)")
+        }
+    }
+
+    @Test func neverPaysASwapThatPaysLessThanReviewed() async {
+        let calls = Calls()
+        let client = Self.client(calls, create: Self.swap("s1", invoice: Self.invoice1500, usdc: "900000"))
+        do {
+            _ = try await UsdcSend.start(Self.payment(1500), reviewedUsdc: "1000000", quote: Self.sendQuote,
+                                         client: client) { _, _ in calls.log.append("submit") }
+            Issue.record("the swap was paid")
+        } catch {
+            #expect((error as? UsdcSend.RateChanged)?.usdc == "900000")
+            #expect(UsdcSend.createFailure(error, locale: "en")
+                == "The rate changed. The recipient now gets about 0.90 USDC. Hold to send again.")
+        }
+        #expect(!calls.log.contains("submit"))
+    }
+
     @Test func createsTheSwapBeforePayingItsInvoice() async throws {
         let calls = Calls()
         let client = Self.client(calls, create: Self.swap("s1", invoice: Self.invoice1500))
         var submitted: SendPayment?
-        let swap = try await UsdcSend.start(sats: 1500, destination: Self.address, quote: Self.sendQuote, client: client) { payment, _ in
+        let swap = try await UsdcSend.start(Self.payment(1500), reviewedUsdc: "0", quote: Self.sendQuote,
+                                            client: client) { payment, _ in
             calls.log.append("submit")
             submitted = payment
         }
@@ -56,7 +81,7 @@ import Testing
         let calls = Calls()
         let client = Self.client(calls, create: Self.swap("s1", invoice: Self.invoice1500))
         await #expect(throws: SatoraError.self) {
-            try await UsdcSend.start(sats: 1000, destination: Self.address, quote: Self.sendQuote, client: client) { _, _ in
+            try await UsdcSend.start(Self.payment(1000), reviewedUsdc: "0", quote: Self.sendQuote, client: client) { _, _ in
                 calls.log.append("submit")
             }
         }
@@ -89,10 +114,11 @@ import Testing
                                                        exchangeRate: "100000", targetUsdc: "5873384", netTargetUsdc: "5839905", minSats: 356,
                                                        maxSats: 20_000_000)
     private static let sendQuote = SendQuote(amount: 1500, fee: 2, total: 1502)
+    private static func payment(_ sats: UInt64) -> SendPayment { SendPayment(destination: address, method: "usdc", amount: sats) }
 
     private nonisolated static func swap(_ id: String, status: String = "pending", terminal: Bool = false, claimTx: String? = nil,
-                                         invoice: String = "") -> SatoraSwap {
-        SatoraSwap(id: id, status: status, terminal: terminal, bolt11Invoice: invoice, sourceSats: "1500", targetUsdc: "0", feeSats: 0,
+                                         invoice: String = "", usdc: String = "0") -> SatoraSwap {
+        SatoraSwap(id: id, status: status, terminal: terminal, bolt11Invoice: invoice, sourceSats: "1500", targetUsdc: usdc, feeSats: 0,
                    destination: address, createdAt: "2026-11-20T00:00:00Z", invoiceExpiresAt: nil, claimDeadline: 0,
                    serverFundTx: nil, claimTx: claimTx, claimUserOpHash: nil, claimStarted: false)
     }

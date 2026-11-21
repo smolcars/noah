@@ -1299,6 +1299,7 @@
   <string name="gt_708398a18d2f5dfe">"The map position could not be saved."</string>
   <string name="gt_bc71b743861782dc">"The operation may have been submitted. Check its status before repeating it. Other recovery operations remain available."</string>
   <string name="gt_58031d0ba8c82f55">"The outcome isn\'t known yet. This checks the payment. It won\'t send it again."</string>
+  <string name="gt_28fcb68134e5e9bb">"The rate changed. The recipient now gets about %1$s USDC. Hold to send again."</string>
   <string name="gt_b0186376f1dac3ea">"The recipient no longer accepts this amount. Update or cancel the recurring payment."</string>
   <string name="gt_0d09cc372ee7f6aa">"The recorded transaction was found. Review its network status."</string>
   <string name="gt_75b3d8381b514e22">"The round,"</string>
