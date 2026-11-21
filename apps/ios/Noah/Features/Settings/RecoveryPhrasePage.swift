@@ -12,9 +12,14 @@ final class PhraseGate {
         /// Moves on whenever the app backgrounds; a result for an older one is dropped.
         var generation: () -> Int
 
-        @MainActor static func live(lock: WalletLock, model: AppModel) -> Self {
+        /// `swap`: the Satora phrase of Beta's USDC sends instead of the wallet's.
+        @MainActor static func live(lock: WalletLock, model: AppModel, swap: Bool = false) -> Self {
             Self(authenticate: { await lock.authenticateRecoveryPhrase($0) }, hasNoScreenLock: { await lock.hasNoScreenLock() },
-                 words: { model.currentMnemonicWords() }, generation: { lock.policy.generation })
+                 words: {
+                     guard swap else { return model.currentMnemonicWords() }
+                     return ((try? SatoraStore.shared.open().mnemonic()) ?? "").split(separator: " ").map(String.init)
+                 },
+                 generation: { lock.policy.generation })
         }
     }
 
@@ -76,7 +81,9 @@ final class PhraseGate {
 
 /// Security → Recovery phrase. Before authentication the grid shows bars and Show, and no word
 /// is in the view; the words soften in after it. Copy is local-only for two minutes.
+/// `swap`: Beta → Swap phrase, the Satora phrase behind USDC sends, under the same protection.
 struct RecoveryPhrasePage: View {
+    var swap = false
     @Environment(AppModel.self) private var model
     @Environment(WalletLock.self) private var lock
     @Environment(\.settings) private var settings
@@ -95,21 +102,26 @@ struct RecoveryPhrasePage: View {
     private static let bars: [CGFloat] = [0.52, 0.64, 0.40, 0.58, 0.46, 0.70, 0.60, 0.44, 0.56, 0.50, 0.66, 0.48]
 
     var body: some View {
-        SettingsScroll(line: shown ? L10n.text("{n} words that restore your wallet.", words.count, locale: language)
+        SettingsScroll(line: swap ? L10n.text("The words that sign your USDC claims.", locale: language)
+            : shown ? L10n.text("{n} words that restore your wallet.", words.count, locale: language)
             : L10n.text("The words that restore your wallet.", locale: language)) {
                 grid.padding(.top, 22)
-                SettingsWarning(text: L10n.text("Never share them. Anyone with these words can take your bitcoin.", locale: language))
+                SettingsWarning(text: swap ? L10n.text(
+                    // swiftlint:disable:next line_length - one literal, so the translation tool extracts it
+                    "They only sign USDC claims for swaps in progress and hold no funds between swaps. They are not your wallet's recovery phrase. Never share them.",
+                    locale: language)
+                    : L10n.text("Never share them. Anyone with these words can take your bitcoin.", locale: language))
                 if let failure = lock.error ?? error {
                     SettingsFine(text: L10n.text(failure, locale: language), failure: true)
                 }
             }
-            .settingsChrome("Recovery phrase")
+            .settingsChrome(swap ? "Swap phrase" : "Recovery phrase")
             .settingsFooter {
                 if shown {
                     Button(action: copy) { Label(L10n.text("Copy", locale: language), systemImage: "doc.on.doc") }
                         .buttonStyle(OnboardingSecondaryButtonStyle(height: NoahTokens.Size.button))
                         .accessibilityIdentifier("phrase-copy")
-                    if model.needsRecoveryPhraseBackup {
+                    if model.needsRecoveryPhraseBackup && !swap {
                         Button(L10n.text("I wrote it down", locale: language), action: confirm)
                             .buttonStyle(SettingsActionStyle())
                             .accessibilityIdentifier("backup-confirm")
@@ -132,7 +144,7 @@ struct RecoveryPhrasePage: View {
                 }
             }
             .task {
-                if gate == nil { gate = PhraseGate(dependencies: fixture?.phrase ?? .live(lock: lock, model: model)) }
+                if gate == nil { gate = PhraseGate(dependencies: fixture?.phrase ?? .live(lock: lock, model: model, swap: swap)) }
                 try? await Task.sleep(for: .milliseconds(420))
                 await authenticate()
             }
@@ -146,7 +158,9 @@ struct RecoveryPhrasePage: View {
             .accessibilityIdentifier("recovery-phrase")
     }
 
-    private var reason: String { L10n.text("View your seed phrase", locale: language) }
+    private var reason: String {
+        swap ? L10n.text("View your swap phrase", locale: language) : L10n.text("View your seed phrase", locale: language)
+    }
 
     /// Two columns of numbered cells. Bars until authenticated; then the words, blurring in one after another.
     private var grid: some View {

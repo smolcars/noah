@@ -17,6 +17,8 @@ extension WalletSession {
         /// After a backup restore, until it's done: sync, then check each spendable VTXO with the server
         /// (`RestoredVtxoCheck`). Nothing otherwise.
         var checkRestoredVtxos: @Sendable () async throws -> Void = {}
+        /// USDC swaps (beta) an earlier run paid but didn't claim, even with the switch off since.
+        var finishUsdcSwaps: @Sendable () async throws -> Void = {}
 
         /// With `timing`, each call's start and end go to the app log.
         static func live(_ session: WalletSession, _ handles: Handles, timing: PassTiming? = nil) -> Self {
@@ -35,7 +37,8 @@ extension WalletSession {
                 takeMaintenance: { await session.takeForegroundMaintenance() },
                 maintenanceFailed: { await session.foregroundMaintenanceFailed() },
                 refreshes: { try await handles.wallet.history().count { HistoryMapping.subsystemID($0) == "bark.round:refresh" } },
-                checkRestoredVtxos: { try await session.checkRestoredVtxos(handles) })
+                checkRestoredVtxos: { try await session.checkRestoredVtxos(handles) },
+                finishUsdcSwaps: timed("usdc swaps") { await UsdcSwaps.shared.finishOpenSwaps() })
         }
 
         /// RN's foreground stages, each attempted on its own. The first pass after a foreground entry runs bark's
@@ -68,6 +71,7 @@ extension WalletSession {
                 },
                 claimLightning,
                 progressExits,
+                finishUsdcSwaps,
                 syncOnchain,
             ]
         }

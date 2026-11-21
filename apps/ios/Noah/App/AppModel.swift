@@ -590,6 +590,7 @@ extension AppModel {
             throw error
         }
         walletLock.reset()
+        SatoraStore.shared.close()
         summary = nil
         walletError = nil
         isWalletSuspended = false

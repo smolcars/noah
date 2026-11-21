@@ -10,6 +10,8 @@ enum SettingsPage: Hashable {
     /// Emergency exit: the warning, then Choose, Review, an exit's progress, Claim and the list.
     case exit, exitChoose, exitReview([String]), exitProgress(String), exitClaim, exitList
     case notifications, siri, advanced, arkServer, esplora, logs, debug
+    /// Beta, and its USDC sends' Satora phrase.
+    case beta, swapPhrase
     case feedback, about
 
     /// The root row a page belongs to: wide windows highlight it in the list.
@@ -20,6 +22,7 @@ enum SettingsPage: Hashable {
         case .schedule, .editor: .recurring
         case .exitChoose, .exitReview, .exitProgress, .exitClaim, .exitList: .exit
         case .arkServer, .esplora, .logs, .debug: .advanced
+        case .swapPhrase: .beta
         default: self
         }
     }

@@ -727,14 +727,12 @@ extension SendView {
     @ViewBuilder private var reviewScreen: some View {
         if let payment = model.payment, let quote = model.quote, model.showReview {
             SendConfirmation(
-                confirm: {
-                    clock.start()
-                    model.controller.submit(payment, quote: quote)
-                },
+                confirm: { model.confirm(payment, quote: quote) { clock.start() } },
                 btcPrice: model.btcPrice, fiatCurrency: model.fiatCurrency, payment: payment, quote: quote,
                 controller: model.controller, cancel: cancelReview, done: finish, onLeave: onLeave,
                 unit: unit, recipient: .of(destination: model.destination, ownDomain: ownDomain, payment: payment),
-                invoiceNote: invoiceNote, wide: wide, sideInsets: (window.insets.leading, window.insets.trailing), clock: clock,
+                invoiceNote: model.usdcNote(locale: locale.identifier) ?? invoiceNote, wide: wide, sideInsets: (window.insets.leading, window.insets.trailing),
+                clock: clock,
                 gate: holdGate, chainTip: chainTip, backToSend: true)
         } else {
             // Today's quote is being prepared.
