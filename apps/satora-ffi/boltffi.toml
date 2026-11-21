@@ -1,0 +1,33 @@
+[package]
+name = "satora_ffi"
+
+[cargo]
+global_args = ["--locked"]
+
+[targets.apple]
+enabled = true
+include_macos = false
+deployment_target = "18.0"
+ios_architectures = ["arm64"]
+simulator_architectures = ["arm64"]
+
+[targets.apple.swift]
+module_name = "SatoraFFI"
+output = "dist/swift"
+
+[targets.android]
+enabled = true
+architectures = ["arm64", "x86_64"]
+min_sdk = 24
+
+[targets.android.link]
+extra_args = ["-Wl,-z,max-page-size=16384"]
+
+[targets.android.kotlin]
+module_name = "SatoraFFI"
+package = "com.noahwallet.satora"
+output = "dist/kotlin"
+factory_style = "companion_methods"
+
+[targets.wasm]
+enabled = false
