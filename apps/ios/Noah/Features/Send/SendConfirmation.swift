@@ -244,7 +244,7 @@ struct SendToBlock: View {
     /// Addresses are short enough to show whole; an invoice starts collapsed to its first two lines and last
     /// characters and toggles between them and the whole. The copy button copies the whole string either way.
     private func card(_ full: String) -> some View {
-        let collapsible = SendMotion.Rail(payment) == .lightning
+        let collapsible = SendMotion.Rail(payment) == .lightning && payment.method != "usdc"
         return VStack(alignment: .leading, spacing: 10) {
             HStack(alignment: .top, spacing: 4) {
                 Group {

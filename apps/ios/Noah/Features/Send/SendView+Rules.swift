@@ -60,6 +60,7 @@ extension SendView {
         case "bip321": return "Payment request"
         case "ark": return "Ark address"
         case "offer": return "Lightning offer"
+        case "usdc": return "USDC address"
         default: return nil
         }
     }
