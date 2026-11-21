@@ -1,0 +1,109 @@
+{
+  "description": "Checks before a USDC swap is created. sats: the amount sent; total: sats plus the Lightning fee from the reviewed quote; spendable: the Ark balance; min/max: the Satora quote's limits. error: null, \"min\", \"max\" or \"balance\", checked in that order. Shared by Android and iOS.",
+  "cases": [
+    {
+      "name": "within limits and balance",
+      "input": {
+        "sats": 10000,
+        "total": 10050,
+        "spendable": 20000,
+        "min": 356,
+        "max": 20000000
+      },
+      "expected": {
+        "error": null
+      }
+    },
+    {
+      "name": "exactly the minimum",
+      "input": {
+        "sats": 356,
+        "total": 400,
+        "spendable": 20000,
+        "min": 356,
+        "max": 20000000
+      },
+      "expected": {
+        "error": null
+      }
+    },
+    {
+      "name": "below the minimum",
+      "input": {
+        "sats": 355,
+        "total": 400,
+        "spendable": 20000,
+        "min": 356,
+        "max": 20000000
+      },
+      "expected": {
+        "error": "min"
+      }
+    },
+    {
+      "name": "exactly the maximum",
+      "input": {
+        "sats": 20000000,
+        "total": 20000100,
+        "spendable": 30000000,
+        "min": 356,
+        "max": 20000000
+      },
+      "expected": {
+        "error": null
+      }
+    },
+    {
+      "name": "above the maximum",
+      "input": {
+        "sats": 20000001,
+        "total": 20000101,
+        "spendable": 30000000,
+        "min": 356,
+        "max": 20000000
+      },
+      "expected": {
+        "error": "max"
+      }
+    },
+    {
+      "name": "total exactly the balance",
+      "input": {
+        "sats": 10000,
+        "total": 10050,
+        "spendable": 10050,
+        "min": 356,
+        "max": 20000000
+      },
+      "expected": {
+        "error": null
+      }
+    },
+    {
+      "name": "total over the balance",
+      "input": {
+        "sats": 10000,
+        "total": 10050,
+        "spendable": 10049,
+        "min": 356,
+        "max": 20000000
+      },
+      "expected": {
+        "error": "balance"
+      }
+    },
+    {
+      "name": "below the minimum and over the balance: the minimum first",
+      "input": {
+        "sats": 100,
+        "total": 150,
+        "spendable": 0,
+        "min": 356,
+        "max": 20000000
+      },
+      "expected": {
+        "error": "min"
+      }
+    }
+  ]
+}
