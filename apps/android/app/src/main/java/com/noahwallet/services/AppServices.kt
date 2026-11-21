@@ -324,6 +324,7 @@ class AppServices private constructor(private val context: Context) {
         progressExits = { session.progressPendingExits { AppLog(context, "wallet").w("Foreground exit progress failed: $it") } },
         syncOnchain = session::syncOnchain,
         checkRestoredVtxos = { session.checkRestoredVtxos(AppLog(context, "restore")::w) },
+        finishSwaps = { com.noahwallet.send.UsdcSwaps.finishOpen(context, AppLog(context, "usdc")::w) },
         log = AppLog(context, "wallet")::i,
     )
 

@@ -176,6 +176,7 @@ internal object SendWhoRules {
         "bip321" -> "Payment request"
         "ark" -> "Ark address"
         "offer" -> "Lightning offer"
+        "usdc" -> "USDC address"
         else -> null
     }
     fun short(value: String) = if (value.length <= 14) value else value.take(4) + "…" + value.takeLast(4)
@@ -553,7 +554,8 @@ private fun ErrorLine(text: String, model: SendModel? = null) {
     val context = LocalContext.current
     // A wrong network says so plainly; the parser's own wording ("expected regtest, got mainnet") stays in its error.
     val wrongNetwork = wrongNetwork(model?.destinationError)
-    Text(if (wrongNetwork) tr("This address is for a different Bitcoin network.") else model?.destinationError?.localized(context) ?: tr(text),
+    val shown = model?.errorArgument?.let { tr(text, it) } ?: tr(text)
+    Text(if (wrongNetwork) tr("This address is for a different Bitcoin network.") else model?.destinationError?.localized(context) ?: shown,
         Modifier.fillMaxWidth().padding(top = 12.dp), style = SendType.small,
         color = LocalPalette.current.failure, textAlign = TextAlign.Center)
 }
@@ -790,15 +792,20 @@ private fun ReviewStep(presentation: SendPresentation, env: SendEnv) {
             model.error?.let { ErrorLine(it, model) }
             controller.message?.let { ErrorLine(it) }
         }) {
-        if (ready) HoldToSend(formatted(amount, env), enabled = !controller.locked, sending = controller.locked, modifier = Modifier.padding(bottom = 6.dp)) {
-            // A Lightning payment can outlast the screen: its service starts here, while Noah is visible.
-            if (presentation.confirm(payment, quote) && SendRoute.of(payment) == SendRoute.lightning)
-                com.noahwallet.services.background.SendPendingService.start(context)
-        } else SendPill(if (model.busy) tr("Preparing…") else tr("Next"), Modifier.fillMaxWidth().padding(bottom = 6.dp).testTag("send-continue"),
+        if (ready) HoldToSend(formatted(amount, env), enabled = !controller.locked && !model.busy, sending = controller.locked || model.busy,
+            modifier = Modifier.padding(bottom = 6.dp)) { hold(presentation, payment, quote, context) }
+        else SendPill(if (model.busy) tr("Preparing…") else tr("Next"), Modifier.fillMaxWidth().padding(bottom = 6.dp).testTag("send-continue"),
             enabled = !model.busy) {
             haptics.light(); scope.launch { model.continueStage() }
         }
     }
+}
+
+/** Holding to send. A Lightning payment can outlast the screen: its service starts here, while Noah is visible. */
+private fun hold(presentation: SendPresentation, payment: SendPayment, quote: SendQuote, context: Context) {
+    val start = { com.noahwallet.services.background.SendPendingService.start(context) }
+    if (payment.method == "usdc") presentation.confirmUsdc(payment, quote, start)
+    else if (presentation.confirm(payment, quote) && SendRoute.of(payment) == SendRoute.lightning) start()
 }
 
 /** The review's layout: "Send ₿X", who it goes to, the rows, then [notes] and [action] (Hold to send) at the foot. */
@@ -926,6 +933,8 @@ internal fun arrives(rail: SendRail, source: SendSource?, needed: Long): Pair<St
 /** At most one line of fine print, today's notes first: checkpoint, invoice amount, sweep, estimate. [model] is null for a recurring approval (no typed amount). */
 @Composable
 private fun reviewNote(model: SendModel?, quote: SendQuote?, env: SendEnv, typedBefore: Long?): String? = when {
+    model?.usdcQuote != null -> UsdcSwaps.fineprint(model.usdcQuote!!).let { (usdc, fee) ->
+        tr("Recipient gets about {usdc} USDC on Arbitrum · Swap fee {fee} sats", usdc, fee) }
     quote?.checkpoint != null -> tr("An existing Lightning payment will be checked. No new payment will be created.")
     model?.parsed?.amount != null && typedBefore != null && typedBefore > 0 && typedBefore != quote?.amount ->
         tr("The invoice sets the amount to {amount}", formatted(model.parsed.amount!!.toLong(), env))
@@ -986,12 +995,21 @@ private fun SendingStep(presentation: SendPresentation, env: SendEnv, actions: S
             Column(Modifier.fillMaxWidth().padding(top = 18.dp).graphicsLayer { alpha = show.value.coerceIn(0f, 1f)
                 if (!reduceMotion) translationY = 16 * (1 - show.value) * density }) {
                 shown?.takeIf { it != SendEnding.sending }?.let { ResultArea(it, controller, attempt, receipt, env, actions) }
+                UsdcStatus(presentation, payment)
             }
         }, bottom = {
             Spacer(Modifier.height(16.dp))
             SendingFoot(shown, receipt, controller, actions, show)
         })
     }
+}
+
+/** A USDC send's swap, under its result. */
+@Composable
+private fun UsdcStatus(presentation: SendPresentation, payment: SendPayment?) {
+    val (invoice, line) = presentation.usdcStatus ?: return
+    if (invoice == payment?.destination) Text(tr(line), Modifier.fillMaxWidth().padding(top = 12.dp).testTag("send-usdc-status"), style = SendType.line,
+        color = LocalPalette.current.muted, textAlign = TextAlign.Center)
 }
 
 /**

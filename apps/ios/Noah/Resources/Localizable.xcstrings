@@ -8401,6 +8401,42 @@
         }
       }
     },
+    "Claiming the USDC…": {
+      "comment": "GT gt_ff0bfcfabdba98db; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Claiming the USDC…"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Claiming the USDC…"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Claiming the USDC…"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Claiming the USDC…"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Claiming the USDC…"
+          }
+        }
+      }
+    },
     "Claiming · waiting for block {height}": {
       "comment": "GT gt_0075dff6ca828fc1; arguments: height",
       "extractionState": "manual",
@@ -10309,6 +10345,42 @@
         }
       }
     },
+    "Couldn't get a USDC quote. Try again.": {
+      "comment": "GT gt_a8142e77c36cb71c; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't get a USDC quote. Try again."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't get a USDC quote. Try again."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't get a USDC quote. Try again."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't get a USDC quote. Try again."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't get a USDC quote. Try again."
+          }
+        }
+      }
+    },
     "Couldn't list backups.": {
       "comment": "GT gt_75433c45038e4e69; arguments: none",
       "extractionState": "manual",
@@ -11277,6 +11349,78 @@
           "stringUnit": {
             "state": "translated",
             "value": "Kunde inte spara ditt val."
+          }
+        }
+      }
+    },
+    "Couldn't start the USDC swap. Nothing was sent.": {
+      "comment": "GT gt_ce0215bb055d0506; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't start the USDC swap. Nothing was sent."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't start the USDC swap. Nothing was sent."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't start the USDC swap. Nothing was sent."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't start the USDC swap. Nothing was sent."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't start the USDC swap. Nothing was sent."
+          }
+        }
+      }
+    },
+    "Couldn't turn on USDC sends.": {
+      "comment": "GT gt_0a58d8ed4f77229a; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't turn on USDC sends."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't turn on USDC sends."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't turn on USDC sends."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't turn on USDC sends."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Couldn't turn on USDC sends."
           }
         }
       }
@@ -13281,6 +13425,42 @@
           "stringUnit": {
             "state": "translated",
             "value": "Varje transaktions avgift tas från dina bekräftade bitcoin på blockkedjan. Noah skickar nästa när en insättning har bekräftats."
+          }
+        }
+      }
+    },
+    "Early features that may change or go away.": {
+      "comment": "GT gt_dfbc35fa158dcd2e; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Early features that may change or go away."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Early features that may change or go away."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Early features that may change or go away."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Early features that may change or go away."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Early features that may change or go away."
           }
         }
       }
@@ -32977,6 +33157,42 @@
         }
       }
     },
+    "Pay USDC addresses on Arbitrum through Satora's swap service": {
+      "comment": "GT gt_c3e09a1d6f0cfe5d; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pay USDC addresses on Arbitrum through Satora's swap service"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pay USDC addresses on Arbitrum through Satora's swap service"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pay USDC addresses on Arbitrum through Satora's swap service"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pay USDC addresses on Arbitrum through Satora's swap service"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Pay USDC addresses on Arbitrum through Satora's swap service"
+          }
+        }
+      }
+    },
     "Pay again": {
       "comment": "GT gt_0468d821ffcacc9e; arguments: none",
       "extractionState": "manual",
@@ -35493,6 +35709,42 @@
           "stringUnit": {
             "state": "translated",
             "value": "Mottagarbeloppet är ännu inte fastställt"
+          }
+        }
+      }
+    },
+    "Recipient gets about {usdc} USDC on Arbitrum · Swap fee {fee} sats": {
+      "comment": "GT gt_b0ee7fd5195405fa; arguments: usdc, fee",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recipient gets about %1$@ USDC on Arbitrum · Swap fee %2$@ sats"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recipient gets about %1$@ USDC on Arbitrum · Swap fee %2$@ sats"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recipient gets about %1$@ USDC on Arbitrum · Swap fee %2$@ sats"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recipient gets about %1$@ USDC on Arbitrum · Swap fee %2$@ sats"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Recipient gets about %1$@ USDC on Arbitrum · Swap fee %2$@ sats"
           }
         }
       }
@@ -40765,6 +41017,42 @@
         }
       }
     },
+    "Send USDC": {
+      "comment": "GT gt_d193dfcad3459f7e; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Send USDC"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Send USDC"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Send USDC"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Send USDC"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Send USDC"
+          }
+        }
+      }
+    },
     "Send about {amount} here. Exits use it once it confirms.": {
       "comment": "GT gt_b3080e138c3a73a8; arguments: amount",
       "extractionState": "manual",
@@ -40797,6 +41085,78 @@
           "stringUnit": {
             "state": "translated",
             "value": "Skicka ungefär %1$@ hit. Uttag använder det när det har bekräftats."
+          }
+        }
+      }
+    },
+    "Send at least {amount} sats to a USDC address.": {
+      "comment": "GT gt_459862131f0e7414; arguments: amount",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Send at least %1$@ sats to a USDC address."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Send at least %1$@ sats to a USDC address."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Send at least %1$@ sats to a USDC address."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Send at least %1$@ sats to a USDC address."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Send at least %1$@ sats to a USDC address."
+          }
+        }
+      }
+    },
+    "Send at most {amount} sats to a USDC address.": {
+      "comment": "GT gt_db107c2698eb02c1; arguments: amount",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Send at most %1$@ sats to a USDC address."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Send at most %1$@ sats to a USDC address."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Send at most %1$@ sats to a USDC address."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Send at most %1$@ sats to a USDC address."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Send at most %1$@ sats to a USDC address."
           }
         }
       }
@@ -43825,6 +44185,42 @@
         }
       }
     },
+    "Swap phrase": {
+      "comment": "GT gt_ef5a00623b030e90; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Swap phrase"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Swap phrase"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Swap phrase"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Swap phrase"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Swap phrase"
+          }
+        }
+      }
+    },
     "Swapping with Ark": {
       "comment": "GT gt_f13735d87fed3876; arguments: none",
       "extractionState": "manual",
@@ -44649,6 +45045,42 @@
           "stringUnit": {
             "state": "translated",
             "value": "Lightning-betalningen kunde inte tas emot. Skapa en ny betalningsbegäran och försök igen."
+          }
+        }
+      }
+    },
+    "The USDC claim hasn't gone through yet. Noah tries again whenever you open it.": {
+      "comment": "GT gt_7055dd94252c5a5b; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The USDC claim hasn't gone through yet. Noah tries again whenever you open it."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The USDC claim hasn't gone through yet. Noah tries again whenever you open it."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The USDC claim hasn't gone through yet. Noah tries again whenever you open it."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The USDC claim hasn't gone through yet. Noah tries again whenever you open it."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The USDC claim hasn't gone through yet. Noah tries again whenever you open it."
           }
         }
       }
@@ -45625,6 +46057,42 @@
         }
       }
     },
+    "The rate changed. The recipient now gets about {amount} USDC. Hold to send again.": {
+      "comment": "GT gt_28fcb68134e5e9bb; arguments: amount",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The rate changed. The recipient now gets about %1$@ USDC. Hold to send again."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The rate changed. The recipient now gets about %1$@ USDC. Hold to send again."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The rate changed. The recipient now gets about %1$@ USDC. Hold to send again."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The rate changed. The recipient now gets about %1$@ USDC. Hold to send again."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The rate changed. The recipient now gets about %1$@ USDC. Hold to send again."
+          }
+        }
+      }
+    },
     "The recipient no longer accepts this amount. Update or cancel the recurring payment.": {
       "comment": "GT gt_b0186376f1dac3ea; arguments: none",
       "extractionState": "manual",
@@ -45913,6 +46381,42 @@
         }
       }
     },
+    "The swap ended without sending USDC. The payment stays pending until Satora releases it, which can take hours.": {
+      "comment": "GT gt_4fb600762e963173; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The swap ended without sending USDC. The payment stays pending until Satora releases it, which can take hours."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The swap ended without sending USDC. The payment stays pending until Satora releases it, which can take hours."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The swap ended without sending USDC. The payment stays pending until Satora releases it, which can take hours."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The swap ended without sending USDC. The payment stays pending until Satora releases it, which can take hours."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The swap ended without sending USDC. The payment stays pending until Satora releases it, which can take hours."
+          }
+        }
+      }
+    },
     "The transaction could not be built. No payment was submitted. Review the amount and fee.": {
       "comment": "GT gt_c6e0499eb3d93af4; arguments: none",
       "extractionState": "manual",
@@ -46089,6 +46593,42 @@
           "stringUnit": {
             "state": "translated",
             "value": "Orden som återställer din plånbok."
+          }
+        }
+      }
+    },
+    "The words that sign your USDC claims.": {
+      "comment": "GT gt_86b941007e7bf7c6; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The words that sign your USDC claims."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The words that sign your USDC claims."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The words that sign your USDC claims."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The words that sign your USDC claims."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "The words that sign your USDC claims."
           }
         }
       }
@@ -46413,6 +46953,42 @@
           "stringUnit": {
             "state": "translated",
             "value": "De här %1$@ delar en del av sin väg: %2$@ transaktioner att skicka, inte %3$@. Delade skickas och betalas en gång."
+          }
+        }
+      }
+    },
+    "They only sign USDC claims for swaps in progress and hold no funds between swaps. They are not your wallet's recovery phrase. Never share them.": {
+      "comment": "GT gt_8bce9d1b0b70fdff; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "They only sign USDC claims for swaps in progress and hold no funds between swaps. They are not your wallet's recovery phrase. Never share them."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "They only sign USDC claims for swaps in progress and hold no funds between swaps. They are not your wallet's recovery phrase. Never share them."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "They only sign USDC claims for swaps in progress and hold no funds between swaps. They are not your wallet's recovery phrase. Never share them."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "They only sign USDC claims for swaps in progress and hold no funds between swaps. They are not your wallet's recovery phrase. Never share them."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "They only sign USDC claims for swaps in progress and hold no funds between swaps. They are not your wallet's recovery phrase. Never share them."
           }
         }
       }
@@ -48925,6 +49501,150 @@
         }
       }
     },
+    "USDC address": {
+      "comment": "GT gt_b32b40ff92de7001; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "USDC address"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "USDC address"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "USDC address"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "USDC address"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "USDC address"
+          }
+        }
+      }
+    },
+    "USDC sends are paused until you update Noah.": {
+      "comment": "GT gt_fa9ea4dcc8f420d4; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "USDC sends are paused until you update Noah."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "USDC sends are paused until you update Noah."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "USDC sends are paused until you update Noah."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "USDC sends are paused until you update Noah."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "USDC sends are paused until you update Noah."
+          }
+        }
+      }
+    },
+    "USDC sends work on mainnet only.": {
+      "comment": "GT gt_bc97b8d594aa5a54; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "USDC sends work on mainnet only."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "USDC sends work on mainnet only."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "USDC sends work on mainnet only."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "USDC sends work on mainnet only."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "USDC sends work on mainnet only."
+          }
+        }
+      }
+    },
+    "USDC sent.": {
+      "comment": "GT gt_34d630d63bba53a3; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "USDC sent."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "USDC sent."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "USDC sent."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "USDC sent."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "USDC sent."
+          }
+        }
+      }
+    },
     "Unable to check this payment. Sending remains stopped.": {
       "comment": "GT gt_ed8e5311ed8b968a; arguments: none",
       "extractionState": "manual",
@@ -51337,6 +52057,42 @@
         }
       }
     },
+    "View your swap phrase": {
+      "comment": "GT gt_713d91c502182a53; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "View your swap phrase"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "View your swap phrase"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "View your swap phrase"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "View your swap phrase"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "View your swap phrase"
+          }
+        }
+      }
+    },
     "Wait for the current wallet operation to finish before changing the endpoint.": {
       "comment": "GT gt_0c6da2b7449f5e54; arguments: none",
       "extractionState": "manual",
@@ -51693,6 +52449,42 @@
           "stringUnit": {
             "state": "translated",
             "value": "Väntar på åtkomst till säker lagring. Lås upp enheten och försök igen."
+          }
+        }
+      }
+    },
+    "Waiting for the swap to lock the USDC…": {
+      "comment": "GT gt_c35c6712a49cf3a6; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Waiting for the swap to lock the USDC…"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Waiting for the swap to lock the USDC…"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Waiting for the swap to lock the USDC…"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Waiting for the swap to lock the USDC…"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Waiting for the swap to lock the USDC…"
           }
         }
       }

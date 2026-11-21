@@ -203,6 +203,8 @@ android {
     }
     // Share the exact iOS snapshots; do not copy 7 MB into another source tree.
     sourceSets.getByName("main").assets.directories += listOf("../../assets/btcmap", "../../assets/geonames")
+    sourceSets.getByName("main").jniLibs.directories += "../../satora-ffi/android/jniLibs"
+    sourceSets.getByName("main").kotlin.directories += "../../satora-ffi/android/kotlin"
     sourceSets.getByName("test").resources.directories += listOf("../../assets/btcmap", "../../assets/geonames")
     sourceSets.getByName("test").resources.directories += "../../fixtures"
     sourceSets.getByName("test").resources.directories += "../../../api"
@@ -214,6 +216,8 @@ kotlin {
 }
 
 dependencies {
+    // The Kotlin half of the Rust crate the Satora library checks certificates with.
+    implementation(libs.rustls.platform.verifier)
     implementation(libs.window)
     implementation(libs.window.core)
     androidTestImplementation(platform(libs.compose.bom))

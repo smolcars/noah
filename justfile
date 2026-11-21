@@ -46,6 +46,20 @@ android-native-install variant="Regtest":
 android-native-test:
     cd apps/android && ./gradlew :app:testRegtestDebugUnitTest
 
+# Satora swap bindings (apps/satora-ffi), built into apps/satora-ffi/dist
+satora-ffi-build-ios:
+    apps/satora-ffi/scripts/build.sh ios
+
+satora-ffi-build-android:
+    apps/satora-ffi/scripts/build.sh android
+
+satora-ffi-test:
+    cd apps/satora-ffi && cargo test
+
+# Link the iOS device slice with bark's static library and check for symbol clashes
+satora-ffi-check-link bark_xcframework:
+    apps/satora-ffi/scripts/check-bark-link.sh {{ bark_xcframework }}
+
 # Native lint and format (apps/ios, apps/android). Tools come from the Nix shell; the pre-commit hook runs the same checks.
 native-lint: ios-native-lint android-native-lint
 

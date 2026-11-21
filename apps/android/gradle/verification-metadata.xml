@@ -4,7 +4,7 @@
       <verify-metadata>false</verify-metadata>
       <verify-signatures>false</verify-signatures>
       <trusted-artifacts>
-         <trust group="^(?!io[.]github[.]niteshbalusu11$|io[.]ktor$|org[.]jetbrains[.]kotlinx$|org[.]slf4j$|androidx[.]camera$|androidx[.]work$|androidx[.]biometric$|androidx[.]fragment$|androidx[.]room$|androidx[.]sqlite$|androidx[.]concurrent$|org[.]unifiedpush[.]android$|org[.]apache[.]commons$|commons-io$|commons-codec$|com[.]google[.]zxing$|org[.]maplibre[.]gl$|com[.]jakewharton[.]timber$|com[.]google[.]code[.]gson$|io[.]sentry$|androidx[.]appfunctions$|androidx[.]appsearch$|com[.]google[.]devtools[.]ksp$).*" file="^(?!(?:annotation-jvm-1[.]7[.]0[.]jar|auto-service-annotations-1[.]0-rc6[.]jar|failureaccess-1[.]0[.]1[.]jar|guava-32[.]0[.]1-android[.]jar|j2objc-annotations-2[.]8[.]jar|kotlinpoet-jvm-2[.]0[.]0[.]jar|checker-qual-3[.]33[.]0[.]jar|kotlin-reflect-2[.]0[.]10[.]jar|kotlin-stdlib-2[.]2[.]20[.]jar)$).*" regex="true" reason="Verify the wallet AAR, backup extraction, server networking, push connector, WorkManager, biometric and map dependencies, and AppFunctions with KSP and every artifact they brought in (the file names excluded here); retain the scaffold trust policy for other groups."/>
+         <trust group="^(?!io[.]github[.]niteshbalusu11$|io[.]ktor$|org[.]jetbrains[.]kotlinx$|org[.]slf4j$|androidx[.]camera$|androidx[.]work$|androidx[.]biometric$|androidx[.]fragment$|androidx[.]room$|androidx[.]sqlite$|androidx[.]concurrent$|org[.]unifiedpush[.]android$|org[.]apache[.]commons$|commons-io$|commons-codec$|com[.]google[.]zxing$|org[.]maplibre[.]gl$|com[.]jakewharton[.]timber$|com[.]google[.]code[.]gson$|io[.]sentry$|androidx[.]appfunctions$|androidx[.]appsearch$|com[.]google[.]devtools[.]ksp$|org[.]rustls$).*" file="^(?!(?:annotation-jvm-1[.]7[.]0[.]jar|auto-service-annotations-1[.]0-rc6[.]jar|failureaccess-1[.]0[.]1[.]jar|guava-32[.]0[.]1-android[.]jar|j2objc-annotations-2[.]8[.]jar|kotlinpoet-jvm-2[.]0[.]0[.]jar|checker-qual-3[.]33[.]0[.]jar|kotlin-reflect-2[.]0[.]10[.]jar|kotlin-stdlib-2[.]2[.]20[.]jar)$).*" regex="true" reason="Verify the wallet AAR, backup extraction, server networking, push connector, WorkManager, biometric and map dependencies, the Satora certificate verifier, and AppFunctions with KSP and every artifact they brought in (the file names excluded here); retain the scaffold trust policy for other groups."/>
       </trusted-artifacts>
    </configuration>
    <components>
@@ -504,6 +504,11 @@
       <component group="org.jetbrains.kotlinx" name="kotlinx-coroutines-guava" version="1.11.0">
          <artifact name="kotlinx-coroutines-guava-1.11.0.jar">
             <sha256 value="82d3993130a494d6fab8b64705c8e10a61decd8af3d2e9274cfd8a3a5d80591f" origin="Maven Central artifact, independently downloaded for AppFunctions and KSP"/>
+         </artifact>
+      </component>
+      <component group="org.rustls" name="rustls-platform-verifier" version="0.2.0">
+         <artifact name="rustls-platform-verifier-0.2.0.aar">
+            <sha256 value="aa021794230fbc2f0be355999e2cf67398dd563de066a2e17001ffbd0b69101b" origin="rustls-platform-verifier's GitHub Maven archive, independently downloaded"/>
          </artifact>
       </component>
    </components>

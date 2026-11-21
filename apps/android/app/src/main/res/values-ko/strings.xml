@@ -237,6 +237,7 @@
   <string name="gt_1b9a6f007e618766">"블록 %1$s에서 청구 완료"</string>
   <string name="gt_6ff55162d8a9bb5e">"청구 완료 · 블록 %1$s"</string>
   <string name="gt_9928373127bf808f">"청구 중"</string>
+  <string name="gt_ff0bfcfabdba98db">"Claiming the USDC…"</string>
   <string name="gt_0075dff6ca828fc1">"청구 중 · 블록 %1$s 대기 중"</string>
   <string name="gt_83b12c2216efb4fd">"지우기"</string>
   <string name="gt_ba59e2d4a5e39a42">"필터 지우기"</string>
@@ -290,6 +291,7 @@
   <string name="gt_22dad4fc40178cdc">"거래를 내보내지 못했습니다. 다시 시도해 주세요."</string>
   <string name="gt_f41da471fbfdefcb">"설정을 완료하지 못했습니다. 다시 시도하세요."</string>
   <string name="gt_1d8505ecfe54e3ec">"지갑 복구를 완료하지 못했습니다. 지갑 파일은 그대로 보관되어 있습니다. 다시 시도하세요."</string>
+  <string name="gt_a8142e77c36cb71c">"Couldn\'t get a USDC quote. Try again."</string>
   <string name="gt_75433c45038e4e69">"백업 목록을 불러오지 못했습니다."</string>
   <string name="gt_64b871562593e23b">"Noah 지갑 주소를 불러오지 못했습니다. 지갑이 준비되면 다시 시도하세요."</string>
   <string name="gt_28c0fd81cb2b2864">"입금 주소를 불러오지 못했습니다. 이 화면을 닫고 지갑이 준비되면 다시 시도해 주세요."</string>
@@ -317,6 +319,8 @@
   <string name="gt_a23e74658fe15a8e">"이 결제를 저장하지 못했습니다. 다시 시도해 주세요."</string>
   <string name="gt_f86a26a2b4cac899">"이름을 저장하지 못했습니다."</string>
   <string name="gt_de1c8e4d260f4c2f">"환경설정을 저장하지 못했습니다."</string>
+  <string name="gt_ce0215bb055d0506">"Couldn\'t start the USDC swap. Nothing was sent."</string>
+  <string name="gt_0a58d8ed4f77229a">"Couldn\'t turn on USDC sends."</string>
   <string name="gt_2ad14a344060b310">"백업 설정을 업데이트하지 못했습니다."</string>
   <string name="gt_395881a9f3636129">"우편함 알림을 업데이트하지 못했습니다."</string>
   <string name="gt_7bcc035ddf337589">"정기 결제를 업데이트하지 못했습니다. 다시 시도하세요."</string>
@@ -374,6 +378,7 @@
   <string name="gt_fe5131b6ce9ebad8">"각 출금 거래에는 네트워크 수수료가 필요하며, 온체인 잔액에서 차감됩니다."</string>
   <string name="gt_a8652bad1788fdd8">"각 트랜잭션은 이전 트랜잭션이 블록에 들어간 뒤에만 보내져요."</string>
   <string name="gt_985a8feacc07a757">"각 트랜잭션의 수수료는 확정된 온체인 비트코인에서 나가요. 입금이 확정되면 Noah가 다음 트랜잭션을 보내요."</string>
+  <string name="gt_dfbc35fa158dcd2e">"Early features that may change or go away."</string>
   <string name="gt_464c4ffd019e1e96">"수정"</string>
   <string name="gt_84c74f3a02721306">"이메일 주소 편집"</string>
   <string name="gt_86c1a43426ba6fd7">"결제 수정"</string>
@@ -933,6 +938,7 @@
   <string name="gt_858e4ba7a29fd38b">"일시 중지"</string>
   <string name="gt_e159b06187d369a0">"일시 중지됨"</string>
   <string name="gt_2537c82bbce31609">"지갑의 모든 활동을 일시 중지해요"</string>
+  <string name="gt_c3e09a1d6f0cfe5d">"Pay USDC addresses on Arbitrum through Satora\'s swap service"</string>
   <string name="gt_0468d821ffcacc9e">"다시 결제"</string>
   <string name="gt_0e451980296d716f">"그래도 다시 결제"</string>
   <string name="gt_9411da19987facec">"다른 사람에게 결제"</string>
@@ -1003,6 +1009,7 @@
   <string name="gt_c83fb2b89d2238d7">"%1$s 받음"</string>
   <string name="gt_690dbe9dc0993c42">"최근"</string>
   <string name="gt_aa815083375c5f6e">"받는 사람의 수령액 미정"</string>
+  <string name="gt_b0ee7fd5195405fa">"Recipient gets about %1$s USDC on Arbitrum · Swap fee %2$s sats"</string>
   <string name="gt_fdbcd05664b4ce23">"받는 사람의 수령액은 약 %1$s sats입니다"</string>
   <string name="gt_3fed24d17905877f">"받는 사람 확인됨"</string>
   <string name="gt_c7175fa7a0db0d3c">"기록됨"</string>
@@ -1152,7 +1159,10 @@
   <string name="gt_70f58736b63e2c9e">"표시된 항목 선택"</string>
   <string name="gt_3b18955703b2ebc3">"선택한 화면 캡처"</string>
   <string name="gt_f6f4688ff23d50c6">"보내기"</string>
+  <string name="gt_d193dfcad3459f7e">"Send USDC"</string>
   <string name="gt_b3080e138c3a73a8">"여기로 약 %1$s을 보내세요. 확정되면 출금에 사용돼요."</string>
+  <string name="gt_459862131f0e7414">"Send at least %1$s sats to a USDC address."</string>
+  <string name="gt_db107c2698eb02c1">"Send at most %1$s sats to a USDC address."</string>
   <string name="gt_66a5b4090d14cb41">"코드 보내기"</string>
   <string name="gt_dad3741faaf71ced">"%1$s 보내기"</string>
   <string name="gt_e595f17fac1d8384">"전송 중"</string>
@@ -1237,6 +1247,7 @@
   <string name="gt_7ed4156d267cb233">"지갑 일시 중지"</string>
   <string name="gt_c1989bc262294358">"지갑을 일시 중지할까요?"</string>
   <string name="gt_e392a3891c070abe">"일시 중지됨"</string>
+  <string name="gt_ef5a00623b030e90">"Swap phrase"</string>
   <string name="gt_f13735d87fed3876">"Ark와 교환 중"</string>
   <string name="gt_e33c6493161b3d66">"전액 이체됨"</string>
   <string name="gt_4faef8c86f8b1bfe">"금액 표시 통화 변경"</string>
@@ -1260,6 +1271,7 @@
   <string name="gt_0ac08a81559f95ee">"Esplora 엔드포인트에는 인증 정보를 포함할 수 없습니다."</string>
   <string name="gt_96100ca2d23b8821">"Esplora 엔드포인트가 다른 Bitcoin 네트워크용입니다."</string>
   <string name="gt_9dc2f0b60de257af">"Lightning 결제를 받지 못했습니다. 새 결제 요청을 만들고 다시 시도해 주세요."</string>
+  <string name="gt_7055dd94252c5a5b">"The USDC claim hasn\'t gone through yet. Noah tries again whenever you open it."</string>
   <string name="gt_f663d0d5c263a46c">"Ark에 입금되는 금액이 최소 금액보다 적습니다. 입금 금액을 늘리세요."</string>
   <string name="gt_f15bb847093c717a">"금액은 1 sat 이상이어야 합니다."</string>
   <string name="gt_1f7124b49af4bb0c">"금액 또는 수수료가 변경되었습니다. 결제 내용을 다시 확인하세요."</string>
@@ -1287,6 +1299,7 @@
   <string name="gt_708398a18d2f5dfe">"지도 위치를 저장하지 못했습니다."</string>
   <string name="gt_bc71b743861782dc">"작업이 이미 제출되었을 수 있습니다. 다시 실행하기 전에 상태를 확인하세요. 다른 복구 작업은 계속 사용할 수 있습니다."</string>
   <string name="gt_58031d0ba8c82f55">"아직 결제 결과를 알 수 없습니다. 상태만 확인하며, 결제를 다시 보내지는 않습니다."</string>
+  <string name="gt_28fcb68134e5e9bb">"The rate changed. The recipient now gets about %1$s USDC. Hold to send again."</string>
   <string name="gt_b0186376f1dac3ea">"수신자가 더 이상 이 금액을 받지 않습니다. 정기 결제를 수정하거나 취소해 주세요."</string>
   <string name="gt_0d09cc372ee7f6aa">"기록된 거래를 찾았습니다. 해당 거래의 네트워크 상태를 확인하세요."</string>
   <string name="gt_75b3d8381b514e22">"라운드는"</string>
@@ -1295,11 +1308,13 @@
   <string name="gt_b1b5c1f750db3d4a">"서버가 응답하지 않습니다. 이전 서버로 전환 중…"</string>
   <string name="gt_919fe342fe619b2c">"노아의 방주 이야기"</string>
   <string name="gt_cf0ac52cbfc6c5d1">"Noah라는 이름의 유래가 된 이야기예요."</string>
+  <string name="gt_4fb600762e963173">"The swap ended without sending USDC. The payment stays pending until Satora releases it, which can take hours."</string>
   <string name="gt_c6e0499eb3d93af4">"거래를 생성하지 못했습니다. 결제는 제출되지 않았습니다. 금액과 수수료를 확인하세요."</string>
   <string name="gt_3fb33246ab2afa02">"거래를 구성하지 못했습니다. 아무것도 전파되지 않았습니다. 다시 검토해 주세요."</string>
   <string name="gt_c6dfefbf1de6c02f">"이미 온체인에 있는 트랜잭션은 그대로 남아요. VTXO는 지갑에 남아 있고 다시 출금할 수 있어요."</string>
   <string name="gt_fd04d8103140aa83">"지갑 상태나 수수료가 변경되었거나 견적이 만료되었습니다. 확정하기 전에 다시 검토하세요."</string>
   <string name="gt_be11c0d9d86f778e">"지갑을 복원하는 단어예요."</string>
+  <string name="gt_86b941007e7bf7c6">"The words that sign your USDC claims."</string>
   <string name="gt_d05e4b12e63fdf63">"상대의 영수증으로 잠금 해제"</string>
   <string name="gt_cd0b2d8136476cb0">"그다음 청구하기까지 하루쯤 기다려요."</string>
   <string name="gt_a8788032dbf14dad">"그다음 청구하기까지 %1$s블록을 기다려요."</string>
@@ -1309,6 +1324,7 @@
   <string name="gt_7689ea8bed273cfe">"이 정기 결제들은 이전 지갑에 속합니다. 내역은 보존되어 있지만 실행할 수는 없습니다. 해당 결제를 취소하고 이 지갑에서 새 일정을 만드세요."</string>
   <string name="gt_2f1c3676c41f927f">"이 단어들은 올바른 문구가 아닙니다."</string>
   <string name="gt_c80b1131a4f333d0">"이 %1$s개는 경로 일부를 공유해요. 보낼 트랜잭션은 %3$s개가 아니라 %2$s개예요. 공유된 트랜잭션은 한 번만 보내고 지불해요."</string>
+  <string name="gt_8bce9d1b0b70fdff">"They only sign USDC claims for swaps in progress and hold no funds between swaps. They are not your wallet\'s recovery phrase. Never share them."</string>
   <string name="gt_23333df084dfad80">"이 라이트닝 인보이스는 만료되었습니다. 새 결제 요청서를 요청해 주세요."</string>
   <string name="gt_74bb47afc8d3b8c4">"이 QR 코드에는 라이트닝 주소만 포함되어 있습니다."</string>
   <string name="gt_064ce079abb02910">"이 VTXO는 출금할 수 없어요."</string>
@@ -1380,6 +1396,10 @@
   <string name="gt_baaddf70fb5d432b">"유형"</string>
   <string name="gt_11f461fc56ac26c4">"확인하려면 delete를 입력하세요"</string>
   <string name="gt_a26cdf3a6e709124">"USD"</string>
+  <string name="gt_b32b40ff92de7001">"USDC address"</string>
+  <string name="gt_fa9ea4dcc8f420d4">"USDC sends are paused until you update Noah."</string>
+  <string name="gt_bc97b8d594aa5a54">"USDC sends work on mainnet only."</string>
+  <string name="gt_34d630d63bba53a3">"USDC sent."</string>
   <string name="gt_ed8e5311ed8b968a">"이 결제를 확인할 수 없습니다. 전송 중지 상태가 유지됩니다."</string>
   <string name="gt_107e6e5754590692">"이 결제를 확인할 수 없습니다. 이미 진행 중일 수 있습니다. 다시 보내기 전에 상태를 확인하세요."</string>
   <string name="gt_f9ce4ec1f84197b7">"저장된 결제 상태를 불러올 수 없습니다. 이 시도 기록을 삭제하기 전에 내역과 받는 사람을 확인하세요."</string>
@@ -1447,6 +1467,7 @@
   <string name="gt_5c5fe5dc2e3dc1d5">"regtest에서 Bitcoin 잔액 확인"</string>
   <string name="gt_b39c9deaef6ea38e">"signet에서 Bitcoin 잔액 확인"</string>
   <string name="gt_26407c9ad240b551">"시드 문구 보기"</string>
+  <string name="gt_713d91c502182a53">"View your swap phrase"</string>
   <string name="gt_0c6da2b7449f5e54">"현재 지갑 작업이 완료된 후 엔드포인트를 변경하세요."</string>
   <string name="gt_99c1ee35d68e7feb">"지갑이 준비될 때까지 기다린 후 새로고침하세요."</string>
   <string name="gt_6e293a8c009e0011">"대기 중"</string>
@@ -1457,6 +1478,7 @@
   <string name="gt_3456af7054b029e3">"온체인 자금 대기 중"</string>
   <string name="gt_14c805ec3e8cb07b">"보안 저장소 대기 중"</string>
   <string name="gt_d99bd370a6d72213">"보안 저장소에 접근할 수 있을 때까지 기다리는 중입니다. 기기 잠금을 해제하고 다시 시도하세요."</string>
+  <string name="gt_c35c6712a49cf3a6">"Waiting for the swap to lock the USDC…"</string>
   <string name="gt_706eee3cfecc480a">"타임락 대기 중"</string>
   <plurals name="gt_985fc1ec623fd8b3">
     <item quantity="one">"대기 중 · %1$s블록 · %2$s"</item>

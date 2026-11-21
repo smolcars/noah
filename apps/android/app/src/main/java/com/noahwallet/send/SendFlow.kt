@@ -26,7 +26,7 @@ object SendFlow {
         if (type == "bip321" && request != null) return SendRail.entries.filter { method(it, request) != null }
         return when (type) {
             "ark" -> listOf(SendRail.ark)
-            "lightning", "offer", "lnurl" -> listOf(SendRail.lightning)
+            "lightning", "offer", "lnurl", "usdc" -> listOf(SendRail.lightning)
             "onchain" -> listOf(SendRail.onchain)
             else -> emptyList()
         }
@@ -37,7 +37,7 @@ object SendFlow {
         SendRail.onchain -> "onchain".takeIf { "onchainAddress" in request }
     }
     fun label(type: String?) = mapOf("ark" to "Ark address", "lightning" to "Lightning invoice", "offer" to "Lightning offer", "lnurl" to "Lightning address",
-        "onchain" to "On-chain address", "bip321" to "Bitcoin payment request")[type]
+        "onchain" to "On-chain address", "bip321" to "Bitcoin payment request", "usdc" to "USDC address")[type]
     fun recommend(rails: List<SendRail>, availability: Map<String, Boolean>) = rails.firstOrNull { availability[it.name] != false } ?: rails.firstOrNull()
     fun canNote(type: String?, allowed: Int) = type == "lnurl" && allowed > 0
     fun canMax(type: String?, request: Map<String, String>?) = type == "onchain" || (type == "bip321" && request?.containsKey("onchainAddress") == true)

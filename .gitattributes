@@ -1,1 +1,3 @@
 apps/ios/Noah/API/Generated/** linguist-generated=true
+apps/satora-ffi/apple/** linguist-generated=true
+apps/satora-ffi/android/** linguist-generated=true

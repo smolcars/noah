@@ -84,6 +84,7 @@ data class SendDestination(val destinationType: String? = null, val amount: BigD
         fun parse(input: String, network: String): SendDestination {
             if (input.startsWith("bitcoin:", true)) return uri(input, network)
             val value = cleaned(input)
+            if (network == "mainnet" && UsdcAddress.isValid(value)) return SendDestination("usdc")
             // Like an `lnurlp://` one, a `.onion` domain would need cleartext, so it is no destination.
             if (isLightningAddress(value)) return if (addressEndpoint(value)?.host?.let(::isOnion) == true) SendDestination() else SendDestination("lnurl")
             return PaymentEncoding.invoice(value)?.let { invoiceDestination(it, network) } ?: otherDestination(value, network)

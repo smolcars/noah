@@ -12,7 +12,10 @@ class SendModel(val controller: SendController, private val network: String,
     private val discardQuote: suspend (SendQuote) -> Unit,
     private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate),
     /** The amount a BOLT12 offer fixes, or null; the quote checks it again. */
-    private val offerAmount: suspend (String) -> Long? = { null }) {
+    private val offerAmount: suspend (String) -> Long? = { null },
+    /** USDC sends: offered (mainnet with the beta on), and Satora's quote. */
+    private val usdcOffered: () -> Boolean = { false },
+    private val quoteUsdc: suspend (Long) -> com.noahwallet.satora.SatoraQuote = { throw UsdcFailure(UsdcSwaps.quoteFailed) }) {
     private var amountText by mutableStateOf("")
     /** A valid amount clears Next's zero-amount error at once; any other error stays. */
     var amount: String
@@ -41,10 +44,14 @@ class SendModel(val controller: SendController, private val network: String,
     private var errorSource by mutableStateOf<String?>(null)
     var error: String?
         get() = destinationError?.message ?: errorSource
-        set(value) { destinationError = null; errorSource = value }
+        set(value) { destinationError = null; errorSource = value; errorArgument = null }
+    /** The {amount} in [error], for the USDC limits. */
+    var errorArgument by mutableStateOf<String?>(null); private set
     var busy by mutableStateOf(false)
     var resolvingRecipient by mutableStateOf(false)
     var quote by mutableStateOf<SendQuote?>(null); private set
+    /** Satora's price for a USDC send's review. */
+    var usdcQuote by mutableStateOf<com.noahwallet.satora.SatoraQuote?>(null); private set
     var payment by mutableStateOf<SendPayment?>(null); private set
     var showReview by mutableStateOf(false)
     val isMax get() = progress.entry == "max"
@@ -74,7 +81,7 @@ class SendModel(val controller: SendController, private val network: String,
         discardReview(); payment = null
     }
     fun discardReview() {
-        reviewGeneration++; quote?.let { old -> scope.launch { runCatching { discardQuote(old) } } }; quote = null; showReview = false
+        reviewGeneration++; quote?.let { old -> scope.launch { runCatching { discardQuote(old) } } }; quote = null; usdcQuote = null; showReview = false
     }
     fun maxSend() {
         if (controller.locked) return
@@ -123,7 +130,7 @@ class SendModel(val controller: SendController, private val network: String,
     /** False when MAX can't pay this recipient or the recipient or review changed while resolving it. */
     private suspend fun recipientAccepted(keypad: Boolean, unchanged: () -> Boolean): Boolean {
         parsed = SendDestination.parse(destination, network)
-        requireSend(parsed.destinationType != null && parsed.error == null)
+        requireSend(parsed.destinationType != null && parsed.error == null && (parsed.destinationType != "usdc" || usdcOffered()))
         if (isMax && (!SendFlow.canMax(parsed.destinationType, parsed.bip321) || parsed.amount != null)) {
             error = "MAX requires an on-chain address without a fixed amount."; return false
         }
@@ -189,14 +196,36 @@ class SendModel(val controller: SendController, private val network: String,
         try {
             val rail = progress.selectedRail ?: throw SendFailure(SendFailure.Reason.invalid)
             val payment = reviewedPayment(rail)
-            val reviewed = quotePayment(payment)
+            val satora = if (payment.method == "usdc") usdcPrice(payment.amount) else null
+            val reviewed = if (satora != null) usdcReviewed(payment, satora) else quotePayment(payment)
             if (generation != reviewGeneration || !currentCoroutineContext().isActive) { withContext(NonCancellable) { discardQuote(reviewed) }; return }
-            quote = reviewed; this.payment = payment; showReview = true
+            quote = reviewed; usdcQuote = satora; this.payment = payment; showReview = true
+        } catch (failure: UsdcFailure) {
+            reviewFailed(generation, failure.message)
+            if (generation == reviewGeneration) errorArgument = failure.argument
         } catch (failure: SendFailure) {
             reviewFailed(generation, failure.message)
         } catch (_: Exception) {
             reviewFailed(generation, null)
         } finally { busy = false }
+    }
+    /** Hold to send paid nothing. A swap refused for paying less than review showed becomes review's amount: the next hold accepts it. */
+    fun usdcFailed(failure: UsdcFailure) {
+        failure.usdc?.let { usdcQuote = usdcQuote?.copy(netTargetUsdc = it) }
+        error = failure.message; errorArgument = failure.argument
+    }
+    private suspend fun usdcPrice(sats: Long) = try {
+        quoteUsdc(sats)
+    } catch (cancelled: CancellationException) { throw cancelled
+    } catch (@Suppress("TooGenericExceptionCaught") _: Exception) { throw UsdcFailure(UsdcSwaps.quoteFailed) }
+    /** A USDC send quotes as Lightning; Satora's limits come first, then the balance (apps/fixtures/usdc-amount.json). */
+    private suspend fun usdcReviewed(payment: SendPayment, satora: com.noahwallet.satora.SatoraQuote): SendQuote {
+        val reviewed = try { quotePayment(payment) } catch (failure: SendFailure) {
+            if (failure.reason != SendFailure.Reason.insufficient) throw failure
+            null
+        }
+        UsdcSwaps.failure(payment.amount, reviewed?.total ?: Long.MAX_VALUE, arkBalance, satora)?.let { throw it }
+        return checkNotNull(reviewed)
     }
     private suspend fun reviewFailed(generation: Int, message: String?) {
         if (generation == reviewGeneration && currentCoroutineContext().isActive) {

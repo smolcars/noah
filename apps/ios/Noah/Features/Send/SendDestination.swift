@@ -171,6 +171,8 @@ struct SendDestination: Equatable, Sendable {
             } == true
             return login ? Self(error: .lnurlAuth) : Self(destinationType: "lnurl")
         }
+        // USDC on Arbitrum (beta): Satora's swaps are mainnet only. Send offers it only with Beta's switch on.
+        if network == "mainnet", UsdcAddress.isValid(value) { return Self(destinationType: "usdc") }
         return Self()
     }
     private static func mismatch(_ actual: String, _ expected: String) -> Self {

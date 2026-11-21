@@ -365,5 +365,7 @@ internal fun SettingsPageContent(model: AppModel, key: NavKey, nav: SettingsNav,
         SettingsDestination.Debug -> if (live.debug) DebugPage(model, nav)
         SettingsDestination.Feedback -> FeedbackPage(model, nav)
         SettingsDestination.About -> AboutPage(model, nav, live)
+        SettingsDestination.Beta -> BetaPage(model, nav)
+        SettingsDestination.SwapPhrase -> RecoveryPhrasePage(model, nav, preview?.phrase, swap = true)
     }
 }

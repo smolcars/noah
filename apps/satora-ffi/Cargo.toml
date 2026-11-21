@@ -1,0 +1,37 @@
+[package]
+name = "satora-ffi"
+version = "0.1.0"
+edition = "2024"
+publish = false
+description = "Swift and Kotlin bindings for Satora's Lightning to USDC-on-Arbitrum swaps, using BoltFFI."
+
+# Standalone: keeps the SDK's dependency tree out of the server's lockfile.
+[workspace]
+
+[lib]
+name = "satora_ffi"
+crate-type = ["lib", "staticlib", "cdylib"]
+
+[dependencies]
+# To bump, see README.md.
+lendaswap_sdk = { package = "satora-rust-sdk", git = "https://github.com/lendasat/lendaswap-sdk", rev = "2db8d0b6ddc031b1ae4891b4069f564a0abbec23", default-features = false, features = ["rustls-tls", "gasless"] }
+boltffi = "=0.31.1"
+http = "1"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+tokio = { version = "1", features = ["rt-multi-thread", "time"] }
+url = "2"
+
+# Android checks certificates through the JVM: see `init` in src/lib.rs.
+[target.'cfg(target_os = "android")'.dependencies]
+jni = "0.22"
+rustls-platform-verifier = "0.7"
+
+[dev-dependencies]
+tempfile = "3"
+
+[profile.release]
+opt-level = "s"
+lto = "fat"
+codegen-units = 1
+strip = "debuginfo"

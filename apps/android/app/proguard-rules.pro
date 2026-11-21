@@ -8,3 +8,6 @@
 # R8 full mode strips them: WorkDatabase_Impl crashes app start, and the input mergers fail all one-time work.
 -keep class * extends androidx.room.RoomDatabase { <init>(); }
 -keep class * extends androidx.work.InputMerger { <init>(); }
+
+# The Satora library calls this from Rust through JNI, which R8 cannot see.
+-keep, includedescriptorclasses class org.rustls.platformverifier.** { *; }

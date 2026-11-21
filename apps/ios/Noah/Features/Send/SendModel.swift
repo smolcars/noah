@@ -1,5 +1,6 @@
 import Foundation
 import Observation
+import SatoraFFI
 
 @MainActor @Observable final class SendModel {
     static let amountRange: ClosedRange<UInt64> = 1...2_100_000_000_000_000
@@ -62,6 +63,11 @@ import Observation
     var busy = false
     var resolvingRecipient = false
     var quote: SendQuote?
+    /// Satora's price for a reviewed USDC send (beta).
+    var usdcQuote: SatoraQuote?
+    /// The USDC swap couldn't start; shown in place of its review line.
+    var usdcError: String?
+    private var usdcStarting = false
     var payment: SendPayment?
     var showReview = false
     /// Send's camera, a cover over every step.
@@ -73,17 +79,20 @@ import Observation
     private let discardQuote: (SendQuote) async -> Void
     /// The amount a BOLT12 offer fixes, or nil; the quote checks it again.
     private let offerAmount: (String) async throws -> UInt64?
+    private let usdc: @MainActor () throws -> UsdcSwapClient
     init(session: WalletSession = .shared, controller: SendPaymentController = .shared,
          resolveRecipient: ((String) async throws -> SendRecipientRoute)? = nil,
          quotePayment: ((SendPayment) async throws -> SendQuote)? = nil,
          discardQuote: ((SendQuote) async -> Void)? = nil,
-         offerAmount: ((String) async throws -> UInt64?)? = nil) {
+         offerAmount: ((String) async throws -> UInt64?)? = nil,
+         usdc: (@MainActor () throws -> UsdcSwapClient)? = nil) {
         self.session = session
         self.controller = controller
         self.resolveRecipient = resolveRecipient ?? { try await SendRecipientService.resolve($0, session: session) }
         self.quotePayment = quotePayment ?? { try await session.quoteSend($0) }
         self.discardQuote = discardQuote ?? { await session.discardSend($0) }
         self.offerAmount = offerAmount ?? { try await session.sendOfferAmount($0) }
+        self.usdc = usdc ?? { .live(try SatoraStore.shared.open()) }
     }
     var isMax: Bool { progress.entry == .max }
     var sats: UInt64 {
@@ -234,7 +243,7 @@ import Observation
         }
         progress.recipientConfirmed = false
         progress.railConfirmed = false
-        guard let type = parsed.destinationType, parsed.error == nil else {
+        guard let type = parsed.destinationType, parsed.error == nil, type != "usdc" || SatoraStore.offered else {
             error = "Enter a valid Bitcoin, Lightning, or Ark destination."
             destinationError = parsed.error
             return
@@ -372,6 +381,7 @@ import Observation
                 await discardQuote(reviewed)
                 return
             }
+            if method == "usdc", await !priceUsdc(total: reviewed.total, generation: generation) { return }
             quote = reviewed
             self.payment = payment
             showReview = true
@@ -383,7 +393,61 @@ import Observation
             stage = .recipient
         }
     }
+    /// Satora's quote for the reviewed amount and the checks before any swap: its limits, then the balance.
+    private func priceUsdc(total: UInt64, generation: Int) async -> Bool {
+        let priced: SatoraQuote
+        do { priced = try await usdc().quote(sats) } catch {
+            self.error = L10n.text("Couldn't get a USDC quote. Try again.", locale: LegacyLocale.resolved())
+            stage = .recipient
+            return false
+        }
+        guard generation == reviewGeneration else { return false }
+        if let limit = UsdcSend.check(sats: sats, total: total, spendable: arkBalance, min: priced.minSats, max: priced.maxSats) {
+            error = UsdcSend.limitMessage(limit, quote: priced, locale: LegacyLocale.resolved())
+            stage = .recipient
+            return false
+        }
+        usdcQuote = priced
+        return true
+    }
+    /// Review's line for a USDC send: its failure, or what the recipient gets. Nil for other sends.
+    func usdcNote(locale: String) -> String? {
+        guard payment?.method == "usdc" else { return nil }
+        return usdcError ?? usdcQuote.map { UsdcSend.reviewLine($0, locale: locale) }
+    }
+    /// Hold to send. `onSubmit` runs as the payment goes to the controller.
+    func confirm(_ payment: SendPayment, quote: SendQuote, onSubmit: @escaping () -> Void) {
+        guard payment.method == "usdc" else {
+            onSubmit()
+            controller.submit(payment, quote: quote)
+            return
+        }
+        confirmUsdc(payment, quote: quote, onSubmit: onSubmit)
+    }
+    /// Hold to send on a USDC review: the swap first, then its invoice through Send's journal, then the claim.
+    private func confirmUsdc(_ payment: SendPayment, quote: SendQuote, onSubmit: @escaping () -> Void) {
+        guard !usdcStarting, let reviewedUsdc = usdcQuote?.netTargetUsdc else { return }
+        usdcStarting = true
+        usdcError = nil
+        Task {
+            do {
+                let swap = try await UsdcSend.start(payment, reviewedUsdc: reviewedUsdc, quote: quote, client: usdc()) {
+                    onSubmit()
+                    controller.submit($0, quote: $1)
+                }
+                usdcStarting = false
+                await UsdcSwaps.shared.watch(swap)
+            } catch {
+                usdcStarting = false
+                // Review now shows what that swap offered, and the next hold accepts it.
+                if let changed = error as? UsdcSend.RateChanged { usdcQuote?.netTargetUsdc = changed.usdc }
+                usdcError = UsdcSend.createFailure(error, locale: LegacyLocale.resolved())
+            }
+        }
+    }
     func discardReview() {
+        usdcQuote = nil
+        usdcError = nil
         reviewGeneration += 1
         if let quote { Task { await discardQuote(quote) } }
         quote = nil

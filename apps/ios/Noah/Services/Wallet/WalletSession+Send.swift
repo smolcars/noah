@@ -90,7 +90,7 @@ extension WalletSession {
         var vtxoIDs: [String]?
         switch payment.method {
         case "ark": estimate = try await handles.wallet.estimateArkoorPaymentFee(amountSats: payment.amount)
-        case "lightning", "offer", "lnurl":
+        case "lightning", "offer", "lnurl", "usdc":
             estimate = try await handles.wallet.estimateLightningSendFee(amountSats: payment.amount)
         case "onchain":
             guard payment.source == .offchain else { throw SendFailure.invalid }
