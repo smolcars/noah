@@ -1,0 +1,185 @@
+{
+  "description": "Arbitrum addresses Send recognizes as a USDC destination (destinationType \"usdc\"): 0x and 40 hex digits, all lower case, all upper case, or mixed case matching its EIP-55 checksum; mainnet only. Checksums verified with alloy-primitives. Shared by Android and iOS.",
+  "cases": [
+    {
+      "name": "EIP-55 checksummed",
+      "input": {
+        "destination": "0x5aAeb6053F3E94C9b9A09f33669435E7Ef1BeAed",
+        "network": "mainnet"
+      },
+      "expected": {
+        "destinationType": "usdc"
+      }
+    },
+    {
+      "name": "EIP-55 checksummed 2",
+      "input": {
+        "destination": "0xfB6916095ca1df60bB79Ce92cE3Ea74c37c5d359",
+        "network": "mainnet"
+      },
+      "expected": {
+        "destinationType": "usdc"
+      }
+    },
+    {
+      "name": "EIP-55 checksummed 3",
+      "input": {
+        "destination": "0xdbF03B407c01E7cD3CBea99509d93f8DDDC8C6FB",
+        "network": "mainnet"
+      },
+      "expected": {
+        "destinationType": "usdc"
+      }
+    },
+    {
+      "name": "EIP-55 checksummed 4",
+      "input": {
+        "destination": "0xD1220A0cf47c7B9Be7A2E6BA89F429762e7b9aDb",
+        "network": "mainnet"
+      },
+      "expected": {
+        "destinationType": "usdc"
+      }
+    },
+    {
+      "name": "EIP-55 all caps",
+      "input": {
+        "destination": "0x52908400098527886E0F7030069857D2E4169EE7",
+        "network": "mainnet"
+      },
+      "expected": {
+        "destinationType": "usdc"
+      }
+    },
+    {
+      "name": "all lower case, no checksum",
+      "input": {
+        "destination": "0xaf88d065e77c8cc2239327c5edb3a432268e5831",
+        "network": "mainnet"
+      },
+      "expected": {
+        "destinationType": "usdc"
+      }
+    },
+    {
+      "name": "all upper case, no checksum",
+      "input": {
+        "destination": "0xAF88D065E77C8CC2239327C5EDB3A432268E5831",
+        "network": "mainnet"
+      },
+      "expected": {
+        "destinationType": "usdc"
+      }
+    },
+    {
+      "name": "surrounding whitespace",
+      "input": {
+        "destination": "  0x5aAeb6053F3E94C9b9A09f33669435E7Ef1BeAed\n",
+        "network": "mainnet"
+      },
+      "expected": {
+        "destinationType": "usdc"
+      }
+    },
+    {
+      "name": "mixed case, last letter wrong",
+      "input": {
+        "destination": "0x5aAeb6053F3E94C9b9A09f33669435E7Ef1BeAeD",
+        "network": "mainnet"
+      },
+      "expected": {
+        "destinationType": null
+      }
+    },
+    {
+      "name": "mixed case, first letter wrong",
+      "input": {
+        "destination": "0xfb6916095ca1df60bB79Ce92cE3Ea74c37c5d359",
+        "network": "mainnet"
+      },
+      "expected": {
+        "destinationType": null
+      }
+    },
+    {
+      "name": "39 hex digits",
+      "input": {
+        "destination": "0x5aAeb6053F3E94C9b9A09f33669435E7Ef1BeAe",
+        "network": "mainnet"
+      },
+      "expected": {
+        "destinationType": null
+      }
+    },
+    {
+      "name": "41 hex digits",
+      "input": {
+        "destination": "0x5aAeb6053F3E94C9b9A09f33669435E7Ef1BeAed0",
+        "network": "mainnet"
+      },
+      "expected": {
+        "destinationType": null
+      }
+    },
+    {
+      "name": "not hex",
+      "input": {
+        "destination": "0x5aAeb6053F3E94C9b9A09f33669435E7Ef1BeAeg",
+        "network": "mainnet"
+      },
+      "expected": {
+        "destinationType": null
+      }
+    },
+    {
+      "name": "no 0x",
+      "input": {
+        "destination": "5aAeb6053F3E94C9b9A09f33669435E7Ef1BeAed",
+        "network": "mainnet"
+      },
+      "expected": {
+        "destinationType": null
+      }
+    },
+    {
+      "name": "upper-case 0X",
+      "input": {
+        "destination": "0X5aAeb6053F3E94C9b9A09f33669435E7Ef1BeAed",
+        "network": "mainnet"
+      },
+      "expected": {
+        "destinationType": null
+      }
+    },
+    {
+      "name": "ethereum: URI",
+      "input": {
+        "destination": "ethereum:0x5aAeb6053F3E94C9b9A09f33669435E7Ef1BeAed",
+        "network": "mainnet"
+      },
+      "expected": {
+        "destinationType": null
+      }
+    },
+    {
+      "name": "signet: USDC sends are mainnet only",
+      "input": {
+        "destination": "0x5aAeb6053F3E94C9b9A09f33669435E7Ef1BeAed",
+        "network": "signet"
+      },
+      "expected": {
+        "destinationType": null
+      }
+    },
+    {
+      "name": "regtest: USDC sends are mainnet only",
+      "input": {
+        "destination": "0x5aAeb6053F3E94C9b9A09f33669435E7Ef1BeAed",
+        "network": "regtest"
+      },
+      "expected": {
+        "destinationType": null
+      }
+    }
+  ]
+}

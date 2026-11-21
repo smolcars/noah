@@ -237,6 +237,7 @@
   <string name="gt_1b9a6f007e618766">"Claimed in block %1$s"</string>
   <string name="gt_6ff55162d8a9bb5e">"Claimed · block %1$s"</string>
   <string name="gt_9928373127bf808f">"Claiming"</string>
+  <string name="gt_ff0bfcfabdba98db">"Claiming the USDC…"</string>
   <string name="gt_0075dff6ca828fc1">"Claiming · waiting for block %1$s"</string>
   <string name="gt_83b12c2216efb4fd">"Clear"</string>
   <string name="gt_ba59e2d4a5e39a42">"Clear filter"</string>
@@ -290,6 +291,7 @@
   <string name="gt_22dad4fc40178cdc">"Couldn\'t export transactions. Please try again."</string>
   <string name="gt_f41da471fbfdefcb">"Couldn\'t finish setup. Please try again."</string>
   <string name="gt_1d8505ecfe54e3ec">"Couldn\'t finish wallet recovery. Your wallet files have been kept. Please try again."</string>
+  <string name="gt_a8142e77c36cb71c">"Couldn\'t get a USDC quote. Try again."</string>
   <string name="gt_75433c45038e4e69">"Couldn\'t list backups."</string>
   <string name="gt_64b871562593e23b">"Couldn\'t load a Noah wallet address. Try again when the wallet is ready."</string>
   <string name="gt_28c0fd81cb2b2864">"Couldn\'t load a deposit address. Close and try again when the wallet is ready."</string>
@@ -317,6 +319,8 @@
   <string name="gt_a23e74658fe15a8e">"Couldn\'t save this payment. Try again."</string>
   <string name="gt_f86a26a2b4cac899">"Couldn\'t save your name."</string>
   <string name="gt_de1c8e4d260f4c2f">"Couldn\'t save your preference."</string>
+  <string name="gt_ce0215bb055d0506">"Couldn\'t start the USDC swap. Nothing was sent."</string>
+  <string name="gt_0a58d8ed4f77229a">"Couldn\'t turn on USDC sends."</string>
   <string name="gt_2ad14a344060b310">"Couldn\'t update backup settings."</string>
   <string name="gt_395881a9f3636129">"Couldn\'t update mailbox notifications."</string>
   <string name="gt_7bcc035ddf337589">"Couldn\'t update recurring payments. Try again."</string>
@@ -374,6 +378,7 @@
   <string name="gt_fe5131b6ce9ebad8">"Each exit transaction needs a network fee, paid from your on-chain balance."</string>
   <string name="gt_a8652bad1788fdd8">"Each one is sent only after the one before it is in a block."</string>
   <string name="gt_985a8feacc07a757">"Each transaction’s fee comes from your confirmed on-chain bitcoin. Noah sends the next one once a deposit confirms."</string>
+  <string name="gt_dfbc35fa158dcd2e">"Early features that may change or go away."</string>
   <string name="gt_464c4ffd019e1e96">"Edit"</string>
   <string name="gt_84c74f3a02721306">"Edit email address"</string>
   <string name="gt_86c1a43426ba6fd7">"Edit payment"</string>
@@ -933,6 +938,7 @@
   <string name="gt_858e4ba7a29fd38b">"Pause"</string>
   <string name="gt_e159b06187d369a0">"Paused"</string>
   <string name="gt_2537c82bbce31609">"Pauses all wallet activity"</string>
+  <string name="gt_c3e09a1d6f0cfe5d">"Pay USDC addresses on Arbitrum through Satora\'s swap service"</string>
   <string name="gt_0468d821ffcacc9e">"Pay again"</string>
   <string name="gt_0e451980296d716f">"Pay again anyway"</string>
   <string name="gt_9411da19987facec">"Pay someone"</string>
@@ -1003,6 +1009,7 @@
   <string name="gt_c83fb2b89d2238d7">"Received %1$s"</string>
   <string name="gt_690dbe9dc0993c42">"Recent"</string>
   <string name="gt_aa815083375c5f6e">"Recipient amount pending"</string>
+  <string name="gt_b0ee7fd5195405fa">"Recipient gets about %1$s USDC on Arbitrum · Swap fee %2$s sats"</string>
   <string name="gt_fdbcd05664b4ce23">"Recipient receives about %1$s sats"</string>
   <string name="gt_3fed24d17905877f">"Recipient verified"</string>
   <string name="gt_c7175fa7a0db0d3c">"Recorded"</string>
@@ -1152,7 +1159,10 @@
   <string name="gt_70f58736b63e2c9e">"Select visible"</string>
   <string name="gt_3b18955703b2ebc3">"Selected screenshot"</string>
   <string name="gt_f6f4688ff23d50c6">"Send"</string>
+  <string name="gt_d193dfcad3459f7e">"Send USDC"</string>
   <string name="gt_b3080e138c3a73a8">"Send about %1$s here. Exits use it once it confirms."</string>
+  <string name="gt_459862131f0e7414">"Send at least %1$s sats to a USDC address."</string>
+  <string name="gt_db107c2698eb02c1">"Send at most %1$s sats to a USDC address."</string>
   <string name="gt_66a5b4090d14cb41">"Send code"</string>
   <string name="gt_dad3741faaf71ced">"Send %1$s"</string>
   <string name="gt_e595f17fac1d8384">"Sending"</string>
@@ -1237,6 +1247,7 @@
   <string name="gt_7ed4156d267cb233">"Suspend wallet"</string>
   <string name="gt_c1989bc262294358">"Suspend wallet?"</string>
   <string name="gt_e392a3891c070abe">"Suspended"</string>
+  <string name="gt_ef5a00623b030e90">"Swap phrase"</string>
   <string name="gt_f13735d87fed3876">"Swapping with Ark"</string>
   <string name="gt_e33c6493161b3d66">"Swept"</string>
   <string name="gt_4faef8c86f8b1bfe">"Switch amount currency"</string>
@@ -1260,6 +1271,7 @@
   <string name="gt_0ac08a81559f95ee">"The Esplora endpoint cannot include credentials."</string>
   <string name="gt_96100ca2d23b8821">"The Esplora endpoint is for a different Bitcoin network."</string>
   <string name="gt_9dc2f0b60de257af">"The Lightning payment could not be received. Generate a new payment request and try again."</string>
+  <string name="gt_7055dd94252c5a5b">"The USDC claim hasn\'t gone through yet. Noah tries again whenever you open it."</string>
   <string name="gt_f663d0d5c263a46c">"The amount Ark receives is below its minimum. Increase the boarding amount."</string>
   <string name="gt_f15bb847093c717a">"The amount must be at least one sat."</string>
   <string name="gt_1f7124b49af4bb0c">"The amount or fee changed. Review the payment again."</string>
@@ -1295,11 +1307,13 @@
   <string name="gt_b1b5c1f750db3d4a">"The server isn\'t responding; switching back…"</string>
   <string name="gt_919fe342fe619b2c">"The story of Noah’s Ark"</string>
   <string name="gt_cf0ac52cbfc6c5d1">"The story that gave Noah its name."</string>
+  <string name="gt_4fb600762e963173">"The swap ended without sending USDC. The payment stays pending until Satora releases it, which can take hours."</string>
   <string name="gt_c6e0499eb3d93af4">"The transaction could not be built. No payment was submitted. Review the amount and fee."</string>
   <string name="gt_3fb33246ab2afa02">"The transaction could not be constructed. Nothing was broadcast. Review again."</string>
   <string name="gt_c6dfefbf1de6c02f">"The transactions already on-chain stay there. Your VTXO stays in your wallet and can exit again."</string>
   <string name="gt_fd04d8103140aa83">"The wallet or fees changed, or the quote expired. Review again before confirming."</string>
   <string name="gt_be11c0d9d86f778e">"The words that restore your wallet."</string>
+  <string name="gt_86b941007e7bf7c6">"The words that sign your USDC claims."</string>
   <string name="gt_d05e4b12e63fdf63">"Their receipt unlocks it"</string>
   <string name="gt_cd0b2d8136476cb0">"Then a wait of about a day before you can claim."</string>
   <string name="gt_a8788032dbf14dad">"Then a %1$s-block wait before you can claim."</string>
@@ -1309,6 +1323,7 @@
   <string name="gt_7689ea8bed273cfe">"These recurring payments belong to a previous wallet. They are preserved but cannot run. Cancel them and create new schedules for this wallet."</string>
   <string name="gt_2f1c3676c41f927f">"These words don’t form a valid phrase."</string>
   <string name="gt_c80b1131a4f333d0">"These %1$s share part of their path: %2$s transactions to send, not %3$s. Shared ones are sent and paid once."</string>
+  <string name="gt_8bce9d1b0b70fdff">"They only sign USDC claims for swaps in progress and hold no funds between swaps. They are not your wallet\'s recovery phrase. Never share them."</string>
   <string name="gt_23333df084dfad80">"This Lightning invoice has expired. Request a new invoice."</string>
   <string name="gt_74bb47afc8d3b8c4">"This QR contains only your Lightning address."</string>
   <string name="gt_064ce079abb02910">"This VTXO can\'t be exited."</string>
@@ -1380,6 +1395,10 @@
   <string name="gt_baaddf70fb5d432b">"Type"</string>
   <string name="gt_11f461fc56ac26c4">"Type delete to confirm"</string>
   <string name="gt_a26cdf3a6e709124">"USD"</string>
+  <string name="gt_b32b40ff92de7001">"USDC address"</string>
+  <string name="gt_fa9ea4dcc8f420d4">"USDC sends are paused until you update Noah."</string>
+  <string name="gt_bc97b8d594aa5a54">"USDC sends work on mainnet only."</string>
+  <string name="gt_34d630d63bba53a3">"USDC sent."</string>
   <string name="gt_ed8e5311ed8b968a">"Unable to check this payment. Sending remains stopped."</string>
   <string name="gt_107e6e5754590692">"Unable to inspect this payment. It may already be in progress. Check status before sending again."</string>
   <string name="gt_f9ce4ec1f84197b7">"Unable to load saved payment status. Check your history and recipient before forgetting this attempt."</string>
@@ -1447,6 +1466,7 @@
   <string name="gt_5c5fe5dc2e3dc1d5">"View your Bitcoin balance on regtest"</string>
   <string name="gt_b39c9deaef6ea38e">"View your Bitcoin balance on signet"</string>
   <string name="gt_26407c9ad240b551">"View your seed phrase"</string>
+  <string name="gt_713d91c502182a53">"View your swap phrase"</string>
   <string name="gt_0c6da2b7449f5e54">"Wait for the current wallet operation to finish before changing the endpoint."</string>
   <string name="gt_99c1ee35d68e7feb">"Wait for the wallet to be ready, then refresh."</string>
   <string name="gt_6e293a8c009e0011">"Waiting"</string>
@@ -1457,6 +1477,7 @@
   <string name="gt_3456af7054b029e3">"Waiting for on-chain funds"</string>
   <string name="gt_14c805ec3e8cb07b">"Waiting for secure storage"</string>
   <string name="gt_d99bd370a6d72213">"Waiting for secure storage. Unlock your device and try again."</string>
+  <string name="gt_c35c6712a49cf3a6">"Waiting for the swap to lock the USDC…"</string>
   <string name="gt_706eee3cfecc480a">"Waiting for the timelock"</string>
   <plurals name="gt_985fc1ec623fd8b3">
     <item quantity="one">"Waiting · %1$s block · %2$s"</item>

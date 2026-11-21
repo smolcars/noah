@@ -260,6 +260,8 @@ private fun AppGroup(model: AppModel, live: SettingsLive, selected: NavKey?, ope
         { d -> SettingsRow(tr("Advanced"), SettingsIcons.sliders, value = if (model.isWalletSuspended) tr("Suspended") else null,
             failed = model.isWalletSuspended, selected = selected == SettingsDestination.Advanced, divider = d,
             modifier = Modifier.testTag("settings-advanced")) { open(SettingsDestination.Advanced) } },
+        { d -> SettingsRow(tr("Beta"), SettingsIcons.plus, selected = selected == SettingsDestination.Beta, divider = d,
+            modifier = Modifier.testTag("settings-beta")) { open(SettingsDestination.Beta) } },
     ))
 }
 

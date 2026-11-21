@@ -36,9 +36,13 @@ import kotlinx.serialization.json.JsonObject
 @Composable
 fun SendScreen(app: AppModel, tabBar: (Boolean) -> Unit = {}, onDone: () -> Unit) {
     val context = LocalContext.current
-    val presentation = viewModel<SendPresentation>(key = "send-presentation") { SendPresentation(SendModel(SendRuntime.shared(context).controller,
-        BuildConfig.APP_VARIANT, app.session::resolveSendRecipient, app.session::quoteSend, app.session::discardSend,
-        offerAmount = app.session::sendOfferAmount)) }
+    val presentation = viewModel<SendPresentation>(key = "send-presentation") {
+        val application = context.applicationContext
+        SendPresentation(SendModel(SendRuntime.shared(context).controller,
+            BuildConfig.APP_VARIANT, app.session::resolveSendRecipient, app.session::quoteSend, app.session::discardSend,
+            offerAmount = app.session::sendOfferAmount, usdcOffered = { UsdcSwaps.offered(app.settings) },
+            quoteUsdc = { sats -> UsdcSwaps.serialized { UsdcSwaps.open(application).quote(sats.toULong()) } })) { UsdcSwaps.open(application) }
+    }
     val model = presentation.model
     val controller = model.controller
     val scope = presentation.viewModelScope
@@ -290,7 +294,8 @@ internal fun rememberSendProgress(presentation: SendPresentation, movements: sus
 }
 
 /** Configuration recreation retains only presentation; SendRuntime still owns every submission. */
-internal class SendPresentation(val model: SendModel) : ViewModel() {
+internal class SendPresentation(val model: SendModel, private val satora: () -> SatoraSwaps = { error("""USDC sends unavailable""") }) :
+    ViewModel() {
     /** The motion this screen's hold started; kept across recreation and pose changes so it resumes in place. */
     var motion by mutableStateOf<SendMotion?>(null)
     /** True until the submission's job returns: until then an uncertain state is still being reconciled. */
@@ -302,12 +307,38 @@ internal class SendPresentation(val model: SendModel) : ViewModel() {
     /** Send's automatic refresh pacing and the block row's last tip, kept across leaving the tab and recreation. */
     val refresh = SendRefresh()
     var tip by mutableStateOf<Long?>(null)
+    /** A USDC send's swap status line, with the invoice it pays: shown only on that payment's result. */
+    var usdcStatus by mutableStateOf<Pair<String, String>?>(null)
+
+    private fun reviewed(payment: SendPayment, quote: SendQuote) =
+        !model.controller.locked && model.showReview && model.quote === quote && model.payment === payment
 
     /** Holding to send confirms exactly as today's confirm button did: once, for the reviewed quote only. */
-    fun confirm(payment: SendPayment, quote: SendQuote): Boolean {
+    fun confirm(payment: SendPayment, quote: SendQuote): Boolean = reviewed(payment, quote) && submit(payment, quote)
+
+    /**
+     * A USDC send: Satora's swap first (nothing is paid if that fails), then its invoice as a Lightning payment through
+     * the controller with the reviewed quote, then the swap is watched until claimed. [submitted]: the invoice is paying.
+     */
+    fun confirmUsdc(payment: SendPayment, quote: SendQuote, submitted: () -> Unit) {
+        if (!reviewed(payment, quote) || model.busy) return
+        model.busy = true
+        viewModelScope.launch {
+            val started = try {
+                val swaps = withContext(Dispatchers.IO) { satora() }
+                swaps to UsdcSwaps.start(swaps, payment.amount, payment.destination) { reviewed(payment, quote) && submit(it, quote) }
+            } catch (failure: UsdcFailure) { model.error = failure.message; null
+            } catch (cancelled: CancellationException) { throw cancelled
+            } catch (@Suppress("TooGenericExceptionCaught") _: Exception) { model.error = UsdcSwaps.notStarted; null
+            } finally { model.busy = false }
+            val (swaps, swap) = started ?: return@launch
+            submitted()
+            UsdcSwaps.watch(swaps, swap.id) { usdcStatus = swap.bolt11Invoice to it }
+        }
+    }
+
+    private fun submit(payment: SendPayment, quote: SendQuote): Boolean {
         val controller = model.controller
-        if (controller.locked || !model.showReview) return false
-        if (model.quote !== quote || model.payment !== payment) return false
         val job = controller.submit(payment, quote) ?: return false
         model.showReview = false
         motion = SendMotion(SendRoute.of(payment), SystemClock.elapsedRealtime())

@@ -28,6 +28,8 @@ internal class ForegroundWalletWork(
      * before maintenance could try to refresh one the server already has as spent. Nothing otherwise.
      */
     private val checkRestoredVtxos: suspend () -> Unit = {},
+    /** USDC sends' open swaps: refreshed, and claimed once funded ([com.noahwallet.send.UsdcSwaps.finishOpen]). */
+    private val finishSwaps: suspend () -> Unit = {},
     /** The app log: a pass that runs maintenance (after a launch or a return to the front) logs its stages' timing. */
     private val log: (String) -> Unit = {},
 ) {
@@ -57,8 +59,8 @@ internal class ForegroundWalletWork(
                 var completed = false
                 try { maintenance(); completed = true }
                 finally { settled = completed || refreshes() > created }
-            }, timed("exit progress", progressExits), timed("on-chain sync", syncOnchain))
-            else WalletSync.attemptAll(sync, checkRestoredVtxos, progressExits, syncOnchain)
+            }, timed("exit progress", progressExits), timed("on-chain sync", syncOnchain), finishSwaps)
+            else WalletSync.attemptAll(sync, checkRestoredVtxos, progressExits, syncOnchain, finishSwaps)
         } finally {
             if (!settled) maintenanceDue.set(true)
         }

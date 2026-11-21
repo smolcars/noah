@@ -36,7 +36,7 @@ enum SendFlow {
         if type == "bip321", let request {
             return SendRail.allCases.filter { method(rail: $0, request: request) != nil }
         }
-        switch type { case "ark": return [.ark]; case "lightning", "offer", "lnurl": return [.lightning]
+        switch type { case "ark": return [.ark]; case "lightning", "offer", "lnurl", "usdc": return [.lightning]
         case "onchain": return [.onchain]; default: return [] }
     }
     static func method(rail: SendRail, request: [String: String]) -> String? {
@@ -49,7 +49,8 @@ enum SendFlow {
     static func label(type: String?) -> String? {
         switch type {
         case "ark": "Ark address"; case "lightning": "Lightning invoice"; case "offer": "Lightning offer"
-        case "lnurl": "Lightning address"; case "onchain": "On-chain address"; case "bip321": "Bitcoin payment request"; default: nil
+        case "lnurl": "Lightning address"; case "onchain": "On-chain address"; case "usdc": "USDC address"
+        case "bip321": "Bitcoin payment request"; default: nil
         }
     }
     static func recommend(_ rails: [SendRail], availability: [String: Bool]) -> SendRail? {

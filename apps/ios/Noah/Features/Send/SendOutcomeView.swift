@@ -195,6 +195,7 @@ struct SendOutcomeView: View {
                 }
                 // The outcome, who, and why sit together at the top.
                 resultLine
+                usdcLine
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             // Without a saved payment (status unavailable) there's nothing to draw; a payment that was
@@ -210,6 +211,15 @@ struct SendOutcomeView: View {
                 phaseLine.padding(.top, 4)
                 stillWorking
             }
+        }
+    }
+
+    /// A USDC send (beta) pays the swap's invoice; its claim follows the payment.
+    @ViewBuilder private var usdcLine: some View {
+        if let invoice = payment?.destination, let usdc = UsdcSwaps.shared.status[invoice] {
+            Text(verbatim: UsdcSwaps.message(usdc, locale: locale.identifier)).noahText(NoahTokens.Typography.body)
+                .foregroundStyle(NoahTokens.Colors.foreground).fixedSize(horizontal: false, vertical: true).padding(.top, 6)
+                .accessibilityIdentifier("send-usdc-status")
         }
     }
 

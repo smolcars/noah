@@ -33,6 +33,8 @@ settings:
     SWIFT_VERSION: "6.0"
     SWIFT_TREAT_WARNINGS_AS_ERRORS: YES
     TARGETED_DEVICE_FAMILY: "1,2"
+    # SatoraFFI ships an arm64-only simulator slice; Intel simulators are not built.
+    "EXCLUDED_ARCHS[sdk=iphonesimulator*]": x86_64
     ENABLE_USER_SCRIPT_SANDBOXING: YES
     LOCALIZATION_PREFERS_STRING_CATALOGS: YES
     SWIFT_EMIT_LOC_STRINGS: NO # apps/tools/translations.mjs owns the catalog deterministically.
@@ -63,6 +65,9 @@ packages:
   OpenAPIURLSession:
     url: https://github.com/apple/swift-openapi-urlsession
     exactVersion: 1.3.2
+  # Satora swaps (USDC beta), built from apps/satora-ffi and committed.
+  SatoraFFI:
+    path: ../satora-ffi/apple
 
 targets:
   Noah:
@@ -157,6 +162,8 @@ targets:
         product: OpenAPIURLSession
       - package: ZIPFoundation
         product: ZIPFoundation
+      - package: SatoraFFI
+        product: SatoraFFI
 
   NoahWidget:
     type: app-extension

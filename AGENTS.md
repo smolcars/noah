@@ -43,6 +43,7 @@ It is intentionally operational: where code lives, how the runtime behaves, and 
   - `apps/fixtures/`: JSON cases both platforms' tests load, so shared behavior stays identical.
   - `apps/maestro/`: Maestro UI flows run against both apps.
   - `apps/i18n/` and `apps/tools/translations.mjs`: English source copy and translations.
+- Satora swaps (`apps/satora-ffi/`): Rust BoltFFI crate wrapping Satora's swap SDK for the USDC send beta (Settings → Beta), in its own Cargo workspace. The built iOS framework (`apple/`, a local Swift package) and Android libraries and Kotlin (`android/`) are committed and generated; rebuild them with `just satora-ffi-build-ios` / `just satora-ffi-build-android` and don't hand-edit them. See its README.
 - Server
   - `server/src/main.rs`: app bootstrap, dependencies, routers, middleware, cron.
   - `server/src/routes/public_api_v0.rs`: public + semi-public API handlers.
