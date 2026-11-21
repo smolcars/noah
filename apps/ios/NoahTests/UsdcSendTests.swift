@@ -80,17 +80,17 @@ import Testing
 
     final class Calls { var log: [String] = [] }
 
-    private static let address = "0x5aAeb6053F3E94C9b9A09f33669435E7Ef1BeAed"
+    private nonisolated static let address = "0x5aAeb6053F3E94C9b9A09f33669435E7Ef1BeAed"
     /// 15u: 1,500 sats (apps/fixtures/send-utils.json).
     private static let invoice1500 = "lnbc15u1p3xnhl2pp5jptserfk3zk4qy42tlucycrfwxhydvlemu9pqr93tuzlv9cc7g3sdqsvfhkcap3xyhx7un8cqzpgxqzjcsp5"
         + "f8c52y2stc300gl6s4xswtjpc37hrnnr3c9wvtgjfuvqmpm35evq9qyyssqy4lgd8tj637qcjp05rdpxxykjenthxftej7a2zzmwrmrl70fyj9hvj0rewhzj7jfyuwk"
         + "wcg9g2jpwtk3wkjtwnkdks84hsnu8xps5vsq4gj5hs"
-    private static let quote = SatoraQuote(protocolFeeSats: 50, protocolFeeRate: 0.005, networkFeeSats: 20, gaslessClaimFeeSats: 3,
+    private nonisolated static let quote = SatoraQuote(protocolFeeSats: 50, protocolFeeRate: 0.005, networkFeeSats: 20, gaslessClaimFeeSats: 3,
                                            exchangeRate: "100000", targetUsdc: "5873384", netTargetUsdc: "5839905", minSats: 356,
                                            maxSats: 20_000_000)
     private static let sendQuote = SendQuote(amount: 1500, fee: 2, total: 1502)
 
-    private static func swap(_ id: String, status: String = "pending", terminal: Bool = false, claimTx: String? = nil,
+    private nonisolated static func swap(_ id: String, status: String = "pending", terminal: Bool = false, claimTx: String? = nil,
                              invoice: String = "") -> SatoraSwap {
         SatoraSwap(id: id, status: status, terminal: terminal, bolt11Invoice: invoice, sourceSats: "1500", targetUsdc: "0", feeSats: 0,
                    destination: address, createdAt: "2026-11-20T00:00:00Z", invoiceExpiresAt: nil, claimDeadline: 0,
