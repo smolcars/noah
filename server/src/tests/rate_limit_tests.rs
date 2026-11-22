@@ -49,25 +49,30 @@ async fn assert_limited(
     let first = Ipv4Addr::new(10, 0, 0, 1);
     let second = Ipv4Addr::new(10, 0, 0, 2);
 
-    let start = Instant::now();
-    let mut served = 0;
-    while status_from(&app, first, method, path, token).await != StatusCode::TOO_MANY_REQUESTS {
-        served += 1;
-        let cap = burst + (start.elapsed().as_secs_f64() / refill.as_secs_f64()) as u32;
+    let probe = async {
+        let start = Instant::now();
+        let mut served = 0;
+        while status_from(&app, first, method, path, token).await != StatusCode::TOO_MANY_REQUESTS {
+            served += 1;
+            let cap = burst + (start.elapsed().as_secs_f64() / refill.as_secs_f64()) as u32;
+            assert!(
+                served <= cap,
+                "{method} {path} served {served} requests, quota allows {cap}"
+            );
+        }
         assert!(
-            served <= cap,
-            "{method} {path} served {served} requests, quota allows {cap}"
+            served >= burst,
+            "{method} {path} refused request {served}, before its burst of {burst}"
         );
-    }
-    assert!(
-        served >= burst,
-        "{method} {path} refused request {served}, before its burst of {burst}"
-    );
-    assert_ne!(
-        status_from(&app, second, method, path, token).await,
-        StatusCode::TOO_MANY_REQUESTS,
-        "{method} {path} from another peer"
-    );
+        assert_ne!(
+            status_from(&app, second, method, path, token).await,
+            StatusCode::TOO_MANY_REQUESTS,
+            "{method} {path} from another peer"
+        );
+    };
+    tokio::time::timeout(Duration::from_secs(60), probe)
+        .await
+        .unwrap_or_else(|_| panic!("{method} {path} did not use up its burst of {burst} in 60 s"));
 }
 
 #[tokio::test]

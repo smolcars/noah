@@ -1276,5 +1276,9 @@ async fn test_root_and_health_answer_their_own_status() {
             .await
             .unwrap();
         assert_eq!(response.status(), expected, "GET {path}");
+        let body = axum::body::to_bytes(response.into_body(), usize::MAX)
+            .await
+            .unwrap();
+        assert!(body.is_empty(), "GET {path} body");
     }
 }

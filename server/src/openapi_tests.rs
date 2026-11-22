@@ -115,8 +115,8 @@ async fn every_operation_is_served_behind_its_documented_gates() {
                     send(&app, method, path, Some(&registered), &mut peer).await;
                 if method == "head" && item.get("get").is_some() {
                     // Axum serves HEAD from the GET handler with the body dropped; the document lists only GET.
-                    assert_ne!(status, StatusCode::METHOD_NOT_ALLOWED, "{method} {path}");
-                    assert_ne!(status, StatusCode::NOT_FOUND, "{method} {path}");
+                    let (get, _, _) = send(&app, "get", path, Some(&registered), &mut peer).await;
+                    assert_eq!(status, get, "{method} {path} answers as GET does");
                 } else if method == "options" && path == "/.well-known/lnurlp/{username}" {
                     // Browser wallets fetch LNURL cross-origin, so the CORS layer answers the preflight, not a handler.
                     assert_eq!(status, StatusCode::OK, "{method} {path}");
