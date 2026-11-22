@@ -1,10 +1,8 @@
-use deadpool_redis::redis::AsyncCommands;
 use rand::RngExt;
 
-use super::redis_client::RedisClient;
+use super::{keyspace::RedisKey, redis_client::RedisClient};
 
-const EMAIL_VERIFICATION_PREFIX: &str = "email_verification:";
-const EMAIL_VERIFICATION_TTL_SECONDS: u64 = 600; // 10 minutes
+const EMAIL_VERIFICATION_TTL_SECONDS: u64 = 600;
 const TEST_VERIFICATION_CODE: &str = "000000";
 
 #[derive(Clone)]
@@ -18,30 +16,32 @@ impl EmailVerificationStore {
     }
 
     pub async fn store(&self, pubkey: &str, email: &str, code: &str) -> anyhow::Result<()> {
-        let key = format!("{}{}:code", EMAIL_VERIFICATION_PREFIX, pubkey);
-        let email_key = format!("{}{}:email", EMAIL_VERIFICATION_PREFIX, pubkey);
-        let mut conn = self.client.get_connection().await?;
-        let _: () = conn
-            .set_ex(&key, code, EMAIL_VERIFICATION_TTL_SECONDS)
+        self.client
+            .set_ex(
+                &RedisKey::email_verification_code(pubkey),
+                code,
+                EMAIL_VERIFICATION_TTL_SECONDS,
+            )
             .await?;
-        let _: () = conn
-            .set_ex(&email_key, email, EMAIL_VERIFICATION_TTL_SECONDS)
-            .await?;
-        Ok(())
+        self.client
+            .set_ex(
+                &RedisKey::email_verification_email(pubkey),
+                email,
+                EMAIL_VERIFICATION_TTL_SECONDS,
+            )
+            .await
     }
 
     pub async fn get_code(&self, pubkey: &str) -> anyhow::Result<Option<String>> {
-        let key = format!("{}{}:code", EMAIL_VERIFICATION_PREFIX, pubkey);
-        let mut conn = self.client.get_connection().await?;
-        let code: Option<String> = conn.get(&key).await?;
-        Ok(code)
+        self.client
+            .get(&RedisKey::email_verification_code(pubkey))
+            .await
     }
 
     pub async fn get_email(&self, pubkey: &str) -> anyhow::Result<Option<String>> {
-        let key = format!("{}{}:email", EMAIL_VERIFICATION_PREFIX, pubkey);
-        let mut conn = self.client.get_connection().await?;
-        let email: Option<String> = conn.get(&key).await?;
-        Ok(email)
+        self.client
+            .get(&RedisKey::email_verification_email(pubkey))
+            .await
     }
 
     pub async fn verify(
@@ -50,7 +50,6 @@ impl EmailVerificationStore {
         code: &str,
         dev_mode: bool,
     ) -> anyhow::Result<Option<String>> {
-        // In dev mode, accept the test code
         if dev_mode && code == TEST_VERIFICATION_CODE {
             let email = self.get_email(pubkey).await?;
             if email.is_some() {
@@ -71,12 +70,12 @@ impl EmailVerificationStore {
     }
 
     pub async fn remove(&self, pubkey: &str) -> anyhow::Result<()> {
-        let code_key = format!("{}{}:code", EMAIL_VERIFICATION_PREFIX, pubkey);
-        let email_key = format!("{}{}:email", EMAIL_VERIFICATION_PREFIX, pubkey);
-        let mut conn = self.client.get_connection().await?;
-        let _: () = conn.del(&code_key).await?;
-        let _: () = conn.del(&email_key).await?;
-        Ok(())
+        self.client
+            .del(&RedisKey::email_verification_code(pubkey))
+            .await?;
+        self.client
+            .del(&RedisKey::email_verification_email(pubkey))
+            .await
     }
 
     pub fn generate_code() -> String {

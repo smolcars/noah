@@ -208,8 +208,7 @@ pub async fn check_and_deregister_inactive_users(app_state: AppState) -> anyhow:
 }
 
 async fn redis_keepalive(app_state: AppState) -> anyhow::Result<()> {
-    app_state.k1_cache.contains("keepalive").await?;
-    Ok(())
+    app_state.redis.check_connection().await
 }
 
 pub async fn timeout_stale_pending_job_reports(app_state: AppState) -> anyhow::Result<()> {

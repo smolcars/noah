@@ -41,6 +41,7 @@ pub struct AppStruct {
     pub lnurl_domain: String,
     pub ark_server_pubkey: Arc<tokio::sync::RwLock<Option<String>>>,
     pub db_pool: PgPool,
+    pub redis: RedisClient,
     pub k1_cache: K1Store,
     pub invoice_store: InvoiceStore,
     pub email_verification_store: EmailVerificationStore,
@@ -65,7 +66,7 @@ pub async fn build_app_state(config: Config) -> anyhow::Result<AppState> {
     let k1_cache = K1Store::new(redis_client.clone(), K1_TTL_SECONDS);
     let invoice_store = InvoiceStore::new(redis_client.clone());
     let maintenance_store = MaintenanceStore::new(redis_client.clone());
-    let email_verification_store = EmailVerificationStore::new(redis_client);
+    let email_verification_store = EmailVerificationStore::new(redis_client.clone());
     let email_client =
         EmailClient::new(config.ses_from_address.clone(), config.email_dev_mode).await?;
     let barkd_invoice_provider = build_forwarding_invoice_provider(&config)?;
@@ -78,6 +79,7 @@ pub async fn build_app_state(config: Config) -> anyhow::Result<AppState> {
         lnurl_domain: config.lnurl_domain.clone(),
         ark_server_pubkey: Arc::new(tokio::sync::RwLock::new(None)),
         db_pool,
+        redis: redis_client,
         k1_cache,
         invoice_store,
         email_verification_store,
