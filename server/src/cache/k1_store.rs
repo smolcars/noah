@@ -35,18 +35,22 @@ impl K1Store {
         Ok(value.is_some())
     }
 
+    #[cfg(test)]
     pub async fn contains(&self, k1: &str) -> anyhow::Result<bool> {
         self.client.exists(&RedisKey::k1(k1)).await
     }
 
+    #[cfg(test)]
     pub async fn remove(&self, k1: &str) -> anyhow::Result<()> {
         self.client.del(&RedisKey::k1(k1)).await
     }
 
+    #[cfg(test)]
     pub async fn insert_with_timestamp(&self, k1: &str, timestamp: u64) -> anyhow::Result<()> {
         self.persist(k1, timestamp).await
     }
 
+    #[cfg(test)]
     pub async fn clear_all(&self) -> anyhow::Result<()> {
         self.client.flush_db().await
     }

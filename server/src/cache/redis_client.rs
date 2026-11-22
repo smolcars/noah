@@ -87,10 +87,12 @@ impl RedisClient {
         Ok(self.connection().await?.del(key.as_str()).await?)
     }
 
+    #[cfg(test)]
     pub async fn exists(&self, key: &RedisKey) -> anyhow::Result<bool> {
         Ok(self.connection().await?.exists(key.as_str()).await?)
     }
 
+    #[cfg(test)]
     pub async fn flush_db(&self) -> anyhow::Result<()> {
         let _: () = cmd("FLUSHDB")
             .query_async(&mut self.connection().await?)
