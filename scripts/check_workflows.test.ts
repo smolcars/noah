@@ -296,8 +296,8 @@ jobs:
     expect(check(workflow("${{ github.workflow }}-${{ github.head_ref }}"))).toEqual(["concurrency-group-without-ref@.github/workflows/t.yml:5"]);
     expect(check(workflow("${{ github.workflow }}-${{ github.head_ref || github.ref }}"))).toEqual([]);
   });
-  test("ref_name is per ref", () => {
-    expect(check(workflow("${{ github.workflow }}-${{ github.ref_name }}"))).toEqual([]);
+  test("ref_name is not per ref: a branch and a tag can share a name", () => {
+    expect(check(workflow("${{ github.workflow }}-${{ github.ref_name }}"))).toEqual(["concurrency-group-without-ref@.github/workflows/t.yml:5"]);
   });
   test("a job that tests ref_name or ref_type has the same bug", () => {
     expect(check(workflow("${{ github.workflow }}", "github.ref_name == 'master'"))).toEqual(["concurrency-group-without-ref@.github/workflows/t.yml:5"]);
@@ -347,18 +347,20 @@ jobs:
   expect(rules({ ".github/workflows/ci.yml": text }, ["server/a.rs"])).toEqual(["gate-behind-workflow-paths@.github/workflows/ci.yml:3"]);
 });
 
-test("a paths-ignore filter's hints say to stop ignoring the file, not to add it", () => {
+test("a paths-ignore filter's hints say to stop ignoring the file, and \"!\" lines do not un-ignore it", () => {
   const text = `on:
   push:
     paths-ignore:
       - ".github/**"
       - "docs/**"
+      - "!.github/workflows/ci.yml"
+      - "!docs/**"
 `;
   const messages = checkWorkflows({
     workflows: { ".github/workflows/ci.yml": text }, files: ["docs/a.md"], triggers: `{ ".github": [], "docs": ["ci.yml"] }`,
   }).map(p => `${p.rule}: ${p.message}`);
   expect(messages).toEqual([
-    expect.stringMatching(/^filter-misses-own-workflow: .*Remove the pattern that matches it, or add - "!\.github\/workflows\/ci\.yml" after it\.$/),
-    expect.stringMatching(/^filter-misses-input: .*Remove the patterns that match "docs", or add - "!docs\/\*\*" after them\.$/),
+    expect.stringMatching(/^filter-misses-own-workflow: .*Narrow or remove the pattern that matches it\. paths-ignore has no "!" exceptions; use paths if you need them\.$/),
+    expect.stringMatching(/^filter-misses-input: .*Narrow or remove the patterns that match "docs"\. paths-ignore has no "!" exceptions; use paths if you need them\.$/),
   ]);
 });

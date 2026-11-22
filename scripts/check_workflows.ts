@@ -10,8 +10,8 @@ export type Triggers = Record<string, string[]>;
 
 export const TRIGGERS_FILE = ".github/workflow-triggers.json";
 const FILTERED_EVENTS = ["pull_request", "pull_request_target", "push"];
-// No head_ref: it is empty outside pull requests, so it is per ref only with a fallback such as `|| github.ref`.
-const PER_REF = /github\.(ref|ref_name|run_id)\b|pull_request\.number/;
+// No head_ref: it is empty outside pull requests. No ref_name: a branch and a tag can share one.
+const PER_REF = /github\.(ref|run_id)\b|pull_request\.number/;
 
 type Filter = { label: string; patterns: string[]; ignore: boolean; line: number };
 
@@ -48,6 +48,7 @@ export function filterMatches(filter: Filter, file: string) {
   let hit = false;
   for (const p of filter.patterns) {
     const negated = p.startsWith("!");
+    if (negated && filter.ignore) continue; // GitHub documents "!" for paths only
     if (patternMatches(filter, negated ? p.slice(1) : p, file)) hit = !negated;
   }
   return filter.ignore ? !hit : hit;
@@ -114,7 +115,7 @@ function checkWorkflow(file: string, text: string, files: string[]): Problem[] {
     if (!filterMatches(f, file)) {
       add(f.line, "filter-misses-own-workflow",
         `${f.label} does not match ${file}, so a change to this workflow does not run it. ` +
-        (f.ignore ? `Remove the pattern that matches it, or add - "!${file}" after it.`
+        (f.ignore ? `Narrow or remove the pattern that matches it. paths-ignore has no "!" exceptions; use paths if you need them.`
           : `Add - "${file}" to the list, and remove any "!" pattern that excludes it.`));
     }
     // 7f63705da: a filter kept naming client/gt.config.json after the file was gone.
@@ -184,7 +185,7 @@ function checkTriggers(workflows: Record<string, string>, files: string[], table
       for (const f of missed) {
         add(file, f.line, "filter-misses-input",
           `${f.label} matches nothing under "${top}", but ${TRIGGERS_FILE} says ${name} reads it, so a change there alone skips this workflow. ` +
-          (f.ignore ? `Remove the patterns that match "${top}", or add - "!${pattern}" after them.`
+          (f.ignore ? `Narrow or remove the patterns that match "${top}". paths-ignore has no "!" exceptions; use paths if you need them.`
             : `Add - "${pattern}" (or a narrower pattern for the files it reads).`));
       }
     }
