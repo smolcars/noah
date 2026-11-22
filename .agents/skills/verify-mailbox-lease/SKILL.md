@@ -32,7 +32,7 @@ To tell, diff the covered files against `synced-at` (`git diff <synced-at> -- <f
 just formal-mailbox-lease
 ```
 
-It needs Java 17 or later. It runs about 50 s on a laptop. It exits non-zero on any of these:
+It needs Java 17 or later and runs in under a minute. It exits non-zero on any of these:
 
 - `FAIL MailboxLease.cfg`: a rule that held at master breaks. Treat it as a real bug until you show otherwise.
 - `FAIL bug-*.cfg`: a past bug replay no longer fails on its rule. The model has stopped catching that bug; fix the model.

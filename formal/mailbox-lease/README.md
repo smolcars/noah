@@ -2,7 +2,7 @@
 
 `MailboxLease.tla` is a TLA+ model of the database lease that gives one mailbox worker one mailbox (`mailbox_authorizations.lease_owner` and `lease_expires_at`). TLC checks every order of its steps for two workers, one mailbox row and three messages.
 
-Run it with `just formal-mailbox-lease` (or `formal/mailbox-lease/check.sh`). It needs Java 17 or later and downloads `tla2tools.jar` v1.7.4 into `formal/.tools/` (ignored by git), checked against a pinned sha256. The run takes about 50 s on a laptop. CI runs it in `.github/workflows/formal-mailbox-lease.yml`. Agents changing the covered code follow `.agents/skills/verify-mailbox-lease/SKILL.md`.
+Run it with `just formal-mailbox-lease` (or `formal/mailbox-lease/check.sh`). It needs Java 17 or later and downloads `tla2tools.jar` v1.7.4 into `formal/.tools/` (ignored by git), checked against a pinned sha256. The run takes under a minute on a laptop (23 to 50 s measured). CI runs it in `.github/workflows/formal-mailbox-lease.yml`. Agents changing the covered code follow `.agents/skills/verify-mailbox-lease/SKILL.md`.
 
 ## What each step stands for
 
