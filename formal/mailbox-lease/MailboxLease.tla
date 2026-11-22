@@ -40,7 +40,7 @@ vars == <<owner, live, lastCp, posted, sess, pushes, stopping, stopped,
 Slots == 1..2
 
 Phases == {"starting", "idle", "checked", "pushed", "clearing", "releasing", "done"}
-Session == [pos : 0..MaxCheckpoint, phase : Phases, cancelled : BOOLEAN]
+Session == [pos : 0..MaxCheckpoint, phase : Phases, cancelled : BOOLEAN, quiet : BOOLEAN]
 
 TypeOK ==
     /\ owner \in Workers \cup {NoWorker}
@@ -114,7 +114,7 @@ Claim(w) ==
     /\ sess' = IF sess[w] # <<>>
                  THEN sess
                  ELSE [sess EXCEPT ![w] = <<[pos |-> lastCp, phase |-> "starting",
-                                             cancelled |-> FALSE]>>]
+                                             cancelled |-> FALSE, quiet |-> lastCp = 0]>>]
     /\ UNCHANGED <<lastCp, posted, pushes, stopping, stopped, staleCheck, cpBack>>
 
 \* renew_active_sessions: one bulk_renew_claims statement, then cancel each
@@ -166,12 +166,13 @@ CheckActive(w, i) ==
                    claimedLive, cpBack>>
 
 \* send_push_notification for the message at checkpoint pos + 1. Nothing on
-\* this path reads the lease again.
+\* this path reads the lease again. A session that started from checkpoint 0
+\* sends nothing for the backlog (should_suppress_catchup_notifications).
 Push(w, i) ==
     LET c == sess[w][i].pos + 1 IN
     /\ i \in DOMAIN sess[w]
     /\ sess[w][i].phase = "checked"
-    /\ pushes' = [pushes EXCEPT ![c] = @ + 1]
+    /\ pushes' = IF sess[w][i].quiet THEN pushes ELSE [pushes EXCEPT ![c] = @ + 1]
     /\ SetPhase(w, i, "pushed")
     /\ UNCHANGED <<owner, live, lastCp, posted, stopping, stopped,
                    claimedLive, staleCheck, cpBack>>
@@ -197,6 +198,17 @@ StopOnCancel(w, i) ==
     /\ sess[w][i].phase \in {"starting", "idle"}
     /\ sess[w][i].cancelled
     /\ SetPhase(w, i, IF sess[w][i].phase = "starting" THEN "done" ELSE "clearing")
+    /\ UNCHANGED <<owner, live, lastCp, posted, pushes, stopping, stopped,
+                   claimedLive, staleCheck, cpBack>>
+
+\* read_mailbox returns no messages: the backlog is done, and later messages
+\* come from subscribe_mailbox with notifications on.
+CaughtUp(w, i) ==
+    /\ i \in DOMAIN sess[w]
+    /\ sess[w][i].phase = "idle"
+    /\ sess[w][i].quiet
+    /\ sess[w][i].pos = posted
+    /\ sess' = [sess EXCEPT ![w][i].quiet = FALSE]
     /\ UNCHANGED <<owner, live, lastCp, posted, pushes, stopping, stopped,
                    claimedLive, staleCheck, cpBack>>
 
@@ -289,6 +301,7 @@ Next ==
     \/ \E w \in Workers, i \in Slots : Push(w, i)
     \/ \E w \in Workers, i \in Slots : UpdateCheckpoint(w, i)
     \/ \E w \in Workers, i \in Slots : StopOnCancel(w, i)
+    \/ \E w \in Workers, i \in Slots : CaughtUp(w, i)
     \/ \E w \in Workers, i \in Slots : StreamEnds(w, i)
     \/ \E w \in Workers, i \in Slots : ClearError(w, i)
     \/ \E w \in Workers, i \in Slots : ReleaseClaim(w, i)
