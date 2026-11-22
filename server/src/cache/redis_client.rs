@@ -1,7 +1,7 @@
 use anyhow::Context;
 use deadpool_redis::{
     Connection, Pool, PoolConfig, Runtime,
-    redis::{AsyncCommands, FromRedisValue, ToSingleRedisArg, cmd},
+    redis::{AsyncCommands, FromRedisValue, ToSingleRedisArg, cmd, pipe},
 };
 
 use super::keyspace::RedisKey;
@@ -73,6 +73,31 @@ impl RedisClient {
             .await?
             .set_ex(key.as_str(), value, ttl_seconds)
             .await?)
+    }
+
+    /// Sets every key in one MULTI/EXEC, so no reader sees some keys from one call and some from
+    /// another.
+    pub async fn set_ex_all(
+        &self,
+        entries: &[(&RedisKey, &str)],
+        ttl_seconds: u64,
+    ) -> anyhow::Result<()> {
+        let mut pipeline = pipe();
+        pipeline.atomic();
+        for (key, value) in entries {
+            pipeline.set_ex(key.as_str(), *value, ttl_seconds).ignore();
+        }
+        Ok(pipeline.query_async(&mut self.connection().await?).await?)
+    }
+
+    /// Gets every key in one MULTI/EXEC, so all values come from the same moment.
+    pub async fn get_all<V: FromRedisValue>(&self, keys: &[&RedisKey]) -> anyhow::Result<V> {
+        let mut pipeline = pipe();
+        pipeline.atomic();
+        for key in keys {
+            pipeline.get(key.as_str());
+        }
+        Ok(pipeline.query_async(&mut self.connection().await?).await?)
     }
 
     pub async fn incr<V: ToSingleRedisArg + FromRedisValue + Send + Sync>(

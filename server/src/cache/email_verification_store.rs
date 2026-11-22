@@ -17,21 +17,17 @@ impl EmailVerificationStore {
 
     pub async fn store(&self, pubkey: &str, email: &str, code: &str) -> anyhow::Result<()> {
         self.client
-            .set_ex(
-                &RedisKey::email_verification_code(pubkey),
-                code,
-                EMAIL_VERIFICATION_TTL_SECONDS,
-            )
-            .await?;
-        self.client
-            .set_ex(
-                &RedisKey::email_verification_email(pubkey),
-                email,
+            .set_ex_all(
+                &[
+                    (&RedisKey::email_verification_code(pubkey), code),
+                    (&RedisKey::email_verification_email(pubkey), email),
+                ],
                 EMAIL_VERIFICATION_TTL_SECONDS,
             )
             .await
     }
 
+    #[cfg(test)]
     pub async fn get_code(&self, pubkey: &str) -> anyhow::Result<Option<String>> {
         self.client
             .get(&RedisKey::email_verification_code(pubkey))
@@ -58,10 +54,15 @@ impl EmailVerificationStore {
             }
         }
 
-        let stored_code = self.get_code(pubkey).await?;
+        let (stored_code, email): (Option<String>, Option<String>) = self
+            .client
+            .get_all(&[
+                &RedisKey::email_verification_code(pubkey),
+                &RedisKey::email_verification_email(pubkey),
+            ])
+            .await?;
         match stored_code {
             Some(stored) if stored == code => {
-                let email = self.get_email(pubkey).await?;
                 self.remove(pubkey).await?;
                 Ok(email)
             }
