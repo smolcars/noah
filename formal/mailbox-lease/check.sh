@@ -18,10 +18,11 @@ jar="$tools_dir/tla2tools-$TLA_VERSION.jar"
 expectations=(
   "MailboxLease.cfg=pass"
   "bug-86b883f05-self-reclaim.cfg=NoClaimOfLiveLease"
-  "bug-b018632a5-no-lease-expiry.cfg=CheckOnlyUnderLiveLease"
+  "bug-no-expiry-guard.cfg=CheckPassesOnlyIfLiveSinceSample"
   "bug-3ed2b04c8-no-shutdown-release.cfg=StoppedWorkerHoldsNoLease"
   "finding-duplicate-push.cfg=AtMostOnePushPerCheckpoint"
   "finding-checkpoint-moves-back.cfg=CheckpointNeverMovesBack"
+  "finding-stale-check.cfg=CheckOnlyUnderLiveLease"
 )
 # TLC exit statuses, from tlc2.output.EC$ExitStatus in the pinned jar.
 TLC_SUCCESS=0
