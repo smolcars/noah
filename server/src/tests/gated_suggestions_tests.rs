@@ -23,7 +23,7 @@ async fn test_ln_address_suggestions_requires_auth() {
         .oneshot(
             Request::builder()
                 .method(http::Method::POST)
-                .uri("/ln_address_suggestions")
+                .uri("/v0/ln_address_suggestions")
                 .header(http::header::CONTENT_TYPE, "application/json")
                 .body(Body::from(serde_json::to_string(&payload).unwrap()))
                 .unwrap(),
@@ -49,7 +49,7 @@ async fn test_ln_address_suggestions_invalid_auth() {
         .oneshot(
             Request::builder()
                 .method(http::Method::POST)
-                .uri("/ln_address_suggestions")
+                .uri("/v0/ln_address_suggestions")
                 .header(http::header::CONTENT_TYPE, "application/json")
                 .header(http::header::AUTHORIZATION, "Bearer invalid-token")
                 .body(Body::from(serde_json::to_string(&payload).unwrap()))
@@ -87,7 +87,7 @@ async fn test_ln_address_suggestions_prefix() {
         .oneshot(
             Request::builder()
                 .method(http::Method::POST)
-                .uri("/ln_address_suggestions")
+                .uri("/v0/ln_address_suggestions")
                 .header(http::header::CONTENT_TYPE, "application/json")
                 .header(
                     http::header::AUTHORIZATION,
@@ -137,7 +137,7 @@ async fn test_ln_address_suggestions_excludes_inactive_short_prefix_matches() {
         .oneshot(
             Request::builder()
                 .method(http::Method::POST)
-                .uri("/ln_address_suggestions")
+                .uri("/v0/ln_address_suggestions")
                 .header(http::header::CONTENT_TYPE, "application/json")
                 .header(
                     http::header::AUTHORIZATION,
@@ -191,7 +191,7 @@ async fn test_ln_address_suggestions_excludes_inactive_fuzzy_matches() {
         .oneshot(
             Request::builder()
                 .method(http::Method::POST)
-                .uri("/ln_address_suggestions")
+                .uri("/v0/ln_address_suggestions")
                 .header(http::header::CONTENT_TYPE, "application/json")
                 .header(
                     http::header::AUTHORIZATION,
@@ -225,7 +225,7 @@ async fn test_ln_address_suggestions_short_query_returns_empty() {
         .oneshot(
             Request::builder()
                 .method(http::Method::POST)
-                .uri("/ln_address_suggestions")
+                .uri("/v0/ln_address_suggestions")
                 .header(http::header::CONTENT_TYPE, "application/json")
                 .header(
                     http::header::AUTHORIZATION,
@@ -259,7 +259,7 @@ async fn test_ln_address_suggestions_domain_divergence_returns_empty() {
         .oneshot(
             Request::builder()
                 .method(http::Method::POST)
-                .uri("/ln_address_suggestions")
+                .uri("/v0/ln_address_suggestions")
                 .header(http::header::CONTENT_TYPE, "application/json")
                 .header(
                     http::header::AUTHORIZATION,
@@ -306,7 +306,7 @@ async fn test_ln_address_suggestions_limit() {
         .oneshot(
             Request::builder()
                 .method(http::Method::POST)
-                .uri("/ln_address_suggestions")
+                .uri("/v0/ln_address_suggestions")
                 .header(http::header::CONTENT_TYPE, "application/json")
                 .header(
                     http::header::AUTHORIZATION,
@@ -340,7 +340,7 @@ async fn test_ln_address_suggestions_query_too_long() {
         .oneshot(
             Request::builder()
                 .method(http::Method::POST)
-                .uri("/ln_address_suggestions")
+                .uri("/v0/ln_address_suggestions")
                 .header(http::header::CONTENT_TYPE, "application/json")
                 .header(
                     http::header::AUTHORIZATION,
@@ -371,7 +371,7 @@ async fn test_ln_address_suggestions_blocked_prefix_returns_empty() {
         .oneshot(
             Request::builder()
                 .method(http::Method::POST)
-                .uri("/ln_address_suggestions")
+                .uri("/v0/ln_address_suggestions")
                 .header(http::header::CONTENT_TYPE, "application/json")
                 .header(
                     http::header::AUTHORIZATION,

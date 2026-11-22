@@ -29,7 +29,7 @@ async fn test_submit_invoice_stores_in_redis() {
         .oneshot(
             Request::builder()
                 .method(http::Method::POST)
-                .uri("/lnurlp/submit_invoice")
+                .uri("/v0/lnurlp/submit_invoice")
                 .header(http::header::CONTENT_TYPE, "application/json")
                 .header(
                     http::header::AUTHORIZATION,
@@ -84,7 +84,7 @@ async fn test_submit_invoice_can_be_retrieved() {
         .oneshot(
             Request::builder()
                 .method(http::Method::POST)
-                .uri("/lnurlp/submit_invoice")
+                .uri("/v0/lnurlp/submit_invoice")
                 .header(http::header::CONTENT_TYPE, "application/json")
                 .header(
                     http::header::AUTHORIZATION,
@@ -134,7 +134,7 @@ async fn test_submit_invoice_requires_auth() {
         .oneshot(
             Request::builder()
                 .method(http::Method::POST)
-                .uri("/lnurlp/submit_invoice")
+                .uri("/v0/lnurlp/submit_invoice")
                 .header(http::header::CONTENT_TYPE, "application/json")
                 .body(Body::from(
                     serde_json::to_vec(&json!({
@@ -163,7 +163,7 @@ async fn test_submit_invoice_requires_existing_user() {
         .oneshot(
             Request::builder()
                 .method(http::Method::POST)
-                .uri("/lnurlp/submit_invoice")
+                .uri("/v0/lnurlp/submit_invoice")
                 .header(http::header::CONTENT_TYPE, "application/json")
                 .header(
                     http::header::AUTHORIZATION,
@@ -213,7 +213,7 @@ async fn test_submit_invoice_overwrites_existing() {
         .oneshot(
             Request::builder()
                 .method(http::Method::POST)
-                .uri("/lnurlp/submit_invoice")
+                .uri("/v0/lnurlp/submit_invoice")
                 .header(http::header::CONTENT_TYPE, "application/json")
                 .header(
                     http::header::AUTHORIZATION,

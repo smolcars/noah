@@ -42,7 +42,7 @@ async fn test_auth_login_success() {
         .oneshot(
             Request::builder()
                 .method(http::Method::POST)
-                .uri("/auth/login")
+                .uri("/v0/auth/login")
                 .header(http::header::CONTENT_TYPE, "application/json")
                 .body(Body::from(serde_json::to_vec(&auth_payload).unwrap()))
                 .unwrap(),
@@ -76,7 +76,7 @@ async fn test_auth_login_reused_k1_is_rejected() {
         .oneshot(
             Request::builder()
                 .method(http::Method::POST)
-                .uri("/auth/login")
+                .uri("/v0/auth/login")
                 .header(http::header::CONTENT_TYPE, "application/json")
                 .body(Body::from(serde_json::to_vec(&auth_payload).unwrap()))
                 .unwrap(),
@@ -90,7 +90,7 @@ async fn test_auth_login_reused_k1_is_rejected() {
         .oneshot(
             Request::builder()
                 .method(http::Method::POST)
-                .uri("/auth/login")
+                .uri("/v0/auth/login")
                 .header(http::header::CONTENT_TYPE, "application/json")
                 .body(Body::from(serde_json::to_vec(&auth_payload).unwrap()))
                 .unwrap(),
@@ -124,7 +124,7 @@ async fn test_auth_login_preserves_other_redis_keys() {
             .oneshot(
                 Request::builder()
                     .method(http::Method::POST)
-                    .uri("/auth/login")
+                    .uri("/v0/auth/login")
                     .header(http::header::CONTENT_TYPE, "application/json")
                     .body(Body::from(
                         json!({ "k1": key, "key": "00", "sig": "00" }).to_string(),
@@ -170,7 +170,7 @@ async fn test_auth_login_rejects_malformed_k1_before_consuming_it() {
             .oneshot(
                 Request::builder()
                     .method(http::Method::POST)
-                    .uri("/auth/login")
+                    .uri("/v0/auth/login")
                     .header(http::header::CONTENT_TYPE, "application/json")
                     .body(Body::from(
                         json!({ "k1": k1, "key": "00", "sig": "00" }).to_string(),
@@ -224,7 +224,7 @@ async fn test_register_new_user() {
         .oneshot(
             Request::builder()
                 .method(http::Method::POST)
-                .uri("/register")
+                .uri("/v0/register")
                 .header(http::header::CONTENT_TYPE, "application/json")
                 .header(
                     http::header::AUTHORIZATION,
@@ -270,7 +270,7 @@ async fn test_register_existing_user() {
         .oneshot(
             Request::builder()
                 .method(http::Method::POST)
-                .uri("/register")
+                .uri("/v0/register")
                 .header(http::header::CONTENT_TYPE, "application/json")
                 .header(
                     http::header::AUTHORIZATION,
@@ -316,7 +316,7 @@ async fn test_auth_login_invalid_signature() {
         .oneshot(
             Request::builder()
                 .method(http::Method::POST)
-                .uri("/auth/login")
+                .uri("/v0/auth/login")
                 .header(http::header::CONTENT_TYPE, "application/json")
                 .body(Body::from(serde_json::to_vec(&auth_payload).unwrap()))
                 .unwrap(),
@@ -343,7 +343,7 @@ async fn test_auth_login_invalid_k1() {
         .oneshot(
             Request::builder()
                 .method(http::Method::POST)
-                .uri("/auth/login")
+                .uri("/v0/auth/login")
                 .header(http::header::CONTENT_TYPE, "application/json")
                 .body(Body::from(serde_json::to_vec(&auth_payload).unwrap()))
                 .unwrap(),
@@ -380,7 +380,7 @@ async fn test_auth_login_expired_k1() {
         .oneshot(
             Request::builder()
                 .method(http::Method::POST)
-                .uri("/auth/login")
+                .uri("/v0/auth/login")
                 .header(http::header::CONTENT_TYPE, "application/json")
                 .body(Body::from(serde_json::to_vec(&auth_payload).unwrap()))
                 .unwrap(),
@@ -410,7 +410,7 @@ async fn test_register_push_token() {
         .oneshot(
             Request::builder()
                 .method(http::Method::POST)
-                .uri("/register_push_token")
+                .uri("/v0/register_push_token")
                 .header(http::header::CONTENT_TYPE, "application/json")
                 .header(
                     http::header::AUTHORIZATION,
@@ -471,7 +471,7 @@ async fn test_register_push_token_rejects_private_endpoint_without_replacing_tok
         .oneshot(
             Request::builder()
                 .method(http::Method::POST)
-                .uri("/register_push_token")
+                .uri("/v0/register_push_token")
                 .header(http::header::CONTENT_TYPE, "application/json")
                 .header(
                     http::header::AUTHORIZATION,
@@ -522,7 +522,7 @@ async fn test_authorize_mailbox() {
         .oneshot(
             Request::builder()
                 .method(http::Method::POST)
-                .uri("/mailbox/authorize")
+                .uri("/v0/mailbox/authorize")
                 .header(http::header::CONTENT_TYPE, "application/json")
                 .header(
                     http::header::AUTHORIZATION,
@@ -570,7 +570,7 @@ async fn test_authorize_mailbox_rejects_invalid_hex() {
         .oneshot(
             Request::builder()
                 .method(http::Method::POST)
-                .uri("/mailbox/authorize")
+                .uri("/v0/mailbox/authorize")
                 .header(http::header::CONTENT_TYPE, "application/json")
                 .header(
                     http::header::AUTHORIZATION,
@@ -614,7 +614,7 @@ async fn test_authorize_mailbox_rejects_invalid_mailbox_id_hex() {
         .oneshot(
             Request::builder()
                 .method(http::Method::POST)
-                .uri("/mailbox/authorize")
+                .uri("/v0/mailbox/authorize")
                 .header(http::header::CONTENT_TYPE, "application/json")
                 .header(
                     http::header::AUTHORIZATION,
@@ -658,7 +658,7 @@ async fn test_authorize_mailbox_rejects_past_expiry() {
         .oneshot(
             Request::builder()
                 .method(http::Method::POST)
-                .uri("/mailbox/authorize")
+                .uri("/v0/mailbox/authorize")
                 .header(http::header::CONTENT_TYPE, "application/json")
                 .header(
                     http::header::AUTHORIZATION,
@@ -696,7 +696,7 @@ async fn test_authorize_mailbox_rejects_expiry_beyond_max_ttl() {
         .oneshot(
             Request::builder()
                 .method(http::Method::POST)
-                .uri("/mailbox/authorize")
+                .uri("/v0/mailbox/authorize")
                 .header(http::header::CONTENT_TYPE, "application/json")
                 .header(
                     http::header::AUTHORIZATION,
@@ -732,7 +732,7 @@ async fn test_authorize_mailbox_rejects_expiry_mismatch() {
         .oneshot(
             Request::builder()
                 .method(http::Method::POST)
-                .uri("/mailbox/authorize")
+                .uri("/v0/mailbox/authorize")
                 .header(http::header::CONTENT_TYPE, "application/json")
                 .header(
                     http::header::AUTHORIZATION,
@@ -772,7 +772,7 @@ async fn test_authorize_mailbox_rejects_invalid_signature() {
         .oneshot(
             Request::builder()
                 .method(http::Method::POST)
-                .uri("/mailbox/authorize")
+                .uri("/v0/mailbox/authorize")
                 .header(http::header::CONTENT_TYPE, "application/json")
                 .header(
                     http::header::AUTHORIZATION,
@@ -818,7 +818,7 @@ async fn test_revoke_mailbox_authorization() {
         .oneshot(
             Request::builder()
                 .method(http::Method::POST)
-                .uri("/mailbox/revoke")
+                .uri("/v0/mailbox/revoke")
                 .header(
                     http::header::AUTHORIZATION,
                     format!("Bearer {}", access_token),

@@ -22,7 +22,7 @@ async fn test_get_upload_url() {
         .oneshot(
             Request::builder()
                 .method(http::Method::POST)
-                .uri("/backup/upload_url")
+                .uri("/v0/backup/upload_url")
                 .header(http::header::CONTENT_TYPE, "application/json")
                 .header(
                     http::header::AUTHORIZATION,
@@ -66,7 +66,7 @@ async fn test_v2_upload_rejects_unsupported_format_before_s3() {
         .oneshot(
             Request::builder()
                 .method(http::Method::POST)
-                .uri("/backup/v2/upload")
+                .uri("/v0/backup/v2/upload")
                 .header(http::header::CONTENT_TYPE, "application/json")
                 .header(
                     http::header::AUTHORIZATION,
@@ -99,7 +99,7 @@ async fn test_v2_upload_rejects_oversized_object_before_s3() {
         .oneshot(
             Request::builder()
                 .method(http::Method::POST)
-                .uri("/backup/v2/upload")
+                .uri("/v0/backup/v2/upload")
                 .header(http::header::CONTENT_TYPE, "application/json")
                 .header(
                     http::header::AUTHORIZATION,
@@ -264,7 +264,7 @@ async fn test_v2_complete_rejects_superseded_upload_before_s3() {
         .oneshot(
             Request::builder()
                 .method(http::Method::POST)
-                .uri("/backup/v2/complete")
+                .uri("/v0/backup/v2/complete")
                 .header(http::header::CONTENT_TYPE, "application/json")
                 .header(
                     http::header::AUTHORIZATION,
@@ -389,7 +389,7 @@ async fn test_complete_upload() {
         .oneshot(
             Request::builder()
                 .method(http::Method::POST)
-                .uri("/backup/complete_upload")
+                .uri("/v0/backup/complete_upload")
                 .header(http::header::CONTENT_TYPE, "application/json")
                 .header(
                     http::header::AUTHORIZATION,
@@ -439,7 +439,7 @@ async fn test_complete_upload_upsert() {
         .oneshot(
             Request::builder()
                 .method(http::Method::POST)
-                .uri("/backup/complete_upload")
+                .uri("/v0/backup/complete_upload")
                 .header(http::header::CONTENT_TYPE, "application/json")
                 .header(
                     http::header::AUTHORIZATION,
@@ -465,7 +465,7 @@ async fn test_complete_upload_upsert() {
         .oneshot(
             Request::builder()
                 .method(http::Method::POST)
-                .uri("/backup/complete_upload")
+                .uri("/v0/backup/complete_upload")
                 .header(http::header::CONTENT_TYPE, "application/json")
                 .header(
                     http::header::AUTHORIZATION,
@@ -511,7 +511,7 @@ async fn test_complete_upload_rejects_noncanonical_s3_keys() {
             .oneshot(
                 Request::builder()
                     .method(http::Method::POST)
-                    .uri("/backup/complete_upload")
+                    .uri("/v0/backup/complete_upload")
                     .header(http::header::CONTENT_TYPE, "application/json")
                     .header(
                         http::header::AUTHORIZATION,
@@ -558,7 +558,7 @@ async fn test_complete_upload_key_mismatch_does_not_overwrite_metadata() {
         .oneshot(
             Request::builder()
                 .method(http::Method::POST)
-                .uri("/backup/complete_upload")
+                .uri("/v0/backup/complete_upload")
                 .header(http::header::CONTENT_TYPE, "application/json")
                 .header(
                     http::header::AUTHORIZATION,
@@ -626,7 +626,7 @@ async fn test_list_backups_empty() {
         .oneshot(
             Request::builder()
                 .method(http::Method::POST)
-                .uri("/backup/list")
+                .uri("/v0/backup/list")
                 .header(http::header::CONTENT_TYPE, "application/json")
                 .header(
                     http::header::AUTHORIZATION,
@@ -668,7 +668,7 @@ async fn test_list_backups_with_data() {
         .oneshot(
             Request::builder()
                 .method(http::Method::POST)
-                .uri("/backup/list")
+                .uri("/v0/backup/list")
                 .header(http::header::CONTENT_TYPE, "application/json")
                 .header(
                     http::header::AUTHORIZATION,
@@ -715,7 +715,7 @@ async fn test_get_download_url_specific_version() {
         .oneshot(
             Request::builder()
                 .method(http::Method::POST)
-                .uri("/backup/download_url")
+                .uri("/v0/backup/download_url")
                 .header(http::header::CONTENT_TYPE, "application/json")
                 .header(
                     http::header::AUTHORIZATION,
@@ -770,7 +770,7 @@ async fn test_get_download_url_latest() {
         .oneshot(
             Request::builder()
                 .method(http::Method::POST)
-                .uri("/backup/download_url")
+                .uri("/v0/backup/download_url")
                 .header(http::header::CONTENT_TYPE, "application/json")
                 .header(
                     http::header::AUTHORIZATION,
@@ -806,7 +806,7 @@ async fn test_get_download_url_not_found() {
         .oneshot(
             Request::builder()
                 .method(http::Method::POST)
-                .uri("/backup/download_url")
+                .uri("/v0/backup/download_url")
                 .header(http::header::CONTENT_TYPE, "application/json")
                 .header(
                     http::header::AUTHORIZATION,
@@ -845,7 +845,7 @@ async fn test_delete_backup() {
         .oneshot(
             Request::builder()
                 .method(http::Method::POST)
-                .uri("/backup/delete")
+                .uri("/v0/backup/delete")
                 .header(http::header::CONTENT_TYPE, "application/json")
                 .header(
                     http::header::AUTHORIZATION,
@@ -890,7 +890,7 @@ async fn test_delete_backup_not_found() {
         .oneshot(
             Request::builder()
                 .method(http::Method::POST)
-                .uri("/backup/delete")
+                .uri("/v0/backup/delete")
                 .header(http::header::CONTENT_TYPE, "application/json")
                 .header(
                     http::header::AUTHORIZATION,
@@ -922,7 +922,7 @@ async fn test_update_backup_settings_enable() {
         .oneshot(
             Request::builder()
                 .method(http::Method::POST)
-                .uri("/backup/settings")
+                .uri("/v0/backup/settings")
                 .header(http::header::CONTENT_TYPE, "application/json")
                 .header(
                     http::header::AUTHORIZATION,
@@ -970,7 +970,7 @@ async fn test_update_backup_settings_disable() {
         .oneshot(
             Request::builder()
                 .method(http::Method::POST)
-                .uri("/backup/settings")
+                .uri("/v0/backup/settings")
                 .header(http::header::CONTENT_TYPE, "application/json")
                 .header(
                     http::header::AUTHORIZATION,

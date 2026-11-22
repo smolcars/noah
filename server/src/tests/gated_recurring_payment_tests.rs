@@ -16,7 +16,7 @@ async fn sync(app: &Router, app_state: &AppState, user: &TestUser, body: Value) 
         .oneshot(
             Request::builder()
                 .method(http::Method::POST)
-                .uri("/recurring_payments/sync")
+                .uri("/v0/recurring_payments/sync")
                 .header(http::header::CONTENT_TYPE, "application/json")
                 .header(
                     http::header::AUTHORIZATION,
@@ -129,7 +129,7 @@ async fn test_sync_recurring_payments_requires_auth() {
         .oneshot(
             Request::builder()
                 .method(http::Method::POST)
-                .uri("/recurring_payments/sync")
+                .uri("/v0/recurring_payments/sync")
                 .header(http::header::CONTENT_TYPE, "application/json")
                 .body(Body::from(
                     serde_json::to_vec(&json!({ "schedules": [] })).unwrap(),
@@ -256,7 +256,7 @@ async fn test_deregister_removes_recurring_payment_schedules() {
         .oneshot(
             Request::builder()
                 .method(http::Method::POST)
-                .uri("/deregister")
+                .uri("/v0/deregister")
                 .header(http::header::CONTENT_TYPE, "application/json")
                 .header(
                     http::header::AUTHORIZATION,

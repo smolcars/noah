@@ -20,7 +20,7 @@ async fn test_send_verification_email_success() {
         .oneshot(
             Request::builder()
                 .method(http::Method::POST)
-                .uri("/email/send_verification")
+                .uri("/v0/email/send_verification")
                 .header(http::header::CONTENT_TYPE, "application/json")
                 .header(
                     http::header::AUTHORIZATION,
@@ -59,7 +59,7 @@ async fn test_send_verification_email_invalid_email() {
         .oneshot(
             Request::builder()
                 .method(http::Method::POST)
-                .uri("/email/send_verification")
+                .uri("/v0/email/send_verification")
                 .header(http::header::CONTENT_TYPE, "application/json")
                 .header(
                     http::header::AUTHORIZATION,
@@ -104,7 +104,7 @@ async fn test_send_verification_email_already_verified() {
         .oneshot(
             Request::builder()
                 .method(http::Method::POST)
-                .uri("/email/send_verification")
+                .uri("/v0/email/send_verification")
                 .header(http::header::CONTENT_TYPE, "application/json")
                 .header(
                     http::header::AUTHORIZATION,
@@ -155,7 +155,7 @@ async fn test_send_verification_email_verified_user_can_request_new_email() {
         .oneshot(
             Request::builder()
                 .method(http::Method::POST)
-                .uri("/email/send_verification")
+                .uri("/v0/email/send_verification")
                 .header(http::header::CONTENT_TYPE, "application/json")
                 .header(
                     http::header::AUTHORIZATION,
@@ -227,7 +227,7 @@ async fn test_send_verification_email_duplicate_email_allowed() {
         .oneshot(
             Request::builder()
                 .method(http::Method::POST)
-                .uri("/email/send_verification")
+                .uri("/v0/email/send_verification")
                 .header(http::header::CONTENT_TYPE, "application/json")
                 .header(
                     http::header::AUTHORIZATION,
@@ -275,7 +275,7 @@ async fn test_verify_email_success() {
         .oneshot(
             Request::builder()
                 .method(http::Method::POST)
-                .uri("/email/verify")
+                .uri("/v0/email/verify")
                 .header(http::header::CONTENT_TYPE, "application/json")
                 .header(
                     http::header::AUTHORIZATION,
@@ -334,7 +334,7 @@ async fn test_verify_email_invalid_code() {
         .oneshot(
             Request::builder()
                 .method(http::Method::POST)
-                .uri("/email/verify")
+                .uri("/v0/email/verify")
                 .header(http::header::CONTENT_TYPE, "application/json")
                 .header(
                     http::header::AUTHORIZATION,
@@ -368,7 +368,7 @@ async fn test_verify_email_no_pending_verification() {
         .oneshot(
             Request::builder()
                 .method(http::Method::POST)
-                .uri("/email/verify")
+                .uri("/v0/email/verify")
                 .header(http::header::CONTENT_TYPE, "application/json")
                 .header(
                     http::header::AUTHORIZATION,
@@ -413,7 +413,7 @@ async fn test_verify_email_verified_user_without_pending_code_fails() {
         .oneshot(
             Request::builder()
                 .method(http::Method::POST)
-                .uri("/email/verify")
+                .uri("/v0/email/verify")
                 .header(http::header::CONTENT_TYPE, "application/json")
                 .header(
                     http::header::AUTHORIZATION,
@@ -474,7 +474,7 @@ async fn test_verify_email_verified_user_can_update_email() {
         .oneshot(
             Request::builder()
                 .method(http::Method::POST)
-                .uri("/email/verify")
+                .uri("/v0/email/verify")
                 .header(http::header::CONTENT_TYPE, "application/json")
                 .header(
                     http::header::AUTHORIZATION,
@@ -541,7 +541,7 @@ async fn test_verify_email_verified_user_invalid_code_keeps_old_email() {
         .oneshot(
             Request::builder()
                 .method(http::Method::POST)
-                .uri("/email/verify")
+                .uri("/v0/email/verify")
                 .header(http::header::CONTENT_TYPE, "application/json")
                 .header(
                     http::header::AUTHORIZATION,
@@ -608,7 +608,7 @@ async fn test_verify_email_duplicate_email_allowed() {
         .oneshot(
             Request::builder()
                 .method(http::Method::POST)
-                .uri("/email/verify")
+                .uri("/v0/email/verify")
                 .header(http::header::CONTENT_TYPE, "application/json")
                 .header(
                     http::header::AUTHORIZATION,
@@ -669,7 +669,7 @@ async fn test_register_returns_email_verified_status() {
         .oneshot(
             Request::builder()
                 .method(http::Method::POST)
-                .uri("/register")
+                .uri("/v0/register")
                 .header(http::header::CONTENT_TYPE, "application/json")
                 .header(
                     http::header::AUTHORIZATION,
@@ -707,7 +707,7 @@ async fn test_register_returns_email_not_verified_for_new_user() {
         .oneshot(
             Request::builder()
                 .method(http::Method::POST)
-                .uri("/register")
+                .uri("/v0/register")
                 .header(http::header::CONTENT_TYPE, "application/json")
                 .header(
                     http::header::AUTHORIZATION,
@@ -746,7 +746,7 @@ async fn test_send_verification_unregistered_user() {
         .oneshot(
             Request::builder()
                 .method(http::Method::POST)
-                .uri("/email/send_verification")
+                .uri("/v0/email/send_verification")
                 .header(http::header::CONTENT_TYPE, "application/json")
                 .header(
                     http::header::AUTHORIZATION,
