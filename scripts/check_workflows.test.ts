@@ -1,7 +1,7 @@
 // Each case is workflow text from the parent of a fix commit (`git show <sha>^:<path>`, trimmed),
 // then the same text with that commit's fix. The rule must fire on the first and not on the second.
 import { describe, expect, test } from "bun:test";
-import { checkWorkflows } from "./check_workflows";
+import { checkWorkflows, filterMatches } from "./check_workflows";
 
 const rules = (workflows: Record<string, string>, files: string[] = [], triggers?: string) =>
   checkWorkflows({ workflows, files, triggers }).map(p => `${p.rule}@${p.file}:${p.line}`);
@@ -223,5 +223,41 @@ jobs:
 `;
     expect(rules({ ".github/workflows/ci.yml": dorny }, ["apps/ios/a.swift", "apps/android/a.kt"],
       `{ ".github": [], "apps": ["ci.yml"] }`)).toEqual([]);
+  });
+});
+
+describe("GitHub path patterns", () => {
+  const matches = (patterns: string[], file: string) =>
+    filterMatches({ label: "on.push.paths", patterns, ignore: false, line: 1 }, file);
+  // The examples in "Patterns to match file paths" of GitHub's workflow syntax reference.
+  const documented: [string[], string[], string[]][] = [
+    [["*"], ["README.md", "server.rb"], ["docs/README.md"]],
+    [["*.jsx?"], ["page.js", "page.jsx"], ["page.jsxx"]],
+    [["**"], ["all/the/files.md"], []],
+    [["*.js"], ["app.js", "index.js"], ["js/index.js"]],
+    [["**.js"], ["index.js", "js/index.js", "src/js/app.js"], ["index.ts"]],
+    [["docs/*"], ["docs/README.md", "docs/file.txt"], ["docs/mona/octocat.txt"]],
+    [["docs/**"], ["docs/README.md", "docs/mona/octocat.txt"], ["README.md"]],
+    [["docs/**/*.md"], ["docs/README.md", "docs/mona/hello-world.md", "docs/a/markdown/file.md"], ["docs/a.txt"]],
+    [["**/docs/**"], ["docs/hello.md", "dir/docs/my-file.txt", "space/docs/plan/space.doc"], ["mydocs/a.md"]],
+    [["**/README.md"], ["README.md", "js/README.md"], ["js/README.mdx"]],
+    [["**/*src/**"], ["a/src/app.js", "my-src/code/js/app.js"], ["src.js"]],
+    [["**/*-post.md"], ["my-post.md", "path/their-post.md"], ["post.md"]],
+    [["**/migrate-*.sql"], ["migrate-10909.sql", "db/migrate-v1.0.sql", "db/sept/migrate-v1.sql"], ["db/migrate.sql"]],
+    [["*.md", "!README.md"], ["hello.md"], ["README.md", "docs/hello.md"]],
+    [["*.md", "!README.md", "README*"], ["hello.md", "README.md", "README.doc"], []],
+    [["[CB]at", "v[12].[0-9]+"], ["Cat", "Bat", "v1.10"], ["Rat", "v3.1"]],
+  ];
+  test.each(documented)("%p", (patterns, yes, no) => {
+    for (const f of yes) expect([f, matches(patterns, f)]).toEqual([f, true]);
+    for (const f of no) expect([f, matches(patterns, f)]).toEqual([f, false]);
+  });
+
+  test("**.yml crosses / in on: filters, in both directions", () => {
+    const own = ".github/workflows/ci.yml";
+    const excluded = `on:\n  push:\n    paths:\n      - ".github/workflows/**"\n      - "!**.yml"\n`;
+    expect(rules({ [own]: excluded })).toEqual([`filter-misses-own-workflow@${own}:3`]);
+    const correct = `on:\n  push:\n    paths:\n      - "**.ts"\n      - "**.yml"\n`;
+    expect(rules({ [own]: correct }, ["scripts/a.ts"])).toEqual([]);
   });
 });

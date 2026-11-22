@@ -20,12 +20,34 @@ const lineOf = (lines: string[], re: RegExp, from = 0) => {
 };
 const escape = (s: string) => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
+// GitHub's own pattern rules, which differ from a shell glob: "**" crosses "/" even inside a
+// segment ("**.yml"), and "?" and "+" repeat the character before them.
+function githubPattern(pattern: string) {
+  let re = "";
+  for (let i = 0; i < pattern.length; i++) {
+    const c = pattern[i];
+    const close = c === "[" ? pattern.indexOf("]", i) : -1;
+    if (pattern.startsWith("**/", i)) { re += "(?:.*/)?"; i += 2; }
+    else if (pattern.startsWith("**", i)) { re += ".*"; i += 1; }
+    else if (c === "*") re += "[^/]*";
+    else if (c === "?" || c === "+") re += c;
+    else if (close > i) { re += pattern.slice(i, close + 1); i = close; }
+    else if (c === "\\") re += escape(pattern[++i] ?? "");
+    else re += escape(c);
+  }
+  return new RegExp(`^${re}$`);
+}
+
+// dorny/paths-filter matches with picomatch, whose globs Bun.Glob follows; on: filters use GitHub's rules.
+const patternMatches = (filter: Filter, pattern: string, file: string) =>
+  filter.label.startsWith("on.") ? githubPattern(pattern).test(file) : new Bun.Glob(pattern).match(file);
+
 // GitHub's path filter: patterns apply in order and the last one that matches decides.
 export function filterMatches(filter: Filter, file: string) {
   let hit = false;
   for (const p of filter.patterns) {
     const negated = p.startsWith("!");
-    if (new Bun.Glob(negated ? p.slice(1) : p).match(file)) hit = !negated;
+    if (patternMatches(filter, negated ? p.slice(1) : p, file)) hit = !negated;
   }
   return filter.ignore ? !hit : hit;
 }
@@ -85,8 +107,7 @@ function checkWorkflow(file: string, text: string, files: string[]): Problem[] {
     }
     // 7f63705da: a filter kept naming client/gt.config.json after the file was gone.
     for (const p of f.patterns.filter(p => !p.startsWith("!"))) {
-      const glob = new Bun.Glob(p);
-      if (!files.some(t => glob.match(t))) {
+      if (!files.some(t => patternMatches(f, p, t))) {
         add(lineOf(lines, new RegExp(escape(p)), f.line - 1), "filter-matches-no-file",
           `${f.label} pattern "${p}" matches no tracked file. Delete the line, or change it to where the file moved.`);
       }
