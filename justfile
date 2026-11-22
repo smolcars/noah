@@ -60,6 +60,11 @@ android-native-lint:
     cd apps/android && ktlint --relative "**/*.kt" "**/*.kts" "!**/build/**" "!**/generated/**"
     cd apps/android && detekt --input . --excludes "**/build/**,**/generated/**" --build-upon-default-config --all-rules --config Config/detekt/detekt.yml
 
+# Each shared fixture in apps/fixtures is loaded by both apps' tests or listed in apps/fixtures/one-platform.txt.
+native-fixture-twins:
+    bun test apps/tools/check-fixture-twins.test.mjs
+    bun apps/tools/check-fixture-twins.mjs
+
 # Server commands
 server:
     bacon

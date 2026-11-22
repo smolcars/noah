@@ -13,6 +13,9 @@ One JSON file per domain, consumed by Android JUnit and iOS XCTest:
 `input` and `expected` are domain-specific JSON values. Keep fixtures deterministic,
 platform independent and free of real wallet secrets.
 
+`just native-fixture-twins` (CI's Native lint) fails when no iOS or no Android test that
+pull requests run loads a fixture. `one-platform.txt` lists the exceptions, each with a reason.
+
 Android adds this directory to its test resources. `SharedFixtures.load("domain")`
 parses the envelope and returns named cases without depending on the working directory.
 
