@@ -766,3 +766,32 @@ async fn test_send_verification_unregistered_user() {
     // User not found returns 401 UNAUTHORIZED from the middleware
     assert_eq!(response.status(), StatusCode::UNAUTHORIZED);
 }
+
+#[tokio::test]
+async fn test_concurrent_stores_keep_each_code_with_its_email() {
+    let (_app, app_state, _guard) = setup_test_app().await;
+    let store = app_state.email_verification_store.clone();
+    let pubkey = TestUser::new().pubkey().to_string();
+
+    let writes = (0..64).map(|i| {
+        let (store, pubkey) = (store.clone(), pubkey.clone());
+        tokio::spawn(async move {
+            store
+                .store(&pubkey, &format!("{i}@example.com"), &format!("{i:06}"))
+                .await
+                .unwrap();
+        })
+    });
+    for write in writes.collect::<Vec<_>>() {
+        write.await.unwrap();
+    }
+
+    let code = store.get_code(&pubkey).await.unwrap().unwrap();
+    let email = store.get_email(&pubkey).await.unwrap().unwrap();
+    let i: u32 = code.parse().unwrap();
+    assert_eq!(
+        email,
+        format!("{i}@example.com"),
+        "code {code} is paired with another request's email"
+    );
+}

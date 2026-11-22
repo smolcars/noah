@@ -90,6 +90,7 @@ pub struct AppStruct {
     pub lnurl_domain: String,
     pub ark_server_pubkey: Arc<tokio::sync::RwLock<Option<String>>>,
     pub db_pool: PgPool,
+    pub redis: RedisClient,
     pub k1_cache: K1Store,
     pub invoice_store: InvoiceStore,
     pub email_verification_store: EmailVerificationStore,
@@ -221,7 +222,7 @@ async fn start_server(config: Config) -> anyhow::Result<()> {
     let k1_cache = K1Store::new(redis_client.clone(), K1_TTL_SECONDS);
     let invoice_store = InvoiceStore::new(redis_client.clone());
     let maintenance_store = MaintenanceStore::new(redis_client.clone());
-    let email_verification_store = EmailVerificationStore::new(redis_client);
+    let email_verification_store = EmailVerificationStore::new(redis_client.clone());
 
     tracing::info!("Initializing email client...");
     let email_client =
@@ -244,6 +245,7 @@ async fn start_server(config: Config) -> anyhow::Result<()> {
         lnurl_domain: config.lnurl_domain.clone(),
         ark_server_pubkey: Arc::new(tokio::sync::RwLock::new(None)),
         db_pool: db_pool.clone(),
+        redis: redis_client,
         k1_cache: k1_cache.clone(),
         invoice_store,
         email_verification_store,
