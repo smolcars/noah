@@ -3,7 +3,10 @@ use crate::types::*;
 use std::collections::BTreeSet;
 use syn::Item;
 
-const PROBED_METHODS: [&str; 5] = ["get", "post", "put", "delete", "patch"];
+/// Every method axum's `MethodRouter` can route.
+const PROBED_METHODS: [&str; 9] = [
+    "get", "head", "post", "put", "delete", "patch", "options", "trace", "connect",
+];
 
 /// The paths the production router serves. Axum has no route listing, but its
 /// Debug output names every path; an unreadable format yields no paths and fails below.
@@ -29,7 +32,11 @@ async fn send(
     path: &str,
     token: Option<&str>,
     peer: &mut u32,
-) -> (axum::http::StatusCode, Option<String>) {
+) -> (
+    axum::http::StatusCode,
+    Option<String>,
+    axum::http::HeaderMap,
+) {
     use axum::{body::Body, extract::ConnectInfo, http::Request};
     use http_body_util::BodyExt;
     use tower::ServiceExt;
@@ -50,11 +57,12 @@ async fn send(
         ))));
     let response = app.clone().oneshot(request).await.unwrap();
     let status = response.status();
+    let headers = response.headers().clone();
     let body = response.into_body().collect().await.unwrap().to_bytes();
     let code = serde_json::from_slice::<Value>(&body)
         .ok()
         .and_then(|body| body["code"].as_str().map(String::from));
-    (status, code)
+    (status, code, headers)
 }
 
 #[tokio::test]
@@ -103,9 +111,23 @@ async fn every_operation_is_served_behind_its_documented_gates() {
     for (path, item) in paths {
         for method in PROBED_METHODS {
             let Some(op) = item.get(method) else {
-                // Every method the document leaves out is refused, so no operation goes undocumented.
-                let (status, _) = send(&app, method, path, Some(&registered), &mut peer).await;
-                assert_eq!(status, StatusCode::METHOD_NOT_ALLOWED, "{method} {path}");
+                let (status, _, headers) =
+                    send(&app, method, path, Some(&registered), &mut peer).await;
+                if method == "head" && item.get("get").is_some() {
+                    // Axum serves HEAD from the GET handler with the body dropped; the document lists only GET.
+                    assert_ne!(status, StatusCode::METHOD_NOT_ALLOWED, "{method} {path}");
+                    assert_ne!(status, StatusCode::NOT_FOUND, "{method} {path}");
+                } else if method == "options" && path == "/.well-known/lnurlp/{username}" {
+                    // Browser wallets fetch LNURL cross-origin, so the CORS layer answers the preflight, not a handler.
+                    assert_eq!(status, StatusCode::OK, "{method} {path}");
+                    assert_eq!(
+                        headers["access-control-allow-methods"], "GET",
+                        "{method} {path}"
+                    );
+                } else {
+                    // Every other method the document leaves out is refused, so no operation goes undocumented.
+                    assert_eq!(status, StatusCode::METHOD_NOT_ALLOWED, "{method} {path}");
+                }
                 continue;
             };
             let operation = format!("{method} {path}");
@@ -115,7 +137,7 @@ async fn every_operation_is_served_behind_its_documented_gates() {
                 .unwrap_or_default()
                 .contains("a registered user (user-exists middleware)");
 
-            let (status, code) = send(&app, method, path, None, &mut peer).await;
+            let (status, code, _) = send(&app, method, path, None, &mut peer).await;
             assert_ne!(status, StatusCode::NOT_FOUND, "{operation} has no route");
             assert_ne!(
                 status,
@@ -125,6 +147,12 @@ async fn every_operation_is_served_behind_its_documented_gates() {
             if !bearer {
                 assert!(!needs_registration, "{operation}");
                 assert_ne!(status, StatusCode::UNAUTHORIZED, "{operation} is public");
+                // Without a body a public handler answers 2xx or rejects the input. A 5xx means
+                // something in front of it failed, such as a gate that expects an authenticated user.
+                assert!(
+                    status.is_success() || status.is_client_error(),
+                    "{operation} is public, got {status} {code:?}"
+                );
                 continue;
             }
             assert_eq!(op["security"], json!([{ "bearer": [] }]), "{operation}");
@@ -134,19 +162,24 @@ async fn every_operation_is_served_behind_its_documented_gates() {
                 "{operation} without a token"
             );
 
-            let (status, code) = send(&app, method, path, Some(&forged), &mut peer).await;
+            let (status, code, _) = send(&app, method, path, Some(&forged), &mut peer).await;
             assert_eq!(
                 (status, code.as_deref()),
                 (StatusCode::UNAUTHORIZED, Some("INVALID_TOKEN")),
                 "{operation} with a token the server did not sign"
             );
 
-            let (_, code) = send(&app, method, path, Some(&unregistered), &mut peer).await;
-            assert_eq!(
-                code.as_deref() == Some("USER_NOT_FOUND"),
-                needs_registration,
-                "{operation} with a valid token for a key that never registered"
-            );
+            let (status, code, _) = send(&app, method, path, Some(&unregistered), &mut peer).await;
+            let probe = format!("{operation} with a valid token for a key that never registered");
+            if needs_registration {
+                assert_eq!(
+                    (status, code.as_deref()),
+                    (StatusCode::UNAUTHORIZED, Some("USER_NOT_FOUND")),
+                    "{probe}"
+                );
+            } else {
+                assert_ne!(code.as_deref(), Some("USER_NOT_FOUND"), "{probe}");
+            }
         }
     }
 }
