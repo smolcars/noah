@@ -28,11 +28,12 @@
   "docs": [],
   "flake.lock": ["native-lint.yml"],
   "flake.nix": ["native-lint.yml"],
+  "formal": ["formal-mailbox-lease.yml"],
   "justfile": ["native-lint.yml", "native-generated.yml", "native-android.yml", "native-release-checks.yml"],
   "lefthook.yml": [],
   "package.json": ["native-generated.yml", "railway-checks.yml"],
   "rust-toolchain.toml": ["server.yml", "server-push.yml", "native-generated.yml"],
   "scripts": ["native-android.yml", "native-release-checks.yml"],
-  "server": ["server.yml", "server-push.yml", "native-generated.yml"],
+  "server": ["server.yml", "server-push.yml", "native-generated.yml", "formal-mailbox-lease.yml"],
   "start.md": []
 }
