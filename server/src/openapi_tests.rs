@@ -126,7 +126,7 @@ fn every_mounted_operation_and_auth_gate_matches() {
         .items
         .iter()
         .find_map(|item| match item {
-            Item::Fn(function) if function.sig.ident == "start_server" => Some(function),
+            Item::Fn(function) if function.sig.ident == "app_router" => Some(function),
             _ => None,
         })
         .unwrap();
@@ -144,7 +144,10 @@ fn every_mounted_operation_and_auth_gate_matches() {
             Some((name.ident.to_string(), *local.init.as_ref()?.expr.clone()))
         })
         .collect();
-    let routes = mounted_routes(&bindings["app"], &bindings, &source);
+    let Some(Stmt::Expr(app, None)) = start.block.stmts.last() else {
+        panic!("expected router expression")
+    };
+    let routes = mounted_routes(app, &bindings, &source);
 
     struct RouteCount(usize);
     impl<'ast> Visit<'ast> for RouteCount {
