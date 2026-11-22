@@ -1,0 +1,14 @@
+# Fixtures one app's pull-request tests do not load: <fixture> <app that lacks it> <reason>.
+# apps/tools/check-fixture-twins.mjs fails on a fixture missing here and on a line that is no longer true.
+app-intents-contract.txt android Frozen lines of the React Native app's iOS App Intents; Android has no App Intents.
+unifiedpush-connector.sql ios UnifiedPush is Android only.
+unifiedpush-connector.sql android Only the device test PushCompatibilityTest loads it, and pull requests do not run device tests.
+bitcoin-amount.json android Only the device test BitcoinAmountDeviceTest loads it, and pull requests do not run device tests.
+native-backups.json android Only the device test CrossPlatformBackupTest loads it, and pull requests do not run device tests.
+qr-hub.json android Only the device test AdaptiveLayoutDeviceTest loads it, and pull requests do not run device tests.
+app-version.json android No Android test loads it yet.
+home-rounds.json android No Android test loads it yet.
+push-gate.json android No Android test loads it yet.
+backup-crypto-unicode.json ios No iOS test loads it yet.
+restore-phrase.json ios No iOS test loads it yet.
+wallet-selection.json ios No iOS test has loaded it since #423 removed selectionTracksCurrentWalletRows from WalletScreenParityTests.swift.
