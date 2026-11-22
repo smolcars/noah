@@ -346,3 +346,19 @@ jobs:
 `;
   expect(rules({ ".github/workflows/ci.yml": text }, ["server/a.rs"])).toEqual(["gate-behind-workflow-paths@.github/workflows/ci.yml:3"]);
 });
+
+test("a paths-ignore filter's hints say to stop ignoring the file, not to add it", () => {
+  const text = `on:
+  push:
+    paths-ignore:
+      - ".github/**"
+      - "docs/**"
+`;
+  const messages = checkWorkflows({
+    workflows: { ".github/workflows/ci.yml": text }, files: ["docs/a.md"], triggers: `{ ".github": [], "docs": ["ci.yml"] }`,
+  }).map(p => `${p.rule}: ${p.message}`);
+  expect(messages).toEqual([
+    expect.stringMatching(/^filter-misses-own-workflow: .*Remove the pattern that matches it, or add - "!\.github\/workflows\/ci\.yml" after it\.$/),
+    expect.stringMatching(/^filter-misses-input: .*Remove the patterns that match "docs", or add - "!docs\/\*\*" after them\.$/),
+  ]);
+});

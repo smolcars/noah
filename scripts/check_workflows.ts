@@ -114,7 +114,8 @@ function checkWorkflow(file: string, text: string, files: string[]): Problem[] {
     if (!filterMatches(f, file)) {
       add(f.line, "filter-misses-own-workflow",
         `${f.label} does not match ${file}, so a change to this workflow does not run it. ` +
-        `Add - "${file}" to the list, and remove any "!" pattern that excludes it.`);
+        (f.ignore ? `Remove the pattern that matches it, or add - "!${file}" after it.`
+          : `Add - "${file}" to the list, and remove any "!" pattern that excludes it.`));
     }
     // 7f63705da: a filter kept naming client/gt.config.json after the file was gone.
     for (const p of f.patterns.filter(p => !p.startsWith("!"))) {
@@ -179,10 +180,12 @@ function checkTriggers(workflows: Record<string, string>, files: string[], table
       const dorny = filters.filter(f => !f.label.startsWith("on."));
       const missed = events.filter(f => !under.some(u => filterMatches(f, u)));
       if (dorny.length && !dorny.some(f => under.some(u => filterMatches(f, u)))) missed.push(...dorny);
+      const pattern = files.includes(top) ? top : `${top}/**`;
       for (const f of missed) {
         add(file, f.line, "filter-misses-input",
           `${f.label} matches nothing under "${top}", but ${TRIGGERS_FILE} says ${name} reads it, so a change there alone skips this workflow. ` +
-          `Add - "${files.includes(top) ? top : `${top}/**`}" (or a narrower pattern for the files it reads).`);
+          (f.ignore ? `Remove the patterns that match "${top}", or add - "!${pattern}" after them.`
+            : `Add - "${pattern}" (or a narrower pattern for the files it reads).`));
       }
     }
   }
