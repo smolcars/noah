@@ -401,7 +401,7 @@ CheckOnlyUnderLiveLease == ~staleCheck
 \* claim_is_active passes only if the lease was live at some moment between
 \* the session's Utc::now() and the SELECT. This restates the
 \* lease_expires_at > $5 test, so it fails only when that test is removed.
-CheckPassesOnlyIfLiveSinceSample == ~unguarded
+CheckTestsExpiry == ~unguarded
 
 \* A worker that has shut down holds no live lease.
 StoppedWorkerHoldsNoLease == \A w \in Workers : stopped[w] => ~(owner = w /\ live)

@@ -39,13 +39,13 @@ Files: `server/src/mailbox_worker.rs`, `server/src/db/mailbox_authorization_repo
 | --- | --- | --- | --- |
 | `OneSessionPerWorker` | A worker runs at most one session for a mailbox. | One worker streams the mailbox twice and pushes each payment twice. | Holds |
 | `NoClaimOfLiveLease` | `claim_runnable` never takes a lease that is still live, the claimer's own included. | A worker re-takes mailboxes it already streams; those rows use up the scan's `LIMIT` and only the `active_sessions` skip stops a second session. | Holds |
-| `CheckPassesOnlyIfLiveSinceSample` | `claim_is_active` passes only if the lease was live at some moment between the session's `Utc::now()` and the SELECT. | A worker keeps processing a lapsed lease for as long as no one else claims it. | Holds. It restates the `lease_expires_at > $5` test, so it fails only when that test is removed (`bug-no-expiry-guard.cfg`). |
+| `CheckTestsExpiry` | `claim_is_active` passes only through its `lease_expires_at > $5` test. | A worker keeps processing a lapsed lease for as long as no one else claims it. | Holds. This is the SQL test restated, so it fails only when that test is removed (`bug-no-expiry-guard.cfg`). It is a switch for that replay, not a safety guarantee. |
 | `StoppedWorkerHoldsNoLease` | A worker that has shut down holds no live lease. | After a deploy no worker can claim the mailbox until the lease runs out (120 s), so payments in that gap get no push. | Holds |
 | `CheckOnlyUnderLiveLease` | A worker decides to push only while its lease is live. | A worker whose lease lapsed pushes while another worker takes the mailbox over and pushes the same message. | **Fails** (finding 1) |
 | `AtMostOnePushPerCheckpoint` | Each checkpoint is pushed at most once. | The user gets the same payment notification twice. | **Fails** (finding 2) |
 | `CheckpointNeverMovesBack` | `last_checkpoint` never moves down. | Messages already handled are read again later. | **Fails** (finding 3) |
 
-So what master guarantees about the lease check is bounded staleness, not a live lease: a check can pass after the lease lapsed, but only if the lease was live when the session read the clock or became live since.
+So master guarantees nothing about the lease being live when a check passes. A check can pass after the lease lapsed (finding 1). It can also pass when the lease was not live at any moment since the session read the clock: `renew_active_sessions` computes the new expiry from its own earlier `Utc::now()`, so a `bulk_renew_claims` statement that runs late writes an expiry that is already past for everyone except a session whose clock read is older still. The model does not represent that late write. Its `Renew` makes the lease live at the moment it runs.
 
 Why `AtMostOnePushPerCheckpoint` is the duplicate-push rule: delivery is at least once by design, since a push followed by a failed `update_checkpoint` statement is replayed. The model has no SQL errors, so every duplicate it finds happens with every statement succeeding. A duplicate found here is one the lease was meant to prevent, not the designed replay.
 
@@ -56,7 +56,7 @@ Each `bug-*.cfg` turns one fault back on. `check.sh` requires each to fail on th
 | Config | Fault put back | Fails on |
 | --- | --- | --- |
 | `bug-86b883f05-self-reclaim.cfg` | `claim_runnable` also selects rows where `lease_owner = $3` | `NoClaimOfLiveLease` |
-| `bug-no-expiry-guard.cfg` | `claim_is_active` and `bulk_renew_claims` test `lease_owner` but not `lease_expires_at` | `CheckPassesOnlyIfLiveSinceSample` |
+| `bug-no-expiry-guard.cfg` | `claim_is_active` and `bulk_renew_claims` test `lease_owner` but not `lease_expires_at` | `CheckTestsExpiry` |
 | `bug-3ed2b04c8-no-shutdown-release.cfg` | SIGTERM kills the worker with its leases held | `StoppedWorkerHoldsNoLease` |
 
 What the replays show:
@@ -88,7 +88,7 @@ Finding 2, `AtMostOnePushPerCheckpoint` (`finding-duplicate-push.cfg`, 19 states
 7. W1 `claim_runnable` re-takes the lapsed row (its first session is still in `active_sessions`, so it spawns nothing); W1's SELECT passes.
 8. W1 and W2 both call `send_push_notification` for checkpoint 1.
 
-Step 7 needs W1's `renew_active_sessions` not to have run while W2 held the row, or to have errored (the error is only logged); a renewal then would cancel W1's session (inferred). The window also opens without the stale clock read: a check that passes just before the lease lapses leaves the push and `update_checkpoint` (which tests only `lease_owner`) to run after it, and the push can take up to 20 s (`SEND_DEADLINE` in `server/src/direct_push.rs`) (inferred; TLC's shortest trace takes the path above).
+Step 7 needs W1's `renew_active_sessions` not to have run while W2 held the row, or to have errored (the error is only logged); a renewal then would cancel W1's session (inferred). The window also opens without the stale clock read: a check that passes just before the lease lapses leaves the push and `update_checkpoint` (which tests only `lease_owner`) to run after it, and the push can take longer than the 20 s `SEND_DEADLINE` of one direct send (`server/src/direct_push.rs`), because `send_push_notification` also awaits the token lookup and any Expo or UnifiedPush send (inferred; TLC's shortest trace takes the path above).
 
 Finding 3, `CheckpointNeverMovesBack` (`finding-checkpoint-moves-back.cfg`, 24 states): a stale session rewinds the checkpoint.
 

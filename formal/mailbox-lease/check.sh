@@ -18,7 +18,7 @@ jar="$tools_dir/tla2tools-$TLA_VERSION.jar"
 expectations=(
   "MailboxLease.cfg=pass"
   "bug-86b883f05-self-reclaim.cfg=NoClaimOfLiveLease"
-  "bug-no-expiry-guard.cfg=CheckPassesOnlyIfLiveSinceSample"
+  "bug-no-expiry-guard.cfg=CheckTestsExpiry"
   "bug-3ed2b04c8-no-shutdown-release.cfg=StoppedWorkerHoldsNoLease"
   "finding-duplicate-push.cfg=AtMostOnePushPerCheckpoint"
   "finding-checkpoint-moves-back.cfg=CheckpointNeverMovesBack"
@@ -61,7 +61,7 @@ for path in "${covered[@]}"; do
     drift=1
   fi
 done
-while read -r blob path; do
+while read -r blob path || [[ -n "$blob" ]]; do
   [[ -z "$blob" || "$blob" == \#* ]] && continue
   actual="$(git -C "$repo_root" hash-object "$path")"
   if [[ "$actual" != "$blob" ]]; then
