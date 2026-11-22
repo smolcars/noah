@@ -1,0 +1,8 @@
+# Files MailboxLease.tla describes, with their git blob hashes (git hash-object).
+# Rewrite with: formal/mailbox-lease/check.sh --record
+# synced-at 137fe56c6840e91461985a9b936ecd2a528f8d3d
+d3d201d6fa434f0b82716ef67c0b84001d8fe88a server/src/mailbox_worker.rs
+6f50742922b462741a2813087614ba1d7aa454e2 server/src/db/mailbox_authorization_repo.rs
+45f644b4bdee6e3c1724349be571281c8fd7683a server/migrations/0010_add_mailbox_authorizations.sql
+cca2cb915d8c68d0db33f7551bba775f0a91112c server/migrations/0011_add_mailbox_worker_state.sql
+5e6a956b95b1cb28b37af50082238a354dcd6233 server/migrations/0012_add_mailbox_worker_leases.sql
