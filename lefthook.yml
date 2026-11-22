@@ -27,3 +27,6 @@ pre-commit:
       glob: "*.{kt,kts}"
       exclude: ["**/generated/**"]
       run: detekt --input "$(echo {staged_files} | tr ' ' ',')" --build-upon-default-config --all-rules --config Config/detekt/detekt.yml
+    - name: workflow-lint
+      glob: ".github/**"
+      run: just workflow-lint
