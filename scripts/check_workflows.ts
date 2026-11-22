@@ -72,9 +72,14 @@ function filtersOf(doc: any, lines: string[]): Filter[] {
     for (const step of job.steps ?? []) {
       if (!String(step.uses ?? "").startsWith("dorny/paths-filter") || typeof step.with?.filters !== "string") continue;
       const stepLine = lineOf(lines, /dorny\/paths-filter/) - 1;
-      for (const [name, value] of Object.entries<any>(Bun.YAML.parse(step.with.filters) ?? {})) {
+      const parsed = Bun.YAML.parse(step.with.filters);
+      // shortcut: a filters file path is skipped, not read; read it if a workflow ever uses one.
+      if (typeof parsed !== "object" || !parsed) continue;
+      for (const [name, value] of Object.entries<any>(parsed)) {
+        // An item may be a change-type object such as { "added|modified": "server/**" }.
+        const patterns = [value].flat().flatMap(v => typeof v === "object" && v ? Object.values(v).flat() : [v]);
         filters.push({
-          label: `dorny/paths-filter "${name}"`, patterns: [value].flat().map(String), ignore: false,
+          label: `dorny/paths-filter "${name}"`, patterns: patterns.map(String), ignore: false,
           line: lineOf(lines, new RegExp(`^\\s+${escape(name)}:\\s*$`), stepLine),
         });
       }

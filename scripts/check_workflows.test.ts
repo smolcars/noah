@@ -304,3 +304,28 @@ jobs:
     expect(check(workflow("${{ github.workflow }}", "github.ref_type == 'tag'"))).toEqual(["concurrency-group-without-ref@.github/workflows/t.yml:5"]);
   });
 });
+
+describe("dorny/paths-filter forms", () => {
+  const step = (filters: string) => `on:
+  pull_request:
+jobs:
+  changes:
+    steps:
+      - uses: dorny/paths-filter@v3
+        with:
+          filters: ${filters}
+`;
+  test("a filters file is skipped, not read as patterns", () => {
+    expect(rules({ ".github/workflows/ci.yml": step(".github/filters.yml") }, ["server/a.rs"])).toEqual([]);
+  });
+  test("change-type objects give their patterns", () => {
+    const text = step(`|
+            server:
+              - added|modified: 'server/**'
+              - '.github/workflows/ci.yml'
+            gone:
+              - deleted: 'client/**'
+              - '.github/workflows/ci.yml'`);
+    expect(rules({ ".github/workflows/ci.yml": text }, ["server/a.rs"])).toEqual(["filter-matches-no-file@.github/workflows/ci.yml:13"]);
+  });
+});
