@@ -105,7 +105,7 @@ async fn test_auth_login_reused_k1_is_rejected() {
 async fn test_auth_login_preserves_other_redis_keys() {
     let (app, app_state, _guard) = setup_test_app().await;
     let client = RedisClient::new(&app_state.config.redis_url).unwrap();
-    let mut conn = client.get_connection().await.unwrap();
+    let mut conn = client.raw_connection().await.unwrap();
     let timestamp = Utc::now().timestamp().to_string();
     let challenge_shaped_key = format!("{}_{}", "ab".repeat(32), timestamp);
     let entries = [
@@ -191,7 +191,7 @@ async fn test_k1_store_namespace_ttl_and_atomic_consumption() {
     let store = &app_state.k1_cache;
     let k1 = store.issue_k1().await.unwrap();
     let client = RedisClient::new(&app_state.config.redis_url).unwrap();
-    let mut conn = client.get_connection().await.unwrap();
+    let mut conn = client.raw_connection().await.unwrap();
 
     let raw_exists: bool = conn.exists(&k1).await.unwrap();
     assert!(!raw_exists);
