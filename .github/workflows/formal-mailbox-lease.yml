@@ -1,0 +1,82 @@
+name: Mailbox lease model
+
+on:
+  pull_request:
+  push:
+    branches: [master]
+
+jobs:
+  changes:
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    outputs:
+      lease_changed: ${{ steps.set_changed.outputs.lease_changed }}
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+
+      - name: 🔎 Detect changes to the model or the code it covers
+        id: filter
+        if: github.event_name == 'pull_request'
+        uses: dorny/paths-filter@0e4a8c6effa4802afeda77dc8d303f8176d7dfad # v3.0.4
+        with:
+          filters: |
+            lease:
+              - 'formal/mailbox-lease/**'
+              - 'server/src/mailbox_worker.rs'
+              - 'server/src/db/mailbox_authorization_repo.rs'
+              - 'server/migrations/0010_add_mailbox_authorizations.sql'
+              - 'server/migrations/0011_add_mailbox_worker_state.sql'
+              - 'server/migrations/0012_add_mailbox_worker_leases.sql'
+              - '.github/workflows/formal-mailbox-lease.yml'
+
+      - name: 🧭 Set change output
+        id: set_changed
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          FILTER_LEASE: ${{ steps.filter.outputs.lease }}
+        run: |
+          if [[ "$EVENT_NAME" == "pull_request" ]]; then
+            echo "lease_changed=${FILTER_LEASE}" >> "$GITHUB_OUTPUT"
+          else
+            echo "lease_changed=true" >> "$GITHUB_OUTPUT"
+          fi
+
+  model_check:
+    needs: changes
+    if: needs.changes.outputs.lease_changed == 'true'
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6.1.0
+      - name: ☕ Setup Java
+        uses: actions/setup-java@b6effb05e454b25005698d916606bdc6ffcbf961 # v5.7.0
+        with:
+          distribution: temurin
+          java-version: '17'
+      # Prints each known finding's counterexample; the step stays green while
+      # every configuration ends the way check.sh expects.
+      - name: 🧮 Model-check the mailbox lease
+        run: formal/mailbox-lease/check.sh
+
+  model_gate:
+    runs-on: blacksmith-4vcpu-ubuntu-2404
+    needs: [changes, model_check]
+    if: always()
+    steps:
+      - name: ✅ Gate
+        run: |
+          if [[ "${{ needs.changes.result }}" != "success" ]]; then
+            echo "Change detection failed"
+            exit 1
+          fi
+
+          if [[ "${{ needs.changes.outputs.lease_changed }}" != "true" ]]; then
+            echo "No mailbox lease changes; model check not required"
+            exit 0
+          fi
+
+          if [[ "${{ needs.model_check.result }}" == "success" ]]; then
+            echo "Mailbox lease model check passed"
+            exit 0
+          else
+            echo "Mailbox lease model check failed"
+            exit 1
+          fi

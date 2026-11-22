@@ -73,6 +73,10 @@ server-test:
 server-check:
     cargo check
 
+# Model-check the mailbox worker lease (formal/mailbox-lease); needs Java 17+
+formal-mailbox-lease:
+    formal/mailbox-lease/check.sh
+
 # Regenerate api/openapi.json after an intentional API change
 generate-api:
     UPDATE_OPENAPI=1 cargo test -p server --bin server openapi::export
