@@ -82,7 +82,8 @@ LeaseIsMine(w) == owner = w /\ (live \/ BugNoExpiryGuard)
 \* awaiting the query. Between two frees the row's expiry only grows (a
 \* claim needs it lapsed and writes a later one, renewal extends it), and
 \* lease_owner = w after a free needs a new claim. So the test passes iff
-\* lease_owner = w and the lease was live at some moment since the sample.
+\* lease_owner = w and the lease was live at some moment since the sample: the
+\* model's stand-in for lease_expires_at > $5 (see CheckTestsExpiry).
 CheckPasses(w, s) == owner = w /\ (s.seenLive \/ live \/ BugNoExpiryGuard)
 
 \* A step that makes the lease live marks every pending claim_is_active.
@@ -398,9 +399,10 @@ NoClaimOfLiveLease == ~claimedLive
 \* A worker decides to push only while its lease is live.
 CheckOnlyUnderLiveLease == ~staleCheck
 
-\* claim_is_active passes only if the lease was live at some moment between
-\* the session's Utc::now() and the SELECT. This restates the
-\* lease_expires_at > $5 test, so it fails only when that test is removed.
+\* In this model a check passes only if the lease was live at some moment since
+\* the session's Utc::now(). That stands in for the SQL's lease_expires_at > $5
+\* and is stronger than the code, where a late renewal can satisfy the SQL with
+\* no live lease in that span. It fails only when the test is removed.
 CheckTestsExpiry == ~unguarded
 
 \* A worker that has shut down holds no live lease.
