@@ -34,3 +34,7 @@ jobs:
           echo "$RUNNER_TEMP/bin" >> "$GITHUB_PATH"
       - name: actionlint
         run: actionlint
+      - name: Test the workflow checks
+        run: bun test scripts/check_workflows.test.ts
+      - name: Check path filters, conditions and concurrency groups
+        run: bun scripts/check_workflows.ts
