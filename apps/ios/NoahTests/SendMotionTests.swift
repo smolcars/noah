@@ -263,9 +263,10 @@ struct SendMotionTests {
             window.layoutIfNeeded()
             _ = confirm()
             try await Task.sleep(for: .milliseconds(20))
+            // The journal lands after prepare's hop off the main actor, so on a slow runner it can trail the sleep.
+            try await SendPaymentTests.waitUntil { controller.attempt != nil }
             #expect(controller.locked && controller.attempt?.payment == payment)
         }
-        try await SendPaymentTests.waitUntil { controller.attempt != nil }
         #expect(await gate.calls == 1)
         await gate.finish()
         try await SendPaymentTests.waitUntil { controller.state != .submitting }
