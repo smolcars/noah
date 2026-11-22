@@ -6,3 +6,8 @@ self-hosted-runner:
     - blacksmith-8vcpu-ubuntu-2404
     - blacksmith-6vcpu-macos-latest
     - blacksmith-6vcpu-macos-27
+paths:
+  .github/workflows/native-telegram-android.yml:
+    ignore:
+      # $TEST_LIBRARIES is unquoted on purpose: it is empty, or an init script and a task (see the step).
+      - 'SC2086:info:1:134:'

@@ -136,6 +136,7 @@
           pkgs = pkgsFor system;
           androidSdk = androidSdkFor system;
           basePackages = with pkgs; [
+            actionlint
             androidSdk
             bacon
             bun
