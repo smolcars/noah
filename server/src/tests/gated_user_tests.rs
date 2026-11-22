@@ -1622,3 +1622,40 @@ async fn test_register_push_token_stores_the_provider_and_replaces_it() {
         }
     }
 }
+
+#[tracing_test::traced_test]
+#[tokio::test]
+async fn test_support_ticket_reaches_the_ticket_desk() {
+    let (app, app_state, _guard) = setup_test_app().await;
+    let user = TestUser::new();
+    create_test_user(&app_state, &user, None).await;
+
+    let response = app
+        .oneshot(
+            Request::builder()
+                .method(http::Method::POST)
+                .uri("/v0/support/ticket")
+                .header(http::header::CONTENT_TYPE, "application/json")
+                .header(
+                    http::header::AUTHORIZATION,
+                    format!("Bearer {}", user.access_token(&app_state)),
+                )
+                .body(Body::from(
+                    serde_json::to_vec(&json!({
+                        "subject": "Help",
+                        "body": "My payment is stuck",
+                        "name": "Alice"
+                    }))
+                    .unwrap(),
+                ))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    // The tests configure no ticket desk, so the handler gets as far as asking for one.
+    assert_eq!(response.status(), StatusCode::INTERNAL_SERVER_ERROR);
+    let body = response.into_body().collect().await.unwrap().to_bytes();
+    let error: crate::types::ApiErrorResponse = serde_json::from_slice(&body).unwrap();
+    assert_eq!(error.message, "Support ticket submission is not configured");
+}

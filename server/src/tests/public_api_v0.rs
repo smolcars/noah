@@ -1265,3 +1265,16 @@ async fn test_lnurlp_device_invoice_must_come_from_the_payee_and_match_the_reque
         }
     }
 }
+
+#[tokio::test]
+async fn test_root_and_health_answer_their_own_status() {
+    let (app, _, _guard) = setup_test_app().await;
+    for (path, expected) in [("/", StatusCode::NO_CONTENT), ("/health", StatusCode::OK)] {
+        let response = app
+            .clone()
+            .oneshot(Request::builder().uri(path).body(Body::empty()).unwrap())
+            .await
+            .unwrap();
+        assert_eq!(response.status(), expected, "GET {path}");
+    }
+}
