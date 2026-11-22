@@ -72,7 +72,7 @@ async fn assert_limited(
     };
     tokio::time::timeout(Duration::from_secs(60), probe)
         .await
-        .unwrap_or_else(|_| panic!("{method} {path} did not use up its burst of {burst} in 60 s"));
+        .unwrap_or_else(|_| panic!("{method} {path}: the limiter probe timed out after 60 s"));
 }
 
 #[tokio::test]
