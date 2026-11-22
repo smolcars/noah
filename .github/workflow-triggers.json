@@ -21,7 +21,7 @@
   "README.md": [],
   "SECURITY.md": [],
   "api": ["server.yml", "native-generated.yml", "native-ios.yml", "native-android.yml"],
-  "apps": ["server.yml", "native-generated.yml", "native-ios.yml", "native-android.yml", "native-lint.yml", "native-telegram-ios.yml", "native-telegram-android.yml", "native-translations.yml"],
+  "apps": ["server.yml", "native-generated.yml", "native-ios.yml", "native-android.yml", "native-lint.yml", "native-telegram-ios.yml", "native-telegram-android.yml", "native-translations.yml", "native-release-checks.yml"],
   "bacon.toml": [],
   "bun.lock": ["native-generated.yml", "railway-checks.yml"],
   "docker": [],
