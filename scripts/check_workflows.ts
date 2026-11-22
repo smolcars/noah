@@ -126,7 +126,7 @@ function checkWorkflow(file: string, text: string, files: string[]): Problem[] {
   }
 
   // d2ef12862: a workflow skipped by its paths never ran its gate job, so the required check never reported.
-  const prPaths = filters.find(f => f.label.startsWith("on.pull_request."));
+  const prPaths = filters.find(f => /^on\.pull_request(_target)?\./.test(f.label));
   const gate = Object.entries<any>(doc.jobs ?? {}).find(([, j]) => String(j.if ?? "").includes("always()") && j.needs);
   if (prPaths && gate) {
     add(prPaths.line, "gate-behind-workflow-paths",

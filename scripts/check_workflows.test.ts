@@ -329,3 +329,20 @@ jobs:
     expect(rules({ ".github/workflows/ci.yml": text }, ["server/a.rs"])).toEqual(["filter-matches-no-file@.github/workflows/ci.yml:13"]);
   });
 });
+
+test("gate-behind-workflow-paths covers pull_request_target", () => {
+  const text = `on:
+  pull_request_target:
+    paths:
+      - "server/**"
+      - ".github/workflows/ci.yml"
+jobs:
+  test:
+    runs-on: ubuntu-latest
+  gate:
+    needs: test
+    if: always()
+    runs-on: ubuntu-latest
+`;
+  expect(rules({ ".github/workflows/ci.yml": text }, ["server/a.rs"])).toEqual(["gate-behind-workflow-paths@.github/workflows/ci.yml:3"]);
+});
