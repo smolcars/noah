@@ -46,6 +46,11 @@ android-native-install variant="Regtest":
 android-native-test:
     cd apps/android && ./gradlew :app:testRegtestDebugUnitTest
 
+# GitHub workflows: actionlint, then the checks for path filters, conditions and concurrency groups.
+workflow-lint:
+    actionlint
+    bun scripts/check_workflows.ts
+
 # Native lint and format (apps/ios, apps/android). Tools come from the Nix shell; the pre-commit hook runs the same checks.
 native-lint: ios-native-lint android-native-lint
 

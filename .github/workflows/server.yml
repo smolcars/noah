@@ -24,6 +24,9 @@ jobs:
               - 'Cargo.lock'
               - 'rust-toolchain.toml'
               - 'Dockerfile'
+              # cargo test compares these with what the server generates (server/src/openapi.rs).
+              - 'api/openapi.json'
+              - 'apps/fixtures/server-notification-data.json'
               - '.github/workflows/server.yml'
 
       - name: 🧭 Set server change output
