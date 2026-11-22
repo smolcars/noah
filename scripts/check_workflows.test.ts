@@ -261,3 +261,21 @@ describe("GitHub path patterns", () => {
     expect(rules({ [own]: correct }, ["scripts/a.ts"])).toEqual([]);
   });
 });
+
+describe("event-name-workflow-call reads conditions, not lines", () => {
+  test("a comment does not fire it; a folded if: does", () => {
+    const text = `on:
+  workflow_call:
+jobs:
+  build:
+    # Never test github.event_name == 'workflow_call': a called workflow sees its caller's event.
+    runs-on: ubuntu-latest
+    steps:
+      - if: >-
+          github.event_name ==
+          'workflow_call'
+        run: echo sign
+`;
+    expect(rules({ ".github/workflows/ci.yml": text })).toEqual(["event-name-workflow-call@.github/workflows/ci.yml:10"]);
+  });
+});

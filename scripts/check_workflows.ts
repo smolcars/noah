@@ -89,13 +89,18 @@ function checkWorkflow(file: string, text: string, files: string[]): Problem[] {
   const add = (line: number, rule: string, message: string) => problems.push({ file, line, rule, message });
 
   // 0eb5a07c7: release signing steps tested this, were always skipped, and the build still passed.
-  lines.forEach((l, i) => {
-    if (/github\.event_name\s*[!=]=\s*['"]workflow_call['"]|['"]workflow_call['"]\s*[!=]=\s*github\.event_name/.test(l)) {
-      add(i + 1, "event-name-workflow-call",
+  // Parsed conditions, so a comment does not fire it and a folded if: spread over lines does.
+  const jobsLine = lineOf(lines, /^jobs:/);
+  for (const [name, job] of Object.entries<any>(doc.jobs ?? {})) {
+    let from = lineOf(lines, new RegExp(`^\\s+${escape(name)}:`), jobsLine) - 1;
+    for (const condition of [job.if, ...(job.steps ?? []).map((s: any) => s.if)]) {
+      if (!/github\.event_name\s*[!=]=\s*['"]workflow_call['"]|['"]workflow_call['"]\s*[!=]=\s*github\.event_name/.test(String(condition ?? ""))) continue;
+      from = lineOf(lines, /^[^#]*workflow_call/, from);
+      add(from, "event-name-workflow-call",
         "github.event_name is never 'workflow_call': a called workflow sees its caller's event. " +
         "Test the event you mean instead, e.g. replace github.event_name == 'workflow_call' with github.event_name != 'pull_request'.");
     }
-  });
+  }
 
   const filters = filtersOf(doc, lines);
   for (const f of filters) {
