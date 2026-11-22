@@ -279,3 +279,28 @@ jobs:
     expect(rules({ ".github/workflows/ci.yml": text })).toEqual(["event-name-workflow-call@.github/workflows/ci.yml:10"]);
   });
 });
+
+describe("concurrency-group-without-ref", () => {
+  const workflow = (group: string, condition = "github.ref == 'refs/heads/master'") => `on:
+  push:
+  workflow_dispatch:
+concurrency:
+  group: ${group}
+jobs:
+  translate:
+    if: ${condition}
+    runs-on: ubuntu-latest
+`;
+  const check = (text: string) => rules({ ".github/workflows/t.yml": text });
+  test("head_ref alone is empty outside pull requests, so it needs a fallback", () => {
+    expect(check(workflow("${{ github.workflow }}-${{ github.head_ref }}"))).toEqual(["concurrency-group-without-ref@.github/workflows/t.yml:5"]);
+    expect(check(workflow("${{ github.workflow }}-${{ github.head_ref || github.ref }}"))).toEqual([]);
+  });
+  test("ref_name is per ref", () => {
+    expect(check(workflow("${{ github.workflow }}-${{ github.ref_name }}"))).toEqual([]);
+  });
+  test("a job that tests ref_name or ref_type has the same bug", () => {
+    expect(check(workflow("${{ github.workflow }}", "github.ref_name == 'master'"))).toEqual(["concurrency-group-without-ref@.github/workflows/t.yml:5"]);
+    expect(check(workflow("${{ github.workflow }}", "github.ref_type == 'tag'"))).toEqual(["concurrency-group-without-ref@.github/workflows/t.yml:5"]);
+  });
+});

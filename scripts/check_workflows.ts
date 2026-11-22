@@ -10,7 +10,8 @@ export type Triggers = Record<string, string[]>;
 
 export const TRIGGERS_FILE = ".github/workflow-triggers.json";
 const FILTERED_EVENTS = ["pull_request", "pull_request_target", "push"];
-const PER_REF = /github\.(ref|head_ref|run_id)\b|pull_request\.number/;
+// No head_ref: it is empty outside pull requests, so it is per ref only with a fallback such as `|| github.ref`.
+const PER_REF = /github\.(ref|ref_name|run_id)\b|pull_request\.number/;
 
 type Filter = { label: string; patterns: string[]; ignore: boolean; line: number };
 
@@ -130,7 +131,7 @@ function checkWorkflow(file: string, text: string, files: string[]): Problem[] {
 
   // 4a1c032f3 (squashed into 3a4dea331): a dispatch on another branch replaced master's pending run, then skipped its job.
   const group = String(doc.concurrency?.group ?? doc.concurrency ?? "");
-  const refJob = Object.entries<any>(doc.jobs ?? {}).find(([, j]) => /github\.ref\b/.test(String(j.if ?? "")));
+  const refJob = Object.entries<any>(doc.jobs ?? {}).find(([, j]) => /github\.ref(_name|_type)?\b/.test(String(j.if ?? "")));
   if (group && !PER_REF.test(group) && refJob) {
     const at = lineOf(lines, /^concurrency:/);
     add(typeof doc.concurrency === "string" ? at : lineOf(lines, /^\s+group:/, at), "concurrency-group-without-ref",
