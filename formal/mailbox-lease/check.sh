@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 # Checks the mailbox lease model: the covered code still matches coverage.txt,
 # MailboxLease.cfg passes, and every bug-* and finding-* config fails on the
-# invariant its expectation names. Any other outcome, or drift, exits non-zero.
+# invariant its expectation names. TLC's exit status must agree with its log
+# (0 for a pass, 12 for a safety violation), so a crashed or killed run fails.
+# Any other outcome, or drift, exits non-zero.
 set -euo pipefail
 
 cd "$(dirname "${BASH_SOURCE[0]}")"
@@ -21,6 +23,9 @@ expectations=(
   "finding-duplicate-push.cfg=AtMostOnePushPerCheckpoint"
   "finding-checkpoint-moves-back.cfg=CheckpointNeverMovesBack"
 )
+# TLC exit statuses, from tlc2.output.EC$ExitStatus in the pinned jar.
+TLC_SUCCESS=0
+TLC_VIOLATION_SAFETY=12
 
 sha256() {
   if command -v sha256sum >/dev/null; then sha256sum "$1" | cut -d' ' -f1; else shasum -a 256 "$1" | cut -d' ' -f1; fi
@@ -49,6 +54,12 @@ if [[ "${1:-}" == "--record" ]]; then
 fi
 
 drift=0
+for path in "${covered[@]}"; do
+  if [[ -z "$(awk -v p="$path" '$2 == p' coverage.txt)" ]]; then
+    echo "DRIFT: $path is not recorded in coverage.txt, so nothing checks it."
+    drift=1
+  fi
+done
 while read -r blob path; do
   [[ -z "$blob" || "$blob" == \#* ]] && continue
   actual="$(git -C "$repo_root" hash-object "$path")"
@@ -78,25 +89,26 @@ for entry in "${expectations[@]}"; do
   expected="${entry#*=}"
   log="$out_dir/$cfg.out"
   start=$SECONDS
+  status=0
   java -XX:+UseParallelGC -cp "$jar" tlc2.TLC -workers auto \
-    -metadir "$out_dir/states-$cfg" -config "$cfg" MailboxLease.tla >"$log" 2>&1 || true
+    -metadir "$out_dir/states-$cfg" -config "$cfg" MailboxLease.tla >"$log" 2>&1 || status=$?
   took=$((SECONDS - start))
   counts="$(grep -E 'distinct states found' "$log" | tail -1 || true)"
   violated="$(sed -nE 's/^Error: Invariant ([A-Za-z]+) is violated\.$/\1/p' "$log" | head -1)"
 
   if [[ "$expected" == "pass" ]]; then
-    if grep -q "No error has been found" "$log"; then
+    if [[ "$status" == "$TLC_SUCCESS" ]] && grep -q "No error has been found" "$log"; then
       echo "PASS  $cfg: no invariant violated. $counts (${took}s)"
     else
-      echo "FAIL  $cfg: expected no violation, got ${violated:-a TLC error}."
+      echo "FAIL  $cfg: expected no violation, got ${violated:-a TLC error} (exit $status)."
       cat "$log"
       failed=1
     fi
-  elif [[ "$violated" == "$expected" ]]; then
+  elif [[ "$status" == "$TLC_VIOLATION_SAFETY" && "$violated" == "$expected" ]]; then
     echo "PASS  $cfg: $expected is violated, as expected. $counts (${took}s)"
     [[ "$cfg" == finding-* ]] && findings+=("$cfg")
   else
-    echo "FAIL  $cfg: expected $expected to be violated, got ${violated:-no violation}."
+    echo "FAIL  $cfg: expected $expected to be violated, got ${violated:-no violation} (exit $status)."
     cat "$log"
     failed=1
   fi
