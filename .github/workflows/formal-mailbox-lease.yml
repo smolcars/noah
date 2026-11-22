@@ -5,9 +5,15 @@ on:
   push:
     branches: [master]
 
+permissions:
+  contents: read
+
 jobs:
   changes:
     runs-on: blacksmith-4vcpu-ubuntu-2404
+    permissions:
+      contents: read
+      pull-requests: read # dorny/paths-filter lists the PR's changed files
     outputs:
       lease_changed: ${{ steps.set_changed.outputs.lease_changed }}
     steps:
