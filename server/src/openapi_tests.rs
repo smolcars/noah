@@ -695,6 +695,11 @@ async fn no_gated_operation_acts_on_an_object_another_user_holds() {
         {"schedule_id": "b-schedule", "next_run_at": hour},
         {"schedule_id": "b-other", "next_run_at": hour},
     ]);
+    // B's answer to the payer, so a submission that overwrites by transaction ID alone shows.
+    let invoice_b = json!({
+        "transaction_id": "b-transaction",
+        "invoice": test_invoice(bitcoin::Network::Regtest, 1_000_000, 8),
+    });
     for (path, body) in [
         (
             "/v0/backup/complete_upload",
@@ -704,6 +709,7 @@ async fn no_gated_operation_acts_on_an_object_another_user_holds() {
             "/v0/recurring_payments/sync",
             json!({"schedules": schedules}),
         ),
+        ("/v0/lnurlp/submit_invoice", invoice_b.clone()),
     ] {
         let (status, _, _) =
             exchange(&app, "post", path, Some(&token_b), Some(&body), &mut peer).await;
@@ -736,7 +742,7 @@ async fn no_gated_operation_acts_on_an_object_another_user_holds() {
         "backup_size": 2048,
         "backup_id": backup_id,
         "notification_id": notification_id,
-        // The ID the LNURL callback pushed to B; B's answer is read back under B's key.
+        // The ID the LNURL callback pushed to B, answered with an invoice other than B's.
         "transaction_id": "b-transaction",
         "invoice": test_invoice(bitcoin::Network::Regtest, 1_000_000, 7),
         // Another due time for B's ID, so an update that ignores the owner moves B's schedule.
@@ -803,6 +809,20 @@ async fn no_gated_operation_acts_on_an_object_another_user_holds() {
                 }),
         );
     for (operation, fields, may_succeed, token, caller) in probes {
+        // B's invoice expires after 60 seconds, so B answers again before each probe.
+        let (status, _, _) = exchange(
+            &app,
+            "post",
+            "/v0/lnurlp/submit_invoice",
+            Some(&token_b),
+            Some(&invoice_b),
+            &mut peer,
+        )
+        .await;
+        assert!(
+            status.is_success(),
+            "user B answers its invoice request: {status}"
+        );
         let (method, path) = operation.split_once(' ').unwrap();
         let request = |values: &serde_json::Map<String, Value>| {
             let body = fields
