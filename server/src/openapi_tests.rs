@@ -580,6 +580,18 @@ async fn holdings(
     )
 }
 
+/// Requests the probe of all of an operation's fields cannot make: an optional selector left
+/// out, or a field another field's check would answer first. `false` sends them with a valid
+/// token for a key that never registered.
+const PARTIAL_PROBES: [(&str, &[&str], bool); 3] = [
+    // Without a selector the download routes pick the caller's latest backup, and A holds none.
+    ("post /v0/backup/download_url", &[], true),
+    ("post /v0/backup/v2/download", &[], true),
+    // Only a caller without a profile reaches the path that creates one, and with B's Ark
+    // address beside it the Ark address conflict answers first.
+    ("post /v0/register", &["ln_address"], false),
+];
+
 /// Operations whose answer may tell A that B's object exists, and why that is by design.
 const DISTINGUISHABLE: [(&str, &str); 2] = [
     (
@@ -772,7 +784,25 @@ async fn no_gated_operation_acts_on_an_object_another_user_holds() {
     assert!(failures.is_empty(), "{}", failures.join("\n"));
 
     let token_a = a.access_token(&state);
-    for (operation, fields, may_succeed) in OBJECT_FIELDS {
+    let token_unregistered = TestUser::new_with_key(&[0x33; 32]).access_token(&state);
+    let probes = OBJECT_FIELDS
+        .iter()
+        .map(|&(operation, fields, may_succeed)| {
+            (operation, fields, may_succeed, &token_a, "user A")
+        })
+        .chain(
+            PARTIAL_PROBES
+                .iter()
+                .map(|&(operation, fields, registered)| {
+                    let (token, caller) = if registered {
+                        (&token_a, "user A")
+                    } else {
+                        (&token_unregistered, "a never-registered user")
+                    };
+                    (operation, fields, false, token, caller)
+                }),
+        );
+    for (operation, fields, may_succeed, token, caller) in probes {
         let (method, path) = operation.split_once(' ').unwrap();
         let request = |values: &serde_json::Map<String, Value>| {
             let body = fields
@@ -794,7 +824,7 @@ async fn no_gated_operation_acts_on_an_object_another_user_holds() {
             &app,
             method,
             path,
-            Some(&token_a),
+            Some(token),
             Some(&request(named)),
             &mut peer,
         )
@@ -802,7 +832,7 @@ async fn no_gated_operation_acts_on_an_object_another_user_holds() {
         let text = String::from_utf8_lossy(&response);
         assert!(
             may_succeed || !status.is_success(),
-            "{operation} with user B's identifiers and user A's token succeeded: {status} {text}"
+            "{operation} with user B's identifiers and {caller}'s token succeeded: {status} {text}"
         );
         assert!(
             !status.is_server_error(),
@@ -810,12 +840,12 @@ async fn no_gated_operation_acts_on_an_object_another_user_holds() {
         );
         assert!(
             !text.contains(&pubkey_b),
-            "{operation} with user B's identifiers revealed B's object to user A: {text}"
+            "{operation} with user B's identifiers revealed B's object to {caller}: {text}"
         );
         assert_eq!(
             holdings(&state, &pubkey_b, named).await,
             before,
-            "{operation} with user B's identifiers and user A's token changed what B holds"
+            "{operation} with user B's identifiers and {caller}'s token changed what B holds"
         );
 
         // The server must not tell A whether B's object exists: any difference from naming an
@@ -827,7 +857,7 @@ async fn no_gated_operation_acts_on_an_object_another_user_holds() {
             &app,
             method,
             path,
-            Some(&token_a),
+            Some(token),
             Some(&request(&nobody)),
             &mut peer,
         )
@@ -835,7 +865,7 @@ async fn no_gated_operation_acts_on_an_object_another_user_holds() {
         assert_eq!(
             answer(operation, (status, headers, response)),
             answer(operation, unheld),
-            "{operation} answers user A differently when it names user B's object than when it \
+            "{operation} answers {caller} differently when it names user B's object than when it \
              names one nobody holds"
         );
     }
