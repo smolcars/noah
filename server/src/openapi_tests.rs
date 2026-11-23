@@ -580,6 +580,53 @@ async fn holdings(
     )
 }
 
+/// Operations whose answer may tell A that B's object exists, and why that is by design.
+const DISTINGUISHABLE: [(&str, &str); 2] = [
+    (
+        "post /v0/register",
+        "Ark and Lightning addresses are unique, so taking one that is taken must say so",
+    ),
+    (
+        "post /v0/update_lightning_identity",
+        "a Lightning name is unique, so taking one that is taken must say so",
+    ),
+];
+
+/// Response fields built from the request's own values for the caller's own object, so they
+/// differ with the value named whoever holds it.
+const DERIVED_RESPONSE_FIELDS: [(&str, &[&str]); 1] = [(
+    "post /v0/backup/upload_url",
+    // A's own key for the version named, and a URL signed for it.
+    &["s3_key", "upload_url"],
+)];
+
+/// What a response tells its caller, without what differs by design: the time it was sent and
+/// the fields in DERIVED_RESPONSE_FIELDS.
+fn answer(
+    operation: &str,
+    (status, headers, body): (
+        axum::http::StatusCode,
+        axum::http::HeaderMap,
+        axum::body::Bytes,
+    ),
+) -> (axum::http::StatusCode, Vec<String>, Value) {
+    let headers = headers
+        .iter()
+        .filter(|(name, _)| !["date", "content-length"].contains(&name.as_str()))
+        .map(|(name, value)| format!("{name}: {value:?}"))
+        .collect();
+    let mut body = serde_json::from_slice(&body)
+        .unwrap_or_else(|_| Value::String(String::from_utf8_lossy(&body).into_owned()));
+    for (op, fields) in DERIVED_RESPONSE_FIELDS {
+        if op == operation {
+            for field in fields {
+                body.as_object_mut().unwrap().remove(*field);
+            }
+        }
+    }
+    (status, headers, body)
+}
+
 /// The authorization class: a gated request that names another user's object must not act on it.
 /// User B holds one of every object a gated request can name; user A names each with A's token.
 #[tokio::test]
@@ -694,6 +741,32 @@ async fn no_gated_operation_acts_on_an_object_another_user_holds() {
     });
     let named = named.as_object().unwrap();
     let before = holdings(&state, &pubkey_b, named).await;
+    // The same request naming objects nobody holds; fields that name no object keep B's values.
+    let mut nobody = named.clone();
+    let pubkey_nobody = TestUser::new_with_key(&[0x3f; 32]).pubkey().to_string();
+    for (field, value) in [
+        ("s3_key", json!(format!("{pubkey_nobody}/backup_v2.db"))),
+        ("backup_version", json!(2)),
+        ("backup_id", json!("00000000-0000-4000-8000-000000000000")),
+        (
+            "notification_id",
+            json!("00000000-0000-4000-8000-000000000001"),
+        ),
+        ("transaction_id", json!("nobody-transaction")),
+        (
+            "schedules",
+            json!([{"schedule_id": "nobody-schedule", "next_run_at": hour + 3600}]),
+        ),
+        (
+            "ark_address",
+            json!("tark1qnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn"),
+        ),
+        ("ln_address", json!("nobody@localhost")),
+        ("notification_k1", json!("nobody-k1")),
+        ("username", json!("nobody")),
+    ] {
+        assert!(nobody.insert(field.to_string(), value).is_some());
+    }
 
     let failures = classification_failures(&document());
     assert!(failures.is_empty(), "{}", failures.join("\n"));
@@ -701,45 +774,69 @@ async fn no_gated_operation_acts_on_an_object_another_user_holds() {
     let token_a = a.access_token(&state);
     for (operation, fields, may_succeed) in OBJECT_FIELDS {
         let (method, path) = operation.split_once(' ').unwrap();
-        let body = fields
-            .iter()
-            // A nested field travels inside its top-level one.
-            .filter(|field| !field.contains(['.', '[']))
-            .map(|field| {
-                let value = named.get(*field);
-                assert!(
-                    value.is_some(),
-                    "user B holds nothing for {operation} to name in `{field}`"
-                );
-                (field.to_string(), value.unwrap().clone())
-            })
-            .collect::<serde_json::Map<_, _>>();
-        let (status, _, response) = exchange(
+        let request = |values: &serde_json::Map<String, Value>| {
+            let body = fields
+                .iter()
+                // A nested field travels inside its top-level one.
+                .filter(|field| !field.contains(['.', '[']))
+                .map(|field| {
+                    let value = values.get(*field);
+                    assert!(
+                        value.is_some(),
+                        "user B holds nothing for {operation} to name in `{field}`"
+                    );
+                    (field.to_string(), value.unwrap().clone())
+                })
+                .collect();
+            Value::Object(body)
+        };
+        let (status, headers, response) = exchange(
             &app,
             method,
             path,
             Some(&token_a),
-            Some(&Value::Object(body)),
+            Some(&request(named)),
             &mut peer,
         )
         .await;
-        let response = String::from_utf8_lossy(&response);
+        let text = String::from_utf8_lossy(&response);
         assert!(
             may_succeed || !status.is_success(),
-            "{operation} with user B's identifiers and user A's token succeeded: {status} {response}"
+            "{operation} with user B's identifiers and user A's token succeeded: {status} {text}"
         );
         assert!(
             !status.is_server_error(),
-            "{operation} with user B's identifiers failed inside the server: {status} {response}"
+            "{operation} with user B's identifiers failed inside the server: {status} {text}"
         );
         assert!(
-            !response.contains(&pubkey_b),
-            "{operation} with user B's identifiers revealed B's object to user A: {response}"
+            !text.contains(&pubkey_b),
+            "{operation} with user B's identifiers revealed B's object to user A: {text}"
         );
         assert_eq!(
             holdings(&state, &pubkey_b, named).await,
             before,
             "{operation} with user B's identifiers and user A's token changed what B holds"
+        );
+
+        // The server must not tell A whether B's object exists: any difference from naming an
+        // object nobody holds, in status, body or headers, is something A learns about B.
+        if DISTINGUISHABLE.iter().any(|(op, _)| *op == operation) {
+            continue;
+        }
+        let unheld = exchange(
+            &app,
+            method,
+            path,
+            Some(&token_a),
+            Some(&request(&nobody)),
+            &mut peer,
+        )
+        .await;
+        assert_eq!(
+            answer(operation, (status, headers, response)),
+            answer(operation, unheld),
+            "{operation} answers user A differently when it names user B's object than when it \
+             names one nobody holds"
         );
     }
 }
