@@ -1,6 +1,6 @@
 use super::*;
 use crate::types::*;
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 use syn::Item;
 
 /// Every method axum's `MethodRouter` can route.
@@ -25,7 +25,6 @@ fn served_paths(app: &axum::Router) -> BTreeSet<String> {
     paths
 }
 
-/// Sends one request from its own peer address, so this audit never reaches a quota.
 async fn send(
     app: &axum::Router,
     method: &str,
@@ -36,6 +35,26 @@ async fn send(
     axum::http::StatusCode,
     Option<String>,
     axum::http::HeaderMap,
+) {
+    let (status, headers, body) = exchange(app, method, path, token, None, peer).await;
+    let code = serde_json::from_slice::<Value>(&body)
+        .ok()
+        .and_then(|body| body["code"].as_str().map(String::from));
+    (status, code, headers)
+}
+
+/// Sends one request from its own peer address, so this audit never reaches a quota.
+async fn exchange(
+    app: &axum::Router,
+    method: &str,
+    path: &str,
+    token: Option<&str>,
+    json: Option<&Value>,
+    peer: &mut u32,
+) -> (
+    axum::http::StatusCode,
+    axum::http::HeaderMap,
+    axum::body::Bytes,
 ) {
     use axum::{body::Body, extract::ConnectInfo, http::Request};
     use http_body_util::BodyExt;
@@ -48,7 +67,13 @@ async fn send(
     if let Some(token) = token {
         request = request.header("authorization", format!("Bearer {token}"));
     }
-    let mut request = request.body(Body::empty()).unwrap();
+    let mut request = match json {
+        Some(json) => request
+            .header("content-type", "application/json")
+            .body(Body::from(json.to_string())),
+        None => request.body(Body::empty()),
+    }
+    .unwrap();
     request
         .extensions_mut()
         .insert(ConnectInfo(std::net::SocketAddr::from((
@@ -59,10 +84,7 @@ async fn send(
     let status = response.status();
     let headers = response.headers().clone();
     let body = response.into_body().collect().await.unwrap().to_bytes();
-    let code = serde_json::from_slice::<Value>(&body)
-        .ok()
-        .and_then(|body| body["code"].as_str().map(String::from));
-    (status, code, headers)
+    (status, headers, body)
 }
 
 #[tokio::test]
@@ -181,6 +203,976 @@ async fn every_operation_is_served_behind_its_documented_gates() {
                 assert_ne!(code.as_deref(), Some("USER_NOT_FOUND"), "{probe}");
             }
         }
+    }
+}
+
+/// Gated operations whose request names a stored object (an ID, key or name another user can
+/// hold), with all their request fields. `true` marks one that may still succeed when it names
+/// another user's object, because it then acts only on the caller's own.
+const OBJECT_FIELDS: [(&str, &[&str], bool); 14] = [
+    (
+        "post /v0/backup/complete_upload",
+        &["backup_size", "backup_version", "s3_key"],
+        false,
+    ),
+    ("post /v0/backup/delete", &["backup_version"], false),
+    ("post /v0/backup/download_url", &["backup_version"], false),
+    ("post /v0/backup/upload_url", &["backup_version"], true),
+    ("post /v0/backup/v2/complete", &["backup_id"], false),
+    ("post /v0/backup/v2/delete", &["backup_id"], false),
+    ("post /v0/backup/v2/download", &["backup_id"], false),
+    ("post /v0/heartbeat_response", &["notification_id"], false),
+    // The mailbox worker opens the mailbox this names, so it must match the signed grant.
+    (
+        "post /v0/mailbox/authorize",
+        &["encoded", "expiry", "mailbox_id"],
+        false,
+    ),
+    (
+        "post /v0/lnurlp/submit_invoice",
+        &["invoice", "transaction_id"],
+        true,
+    ),
+    (
+        "post /v0/recurring_payments/sync",
+        &[
+            "schedules",
+            "schedules[].next_run_at",
+            "schedules[].schedule_id",
+        ],
+        true,
+    ),
+    (
+        "post /v0/register",
+        &[
+            "ark_address",
+            "device_info",
+            "device_info.app_build",
+            "device_info.app_version",
+            "device_info.device_manufacturer",
+            "device_info.device_model",
+            "device_info.os_name",
+            "device_info.os_version",
+            "ln_address",
+        ],
+        false,
+    ),
+    (
+        "post /v0/report_job_status",
+        &["error_message", "notification_k1", "report_type", "status"],
+        false,
+    ),
+    (
+        "post /v0/update_lightning_identity",
+        &["nostr_pubkey", "username"],
+        false,
+    ),
+];
+
+/// Gated operations whose request fields were reviewed as naming nothing another user owns.
+const CALLER_ONLY_FIELDS: [(&str, &[&str]); 16] = [
+    ("post /v0/backup/list", &[]),
+    ("post /v0/backup/settings", &["backup_enabled"]),
+    ("post /v0/backup/v2/list", &[]),
+    (
+        "post /v0/backup/v2/upload",
+        &["encrypted_sha256", "encrypted_size", "format_version"],
+    ),
+    ("post /v0/deregister", &[]),
+    ("post /v0/email/send_verification", &["email"]),
+    ("post /v0/email/verify", &["code"]),
+    ("post /v0/historical-price", &["currency", "timestamp"]),
+    ("post /v0/ln_address_suggestions", &["query"]),
+    ("post /v0/mailbox/revoke", &[]),
+    ("post /v0/prices", &[]),
+    (
+        "post /v0/register_push_token",
+        &["apns_sandbox", "provider", "push_token"],
+    ),
+    (
+        "post /v0/report_last_login",
+        &[
+            "device_info",
+            "device_info.app_build",
+            "device_info.app_version",
+            "device_info.device_manufacturer",
+            "device_info.device_model",
+            "device_info.os_name",
+            "device_info.os_version",
+        ],
+    ),
+    (
+        "post /v0/support/ticket",
+        &[
+            "attachment",
+            "attachment.base64_data",
+            "attachment.content_type",
+            "attachment.filename",
+            "body",
+            "device_info",
+            "device_info.app_build",
+            "device_info.app_version",
+            "device_info.device_manufacturer",
+            "device_info.device_model",
+            "device_info.os_name",
+            "device_info.os_version",
+            "email",
+            "name",
+            "subject",
+        ],
+    ),
+    ("post /v0/update_profile", &["display_name"]),
+    ("post /v0/user_info", &[]),
+];
+
+/// Whether each gated operation's answer carries data the caller holds. Those that do are sent
+/// by the read probe, unless UNPROBED_READS says why not.
+const RETURNS_CALLER_DATA: [(&str, bool); 30] = [
+    ("post /v0/backup/complete_upload", false),
+    ("post /v0/backup/delete", false),
+    ("post /v0/backup/download_url", true),
+    ("post /v0/backup/list", true),
+    ("post /v0/backup/settings", false),
+    ("post /v0/backup/upload_url", true),
+    ("post /v0/backup/v2/complete", false),
+    ("post /v0/backup/v2/delete", false),
+    ("post /v0/backup/v2/download", true),
+    ("post /v0/backup/v2/list", true),
+    ("post /v0/backup/v2/upload", true),
+    ("post /v0/deregister", false),
+    ("post /v0/email/send_verification", true),
+    ("post /v0/email/verify", true),
+    ("post /v0/heartbeat_response", false),
+    ("post /v0/historical-price", false),
+    ("post /v0/ln_address_suggestions", true),
+    ("post /v0/lnurlp/submit_invoice", false),
+    ("post /v0/mailbox/authorize", false),
+    ("post /v0/mailbox/revoke", false),
+    ("post /v0/prices", false),
+    ("post /v0/recurring_payments/sync", false),
+    ("post /v0/register", true),
+    ("post /v0/register_push_token", false),
+    ("post /v0/report_job_status", false),
+    ("post /v0/report_last_login", false),
+    ("post /v0/support/ticket", false),
+    ("post /v0/update_lightning_identity", true),
+    ("post /v0/update_profile", false),
+    ("post /v0/user_info", true),
+];
+
+/// Operations that return the caller's data that the read probe does not send, and why.
+const UNPROBED_READS: [(&str, &str); 6] = [
+    (
+        "post /v0/backup/upload_url",
+        "answers with what this request creates, so the probe naming B's objects covers it",
+    ),
+    (
+        "post /v0/backup/v2/upload",
+        "answers with the reservation this request creates, not with one the caller held",
+    ),
+    (
+        "post /v0/email/send_verification",
+        "sends a code to the email the request names, or, when that is the caller's verified \
+         email, answers with it; either way it tells the caller only what the request names",
+    ),
+    (
+        "post /v0/email/verify",
+        "answers with the caller's email only once this request verifies it",
+    ),
+    (
+        "post /v0/ln_address_suggestions",
+        "suggests other users' Lightning addresses by design",
+    ),
+    (
+        "post /v0/update_lightning_identity",
+        "answers with what this request sets, so the probe naming B's objects covers it",
+    ),
+];
+
+/// What each read in caller_reads answers a caller who holds nothing but its profile, with
+/// `{lightning_address}` for the caller's own. A read that stops reaching its lookup changes this.
+const READ_BASELINES: [(&str, u16, &str); 6] = [
+    (
+        "post /v0/backup/download_url",
+        404,
+        r#"{"status": "ERROR", "code": "NOT_FOUND", "message": "Backup not found", "reason": "Backup not found"}"#,
+    ),
+    ("post /v0/backup/list", 200, "[]"),
+    (
+        "post /v0/backup/v2/download",
+        404,
+        r#"{"status": "ERROR", "code": "NOT_FOUND", "message": "Backup not found", "reason": "Backup not found"}"#,
+    ),
+    ("post /v0/backup/v2/list", 200, "[]"),
+    // A registered caller's register returns its stored profile.
+    (
+        "post /v0/register",
+        200,
+        r#"{"status": "OK", "event": null, "reason": "User already registered",
+            "lightning_address": "{lightning_address}", "nostr_pubkey": null, "display_name": null,
+            "email": null, "is_email_verified": false, "user_status": "active"}"#,
+    ),
+    (
+        "post /v0/user_info",
+        200,
+        r#"{"lightning_address": "{lightning_address}", "nostr_pubkey": null, "display_name": null,
+            "email": null, "user_status": "active"}"#,
+    ),
+];
+
+#[allow(clippy::type_complexity)]
+fn assert_read_baselines(
+    reads: &[(&str, (axum::http::StatusCode, Vec<String>, Value))],
+    lightning_address: &str,
+) {
+    let expected = READ_BASELINES
+        .iter()
+        .map(|(operation, status, body)| {
+            let body = body.replace("{lightning_address}", lightning_address);
+            (
+                *operation,
+                *status,
+                serde_json::from_str::<Value>(&body).unwrap(),
+            )
+        })
+        .collect::<Vec<_>>();
+    let got = reads
+        .iter()
+        .map(|(operation, (status, _, body))| (*operation, status.as_u16(), body.clone()))
+        .collect::<Vec<_>>();
+    assert_eq!(
+        got, expected,
+        "the reads of a caller with {lightning_address}"
+    );
+}
+
+/// Every field a gated operation's request carries: each parameter as `<in> parameter <name>`,
+/// and each body property at any depth, as `a.b` inside an object and `a[].b` inside an array.
+/// A request shape it does not understand is an error, so no field is skipped silently.
+fn gated_request_fields(doc: &Value) -> BTreeMap<String, Result<BTreeSet<String>, String>> {
+    let mut operations = BTreeMap::new();
+    for (path, item) in doc["paths"].as_object().unwrap() {
+        for (method, op) in item.as_object().unwrap() {
+            if op.get("security").is_none() {
+                continue;
+            }
+            let mut fields = BTreeSet::new();
+            let result = (|| {
+                // Parameters on the path item apply to every operation under it.
+                for parameter in [&item["parameters"], &op["parameters"]]
+                    .into_iter()
+                    .flat_map(|parameters| parameters.as_array().into_iter().flatten())
+                {
+                    let (Some(location), Some(name)) =
+                        (parameter["in"].as_str(), parameter["name"].as_str())
+                    else {
+                        return Err(format!("a parameter it cannot read: {parameter}"));
+                    };
+                    fields.insert(format!("{location} parameter {name}"));
+                }
+                let Some(body) = op.get("requestBody") else {
+                    return Ok(());
+                };
+                let content = body["content"]
+                    .as_object()
+                    .map(|content| content.keys().collect::<Vec<_>>());
+                if content.as_deref() != Some(&[&"application/json".to_string()][..]) {
+                    return Err(format!(
+                        "a body other than one application/json schema: {body}"
+                    ));
+                }
+                let schema = &body["content"]["application/json"]["schema"];
+                let root = schema["$ref"]
+                    .as_str()
+                    .and_then(|reference| reference.strip_prefix("#/components/schemas/"))
+                    .map_or(schema, |name| &doc["components"]["schemas"][name]);
+                // Fields are named by property, so a body of any other shape has none to classify.
+                if root["type"] != "object" {
+                    return Err(format!("a body that is not a JSON object: {schema}"));
+                }
+                collect_fields(doc, schema, "", &mut fields, 0)
+            })();
+            operations.insert(format!("{method} {path}"), result.map(|()| fields));
+        }
+    }
+    operations
+}
+
+fn collect_fields(
+    doc: &Value,
+    schema: &Value,
+    at: &str,
+    fields: &mut BTreeSet<String>,
+    depth: usize,
+) -> Result<(), String> {
+    if depth > 16 {
+        return Err(format!("a schema nested too deep at `{at}`"));
+    }
+    if let Some(reference) = schema.get("$ref") {
+        let target = reference
+            .as_str()
+            .and_then(|reference| reference.strip_prefix("#/components/schemas/"))
+            .and_then(|name| doc["components"]["schemas"].get(name))
+            .ok_or_else(|| format!("a reference it cannot resolve at `{at}`: {reference}"))?;
+        return collect_fields(doc, target, at, fields, depth + 1);
+    }
+    let types = match &schema["type"] {
+        Value::String(kind) => vec![kind.as_str()],
+        Value::Array(kinds) => kinds.iter().filter_map(Value::as_str).collect(),
+        _ => Vec::new(),
+    };
+    let understood = [
+        "type",
+        "properties",
+        "required",
+        "items",
+        "description",
+        "format",
+        "minimum",
+        "maximum",
+        "enum",
+        "additionalProperties",
+    ];
+    if let Some(key) = schema
+        .as_object()
+        .unwrap()
+        .keys()
+        .find(|key| !understood.contains(&key.as_str()))
+    {
+        return Err(format!("a schema with `{key}` at `{at}`: {schema}"));
+    }
+    if types.contains(&"object") {
+        if schema
+            .get("additionalProperties")
+            .is_some_and(|extra| extra != false)
+        {
+            return Err(format!("an object with open-ended properties at `{at}`"));
+        }
+        for (name, property) in schema["properties"].as_object().into_iter().flatten() {
+            let field = if at.is_empty() {
+                name.clone()
+            } else {
+                format!("{at}.{name}")
+            };
+            fields.insert(field.clone());
+            collect_fields(doc, property, &field, fields, depth + 1)?;
+        }
+        Ok(())
+    } else if types.contains(&"array") {
+        collect_fields(doc, &schema["items"], &format!("{at}[]"), fields, depth + 1)
+    } else if !types.is_empty()
+        && types
+            .iter()
+            .all(|kind| ["string", "integer", "number", "boolean", "null"].contains(kind))
+    {
+        Ok(())
+    } else {
+        Err(format!("a schema of no known type at `{at}`: {schema}"))
+    }
+}
+
+/// Why each gated operation's request fields are not classified exactly once; empty when they are.
+fn classification_failures(doc: &Value) -> Vec<String> {
+    let operations = gated_request_fields(doc);
+    let mut failures = Vec::new();
+    for (operation, fields) in &operations {
+        let fields = match fields {
+            Ok(fields) => fields,
+            Err(shape) => {
+                failures.push(format!(
+                    "{operation} sends {shape}. Teach gated_request_fields to read it, so none of \
+                     its fields escapes classification."
+                ));
+                continue;
+            }
+        };
+        let listed = OBJECT_FIELDS
+            .iter()
+            .map(|(op, fields, _)| (op, fields))
+            .chain(CALLER_ONLY_FIELDS.iter().map(|(op, fields)| (op, fields)))
+            .filter(|(op, _)| *op == operation)
+            .map(|(_, fields)| {
+                fields
+                    .iter()
+                    .map(|field| field.to_string())
+                    .collect::<BTreeSet<_>>()
+            })
+            .collect::<Vec<_>>();
+        if listed != [fields.clone()] {
+            failures.push(format!(
+                "{operation} sends {fields:?}. If a field names something a user owns, list the \
+                 operation once in OBJECT_FIELDS and give user B one to name; otherwise list it \
+                 once in CALLER_ONLY_FIELDS."
+            ));
+        }
+    }
+    for (operation, _) in OBJECT_FIELDS
+        .iter()
+        .map(|(op, fields, _)| (op, fields))
+        .chain(CALLER_ONLY_FIELDS.iter().map(|(op, fields)| (op, fields)))
+    {
+        if !operations.contains_key(*operation) {
+            failures.push(format!(
+                "{operation} is classified but is not a gated operation"
+            ));
+        }
+    }
+    for operation in operations.keys() {
+        if RETURNS_CALLER_DATA
+            .iter()
+            .filter(|(op, _)| op == operation)
+            .count()
+            != 1
+        {
+            failures.push(format!(
+                "{operation} is not listed once in RETURNS_CALLER_DATA. Say whether its answer \
+                 carries data the caller holds."
+            ));
+        }
+    }
+    for (operation, _) in RETURNS_CALLER_DATA {
+        if !operations.contains_key(operation) {
+            failures.push(format!(
+                "{operation} is in RETURNS_CALLER_DATA but is not a gated operation"
+            ));
+        }
+    }
+    for (operation, _) in UNPROBED_READS {
+        if !RETURNS_CALLER_DATA.contains(&(operation, true)) {
+            failures.push(format!(
+                "{operation} is in UNPROBED_READS but does not return the caller's data"
+            ));
+        }
+    }
+    failures
+}
+
+/// The caller's answer to every gated read of its own data that names nothing.
+async fn caller_reads(
+    app: &axum::Router,
+    token: &str,
+    peer: &mut u32,
+) -> Vec<(&'static str, (axum::http::StatusCode, Vec<String>, Value))> {
+    let mut answers = Vec::new();
+    for (operation, returns) in RETURNS_CALLER_DATA {
+        if !returns || UNPROBED_READS.iter().any(|(op, _)| *op == operation) {
+            continue;
+        }
+        let (method, path) = operation.split_once(' ').unwrap();
+        let response = exchange(app, method, path, Some(token), Some(&json!({})), peer).await;
+        answers.push((operation, answer(operation, response)));
+    }
+    answers
+}
+
+#[test]
+fn a_request_field_the_inventory_cannot_classify_fails() {
+    let edits: [(&str, fn(&mut Value)); 6] = [
+        ("a nested property", |doc| {
+            doc["components"]["schemas"]["RecurringPaymentScheduleEntry"]["properties"]["backup_id"] =
+                json!({"type": ["string", "null"]});
+        }),
+        // On an operation with no body today, so a reader that skips the shape sees nothing new.
+        ("a form body", |doc| {
+            doc["paths"]["/v0/backup/list"]["post"]["requestBody"] = json!({"content": {
+                "application/x-www-form-urlencoded": {"schema": {
+                    "type": "object", "properties": {"backup_id": {"type": "string"}},
+                }},
+            }});
+        }),
+        ("an inline schema", |doc| {
+            doc["paths"]["/v0/backup/list"]["post"]["requestBody"] = json!({"content": {
+                "application/json": {"schema": {
+                    "type": "object", "properties": {"backup_id": {"type": "string"}},
+                }},
+            }});
+        }),
+        ("a query parameter", |doc| {
+            doc["paths"]["/v0/backup/list"]["post"]["parameters"] =
+                json!([{"in": "query", "name": "backup_id", "schema": {"type": "string"}}]);
+        }),
+        ("a parameter on the path item", |doc| {
+            doc["paths"]["/v0/backup/list"]["parameters"] =
+                json!([{"in": "query", "name": "backup_id", "schema": {"type": "string"}}]);
+        }),
+        // A whole body that is one ID names an object with no property name to classify.
+        ("a scalar body", |doc| {
+            doc["paths"]["/v0/backup/list"]["post"]["requestBody"] = json!({"content": {
+                "application/json": {"schema": {"type": "string", "format": "uuid"}},
+            }});
+        }),
+    ];
+    assert_eq!(classification_failures(&document()), Vec::<String>::new());
+    let escaped = edits
+        .into_iter()
+        .filter(|(_, edit)| {
+            let mut doc = document();
+            edit(&mut doc);
+            classification_failures(&doc).is_empty()
+        })
+        .map(|(case, _)| case)
+        .collect::<Vec<_>>();
+    assert!(
+        escaped.is_empty(),
+        "a gated request gained a field, and the inventory missed it in: {escaped:?}"
+    );
+}
+
+/// Everything `owner` holds that a request can name, as text to compare.
+async fn holdings(
+    state: &crate::AppState,
+    owner: &str,
+    named: &serde_json::Map<String, Value>,
+) -> String {
+    use crate::db::{
+        backup_repo::BackupRepository, heartbeat_repo::HeartbeatRepository,
+        job_status_repo::JobStatusRepository,
+        mailbox_authorization_repo::MailboxAuthorizationRepository,
+        recurring_payment_repo::RecurringPaymentRepository, user_repo::UserRepository,
+    };
+    let backups = BackupRepository::new(&state.db_pool);
+    let backup_id = named["backup_id"].as_str().unwrap().parse().unwrap();
+    format!(
+        "{:?}\n{:?}\n{:?}\n{:?}\n{:?}\n{:?}\n{:?}\n{:?}",
+        UserRepository::new(&state.db_pool)
+            .find_by_pubkey(owner)
+            .await
+            .unwrap(),
+        backups.find_by_pubkey_and_version(owner, 1).await.unwrap(),
+        backups.find_object(owner, backup_id).await.unwrap(),
+        HeartbeatRepository::find_status_and_responded_at(
+            &state.db_pool,
+            named["notification_id"].as_str().unwrap()
+        )
+        .await
+        .unwrap(),
+        JobStatusRepository::find_status_and_error_by_k1(
+            &state.db_pool,
+            owner,
+            named["notification_k1"].as_str().unwrap()
+        )
+        .await
+        .unwrap(),
+        RecurringPaymentRepository::new(&state.db_pool)
+            .list_for_pubkey(owner)
+            .await
+            .unwrap(),
+        state
+            .invoice_store
+            .get(owner, named["transaction_id"].as_str().unwrap())
+            .await
+            .unwrap(),
+        MailboxAuthorizationRepository::new(&state.db_pool)
+            .find_by_pubkey(owner)
+            .await
+            .unwrap(),
+    )
+}
+
+/// Requests the probe of all of an operation's fields cannot make: an optional selector left
+/// out, or a field another field's check would answer first. `false` sends them with a valid
+/// token for a key that never registered.
+const PARTIAL_PROBES: [(&str, &[&str], bool); 3] = [
+    // Without a selector the download routes pick the caller's latest backup, and A holds none.
+    ("post /v0/backup/download_url", &[], true),
+    ("post /v0/backup/v2/download", &[], true),
+    // Only a caller without a profile reaches the path that creates one, and with B's Ark
+    // address beside it the Ark address conflict answers first.
+    ("post /v0/register", &["ln_address"], false),
+];
+
+/// Probes whose answer tells the caller that B's object exists, why that is by design, and the
+/// one answer allowed: a 400 with this message and nothing else, so none of B's data rides along.
+const DISTINGUISHABLE: [(&str, &str, &str, &str); 3] = [
+    (
+        "post /v0/register",
+        "user A",
+        "an Ark address is unique, so taking one that is taken must say so",
+        "Ark address already taken",
+    ),
+    (
+        "post /v0/register",
+        "a never-registered user",
+        "a Lightning address is unique, so taking one that is taken must say so",
+        "Lightning address already taken",
+    ),
+    (
+        "post /v0/update_lightning_identity",
+        "user A",
+        "a Lightning name is unique, so taking one that is taken must say so",
+        "Lightning address already taken",
+    ),
+];
+
+/// Response fields built from the request's own values for the caller's own object, so they
+/// differ with the value named whoever holds it, and the caller's key for that object.
+#[allow(clippy::type_complexity)]
+const DERIVED_RESPONSE_FIELDS: [(&str, &[&str], fn(&str, &Value) -> String); 1] = [(
+    "post /v0/backup/upload_url",
+    // The caller's own key for the version named, and a URL signed for it.
+    &["s3_key", "upload_url"],
+    |caller, request| format!("{caller}/backup_v{}.db", request["backup_version"]),
+)];
+
+/// What a response tells its caller, without what differs by design: the time it was sent and
+/// the fields in DERIVED_RESPONSE_FIELDS.
+fn answer(
+    operation: &str,
+    (status, headers, body): (
+        axum::http::StatusCode,
+        axum::http::HeaderMap,
+        axum::body::Bytes,
+    ),
+) -> (axum::http::StatusCode, Vec<String>, Value) {
+    let headers = headers
+        .iter()
+        .filter(|(name, _)| !["date", "content-length"].contains(&name.as_str()))
+        .map(|(name, value)| format!("{name}: {value:?}"))
+        .collect();
+    let mut body = serde_json::from_slice(&body)
+        .unwrap_or_else(|_| Value::String(String::from_utf8_lossy(&body).into_owned()));
+    for (op, fields, _) in DERIVED_RESPONSE_FIELDS {
+        if op == operation {
+            for field in fields {
+                body.as_object_mut().unwrap().remove(*field);
+            }
+        }
+    }
+    (status, headers, body)
+}
+
+/// The authorization class: a gated request that names another user's object must not act on it.
+/// User B holds one of every object a gated request can name; user A names each with A's token.
+#[tokio::test]
+async fn no_gated_operation_acts_on_an_object_another_user_holds() {
+    use crate::db::{
+        backup_repo::BackupRepository, heartbeat_repo::HeartbeatRepository,
+        job_status_repo::JobStatusRepository, user_repo::UserRepository,
+    };
+    use crate::tests::common::{TestUser, setup_test_app, test_invoice};
+
+    let (_, state, _guard) = setup_test_app().await;
+    let app = crate::app_router(state.clone());
+    let mut peer = 0;
+    let [a, b] = [0x31, 0x32].map(|byte| TestUser::new_with_key(&[byte; 32]));
+    let ark_b = "tark1qbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+    let create = async |user: &TestUser, ln_address, ark_address| {
+        let mut tx = state.db_pool.begin().await.unwrap();
+        UserRepository::create(&mut tx, &user.pubkey().to_string(), ln_address, ark_address)
+            .await
+            .unwrap();
+        tx.commit().await.unwrap();
+    };
+    create(&a, "a@localhost", None).await;
+    let token_a = a.access_token(&state);
+    // What A reads of its own while B holds nothing, to compare once B holds one of everything.
+    let alone = caller_reads(&app, &token_a, &mut peer).await;
+    assert_read_baselines(&alone, "a@localhost");
+    create(&b, "b@localhost", Some(ark_b)).await;
+    let pubkey_b = b.pubkey().to_string();
+    let token_b = b.access_token(&state);
+    // A read that finds its user by anything but the caller would answer B with A's profile.
+    assert_read_baselines(
+        &caller_reads(&app, &token_b, &mut peer).await,
+        "b@localhost",
+    );
+
+    let (status, _, body) = exchange(
+        &app,
+        "post",
+        "/v0/backup/v2/upload",
+        Some(&token_b),
+        Some(
+            &json!({"format_version": 2, "encrypted_size": 1, "encrypted_sha256": "00".repeat(32)}),
+        ),
+        &mut peer,
+    )
+    .await;
+    assert!(
+        status.is_success(),
+        "user B reserves a backup object: {status}"
+    );
+    let backup_id = serde_json::from_slice::<Value>(&body).unwrap()["backup_id"].clone();
+    let backups = BackupRepository::new(&state.db_pool);
+    assert!(
+        backups
+            .complete_object(&pubkey_b, backup_id.as_str().unwrap().parse().unwrap())
+            .await
+            .unwrap()
+    );
+    let hour = chrono::Utc::now().timestamp() + 3600;
+    // A second schedule A does not list makes a prune that ignores the owner delete one of B's.
+    let schedules = json!([
+        {"schedule_id": "b-schedule", "next_run_at": hour},
+        {"schedule_id": "b-other", "next_run_at": hour},
+    ]);
+    let grant = |mailbox: u8| {
+        use ark::ProtocolEncoding;
+        let secp = bitcoin::secp256k1::Secp256k1::new();
+        let key = bitcoin::secp256k1::SecretKey::from_slice(&[mailbox; 32]).unwrap();
+        let grant = ark::mailbox::MailboxAuthorization::new(
+            &bitcoin::secp256k1::Keypair::from_secret_key(&secp, &key),
+            chrono::Local::now() + chrono::Duration::hours(1),
+        );
+        json!({
+            "mailbox_id": grant.mailbox().serialize_hex(),
+            "expiry": grant.expiry().timestamp(),
+            "encoded": grant.serialize_hex(),
+        })
+    };
+    let [mailbox_b, other_mailbox, nobodys_mailbox] = [0x41, 0x42, 0x43].map(grant);
+    // B's answer to the payer, so a submission that overwrites by transaction ID alone shows.
+    let invoice_b = json!({
+        "transaction_id": "b-transaction",
+        "invoice": test_invoice(bitcoin::Network::Regtest, 1_000_000, 8),
+    });
+    for (path, body) in [
+        (
+            "/v0/backup/complete_upload",
+            json!({"s3_key": format!("{pubkey_b}/backup_v1.db"), "backup_version": 1, "backup_size": 1024}),
+        ),
+        (
+            "/v0/recurring_payments/sync",
+            json!({"schedules": schedules}),
+        ),
+        ("/v0/lnurlp/submit_invoice", invoice_b.clone()),
+        ("/v0/mailbox/authorize", mailbox_b.clone()),
+    ] {
+        let (status, _, _) =
+            exchange(&app, "post", path, Some(&token_b), Some(&body), &mut peer).await;
+        assert!(
+            status.is_success(),
+            "user B creates its object with {path}: {status}"
+        );
+    }
+    let notification_id = HeartbeatRepository::new(&state.db_pool)
+        .create_notification(&pubkey_b)
+        .await
+        .unwrap();
+    let mut tx = state.db_pool.begin().await.unwrap();
+    JobStatusRepository::create_with_k1_and_prune(
+        &mut tx,
+        &pubkey_b,
+        "b-k1",
+        &ReportType::Backup,
+        &ReportStatus::Pending,
+        None,
+    )
+    .await
+    .unwrap();
+    tx.commit().await.unwrap();
+
+    for ((operation, held), (_, unheld)) in caller_reads(&app, &token_a, &mut peer)
+        .await
+        .into_iter()
+        .zip(alone)
+    {
+        assert_eq!(
+            held, unheld,
+            "{operation} answers user A differently once user B holds objects"
+        );
+    }
+
+    // User B's identifier for every field in OBJECT_FIELDS, and a valid value for the rest.
+    let named = json!({
+        "s3_key": format!("{pubkey_b}/backup_v1.db"),
+        "backup_version": 1,
+        "backup_size": 2048,
+        "backup_id": backup_id,
+        "notification_id": notification_id,
+        // The ID the LNURL callback pushed to B, answered with an invoice other than B's.
+        "transaction_id": "b-transaction",
+        "invoice": test_invoice(bitcoin::Network::Regtest, 1_000_000, 7),
+        // Another due time for B's ID, so an update that ignores the owner moves B's schedule.
+        "schedules": [{"schedule_id": "b-schedule", "next_run_at": hour + 3600}],
+        "ark_address": ark_b,
+        "ln_address": "b@localhost",
+        "device_info": null,
+        "notification_k1": "b-k1",
+        "report_type": "backup",
+        "status": "success",
+        "error_message": "answered by another user",
+        "username": "b",
+        "nostr_pubkey": null,
+        // B's mailbox, with a grant its key never signed: one for another mailbox.
+        "mailbox_id": mailbox_b["mailbox_id"],
+        "expiry": other_mailbox["expiry"],
+        "encoded": other_mailbox["encoded"],
+    });
+    let named = named.as_object().unwrap();
+    let before = holdings(&state, &pubkey_b, named).await;
+    // The same request naming objects nobody holds; fields that name no object keep B's values.
+    let mut nobody = named.clone();
+    let pubkey_nobody = TestUser::new_with_key(&[0x3f; 32]).pubkey().to_string();
+    for (field, value) in [
+        ("s3_key", json!(format!("{pubkey_nobody}/backup_v2.db"))),
+        ("backup_version", json!(2)),
+        ("backup_id", json!("00000000-0000-4000-8000-000000000000")),
+        (
+            "notification_id",
+            json!("00000000-0000-4000-8000-000000000001"),
+        ),
+        ("transaction_id", json!("nobody-transaction")),
+        (
+            "schedules",
+            json!([{"schedule_id": "nobody-schedule", "next_run_at": hour + 3600}]),
+        ),
+        (
+            "ark_address",
+            json!("tark1qnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnnn"),
+        ),
+        ("ln_address", json!("nobody@localhost")),
+        ("notification_k1", json!("nobody-k1")),
+        ("username", json!("nobody")),
+        ("mailbox_id", nobodys_mailbox["mailbox_id"].clone()),
+    ] {
+        assert!(nobody.insert(field.to_string(), value).is_some());
+    }
+
+    let failures = classification_failures(&document());
+    assert!(failures.is_empty(), "{}", failures.join("\n"));
+
+    let unregistered = TestUser::new_with_key(&[0x33; 32]);
+    let token_unregistered = unregistered.access_token(&state);
+    let [pubkey_a, pubkey_unregistered] = [&a, &unregistered].map(|user| user.pubkey().to_string());
+    let probes = OBJECT_FIELDS
+        .iter()
+        .map(|&(operation, fields, may_succeed)| {
+            (
+                operation,
+                fields,
+                may_succeed,
+                &token_a,
+                &pubkey_a,
+                "user A",
+            )
+        })
+        .chain(
+            PARTIAL_PROBES
+                .iter()
+                .map(|&(operation, fields, registered)| {
+                    let (token, caller_key, caller) = if registered {
+                        (&token_a, &pubkey_a, "user A")
+                    } else {
+                        (
+                            &token_unregistered,
+                            &pubkey_unregistered,
+                            "a never-registered user",
+                        )
+                    };
+                    (operation, fields, false, token, caller_key, caller)
+                }),
+        );
+    for (operation, fields, may_succeed, token, caller_key, caller) in probes {
+        // B's invoice expires after 60 seconds, so B answers again before each probe.
+        let (status, _, _) = exchange(
+            &app,
+            "post",
+            "/v0/lnurlp/submit_invoice",
+            Some(&token_b),
+            Some(&invoice_b),
+            &mut peer,
+        )
+        .await;
+        assert!(
+            status.is_success(),
+            "user B answers its invoice request: {status}"
+        );
+        let (method, path) = operation.split_once(' ').unwrap();
+        let request = |values: &serde_json::Map<String, Value>| {
+            let body = fields
+                .iter()
+                // A nested field travels inside its top-level one.
+                .filter(|field| !field.contains(['.', '[']))
+                .map(|field| {
+                    let value = values.get(*field);
+                    assert!(
+                        value.is_some(),
+                        "user B holds nothing for {operation} to name in `{field}`"
+                    );
+                    (field.to_string(), value.unwrap().clone())
+                })
+                .collect();
+            Value::Object(body)
+        };
+        let (status, headers, response) = exchange(
+            &app,
+            method,
+            path,
+            Some(token),
+            Some(&request(named)),
+            &mut peer,
+        )
+        .await;
+        let text = String::from_utf8_lossy(&response);
+        assert!(
+            may_succeed || !status.is_success(),
+            "{operation} with user B's identifiers and {caller}'s token succeeded: {status} {text}"
+        );
+        assert!(
+            !status.is_server_error(),
+            "{operation} with user B's identifiers failed inside the server: {status} {text}"
+        );
+        assert!(
+            !text.contains(&pubkey_b),
+            "{operation} with user B's identifiers revealed B's object to {caller}: {text}"
+        );
+        assert_eq!(
+            holdings(&state, &pubkey_b, named).await,
+            before,
+            "{operation} with user B's identifiers and {caller}'s token changed what B holds"
+        );
+
+        if let Some((_, _, _, message)) = DISTINGUISHABLE
+            .iter()
+            .find(|(op, by, _, _)| *op == operation && *by == caller)
+        {
+            assert_eq!(
+                answer(operation, (status, headers, response)),
+                (
+                    axum::http::StatusCode::BAD_REQUEST,
+                    vec![r#"content-type: "application/json""#.to_string()],
+                    json!({"status": "ERROR", "code": "INVALID_ARGUMENT", "message": message, "reason": message}),
+                ),
+                "{operation} with user B's identifiers answers {caller} with more than the conflict"
+            );
+            continue;
+        }
+        // The server must not tell A whether B's object exists: any difference from naming an
+        // object nobody holds, in status, body or headers, is something A learns about B.
+        let unheld = exchange(
+            &app,
+            method,
+            path,
+            Some(token),
+            Some(&request(&nobody)),
+            &mut peer,
+        )
+        .await;
+        // Checked before `answer` drops them: each names the caller's own object, never B's.
+        for (values, body) in [(named, &response), (&nobody, &unheld.2)] {
+            for (op, fields, key) in DERIVED_RESPONSE_FIELDS {
+                if op != operation {
+                    continue;
+                }
+                let key = key(caller_key, &request(values));
+                let body = serde_json::from_slice::<Value>(body).unwrap();
+                for field in fields {
+                    let value = body[field].as_str().unwrap_or_default();
+                    let location = value.split('?').next().unwrap();
+                    assert!(
+                        location == key || location.ends_with(&format!("/{key}")),
+                        "{operation} answers {caller} with `{field}` {value}, not for its own {key}"
+                    );
+                }
+            }
+        }
+        assert_eq!(
+            answer(operation, (status, headers, response)),
+            answer(operation, unheld),
+            "{operation} answers {caller} differently when it names user B's object than when it \
+             names one nobody holds"
+        );
     }
 }
 
