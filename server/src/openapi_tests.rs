@@ -1,6 +1,6 @@
 use super::*;
 use crate::types::*;
-use std::collections::BTreeSet;
+use std::collections::{BTreeMap, BTreeSet};
 use syn::Item;
 
 /// Every method axum's `MethodRouter` can route.
@@ -227,10 +227,28 @@ const OBJECT_FIELDS: [(&str, &[&str], bool); 13] = [
         &["invoice", "transaction_id"],
         true,
     ),
-    ("post /v0/recurring_payments/sync", &["schedules"], true),
+    (
+        "post /v0/recurring_payments/sync",
+        &[
+            "schedules",
+            "schedules[].next_run_at",
+            "schedules[].schedule_id",
+        ],
+        true,
+    ),
     (
         "post /v0/register",
-        &["ark_address", "device_info", "ln_address"],
+        &[
+            "ark_address",
+            "device_info",
+            "device_info.app_build",
+            "device_info.app_version",
+            "device_info.device_manufacturer",
+            "device_info.device_model",
+            "device_info.os_name",
+            "device_info.os_version",
+            "ln_address",
+        ],
         false,
     ),
     (
@@ -270,13 +288,33 @@ const CALLER_ONLY_FIELDS: [(&str, &[&str]); 17] = [
         "post /v0/register_push_token",
         &["apns_sandbox", "provider", "push_token"],
     ),
-    ("post /v0/report_last_login", &["device_info"]),
+    (
+        "post /v0/report_last_login",
+        &[
+            "device_info",
+            "device_info.app_build",
+            "device_info.app_version",
+            "device_info.device_manufacturer",
+            "device_info.device_model",
+            "device_info.os_name",
+            "device_info.os_version",
+        ],
+    ),
     (
         "post /v0/support/ticket",
         &[
             "attachment",
+            "attachment.base64_data",
+            "attachment.content_type",
+            "attachment.filename",
             "body",
             "device_info",
+            "device_info.app_build",
+            "device_info.app_version",
+            "device_info.device_manufacturer",
+            "device_info.device_model",
+            "device_info.os_name",
+            "device_info.os_version",
             "email",
             "name",
             "subject",
@@ -285,6 +323,216 @@ const CALLER_ONLY_FIELDS: [(&str, &[&str]); 17] = [
     ("post /v0/update_profile", &["display_name"]),
     ("post /v0/user_info", &[]),
 ];
+
+/// Every field a gated operation's request carries: each parameter as `<in> parameter <name>`,
+/// and each body property at any depth, as `a.b` inside an object and `a[].b` inside an array.
+/// A request shape it does not understand is an error, so no field is skipped silently.
+fn gated_request_fields(doc: &Value) -> BTreeMap<String, Result<BTreeSet<String>, String>> {
+    let mut operations = BTreeMap::new();
+    for (path, item) in doc["paths"].as_object().unwrap() {
+        for (method, op) in item.as_object().unwrap() {
+            if op.get("security").is_none() {
+                continue;
+            }
+            let mut fields = BTreeSet::new();
+            let result = (|| {
+                for parameter in op["parameters"].as_array().into_iter().flatten() {
+                    let (Some(location), Some(name)) =
+                        (parameter["in"].as_str(), parameter["name"].as_str())
+                    else {
+                        return Err(format!("a parameter it cannot read: {parameter}"));
+                    };
+                    fields.insert(format!("{location} parameter {name}"));
+                }
+                let Some(body) = op.get("requestBody") else {
+                    return Ok(());
+                };
+                let content = body["content"]
+                    .as_object()
+                    .map(|content| content.keys().collect::<Vec<_>>());
+                if content.as_deref() != Some(&[&"application/json".to_string()][..]) {
+                    return Err(format!(
+                        "a body other than one application/json schema: {body}"
+                    ));
+                }
+                collect_fields(
+                    doc,
+                    &body["content"]["application/json"]["schema"],
+                    "",
+                    &mut fields,
+                    0,
+                )
+            })();
+            operations.insert(format!("{method} {path}"), result.map(|()| fields));
+        }
+    }
+    operations
+}
+
+fn collect_fields(
+    doc: &Value,
+    schema: &Value,
+    at: &str,
+    fields: &mut BTreeSet<String>,
+    depth: usize,
+) -> Result<(), String> {
+    if depth > 16 {
+        return Err(format!("a schema nested too deep at `{at}`"));
+    }
+    if let Some(reference) = schema.get("$ref") {
+        let target = reference
+            .as_str()
+            .and_then(|reference| reference.strip_prefix("#/components/schemas/"))
+            .and_then(|name| doc["components"]["schemas"].get(name))
+            .ok_or_else(|| format!("a reference it cannot resolve at `{at}`: {reference}"))?;
+        return collect_fields(doc, target, at, fields, depth + 1);
+    }
+    let types = match &schema["type"] {
+        Value::String(kind) => vec![kind.as_str()],
+        Value::Array(kinds) => kinds.iter().filter_map(Value::as_str).collect(),
+        _ => Vec::new(),
+    };
+    let understood = [
+        "type",
+        "properties",
+        "required",
+        "items",
+        "description",
+        "format",
+        "minimum",
+        "maximum",
+        "enum",
+        "additionalProperties",
+    ];
+    if let Some(key) = schema
+        .as_object()
+        .unwrap()
+        .keys()
+        .find(|key| !understood.contains(&key.as_str()))
+    {
+        return Err(format!("a schema with `{key}` at `{at}`: {schema}"));
+    }
+    if types.contains(&"object") {
+        if schema
+            .get("additionalProperties")
+            .is_some_and(|extra| extra != false)
+        {
+            return Err(format!("an object with open-ended properties at `{at}`"));
+        }
+        for (name, property) in schema["properties"].as_object().into_iter().flatten() {
+            let field = if at.is_empty() {
+                name.clone()
+            } else {
+                format!("{at}.{name}")
+            };
+            fields.insert(field.clone());
+            collect_fields(doc, property, &field, fields, depth + 1)?;
+        }
+        Ok(())
+    } else if types.contains(&"array") {
+        collect_fields(doc, &schema["items"], &format!("{at}[]"), fields, depth + 1)
+    } else if !types.is_empty()
+        && types
+            .iter()
+            .all(|kind| ["string", "integer", "number", "boolean", "null"].contains(kind))
+    {
+        Ok(())
+    } else {
+        Err(format!("a schema of no known type at `{at}`: {schema}"))
+    }
+}
+
+/// Why each gated operation's request fields are not classified exactly once; empty when they are.
+fn classification_failures(doc: &Value) -> Vec<String> {
+    let operations = gated_request_fields(doc);
+    let mut failures = Vec::new();
+    for (operation, fields) in &operations {
+        let fields = match fields {
+            Ok(fields) => fields,
+            Err(shape) => {
+                failures.push(format!(
+                    "{operation} sends {shape}. Teach gated_request_fields to read it, so none of \
+                     its fields escapes classification."
+                ));
+                continue;
+            }
+        };
+        let listed = OBJECT_FIELDS
+            .iter()
+            .map(|(op, fields, _)| (op, fields))
+            .chain(CALLER_ONLY_FIELDS.iter().map(|(op, fields)| (op, fields)))
+            .filter(|(op, _)| *op == operation)
+            .map(|(_, fields)| {
+                fields
+                    .iter()
+                    .map(|field| field.to_string())
+                    .collect::<BTreeSet<_>>()
+            })
+            .collect::<Vec<_>>();
+        if listed != [fields.clone()] {
+            failures.push(format!(
+                "{operation} sends {fields:?}. If a field names something a user owns, list the \
+                 operation once in OBJECT_FIELDS and give user B one to name; otherwise list it \
+                 once in CALLER_ONLY_FIELDS."
+            ));
+        }
+    }
+    for (operation, _) in OBJECT_FIELDS
+        .iter()
+        .map(|(op, fields, _)| (op, fields))
+        .chain(CALLER_ONLY_FIELDS.iter().map(|(op, fields)| (op, fields)))
+    {
+        if !operations.contains_key(*operation) {
+            failures.push(format!(
+                "{operation} is classified but is not a gated operation"
+            ));
+        }
+    }
+    failures
+}
+
+#[test]
+fn a_request_field_the_inventory_cannot_classify_fails() {
+    let edits: [(&str, fn(&mut Value)); 4] = [
+        ("a nested property", |doc| {
+            doc["components"]["schemas"]["RecurringPaymentScheduleEntry"]["properties"]["backup_id"] =
+                json!({"type": ["string", "null"]});
+        }),
+        // On an operation with no body today, so a reader that skips the shape sees nothing new.
+        ("a form body", |doc| {
+            doc["paths"]["/v0/backup/list"]["post"]["requestBody"] = json!({"content": {
+                "application/x-www-form-urlencoded": {"schema": {
+                    "type": "object", "properties": {"backup_id": {"type": "string"}},
+                }},
+            }});
+        }),
+        ("an inline schema", |doc| {
+            doc["paths"]["/v0/backup/list"]["post"]["requestBody"] = json!({"content": {
+                "application/json": {"schema": {
+                    "type": "object", "properties": {"backup_id": {"type": "string"}},
+                }},
+            }});
+        }),
+        ("a query parameter", |doc| {
+            doc["paths"]["/v0/backup/list"]["post"]["parameters"] =
+                json!([{"in": "query", "name": "backup_id", "schema": {"type": "string"}}]);
+        }),
+    ];
+    assert_eq!(classification_failures(&document()), Vec::<String>::new());
+    let escaped = edits
+        .into_iter()
+        .filter(|(_, edit)| {
+            let mut doc = document();
+            edit(&mut doc);
+            classification_failures(&doc).is_empty()
+        })
+        .map(|(case, _)| case)
+        .collect::<Vec<_>>();
+    assert!(
+        escaped.is_empty(),
+        "a gated request gained a field, and the inventory missed it in: {escaped:?}"
+    );
+}
 
 /// Everything `owner` holds that a request can name, as text to compare.
 async fn holdings(
@@ -441,50 +689,16 @@ async fn no_gated_operation_acts_on_an_object_another_user_holds() {
     let named = named.as_object().unwrap();
     let before = holdings(&state, &pubkey_b, named).await;
 
-    let doc = document();
-    let mut gated = BTreeSet::new();
-    for (path, item) in doc["paths"].as_object().unwrap() {
-        for (method, op) in item.as_object().unwrap() {
-            if op.get("security").is_none() {
-                continue;
-            }
-            let operation = format!("{method} {path}");
-            let schema = &op["requestBody"]["content"]["application/json"]["schema"]["$ref"];
-            let fields = schema
-                .as_str()
-                .and_then(|reference| reference.strip_prefix("#/components/schemas/"))
-                .and_then(|name| doc["components"]["schemas"][name]["properties"].as_object())
-                .map(|properties| properties.keys().cloned().collect::<BTreeSet<_>>())
-                .unwrap_or_default();
-            let listed = OBJECT_FIELDS
-                .iter()
-                .map(|(op, fields, _)| (op, fields))
-                .chain(CALLER_ONLY_FIELDS.iter().map(|(op, fields)| (op, fields)))
-                .filter(|(op, _)| **op == operation)
-                .map(|(_, fields)| {
-                    fields
-                        .iter()
-                        .map(|field| field.to_string())
-                        .collect::<BTreeSet<_>>()
-                })
-                .collect::<Vec<_>>();
-            assert_eq!(
-                listed,
-                [fields.clone()],
-                "{operation} sends {fields:?}. If a field names something a user owns, list the \
-                 operation once in OBJECT_FIELDS and give user B one to name; otherwise list it \
-                 once in CALLER_ONLY_FIELDS."
-            );
-            gated.insert(operation);
-        }
-    }
-    assert_eq!(gated.len(), OBJECT_FIELDS.len() + CALLER_ONLY_FIELDS.len());
+    let failures = classification_failures(&document());
+    assert!(failures.is_empty(), "{}", failures.join("\n"));
 
     let token_a = a.access_token(&state);
     for (operation, fields, may_succeed) in OBJECT_FIELDS {
         let (method, path) = operation.split_once(' ').unwrap();
         let body = fields
             .iter()
+            // A nested field travels inside its top-level one.
+            .filter(|field| !field.contains(['.', '[']))
             .map(|field| {
                 let value = named.get(*field);
                 assert!(
