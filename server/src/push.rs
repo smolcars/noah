@@ -7,7 +7,7 @@ use expo_push_notification_client::{
     DetailsErrorType, Expo, ExpoClientOptions, ExpoPushMessage, ExpoPushTicket, Priority,
 };
 use futures_util::{StreamExt, stream};
-use reqwest::{Client, Url, redirect::Policy};
+use reqwest::{Url, redirect::Policy};
 use serde::Serialize;
 use tokio::{net::lookup_host, time::timeout};
 
@@ -656,11 +656,10 @@ async fn send_unified_notification(endpoint: &str, payload: &str) -> Result<(), 
     let resolved = resolve_unified_push_endpoint(endpoint)
         .await
         .map_err(|_| ApiError::ServerErr("Invalid UnifiedPush endpoint".to_string()))?;
-    let client = Client::builder()
+    let client = crate::http_client::outbound(UNIFIED_PUSH_REQUEST_TIMEOUT)
         .redirect(Policy::none())
         .no_proxy()
         .connect_timeout(UNIFIED_PUSH_CONNECT_TIMEOUT)
-        .timeout(UNIFIED_PUSH_REQUEST_TIMEOUT)
         .resolve_to_addrs(&resolved.host, &resolved.addresses)
         .build()
         .map_err(|_| {

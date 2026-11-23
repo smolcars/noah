@@ -59,6 +59,7 @@ mod direct_push;
 mod email_client;
 mod errors;
 mod fiat_rates;
+mod http_client;
 mod mailbox_auth;
 mod mailbox_worker;
 mod notification_coordinator;

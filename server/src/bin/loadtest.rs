@@ -3,6 +3,7 @@ use rand::RngExt;
 use serde::{Deserialize, Serialize};
 use std::sync::OnceLock;
 use std::sync::atomic::{AtomicU64, Ordering};
+use std::time::Duration;
 
 static USER_COUNTER: AtomicU64 = AtomicU64::new(0);
 static TEST_USER_LN_ADDRESS: OnceLock<String> = OnceLock::new();
@@ -208,7 +209,7 @@ async fn login_test_user(
 }
 
 async fn setup_test_user(host: &str) -> anyhow::Result<String> {
-    let client = reqwest::Client::new();
+    let client = server::http_client::outbound(Duration::from_secs(30)).build()?;
     let test_user = TestUser::new_random();
 
     let k1_response: GetK1Response = client

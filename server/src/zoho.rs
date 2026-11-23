@@ -23,6 +23,9 @@ const MAX_NAME_LEN: usize = 150;
 const MAX_ATTACHMENT_BYTES: usize = 5 * 1024 * 1024;
 const MAX_ATTACHMENT_BASE64_LEN: usize = MAX_ATTACHMENT_BYTES.div_ceil(3) * 4 + 16;
 const ACCESS_TOKEN_EXPIRY_BUFFER: Duration = Duration::from_secs(120);
+/// Bounds each Zoho call, the 5 MB screenshot upload included, so a stalled Zoho
+/// fails the ticket instead of holding the user's request open.
+const ZOHO_REQUEST_TIMEOUT: Duration = Duration::from_secs(20);
 
 static TOKEN_CACHE: LazyLock<Mutex<Option<CachedZohoAccessToken>>> =
     LazyLock::new(|| Mutex::new(None));
@@ -108,7 +111,7 @@ pub async fn submit_support_ticket(
 ) -> Result<SubmitSupportTicketResponse, ApiError> {
     let zoho_config = ZohoDeskConfig::from_config(config)?;
     let mut payload = validate_support_ticket_payload(payload)?;
-    let http_client = reqwest::Client::new();
+    let http_client = http_client()?;
     let access_token = get_access_token(&http_client, &zoho_config).await?;
 
     let upload_ids = match payload.attachment.take() {
@@ -286,6 +289,15 @@ impl ZohoDeskConfig {
     fn cache_key(&self) -> String {
         format!("{}:{}", self.client_id, self.refresh_token)
     }
+}
+
+fn http_client() -> Result<reqwest::Client, ApiError> {
+    crate::http_client::outbound(ZOHO_REQUEST_TIMEOUT)
+        .build()
+        .map_err(|e| {
+            tracing::error!(error = %e, "Failed to build the Zoho HTTP client");
+            ApiError::ServerErr("Failed to submit support ticket".to_string())
+        })
 }
 
 fn support_not_configured() -> ApiError {
@@ -536,6 +548,36 @@ fn escape_html(value: &str) -> String {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[tokio::test(start_paused = true)]
+    async fn a_zoho_server_that_never_answers_fails_at_the_deadline() {
+        let listener = tokio::net::TcpListener::bind("127.0.0.1:0").await.unwrap();
+        let address = listener.local_addr().unwrap();
+        tokio::spawn(async move {
+            let (_socket, _) = listener.accept().await.unwrap();
+            std::future::pending::<()>().await;
+        });
+        let config = ZohoDeskConfig {
+            client_id: "stalled-test".to_string(),
+            client_secret: "secret".to_string(),
+            refresh_token: "refresh".to_string(),
+            org_id: "org".to_string(),
+            department_id: "department".to_string(),
+            accounts_url: format!("http://{address}"),
+            api_domain: format!("http://{address}"),
+        };
+        let started = tokio::time::Instant::now();
+
+        let result = tokio::time::timeout(
+            ZOHO_REQUEST_TIMEOUT * 2,
+            get_access_token(&http_client().unwrap(), &config),
+        )
+        .await
+        .expect("the Zoho request outlived its deadline");
+
+        assert!(result.is_err());
+        assert!(started.elapsed() >= ZOHO_REQUEST_TIMEOUT);
+    }
 
     fn payload_with_body(body: &str) -> SubmitSupportTicketPayload {
         SubmitSupportTicketPayload {

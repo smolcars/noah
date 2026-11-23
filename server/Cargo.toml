@@ -60,6 +60,7 @@ expo_push_notification_client = "2.0.2"
 jsonwebtoken = { version = "10.4.0", features = ["aws_lc_rs"] }
 
 [dev-dependencies]
+tokio = { version = "1.52.4", features = ["test-util"] }
 syn = { version = "2", features = ["full"] }
 tower = { version = "0.5.3", features = ["full"] }
 tracing-test = "0.2.6"

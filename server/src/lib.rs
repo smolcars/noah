@@ -10,6 +10,7 @@ pub mod db;
 pub mod direct_push;
 pub mod email_client;
 pub mod errors;
+pub mod http_client;
 pub mod mailbox_auth;
 pub mod mailbox_worker;
 pub mod push;
