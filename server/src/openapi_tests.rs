@@ -325,6 +325,73 @@ const CALLER_ONLY_FIELDS: [(&str, &[&str]); 16] = [
     ("post /v0/user_info", &[]),
 ];
 
+/// Whether each gated operation's answer carries data the caller holds. Those that do are sent
+/// by the read probe, unless UNPROBED_READS says why not.
+const RETURNS_CALLER_DATA: [(&str, bool); 30] = [
+    ("post /v0/backup/complete_upload", false),
+    ("post /v0/backup/delete", false),
+    ("post /v0/backup/download_url", true),
+    ("post /v0/backup/list", true),
+    ("post /v0/backup/settings", false),
+    ("post /v0/backup/upload_url", true),
+    ("post /v0/backup/v2/complete", false),
+    ("post /v0/backup/v2/delete", false),
+    ("post /v0/backup/v2/download", true),
+    ("post /v0/backup/v2/list", true),
+    ("post /v0/backup/v2/upload", true),
+    ("post /v0/deregister", false),
+    ("post /v0/email/send_verification", true),
+    ("post /v0/email/verify", true),
+    ("post /v0/heartbeat_response", false),
+    ("post /v0/historical-price", false),
+    ("post /v0/ln_address_suggestions", true),
+    ("post /v0/lnurlp/submit_invoice", false),
+    ("post /v0/mailbox/authorize", false),
+    ("post /v0/mailbox/revoke", false),
+    ("post /v0/prices", false),
+    ("post /v0/recurring_payments/sync", false),
+    ("post /v0/register", true),
+    ("post /v0/register_push_token", false),
+    ("post /v0/report_job_status", false),
+    ("post /v0/report_last_login", false),
+    ("post /v0/support/ticket", false),
+    ("post /v0/update_lightning_identity", true),
+    ("post /v0/update_profile", false),
+    ("post /v0/user_info", true),
+];
+
+/// Operations that return the caller's data that the read probe does not send, and why.
+const UNPROBED_READS: [(&str, &str); 7] = [
+    (
+        "post /v0/backup/upload_url",
+        "answers with what this request creates, so the probe naming B's objects covers it",
+    ),
+    (
+        "post /v0/backup/v2/upload",
+        "answers with the reservation this request creates, not with one the caller held",
+    ),
+    (
+        "post /v0/email/send_verification",
+        "echoes the email in the request and sends it a code",
+    ),
+    (
+        "post /v0/email/verify",
+        "answers with the caller's email only once this request verifies it",
+    ),
+    (
+        "post /v0/ln_address_suggestions",
+        "suggests other users' Lightning addresses by design",
+    ),
+    (
+        "post /v0/register",
+        "answers with what this request registers, so the probe naming B's objects covers it",
+    ),
+    (
+        "post /v0/update_lightning_identity",
+        "answers with what this request sets, so the probe naming B's objects covers it",
+    ),
+];
+
 /// Every field a gated operation's request carries: each parameter as `<in> parameter <name>`,
 /// and each body property at any depth, as `a.b` inside an object and `a[].b` inside an array.
 /// A request shape it does not understand is an error, so no field is skipped silently.
@@ -489,7 +556,52 @@ fn classification_failures(doc: &Value) -> Vec<String> {
             ));
         }
     }
+    for operation in operations.keys() {
+        if RETURNS_CALLER_DATA
+            .iter()
+            .filter(|(op, _)| op == operation)
+            .count()
+            != 1
+        {
+            failures.push(format!(
+                "{operation} is not listed once in RETURNS_CALLER_DATA. Say whether its answer \
+                 carries data the caller holds."
+            ));
+        }
+    }
+    for (operation, _) in RETURNS_CALLER_DATA {
+        if !operations.contains_key(operation) {
+            failures.push(format!(
+                "{operation} is in RETURNS_CALLER_DATA but is not a gated operation"
+            ));
+        }
+    }
+    for (operation, _) in UNPROBED_READS {
+        if !RETURNS_CALLER_DATA.contains(&(operation, true)) {
+            failures.push(format!(
+                "{operation} is in UNPROBED_READS but does not return the caller's data"
+            ));
+        }
+    }
     failures
+}
+
+/// The caller's answer to every gated read of its own data that names nothing.
+async fn caller_reads(
+    app: &axum::Router,
+    token: &str,
+    peer: &mut u32,
+) -> Vec<(&'static str, (axum::http::StatusCode, Vec<String>, Value))> {
+    let mut answers = Vec::new();
+    for (operation, returns) in RETURNS_CALLER_DATA {
+        if !returns || UNPROBED_READS.iter().any(|(op, _)| *op == operation) {
+            continue;
+        }
+        let (method, path) = operation.split_once(' ').unwrap();
+        let response = exchange(app, method, path, Some(token), Some(&json!({})), peer).await;
+        answers.push((operation, answer(operation, response)));
+    }
+    answers
 }
 
 #[test]
@@ -660,15 +772,18 @@ async fn no_gated_operation_acts_on_an_object_another_user_holds() {
     let mut peer = 0;
     let [a, b] = [0x31, 0x32].map(|byte| TestUser::new_with_key(&[byte; 32]));
     let ark_b = "tark1qbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
-    let mut tx = state.db_pool.begin().await.unwrap();
-    for (user, ln_address, ark_address) in
-        [(&a, "a@localhost", None), (&b, "b@localhost", Some(ark_b))]
-    {
+    let create = async |user: &TestUser, ln_address, ark_address| {
+        let mut tx = state.db_pool.begin().await.unwrap();
         UserRepository::create(&mut tx, &user.pubkey().to_string(), ln_address, ark_address)
             .await
             .unwrap();
-    }
-    tx.commit().await.unwrap();
+        tx.commit().await.unwrap();
+    };
+    create(&a, "a@localhost", None).await;
+    let token_a = a.access_token(&state);
+    // What A reads of its own while B holds nothing, to compare once B holds one of everything.
+    let alone = caller_reads(&app, &token_a, &mut peer).await;
+    create(&b, "b@localhost", Some(ark_b)).await;
     let pubkey_b = b.pubkey().to_string();
     let token_b = b.access_token(&state);
 
@@ -757,6 +872,17 @@ async fn no_gated_operation_acts_on_an_object_another_user_holds() {
     .unwrap();
     tx.commit().await.unwrap();
 
+    for ((operation, held), (_, unheld)) in caller_reads(&app, &token_a, &mut peer)
+        .await
+        .into_iter()
+        .zip(alone)
+    {
+        assert_eq!(
+            held, unheld,
+            "{operation} answers user A differently once user B holds objects"
+        );
+    }
+
     // User B's identifier for every field in OBJECT_FIELDS, and a valid value for the rest.
     let named = json!({
         "s3_key": format!("{pubkey_b}/backup_v1.db"),
@@ -816,7 +942,6 @@ async fn no_gated_operation_acts_on_an_object_another_user_holds() {
     let failures = classification_failures(&document());
     assert!(failures.is_empty(), "{}", failures.join("\n"));
 
-    let token_a = a.access_token(&state);
     let token_unregistered = TestUser::new_with_key(&[0x33; 32]).access_token(&state);
     let probes = OBJECT_FIELDS
         .iter()
