@@ -65,9 +65,8 @@ impl BarkdClient {
             .context("invalid barkd auth token")?;
         authorization.set_sensitive(true);
 
-        let client = reqwest::Client::builder()
+        let client = crate::http_client::outbound(request_timeout)
             .connect_timeout(request_timeout)
-            .timeout(request_timeout)
             .redirect(reqwest::redirect::Policy::none())
             .build()
             .context("failed to build barkd HTTP client")?;

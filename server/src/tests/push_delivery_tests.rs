@@ -1616,7 +1616,9 @@ lwIDAQAB
     #[tokio::test]
     #[ignore = "reaches the real APNs sandbox"]
     async fn apns_negotiates_http2_on_the_real_service() {
-        let response = reqwest::Client::new()
+        let response = crate::http_client::outbound(Duration::from_secs(30))
+            .build()
+            .unwrap()
             .post(format!(
                 "https://api.sandbox.push.apple.com/3/device/{APNS_TOKEN}"
             ))

@@ -78,6 +78,10 @@ server-test:
 server-check:
     cargo check
 
+# The clippy check CI runs: outbound clients must be built with a deadline (server/clippy.toml)
+server-clippy:
+    cargo clippy --all-targets --all-features -- -A clippy::all -D clippy::disallowed_methods
+
 # Model-check the mailbox worker lease (formal/mailbox-lease); needs Java 17+
 formal-mailbox-lease:
     formal/mailbox-lease/check.sh

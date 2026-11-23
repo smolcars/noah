@@ -56,8 +56,7 @@ pub struct CoinGeckoFiatRateProvider {
 impl CoinGeckoFiatRateProvider {
     pub fn new(config: &Config) -> Self {
         Self {
-            client: reqwest::Client::builder()
-                .timeout(COINGECKO_REQUEST_TIMEOUT)
+            client: crate::http_client::outbound(COINGECKO_REQUEST_TIMEOUT)
                 .user_agent(COINGECKO_USER_AGENT)
                 .build()
                 .expect("valid CoinGecko HTTP client"),

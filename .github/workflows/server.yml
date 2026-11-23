@@ -70,7 +70,7 @@ jobs:
       - name: 🦀 Setup Rust
         uses: actions-rust-lang/setup-rust-toolchain@166cdcfd11aee3cb47222f9ddb555ce30ddb9659 # v1.17.0
         with:
-          components: rustfmt
+          components: rustfmt, clippy
           cache: false
       # Merges save the cache and PRs restore it, so a PR doesn't evict master's entry.
       # Merges only compile, to keep that cache warm; formatting and tests run on PRs.
@@ -83,6 +83,10 @@ jobs:
       - name: ✨ Check formatting
         if: github.event_name == 'pull_request'
         run: cargo fmt --check
+      # Only the outbound-deadline rules in server/clippy.toml fail the build for now.
+      - name: ⏱️ Check outbound calls have deadlines
+        if: github.event_name == 'pull_request'
+        run: cargo clippy --all-targets --all-features -- -A clippy::all -D clippy::disallowed_methods
       - name: 🧪 Run tests
         if: github.event_name == 'pull_request'
         env:

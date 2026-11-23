@@ -99,9 +99,8 @@ impl DirectPush {
     /// Fails on credentials that are present but unusable, so a bad secret stops the
     /// deploy instead of silently losing pushes. Missing ones only fail at send time.
     pub fn from_config(config: &Config) -> Result<Self> {
-        let client = Client::builder()
+        let client = crate::http_client::outbound(REQUEST_TIMEOUT)
             .connect_timeout(CONNECT_TIMEOUT)
-            .timeout(REQUEST_TIMEOUT)
             .build()
             .context("Failed to build the direct push HTTP client")?;
 
