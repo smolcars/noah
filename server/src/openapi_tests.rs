@@ -630,7 +630,12 @@ async fn no_gated_operation_acts_on_an_object_another_user_holds() {
             .await
             .unwrap()
     );
-    let schedules = json!([{"schedule_id": "b-schedule", "next_run_at": chrono::Utc::now().timestamp() + 3600}]);
+    let hour = chrono::Utc::now().timestamp() + 3600;
+    // A second schedule A does not list makes a prune that ignores the owner delete one of B's.
+    let schedules = json!([
+        {"schedule_id": "b-schedule", "next_run_at": hour},
+        {"schedule_id": "b-other", "next_run_at": hour},
+    ]);
     for (path, body) in [
         (
             "/v0/backup/complete_upload",
@@ -675,7 +680,8 @@ async fn no_gated_operation_acts_on_an_object_another_user_holds() {
         // The ID the LNURL callback pushed to B; B's answer is read back under B's key.
         "transaction_id": "b-transaction",
         "invoice": test_invoice(bitcoin::Network::Regtest, 1_000_000, 7),
-        "schedules": schedules,
+        // Another due time for B's ID, so an update that ignores the owner moves B's schedule.
+        "schedules": [{"schedule_id": "b-schedule", "next_run_at": hour + 3600}],
         "ark_address": ark_b,
         "ln_address": "b@localhost",
         "device_info": null,
