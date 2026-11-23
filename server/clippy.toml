@@ -9,4 +9,7 @@ disallowed-methods = [
   { path = "server_rpc::client::ServerConnectionBuilder::connect", reason = "it waits up to ten minutes; use crate::mailbox_worker::connect_ark_server" },
   { path = "server_rpc::client::ServerConnection::connect", reason = "it waits up to ten minutes; use crate::mailbox_worker::connect_ark_server" },
   { path = "server_rpc::tonic::transport::Endpoint::connect", reason = "it has no connect timeout; use crate::mailbox_worker::connect_ark_server" },
+  { path = "server_rpc::tonic::transport::Endpoint::connect_lazy", reason = "it has no connect timeout; use crate::mailbox_worker::connect_ark_server" },
+  { path = "server_rpc::tonic::transport::Endpoint::connect_with_connector", reason = "it has no connect timeout; use crate::mailbox_worker::connect_ark_server" },
+  { path = "server_rpc::tonic::transport::Endpoint::connect_with_connector_lazy", reason = "it has no connect timeout; use crate::mailbox_worker::connect_ark_server" },
 ]
