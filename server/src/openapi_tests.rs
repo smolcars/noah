@@ -25,7 +25,6 @@ fn served_paths(app: &axum::Router) -> BTreeSet<String> {
     paths
 }
 
-/// Sends one request from its own peer address, so this audit never reaches a quota.
 async fn send(
     app: &axum::Router,
     method: &str,
@@ -36,6 +35,26 @@ async fn send(
     axum::http::StatusCode,
     Option<String>,
     axum::http::HeaderMap,
+) {
+    let (status, headers, body) = exchange(app, method, path, token, None, peer).await;
+    let code = serde_json::from_slice::<Value>(&body)
+        .ok()
+        .and_then(|body| body["code"].as_str().map(String::from));
+    (status, code, headers)
+}
+
+/// Sends one request from its own peer address, so this audit never reaches a quota.
+async fn exchange(
+    app: &axum::Router,
+    method: &str,
+    path: &str,
+    token: Option<&str>,
+    json: Option<&Value>,
+    peer: &mut u32,
+) -> (
+    axum::http::StatusCode,
+    axum::http::HeaderMap,
+    axum::body::Bytes,
 ) {
     use axum::{body::Body, extract::ConnectInfo, http::Request};
     use http_body_util::BodyExt;
@@ -48,7 +67,13 @@ async fn send(
     if let Some(token) = token {
         request = request.header("authorization", format!("Bearer {token}"));
     }
-    let mut request = request.body(Body::empty()).unwrap();
+    let mut request = match json {
+        Some(json) => request
+            .header("content-type", "application/json")
+            .body(Body::from(json.to_string())),
+        None => request.body(Body::empty()),
+    }
+    .unwrap();
     request
         .extensions_mut()
         .insert(ConnectInfo(std::net::SocketAddr::from((
@@ -59,10 +84,7 @@ async fn send(
     let status = response.status();
     let headers = response.headers().clone();
     let body = response.into_body().collect().await.unwrap().to_bytes();
-    let code = serde_json::from_slice::<Value>(&body)
-        .ok()
-        .and_then(|body| body["code"].as_str().map(String::from));
-    (status, code, headers)
+    (status, headers, body)
 }
 
 #[tokio::test]
@@ -181,6 +203,324 @@ async fn every_operation_is_served_behind_its_documented_gates() {
                 assert_ne!(code.as_deref(), Some("USER_NOT_FOUND"), "{probe}");
             }
         }
+    }
+}
+
+/// Gated operations whose request names a stored object (an ID, key or name another user can
+/// hold), with all their request fields. `true` marks one that may still succeed when it names
+/// another user's object, because it then acts only on the caller's own.
+const OBJECT_FIELDS: [(&str, &[&str], bool); 13] = [
+    (
+        "post /v0/backup/complete_upload",
+        &["backup_size", "backup_version", "s3_key"],
+        false,
+    ),
+    ("post /v0/backup/delete", &["backup_version"], false),
+    ("post /v0/backup/download_url", &["backup_version"], false),
+    ("post /v0/backup/upload_url", &["backup_version"], true),
+    ("post /v0/backup/v2/complete", &["backup_id"], false),
+    ("post /v0/backup/v2/delete", &["backup_id"], false),
+    ("post /v0/backup/v2/download", &["backup_id"], false),
+    ("post /v0/heartbeat_response", &["notification_id"], false),
+    (
+        "post /v0/lnurlp/submit_invoice",
+        &["invoice", "transaction_id"],
+        true,
+    ),
+    ("post /v0/recurring_payments/sync", &["schedules"], true),
+    (
+        "post /v0/register",
+        &["ark_address", "device_info", "ln_address"],
+        false,
+    ),
+    (
+        "post /v0/report_job_status",
+        &["error_message", "notification_k1", "report_type", "status"],
+        false,
+    ),
+    (
+        "post /v0/update_lightning_identity",
+        &["nostr_pubkey", "username"],
+        false,
+    ),
+];
+
+/// Gated operations whose request fields were reviewed as naming nothing another user owns.
+const CALLER_ONLY_FIELDS: [(&str, &[&str]); 17] = [
+    ("post /v0/backup/list", &[]),
+    ("post /v0/backup/settings", &["backup_enabled"]),
+    ("post /v0/backup/v2/list", &[]),
+    (
+        "post /v0/backup/v2/upload",
+        &["encrypted_sha256", "encrypted_size", "format_version"],
+    ),
+    ("post /v0/deregister", &[]),
+    ("post /v0/email/send_verification", &["email"]),
+    ("post /v0/email/verify", &["code"]),
+    ("post /v0/historical-price", &["currency", "timestamp"]),
+    ("post /v0/ln_address_suggestions", &["query"]),
+    // The mailbox key signs the authorization, so naming another mailbox needs its key.
+    (
+        "post /v0/mailbox/authorize",
+        &["encoded", "expiry", "mailbox_id"],
+    ),
+    ("post /v0/mailbox/revoke", &[]),
+    ("post /v0/prices", &[]),
+    (
+        "post /v0/register_push_token",
+        &["apns_sandbox", "provider", "push_token"],
+    ),
+    ("post /v0/report_last_login", &["device_info"]),
+    (
+        "post /v0/support/ticket",
+        &[
+            "attachment",
+            "body",
+            "device_info",
+            "email",
+            "name",
+            "subject",
+        ],
+    ),
+    ("post /v0/update_profile", &["display_name"]),
+    ("post /v0/user_info", &[]),
+];
+
+/// Everything `owner` holds that a request can name, as text to compare.
+async fn holdings(
+    state: &crate::AppState,
+    owner: &str,
+    named: &serde_json::Map<String, Value>,
+) -> String {
+    use crate::db::{
+        backup_repo::BackupRepository, heartbeat_repo::HeartbeatRepository,
+        job_status_repo::JobStatusRepository, recurring_payment_repo::RecurringPaymentRepository,
+        user_repo::UserRepository,
+    };
+    let backups = BackupRepository::new(&state.db_pool);
+    let backup_id = named["backup_id"].as_str().unwrap().parse().unwrap();
+    format!(
+        "{:?}\n{:?}\n{:?}\n{:?}\n{:?}\n{:?}\n{:?}",
+        UserRepository::new(&state.db_pool)
+            .find_by_pubkey(owner)
+            .await
+            .unwrap(),
+        backups.find_by_pubkey_and_version(owner, 1).await.unwrap(),
+        backups.find_object(owner, backup_id).await.unwrap(),
+        HeartbeatRepository::find_status_and_responded_at(
+            &state.db_pool,
+            named["notification_id"].as_str().unwrap()
+        )
+        .await
+        .unwrap(),
+        JobStatusRepository::find_status_and_error_by_k1(
+            &state.db_pool,
+            owner,
+            named["notification_k1"].as_str().unwrap()
+        )
+        .await
+        .unwrap(),
+        RecurringPaymentRepository::new(&state.db_pool)
+            .list_for_pubkey(owner)
+            .await
+            .unwrap(),
+        state
+            .invoice_store
+            .get(owner, named["transaction_id"].as_str().unwrap())
+            .await
+            .unwrap(),
+    )
+}
+
+/// The authorization class: a gated request that names another user's object must not act on it.
+/// User B holds one of every object a gated request can name; user A names each with A's token.
+#[tokio::test]
+async fn no_gated_operation_acts_on_an_object_another_user_holds() {
+    use crate::db::{
+        backup_repo::BackupRepository, heartbeat_repo::HeartbeatRepository,
+        job_status_repo::JobStatusRepository, user_repo::UserRepository,
+    };
+    use crate::tests::common::{TestUser, setup_test_app, test_invoice};
+
+    let (_, state, _guard) = setup_test_app().await;
+    let app = crate::app_router(state.clone());
+    let mut peer = 0;
+    let [a, b] = [0x31, 0x32].map(|byte| TestUser::new_with_key(&[byte; 32]));
+    let ark_b = "tark1qbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb";
+    let mut tx = state.db_pool.begin().await.unwrap();
+    for (user, ln_address, ark_address) in
+        [(&a, "a@localhost", None), (&b, "b@localhost", Some(ark_b))]
+    {
+        UserRepository::create(&mut tx, &user.pubkey().to_string(), ln_address, ark_address)
+            .await
+            .unwrap();
+    }
+    tx.commit().await.unwrap();
+    let pubkey_b = b.pubkey().to_string();
+    let token_b = b.access_token(&state);
+
+    let (status, _, body) = exchange(
+        &app,
+        "post",
+        "/v0/backup/v2/upload",
+        Some(&token_b),
+        Some(
+            &json!({"format_version": 2, "encrypted_size": 1, "encrypted_sha256": "00".repeat(32)}),
+        ),
+        &mut peer,
+    )
+    .await;
+    assert!(
+        status.is_success(),
+        "user B reserves a backup object: {status}"
+    );
+    let backup_id = serde_json::from_slice::<Value>(&body).unwrap()["backup_id"].clone();
+    let backups = BackupRepository::new(&state.db_pool);
+    assert!(
+        backups
+            .complete_object(&pubkey_b, backup_id.as_str().unwrap().parse().unwrap())
+            .await
+            .unwrap()
+    );
+    let schedules = json!([{"schedule_id": "b-schedule", "next_run_at": chrono::Utc::now().timestamp() + 3600}]);
+    for (path, body) in [
+        (
+            "/v0/backup/complete_upload",
+            json!({"s3_key": format!("{pubkey_b}/backup_v1.db"), "backup_version": 1, "backup_size": 1024}),
+        ),
+        (
+            "/v0/recurring_payments/sync",
+            json!({"schedules": schedules}),
+        ),
+    ] {
+        let (status, _, _) =
+            exchange(&app, "post", path, Some(&token_b), Some(&body), &mut peer).await;
+        assert!(
+            status.is_success(),
+            "user B creates its object with {path}: {status}"
+        );
+    }
+    let notification_id = HeartbeatRepository::new(&state.db_pool)
+        .create_notification(&pubkey_b)
+        .await
+        .unwrap();
+    let mut tx = state.db_pool.begin().await.unwrap();
+    JobStatusRepository::create_with_k1_and_prune(
+        &mut tx,
+        &pubkey_b,
+        "b-k1",
+        &ReportType::Backup,
+        &ReportStatus::Pending,
+        None,
+    )
+    .await
+    .unwrap();
+    tx.commit().await.unwrap();
+
+    // User B's identifier for every field in OBJECT_FIELDS, and a valid value for the rest.
+    let named = json!({
+        "s3_key": format!("{pubkey_b}/backup_v1.db"),
+        "backup_version": 1,
+        "backup_size": 2048,
+        "backup_id": backup_id,
+        "notification_id": notification_id,
+        // The ID the LNURL callback pushed to B; B's answer is read back under B's key.
+        "transaction_id": "b-transaction",
+        "invoice": test_invoice(bitcoin::Network::Regtest, 1_000_000, 7),
+        "schedules": schedules,
+        "ark_address": ark_b,
+        "ln_address": "b@localhost",
+        "device_info": null,
+        "notification_k1": "b-k1",
+        "report_type": "backup",
+        "status": "success",
+        "error_message": "answered by another user",
+        "username": "b",
+        "nostr_pubkey": null,
+    });
+    let named = named.as_object().unwrap();
+    let before = holdings(&state, &pubkey_b, named).await;
+
+    let doc = document();
+    let mut gated = BTreeSet::new();
+    for (path, item) in doc["paths"].as_object().unwrap() {
+        for (method, op) in item.as_object().unwrap() {
+            if op.get("security").is_none() {
+                continue;
+            }
+            let operation = format!("{method} {path}");
+            let schema = &op["requestBody"]["content"]["application/json"]["schema"]["$ref"];
+            let fields = schema
+                .as_str()
+                .and_then(|reference| reference.strip_prefix("#/components/schemas/"))
+                .and_then(|name| doc["components"]["schemas"][name]["properties"].as_object())
+                .map(|properties| properties.keys().cloned().collect::<BTreeSet<_>>())
+                .unwrap_or_default();
+            let listed = OBJECT_FIELDS
+                .iter()
+                .map(|(op, fields, _)| (op, fields))
+                .chain(CALLER_ONLY_FIELDS.iter().map(|(op, fields)| (op, fields)))
+                .filter(|(op, _)| **op == operation)
+                .map(|(_, fields)| {
+                    fields
+                        .iter()
+                        .map(|field| field.to_string())
+                        .collect::<BTreeSet<_>>()
+                })
+                .collect::<Vec<_>>();
+            assert_eq!(
+                listed,
+                [fields.clone()],
+                "{operation} sends {fields:?}. If a field names something a user owns, list the \
+                 operation once in OBJECT_FIELDS and give user B one to name; otherwise list it \
+                 once in CALLER_ONLY_FIELDS."
+            );
+            gated.insert(operation);
+        }
+    }
+    assert_eq!(gated.len(), OBJECT_FIELDS.len() + CALLER_ONLY_FIELDS.len());
+
+    let token_a = a.access_token(&state);
+    for (operation, fields, may_succeed) in OBJECT_FIELDS {
+        let (method, path) = operation.split_once(' ').unwrap();
+        let body = fields
+            .iter()
+            .map(|field| {
+                let value = named.get(*field);
+                assert!(
+                    value.is_some(),
+                    "user B holds nothing for {operation} to name in `{field}`"
+                );
+                (field.to_string(), value.unwrap().clone())
+            })
+            .collect::<serde_json::Map<_, _>>();
+        let (status, _, response) = exchange(
+            &app,
+            method,
+            path,
+            Some(&token_a),
+            Some(&Value::Object(body)),
+            &mut peer,
+        )
+        .await;
+        let response = String::from_utf8_lossy(&response);
+        assert!(
+            may_succeed || !status.is_success(),
+            "{operation} with user B's identifiers and user A's token succeeded: {status} {response}"
+        );
+        assert!(
+            !status.is_server_error(),
+            "{operation} with user B's identifiers failed inside the server: {status} {response}"
+        );
+        assert!(
+            !response.contains(&pubkey_b),
+            "{operation} with user B's identifiers revealed B's object to user A: {response}"
+        );
+        assert_eq!(
+            holdings(&state, &pubkey_b, named).await,
+            before,
+            "{operation} with user B's identifiers and user A's token changed what B holds"
+        );
     }
 }
 
