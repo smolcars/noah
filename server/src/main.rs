@@ -321,6 +321,41 @@ async fn start_server(config: Config) -> anyhow::Result<()> {
         None
     };
 
+    let app = app_router(app_state)
+        .layer(SentryHttpLayer::new().enable_transaction())
+        .layer(NewSentryLayer::new_from_top());
+
+    let addr = SocketAddr::from((host, config.port));
+    tracing::debug!("server started listening on {}", addr);
+    let listener = tokio::net::TcpListener::bind(addr).await?;
+
+    let signal_shutdown = shutdown.clone();
+    // Important: Use into_make_service_with_connect_info to provide IP information for rate limiting
+    let served = axum::serve(
+        listener,
+        app.into_make_service_with_connect_info::<SocketAddr>(),
+    )
+    .with_graceful_shutdown(async move {
+        utils::shutdown_signal().await;
+        signal_shutdown.cancel();
+    })
+    .await;
+
+    // Let the mailbox worker stop its sessions and release its leases before exiting.
+    shutdown.cancel();
+    if let Some(mailbox_worker) = mailbox_worker
+        && let Err(error) = mailbox_worker.await
+    {
+        tracing::error!(error = %error, "mailbox worker task failed");
+    }
+
+    served?;
+    Ok(())
+}
+
+/// Every route the server serves, with its auth tier, rate limiter and body limit.
+/// Rate-limit state lives in the returned router, so each call starts with fresh quotas.
+fn app_router(app_state: AppState) -> Router {
     // Middleware that checks the signature and authenticates the user
     let auth_layer =
         middleware::from_fn_with_state(app_state.clone(), app_middleware::auth_middleware);
@@ -414,40 +449,11 @@ async fn start_server(config: Config) -> anyhow::Result<()> {
         get(nip05_request).layer(nip05_rate_limiter),
     );
 
-    let app = Router::new()
+    Router::new()
         .route("/", get(root))
         .route("/health", get(health))
         .nest("/v0", v0_router)
         .merge(lnurl_router)
-        .with_state(app_state.clone())
+        .with_state(app_state)
         .layer(middleware::from_fn(trace_layer::trace_middleware))
-        .layer(SentryHttpLayer::new().enable_transaction())
-        .layer(NewSentryLayer::new_from_top());
-
-    let addr = SocketAddr::from((host, config.port));
-    tracing::debug!("server started listening on {}", addr);
-    let listener = tokio::net::TcpListener::bind(addr).await?;
-
-    let signal_shutdown = shutdown.clone();
-    // Important: Use into_make_service_with_connect_info to provide IP information for rate limiting
-    let served = axum::serve(
-        listener,
-        app.into_make_service_with_connect_info::<SocketAddr>(),
-    )
-    .with_graceful_shutdown(async move {
-        utils::shutdown_signal().await;
-        signal_shutdown.cancel();
-    })
-    .await;
-
-    // Let the mailbox worker stop its sessions and release its leases before exiting.
-    shutdown.cancel();
-    if let Some(mailbox_worker) = mailbox_worker
-        && let Err(error) = mailbox_worker.await
-    {
-        tracing::error!(error = %error, "mailbox worker task failed");
-    }
-
-    served?;
-    Ok(())
 }

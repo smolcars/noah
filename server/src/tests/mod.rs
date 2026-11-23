@@ -11,5 +11,6 @@ pub mod gated_suggestions_tests;
 pub mod gated_user_tests;
 pub mod mailbox_transport_tests;
 pub mod public_api_v0;
+mod rate_limit_tests;
 
 mod push_delivery_tests;

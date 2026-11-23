@@ -1,13 +1,11 @@
 use std::{net::SocketAddr, sync::Arc};
 
 use axum::{Extension, Router, extract::ConnectInfo};
-use axum::{middleware, routing::post};
 use bitcoin::key::Keypair;
 use once_cell::sync::Lazy;
 use sqlx::{PgPool, postgres::PgPoolOptions};
 use tokio::sync::{OwnedSemaphorePermit, Semaphore};
 
-use crate::app_middleware::{auth_middleware, user_exists_middleware};
 use crate::auth::mint_access_token;
 use crate::barkd_client::ForwardingInvoiceProvider;
 use crate::cache::{
@@ -16,19 +14,6 @@ use crate::cache::{
 };
 use crate::config::Config;
 use crate::email_client::EmailClient;
-use crate::routes::gated_api_v0::{
-    authorize_mailbox, complete_backup_object_upload, complete_upload, delete_backup,
-    delete_backup_object, deregister, get_backup_object_download_url, get_download_url,
-    get_upload_url, get_user_info, heartbeat_response, initiate_backup_object_upload,
-    list_backup_objects, list_backups, ln_address_suggestions, register_push_token,
-    report_job_status, report_last_login, revoke_mailbox_authorization, submit_invoice,
-    submit_support_ticket, sync_recurring_payments, update_backup_settings,
-    update_lightning_identity, update_profile,
-};
-use crate::routes::public_api_v0::{
-    auth_login, check_app_version, fiat_prices, get_k1, historical_fiat_price, nip05_request,
-    register, send_verification_email, verify_email,
-};
 use crate::types::AuthLoginPayload;
 use crate::{AppState, AppStruct};
 
@@ -146,10 +131,25 @@ impl TestUser {
 }
 
 pub async fn setup_test_app() -> (Router, AppState, TestDbGuard) {
+    setup_test_app_with_barkd(None).await
+}
+
+pub async fn setup_test_app_with_barkd(
+    barkd_invoice_provider: Option<Arc<dyn ForwardingInvoiceProvider>>,
+) -> (Router, AppState, TestDbGuard) {
+    setup_test_app_with_push(barkd_invoice_provider, None).await
+}
+
+/// The production router over test state, as seen from one peer address.
+pub async fn setup_test_app_with_push(
+    barkd_invoice_provider: Option<Arc<dyn ForwardingInvoiceProvider>>,
+    push_deliveries: Option<
+        tokio::sync::mpsc::UnboundedSender<(String, crate::push::PushNotificationData)>,
+    >,
+) -> (Router, AppState, TestDbGuard) {
     // Ensure tests run sequentially against the shared Postgres instance
     let guard = acquire_test_db_guard().await;
 
-    // Set up environment variables for testing
     unsafe {
         std::env::set_var("S3_BUCKET_NAME", "test-bucket");
         std::env::set_var("AWS_ACCESS_KEY_ID", "test-key");
@@ -157,119 +157,6 @@ pub async fn setup_test_app() -> (Router, AppState, TestDbGuard) {
         std::env::set_var("AWS_REGION", "us-east-1");
         std::env::set_var("EMAIL_DEV_MODE", "true");
     }
-
-    let db_pool = setup_test_database().await;
-
-    let k1_cache = setup_test_k1_store().await;
-    let invoice_store = setup_test_invoice_store().await;
-    let email_verification_store = setup_test_email_verification_store().await;
-    let email_client = EmailClient::new("test@noahwallet.com".to_string(), true)
-        .await
-        .expect("Failed to create email client");
-
-    let maintenance_store = setup_test_maintenance_store().await;
-
-    let app_state = Arc::new(AppStruct {
-        push_deliveries: None,
-        direct_push: Arc::new(
-            crate::direct_push::DirectPush::from_config(&TestUser::get_config()).unwrap(),
-        ),
-        lnurl_domain: "localhost".to_string(),
-        ark_server_pubkey: Arc::new(tokio::sync::RwLock::new(None)),
-        db_pool: db_pool.clone(),
-        redis: RedisClient::new(&TestUser::get_config().redis_url).unwrap(),
-        k1_cache: k1_cache.clone(),
-        invoice_store,
-        email_verification_store,
-        email_client,
-        maintenance_store,
-        barkd_invoice_provider: None,
-        config: Arc::new(TestUser::get_config()),
-    });
-
-    // Middleware layers
-    let auth_layer = middleware::from_fn_with_state(app_state.clone(), auth_middleware);
-    let user_exists_layer =
-        middleware::from_fn_with_state(app_state.clone(), user_exists_middleware);
-
-    // Email verification routes - need auth and user to exist
-    let email_verification_router = Router::new()
-        .route("/email/send_verification", post(send_verification_email))
-        .route("/email/verify", post(verify_email))
-        .layer(user_exists_layer.clone());
-
-    // Gated routes that need auth AND user to exist in database
-    let gated_router = Router::new()
-        .route("/register_push_token", post(register_push_token))
-        .route("/mailbox/authorize", post(authorize_mailbox))
-        .route("/mailbox/revoke", post(revoke_mailbox_authorization))
-        .route("/lnurlp/submit_invoice", post(submit_invoice))
-        .route("/ln_address_suggestions", post(ln_address_suggestions))
-        .route("/user_info", post(get_user_info))
-        .route(
-            "/update_lightning_identity",
-            post(update_lightning_identity),
-        )
-        .route("/update_profile", post(update_profile))
-        .route("/deregister", post(deregister))
-        .route("/backup/upload_url", post(get_upload_url))
-        .route("/backup/complete_upload", post(complete_upload))
-        .route("/backup/list", post(list_backups))
-        .route("/backup/download_url", post(get_download_url))
-        .route("/backup/delete", post(delete_backup))
-        .route("/backup/v2/upload", post(initiate_backup_object_upload))
-        .route("/backup/v2/complete", post(complete_backup_object_upload))
-        .route("/backup/v2/list", post(list_backup_objects))
-        .route("/backup/v2/download", post(get_backup_object_download_url))
-        .route("/backup/v2/delete", post(delete_backup_object))
-        .route("/backup/settings", post(update_backup_settings))
-        .route("/report_job_status", post(report_job_status))
-        .route("/heartbeat_response", post(heartbeat_response))
-        .route("/report_last_login", post(report_last_login))
-        .route("/support/ticket", post(submit_support_ticket))
-        .route("/recurring_payments/sync", post(sync_recurring_payments))
-        .layer(user_exists_layer.clone());
-
-    let fiat_router = Router::new()
-        .route("/prices", post(fiat_prices))
-        .route("/historical-price", post(historical_fiat_price))
-        .layer(user_exists_layer)
-        .layer(auth_layer.clone());
-
-    // Routes that need auth but user may not exist (like registration)
-    let auth_router = Router::new()
-        .route("/register", post(register))
-        .merge(email_verification_router)
-        .merge(gated_router)
-        .layer(auth_layer);
-
-    let app = Router::new()
-        .route("/getk1", axum::routing::get(get_k1))
-        .route("/auth/login", post(auth_login))
-        .merge(fiat_router)
-        .merge(auth_router)
-        .with_state(app_state.clone());
-
-    (app, app_state, guard)
-}
-
-pub async fn setup_public_test_app() -> (Router, AppState, TestDbGuard) {
-    setup_public_test_app_with_barkd(None).await
-}
-
-pub async fn setup_public_test_app_with_barkd(
-    barkd_invoice_provider: Option<Arc<dyn ForwardingInvoiceProvider>>,
-) -> (Router, AppState, TestDbGuard) {
-    setup_public_test_app_with_push(barkd_invoice_provider, None).await
-}
-
-pub async fn setup_public_test_app_with_push(
-    barkd_invoice_provider: Option<Arc<dyn ForwardingInvoiceProvider>>,
-    push_deliveries: Option<
-        tokio::sync::mpsc::UnboundedSender<(String, crate::push::PushNotificationData)>,
-    >,
-) -> (Router, AppState, TestDbGuard) {
-    let guard = acquire_test_db_guard().await;
 
     let db_pool = setup_test_database().await;
 
@@ -300,17 +187,9 @@ pub async fn setup_public_test_app_with_push(
         config: Arc::new(TestUser::get_config()),
     });
 
-    let app = Router::new()
-        .route("/getk1", axum::routing::get(get_k1))
-        .route("/auth/login", post(auth_login))
-        .route("/app_version", post(check_app_version))
-        .merge(crate::lnurlp_router())
-        .route("/.well-known/nostr.json", axum::routing::get(nip05_request))
-        .with_state(app_state.clone())
-        .layer(Extension(ConnectInfo(SocketAddr::from((
-            [127, 0, 0, 1],
-            3000,
-        )))));
+    let app = crate::app_router(app_state.clone()).layer(Extension(ConnectInfo(SocketAddr::from(
+        ([127, 0, 0, 1], 3000),
+    ))));
 
     (app, app_state, guard)
 }

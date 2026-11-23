@@ -14,12 +14,12 @@ async fn test_backup_endpoints_invalid_auth() {
     create_test_user(&app_state, &user, None).await;
 
     let endpoints = vec![
-        "/backup/upload_url",
-        "/backup/complete_upload",
-        "/backup/list",
-        "/backup/download_url",
-        "/backup/delete",
-        "/backup/settings",
+        "/v0/backup/upload_url",
+        "/v0/backup/complete_upload",
+        "/v0/backup/list",
+        "/v0/backup/download_url",
+        "/v0/backup/delete",
+        "/v0/backup/settings",
     ];
 
     for endpoint in endpoints {
@@ -65,7 +65,7 @@ async fn test_error_payload_shape_invalid_auth() {
         .oneshot(
             Request::builder()
                 .method(http::Method::POST)
-                .uri("/backup/list")
+                .uri("/v0/backup/list")
                 .header(http::header::CONTENT_TYPE, "application/json")
                 .header(http::header::AUTHORIZATION, "Bearer invalid-token")
                 .body(Body::from("{}"))
@@ -108,12 +108,12 @@ async fn test_backup_endpoints_missing_auth() {
     let (app, _, _guard) = setup_test_app().await;
 
     let endpoints = vec![
-        "/backup/upload_url",
-        "/backup/complete_upload",
-        "/backup/list",
-        "/backup/download_url",
-        "/backup/delete",
-        "/backup/settings",
+        "/v0/backup/upload_url",
+        "/v0/backup/complete_upload",
+        "/v0/backup/list",
+        "/v0/backup/download_url",
+        "/v0/backup/delete",
+        "/v0/backup/settings",
     ];
 
     for endpoint in endpoints {
@@ -155,11 +155,11 @@ async fn test_backup_endpoints_malformed_json() {
     let access_token = user.access_token(&app_state);
 
     let endpoints = vec![
-        "/backup/upload_url",
-        "/backup/complete_upload",
-        "/backup/download_url",
-        "/backup/delete",
-        "/backup/settings",
+        "/v0/backup/upload_url",
+        "/v0/backup/complete_upload",
+        "/v0/backup/download_url",
+        "/v0/backup/delete",
+        "/v0/backup/settings",
     ];
 
     for endpoint in endpoints {
@@ -203,7 +203,7 @@ async fn test_complete_upload_missing_fields() {
         .oneshot(
             Request::builder()
                 .method(http::Method::POST)
-                .uri("/backup/complete_upload")
+                .uri("/v0/backup/complete_upload")
                 .header(http::header::CONTENT_TYPE, "application/json")
                 .header(
                     http::header::AUTHORIZATION,
@@ -246,7 +246,7 @@ async fn test_get_upload_url_missing_fields() {
         .oneshot(
             Request::builder()
                 .method(http::Method::POST)
-                .uri("/backup/upload_url")
+                .uri("/v0/backup/upload_url")
                 .header(http::header::CONTENT_TYPE, "application/json")
                 .header(
                     http::header::AUTHORIZATION,
@@ -284,7 +284,7 @@ async fn test_delete_backup_missing_version() {
         .oneshot(
             Request::builder()
                 .method(http::Method::POST)
-                .uri("/backup/delete")
+                .uri("/v0/backup/delete")
                 .header(http::header::CONTENT_TYPE, "application/json")
                 .header(
                     http::header::AUTHORIZATION,
@@ -321,7 +321,7 @@ async fn test_update_backup_settings_missing_enabled() {
         .oneshot(
             Request::builder()
                 .method(http::Method::POST)
-                .uri("/backup/settings")
+                .uri("/v0/backup/settings")
                 .header(http::header::CONTENT_TYPE, "application/json")
                 .header(
                     http::header::AUTHORIZATION,

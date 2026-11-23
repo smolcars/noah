@@ -53,7 +53,7 @@ async fn test_get_user_info() {
         .oneshot(
             Request::builder()
                 .method(http::Method::POST)
-                .uri("/user_info")
+                .uri("/v0/user_info")
                 .header(http::header::CONTENT_TYPE, "application/json")
                 .header(
                     http::header::AUTHORIZATION,
@@ -98,7 +98,7 @@ async fn test_update_lightning_identity() {
         .oneshot(
             Request::builder()
                 .method(http::Method::POST)
-                .uri("/update_lightning_identity")
+                .uri("/v0/update_lightning_identity")
                 .header(http::header::CONTENT_TYPE, "application/json")
                 .header(
                     http::header::AUTHORIZATION,
@@ -156,7 +156,7 @@ async fn test_update_lightning_identity_allows_lightning_only() {
         .oneshot(
             Request::builder()
                 .method(http::Method::POST)
-                .uri("/update_lightning_identity")
+                .uri("/v0/update_lightning_identity")
                 .header(http::header::CONTENT_TYPE, "application/json")
                 .header(
                     http::header::AUTHORIZATION,
@@ -201,7 +201,7 @@ async fn test_update_lightning_identity_rejects_private_key() {
         .oneshot(
             Request::builder()
                 .method(http::Method::POST)
-                .uri("/update_lightning_identity")
+                .uri("/v0/update_lightning_identity")
                 .header(http::header::CONTENT_TYPE, "application/json")
                 .header(
                     http::header::AUTHORIZATION,
@@ -235,7 +235,7 @@ async fn test_update_lightning_identity_rejects_hex_key() {
         .oneshot(
             Request::builder()
                 .method(http::Method::POST)
-                .uri("/update_lightning_identity")
+                .uri("/v0/update_lightning_identity")
                 .header(http::header::CONTENT_TYPE, "application/json")
                 .header(
                     http::header::AUTHORIZATION,
@@ -279,7 +279,7 @@ async fn test_update_profile_display_name() {
         .oneshot(
             Request::builder()
                 .method(http::Method::POST)
-                .uri("/update_profile")
+                .uri("/v0/update_profile")
                 .header(http::header::CONTENT_TYPE, "application/json")
                 .header(
                     http::header::AUTHORIZATION,
@@ -336,7 +336,7 @@ async fn test_update_profile_clears_empty_display_name() {
         .oneshot(
             Request::builder()
                 .method(http::Method::POST)
-                .uri("/update_profile")
+                .uri("/v0/update_profile")
                 .header(http::header::CONTENT_TYPE, "application/json")
                 .header(
                     http::header::AUTHORIZATION,
@@ -386,7 +386,7 @@ async fn test_update_profile_rejects_long_display_name() {
         .oneshot(
             Request::builder()
                 .method(http::Method::POST)
-                .uri("/update_profile")
+                .uri("/v0/update_profile")
                 .header(http::header::CONTENT_TYPE, "application/json")
                 .header(
                     http::header::AUTHORIZATION,
@@ -458,7 +458,7 @@ async fn test_deregister_user() {
         .oneshot(
             Request::builder()
                 .method(http::Method::POST)
-                .uri("/deregister")
+                .uri("/v0/deregister")
                 .header(http::header::CONTENT_TYPE, "application/json")
                 .header(
                     http::header::AUTHORIZATION,
@@ -527,7 +527,7 @@ async fn test_deregister_user() {
         .oneshot(
             Request::builder()
                 .method(http::Method::POST)
-                .uri("/user_info")
+                .uri("/v0/user_info")
                 .header(http::header::CONTENT_TYPE, "application/json")
                 .header(
                     http::header::AUTHORIZATION,
@@ -570,7 +570,7 @@ async fn test_register_push_token_reactivates_deregistered_user() {
         .oneshot(
             Request::builder()
                 .method(http::Method::POST)
-                .uri("/register_push_token")
+                .uri("/v0/register_push_token")
                 .header(http::header::CONTENT_TYPE, "application/json")
                 .header(
                     http::header::AUTHORIZATION,
@@ -790,7 +790,7 @@ async fn test_report_job_status_updates_existing_pending_entry() {
         .oneshot(
             Request::builder()
                 .method(http::Method::POST)
-                .uri("/report_job_status")
+                .uri("/v0/report_job_status")
                 .header(http::header::CONTENT_TYPE, "application/json")
                 .header(
                     http::header::AUTHORIZATION,
@@ -851,7 +851,7 @@ async fn test_report_job_status_missing_pending_entry_returns_not_found() {
         .oneshot(
             Request::builder()
                 .method(http::Method::POST)
-                .uri("/report_job_status")
+                .uri("/v0/report_job_status")
                 .header(http::header::CONTENT_TYPE, "application/json")
                 .header(
                     http::header::AUTHORIZATION,
@@ -886,7 +886,7 @@ async fn test_report_job_status_rejects_pending_status() {
         .oneshot(
             Request::builder()
                 .method(http::Method::POST)
-                .uri("/report_job_status")
+                .uri("/v0/report_job_status")
                 .header(http::header::CONTENT_TYPE, "application/json")
                 .header(
                     http::header::AUTHORIZATION,
@@ -925,7 +925,7 @@ async fn test_report_job_status_rejects_timeout_status() {
         .oneshot(
             Request::builder()
                 .method(http::Method::POST)
-                .uri("/report_job_status")
+                .uri("/v0/report_job_status")
                 .header(http::header::CONTENT_TYPE, "application/json")
                 .header(
                     http::header::AUTHORIZATION,
@@ -1075,7 +1075,7 @@ async fn test_register_new_user_with_ark_address() {
         .oneshot(
             Request::builder()
                 .method(http::Method::POST)
-                .uri("/register")
+                .uri("/v0/register")
                 .header(http::header::CONTENT_TYPE, "application/json")
                 .header(
                     http::header::AUTHORIZATION,
@@ -1120,7 +1120,7 @@ async fn test_register_existing_user_update_ark_address() {
         .oneshot(
             Request::builder()
                 .method(http::Method::POST)
-                .uri("/register")
+                .uri("/v0/register")
                 .header(http::header::CONTENT_TYPE, "application/json")
                 .header(
                     http::header::AUTHORIZATION,
@@ -1169,7 +1169,7 @@ async fn test_register_ark_address_taken() {
         .oneshot(
             Request::builder()
                 .method(http::Method::POST)
-                .uri("/register")
+                .uri("/v0/register")
                 .header(http::header::CONTENT_TYPE, "application/json")
                 .header(
                     http::header::AUTHORIZATION,
@@ -1193,7 +1193,7 @@ async fn test_register_ark_address_taken() {
         .oneshot(
             Request::builder()
                 .method(http::Method::POST)
-                .uri("/register")
+                .uri("/v0/register")
                 .header(http::header::CONTENT_TYPE, "application/json")
                 .header(
                     http::header::AUTHORIZATION,
@@ -1232,7 +1232,7 @@ async fn test_update_ark_address_taken() {
         .oneshot(
             Request::builder()
                 .method(http::Method::POST)
-                .uri("/register")
+                .uri("/v0/register")
                 .header(http::header::CONTENT_TYPE, "application/json")
                 .header(
                     http::header::AUTHORIZATION,
@@ -1255,7 +1255,7 @@ async fn test_update_ark_address_taken() {
         .oneshot(
             Request::builder()
                 .method(http::Method::POST)
-                .uri("/register")
+                .uri("/v0/register")
                 .header(http::header::CONTENT_TYPE, "application/json")
                 .header(
                     http::header::AUTHORIZATION,
@@ -1278,7 +1278,7 @@ async fn test_update_ark_address_taken() {
         .oneshot(
             Request::builder()
                 .method(http::Method::POST)
-                .uri("/register") // Still using /register for update
+                .uri("/v0/register") // Still using /register for update
                 .header(http::header::CONTENT_TYPE, "application/json")
                 .header(
                     http::header::AUTHORIZATION,
@@ -1341,7 +1341,7 @@ async fn test_report_last_login() {
         .oneshot(
             Request::builder()
                 .method(http::Method::POST)
-                .uri("/report_last_login")
+                .uri("/v0/report_last_login")
                 .header(http::header::CONTENT_TYPE, "application/json")
                 .header(
                     http::header::AUTHORIZATION,
@@ -1383,7 +1383,7 @@ async fn test_report_last_login_upserts_device_info() {
         .oneshot(
             Request::builder()
                 .method(http::Method::POST)
-                .uri("/report_last_login")
+                .uri("/v0/report_last_login")
                 .header(http::header::CONTENT_TYPE, "application/json")
                 .header(
                     http::header::AUTHORIZATION,
@@ -1421,7 +1421,7 @@ async fn test_report_last_login_upserts_device_info() {
         .oneshot(
             Request::builder()
                 .method(http::Method::POST)
-                .uri("/report_last_login")
+                .uri("/v0/report_last_login")
                 .header(http::header::CONTENT_TYPE, "application/json")
                 .header(
                     http::header::AUTHORIZATION,
@@ -1481,7 +1481,7 @@ async fn test_report_last_login_updates_timestamp() {
         .oneshot(
             Request::builder()
                 .method(http::Method::POST)
-                .uri("/report_last_login")
+                .uri("/v0/report_last_login")
                 .header(http::header::CONTENT_TYPE, "application/json")
                 .header(
                     http::header::AUTHORIZATION,
@@ -1510,7 +1510,7 @@ async fn test_report_last_login_updates_timestamp() {
         .oneshot(
             Request::builder()
                 .method(http::Method::POST)
-                .uri("/report_last_login")
+                .uri("/v0/report_last_login")
                 .header(http::header::CONTENT_TYPE, "application/json")
                 .header(
                     http::header::AUTHORIZATION,
@@ -1593,7 +1593,7 @@ async fn test_register_push_token_stores_the_provider_and_replaces_it() {
             .oneshot(
                 Request::builder()
                     .method(http::Method::POST)
-                    .uri("/register_push_token")
+                    .uri("/v0/register_push_token")
                     .header(http::header::CONTENT_TYPE, "application/json")
                     .header(
                         http::header::AUTHORIZATION,
@@ -1621,4 +1621,41 @@ async fn test_register_push_token_stores_the_provider_and_replaces_it() {
             ),
         }
     }
+}
+
+#[tracing_test::traced_test]
+#[tokio::test]
+async fn test_support_ticket_reaches_the_ticket_desk() {
+    let (app, app_state, _guard) = setup_test_app().await;
+    let user = TestUser::new();
+    create_test_user(&app_state, &user, None).await;
+
+    let response = app
+        .oneshot(
+            Request::builder()
+                .method(http::Method::POST)
+                .uri("/v0/support/ticket")
+                .header(http::header::CONTENT_TYPE, "application/json")
+                .header(
+                    http::header::AUTHORIZATION,
+                    format!("Bearer {}", user.access_token(&app_state)),
+                )
+                .body(Body::from(
+                    serde_json::to_vec(&json!({
+                        "subject": "Help",
+                        "body": "My payment is stuck",
+                        "name": "Alice"
+                    }))
+                    .unwrap(),
+                ))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+
+    // The tests configure no ticket desk, so the handler gets as far as asking for one.
+    assert_eq!(response.status(), StatusCode::INTERNAL_SERVER_ERROR);
+    let body = response.into_body().collect().await.unwrap().to_bytes();
+    let error: crate::types::ApiErrorResponse = serde_json::from_slice(&body).unwrap();
+    assert_eq!(error.message, "Support ticket submission is not configured");
 }

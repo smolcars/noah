@@ -8,7 +8,9 @@ use uuid::Uuid;
 use crate::db::backup_repo::{BackupRepository, legacy_backup_object_key};
 use crate::db::user_repo::UserRepository;
 use crate::tests::common::{TestUser, create_test_user, setup_test_app};
-use crate::types::{BackupInfo, DownloadUrlResponse, UploadUrlResponse, UserStatus};
+use crate::types::{
+    BackupInfo, BackupObjectInfo, DownloadUrlResponse, UploadUrlResponse, UserStatus,
+};
 
 #[tracing_test::traced_test]
 #[tokio::test]
@@ -22,7 +24,7 @@ async fn test_get_upload_url() {
         .oneshot(
             Request::builder()
                 .method(http::Method::POST)
-                .uri("/backup/upload_url")
+                .uri("/v0/backup/upload_url")
                 .header(http::header::CONTENT_TYPE, "application/json")
                 .header(
                     http::header::AUTHORIZATION,
@@ -66,7 +68,7 @@ async fn test_v2_upload_rejects_unsupported_format_before_s3() {
         .oneshot(
             Request::builder()
                 .method(http::Method::POST)
-                .uri("/backup/v2/upload")
+                .uri("/v0/backup/v2/upload")
                 .header(http::header::CONTENT_TYPE, "application/json")
                 .header(
                     http::header::AUTHORIZATION,
@@ -99,7 +101,7 @@ async fn test_v2_upload_rejects_oversized_object_before_s3() {
         .oneshot(
             Request::builder()
                 .method(http::Method::POST)
-                .uri("/backup/v2/upload")
+                .uri("/v0/backup/v2/upload")
                 .header(http::header::CONTENT_TYPE, "application/json")
                 .header(
                     http::header::AUTHORIZATION,
@@ -264,7 +266,7 @@ async fn test_v2_complete_rejects_superseded_upload_before_s3() {
         .oneshot(
             Request::builder()
                 .method(http::Method::POST)
-                .uri("/backup/v2/complete")
+                .uri("/v0/backup/v2/complete")
                 .header(http::header::CONTENT_TYPE, "application/json")
                 .header(
                     http::header::AUTHORIZATION,
@@ -389,7 +391,7 @@ async fn test_complete_upload() {
         .oneshot(
             Request::builder()
                 .method(http::Method::POST)
-                .uri("/backup/complete_upload")
+                .uri("/v0/backup/complete_upload")
                 .header(http::header::CONTENT_TYPE, "application/json")
                 .header(
                     http::header::AUTHORIZATION,
@@ -439,7 +441,7 @@ async fn test_complete_upload_upsert() {
         .oneshot(
             Request::builder()
                 .method(http::Method::POST)
-                .uri("/backup/complete_upload")
+                .uri("/v0/backup/complete_upload")
                 .header(http::header::CONTENT_TYPE, "application/json")
                 .header(
                     http::header::AUTHORIZATION,
@@ -465,7 +467,7 @@ async fn test_complete_upload_upsert() {
         .oneshot(
             Request::builder()
                 .method(http::Method::POST)
-                .uri("/backup/complete_upload")
+                .uri("/v0/backup/complete_upload")
                 .header(http::header::CONTENT_TYPE, "application/json")
                 .header(
                     http::header::AUTHORIZATION,
@@ -511,7 +513,7 @@ async fn test_complete_upload_rejects_noncanonical_s3_keys() {
             .oneshot(
                 Request::builder()
                     .method(http::Method::POST)
-                    .uri("/backup/complete_upload")
+                    .uri("/v0/backup/complete_upload")
                     .header(http::header::CONTENT_TYPE, "application/json")
                     .header(
                         http::header::AUTHORIZATION,
@@ -558,7 +560,7 @@ async fn test_complete_upload_key_mismatch_does_not_overwrite_metadata() {
         .oneshot(
             Request::builder()
                 .method(http::Method::POST)
-                .uri("/backup/complete_upload")
+                .uri("/v0/backup/complete_upload")
                 .header(http::header::CONTENT_TYPE, "application/json")
                 .header(
                     http::header::AUTHORIZATION,
@@ -626,7 +628,7 @@ async fn test_list_backups_empty() {
         .oneshot(
             Request::builder()
                 .method(http::Method::POST)
-                .uri("/backup/list")
+                .uri("/v0/backup/list")
                 .header(http::header::CONTENT_TYPE, "application/json")
                 .header(
                     http::header::AUTHORIZATION,
@@ -668,7 +670,7 @@ async fn test_list_backups_with_data() {
         .oneshot(
             Request::builder()
                 .method(http::Method::POST)
-                .uri("/backup/list")
+                .uri("/v0/backup/list")
                 .header(http::header::CONTENT_TYPE, "application/json")
                 .header(
                     http::header::AUTHORIZATION,
@@ -715,7 +717,7 @@ async fn test_get_download_url_specific_version() {
         .oneshot(
             Request::builder()
                 .method(http::Method::POST)
-                .uri("/backup/download_url")
+                .uri("/v0/backup/download_url")
                 .header(http::header::CONTENT_TYPE, "application/json")
                 .header(
                     http::header::AUTHORIZATION,
@@ -770,7 +772,7 @@ async fn test_get_download_url_latest() {
         .oneshot(
             Request::builder()
                 .method(http::Method::POST)
-                .uri("/backup/download_url")
+                .uri("/v0/backup/download_url")
                 .header(http::header::CONTENT_TYPE, "application/json")
                 .header(
                     http::header::AUTHORIZATION,
@@ -806,7 +808,7 @@ async fn test_get_download_url_not_found() {
         .oneshot(
             Request::builder()
                 .method(http::Method::POST)
-                .uri("/backup/download_url")
+                .uri("/v0/backup/download_url")
                 .header(http::header::CONTENT_TYPE, "application/json")
                 .header(
                     http::header::AUTHORIZATION,
@@ -845,7 +847,7 @@ async fn test_delete_backup() {
         .oneshot(
             Request::builder()
                 .method(http::Method::POST)
-                .uri("/backup/delete")
+                .uri("/v0/backup/delete")
                 .header(http::header::CONTENT_TYPE, "application/json")
                 .header(
                     http::header::AUTHORIZATION,
@@ -890,7 +892,7 @@ async fn test_delete_backup_not_found() {
         .oneshot(
             Request::builder()
                 .method(http::Method::POST)
-                .uri("/backup/delete")
+                .uri("/v0/backup/delete")
                 .header(http::header::CONTENT_TYPE, "application/json")
                 .header(
                     http::header::AUTHORIZATION,
@@ -922,7 +924,7 @@ async fn test_update_backup_settings_enable() {
         .oneshot(
             Request::builder()
                 .method(http::Method::POST)
-                .uri("/backup/settings")
+                .uri("/v0/backup/settings")
                 .header(http::header::CONTENT_TYPE, "application/json")
                 .header(
                     http::header::AUTHORIZATION,
@@ -970,7 +972,7 @@ async fn test_update_backup_settings_disable() {
         .oneshot(
             Request::builder()
                 .method(http::Method::POST)
-                .uri("/backup/settings")
+                .uri("/v0/backup/settings")
                 .header(http::header::CONTENT_TYPE, "application/json")
                 .header(
                     http::header::AUTHORIZATION,
@@ -1042,4 +1044,142 @@ async fn test_backup_push_goes_to_active_users_unless_switched_off() {
     ];
     expected.sort();
     assert_eq!(pubkeys, expected);
+}
+
+/// Posts `body` as JSON and returns the status and the parsed body (Null when not JSON).
+async fn post_json(
+    app: &axum::Router,
+    token: &str,
+    path: &str,
+    body: serde_json::Value,
+) -> (StatusCode, serde_json::Value) {
+    let response = app
+        .clone()
+        .oneshot(
+            Request::builder()
+                .method(http::Method::POST)
+                .uri(path)
+                .header(http::header::CONTENT_TYPE, "application/json")
+                .header(http::header::AUTHORIZATION, format!("Bearer {token}"))
+                .body(Body::from(serde_json::to_vec(&body).unwrap()))
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    let status = response.status();
+    let body = response.into_body().collect().await.unwrap().to_bytes();
+    (status, serde_json::from_slice(&body).unwrap_or_default())
+}
+
+/// Reserves a pending v2 object for `owner` and returns its id.
+async fn reserve_v2_object(repo: &BackupRepository<'_>, owner: &str) -> Uuid {
+    let backup_id = Uuid::new_v4();
+    repo.reserve_pending_object(
+        backup_id,
+        owner,
+        &format!("{owner}/backups/{backup_id}.noahbackup"),
+        2,
+        1024,
+        &"ab".repeat(32),
+    )
+    .await
+    .unwrap()
+    .unwrap();
+    backup_id
+}
+
+#[tracing_test::traced_test]
+#[tokio::test]
+async fn test_v2_list_returns_completed_objects() {
+    let (app, app_state, _guard) = setup_test_app().await;
+    let user = TestUser::new();
+    create_test_user(&app_state, &user, None).await;
+    let owner = user.pubkey().to_string();
+    let repo = BackupRepository::new(&app_state.db_pool);
+    let backup_id = reserve_v2_object(&repo, &owner).await;
+    assert!(repo.complete_object(&owner, backup_id).await.unwrap());
+
+    let (status, body) = post_json(
+        &app,
+        &user.access_token(&app_state),
+        "/v0/backup/v2/list",
+        json!({}),
+    )
+    .await;
+
+    assert_eq!(status, StatusCode::OK);
+    let listed: Vec<BackupObjectInfo> = serde_json::from_value(body).unwrap();
+    assert_eq!(listed.len(), 1);
+    assert_eq!(listed[0].backup_id, backup_id.to_string());
+    assert_eq!(listed[0].encrypted_size, 1024);
+}
+
+// Both v2 calls below stop before S3. Each request rules out a sibling handler: only v2 download
+// takes an optional backup ID, and only the v2 handlers parse it as a UUID.
+#[tracing_test::traced_test]
+#[tokio::test]
+async fn test_v2_download_without_an_id_looks_for_the_latest_backup() {
+    let (app, app_state, _guard) = setup_test_app().await;
+    let user = TestUser::new();
+    create_test_user(&app_state, &user, None).await;
+    let token = user.access_token(&app_state);
+
+    let (status, body) = post_json(&app, &token, "/v0/backup/v2/download", json!({})).await;
+    assert_eq!(
+        (status, &body["code"]),
+        (StatusCode::NOT_FOUND, &json!("NOT_FOUND"))
+    );
+
+    let (status, body) = post_json(
+        &app,
+        &token,
+        "/v0/backup/v2/download",
+        json!({ "backup_id": "not-a-uuid" }),
+    )
+    .await;
+    assert_eq!(
+        (status, &body["code"]),
+        (StatusCode::BAD_REQUEST, &json!("INVALID_ARGUMENT"))
+    );
+}
+
+#[tracing_test::traced_test]
+#[tokio::test]
+async fn test_v2_delete_needs_a_completed_backup_id() {
+    let (app, app_state, _guard) = setup_test_app().await;
+    let user = TestUser::new();
+    create_test_user(&app_state, &user, None).await;
+    let token = user.access_token(&app_state);
+    let owner = user.pubkey().to_string();
+    let repo = BackupRepository::new(&app_state.db_pool);
+    let superseded = reserve_v2_object(&repo, &owner).await;
+    reserve_v2_object(&repo, &owner).await;
+
+    let (status, _) = post_json(&app, &token, "/v0/backup/v2/delete", json!({})).await;
+    assert_eq!(status, StatusCode::UNPROCESSABLE_ENTITY);
+
+    let (status, body) = post_json(
+        &app,
+        &token,
+        "/v0/backup/v2/delete",
+        json!({ "backup_id": "not-a-uuid" }),
+    )
+    .await;
+    assert_eq!(
+        (status, &body["code"]),
+        (StatusCode::BAD_REQUEST, &json!("INVALID_ARGUMENT"))
+    );
+
+    // v2 complete answers CONFLICT for a superseded upload; delete only sees completed ones.
+    let (status, body) = post_json(
+        &app,
+        &token,
+        "/v0/backup/v2/delete",
+        json!({ "backup_id": superseded.to_string() }),
+    )
+    .await;
+    assert_eq!(
+        (status, &body["code"]),
+        (StatusCode::NOT_FOUND, &json!("NOT_FOUND"))
+    );
 }

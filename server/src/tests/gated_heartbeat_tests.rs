@@ -37,7 +37,7 @@ async fn test_heartbeat_response_success() {
         .oneshot(
             Request::builder()
                 .method(http::Method::POST)
-                .uri("/heartbeat_response")
+                .uri("/v0/heartbeat_response")
                 .header(http::header::CONTENT_TYPE, "application/json")
                 .header(
                     http::header::AUTHORIZATION,
@@ -86,7 +86,7 @@ async fn test_heartbeat_response_invalid_notification_id() {
         .oneshot(
             Request::builder()
                 .method(http::Method::POST)
-                .uri("/heartbeat_response")
+                .uri("/v0/heartbeat_response")
                 .header(http::header::CONTENT_TYPE, "application/json")
                 .header(
                     http::header::AUTHORIZATION,
@@ -132,7 +132,7 @@ async fn test_heartbeat_response_already_responded() {
         .oneshot(
             Request::builder()
                 .method(http::Method::POST)
-                .uri("/heartbeat_response")
+                .uri("/v0/heartbeat_response")
                 .header(http::header::CONTENT_TYPE, "application/json")
                 .header(
                     http::header::AUTHORIZATION,
@@ -179,7 +179,7 @@ async fn test_heartbeat_response_rejects_other_users_notification() {
         .oneshot(
             Request::builder()
                 .method(http::Method::POST)
-                .uri("/heartbeat_response")
+                .uri("/v0/heartbeat_response")
                 .header(http::header::CONTENT_TYPE, "application/json")
                 .header(
                     http::header::AUTHORIZATION,
@@ -229,7 +229,7 @@ async fn test_heartbeat_response_invalid_token() {
         .oneshot(
             Request::builder()
                 .method(http::Method::POST)
-                .uri("/heartbeat_response")
+                .uri("/v0/heartbeat_response")
                 .header(http::header::CONTENT_TYPE, "application/json")
                 .header(http::header::AUTHORIZATION, "Bearer invalid-token")
                 .body(Body::from(

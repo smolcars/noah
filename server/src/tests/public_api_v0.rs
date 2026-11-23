@@ -8,10 +8,7 @@ use crate::db::{
 use crate::routes::public_api_v0::{
     GetK1, LnurlpDefaultResponse, LnurlpInvoiceResponse, Nip05Response,
 };
-use crate::tests::common::{
-    TestUser, create_test_user, setup_public_test_app, setup_public_test_app_with_barkd,
-    setup_test_app,
-};
+use crate::tests::common::{TestUser, create_test_user, setup_test_app, setup_test_app_with_barkd};
 use crate::types::{
     ApiErrorResponse, AppVersionCheckPayload, AppVersionInfo, FiatPricesPayload,
     FiatPricesResponse, HistoricalFiatPricePayload, HistoricalFiatPriceResponse, UserStatus,
@@ -111,7 +108,7 @@ const NOSTR_PUBKEY: &str = "b0635d6a9851d3aed0cd6c495b282167acf761729078d975fc34
 #[tracing_test::traced_test]
 #[tokio::test]
 async fn test_nip05_request_returns_active_linked_user() {
-    let (app, app_state, _guard) = setup_public_test_app().await;
+    let (app, app_state, _guard) = setup_test_app().await;
 
     sqlx::query("INSERT INTO users (pubkey, lightning_address, nostr_pubkey) VALUES ($1, $2, $3)")
         .bind("wallet_pubkey")
@@ -156,7 +153,7 @@ async fn test_nip05_request_returns_active_linked_user() {
 #[tracing_test::traced_test]
 #[tokio::test]
 async fn test_nip05_request_omits_unlinked_and_inactive_users() {
-    let (app, app_state, _guard) = setup_public_test_app().await;
+    let (app, app_state, _guard) = setup_test_app().await;
 
     sqlx::query("INSERT INTO users (pubkey, lightning_address) VALUES ($1, $2)")
         .bind("unlinked_wallet_pubkey")
@@ -197,7 +194,7 @@ async fn test_nip05_request_omits_unlinked_and_inactive_users() {
 #[tracing_test::traced_test]
 #[tokio::test]
 async fn test_lnurlp_request_cors_preflight() {
-    let (app, _app_state, _guard) = setup_public_test_app().await;
+    let (app, _app_state, _guard) = setup_test_app().await;
     let response = app
         .oneshot(
             Request::builder()
@@ -225,7 +222,7 @@ async fn test_lnurlp_request_cors_preflight() {
 #[tracing_test::traced_test]
 #[tokio::test]
 async fn test_lnurlp_request_default() {
-    let (app, app_state, _guard) = setup_public_test_app().await;
+    let (app, app_state, _guard) = setup_test_app().await;
     let (_, ark_address) = test_ark_address(0x11);
 
     sqlx::query("INSERT INTO users (pubkey, lightning_address, ark_address) VALUES ($1, $2, $3)")
@@ -267,7 +264,7 @@ async fn test_lnurlp_request_default() {
 #[tracing_test::traced_test]
 #[tokio::test]
 async fn test_lnurlp_request_advertises_address_for_matching_ark_server() {
-    let (app, app_state, _guard) = setup_public_test_app().await;
+    let (app, app_state, _guard) = setup_test_app().await;
     let (server_pubkey, ark_address) = test_ark_address(0x11);
     *app_state.ark_server_pubkey.write().await = Some(server_pubkey.to_string());
 
@@ -301,7 +298,7 @@ async fn test_lnurlp_request_advertises_address_for_matching_ark_server() {
 #[tracing_test::traced_test]
 #[tokio::test]
 async fn test_lnurlp_request_omits_address_for_different_ark_server() {
-    let (app, app_state, _guard) = setup_public_test_app().await;
+    let (app, app_state, _guard) = setup_test_app().await;
     let (server_pubkey, ark_address) = test_ark_address(0x11);
     let (different_server_pubkey, _) = test_ark_address(0x12);
     *app_state.ark_server_pubkey.write().await = Some(server_pubkey.to_string());
@@ -338,7 +335,7 @@ async fn test_lnurlp_request_omits_address_for_different_ark_server() {
 #[tracing_test::traced_test]
 #[tokio::test]
 async fn test_lnurlp_request_ignores_deprecated_wallet_parameter() {
-    let (app, app_state, _guard) = setup_public_test_app().await;
+    let (app, app_state, _guard) = setup_test_app().await;
     let (_, ark_address) = test_ark_address(0x11);
 
     sqlx::query("INSERT INTO users (pubkey, lightning_address, ark_address) VALUES ($1, $2, $3)")
@@ -373,7 +370,7 @@ async fn test_lnurlp_request_ignores_deprecated_wallet_parameter() {
 #[tracing_test::traced_test]
 #[tokio::test]
 async fn test_lnurlp_invoice_request_returns_matching_ark_address_without_mailbox() {
-    let (app, app_state, _guard) = setup_public_test_app().await;
+    let (app, app_state, _guard) = setup_test_app().await;
     let (server_pubkey, ark_address) = test_ark_address(0x11);
     *app_state.ark_server_pubkey.write().await = Some(server_pubkey.to_string());
 
@@ -411,7 +408,7 @@ async fn test_lnurlp_invoice_request_returns_matching_ark_address_without_mailbo
 #[tokio::test]
 async fn test_lnurlp_invoice_request_uses_barkd_without_waking_device() {
     let barkd = Arc::new(TestForwardingInvoiceProvider::returning("lnbc-forwarded"));
-    let (app, app_state, _guard) = setup_public_test_app_with_barkd(Some(barkd.clone())).await;
+    let (app, app_state, _guard) = setup_test_app_with_barkd(Some(barkd.clone())).await;
     let (_, ark_address) = test_ark_address(0x11);
 
     sqlx::query("INSERT INTO users (pubkey, lightning_address, ark_address) VALUES ($1, $2, $3)")
@@ -461,7 +458,7 @@ async fn test_lnurlp_invoice_request_uses_barkd_without_waking_device() {
 #[tokio::test]
 async fn test_lnurlp_invoice_request_prefers_negotiated_ark_over_barkd() {
     let barkd = Arc::new(TestForwardingInvoiceProvider::returning("lnbc-forwarded"));
-    let (app, app_state, _guard) = setup_public_test_app_with_barkd(Some(barkd.clone())).await;
+    let (app, app_state, _guard) = setup_test_app_with_barkd(Some(barkd.clone())).await;
     let (server_pubkey, ark_address) = test_ark_address(0x11);
     *app_state.ark_server_pubkey.write().await = Some(server_pubkey.to_string());
 
@@ -500,7 +497,7 @@ async fn test_lnurlp_invoice_request_prefers_negotiated_ark_over_barkd() {
 #[tokio::test]
 async fn test_lnurlp_invoice_request_rejects_sub_sat_amount_before_barkd() {
     let barkd = Arc::new(TestForwardingInvoiceProvider::returning("lnbc-forwarded"));
-    let (app, app_state, _guard) = setup_public_test_app_with_barkd(Some(barkd.clone())).await;
+    let (app, app_state, _guard) = setup_test_app_with_barkd(Some(barkd.clone())).await;
     let (_, ark_address) = test_ark_address(0x11);
 
     sqlx::query("INSERT INTO users (pubkey, lightning_address, ark_address) VALUES ($1, $2, $3)")
@@ -538,7 +535,7 @@ async fn test_lnurlp_invoice_request_rejects_sub_sat_amount_before_barkd() {
 #[tokio::test]
 async fn test_lnurlp_invoice_request_falls_back_when_barkd_fails() {
     let barkd = Arc::new(TestForwardingInvoiceProvider::failing());
-    let (app, app_state, _guard) = setup_public_test_app_with_barkd(Some(barkd.clone())).await;
+    let (app, app_state, _guard) = setup_test_app_with_barkd(Some(barkd.clone())).await;
     let (_, ark_address) = test_ark_address(0x11);
 
     sqlx::query("INSERT INTO users (pubkey, lightning_address, ark_address) VALUES ($1, $2, $3)")
@@ -575,7 +572,7 @@ async fn test_lnurlp_invoice_request_falls_back_when_barkd_fails() {
 #[tracing_test::traced_test]
 #[tokio::test]
 async fn test_lnurlp_request_omits_ark_address_when_user_has_none() {
-    let (app, app_state, _guard) = setup_public_test_app().await;
+    let (app, app_state, _guard) = setup_test_app().await;
     let (server_pubkey, _) = test_ark_address(0x11);
 
     sqlx::query("INSERT INTO users (pubkey, lightning_address, ark_address) VALUES ($1, $2, NULL)")
@@ -607,7 +604,7 @@ async fn test_lnurlp_request_omits_ark_address_when_user_has_none() {
 #[tracing_test::traced_test]
 #[tokio::test]
 async fn test_lnurlp_request_rejects_deregistered_user() {
-    let (app, app_state, _guard) = setup_public_test_app().await;
+    let (app, app_state, _guard) = setup_test_app().await;
     let user = TestUser::new();
     let pubkey = user.pubkey().to_string();
     create_test_user(&app_state, &user, None).await;
@@ -649,7 +646,7 @@ async fn test_lnurlp_request_rejects_deregistered_user() {
 #[tracing_test::traced_test]
 #[tokio::test]
 async fn test_lnurlp_invoice_request_rejects_missing_mailbox_authorization() {
-    let (app, app_state, _guard) = setup_public_test_app().await;
+    let (app, app_state, _guard) = setup_test_app().await;
     let user = TestUser::new();
     let pubkey = user.pubkey().to_string();
     create_test_user(&app_state, &user, None).await;
@@ -684,7 +681,7 @@ async fn test_lnurlp_invoice_request_rejects_missing_mailbox_authorization() {
 #[tracing_test::traced_test]
 #[tokio::test]
 async fn test_lnurlp_invoice_request_rejects_expired_mailbox_authorization() {
-    let (app, app_state, _guard) = setup_public_test_app().await;
+    let (app, app_state, _guard) = setup_test_app().await;
     let user = TestUser::new();
     let pubkey = user.pubkey().to_string();
     create_test_user(&app_state, &user, None).await;
@@ -723,13 +720,13 @@ async fn test_lnurlp_invoice_request_rejects_expired_mailbox_authorization() {
 #[tracing_test::traced_test]
 #[tokio::test]
 async fn test_get_k1() {
-    let (app, app_state, _guard) = setup_public_test_app().await;
+    let (app, app_state, _guard) = setup_test_app().await;
 
     let response = app
         .oneshot(
             Request::builder()
                 .method(http::Method::GET)
-                .uri("/getk1")
+                .uri("/v0/getk1")
                 .body(Body::empty())
                 .unwrap(),
         )
@@ -754,7 +751,7 @@ async fn test_get_k1() {
 #[tracing_test::traced_test]
 #[tokio::test]
 async fn test_app_version_check_update_required() {
-    let (app, _app_state, _guard) = setup_public_test_app().await;
+    let (app, _app_state, _guard) = setup_test_app().await;
 
     let payload = AppVersionCheckPayload {
         client_version: "0.0.0".to_string(),
@@ -764,7 +761,7 @@ async fn test_app_version_check_update_required() {
         .oneshot(
             Request::builder()
                 .method(http::Method::POST)
-                .uri("/app_version")
+                .uri("/v0/app_version")
                 .header(http::header::CONTENT_TYPE, "application/json")
                 .body(Body::from(serde_json::to_string(&payload).unwrap()))
                 .unwrap(),
@@ -784,7 +781,7 @@ async fn test_app_version_check_update_required() {
 #[tracing_test::traced_test]
 #[tokio::test]
 async fn test_app_version_check_no_update_required() {
-    let (app, _app_state, _guard) = setup_public_test_app().await;
+    let (app, _app_state, _guard) = setup_test_app().await;
 
     let payload = AppVersionCheckPayload {
         client_version: "0.0.1".to_string(),
@@ -794,7 +791,7 @@ async fn test_app_version_check_no_update_required() {
         .oneshot(
             Request::builder()
                 .method(http::Method::POST)
-                .uri("/app_version")
+                .uri("/v0/app_version")
                 .header(http::header::CONTENT_TYPE, "application/json")
                 .body(Body::from(serde_json::to_string(&payload).unwrap()))
                 .unwrap(),
@@ -814,7 +811,7 @@ async fn test_app_version_check_no_update_required() {
 #[tracing_test::traced_test]
 #[tokio::test]
 async fn test_app_version_check_newer_version() {
-    let (app, _app_state, _guard) = setup_public_test_app().await;
+    let (app, _app_state, _guard) = setup_test_app().await;
 
     let payload = AppVersionCheckPayload {
         client_version: "1.0.0".to_string(),
@@ -824,7 +821,7 @@ async fn test_app_version_check_newer_version() {
         .oneshot(
             Request::builder()
                 .method(http::Method::POST)
-                .uri("/app_version")
+                .uri("/v0/app_version")
                 .header(http::header::CONTENT_TYPE, "application/json")
                 .body(Body::from(serde_json::to_string(&payload).unwrap()))
                 .unwrap(),
@@ -844,7 +841,7 @@ async fn test_app_version_check_newer_version() {
 #[tracing_test::traced_test]
 #[tokio::test]
 async fn test_app_version_check_invalid_version() {
-    let (app, _app_state, _guard) = setup_public_test_app().await;
+    let (app, _app_state, _guard) = setup_test_app().await;
 
     let payload = AppVersionCheckPayload {
         client_version: "invalid".to_string(),
@@ -854,7 +851,7 @@ async fn test_app_version_check_invalid_version() {
         .oneshot(
             Request::builder()
                 .method(http::Method::POST)
-                .uri("/app_version")
+                .uri("/v0/app_version")
                 .header(http::header::CONTENT_TYPE, "application/json")
                 .body(Body::from(serde_json::to_string(&payload).unwrap()))
                 .unwrap(),
@@ -874,7 +871,7 @@ async fn test_fiat_prices_requires_authentication() {
         .oneshot(
             Request::builder()
                 .method(http::Method::POST)
-                .uri("/prices")
+                .uri("/v0/prices")
                 .header(http::header::CONTENT_TYPE, "application/json")
                 .body(Body::from(
                     serde_json::to_vec(&FiatPricesPayload {}).unwrap(),
@@ -898,7 +895,7 @@ async fn test_fiat_prices_requires_registered_user() {
         .oneshot(
             Request::builder()
                 .method(http::Method::POST)
-                .uri("/prices")
+                .uri("/v0/prices")
                 .header(http::header::CONTENT_TYPE, "application/json")
                 .header(
                     http::header::AUTHORIZATION,
@@ -953,7 +950,7 @@ async fn test_fiat_prices_returns_cached_typed_response() {
         .oneshot(
             Request::builder()
                 .method(http::Method::POST)
-                .uri("/prices")
+                .uri("/v0/prices")
                 .header(http::header::CONTENT_TYPE, "application/json")
                 .header(
                     http::header::AUTHORIZATION,
@@ -1002,7 +999,7 @@ async fn test_historical_fiat_price_returns_cached_typed_response() {
         .oneshot(
             Request::builder()
                 .method(http::Method::POST)
-                .uri("/historical-price")
+                .uri("/v0/historical-price")
                 .header(http::header::CONTENT_TYPE, "application/json")
                 .header(
                     http::header::AUTHORIZATION,
@@ -1042,7 +1039,7 @@ async fn test_historical_fiat_price_rejects_unsupported_currency() {
         .oneshot(
             Request::builder()
                 .method(http::Method::POST)
-                .uri("/historical-price")
+                .uri("/v0/historical-price")
                 .header(http::header::CONTENT_TYPE, "application/json")
                 .header(
                     http::header::AUTHORIZATION,
@@ -1065,12 +1062,12 @@ async fn test_historical_fiat_price_rejects_unsupported_currency() {
 
 #[tokio::test]
 async fn test_lnurlp_any_push_token_gate_and_invoice_delivery() {
-    use crate::tests::common::setup_public_test_app_with_push;
+    use crate::tests::common::setup_test_app_with_push;
     use crate::types::NotificationData;
     use std::time::Duration;
 
     let (sender, mut deliveries) = tokio::sync::mpsc::unbounded_channel();
-    let (app, state, _guard) = setup_public_test_app_with_push(None, Some(sender)).await;
+    let (app, state, _guard) = setup_test_app_with_push(None, Some(sender)).await;
     let user = TestUser::new();
     let pubkey = user.pubkey().to_string();
     create_test_user(&state, &user, None).await;
@@ -1172,14 +1169,14 @@ async fn test_lnurlp_any_push_token_gate_and_invoice_delivery() {
 #[tokio::test]
 async fn test_lnurlp_device_invoice_must_come_from_the_payee_and_match_the_request() {
     use crate::routes::gated_api_v0::submit_invoice;
-    use crate::tests::common::{setup_public_test_app_with_push, test_invoice};
+    use crate::tests::common::{setup_test_app_with_push, test_invoice};
     use crate::types::{AuthenticatedUser, NotificationData, SubmitInvoicePayload};
     use axum::{Extension, Json, extract::State};
     use bitcoin::Network::{Bitcoin, Regtest};
     use std::time::Duration;
 
     let (sender, mut deliveries) = tokio::sync::mpsc::unbounded_channel();
-    let (app, state, _guard) = setup_public_test_app_with_push(None, Some(sender)).await;
+    let (app, state, _guard) = setup_test_app_with_push(None, Some(sender)).await;
     let payee = TestUser::new().pubkey().to_string();
     let other = TestUser::new_with_key(&[7; 32]).pubkey().to_string();
     create_test_user(&state, &TestUser::new(), None).await;
@@ -1266,5 +1263,22 @@ async fn test_lnurlp_device_invoice_must_come_from_the_payee_and_match_the_reque
             }
             None => assert_eq!(status, StatusCode::INTERNAL_SERVER_ERROR),
         }
+    }
+}
+
+#[tokio::test]
+async fn test_root_and_health_answer_their_own_status() {
+    let (app, _, _guard) = setup_test_app().await;
+    for (path, expected) in [("/", StatusCode::NO_CONTENT), ("/health", StatusCode::OK)] {
+        let response = app
+            .clone()
+            .oneshot(Request::builder().uri(path).body(Body::empty()).unwrap())
+            .await
+            .unwrap();
+        assert_eq!(response.status(), expected, "GET {path}");
+        let body = axum::body::to_bytes(response.into_body(), usize::MAX)
+            .await
+            .unwrap();
+        assert!(body.is_empty(), "GET {path} body");
     }
 }
