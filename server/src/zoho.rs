@@ -23,9 +23,11 @@ const MAX_NAME_LEN: usize = 150;
 const MAX_ATTACHMENT_BYTES: usize = 5 * 1024 * 1024;
 const MAX_ATTACHMENT_BASE64_LEN: usize = MAX_ATTACHMENT_BYTES.div_ceil(3) * 4 + 16;
 const ACCESS_TOKEN_EXPIRY_BUFFER: Duration = Duration::from_secs(120);
-/// Bounds each Zoho call, the 5 MB screenshot upload included, so a stalled Zoho
-/// fails the ticket instead of holding the user's request open.
+/// Bounds each Zoho call, so a stalled Zoho fails the ticket instead of holding the
+/// user's request open.
 const ZOHO_REQUEST_TIMEOUT: Duration = Duration::from_secs(20);
+/// The screenshot upload sends up to 5 MiB, which a slow link cannot finish in 20 s.
+const ZOHO_UPLOAD_TIMEOUT: Duration = Duration::from_secs(60);
 
 static TOKEN_CACHE: LazyLock<Mutex<Option<CachedZohoAccessToken>>> =
     LazyLock::new(|| Mutex::new(None));
@@ -395,6 +397,7 @@ async fn upload_attachment(
         .header("orgId", &config.org_id)
         .header("Authorization", format!("Zoho-oauthtoken {access_token}"))
         .multipart(form)
+        .timeout(ZOHO_UPLOAD_TIMEOUT)
         .send()
         .await
         .map_err(|e| {

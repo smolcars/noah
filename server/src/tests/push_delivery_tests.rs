@@ -1616,7 +1616,7 @@ lwIDAQAB
     #[tokio::test]
     #[ignore = "reaches the real APNs sandbox"]
     async fn apns_negotiates_http2_on_the_real_service() {
-        let response = crate::http_client::outbound(Duration::from_secs(10))
+        let response = crate::http_client::outbound(Duration::from_secs(30))
             .build()
             .unwrap()
             .post(format!(
