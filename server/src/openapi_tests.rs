@@ -209,7 +209,7 @@ async fn every_operation_is_served_behind_its_documented_gates() {
 /// Gated operations whose request names a stored object (an ID, key or name another user can
 /// hold), with all their request fields. `true` marks one that may still succeed when it names
 /// another user's object, because it then acts only on the caller's own.
-const OBJECT_FIELDS: [(&str, &[&str], bool); 13] = [
+const OBJECT_FIELDS: [(&str, &[&str], bool); 14] = [
     (
         "post /v0/backup/complete_upload",
         &["backup_size", "backup_version", "s3_key"],
@@ -222,6 +222,12 @@ const OBJECT_FIELDS: [(&str, &[&str], bool); 13] = [
     ("post /v0/backup/v2/delete", &["backup_id"], false),
     ("post /v0/backup/v2/download", &["backup_id"], false),
     ("post /v0/heartbeat_response", &["notification_id"], false),
+    // The mailbox worker opens the mailbox this names, so it must match the signed grant.
+    (
+        "post /v0/mailbox/authorize",
+        &["encoded", "expiry", "mailbox_id"],
+        false,
+    ),
     (
         "post /v0/lnurlp/submit_invoice",
         &["invoice", "transaction_id"],
@@ -264,7 +270,7 @@ const OBJECT_FIELDS: [(&str, &[&str], bool); 13] = [
 ];
 
 /// Gated operations whose request fields were reviewed as naming nothing another user owns.
-const CALLER_ONLY_FIELDS: [(&str, &[&str]); 17] = [
+const CALLER_ONLY_FIELDS: [(&str, &[&str]); 16] = [
     ("post /v0/backup/list", &[]),
     ("post /v0/backup/settings", &["backup_enabled"]),
     ("post /v0/backup/v2/list", &[]),
@@ -277,11 +283,6 @@ const CALLER_ONLY_FIELDS: [(&str, &[&str]); 17] = [
     ("post /v0/email/verify", &["code"]),
     ("post /v0/historical-price", &["currency", "timestamp"]),
     ("post /v0/ln_address_suggestions", &["query"]),
-    // The mailbox key signs the authorization, so naming another mailbox needs its key.
-    (
-        "post /v0/mailbox/authorize",
-        &["encoded", "expiry", "mailbox_id"],
-    ),
     ("post /v0/mailbox/revoke", &[]),
     ("post /v0/prices", &[]),
     (
@@ -542,13 +543,14 @@ async fn holdings(
 ) -> String {
     use crate::db::{
         backup_repo::BackupRepository, heartbeat_repo::HeartbeatRepository,
-        job_status_repo::JobStatusRepository, recurring_payment_repo::RecurringPaymentRepository,
-        user_repo::UserRepository,
+        job_status_repo::JobStatusRepository,
+        mailbox_authorization_repo::MailboxAuthorizationRepository,
+        recurring_payment_repo::RecurringPaymentRepository, user_repo::UserRepository,
     };
     let backups = BackupRepository::new(&state.db_pool);
     let backup_id = named["backup_id"].as_str().unwrap().parse().unwrap();
     format!(
-        "{:?}\n{:?}\n{:?}\n{:?}\n{:?}\n{:?}\n{:?}",
+        "{:?}\n{:?}\n{:?}\n{:?}\n{:?}\n{:?}\n{:?}\n{:?}",
         UserRepository::new(&state.db_pool)
             .find_by_pubkey(owner)
             .await
@@ -575,6 +577,10 @@ async fn holdings(
         state
             .invoice_store
             .get(owner, named["transaction_id"].as_str().unwrap())
+            .await
+            .unwrap(),
+        MailboxAuthorizationRepository::new(&state.db_pool)
+            .find_by_pubkey(owner)
             .await
             .unwrap(),
     )
@@ -695,6 +701,21 @@ async fn no_gated_operation_acts_on_an_object_another_user_holds() {
         {"schedule_id": "b-schedule", "next_run_at": hour},
         {"schedule_id": "b-other", "next_run_at": hour},
     ]);
+    let grant = |mailbox: u8| {
+        use ark::ProtocolEncoding;
+        let secp = bitcoin::secp256k1::Secp256k1::new();
+        let key = bitcoin::secp256k1::SecretKey::from_slice(&[mailbox; 32]).unwrap();
+        let grant = ark::mailbox::MailboxAuthorization::new(
+            &bitcoin::secp256k1::Keypair::from_secret_key(&secp, &key),
+            chrono::Local::now() + chrono::Duration::hours(1),
+        );
+        json!({
+            "mailbox_id": grant.mailbox().serialize_hex(),
+            "expiry": grant.expiry().timestamp(),
+            "encoded": grant.serialize_hex(),
+        })
+    };
+    let [mailbox_b, other_mailbox, nobodys_mailbox] = [0x41, 0x42, 0x43].map(grant);
     // B's answer to the payer, so a submission that overwrites by transaction ID alone shows.
     let invoice_b = json!({
         "transaction_id": "b-transaction",
@@ -710,6 +731,7 @@ async fn no_gated_operation_acts_on_an_object_another_user_holds() {
             json!({"schedules": schedules}),
         ),
         ("/v0/lnurlp/submit_invoice", invoice_b.clone()),
+        ("/v0/mailbox/authorize", mailbox_b.clone()),
     ] {
         let (status, _, _) =
             exchange(&app, "post", path, Some(&token_b), Some(&body), &mut peer).await;
@@ -756,6 +778,10 @@ async fn no_gated_operation_acts_on_an_object_another_user_holds() {
         "error_message": "answered by another user",
         "username": "b",
         "nostr_pubkey": null,
+        // B's mailbox, with a grant its key never signed: one for another mailbox.
+        "mailbox_id": mailbox_b["mailbox_id"],
+        "expiry": other_mailbox["expiry"],
+        "encoded": other_mailbox["encoded"],
     });
     let named = named.as_object().unwrap();
     let before = holdings(&state, &pubkey_b, named).await;
@@ -782,6 +808,7 @@ async fn no_gated_operation_acts_on_an_object_another_user_holds() {
         ("ln_address", json!("nobody@localhost")),
         ("notification_k1", json!("nobody-k1")),
         ("username", json!("nobody")),
+        ("mailbox_id", nobodys_mailbox["mailbox_id"].clone()),
     ] {
         assert!(nobody.insert(field.to_string(), value).is_some());
     }
