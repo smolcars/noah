@@ -50,3 +50,6 @@ config.toml
 local.properties
 report.html
 .ngrok-domain
+
+# TLA+ tools downloaded by formal/*/check.sh
+formal/.tools/
