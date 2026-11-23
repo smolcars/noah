@@ -1,13 +1,13 @@
 use crate::{
     AppState,
-    config::ARK_USER_AGENT,
+    mailbox_worker::connect_ark_server,
     notification_coordinator::{NotificationCoordinator, NotificationRequest},
     types::NotificationRequestData,
 };
 
 use bitcoin::hex::DisplayHex;
 use expo_push_notification_client::Priority;
-use server_rpc::{ServerConnection, protos::Empty};
+use server_rpc::protos::Empty;
 use std::time::{Duration, SystemTime, UNIX_EPOCH};
 
 const POLL_INTERVAL: Duration = Duration::from_secs(30);
@@ -59,11 +59,7 @@ async fn establish_connection_and_process(
     ark_server_url: &str,
 ) -> anyhow::Result<()> {
     let network = app_state.config.network()?;
-    let connection = ServerConnection::builder()
-        .address(ark_server_url)
-        .network(network)
-        .user_agent(ARK_USER_AGENT)
-        .connect()
+    let connection = connect_ark_server(ark_server_url, network)
         .await
         .map_err(|e| anyhow::anyhow!("Failed to connect: {e:#}"))?;
     let mut client = connection.client;

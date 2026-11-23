@@ -779,13 +779,25 @@ impl<C> ChannelPool<C> {
 
 async fn dial_ark_server(app_state: &AppState) -> Result<MailboxClient> {
     let network = app_state.config.network()?;
-    let connection = ServerConnection::builder()
-        .address(&app_state.config.ark_server_url)
+    let connection = connect_ark_server(&app_state.config.ark_server_url, network).await?;
+    Ok(connection.mailbox_client)
+}
+
+/// Opens every connection to the Ark server, giving up after `ARK_DIAL_TIMEOUT`.
+#[allow(clippy::disallowed_methods)] // the one place the Ark server may be dialled
+pub(crate) async fn connect_ark_server(
+    address: &str,
+    network: bitcoin::Network,
+) -> Result<ServerConnection> {
+    let connect = ServerConnection::builder()
+        .address(address)
         .network(network)
         .user_agent(ARK_USER_AGENT)
-        .connect()
-        .await?;
-    Ok(connection.mailbox_client)
+        .connect();
+    match tokio::time::timeout(ARK_DIAL_TIMEOUT, connect).await {
+        Ok(connection) => Ok(connection?),
+        Err(_) => anyhow::bail!("ark server dial timed out after {ARK_DIAL_TIMEOUT:?}"),
+    }
 }
 
 pub struct Beta8MailboxTransport {
