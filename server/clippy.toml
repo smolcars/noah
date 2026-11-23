@@ -1,0 +1,10 @@
+# A network call with no deadline lets one stalled peer hold a lock, a permit or a
+# user's request. Outbound connections go through constructors that set one.
+disallowed-methods = [
+  { path = "reqwest::Client::new", reason = "it has no timeout; use crate::http_client::outbound(timeout)" },
+  { path = "reqwest::Client::builder", reason = "it has no timeout; use crate::http_client::outbound(timeout)" },
+  { path = "reqwest::ClientBuilder::new", reason = "it has no timeout; use crate::http_client::outbound(timeout)" },
+  { path = "reqwest::get", reason = "it has no timeout; use crate::http_client::outbound(timeout)" },
+  { path = "server_rpc::client::ServerConnectionBuilder::connect", reason = "it waits up to ten minutes; use crate::mailbox_worker::connect_ark_server" },
+  { path = "server_rpc::client::ServerConnection::connect", reason = "it waits up to ten minutes; use crate::mailbox_worker::connect_ark_server" },
+]
