@@ -727,24 +727,37 @@ const PARTIAL_PROBES: [(&str, &[&str], bool); 3] = [
     ("post /v0/register", &["ln_address"], false),
 ];
 
-/// Operations whose answer may tell A that B's object exists, and why that is by design.
-const DISTINGUISHABLE: [(&str, &str); 2] = [
+/// Probes whose answer tells the caller that B's object exists, why that is by design, and the
+/// one answer allowed: a 400 with this message and nothing else, so none of B's data rides along.
+const DISTINGUISHABLE: [(&str, &str, &str, &str); 3] = [
     (
         "post /v0/register",
-        "Ark and Lightning addresses are unique, so taking one that is taken must say so",
+        "user A",
+        "an Ark address is unique, so taking one that is taken must say so",
+        "Ark address already taken",
+    ),
+    (
+        "post /v0/register",
+        "a never-registered user",
+        "a Lightning address is unique, so taking one that is taken must say so",
+        "Lightning address already taken",
     ),
     (
         "post /v0/update_lightning_identity",
+        "user A",
         "a Lightning name is unique, so taking one that is taken must say so",
+        "Lightning address already taken",
     ),
 ];
 
 /// Response fields built from the request's own values for the caller's own object, so they
-/// differ with the value named whoever holds it.
-const DERIVED_RESPONSE_FIELDS: [(&str, &[&str]); 1] = [(
+/// differ with the value named whoever holds it, and the caller's key for that object.
+#[allow(clippy::type_complexity)]
+const DERIVED_RESPONSE_FIELDS: [(&str, &[&str], fn(&str, &Value) -> String); 1] = [(
     "post /v0/backup/upload_url",
-    // A's own key for the version named, and a URL signed for it.
+    // The caller's own key for the version named, and a URL signed for it.
     &["s3_key", "upload_url"],
+    |caller, request| format!("{caller}/backup_v{}.db", request["backup_version"]),
 )];
 
 /// What a response tells its caller, without what differs by design: the time it was sent and
@@ -764,7 +777,7 @@ fn answer(
         .collect();
     let mut body = serde_json::from_slice(&body)
         .unwrap_or_else(|_| Value::String(String::from_utf8_lossy(&body).into_owned()));
-    for (op, fields) in DERIVED_RESPONSE_FIELDS {
+    for (op, fields, _) in DERIVED_RESPONSE_FIELDS {
         if op == operation {
             for field in fields {
                 body.as_object_mut().unwrap().remove(*field);
@@ -959,25 +972,38 @@ async fn no_gated_operation_acts_on_an_object_another_user_holds() {
     let failures = classification_failures(&document());
     assert!(failures.is_empty(), "{}", failures.join("\n"));
 
-    let token_unregistered = TestUser::new_with_key(&[0x33; 32]).access_token(&state);
+    let unregistered = TestUser::new_with_key(&[0x33; 32]);
+    let token_unregistered = unregistered.access_token(&state);
+    let [pubkey_a, pubkey_unregistered] = [&a, &unregistered].map(|user| user.pubkey().to_string());
     let probes = OBJECT_FIELDS
         .iter()
         .map(|&(operation, fields, may_succeed)| {
-            (operation, fields, may_succeed, &token_a, "user A")
+            (
+                operation,
+                fields,
+                may_succeed,
+                &token_a,
+                &pubkey_a,
+                "user A",
+            )
         })
         .chain(
             PARTIAL_PROBES
                 .iter()
                 .map(|&(operation, fields, registered)| {
-                    let (token, caller) = if registered {
-                        (&token_a, "user A")
+                    let (token, caller_key, caller) = if registered {
+                        (&token_a, &pubkey_a, "user A")
                     } else {
-                        (&token_unregistered, "a never-registered user")
+                        (
+                            &token_unregistered,
+                            &pubkey_unregistered,
+                            "a never-registered user",
+                        )
                     };
-                    (operation, fields, false, token, caller)
+                    (operation, fields, false, token, caller_key, caller)
                 }),
         );
-    for (operation, fields, may_succeed, token, caller) in probes {
+    for (operation, fields, may_succeed, token, caller_key, caller) in probes {
         // B's invoice expires after 60 seconds, so B answers again before each probe.
         let (status, _, _) = exchange(
             &app,
@@ -1037,11 +1063,23 @@ async fn no_gated_operation_acts_on_an_object_another_user_holds() {
             "{operation} with user B's identifiers and {caller}'s token changed what B holds"
         );
 
-        // The server must not tell A whether B's object exists: any difference from naming an
-        // object nobody holds, in status, body or headers, is something A learns about B.
-        if DISTINGUISHABLE.iter().any(|(op, _)| *op == operation) {
+        if let Some((_, _, _, message)) = DISTINGUISHABLE
+            .iter()
+            .find(|(op, by, _, _)| *op == operation && *by == caller)
+        {
+            assert_eq!(
+                answer(operation, (status, headers, response)),
+                (
+                    axum::http::StatusCode::BAD_REQUEST,
+                    vec![r#"content-type: "application/json""#.to_string()],
+                    json!({"status": "ERROR", "code": "INVALID_ARGUMENT", "message": message, "reason": message}),
+                ),
+                "{operation} with user B's identifiers answers {caller} with more than the conflict"
+            );
             continue;
         }
+        // The server must not tell A whether B's object exists: any difference from naming an
+        // object nobody holds, in status, body or headers, is something A learns about B.
         let unheld = exchange(
             &app,
             method,
@@ -1051,6 +1089,24 @@ async fn no_gated_operation_acts_on_an_object_another_user_holds() {
             &mut peer,
         )
         .await;
+        // Checked before `answer` drops them: each names the caller's own object, never B's.
+        for (values, body) in [(named, &response), (&nobody, &unheld.2)] {
+            for (op, fields, key) in DERIVED_RESPONSE_FIELDS {
+                if op != operation {
+                    continue;
+                }
+                let key = key(caller_key, &request(values));
+                let body = serde_json::from_slice::<Value>(body).unwrap();
+                for field in fields {
+                    let value = body[field].as_str().unwrap_or_default();
+                    let location = value.split('?').next().unwrap();
+                    assert!(
+                        location == key || location.ends_with(&format!("/{key}")),
+                        "{operation} answers {caller} with `{field}` {value}, not for its own {key}"
+                    );
+                }
+            }
+        }
         assert_eq!(
             answer(operation, (status, headers, response)),
             answer(operation, unheld),
