@@ -404,7 +404,11 @@ fn gated_request_fields(doc: &Value) -> BTreeMap<String, Result<BTreeSet<String>
             }
             let mut fields = BTreeSet::new();
             let result = (|| {
-                for parameter in op["parameters"].as_array().into_iter().flatten() {
+                // Parameters on the path item apply to every operation under it.
+                for parameter in [&item["parameters"], &op["parameters"]]
+                    .into_iter()
+                    .flat_map(|parameters| parameters.as_array().into_iter().flatten())
+                {
                     let (Some(location), Some(name)) =
                         (parameter["in"].as_str(), parameter["name"].as_str())
                     else {
@@ -423,13 +427,16 @@ fn gated_request_fields(doc: &Value) -> BTreeMap<String, Result<BTreeSet<String>
                         "a body other than one application/json schema: {body}"
                     ));
                 }
-                collect_fields(
-                    doc,
-                    &body["content"]["application/json"]["schema"],
-                    "",
-                    &mut fields,
-                    0,
-                )
+                let schema = &body["content"]["application/json"]["schema"];
+                let root = schema["$ref"]
+                    .as_str()
+                    .and_then(|reference| reference.strip_prefix("#/components/schemas/"))
+                    .map_or(schema, |name| &doc["components"]["schemas"][name]);
+                // Fields are named by property, so a body of any other shape has none to classify.
+                if root["type"] != "object" {
+                    return Err(format!("a body that is not a JSON object: {schema}"));
+                }
+                collect_fields(doc, schema, "", &mut fields, 0)
             })();
             operations.insert(format!("{method} {path}"), result.map(|()| fields));
         }
@@ -606,7 +613,7 @@ async fn caller_reads(
 
 #[test]
 fn a_request_field_the_inventory_cannot_classify_fails() {
-    let edits: [(&str, fn(&mut Value)); 4] = [
+    let edits: [(&str, fn(&mut Value)); 6] = [
         ("a nested property", |doc| {
             doc["components"]["schemas"]["RecurringPaymentScheduleEntry"]["properties"]["backup_id"] =
                 json!({"type": ["string", "null"]});
@@ -629,6 +636,16 @@ fn a_request_field_the_inventory_cannot_classify_fails() {
         ("a query parameter", |doc| {
             doc["paths"]["/v0/backup/list"]["post"]["parameters"] =
                 json!([{"in": "query", "name": "backup_id", "schema": {"type": "string"}}]);
+        }),
+        ("a parameter on the path item", |doc| {
+            doc["paths"]["/v0/backup/list"]["parameters"] =
+                json!([{"in": "query", "name": "backup_id", "schema": {"type": "string"}}]);
+        }),
+        // A whole body that is one ID names an object with no property name to classify.
+        ("a scalar body", |doc| {
+            doc["paths"]["/v0/backup/list"]["post"]["requestBody"] = json!({"content": {
+                "application/json": {"schema": {"type": "string", "format": "uuid"}},
+            }});
         }),
     ];
     assert_eq!(classification_failures(&document()), Vec::<String>::new());
