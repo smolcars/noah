@@ -361,7 +361,7 @@ const RETURNS_CALLER_DATA: [(&str, bool); 30] = [
 ];
 
 /// Operations that return the caller's data that the read probe does not send, and why.
-const UNPROBED_READS: [(&str, &str); 7] = [
+const UNPROBED_READS: [(&str, &str); 6] = [
     (
         "post /v0/backup/upload_url",
         "answers with what this request creates, so the probe naming B's objects covers it",
@@ -372,7 +372,8 @@ const UNPROBED_READS: [(&str, &str); 7] = [
     ),
     (
         "post /v0/email/send_verification",
-        "echoes the email in the request and sends it a code",
+        "sends a code to the email the request names, or, when that is the caller's verified \
+         email, answers with it; either way it tells the caller only what the request names",
     ),
     (
         "post /v0/email/verify",
@@ -383,14 +384,66 @@ const UNPROBED_READS: [(&str, &str); 7] = [
         "suggests other users' Lightning addresses by design",
     ),
     (
-        "post /v0/register",
-        "answers with what this request registers, so the probe naming B's objects covers it",
-    ),
-    (
         "post /v0/update_lightning_identity",
         "answers with what this request sets, so the probe naming B's objects covers it",
     ),
 ];
+
+/// What each read in caller_reads answers a caller who holds nothing but its profile, with
+/// `{lightning_address}` for the caller's own. A read that stops reaching its lookup changes this.
+const READ_BASELINES: [(&str, u16, &str); 6] = [
+    (
+        "post /v0/backup/download_url",
+        404,
+        r#"{"status": "ERROR", "code": "NOT_FOUND", "message": "Backup not found", "reason": "Backup not found"}"#,
+    ),
+    ("post /v0/backup/list", 200, "[]"),
+    (
+        "post /v0/backup/v2/download",
+        404,
+        r#"{"status": "ERROR", "code": "NOT_FOUND", "message": "Backup not found", "reason": "Backup not found"}"#,
+    ),
+    ("post /v0/backup/v2/list", 200, "[]"),
+    // A registered caller's register returns its stored profile.
+    (
+        "post /v0/register",
+        200,
+        r#"{"status": "OK", "event": null, "reason": "User already registered",
+            "lightning_address": "{lightning_address}", "nostr_pubkey": null, "display_name": null,
+            "email": null, "is_email_verified": false, "user_status": "active"}"#,
+    ),
+    (
+        "post /v0/user_info",
+        200,
+        r#"{"lightning_address": "{lightning_address}", "nostr_pubkey": null, "display_name": null,
+            "email": null, "user_status": "active"}"#,
+    ),
+];
+
+fn assert_read_baselines(
+    reads: &[(&str, (axum::http::StatusCode, Vec<String>, Value))],
+    lightning_address: &str,
+) {
+    let expected = READ_BASELINES
+        .iter()
+        .map(|(operation, status, body)| {
+            let body = body.replace("{lightning_address}", lightning_address);
+            (
+                *operation,
+                *status,
+                serde_json::from_str::<Value>(&body).unwrap(),
+            )
+        })
+        .collect::<Vec<_>>();
+    let got = reads
+        .iter()
+        .map(|(operation, (status, _, body))| (*operation, status.as_u16(), body.clone()))
+        .collect::<Vec<_>>();
+    assert_eq!(
+        got, expected,
+        "the reads of a caller with {lightning_address}"
+    );
+}
 
 /// Every field a gated operation's request carries: each parameter as `<in> parameter <name>`,
 /// and each body property at any depth, as `a.b` inside an object and `a[].b` inside an array.
@@ -813,9 +866,15 @@ async fn no_gated_operation_acts_on_an_object_another_user_holds() {
     let token_a = a.access_token(&state);
     // What A reads of its own while B holds nothing, to compare once B holds one of everything.
     let alone = caller_reads(&app, &token_a, &mut peer).await;
+    assert_read_baselines(&alone, "a@localhost");
     create(&b, "b@localhost", Some(ark_b)).await;
     let pubkey_b = b.pubkey().to_string();
     let token_b = b.access_token(&state);
+    // A read that finds its user by anything but the caller would answer B with A's profile.
+    assert_read_baselines(
+        &caller_reads(&app, &token_b, &mut peer).await,
+        "b@localhost",
+    );
 
     let (status, _, body) = exchange(
         &app,
