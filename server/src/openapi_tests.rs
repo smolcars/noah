@@ -420,6 +420,7 @@ const READ_BASELINES: [(&str, u16, &str); 6] = [
     ),
 ];
 
+#[allow(clippy::type_complexity)]
 fn assert_read_baselines(
     reads: &[(&str, (axum::http::StatusCode, Vec<String>, Value))],
     lightning_address: &str,
