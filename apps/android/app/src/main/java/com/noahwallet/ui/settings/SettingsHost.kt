@@ -145,22 +145,17 @@ private fun AnimatedContentTransitionScope<Scene<NavKey>>.pageTransition(
     split: Boolean,
     density: Density,
 ): ContentTransform {
-    if (reduceMotion) return fadeIn(tween(180)) togetherWith fadeOut(tween(180))
+    if (reduceMotion) {
+        return fadeIn(tween(com.noahwallet.ui.design.NoahTokens.Motion.REDUCE_MOTION_FADE_MS)) togetherWith
+            fadeOut(tween(com.noahwallet.ui.design.NoahTokens.Motion.REDUCE_MOTION_FADE_MS))
+    }
     val forward = targetState.previousEntries.size >= initialState.previousEntries.size
     if (split) {
         val spring = spring<androidx.compose.ui.unit.IntOffset>(.85f, 438.6491f / 1.21f)
         return (fadeIn(tween(220, delayMillis = 60)) +
             slideInVertically(spring) { with(density) { (if (forward) 10 else -6).dp.roundToPx() } }) togetherWith fadeOut(tween(140))
     }
-    if (predictive) {
-        return if (forward) slideInHorizontally(tween(250, easing = LinearEasing)) { it } togetherWith
-            slideOutHorizontally(tween(250, easing = LinearEasing)) { -it }
-        else slideInHorizontally(tween(250, easing = LinearEasing)) { -it } togetherWith
-            slideOutHorizontally(tween(250, easing = LinearEasing)) { it }
-    }
-    val spring = com.noahwallet.ui.design.NoahTokens.Motion.snappy<androidx.compose.ui.unit.IntOffset>()
-    return if (forward) slideInHorizontally(spring) { it } togetherWith slideOutHorizontally(spring) { -it }
-    else slideInHorizontally(spring) { -it } togetherWith slideOutHorizontally(spring) { it }
+    return com.noahwallet.ui.horizontalSlide(forward = forward, predictive = predictive)
 }
 
 /**

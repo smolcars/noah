@@ -271,7 +271,11 @@ private fun AnimatedContentTransitionScope<Scene<NavKey>>.stackTransition(predic
         return fadeIn(tween(com.noahwallet.ui.design.NoahTokens.Motion.REDUCE_MOTION_FADE_MS)) togetherWith
             fadeOut(tween(com.noahwallet.ui.design.NoahTokens.Motion.REDUCE_MOTION_FADE_MS))
     }
-    val forward = targetState.previousEntries.size >= initialState.previousEntries.size
+    return horizontalSlide(forward = targetState.previousEntries.size >= initialState.previousEntries.size, predictive = predictive)
+}
+
+/** Edge-to-edge opaque horizontal slide on the snappy spring, or 1:1 linear travel during predictive back. */
+internal fun horizontalSlide(forward: Boolean, predictive: Boolean): ContentTransform {
     if (predictive) {
         return if (forward) slideInHorizontally(tween(250, easing = LinearEasing)) { it } togetherWith
             slideOutHorizontally(tween(250, easing = LinearEasing)) { -it }

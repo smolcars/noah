@@ -65,6 +65,11 @@ class SettingsRulesTest {
             assertEquals(name, listOf(Destination.Home, settings), home)
             assertEquals(name, link.second, stack)
         }
+        val directHome = mutableListOf<NavKey>(Destination.Home, QRDestination(false))
+        val directStack = mutableListOf<NavKey>(settings, SettingsDestination.Logs)
+        SettingsRoutes.openDirect(directHome, directStack, SettingsDestination.Profile)
+        assertEquals(listOf(Destination.Home, settings), directHome)
+        assertEquals(listOf(SettingsDestination.Profile), directStack)
         assertEquals(listOf(settings, SettingsDestination.Profile, SettingsDestination.Lightning), SettingsRoutes.chain(SettingsDestination.Lightning))
         assertEquals(listOf(settings, SettingsDestination.Notifications, SettingsDestination.UnifiedPush),
             SettingsRoutes.chain(SettingsDestination.UnifiedPush))
