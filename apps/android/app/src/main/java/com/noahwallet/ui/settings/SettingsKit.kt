@@ -25,6 +25,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
@@ -34,6 +35,7 @@ import androidx.compose.ui.graphics.PathEffect
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.scale
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.takeOrElse
 import androidx.compose.ui.layout.onSizeChanged
@@ -291,17 +293,45 @@ internal fun SettingsRow(title: String, icon: Int? = null, glyph: String? = null
 /** The avatar's circle (ringed in orange for you) with an initial or an icon. */
 @Composable
 private fun AvatarCore(size: Dp, you: Boolean, initial: String?, icon: Int?) {
+    if (you) { YouAvatarCore(size, initial, icon); return }
     val palette = LocalPalette.current
     val large = size >= 60.dp
-    val ring = if (you) Modifier.background(palette.background, CircleShape).border(2.dp, palette.orange, CircleShape)
-    else Modifier.background(palette.soft, CircleShape)
-    Box(Modifier.fillMaxSize().then(ring), contentAlignment = Alignment.Center) {
+    Box(Modifier.fillMaxSize().background(palette.soft, CircleShape), contentAlignment = Alignment.Center) {
         val fontSize = when { size >= 84.dp -> 34.sp; large -> 24.sp; else -> 17.sp }
         if (initial != null) Text(initial.lowercase(), style = TextStyle(fontFamily = NoahTokens.Display, fontWeight = FontWeight.SemiBold,
             fontSize = fontSize, lineHeight = fontSize), color = palette.foreground)
         else icon?.let { Icon(painterResource(it), null, Modifier.size(if (large) 27.dp else 20.dp), tint = palette.foreground) }
     }
 }
+
+/** Your orange-ringed avatar: draws a crisp 1.5–2 dp ring and scales the glyph from its live bounds during flight. */
+@Composable
+private fun YouAvatarCore(size: Dp, initial: String?, icon: Int?) {
+    val palette = LocalPalette.current
+    val restSp = avatarInitialSp(size.value)
+    val restIcon = avatarIconDp(size.value)
+    Box(Modifier.fillMaxSize().drawWithContent {
+        val w = this.size.minDimension / density
+        val strokePx = (1.5f + 0.5f * ((w - 30f) / 30f).coerceIn(0f, 1f)).dp.toPx()
+        val liveScale = if (initial != null) avatarInitialSp(w) / restSp else avatarIconDp(w) / restIcon
+        drawCircle(palette.background)
+        scale(liveScale) { this@drawWithContent.drawContent() }
+        drawCircle(palette.orange, radius = (this.size.minDimension - strokePx) / 2f, style = Stroke(strokePx))
+    }, contentAlignment = Alignment.Center) {
+        if (initial != null) Text(initial.lowercase(), style = TextStyle(fontFamily = NoahTokens.Display, fontWeight = FontWeight.SemiBold,
+            fontSize = restSp.sp, lineHeight = restSp.sp), color = palette.foreground)
+        else icon?.let { Icon(painterResource(it), null, Modifier.size(restIcon.dp), tint = palette.foreground) }
+    }
+}
+
+private fun avatarInitialSp(widthDp: Float): Float = when {
+    widthDp <= 30f -> 14f
+    widthDp <= 60f -> 14f + (widthDp - 30f) * (10f / 30f)
+    widthDp <= 84f -> 24f + (widthDp - 60f) * (10f / 24f)
+    else -> 34f
+}
+
+private fun avatarIconDp(widthDp: Float): Float = 18f + 9f * ((widthDp - 30f) / 30f).coerceIn(0f, 1f)
 
 /** A pending avatar's dashed ring, turning slowly (still under Reduce Motion). */
 @Composable

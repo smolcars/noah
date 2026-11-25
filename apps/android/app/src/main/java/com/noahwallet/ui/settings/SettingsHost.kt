@@ -119,10 +119,8 @@ internal fun Modifier.meAvatar(): Modifier {
     val visibility = LocalEntryScope.current ?: return this
     if (LocalReduceMotion.current) return this
     return with(shared) {
-        this@meAvatar.sharedBounds(rememberSharedContentState("settings-me"), visibility,
-            enter = fadeIn(), exit = ExitTransition.None,
-            boundsTransform = { _, _ -> spring(.85f, 438.6491f, Rect.VisibilityThreshold) },
-            resizeMode = SharedTransitionScope.ResizeMode.scaleToBounds())
+        this@meAvatar.sharedElement(rememberSharedContentState("settings-me"), visibility,
+            boundsTransform = { _, _ -> spring(.85f, 438.6491f, Rect.VisibilityThreshold) })
     }
 }
 
