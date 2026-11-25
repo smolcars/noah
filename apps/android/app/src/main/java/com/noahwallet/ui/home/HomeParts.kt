@@ -96,7 +96,8 @@ internal fun NameChip(address: String?, variant: String, onClick: () -> Unit) {
         .clickable(onClickLabel = label, role = Role.Button, onClick = onClick)
         .padding(start = 5.dp, end = if (local != null || variant != "mainnet") 14.dp else 5.dp),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        Box(Modifier.size(30.dp).meAvatar().border(1.5.dp, palette.orange, CircleShape), contentAlignment = Alignment.Center) {
+        Box(Modifier.size(30.dp).meAvatar().background(palette.background, CircleShape).border(1.5.dp, palette.orange, CircleShape),
+            contentAlignment = Alignment.Center) {
             if (local != null) Text(local.take(1).lowercase(), style = HomeType.chipInitial, color = palette.foreground)
             else Icon(painterResource(HomeIcons.person), null, Modifier.size(18.dp), tint = palette.foreground)
         }

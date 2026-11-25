@@ -71,7 +71,7 @@ internal fun ProfilePage(model: AppModel, nav: SettingsNav) {
     val address = server.lightningAddress?.takeIf { it.isNotEmpty() }
     SettingsFrame(tr("Profile"), nav.back, hero = true) {
         Column(Modifier.padding(top = 6.dp)) {
-            SettingsAvatar(84.dp, you = true, initial = address?.take(1) ?: name?.take(1), icon = SettingsIcons.person)
+            SettingsAvatar(84.dp, Modifier.meAvatar(), you = true, initial = address?.take(1) ?: name?.take(1), icon = SettingsIcons.person)
             Text(name ?: address?.substringBefore('@') ?: tr("Profile"), Modifier.padding(top = 16.dp), style = SettingsType.hero, color = palette.foreground,
                 maxLines = 2, overflow = TextOverflow.Ellipsis)
             address?.let { Text(it, Modifier.padding(top = 2.dp), style = HomeType.line, color = palette.muted) }

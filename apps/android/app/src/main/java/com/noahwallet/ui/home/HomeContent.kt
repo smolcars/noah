@@ -34,7 +34,6 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.*
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.LayoutCoordinates
-import androidx.compose.ui.layout.boundsInWindow
 import androidx.compose.ui.layout.layout
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.layout.onSizeChanged
@@ -408,16 +407,14 @@ private fun MiniBalance(ui: HomeUi, tuck: Float) {
         style = HomeType.mini, color = palette.foreground, maxLines = 1, overflow = TextOverflow.Ellipsis)
 }
 
-/** The top bar's end: background work, Scan and the Settings gear (Settings opens out of it). */
+/** The top bar's end: background work, Scan and Settings. */
 @Composable
 private fun TopBarButtons(ui: HomeUi, actions: HomeActions, suspended: Boolean) {
     val haptics = rememberHaptics()
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         if (!suspended) ActivityGlyph(ui.activity, ui.backedUpAt)
         if (!suspended) CircleButton(HomeIcons.scan, tr("Scan")) { haptics.light(); actions.scan() }
-        val entry = com.noahwallet.ui.settings.LocalSettingsEntry.current
-        CircleButton(HomeIcons.settings, tr("Settings"), Modifier.testTag("home-settings-button").then(if (entry == null) Modifier
-        else Modifier.onGloballyPositioned { entry.gear = it.boundsInWindow() })) { haptics.light(); actions.settings() }
+        CircleButton(HomeIcons.settings, tr("Settings"), Modifier.testTag("home-settings-button")) { haptics.light(); actions.settings() }
     }
 }
 

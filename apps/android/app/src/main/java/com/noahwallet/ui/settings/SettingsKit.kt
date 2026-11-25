@@ -293,7 +293,8 @@ internal fun SettingsRow(title: String, icon: Int? = null, glyph: String? = null
 private fun AvatarCore(size: Dp, you: Boolean, initial: String?, icon: Int?) {
     val palette = LocalPalette.current
     val large = size >= 60.dp
-    Box(Modifier.fillMaxSize().then(if (you) Modifier.border(2.dp, palette.orange, CircleShape) else Modifier.background(palette.soft, CircleShape)),
+    Box(Modifier.fillMaxSize().then(if (you) Modifier.background(palette.background, CircleShape).border(2.dp, palette.orange, CircleShape)
+        else Modifier.background(palette.soft, CircleShape)),
         contentAlignment = Alignment.Center) {
         val fontSize = when { size >= 84.dp -> 34.sp; large -> 24.sp; else -> 17.sp }
         if (initial != null) Text(initial.lowercase(), style = TextStyle(fontFamily = NoahTokens.Display, fontWeight = FontWeight.SemiBold,
