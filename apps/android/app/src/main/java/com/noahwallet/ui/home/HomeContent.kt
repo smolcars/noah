@@ -425,6 +425,40 @@ private fun TopBarButtons(ui: HomeUi, actions: HomeActions, suspended: Boolean) 
 /** Critically damped reveal for balance opacity and blur so it settles monotonically without re-triggering blur. */
 internal fun balanceMorphReveal() = androidx.compose.animation.core.spring<Float>(dampingRatio = 1f, stiffness = 438.6491f)
 
+private class BalanceMotion(initial: Boolean) {
+    var hidden by mutableStateOf(initial)
+    val morph = androidx.compose.animation.core.Animatable(1f)
+    val scale = androidx.compose.animation.core.Animatable(1f)
+}
+
+@Composable
+private fun rememberBalanceMotion(targetHidden: Boolean, reduceMotion: Boolean): BalanceMotion {
+    val motion = remember { BalanceMotion(targetHidden) }
+    val morph = motion.morph
+    val scale = motion.scale
+    LaunchedEffect(targetHidden) {
+        if (motion.hidden == targetHidden && morph.value == 1f && scale.value == 1f) return@LaunchedEffect
+        if (motion.hidden != targetHidden) {
+            if (reduceMotion) morph.animateTo(0f, androidx.compose.animation.core.tween(90))
+            else kotlinx.coroutines.coroutineScope {
+                launch { morph.animateTo(0f, androidx.compose.animation.core.tween(140)) }
+                launch { scale.animateTo(.96f, androidx.compose.animation.core.tween(140)) }
+            }
+            motion.hidden = targetHidden
+            morph.snapTo(0f)
+            scale.snapTo(if (reduceMotion) 1f else 1.04f)
+        }
+        if (reduceMotion) {
+            scale.snapTo(1f)
+            morph.animateTo(1f, androidx.compose.animation.core.tween(90))
+        } else kotlinx.coroutines.coroutineScope {
+            launch { morph.animateTo(1f, balanceMorphReveal()) }
+            launch { scale.animateTo(1f, NoahTokens.Motion.bouncy()) }
+        }
+    }
+    return motion
+}
+
 /**
  * Applies the balance's tuck scale and hide/show blur-morph in one draw layer, adding vertical [bleed] inside the
  * layer bounds (cancelled outside) so Android's blur RenderEffect never clips ₿'s stems or separator descenders.
@@ -457,31 +491,9 @@ private fun Modifier.balanceMorphLayer(
 internal fun BalanceBlock(ui: HomeUi, total: ULong?, tuck: Float, entered: Long, onTap: () -> Unit, onToggle: () -> Unit) {
     if (ui.state == HomeRules.State.suspended) return
     val reduceMotion = LocalReduceMotion.current
-    var hidden by remember { mutableStateOf(ui.hidden) }
-    val morph = remember { androidx.compose.animation.core.Animatable(1f) }
-    val scale = remember { androidx.compose.animation.core.Animatable(1f) }
-    LaunchedEffect(ui.hidden) {
-        if (hidden == ui.hidden && morph.value == 1f && scale.value == 1f) return@LaunchedEffect
-        if (hidden != ui.hidden) {
-            if (reduceMotion) morph.animateTo(0f, androidx.compose.animation.core.tween(90))
-            else kotlinx.coroutines.coroutineScope {
-                launch { morph.animateTo(0f, androidx.compose.animation.core.tween(140)) }
-                launch { scale.animateTo(.96f, androidx.compose.animation.core.tween(140)) }
-            }
-            hidden = ui.hidden
-            morph.snapTo(0f)
-            scale.snapTo(if (reduceMotion) 1f else 1.04f)
-        }
-        if (reduceMotion) {
-            scale.snapTo(1f)
-            morph.animateTo(1f, androidx.compose.animation.core.tween(90))
-        } else kotlinx.coroutines.coroutineScope {
-            launch { morph.animateTo(1f, balanceMorphReveal()) }
-            launch { scale.animateTo(1f, NoahTokens.Motion.bouncy()) }
-        }
-    }
+    val motion = rememberBalanceMotion(ui.hidden, reduceMotion)
     val text = when {
-        hidden -> BitcoinAmount.format(0, ui.unit, ui.locale).replace("0", "••••••")
+        motion.hidden -> BitcoinAmount.format(0, ui.unit, ui.locale).replace("0", "••••••")
         total != null -> BitcoinAmount.format(total.toLong(), ui.unit, ui.locale)
         else -> null
     }
@@ -505,9 +517,9 @@ internal fun BalanceBlock(ui: HomeUi, total: ULong?, tuck: Float, entered: Long,
                 customActions = listOf(CustomAccessibilityAction(toggleLabel) { onToggle(); true })
                 testTag = "home-balance"
             }
-            .balanceMorphLayer(bleed, tuck, { morph.value }, { scale.value }, reduceMotion),
+            .balanceMorphLayer(bleed, tuck, { motion.morph.value }, { motion.scale.value }, reduceMotion),
             verticalAlignment = Alignment.CenterVertically) {
-            BalanceFigures(text, hidden, rollFromZero = entered < 1_600, startDelay = if (entered < 1_600) 160 else 0, Modifier.weight(1f, fill = false))
+            BalanceFigures(text, motion.hidden, rollFromZero = entered < 1_600, startDelay = if (entered < 1_600) 160 else 0, Modifier.weight(1f, fill = false))
             DetailsChevron(total != null)
         }
         HideToggle(total != null, ui.hidden, toggleLabel, onToggle)
