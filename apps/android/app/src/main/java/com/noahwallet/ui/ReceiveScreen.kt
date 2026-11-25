@@ -66,12 +66,18 @@ fun ReceiveScreen(app: AppModel, onProfile: () -> Unit = {}) {
     val requestState = rememberSaveable(stateSaver = requestSaver) { mutableStateOf<ReceiveRequest?>(null) }
     val formatState = rememberSaveable { mutableStateOf(ReceiveFormats.initial) }
     val arrivalState = rememberSaveable(stateSaver = arrivalSaver) { mutableStateOf<ReceiveArrival?>(null) }
-    val state = remember(requestState, formatState, arrivalState) { ReceiveScreenState(requestState, formatState, arrivalState) }
+    // The history rows of payments to this screen's own requests ("movement-<id>"), so they're never a Lightning-address arrival too.
+    val movementsState = rememberSaveable { mutableStateOf(emptyList<String>()) }
+    val state = remember(requestState, formatState, arrivalState, movementsState) {
+        ReceiveScreenState(requestState, formatState, arrivalState, movementsState)
+    }
     val request by state.request
     val arrival by state.arrival
     // The on-chain arrival whose confirmation the block row follows, after its presentation has ended.
     val chainState = rememberSaveable(stateSaver = arrivalSaver) { mutableStateOf<ReceiveArrival?>(null) }
-    // What Receive has taken from the wallet's records, and this screen's own Ark addresses and invoices.
+    // What Receive has taken from the wallet's records; the Ark address the card shows (the last one while a new request
+    // is made: an address you shared before may be paid again, e.g. the one the server gives other Noah users) and this
+    // screen's invoices.
     val records = rememberSaveable(stateSaver = recordsSaver) { mutableStateOf<ReceiveRecords?>(null) }
     var ownArk by rememberSaveable { mutableStateOf(emptyList<String>()) }
     var ownHashes by rememberSaveable { mutableStateOf(emptyList<String>()) }
@@ -82,7 +88,7 @@ fun ReceiveScreen(app: AppModel, onProfile: () -> Unit = {}) {
     LaunchedEffect(state.retry.intValue, request == null) { state.loadRequest(app) }
     LaunchedEffect(request?.arkAddress, request?.paymentHash) {
         request?.let { current ->
-            if (current.arkAddress !in ownArk) ownArk = ownArk + current.arkAddress
+            if (ownArk != listOf(current.arkAddress)) ownArk = listOf(current.arkAddress)
             current.paymentHash?.let { if (it !in ownHashes) ownHashes = ownHashes + it }
         }
     }
@@ -92,12 +98,15 @@ fun ReceiveScreen(app: AppModel, onProfile: () -> Unit = {}) {
         val current = request?.takeIf { app.session.isOpen } ?: return@LaunchedEffect
         state.listen(app, current)
     }
-    // Once the card has flipped back the arrival is done. Ark and Lightning get a fresh request (the invoice is paid
-    // and addresses aren't reused); an on-chain arrival keeps it, and its block row carries on through the chain state.
+    // Once the card has flipped back the arrival is done. An Ark or Lightning payment to this request gets a fresh one
+    // (the invoice is paid and addresses aren't reused); an on-chain arrival or a payment through your Lightning address
+    // keeps it, and an on-chain arrival's block row carries on through the chain state.
     LaunchedEffect(arrival) { state.finishArrival(reduceMotion) }
-    // On-chain arrivals and payments to your Lightning address, from the wallet's records, one at a time.
+    // On-chain arrivals and payments to your Lightning address, from the wallet's records, one at a time. No baseline after
+    // a failed read: it empties the records, and a baseline from them would replay every receipt. (A refresh keeps the last
+    // good read, and the error stays until one succeeds.)
     ReceiveRecordsWatcher(app.history.transactions, app.history.isLoading, request, ownArk.toSet(), ownHashes.toSet(), records, state.arrival,
-        chainState) { scope.launch { app.refresh() } }
+        chainState, baselineReady = app.history.error == null, ownMovements = state.ownMovements.value.toSet()) { scope.launch { app.refresh() } }
     val ui = receiveUi(app, state, chainState.value, rememberChainTip(app), price, currency)
     com.noahwallet.ui.onboarding.OnboardingFrame(null, splitAtWindowCentre = true) {
         ReceiveContent(ui, state.actions(app, scope, onProfile))
@@ -128,6 +137,7 @@ private fun receiveUi(app: AppModel, state: ReceiveScreenState, chain: ReceiveAr
  */
 private class ReceiveScreenState(
     val request: MutableState<ReceiveRequest?>, val format: MutableState<ReceiveFormat>, val arrival: MutableState<ReceiveArrival?>,
+    val ownMovements: MutableState<List<String>>,
 ) {
     val error = mutableStateOf<String?>(null)
     val errorTitle = mutableStateOf<String?>(null)
@@ -179,7 +189,11 @@ private class ReceiveScreenState(
         }
     }
 
-    private fun received(event: ReceiveCompletion.Received) {
+    private suspend fun received(event: ReceiveCompletion.Received) {
+        // Its history row is this request's, not a payment through your Lightning address (see HistoryMapping's row IDs).
+        event.movementId?.let { "movement-$it" }?.takeIf { it !in ownMovements.value }?.let { ownMovements.value = ownMovements.value + it }
+        // A payment through your Lightning address that's playing finishes first, as iOS plays arrivals in turn.
+        while (arrival.value?.viaAddress == true) delay(100)
         if (!ReceiveArrivals.takesCard(arrival.value)) return
         val rail = when (event.rail) {
             ReceiveCompletion.Rail.ark -> ReceiveArrival.Rail.ark
@@ -194,12 +208,12 @@ private class ReceiveScreenState(
         error.value = "The Lightning payment could not be received. Generate a new payment request and try again."
     }
 
-    /** Clears the arrival once its presentation ends; Ark and Lightning then need a fresh request. */
+    /** Clears the arrival once its presentation ends; an Ark or Lightning payment to this request then needs a fresh one. */
     suspend fun finishArrival(reduceMotion: Boolean) {
         val current = arrival.value ?: return
         delay((ReceiveTimeline.end(current.rail, reduceMotion) - (SystemClock.elapsedRealtime() - current.startedAt)).coerceAtLeast(0))
         arrival.value = null
-        if (current.rail != ReceiveArrival.Rail.onchain) { format.value = ReceiveFormats.afterAmount(format.value, false); request.value = null }
+        if (current.usesUpRequest) { format.value = ReceiveFormats.afterAmount(format.value, false); request.value = null }
     }
 
     /** Today's invoice creation for [sats] and [note] on [current]; the error to show, or null once it's created. */

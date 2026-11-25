@@ -11,9 +11,9 @@ import kotlinx.serialization.Serializable
 enum class ReceiveFormat { lightningAddress, request, invoice, ark, onchain }
 
 /**
- * What each format copies and shares: exactly its own payload. The Lightning address is the literal address (as
- * the QR hub shows it), the payment request is the BIP-321 URI with your Lightning address as its LNURL-pay code,
- * and the invoice exists only once an amount has been added.
+ * What each format copies and shares: exactly its own payload. The Lightning address is the literal address (its
+ * QR, here and in the QR hub, is the LNURL-pay code: see [qr]), the payment request is the BIP-321 URI with your
+ * Lightning address as its LNURL-pay code, and the invoice exists only once an amount has been added.
  */
 internal object ReceiveFormats {
     fun payload(format: ReceiveFormat, request: ReceiveRequest?, address: String?): String? = when (format) {
@@ -32,7 +32,7 @@ internal object ReceiveFormats {
         if (format == ReceiveFormat.lightningAddress) LightningIdentity.lnurlQR(it) ?: it else it
     }
 
-    /** H keeps the logo safest; long payloads (the request with its invoice) use M so the modules stay large. */
+    /** H keeps the logo safest; long payloads (an invoice, the payment request, an LNURL) use M so the modules stay large. */
     fun correction(payload: String): ErrorCorrectionLevel = if (payload.length > 90) ErrorCorrectionLevel.M else ErrorCorrectionLevel.H
 
     /** What Receive shows first, and returns to: the payment request, every way to pay in one code. */
@@ -57,13 +57,20 @@ internal object ReceiveFormats {
  * can be recognised.
  */
 @Serializable
-data class ReceiveArrival(val rail: Rail, val sats: Long, val startedAt: Long, val txid: String? = null, val inputs: List<String> = emptyList()) {
+data class ReceiveArrival(val rail: Rail, val sats: Long, val startedAt: Long, val txid: String? = null, val inputs: List<String> = emptyList(),
+    val viaAddress: Boolean = false) {
     @Serializable enum class Rail { ark, lightning, onchain }
+
+    /** An Ark or Lightning payment to this request ([viaAddress]: through your Lightning address instead): it's used up. */
+    val usesUpRequest get() = rail != Rail.onchain && !viaAddress
 }
 
 internal object ReceiveArrivals {
-    /** A new arrival takes the card when it's free or showing an on-chain arrival, whose block row carries on separately. */
-    fun takesCard(current: ReceiveArrival?): Boolean = current == null || current.rail == ReceiveArrival.Rail.onchain
+    /**
+     * A new arrival takes the card when it's free, or showing an arrival that didn't use up the request: an on-chain one,
+     * whose block row carries on separately, or a payment through your Lightning address.
+     */
+    fun takesCard(current: ReceiveArrival?): Boolean = current == null || !current.usesUpRequest
 
     /**
      * A new unconfirmed incoming on-chain transaction for this request: paying its Bitcoin address, or, if no output
@@ -94,7 +101,7 @@ internal object ReceiveArrivals {
         }
         viaAddress(rows, seen.settled, ownArk, ownHashes)?.let { row ->
             val rail = if (row.movementKind == "lightning-receive") ReceiveArrival.Rail.lightning else ReceiveArrival.Rail.ark
-            return seen.copy(settled = seen.settled + row.id) to ReceiveArrival(rail, row.amount, now)
+            return seen.copy(settled = seen.settled + row.id) to ReceiveArrival(rail, row.amount, now, viaAddress = true)
         }
         return if (seen != records) seen to null else null
     }

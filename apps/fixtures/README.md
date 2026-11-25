@@ -49,7 +49,10 @@ an offer, and the rail order stays Ark, Lightning, on-chain.
 Noah's Lightning address as LNURL (hand-specified): `send-lnurl-address.json` is Send
 reading an LNURL to LUD-16's `https://<domain>/.well-known/lnurlp/<username>` back as
 `username@domain` (Noah's own QR codes carry the address that way), and leaving every
-other LNURL as it is. Its LNURLs were computed with the BIP-173 reference bech32.
+other LNURL as it is. `receive-address-payments.json` is the rule Receive uses to show a
+payment through your Lightning address arriving: new successful Ark or Lightning receives
+that aren't for the screen's own Ark addresses or invoices. LNURLs in both were computed
+with the BIP-173 reference bech32.
 
 M6 boarding/exits: the fixtures are frozen from the React Native app and edited by hand; keep both platforms' tests passing. Their generator imported
 RN's `exitFeeEstimate`, `exitTimeline`, `useExitOverview`, and `buildAutoBoardPlan`;

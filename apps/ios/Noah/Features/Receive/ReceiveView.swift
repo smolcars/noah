@@ -14,6 +14,7 @@ struct ReceiveView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @Environment(\.sendReceiveFixture) private var fixture
+    @Environment(HistoryModel.self) private var history: HistoryModel?
     let isActive: Bool
     @State private var model: ReceiveModel
     @State private var btcPrice: Double?
@@ -40,6 +41,16 @@ struct ReceiveView: View {
     @State private var tip: UInt32?
     @State private var toast: HomeToast?
     @State private var profile = false
+    /// Receipts already complete when Receive appeared, plus each payment through your Lightning address shown since.
+    // swiftlint:disable:next discouraged_optional_collection - nil until the first look at history while showing
+    @State private var settledReceipts: Set<String>?
+    /// The Ark address the card shows (the last one while a new request is made) and this screen's invoices: their
+    /// payments arrive through `ReceiveCompletion` instead. Only the shown Ark address: one you shared before may be paid
+    /// again through your Lightning address (the server gives other Noah users your first Ark address).
+    @State private var ownArk: Set<String> = []
+    @State private var ownHashes: Set<String> = []
+    /// The history rows of payments to this screen's own requests ("movement-<id>", as `HistoryMapping` names them).
+    @State private var ownMovements: Set<String> = []
     private enum Sheet: String, Identifiable { case amount, formats; var id: String { rawValue } }
 
     init(isActive: Bool, model: ReceiveModel? = nil) {
@@ -61,8 +72,8 @@ struct ReceiveView: View {
 
     private var wide: Bool { window.wide }
     private var arrival: ReceiveArrival? { arrivals.current }
-    /// An Ark or Lightning arrival is showing: the request it paid is used up.
-    private var paidArrival: Bool { arrival.map { $0.rail != .onchain } ?? false }
+    /// An Ark or Lightning arrival for this request is showing: the request it paid is used up.
+    private var paidArrival: Bool { arrival?.usesUpRequest ?? false }
     private var address: String? { app.server.state.lightningAddress }
     private var hasAmount: Bool { model.request?.amountSat != nil }
     private var amountText: String? {
@@ -127,15 +138,23 @@ struct ReceiveView: View {
                 draft = nil
                 arrivals.clear()
                 interrupted = nil
+                settledReceipts = nil
             }
         }
         .onDisappear { model.stop() }
         .onChange(of: current, initial: true) { _, value in if !paidArrival && value.payload != nil { lastShown = value } }
         .onChange(of: model.receivedSats) { _, sats in
             guard let sats else { return }
+            if let movement = model.receivedMovement { ownMovements.insert("movement-\(movement)") }
             announce(ReceiveArrival(rail: model.receivedRail == .lightning ? .lightning : .ark, sats: sats, start: Date()))
         }
         .onChange(of: model.baseError) { _, error in if error != nil { sheet = nil; editing = false } }
+        // Initial too: the model outlives this view, so a recreated view may start with a request showing.
+        .onChange(of: model.request, initial: true) { _, new in
+            guard let new else { return }
+            ownArk = [new.arkAddress]
+            if let hash = new.paymentHash { ownHashes.insert(hash) }
+        }
         .onChange(of: model.request) { old, new in
             // A draft belongs to its request.
             if let draft, draft.request != new { self.draft = nil; editing = false }
@@ -162,6 +181,7 @@ struct ReceiveView: View {
             }
         }
         .task(id: chainKey) { await watchChain() }
+        .task(id: addressPaymentsKey) { lookForAddressPayments() }
         .sheet(item: Binding(get: { wide ? nil : editing ? .amount : sheet }, set: { next in
             // Folding away a sheet isn't closing it; the pane takes over.
             guard !wide, next == nil else { return }
@@ -416,7 +436,7 @@ struct ReceiveView: View {
         let wait = arrival.settledAt - arrival.elapsed(Date())
         if wait > 0 { do { try await Task.sleep(for: .seconds(wait)) } catch { return } }
         guard self.arrival?.id == arrival.id else { return }
-        if arrival.rail != .onchain {
+        if arrival.usesUpRequest {
             // Regenerate before moving on: changing the arrival ends this task.
             format = ReceiveFormat.reconciled(format, hasAmount: false)
             if isActive && fixture == nil { await model.start() }
@@ -434,10 +454,11 @@ struct ReceiveView: View {
     }
 
     /// Compact sheets would hide the card, so they step aside for an arrival. One set aside
-    /// for an on-chain arrival comes back with its draft; an Ark or Lightning payment uses
-    /// up the request, and the draft with it. Wide windows show the card beside the pane.
+    /// for an on-chain arrival or a payment through your Lightning address comes back with its
+    /// draft; an Ark or Lightning payment to this request uses it up, and the draft with it.
+    /// Wide windows show the card beside the pane.
     private func stepAside(for arrival: ReceiveArrival) {
-        if arrival.rail == .onchain {
+        if !arrival.usesUpRequest {
             guard !wide, editing || sheet != nil else { return }
             interrupted = editing ? .amount : sheet
         } else {
@@ -482,7 +503,32 @@ struct ReceiveView: View {
                 known = look.known
             }
             do { try await Task.sleep(for: .seconds(fixture?.chain == nil ? 30 : 2)) } catch { return }
+            // As on Android: sync Ark too, so a payment through your Lightning address reaches history (and
+            // `lookForAddressPayments`) without waiting for the foreground pass.
+            if fixture?.chain == nil { try? await WalletSession.shared.syncArk() }
         }
+    }
+
+    /// Changes whenever history reloads while Receive is showing.
+    private var addressPaymentsKey: String? { isActive ? "\(history?.revision ?? -1)" : nil }
+
+    /// Payments through your Lightning address, from the wallet's history as it reloads: the first look while Receive is
+    /// showing notes what's already there; each later one plays every new receipt in turn.
+    private func lookForAddressPayments() {
+        guard isActive, fixture == nil, let history, !history.isLoading else { return }
+        let rows = history.transactions
+        guard var settled = settledReceipts else {
+            // Not after a failed read: it empties the list, which would replay every receipt. (A refresh keeps the last good
+            // read, and the error stays until one succeeds.)
+            guard history.error == nil else { return }
+            settledReceipts = ReceiveAddressPayments.settled(rows)
+            return
+        }
+        while let row = ReceiveAddressPayments.next(rows, settled: settled.union(ownMovements), ownArk: ownArk, ownHashes: ownHashes) {
+            settled.insert(row.id)
+            announce(ReceiveArrival(rail: ReceiveAddressPayments.rail(of: row), sats: row.amount, start: Date(), viaAddress: true))
+        }
+        settledReceipts = settled
     }
 
     private func loadRate() async {

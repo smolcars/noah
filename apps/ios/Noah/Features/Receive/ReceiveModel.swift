@@ -22,6 +22,8 @@ final class ReceiveModel {
     private(set) var receivedSats: Int64?
     /// The rail of the payment in `receivedSats`.
     private(set) var receivedRail: ReceiveCompletion.Rail?
+    /// Bark's movement for the payment in `receivedSats`, when the wallet named it.
+    private(set) var receivedMovement: UInt32?
     private(set) var baseError: String?
     private(set) var baseErrorTitle = L10n.text("Couldn’t create a request")
     var invoiceError: String?
@@ -37,6 +39,7 @@ final class ReceiveModel {
         stop()
         receivedSats = nil
         receivedRail = nil
+        receivedMovement = nil
         baseError = nil
         baseErrorTitle = L10n.text("Couldn’t create a request")
         isGenerating = true
@@ -110,8 +113,9 @@ final class ReceiveModel {
                         guard let self, !Task.isCancelled, self.generation == generation else { return }
                         stop()
                         switch event {
-                        case .received(let sats, let rail):
+                        case .received(let sats, let rail, let movement):
                             receivedRail = rail
+                            receivedMovement = movement
                             receivedSats = sats
                         case .lightningFailed(let canceled):
                             baseErrorTitle = canceled ? L10n.text("Lightning receive canceled") : L10n.text("Lightning receive failed")

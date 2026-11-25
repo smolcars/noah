@@ -30,10 +30,14 @@ data class ReceiveRecords(val known: Set<String>, val settled: Set<String>, val 
 @Composable
 internal fun ReceiveRecordsWatcher(rows: List<HistoryTransaction>, loading: Boolean, request: ReceiveRequest?, ownArk: Set<String>, ownHashes: Set<String>,
     records: MutableState<ReceiveRecords?>, arrival: MutableState<ReceiveArrival?>, chain: MutableState<ReceiveArrival?>,
-    onAddressPayment: () -> Unit = {}) {
-    LaunchedEffect(rows, loading, request, ownArk, ownHashes, records.value, arrival.value == null, chain.value) {
+    baselineReady: Boolean = true, ownMovements: Set<String> = emptySet(), onAddressPayment: () -> Unit = {}) {
+    LaunchedEffect(rows, loading, request, ownArk, ownHashes, records.value, arrival.value == null, chain.value, baselineReady, ownMovements) {
         if (loading) return@LaunchedEffect
-        val seen = records.value ?: run { records.value = ReceiveRecords.baseline(rows); return@LaunchedEffect }
+        val seen = records.value ?: run {
+            // [baselineReady]: not after a failed read, so the baseline holds every receipt already there.
+            if (baselineReady) records.value = ReceiveRecords.baseline(rows)
+            return@LaunchedEffect
+        }
         // The deposit the block row follows, reconciled on its own (the arrival filter skips confirmed transactions):
         // a replacement spending the same coins takes over and shows its confirmation without a second arrival; one
         // that's simply gone ends the wait.
@@ -46,7 +50,9 @@ internal fun ReceiveRecordsWatcher(rows: List<HistoryTransaction>, loading: Bool
             }
         }
         if (arrival.value != null) return@LaunchedEffect
-        val (taken, next) = ReceiveArrivals.next(rows, seen, request?.onchainAddress, ownArk, ownHashes, ::paid, ::spends, SystemClock.elapsedRealtime())
+        // [ownMovements]: payments to this screen's own requests, already shown through their completion.
+        val (taken, next) = ReceiveArrivals.next(rows, seen.copy(settled = seen.settled + ownMovements), request?.onchainAddress, ownArk, ownHashes,
+            ::paid, ::spends, SystemClock.elapsedRealtime())
             ?: return@LaunchedEffect
         // Taken in one step: a new key restarts this effect, so nothing here may suspend before the arrival is set.
         records.value = taken

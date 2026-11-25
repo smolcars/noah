@@ -3,8 +3,11 @@ package com.noahwallet.services.wallet
 import io.github.niteshbalusu11.bark.Movement
 
 sealed interface ReceiveCompletion {
-    /** [rail]: which rail it arrived on, for Receive's arrival motion. */
-    data class Received(val sats: Long, val rail: Rail) : ReceiveCompletion
+    /**
+     * [rail]: which rail it arrived on, for Receive's arrival motion. [movementId]: bark's movement, so Receive can tell its
+     * history row from a payment through your Lightning address.
+     */
+    data class Received(val sats: Long, val rail: Rail, val movementId: UInt? = null) : ReceiveCompletion
     data class LightningFailed(val canceled: Boolean) : ReceiveCompletion
     enum class Rail { ark, lightning }
 
@@ -27,14 +30,14 @@ sealed interface ReceiveCompletion {
                 if (destination.amountSats > Long.MAX_VALUE.toULong() - total) return null
                 total += destination.amountSats
             }
-            return if (total > 0uL) Received(total.toLong(), Rail.ark) else request.amountSat?.let { Received(it, Rail.ark) }
+            return if (total > 0uL) Received(total.toLong(), Rail.ark, movement.id) else request.amountSat?.let { Received(it, Rail.ark, movement.id) }
         }
 
         private fun lightning(movement: Movement, request: ReceiveRequest): ReceiveCompletion? {
             if (request.paymentHash == null || movement.paymentHash != request.paymentHash) return null
             return when (movement.status) {
                 "failed", "canceled" -> LightningFailed(movement.status == "canceled")
-                "successful" -> request.amountSat?.let { Received(it, Rail.lightning) }
+                "successful" -> request.amountSat?.let { Received(it, Rail.lightning, movement.id) }
                 else -> null
             }
         }

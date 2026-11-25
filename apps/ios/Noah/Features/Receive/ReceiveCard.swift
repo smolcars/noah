@@ -15,6 +15,11 @@ struct ReceiveArrival: Equatable, Identifiable {
     var confirmedAt: Date?
     /// On-chain: the outputs it spends, to follow a replacement (RBF).
     var inputs: Set<SendTransaction.Input> = []
+    /// Paid through your Lightning address, not this request's own Ark address or invoice.
+    var viaAddress = false
+
+    /// An Ark or Lightning payment to this request: it's used up, so Receive makes a new one.
+    var usesUpRequest: Bool { rail != .onchain && !viaAddress }
 
     /// The card flips to its back this many seconds after the arrival starts.
     var flipAt: Double {

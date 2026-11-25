@@ -120,7 +120,11 @@ class ReceiveFormatsTest {
         assertEquals(ReceiveArrival(ReceiveArrival.Rail.onchain, 20_000, 7, "new"), first)
         // ...then the address payment from the same update...
         val (afterPayment, second) = checkNotNull(ReceiveArrivals.next(rows, afterDeposit, "bcrt1qpayme", emptySet(), emptySet(), none, { null }, 9))
-        assertEquals(ReceiveArrival(ReceiveArrival.Rail.lightning, 2_000, 9), second)
+        assertEquals(ReceiveArrival(ReceiveArrival.Rail.lightning, 2_000, 9, viaAddress = true), second)
+        // Through your Lightning address, so the shown request (an invoice, say) isn't used up; a payment to it is.
+        assertFalse(checkNotNull(second).usesUpRequest)
+        assertTrue(ReceiveArrival(ReceiveArrival.Rail.lightning, 2_000, 9).usesUpRequest)
+        assertFalse(ReceiveArrival(ReceiveArrival.Rail.onchain, 2_000, 9).usesUpRequest)
         // ...and then nothing is left waiting.
         assertNull(ReceiveArrivals.next(rows, afterPayment, "bcrt1qpayme", emptySet(), emptySet(), none, { null }, 11))
     }
@@ -196,5 +200,7 @@ class ReceiveFormatsTest {
         assertTrue(ReceiveArrivals.takesCard(ReceiveArrival(ReceiveArrival.Rail.onchain, 5_000, 0, "tx")))
         assertFalse(ReceiveArrivals.takesCard(ReceiveArrival(ReceiveArrival.Rail.ark, 5_000, 0)))
         assertFalse(ReceiveArrivals.takesCard(ReceiveArrival(ReceiveArrival.Rail.lightning, 5_000, 0)))
+        // A payment through your Lightning address leaves the request showing, so a payment to it still takes the card.
+        assertTrue(ReceiveArrivals.takesCard(ReceiveArrival(ReceiveArrival.Rail.lightning, 5_000, 0, viaAddress = true)))
     }
 }

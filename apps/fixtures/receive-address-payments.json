@@ -1,0 +1,425 @@
+{
+  "description": "Payments through your Lightning address that Receive shows arriving (Android ReceiveArrivals.viaAddress / settled, iOS ReceiveAddressPayments). Cases with `expected.next` pick the next arrival from `rows` given `settled`, this screen's own Ark addresses and invoice hashes; cases with `expected.settled` list the receipts already complete when Receive appears. Hand-written.",
+  "cases": [
+    {
+      "name": "A Lightning payment through the address arrives",
+      "input": {
+        "rows": [
+          {
+            "id": "a",
+            "kind": "lightning-receive",
+            "status": "successful",
+            "direction": "incoming",
+            "amount": 1000,
+            "paymentHash": "elsewhere"
+          }
+        ],
+        "settled": [],
+        "ownArk": [
+          "tark1qpayme"
+        ],
+        "ownHashes": [
+          "hash"
+        ]
+      },
+      "expected": {
+        "next": "a"
+      }
+    },
+    {
+      "name": "An Ark payment to another of your addresses arrives",
+      "input": {
+        "rows": [
+          {
+            "id": "e",
+            "kind": "arkoor-receive",
+            "status": "successful",
+            "direction": "incoming",
+            "amount": 1000,
+            "receivedOn": [
+              "tark1qstatic"
+            ]
+          }
+        ],
+        "settled": [],
+        "ownArk": [
+          "tark1qpayme"
+        ],
+        "ownHashes": [
+          "hash"
+        ]
+      },
+      "expected": {
+        "next": "e"
+      }
+    },
+    {
+      "name": "A payment to an Ark address the card showed earlier arrives (the server gives Noah users your first one)",
+      "input": {
+        "rows": [
+          {
+            "id": "movement-7",
+            "kind": "arkoor-receive",
+            "status": "successful",
+            "direction": "incoming",
+            "amount": 1000,
+            "receivedOn": [
+              "tark1qfirst"
+            ]
+          }
+        ],
+        "settled": [],
+        "ownArk": [
+          "tark1qpayme"
+        ],
+        "ownHashes": [
+          "hash"
+        ]
+      },
+      "expected": {
+        "next": "movement-7"
+      }
+    },
+    {
+      "name": "A payment to the card's own request, already shown through its completion, doesn't arrive again",
+      "input": {
+        "rows": [
+          {
+            "id": "movement-8",
+            "kind": "arkoor-receive",
+            "status": "successful",
+            "direction": "incoming",
+            "amount": 1000,
+            "receivedOn": [
+              "tark1qfirst"
+            ]
+          }
+        ],
+        "settled": [
+          "movement-8"
+        ],
+        "ownArk": [
+          "tark1qpayme"
+        ],
+        "ownHashes": [
+          "hash"
+        ]
+      },
+      "expected": {
+        "next": null
+      }
+    },
+    {
+      "name": "A settled receipt never arrives again",
+      "input": {
+        "rows": [
+          {
+            "id": "a",
+            "kind": "lightning-receive",
+            "status": "successful",
+            "direction": "incoming",
+            "amount": 1000,
+            "paymentHash": "elsewhere"
+          }
+        ],
+        "settled": [
+          "a"
+        ],
+        "ownArk": [
+          "tark1qpayme"
+        ],
+        "ownHashes": [
+          "hash"
+        ]
+      },
+      "expected": {
+        "next": null
+      }
+    },
+    {
+      "name": "An Ark payment to this screen's own address is the request's",
+      "input": {
+        "rows": [
+          {
+            "id": "b",
+            "kind": "arkoor-receive",
+            "status": "successful",
+            "direction": "incoming",
+            "amount": 1000,
+            "receivedOn": [
+              "tark1qpayme"
+            ]
+          }
+        ],
+        "settled": [],
+        "ownArk": [
+          "tark1qpayme"
+        ],
+        "ownHashes": [
+          "hash"
+        ]
+      },
+      "expected": {
+        "next": null
+      }
+    },
+    {
+      "name": "A Lightning payment to this screen's own invoice is the request's",
+      "input": {
+        "rows": [
+          {
+            "id": "c",
+            "kind": "lightning-receive",
+            "status": "successful",
+            "direction": "incoming",
+            "amount": 1000,
+            "paymentHash": "hash"
+          }
+        ],
+        "settled": [],
+        "ownArk": [
+          "tark1qpayme"
+        ],
+        "ownHashes": [
+          "hash"
+        ]
+      },
+      "expected": {
+        "next": null
+      }
+    },
+    {
+      "name": "A pending receive hasn't arrived yet",
+      "input": {
+        "rows": [
+          {
+            "id": "d",
+            "kind": "lightning-receive",
+            "status": "pending",
+            "direction": "incoming",
+            "amount": 1000
+          }
+        ],
+        "settled": [],
+        "ownArk": [
+          "tark1qpayme"
+        ],
+        "ownHashes": [
+          "hash"
+        ]
+      },
+      "expected": {
+        "next": null
+      }
+    },
+    {
+      "name": "A failed receive never arrives",
+      "input": {
+        "rows": [
+          {
+            "id": "d",
+            "kind": "lightning-receive",
+            "status": "failed",
+            "direction": "incoming",
+            "amount": 1000
+          }
+        ],
+        "settled": [],
+        "ownArk": [
+          "tark1qpayme"
+        ],
+        "ownHashes": [
+          "hash"
+        ]
+      },
+      "expected": {
+        "next": null
+      }
+    },
+    {
+      "name": "Outgoing payments aren't arrivals",
+      "input": {
+        "rows": [
+          {
+            "id": "s",
+            "kind": "arkoor-send",
+            "status": "successful",
+            "direction": "outgoing",
+            "amount": 1000
+          }
+        ],
+        "settled": [],
+        "ownArk": [
+          "tark1qpayme"
+        ],
+        "ownHashes": [
+          "hash"
+        ]
+      },
+      "expected": {
+        "next": null
+      }
+    },
+    {
+      "name": "A zero-amount receive isn't an arrival",
+      "input": {
+        "rows": [
+          {
+            "id": "z",
+            "kind": "lightning-receive",
+            "status": "successful",
+            "direction": "incoming",
+            "amount": 0
+          }
+        ],
+        "settled": [],
+        "ownArk": [
+          "tark1qpayme"
+        ],
+        "ownHashes": [
+          "hash"
+        ]
+      },
+      "expected": {
+        "next": null
+      }
+    },
+    {
+      "name": "Other movements aren't address payments",
+      "input": {
+        "rows": [
+          {
+            "id": "r",
+            "kind": "refresh",
+            "status": "successful",
+            "direction": "incoming",
+            "amount": 1000
+          }
+        ],
+        "settled": [],
+        "ownArk": [
+          "tark1qpayme"
+        ],
+        "ownHashes": [
+          "hash"
+        ]
+      },
+      "expected": {
+        "next": null
+      }
+    },
+    {
+      "name": "The first unsettled payment arrives first",
+      "input": {
+        "rows": [
+          {
+            "id": "old",
+            "kind": "lightning-receive",
+            "status": "successful",
+            "direction": "incoming",
+            "amount": 1000
+          },
+          {
+            "id": "new1",
+            "kind": "lightning-receive",
+            "status": "successful",
+            "direction": "incoming",
+            "amount": 1000
+          },
+          {
+            "id": "new2",
+            "kind": "arkoor-receive",
+            "status": "successful",
+            "direction": "incoming",
+            "amount": 1000,
+            "receivedOn": [
+              "tark1qstatic"
+            ]
+          }
+        ],
+        "settled": [
+          "old"
+        ],
+        "ownArk": [
+          "tark1qpayme"
+        ],
+        "ownHashes": [
+          "hash"
+        ]
+      },
+      "expected": {
+        "next": "new1"
+      }
+    },
+    {
+      "name": "A payment still pending when Receive appeared arrives once it succeeds",
+      "input": {
+        "rows": [
+          {
+            "id": "f",
+            "kind": "lightning-receive",
+            "status": "successful",
+            "direction": "incoming",
+            "amount": 1000
+          },
+          {
+            "id": "g",
+            "kind": "lightning-receive",
+            "status": "successful",
+            "direction": "incoming",
+            "amount": 1000
+          }
+        ],
+        "settled": [
+          "g"
+        ],
+        "ownArk": [
+          "tark1qpayme"
+        ],
+        "ownHashes": [
+          "hash"
+        ]
+      },
+      "expected": {
+        "next": "f"
+      }
+    },
+    {
+      "name": "Receive notes what's already complete when it appears",
+      "input": {
+        "rows": [
+          {
+            "id": "f",
+            "kind": "lightning-receive",
+            "status": "pending",
+            "direction": "incoming",
+            "amount": 1000
+          },
+          {
+            "id": "g",
+            "kind": "lightning-receive",
+            "status": "successful",
+            "direction": "incoming",
+            "amount": 1000
+          },
+          {
+            "id": "h",
+            "kind": "arkoor-receive",
+            "status": "successful",
+            "direction": "incoming",
+            "amount": 1000,
+            "receivedOn": [
+              "tark1qstatic"
+            ]
+          }
+        ]
+      },
+      "expected": {
+        "settled": [
+          "g",
+          "h"
+        ]
+      }
+    }
+  ]
+}
