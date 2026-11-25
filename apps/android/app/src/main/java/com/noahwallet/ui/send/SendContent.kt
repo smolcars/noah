@@ -27,6 +27,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.SolidColor
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.layout.layout
 import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -208,31 +209,51 @@ internal object SendWhoRules {
         .take(limit)
 }
 
+/** Shared-axis (X) transition on the snappy spring; disables SizeTransform so tab-bar hiding never shifts layout vertically. */
+private fun AnimatedContentTransitionScope<*>.sendStepTransition(forward: Boolean, reduceMotion: Boolean, shift: Int): ContentTransform {
+    if (reduceMotion) {
+        return (fadeIn(tween(NoahTokens.Motion.REDUCE_MOTION_FADE_MS)) togetherWith
+            fadeOut(tween(NoahTokens.Motion.REDUCE_MOTION_FADE_MS))) using null
+    }
+    val enter = fadeIn(tween(210, delayMillis = 90, easing = LinearOutSlowInEasing)) +
+        slideInHorizontally(NoahTokens.Motion.snappy()) { if (forward) shift else -shift }
+    val exit = fadeOut(tween(90, easing = FastOutLinearInEasing)) +
+        slideOutHorizontally(NoahTokens.Motion.snappy()) { if (forward) -shift else shift }
+    return (enter togetherWith exit) using null
+}
+
 /**
  * Send (docs/native-rewrite/design/send-receive.md): today's SendModel steps restyled. Must sit inside
  * [OnboardingFrame], which resolves the pose: one column, two panes split at the fold, or tabletop.
  */
 @Composable
 internal fun SendContent(presentation: SendPresentation, env: SendEnv, actions: SendActions) {
-    val model = presentation.model
-    val step = model.step()
+    val step = presentation.model.step()
     val reduceMotion = LocalReduceMotion.current
-    val forward = remember { mutableStateOf(true) }
-    var last by remember { mutableStateOf(step) }
-    if (last != step) { forward.value = step.ordinal >= last.ordinal; last = step }
-    val shift = with(androidx.compose.ui.platform.LocalDensity.current) { 28.dp.roundToPx() }
+    val shift = with(LocalDensity.current) { 30.dp.roundToPx() }
     AnimatedContent(step, Modifier.fillMaxSize(), label = "send-step", transitionSpec = {
-        if (reduceMotion) fadeIn(tween(NoahTokens.Motion.REDUCE_MOTION_FADE_MS)) togetherWith fadeOut(tween(NoahTokens.Motion.REDUCE_MOTION_FADE_MS))
-        else (fadeIn(NoahTokens.Motion.snappy()) + slideInHorizontally(NoahTokens.Motion.snappy()) { if (forward.value) shift else -shift }) togetherWith
-            fadeOut(tween(120))
+        sendStepTransition(targetState.ordinal >= initialState.ordinal, reduceMotion, shift)
     }) { shown ->
-        when (shown) {
-            SendStep.amount -> AmountStep(presentation, env, actions)
-            SendStep.to -> ToStep(presentation, env, actions)
-            SendStep.method -> MethodStep(presentation, env)
-            SendStep.source -> SourceStep(presentation, env)
-            SendStep.review -> ReviewStep(presentation, env)
-            SendStep.sending -> SendingStep(presentation, env, actions)
+        // Keep an exiting step at its last active height so hiding the tab bar doesn't drop bottom-aligned controls while it fades out.
+        val activeHeight = remember { IntArray(1) }
+        Box(Modifier.fillMaxSize().clipToBounds().layout { measurable, constraints ->
+            val exiting = transition.targetState == EnterExitState.PostExit
+            if (!exiting && constraints.hasBoundedHeight) activeHeight[0] = constraints.maxHeight
+            val childConstraints = if (exiting && activeHeight[0] > 0) constraints.copy(minHeight = activeHeight[0], maxHeight = activeHeight[0])
+            else constraints
+            val placeable = measurable.measure(childConstraints)
+            val width = if (constraints.hasBoundedWidth) constraints.maxWidth else placeable.width
+            val height = if (constraints.hasBoundedHeight) constraints.maxHeight else placeable.height
+            layout(width, height) { placeable.place(0, 0) }
+        }) {
+            when (shown) {
+                SendStep.amount -> AmountStep(presentation, env, actions)
+                SendStep.to -> ToStep(presentation, env, actions)
+                SendStep.method -> MethodStep(presentation, env)
+                SendStep.source -> SourceStep(presentation, env)
+                SendStep.review -> ReviewStep(presentation, env)
+                SendStep.sending -> SendingStep(presentation, env, actions)
+            }
         }
     }
 }
@@ -248,10 +269,9 @@ internal fun SendApproval(presentation: SendPresentation, payment: SendPayment, 
     paying: Boolean, cancel: () -> Unit, confirm: () -> Unit) {
     val controller = presentation.model.controller
     val reduceMotion = LocalReduceMotion.current
-    val shift = with(androidx.compose.ui.platform.LocalDensity.current) { 28.dp.roundToPx() }
+    val shift = with(LocalDensity.current) { 30.dp.roundToPx() }
     AnimatedContent(controller.locked, Modifier.fillMaxSize(), label = "send-approval", transitionSpec = {
-        if (reduceMotion) fadeIn(tween(NoahTokens.Motion.REDUCE_MOTION_FADE_MS)) togetherWith fadeOut(tween(NoahTokens.Motion.REDUCE_MOTION_FADE_MS))
-        else (fadeIn(NoahTokens.Motion.snappy()) + slideInHorizontally(NoahTokens.Motion.snappy()) { shift }) togetherWith fadeOut(tween(120))
+        sendStepTransition(targetState, reduceMotion, shift)
     }) { sending ->
         if (sending) SendingStep(presentation, env, actions, reviewed = payment)
         else ReviewPanes(quote.amount, presentation.model.fiatOf(quote.amount, env), payment.destination, payment.method, payment.rail(), payment.source,
