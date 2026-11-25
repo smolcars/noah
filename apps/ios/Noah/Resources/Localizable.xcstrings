@@ -47449,38 +47449,38 @@
         }
       }
     },
-    "This payment request has no reusable Ark address or Lightning offer": {
-      "comment": "GT gt_d31a2f01307db793; arguments: none",
+    "This payment request has no Lightning address, reusable Ark address or Lightning offer": {
+      "comment": "GT gt_976923625f1baee2; arguments: none",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "This payment request has no reusable Ark address or Lightning offer"
+            "value": "This payment request has no Lightning address, reusable Ark address or Lightning offer"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Esta solicitud de pago no tiene una dirección de Ark reutilizable ni una oferta de Lightning"
+            "value": "This payment request has no Lightning address, reusable Ark address or Lightning offer"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "この支払いリクエストには再利用可能なArkアドレスやライトニングオファーがありません"
+            "value": "This payment request has no Lightning address, reusable Ark address or Lightning offer"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "이 결제 요청에는 재사용 가능한 Ark 주소나 라이트닝 오퍼가 없습니다"
+            "value": "This payment request has no Lightning address, reusable Ark address or Lightning offer"
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Den här betalningsbegäran saknar en återanvändbar Ark-adress eller ett Lightning-erbjudande"
+            "value": "This payment request has no Lightning address, reusable Ark address or Lightning offer"
           }
         }
       }

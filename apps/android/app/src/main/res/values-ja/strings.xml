@@ -1339,7 +1339,7 @@
   <string name="gt_9e73b9f6cffbb279">"この支払いを準備できませんでした。支払いは送信されていません。"</string>
   <string name="gt_2580b9f907abe759">"この支払いは不要になりました。"</string>
   <string name="gt_f76ccf8f2c1d3ac9">"この支払いは送信済みの可能性があります。再度支払う前に、状況を確認してください。"</string>
-  <string name="gt_d31a2f01307db793">"この支払いリクエストには再利用可能なArkアドレスやライトニングオファーがありません"</string>
+  <string name="gt_976923625f1baee2">"This payment request has no Lightning address, reusable Ark address or Lightning offer"</string>
   <string name="gt_154bf57eb2583196">"この端末"</string>
   <string name="gt_dbf64e9803529181">"この端末のオンチェーンウォレット"</string>
   <string name="gt_40db1d4d49d0c277">"このフレーズではバックアップのロックを解除できないか、バックアップが破損しています。12個または24個すべての単語とその順序を確認してください。"</string>

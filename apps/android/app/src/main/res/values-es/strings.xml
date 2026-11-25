@@ -1354,7 +1354,7 @@
   <string name="gt_9e73b9f6cffbb279">"No se pudo preparar este pago. No se envió ningún pago."</string>
   <string name="gt_2580b9f907abe759">"Este pago ya no está pendiente."</string>
   <string name="gt_f76ccf8f2c1d3ac9">"Es posible que este pago ya se haya enviado. Consulta su estado antes de realizar otro pago."</string>
-  <string name="gt_d31a2f01307db793">"Esta solicitud de pago no tiene una dirección de Ark reutilizable ni una oferta de Lightning"</string>
+  <string name="gt_976923625f1baee2">"This payment request has no Lightning address, reusable Ark address or Lightning offer"</string>
   <string name="gt_154bf57eb2583196">"Este teléfono"</string>
   <string name="gt_dbf64e9803529181">"Billetera en cadena de este teléfono"</string>
   <string name="gt_40db1d4d49d0c277">"No se pudo desbloquear la copia de seguridad con esta frase, o la copia está dañada. Comprueba las 12 o 24 palabras y su orden."</string>

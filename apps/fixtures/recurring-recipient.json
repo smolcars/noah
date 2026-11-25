@@ -1,0 +1,71 @@
+{
+  "description": "Recurring's recipient (RecurringRecipient.resolve): what a schedule stores and how it pays. In a BIP-321 payment request the Lightning address or LNURL in `lightning=` comes first, then the Ark address, then a BOLT12 offer. Tests run on a test network (Android passes `network`; iOS uses the test variant). Hand-written.",
+  "cases": [
+    {
+      "name": "A payment request's Lightning address comes before its Ark address",
+      "input": {
+        "recipient": "bitcoin:?lightning=maya%40noahwallet.io&ark=tark1pwh9vsmezqqpjy9akejayl2vvcse6he97rn40g84xrlvrlnhayuuyefrp9nse2yspqqkm2rpd",
+        "network": "regtest"
+      },
+      "expected": {
+        "destination": "maya@noahwallet.io",
+        "type": "lnurl"
+      }
+    },
+    {
+      "name": "Noah's payment request repeats as the Lightning address it carries",
+      "input": {
+        "recipient": "bitcoin:?lightning=lnurl1dp68gurn8ghj7mn0v958wctvd3jhgtnfduhjuam9d3kz66mwdamkutmvde6hymrs9akkz7tpc4a4fm&ark=tark1pwh9vsmezqqpjy9akejayl2vvcse6he97rn40g84xrlvrlnhayuuyefrp9nse2yspqqkm2rpd",
+        "network": "regtest"
+      },
+      "expected": {
+        "destination": "maya@noahwallet.io",
+        "type": "lnurl"
+      }
+    },
+    {
+      "name": "An uppercase LNURL in a payment request is kept lowercase",
+      "input": {
+        "recipient": "bitcoin:?lightning=LNURL1DP68GURN8GHJ7ETCV9KHQMR99E3K7MF0D3H82UNVWQHKZMRFVDJS6X0UCD",
+        "network": "regtest"
+      },
+      "expected": {
+        "destination": "lnurl1dp68gurn8ghj7etcv9khqmr99e3k7mf0d3h82unvwqhkzmrfvdjs6x0ucd",
+        "type": "lnurl"
+      }
+    },
+    {
+      "name": "A payment request with only a Lightning address is reusable",
+      "input": {
+        "recipient": "bitcoin:?lightning=Alice%40Example.com",
+        "network": "regtest"
+      },
+      "expected": {
+        "destination": "alice@example.com",
+        "type": "lnurl"
+      }
+    },
+    {
+      "name": "A payment request without a Lightning address still uses its Ark address",
+      "input": {
+        "recipient": "bitcoin:?ark=tark1pwh9vsmezqqpjy9akejayl2vvcse6he97rn40g84xrlvrlnhayuuyefrp9nse2yspqqkm2rpd",
+        "network": "regtest"
+      },
+      "expected": {
+        "destination": "tark1pwh9vsmezqqpjy9akejayl2vvcse6he97rn40g84xrlvrlnhayuuyefrp9nse2yspqqkm2rpd",
+        "type": "ark"
+      }
+    },
+    {
+      "name": "A Lightning address on its own is unchanged",
+      "input": {
+        "recipient": "alice@example.com",
+        "network": "regtest"
+      },
+      "expected": {
+        "destination": "alice@example.com",
+        "type": "lnurl"
+      }
+    }
+  ]
+}

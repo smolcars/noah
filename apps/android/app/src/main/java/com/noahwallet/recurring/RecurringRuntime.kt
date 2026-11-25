@@ -93,9 +93,12 @@ object RecurringRecipient {
         return when (parsed.destinationType) {
             "ark", "offer" -> clean to parsed.destinationType
             "lnurl" -> clean.lowercase() to "lnurl"
-            "bip321" -> parsed.bip321?.get("arkAddress")?.let { it to "ark" }
+            // A payment request's Lightning address (or LNURL) first: it's reusable, and each payment resolves it afresh
+            // (Noah-to-Noah still over Ark, through the server); its Ark address is one Receive won't show again.
+            "bip321" -> parsed.bip321?.get("lnurl")?.let { SendDestination.cleaned(it).lowercase() to "lnurl" }
+                ?: parsed.bip321?.get("arkAddress")?.let { it to "ark" }
                 ?: parsed.bip321?.get("offer")?.let { it to "offer" }
-                ?: error("This payment request has no reusable Ark address or Lightning offer")
+                ?: error("This payment request has no Lightning address, reusable Ark address or Lightning offer")
             "lightning" -> error("Lightning invoices can only be paid once. Use a Lightning address or offer")
             "onchain" -> error("On-chain addresses are not supported for recurring payments yet")
             else -> error("Unsupported recipient")

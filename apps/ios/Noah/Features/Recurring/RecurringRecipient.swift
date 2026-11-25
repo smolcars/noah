@@ -56,9 +56,12 @@ enum RecurringRecipient {
         case "offer": return (cleaned, "offer")
         case "lnurl": return (cleaned.lowercased(), "lnurl")
         case "bip321":
+            // A payment request's Lightning address (or LNURL) first: it's reusable, and each payment resolves it afresh
+            // (Noah-to-Noah still over Ark, through the server); its Ark address is one Receive won't show again.
+            if let lnurl = parsed.bip321?["lnurl"] { return (SendDestination.cleaned(lnurl).lowercased(), "lnurl") }
             if let ark = parsed.bip321?["arkAddress"] { return (ark, "ark") }
             if let offer = parsed.bip321?["offer"] { return (offer, "offer") }
-            throw RecurringError.message("This payment request has no reusable Ark address or Lightning offer")
+            throw RecurringError.message("This payment request has no Lightning address, reusable Ark address or Lightning offer")
         case "lightning": throw RecurringError.message("Lightning invoices can only be paid once. Use a Lightning address or offer")
         case "onchain": throw RecurringError.message("On-chain addresses are not supported for recurring payments yet")
         default: throw RecurringError.message("Unsupported recipient")

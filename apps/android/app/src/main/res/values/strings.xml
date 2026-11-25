@@ -1339,7 +1339,7 @@
   <string name="gt_9e73b9f6cffbb279">"This payment could not be prepared. No payment was submitted."</string>
   <string name="gt_2580b9f907abe759">"This payment is no longer due."</string>
   <string name="gt_f76ccf8f2c1d3ac9">"This payment may have been sent. Check its status before making another payment."</string>
-  <string name="gt_d31a2f01307db793">"This payment request has no reusable Ark address or Lightning offer"</string>
+  <string name="gt_976923625f1baee2">"This payment request has no Lightning address, reusable Ark address or Lightning offer"</string>
   <string name="gt_154bf57eb2583196">"This phone"</string>
   <string name="gt_dbf64e9803529181">"This phone’s on-chain wallet"</string>
   <string name="gt_40db1d4d49d0c277">"This phrase couldn\'t unlock the backup, or the backup is damaged. Check all 12 or 24 words and their order."</string>

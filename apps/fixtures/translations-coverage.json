@@ -1180,7 +1180,7 @@
         "This payment could not be prepared. No payment was submitted.",
         "This payment is no longer due.",
         "This payment may have been sent. Check its status before making another payment.",
-        "This payment request has no reusable Ark address or Lightning offer",
+        "This payment request has no Lightning address, reusable Ark address or Lightning offer",
         "This phone",
         "This phone’s on-chain wallet",
         "This phrase couldn't unlock the backup, or the backup is damaged. Check all 12 or 24 words and their order.",
@@ -1429,16 +1429,20 @@
       ],
       "untranslated": {
         "es": [
-          "gt_4c0c6d1a3e05ce59"
+          "gt_4c0c6d1a3e05ce59",
+          "gt_976923625f1baee2"
         ],
         "ja": [
-          "gt_4c0c6d1a3e05ce59"
+          "gt_4c0c6d1a3e05ce59",
+          "gt_976923625f1baee2"
         ],
         "ko": [
-          "gt_4c0c6d1a3e05ce59"
+          "gt_4c0c6d1a3e05ce59",
+          "gt_976923625f1baee2"
         ],
         "sv": [
-          "gt_4c0c6d1a3e05ce59"
+          "gt_4c0c6d1a3e05ce59",
+          "gt_976923625f1baee2"
         ]
       }
     },
@@ -2618,7 +2622,7 @@
         "This payment could not be prepared. No payment was submitted.",
         "This payment is no longer due.",
         "This payment may have been sent. Check its status before making another payment.",
-        "This payment request has no reusable Ark address or Lightning offer",
+        "This payment request has no Lightning address, reusable Ark address or Lightning offer",
         "This phone",
         "This phone’s on-chain wallet",
         "This phrase couldn't unlock the backup, or the backup is damaged. Check all 12 or 24 words and their order.",
@@ -2884,16 +2888,20 @@
       ],
       "untranslated": {
         "es": [
-          "gt_4c0c6d1a3e05ce59"
+          "gt_4c0c6d1a3e05ce59",
+          "gt_976923625f1baee2"
         ],
         "ja": [
-          "gt_4c0c6d1a3e05ce59"
+          "gt_4c0c6d1a3e05ce59",
+          "gt_976923625f1baee2"
         ],
         "ko": [
-          "gt_4c0c6d1a3e05ce59"
+          "gt_4c0c6d1a3e05ce59",
+          "gt_976923625f1baee2"
         ],
         "sv": [
-          "gt_4c0c6d1a3e05ce59"
+          "gt_4c0c6d1a3e05ce59",
+          "gt_976923625f1baee2"
         ]
       }
     }

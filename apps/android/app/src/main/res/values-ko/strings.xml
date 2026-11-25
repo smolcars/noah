@@ -1339,7 +1339,7 @@
   <string name="gt_9e73b9f6cffbb279">"이 결제를 준비하지 못했습니다. 결제는 제출되지 않았습니다."</string>
   <string name="gt_2580b9f907abe759">"더 이상 이 결제를 진행할 필요가 없습니다."</string>
   <string name="gt_f76ccf8f2c1d3ac9">"이미 전송된 결제일 수 있습니다. 다른 결제를 하기 전에 상태를 확인하세요."</string>
-  <string name="gt_d31a2f01307db793">"이 결제 요청에는 재사용 가능한 Ark 주소나 라이트닝 오퍼가 없습니다"</string>
+  <string name="gt_976923625f1baee2">"This payment request has no Lightning address, reusable Ark address or Lightning offer"</string>
   <string name="gt_154bf57eb2583196">"이 휴대폰"</string>
   <string name="gt_dbf64e9803529181">"이 휴대폰의 온체인 지갑"</string>
   <string name="gt_40db1d4d49d0c277">"이 문구로 백업의 잠금을 해제할 수 없거나 백업이 손상되었습니다. 12개 또는 24개 단어와 순서를 모두 확인하세요."</string>

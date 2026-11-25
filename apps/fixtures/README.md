@@ -51,8 +51,10 @@ reading an LNURL to LUD-16's `https://<domain>/.well-known/lnurlp/<username>` ba
 `username@domain` (Noah's own QR codes carry the address that way), and leaving every
 other LNURL as it is. `receive-address-payments.json` is the rule Receive uses to show a
 payment through your Lightning address arriving: new successful Ark or Lightning receives
-that aren't for the screen's own Ark addresses or invoices. LNURLs in both were computed
-with the BIP-173 reference bech32.
+that aren't for the screen's own Ark addresses or invoices. `recurring-recipient.json` is
+what a recurring schedule stores: in a payment request, the Lightning address or LNURL in
+`lightning=` comes before its Ark address. LNURLs in these were computed with the BIP-173
+reference bech32.
 
 M6 boarding/exits: the fixtures are frozen from the React Native app and edited by hand; keep both platforms' tests passing. Their generator imported
 RN's `exitFeeEstimate`, `exitTimeline`, `useExitOverview`, and `buildAutoBoardPlan`;
