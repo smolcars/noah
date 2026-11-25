@@ -342,6 +342,8 @@ struct SendReceiveShotTests {
     private static func stageReceive(_ state: String, _ staging: inout Staging) {
         staging.tab = .receive
         switch state {
+        // Receive opens on the payment request, which works without an address; the address format shows the setup card.
+        case "receive-noaddress": staging.fixture.receiveFormat = .lightningAddress
         case "receive-invoice": staging.fixture.receiveFormat = .invoice
         case "receive-ark": staging.fixture.receiveFormat = .ark
         case "receive-bitcoin": staging.fixture.receiveFormat = .bitcoin

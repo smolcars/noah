@@ -1,7 +1,7 @@
 import CoreImage.CIFilterBuiltins
 import SwiftUI
 
-/// Receive (docs/native-rewrite/design/send-receive.md): your Lightning address as the
+/// Receive (docs/native-rewrite/design/send-receive.md): your payment request as the
 /// default QR on a white card; Add amount runs today's invoice creation and shows the
 /// Lightning invoice with an amount band; every format is one tap away. Payments
 /// arriving on this screen play their rail's arrival and flip the card. Wide windows (the
@@ -17,7 +17,7 @@ struct ReceiveView: View {
     let isActive: Bool
     @State private var model: ReceiveModel
     @State private var btcPrice: Double?
-    @State private var format: ReceiveFormat = .lightningAddress
+    @State private var format: ReceiveFormat = .initial
     @State private var sheet: Sheet?
     /// The amount editor is open: a sheet when compact, the trailing pane when wide. One
     /// intent and one draft for both, so folding or unfolding mid-edit keeps them.

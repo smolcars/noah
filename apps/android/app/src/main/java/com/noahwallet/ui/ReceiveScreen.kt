@@ -57,14 +57,14 @@ private val arrivalSaver = Saver<ReceiveArrival?, String>(
 )
 
 /**
- * Receive (docs/native-rewrite/design/send-receive.md): your Lightning address by default, today's request,
+ * Receive (docs/native-rewrite/design/send-receive.md): your payment request by default, today's request,
  * invoice creation and completion subscription behind the redesigned card, and arrivals from the wallet's own
  * records while the screen is visible.
  */
 @Composable
 fun ReceiveScreen(app: AppModel, onProfile: () -> Unit = {}) {
     val requestState = rememberSaveable(stateSaver = requestSaver) { mutableStateOf<ReceiveRequest?>(null) }
-    val formatState = rememberSaveable { mutableStateOf(ReceiveFormat.lightningAddress) }
+    val formatState = rememberSaveable { mutableStateOf(ReceiveFormats.initial) }
     val arrivalState = rememberSaveable(stateSaver = arrivalSaver) { mutableStateOf<ReceiveArrival?>(null) }
     val state = remember(requestState, formatState, arrivalState) { ReceiveScreenState(requestState, formatState, arrivalState) }
     val request by state.request
@@ -146,10 +146,10 @@ private class ReceiveScreenState(
                 }
             }
         },
-        // Clearing the amount returns to your Lightning address, whichever format was showing.
+        // Clearing the amount returns to the payment request, whichever format was showing.
         removeAmount = {
             request.value?.let { request.value = ReceiveRequest(it.arkAddress, it.onchainAddress) }
-            format.value = ReceiveFormat.lightningAddress
+            format.value = ReceiveFormats.initial
         },
         retry = { error.value = null; errorTitle.value = null; retry.intValue++ },
         profile = onProfile,

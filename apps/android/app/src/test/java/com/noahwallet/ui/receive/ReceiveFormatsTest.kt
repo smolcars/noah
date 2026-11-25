@@ -52,7 +52,10 @@ class ReceiveFormatsTest {
         assertEquals(ReceiveFormat.invoice, ReceiveFormats.afterAmount(ReceiveFormat.invoice, true))
         assertEquals(ReceiveFormat.invoice, ReceiveFormats.afterAmount(ReceiveFormat.request, true))
         assertEquals(ReceiveFormat.request, ReceiveFormats.afterAmount(ReceiveFormat.request, false))
-        assertEquals(ReceiveFormat.lightningAddress, ReceiveFormats.afterAmount(ReceiveFormat.invoice, false))
+        // Receive opens on the payment request, and clearing the amount returns there from the invoice.
+        assertEquals(ReceiveFormat.request, ReceiveFormats.initial)
+        assertEquals(ReceiveFormat.request, ReceiveFormats.afterAmount(ReceiveFormat.invoice, false))
+        assertEquals(ReceiveFormat.lightningAddress, ReceiveFormats.afterAmount(ReceiveFormat.lightningAddress, false))
         assertEquals(ReceiveFormat.onchain, ReceiveFormats.afterAmount(ReceiveFormat.onchain, false))
         assertEquals("tark1qpayme", ReceiveFormats.preview("tark1qpayme"))
         val long = "bitcoin:bcrt1qpayme?amount=1&lightning=lnbc&ark=tark1q"

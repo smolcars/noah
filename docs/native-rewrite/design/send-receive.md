@@ -109,7 +109,9 @@ The background claim in the pending line is true today: bark's server keeps payi
 
 ### The card
 
-**Default:**
+**Default:** the **payment request** (below, under "Ways to pay you"), "Scan with any bitcoin or Lightning wallet". Receive returns to it when an amount is cleared or a paid invoice is replaced.
+
+**Lightning address:**
 - **QR:** your **Lightning address** as LUD-01's `LIGHTNING:LNURL1…` (the LNURL-pay code for `https://<domain>/.well-known/lnurlp/<username>`), using the styled QR from Home (dot modules, rounded eyes, the longship app icon), always on a white card. Copy and Share carry the readable `user@domain`;
 - **under it:** the address in bold, then "Scan with any Lightning wallet";
 - **no address:** today's "Lightning address unavailable" with its Profile action.
@@ -119,7 +121,7 @@ The background claim in the pending line is true today: bark's server keeps payi
 - **Done:** runs today's `ReceiveModel` invoice creation. The QR redraws (radial reveal) as the **Lightning invoice**, whichever format was showing: an amount belongs to the invoice alone. Use error correction M for long payloads, keeping the logo.
 - **Band:** an inverted band grows at the bottom of the card with the amount and fiat.
 - **Caption:** "Scan with any Lightning wallet".
-- **Change amount:** reopens the sheet. Clearing the amount returns to the Lightning address.
+- **Change amount:** reopens the sheet. Clearing the amount returns to the payment request.
 
 **Ways to pay you:**
 - **Where:** Copy at the top right opens the "Ways to pay you" sheet. On the open Duo it's the trailing pane instead, with no sheet.
@@ -211,5 +213,5 @@ Live, against the regtest stack:
 Decode the shown QR for every format in both themes.
 
 Record per platform:
-- **one phone video:** an Ark send, a Lightning send, an on-chain send with its confirmation, then Receive: the Lightning address, add amount → Lightning invoice, and Lightning and on-chain arrivals;
+- **one phone video:** an Ark send, a Lightning send, an on-chain send with its confirmation, then Receive: the payment request, add amount → Lightning invoice, and Lightning and on-chain arrivals;
 - **one foldable video:** the Duo or Pixel Fold open, with a send and a receive, plus a pose change mid-wait.

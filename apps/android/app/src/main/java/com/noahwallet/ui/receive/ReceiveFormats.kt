@@ -35,10 +35,13 @@ internal object ReceiveFormats {
     /** H keeps the logo safest; long payloads (the request with its invoice) use M so the modules stay large. */
     fun correction(payload: String): ErrorCorrectionLevel = if (payload.length > 90) ErrorCorrectionLevel.M else ErrorCorrectionLevel.H
 
-    /** An amount is the invoice's alone: adding one shows the invoice; clearing it returns from the invoice to the address. */
+    /** What Receive shows first, and returns to: the payment request, every way to pay in one code. */
+    val initial = ReceiveFormat.request
+
+    /** An amount is the invoice's alone: adding one shows the invoice; clearing it returns from the invoice to the payment request. */
     fun afterAmount(shown: ReceiveFormat, hasAmount: Boolean): ReceiveFormat = when {
         hasAmount -> ReceiveFormat.invoice
-        shown == ReceiveFormat.invoice -> ReceiveFormat.lightningAddress
+        shown == ReceiveFormat.invoice -> initial
         else -> shown
     }
 

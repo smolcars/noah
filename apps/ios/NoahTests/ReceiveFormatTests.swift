@@ -39,9 +39,13 @@ struct ReceiveFormatTests {
         #expect(ReceiveFormat.ark.payload(request: Self.priced, address: Self.address) == SendReceiveShotTests.ark)
         #expect(ReceiveFormat.bitcoin.payload(request: Self.priced, address: Self.address) == SendReceiveShotTests.bitcoin)
         #expect(ReceiveFormat.allCases.count == 5)
-        // An amount is the invoice's alone: adding one shows the invoice; removing it returns to the Lightning address.
+        // Receive opens on the payment request. An amount is the invoice's alone: adding one shows the invoice;
+        // removing it returns to the payment request.
+        #expect(ReceiveFormat.initial == .request)
         #expect(ReceiveFormat.after(amountChange: true) == .invoice)
-        #expect(ReceiveFormat.after(amountChange: false) == .lightningAddress)
+        #expect(ReceiveFormat.after(amountChange: false) == .request)
+        #expect(ReceiveFormat.reconciled(.invoice, hasAmount: false) == .request)
+        #expect(ReceiveFormat.reconciled(.lightningAddress, hasAmount: false) == .lightningAddress)
         // A fresh request keeps only what it can show: no invoice without an amount.
         for format in ReceiveFormat.allCases {
             let kept = ReceiveFormat.reconciled(format, hasAmount: false)

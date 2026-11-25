@@ -64,13 +64,16 @@ enum ReceiveFormat: String, CaseIterable, Identifiable, Sendable {
     /// invoice's alone.
     func showsBand(hasAmount: Bool) -> Bool { hasAmount && self == .invoice }
 
+    /// What Receive shows first, and returns to: the payment request, every way to pay in one code.
+    static let initial: Self = .request
+
     /// The format to show after you change the amount: an amount shows the invoice it made;
-    /// removing it returns to the Lightning address, whatever was showing.
-    static func after(amountChange hasAmount: Bool) -> Self { hasAmount ? .invoice : .lightningAddress }
+    /// removing it returns to the payment request, whatever was showing.
+    static func after(amountChange hasAmount: Bool) -> Self { hasAmount ? .invoice : .initial }
 
     /// The format to keep for a fresh request (on returning to Receive, or after a payment):
-    /// without an amount, the invoice returns to the Lightning address; the others stay.
+    /// without an amount, the invoice returns to the payment request; the others stay.
     static func reconciled(_ current: Self, hasAmount: Bool) -> Self {
-        !hasAmount && current == .invoice ? .lightningAddress : current
+        !hasAmount && current == .invoice ? .initial : current
     }
 }
