@@ -27,6 +27,18 @@ enum LightningIdentity {
         return .init(nostrPubkey: npub.isEmpty ? nil : npub, username: username)
     }
 
+    /// LUD-16's LNURL-pay URL for `user@domain`, as LUD-01's bech32 `lnurl1…` (lowercase); nil unless it's an address.
+    static func lnurl(address: String) -> String? {
+        let parts = address.split(separator: "@", omittingEmptySubsequences: false)
+        guard parts.count == 2, !parts[0].isEmpty, !parts[1].isEmpty else { return nil }
+        return PaymentEncoding.encodeBech32("lnurl", Array("https://\(parts[1])/.well-known/lnurlp/\(parts[0])".utf8))
+    }
+
+    /// What the Lightning address QR carries: LUD-01's uppercase `LIGHTNING:LNURL1…`, which a phone's camera hands to a wallet.
+    static func lnurlQR(address: String) -> String? {
+        lnurl(address: address).map { "LIGHTNING:" + $0.uppercased() }
+    }
+
     static func domain(for variant: AppVariant) -> String {
         switch variant {
         case .mainnet: "noahwallet.io"

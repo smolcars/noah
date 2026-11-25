@@ -185,8 +185,35 @@ import Testing
         #expect(model.showReview)
     }
 
+    /// Noah's Lightning address QR (an LNURL to LUD-16's well-known path): paid, shown and repeated as the address.
+    @Test func noahLightningAddressQrPaysAndRepeatsAsTheAddress() async {
+        // LIGHTNING: and the LNURL for https://example.com/.well-known/lnurlp/alice.
+        let qr = "LIGHTNING:LNURL1DP68GURN8GHJ7ETCV9KHQMR99E3K7MF09EMK2MRV944KUMMHDCHKCMN4WFK8QTMPD35KXEG9SAEVQ"
+        var resolved: [String] = []
+        var reviewed: SendPayment?
+        let model = SendModel(
+            controller: freshController(),
+            resolveRecipient: { recipient in
+                resolved.append(recipient)
+                return .init(destination: recipient, minMsat: 1000, maxMsat: 1_000_000_000, commentAllowed: 0)
+            },
+            quotePayment: { payment in
+                reviewed = payment
+                return .init(amount: payment.amount, fee: 0, total: payment.amount)
+            })
+        model.amount = "1000"
+        model.arkBalance = 10000
+        await model.importRecipient(qr)
+        // The typed amount waits for Amount's own Next.
+        await model.continueStage()
+        #expect(Set(resolved) == ["alice@example.com"])
+        #expect(reviewed?.destination == "alice@example.com")
+        #expect(reviewed?.repeatMetadata?.contains("alice@example.com") == true)
+    }
+
     @Test func paymentRequestPrefersArkAndResolvesItsLnurlOnlyOnceChosen() async {
-        let lnurl = "LNURL1DP68GURN8GHJ7ETCV9KHQMR99E3K7MF09EMK2MRV944KUMMHDCHKCMN4WFK8QTMPD35KXEG9SAEVQ"
+        // https://example.com/lnurlp/alice: an LNURL that is not a Lightning address in disguise.
+        let lnurl = "LNURL1DP68GURN8GHJ7ETCV9KHQMR99E3K7MF0D3H82UNVWQHKZMRFVDJS6X0UCD"
         let ark = "tark1pwh9vsmezqqpjy9akejayl2vvcse6he97rn40g84xrlvrlnhayuuyefrp9nse2yspqqkm2rpd"
         var resolved: [String] = []
         var reviewed: SendPayment?

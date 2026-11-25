@@ -4,29 +4,27 @@ import Testing
 
 struct ReceiveFixtureTests {
     struct RequestInput: Decodable {
-        let arkAddress: String
-        let onchainAddress: String
+        let arkAddress: String?
+        let onchainAddress: String?
+        let lightningAddress: String?
         let amountSat: Double?
         let lightningInvoice: String?
     }
-    struct RequestExpected: Decodable { let uri: String?; let error: String? }
+    struct RequestExpected: Decodable { let uri: String?; let error: String?; let lightningAddressQR: String? }
 
-    @Test func requestsMatchReactNative() throws {
+    @Test func requestsMatchFixture() throws {
         for fixture in try Fixtures.load("receive-request", input: RequestInput.self, expected: RequestExpected.self) {
             let input = fixture.input
-            if let amount = input.amountSat, amount.rounded() != amount {
-                // Fractional sats cannot enter the Int64 native API or its amount field.
-                #expect(Int64(String(amount)) == nil)
-                #expect(fixture.expected.error != nil)
+            guard let arkAddress = input.arkAddress, let onchainAddress = input.onchainAddress else {
+                // Invoice amounts: fractional sats cannot enter the Int64 native API or its amount field.
+                let valid = try Int64(exactly: #require(input.amountSat)).map { (try? ReceiveRequest.validate(amountSat: $0)) != nil } ?? false
+                #expect(valid == (fixture.expected.error == nil), "\(fixture.name)")
                 continue
             }
-            let request = ReceiveRequest(arkAddress: input.arkAddress, onchainAddress: input.onchainAddress,
+            let request = ReceiveRequest(arkAddress: arkAddress, onchainAddress: onchainAddress,
                                          amountSat: input.amountSat.map(Int64.init), lightningInvoice: input.lightningInvoice)
-            if fixture.expected.error != nil {
-                #expect(throws: ReceiveRequest.ValidationError.invalidAmount) { try request.uri() }
-            } else {
-                #expect(try request.uri() == fixture.expected.uri, "\(fixture.name)")
-            }
+            #expect(request.uri(lightningAddress: input.lightningAddress) == fixture.expected.uri, "\(fixture.name)")
+            #expect(input.lightningAddress.flatMap(LightningIdentity.lnurlQR(address:)) == fixture.expected.lightningAddressQR, "\(fixture.name)")
         }
     }
 

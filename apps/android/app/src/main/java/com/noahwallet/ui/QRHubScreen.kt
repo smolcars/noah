@@ -27,6 +27,7 @@ import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.noahwallet.localization.tr
+import com.noahwallet.services.server.LightningIdentity
 import com.noahwallet.ui.WalletAlertDialog
 import kotlinx.coroutines.delay
 
@@ -115,7 +116,7 @@ private fun Identity(address: String, displayName: String, copied: Boolean, copy
     }
 }
 
-/** My code: the styled QR of the literal Lightning address on its always-white tile; tapping copies it. */
+/** My code: the styled QR of the Lightning address (as its LNURL-pay code) on its always-white tile; tapping copies the address. */
 @Composable
 private fun LightningAddressQR(address: String, maximumSide: androidx.compose.ui.unit.Dp, onClick: () -> Unit) {
     val label = tr("Copy Lightning address")
@@ -125,6 +126,8 @@ private fun LightningAddressQR(address: String, maximumSide: androidx.compose.ui
         .clickable(role = androidx.compose.ui.semantics.Role.Button, onClickLabel = label, onClick = onClick)
         .clearAndSetSemantics { contentDescription = label; role = androidx.compose.ui.semantics.Role.Button; this.onClick(label) { onClick(); true } }
         .padding(20.dp)) {
-        com.noahwallet.ui.home.StyledQR(address, Modifier.fillMaxSize(), reduceMotion = com.noahwallet.ui.onboarding.rememberReduceMotion())
+        val qr = LightningIdentity.lnurlQR(address) ?: address
+        com.noahwallet.ui.home.StyledQR(qr, Modifier.fillMaxSize(), reduceMotion = com.noahwallet.ui.onboarding.rememberReduceMotion(),
+            correction = com.noahwallet.ui.receive.ReceiveFormats.correction(qr))
     }
 }

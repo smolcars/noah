@@ -2,6 +2,7 @@ package com.noahwallet.services.server
 
 import com.noahwallet.BuildConfig
 import com.noahwallet.api.generated.models.UpdateLightningIdentityPayload
+import com.noahwallet.send.PaymentEncoding
 import java.util.Locale
 
 object LightningIdentity {
@@ -20,6 +21,16 @@ object LightningIdentity {
         // The server validates bech32 checksum and secp256k1 key, as in RN/iOS.
         return UpdateLightningIdentityPayload(nostrPubkey = key.ifEmpty { null }, username = normalized)
     }
+
+    /** LUD-16's LNURL-pay URL for `user@domain`, as LUD-01's bech32 `lnurl1…` (lowercase); null unless it's an address. */
+    fun lnurl(address: String): String? {
+        val parts = address.split("@")
+        if (parts.size != 2 || parts.any { it.isEmpty() }) return null
+        return PaymentEncoding.encodeBech32("lnurl", "https://${parts[1]}/.well-known/lnurlp/${parts[0]}".toByteArray())
+    }
+
+    /** What the Lightning address QR carries: LUD-01's uppercase `LIGHTNING:LNURL1…`, which a phone's camera hands to a wallet. */
+    fun lnurlQR(address: String): String? = lnurl(address)?.let { "LIGHTNING:" + it.uppercase(Locale.ROOT) }
 
     fun domain(variant: String, regtestDomain: String = BuildConfig.REGTEST_LNURL_DOMAIN): String = when (variant) {
         "mainnet" -> "noahwallet.io"

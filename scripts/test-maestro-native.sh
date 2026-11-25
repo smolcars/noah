@@ -52,13 +52,17 @@ if [[ "$suite" == funded || "$suite" == all ]]; then
     fi
   done
   : "${token:?No emulator gRPC token found}"
+  clipboard() {
+    grpcurl -max-time 30 -plaintext -H "authorization: Bearer $token" \
+      -import-path "${ANDROID_HOME:?Set ANDROID_HOME}/emulator/lib" -proto emulator_controller.proto \
+      "localhost:$grpc_port" android.emulation.control.EmulatorController/getClipboard | jq -r '.text'
+  }
+  # The wallet's Ark address, then a Lightning invoice: the payment request carries no invoice.
   run_flows funded-setup apps/maestro/subflows/fund-wallet.yml
-  request="$(grpcurl -max-time 30 -plaintext -H "authorization: Bearer $token" \
-    -import-path "${ANDROID_HOME:?Set ANDROID_HOME}/emulator/lib" -proto emulator_controller.proto \
-    "localhost:$grpc_port" android.emulation.control.EmulatorController/getClipboard | jq -r '.text')"
-  invoice="$(sed -n 's/.*[?&]lightning=\([^&]*\).*/\1/p' <<<"$request")"
-  ark="$(sed -n 's/.*[?&]ark=\([^&]*\).*/\1/p' <<<"$request")"
-  [[ "$invoice" == lnbcrt* && "$ark" == tark1* ]] || { echo 'Expected a regtest payment request in the clipboard.' >&2; exit 1; }
+  ark="$(clipboard)"
+  run_flows funded-invoice apps/maestro/subflows/fund-wallet-invoice.yml
+  invoice="$(clipboard)"
+  [[ "$invoice" == lnbcrt* && "$ark" == tark1* ]] || { echo 'Expected a regtest Ark address, then a Lightning invoice, in the clipboard.' >&2; exit 1; }
   # The caller owns the stack lifecycle. This only pays the job's own invoice from LND; no blocks are mined.
   read -ra lncli <<<"${MAESTRO_LNCLI:-just lncli}"
   "${lncli[@]}" payinvoice --force --timeout 60s "$invoice" >/dev/null

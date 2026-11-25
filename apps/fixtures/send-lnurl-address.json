@@ -1,0 +1,194 @@
+{
+  "description": "Send reading an LNURL-pay link to LUD-16's `https://<domain>/.well-known/lnurlp/<username>` back as `username@domain` (SendDestination.cleaned), as Noah's Lightning address QR carries it; every other LNURL stays as it is. LNURLs computed with the BIP-173 reference bech32. Hand-written.",
+  "cases": [
+    {
+      "name": "Noah's Lightning address QR reads back as the address",
+      "input": {
+        "value": "LIGHTNING:LNURL1DP68GURN8GHJ7MN0V958WCTVD3JHGTNFDUHJUAM9D3KZ66MWDAMKUTMVDE6HYMRS9AKKZ7TPC4A4FM"
+      },
+      "expected": {
+        "cleaned": "maya@noahwallet.io"
+      }
+    },
+    {
+      "name": "A lowercase LUD-16 LNURL reads back as the address",
+      "input": {
+        "value": "lnurl1dp68gurn8ghj7mn0v958wctvd3jhgtnfduhjuam9d3kz66mwdamkutmvde6hymrs9akkz7tpc4a4fm"
+      },
+      "expected": {
+        "cleaned": "maya@noahwallet.io"
+      }
+    },
+    {
+      "name": "A regtest LUD-16 LNURL reads back as the address",
+      "input": {
+        "value": "lnurl1dp68gurn8ghj7mr0vdskc6r0wd6zucm0d5hjuam9d3kz66mwdamkutmvde6hymrs9askc6trv5ksjlmz"
+      },
+      "expected": {
+        "cleaned": "alice@localhost.com"
+      }
+    },
+    {
+      "name": "An explicit default port is still the address",
+      "input": {
+        "value": "lnurl1dp68gurn8ghj7mn0v958wctvd3jhgtnfduargdpn9uh8wetvdskkkmn0wahz7mrww4excup0d4shjcg3kdda5"
+      },
+      "expected": {
+        "cleaned": "maya@noahwallet.io"
+      }
+    },
+    {
+      "name": "LUD-16 username characters are kept",
+      "input": {
+        "value": "lnurl1dp68gurn8ghj7urp0yhx27rpd4cxcefwvdhk6tewwajkcmpdddhx7amw9akxuatjd3cz7cfwvf0kxtty9djsh7w7z7"
+      },
+      "expected": {
+        "cleaned": "a.b_c-d+e@pay.example.com"
+      }
+    },
+    {
+      "name": "A query keeps the LNURL",
+      "input": {
+        "value": "lnurl1dp68gurn8ghj7mn0v958wctvd3jhgtnfduhjuam9d3kz66mwdamkutmvde6hymrs9akkz7tp8ask6mm4de6r6vfsxqcqzhxqjs"
+      },
+      "expected": {
+        "cleaned": "lnurl1dp68gurn8ghj7mn0v958wctvd3jhgtnfduhjuam9d3kz66mwdamkutmvde6hymrs9akkz7tp8ask6mm4de6r6vfsxqcqzhxqjs"
+      }
+    },
+    {
+      "name": "Another port keeps the LNURL",
+      "input": {
+        "value": "lnurl1dp68gurn8ghj7mn0v958wctvd3jhgtnfduarsdp5xvhjuam9d3kz66mwdamkutmvde6hymrs9akkz7tpcfkf4p"
+      },
+      "expected": {
+        "cleaned": "lnurl1dp68gurn8ghj7mn0v958wctvd3jhgtnfduarsdp5xvhjuam9d3kz66mwdamkutmvde6hymrs9akkz7tpcfkf4p"
+      }
+    },
+    {
+      "name": "Another path keeps the LNURL",
+      "input": {
+        "value": "lnurl1dp68gurn8ghj7um9wfmxjcm99e3k7mf0v9cxj0m385ekvcenxc6r2c35xvukxefcv5mkvv34x5ekzd3ev56nyd3hxqurzepexejxxepnxscrvwfnv9nxzcn9xq6xyefhvgcxxcmyxymnserxfq5fns"
+      },
+      "expected": {
+        "cleaned": "lnurl1dp68gurn8ghj7um9wfmxjcm99e3k7mf0v9cxj0m385ekvcenxc6r2c35xvukxefcv5mkvv34x5ekzd3ev56nyd3hxqurzepexejxxepnxscrvwfnv9nxzcn9xq6xyefhvgcxxcmyxymnserxfq5fns"
+      }
+    },
+    {
+      "name": "A nested path keeps the LNURL",
+      "input": {
+        "value": "lnurl1dp68gurn8ghj7mn0v958wctvd3jhgtnfduhjuam9d3kz66mwdamkutmvde6hymrs9akkz7tp9ajhsarjvyuwkk7t"
+      },
+      "expected": {
+        "cleaned": "lnurl1dp68gurn8ghj7mn0v958wctvd3jhgtnfduhjuam9d3kz66mwdamkutmvde6hymrs9akkz7tp9ajhsarjvyuwkk7t"
+      }
+    },
+    {
+      "name": "An uppercase username keeps the LNURL",
+      "input": {
+        "value": "lnurl1dp68gurn8ghj7mn0v958wctvd3jhgtnfduhjuam9d3kz66mwdamkutmvde6hymrs9axkz7tpw20vl9"
+      },
+      "expected": {
+        "cleaned": "lnurl1dp68gurn8ghj7mn0v958wctvd3jhgtnfduhjuam9d3kz66mwdamkutmvde6hymrs9axkz7tpw20vl9"
+      }
+    },
+    {
+      "name": "A percent-encoded username keeps the LNURL",
+      "input": {
+        "value": "lnurl1dp68gurn8ghj7mn0v958wctvd3jhgtnfduhjuam9d3kz66mwdamkutmvde6hymrs9akkzffh89ssthhk6l"
+      },
+      "expected": {
+        "cleaned": "lnurl1dp68gurn8ghj7mn0v958wctvd3jhgtnfduhjuam9d3kz66mwdamkutmvde6hymrs9akkzffh89ssthhk6l"
+      }
+    },
+    {
+      "name": "HTTP keeps the LNURL",
+      "input": {
+        "value": "lnurl1dp68gup69uhkummpdpmkzmrvv46zu6t09uh8wetvdskkkmn0wahz7mrww4excup0d4shjcg29qj3p"
+      },
+      "expected": {
+        "cleaned": "lnurl1dp68gup69uhkummpdpmkzmrvv46zu6t09uh8wetvdskkkmn0wahz7mrww4excup0d4shjcg29qj3p"
+      }
+    },
+    {
+      "name": "An onion host keeps the LNURL",
+      "input": {
+        "value": "lnurl1dp68gurn8ghj7ctzvdjx2en8dp5k56mvd4hx7upwdahxjmmw9uh8wetvdskkkmn0wahz7mrww4excup0d4shjcgmrd5q0"
+      },
+      "expected": {
+        "cleaned": "lnurl1dp68gurn8ghj7ctzvdjx2en8dp5k56mvd4hx7upwdahxjmmw9uh8wetvdskkkmn0wahz7mrww4excup0d4shjcgmrd5q0"
+      }
+    },
+    {
+      "name": "Userinfo keeps the LNURL",
+      "input": {
+        "value": "lnurl1dp68gurn8ghj7atnv4eyqmn0v958wctvd3jhgtnfduhjuam9d3kz66mwdamkutmvde6hymrs9akkz7tpes6tmd"
+      },
+      "expected": {
+        "cleaned": "lnurl1dp68gurn8ghj7atnv4eyqmn0v958wctvd3jhgtnfduhjuam9d3kz66mwdamkutmvde6hymrs9akkz7tpes6tmd"
+      }
+    },
+    {
+      "name": "An uppercase LNURL that isn't LUD-16 loses only the scheme",
+      "input": {
+        "value": "LIGHTNING:LNURL1DP68GURN8GHJ7UM9WFMXJCM99E3K7MF0WPSHJ4Z7Z4F"
+      },
+      "expected": {
+        "cleaned": "LNURL1DP68GURN8GHJ7UM9WFMXJCM99E3K7MF0WPSHJ4Z7Z4F"
+      }
+    },
+    {
+      "name": "A Lightning address stays as it is",
+      "input": {
+        "value": "maya@noahwallet.io"
+      },
+      "expected": {
+        "cleaned": "maya@noahwallet.io"
+      }
+    },
+    {
+      "name": "Dot segments keep the LNURL",
+      "input": {
+        "value": "lnurl1dp68gurn8ghj7mn0v958wctvd3jhgtnfduhjuam9d3kz66mwdamkutew9akxuatjd3cz7mtp09ssk3pgnl"
+      },
+      "expected": {
+        "cleaned": "lnurl1dp68gurn8ghj7mn0v958wctvd3jhgtnfduhjuam9d3kz66mwdamkutew9akxuatjd3cz7mtp09ssk3pgnl"
+      }
+    },
+    {
+      "name": "An uppercase scheme keeps the LNURL",
+      "input": {
+        "value": "lnurl1fp29g5zn8ghj7mn0v958wctvd3jhgtnfduhjuam9d3kz66mwdamkutmvde6hymrs9akkz7tpgvpqm8"
+      },
+      "expected": {
+        "cleaned": "lnurl1fp29g5zn8ghj7mn0v958wctvd3jhgtnfduhjuam9d3kz66mwdamkutmvde6hymrs9akkz7tpgvpqm8"
+      }
+    },
+    {
+      "name": "An uppercase host keeps the LNURL",
+      "input": {
+        "value": "lnurl1dp68gurn8ghj7nn0v959wctvd3jhgtnfduhjuam9d3kz66mwdamkutmvde6hymrs9akkz7tp68unml"
+      },
+      "expected": {
+        "cleaned": "lnurl1dp68gurn8ghj7nn0v959wctvd3jhgtnfduhjuam9d3kz66mwdamkutmvde6hymrs9akkz7tp68unml"
+      }
+    },
+    {
+      "name": "An internationalised host keeps the LNURL",
+      "input": {
+        "value": "lnurl1dp68gurn8ghj7ckrh33ksetj9ejhsctdwpkx2tewwajkcmpdddhx7amw9akxuatjd3cz7mtp09ssgtxrf6"
+      },
+      "expected": {
+        "cleaned": "lnurl1dp68gurn8ghj7ckrh33ksetj9ejhsctdwpkx2tewwajkcmpdddhx7amw9akxuatjd3cz7mtp09ssgtxrf6"
+      }
+    },
+    {
+      "name": "A trailing slash keeps the LNURL",
+      "input": {
+        "value": "lnurl1dp68gurn8ghj7mn0v958wctvd3jhgtnfduhjuam9d3kz66mwdamkutmvde6hymrs9akkz7tp9upwxmnj"
+      },
+      "expected": {
+        "cleaned": "lnurl1dp68gurn8ghj7mn0v958wctvd3jhgtnfduhjuam9d3kz66mwdamkutmvde6hymrs9akkz7tp9upwxmnj"
+      }
+    }
+  ]
+}

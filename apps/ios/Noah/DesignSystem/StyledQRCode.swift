@@ -3,7 +3,7 @@ import CoreImage.CIFilterBuiltins
 import SwiftUI
 
 /// QR modules for a payload, without the quiet zone. Short payloads use error
-/// correction H; long ones (a payment request with an invoice) use M, which
+/// correction H; long ones (an invoice, the payment request, an LNURL) use M, which
 /// still leaves room for the logo hole (prototype `buildQR`).
 struct QRMatrix: Equatable, Sendable {
     let count: Int

@@ -141,7 +141,6 @@
   <string name="gt_f7cf2bcf911db9ad">"Bitcoin Core"</string>
   <string name="gt_5538c35c05d2ea68">"Bitcoin-karta"</string>
   <string name="gt_574c3a5e56925ad9">"Bitcoin-adress"</string>
-  <string name="gt_1b7ede8a6599a2f7">"Bitcoin och Ark i en kod. Lägg till ett belopp för Lightning"</string>
   <string name="gt_1b56841e496f03f9">"QR-kod för Bitcoin-insättningsadress"</string>
   <string name="gt_d02d0e8a04250582">"Bitcoin i Ark flyttas direkt och kostar mindre att skicka."</string>
   <string name="gt_49f6aed17460951e">"Karta över handlare som tar emot Bitcoin"</string>
@@ -149,7 +148,7 @@
   <string name="gt_309f770f53455954">"Bitcoin-platser"</string>
   <string name="gt_9ee95317954f93fd">"Bitcoin-enhet"</string>
   <string name="gt_5c2d9cf515bae495">"Bitcoin du tar emot visas här som VTXO:er."</string>
-  <string name="gt_f3feeab7f812d05e">"Bitcoin, Ark och Lightning för %1$s"</string>
+  <string name="gt_4c0c6d1a3e05ce59">"Bitcoin, Ark and Lightning in one code"</string>
   <string name="gt_a800b1a6af330022">"Bitcoin, helt enkelt."</string>
   <string name="gt_165fb7b76f269989">"Bitcoind RPC"</string>
   <string name="gt_97fffb31364c8804">"Blockhash"</string>

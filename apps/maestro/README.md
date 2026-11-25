@@ -15,14 +15,15 @@ Every PR that touches the native Android paths (see `.github/workflows/native-an
 | `smoke/amountless-request.yml` | `smoke` | A `bitcoin:` link without an amount opens Send on the keypad with the recipient set | 3 s |
 | `smoke/delete-wallet.yml` | `smoke` | Settings → Delete wallet, typed confirmation, back to Welcome | 16 s |
 | `smoke/restore-validation.yml` | `smoke` | Restore: twelve valid words with a bad checksum are rejected | 16 s |
-| `subflows/fund-wallet.yml` (setup, run by the script) | — | Create the wallet as above; Receive → Add amount 10,000 → copy the payment request | 51 s |
+| `subflows/fund-wallet.yml` (setup, run by the script) | — | Create the wallet as above; Receive → Ways to pay you → copy the Ark address | not yet timed |
+| `subflows/fund-wallet-invoice.yml` (setup, run by the script) | — | On that Receive screen: Add amount 10,000 → copy the Lightning invoice | not yet timed |
 | `funded/ark-send.yml` | `funded` | A `bitcoin:?ark=…&amount=` link opens the review at ₿5,000 via Ark; hold to send; success; the payment in Activity | 14–18 s |
 
 Times are from the local runs below. A group's wall time adds the APK install and Maestro start-up: **smoke about 80 s, funded about 83 s**.
 
 `config.yaml` orders the smoke chain (`flowsOrder`). Maestro refuses an order naming flows that a tag filter removes, so the funded group runs the `funded/` folder on its own. Subflows are never selected by tag.
 
-The funded group is three steps in `scripts/test-maestro-native.sh`: `fund-wallet.yml`; the script reads the request from the emulator clipboard and pays its `lightning=` invoice from LND (`just lncli payinvoice`, no blocks mined); then `funded/` runs with the request's Ark address as `ARK`. The send goes to the wallet's own Ark address, which is valid on any stack. Fixed and amountless requests use BIP-173's regtest vector `bcrt1qw508d6qejxtdg4y5r3zarvary0c5xw7kygt080`, never paid.
+The funded group is four steps in `scripts/test-maestro-native.sh`: `fund-wallet.yml`, after which the script reads the wallet's Ark address from the emulator clipboard; `fund-wallet-invoice.yml`, after which it reads the Lightning invoice and pays it from LND (`just lncli payinvoice`, no blocks mined); then `funded/` runs with that Ark address as `ARK`. The payment request carries no amount or invoice (its `lightning=` is the Lightning address as LNURL), so the invoice comes from its own format. The send goes to the wallet's own Ark address, which is valid on any stack. Fixed and amountless requests use BIP-173's regtest vector `bcrt1qw508d6qejxtdg4y5r3zarvary0c5xw7kygt080`, never paid.
 
 ## Speed
 

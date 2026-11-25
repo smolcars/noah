@@ -130,7 +130,8 @@ class ParityUIDeviceTest {
                     true
                 } catch (_: ReaderException) { false }
             }
-            assertEquals("satoshi@example.test", decoded)
+            // Only the Lightning address, as its LNURL-pay code (LUD-01); Copy still takes the literal address.
+            assertEquals(com.noahwallet.services.server.LightningIdentity.lnurlQR("satoshi@example.test"), decoded)
             shot("qr-my-code")
             var qr = text("Copy Lightning address")
             assertNotNull("QR announces its copy action", qr)
@@ -248,7 +249,7 @@ class ParityUIDeviceTest {
         automation.grantRuntimePermission(context.packageName, Manifest.permission.CAMERA)
         val services = AppServices.shared(context)
         services.ensureWalletOpen()
-        val request = services.session.receiveRequest().uri()
+        val request = services.session.receiveRequest().uri(lightningAddress = null)
         val activity = instrumentation.startActivitySync(Intent(context, com.noahwallet.MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
         try {
             // Start from a shown balance whatever the persisted hide flag says.

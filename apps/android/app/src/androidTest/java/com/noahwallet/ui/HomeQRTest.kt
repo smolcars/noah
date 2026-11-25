@@ -55,7 +55,8 @@ class HomeQRTest {
             compose.mainClock.advanceTimeBy(500)
             val card = compose.onNodeWithTag("home-get-paid").captureToImage().asAndroidBitmap()
             try {
-                assertEquals("theme dark=$theme", HomeFixtures.address, decode(card))
+                // The card's QR is the address's LNURL-pay code (LUD-01), not the literal address.
+                assertEquals("theme dark=$theme", com.noahwallet.services.server.LightningIdentity.lnurlQR(HomeFixtures.address), decode(card))
                 // The QR's card stays white with near-black ink in both themes.
                 val corner = card.getPixel(card.width / 2, 6)
                 assertTrue("white card dark=$theme", android.graphics.Color.red(corner) > 240 && android.graphics.Color.blue(corner) > 240)

@@ -33,6 +33,5 @@ class ReceiveCompletionTest {
         ReceiveRequest.validate(1, "x".repeat(639))
         assertTrue(runCatching { ReceiveRequest.validate(1, "x".repeat(640)) }.isFailure)
         assertTrue(runCatching { ReceiveRequest.validate(1, "🚀".repeat(320)) }.isFailure)
-        assertTrue(runCatching { ReceiveRequest("ark", "chain", 1).uri() }.isFailure)
     }
 }

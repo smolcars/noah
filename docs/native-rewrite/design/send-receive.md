@@ -110,20 +110,21 @@ The background claim in the pending line is true today: bark's server keeps payi
 ### The card
 
 **Default:**
-- **QR:** your **Lightning address**, using the styled QR from Home (error correction H, dot modules, rounded eyes, the longship app icon), always on a white card;
+- **QR:** your **Lightning address** as LUD-01's `LIGHTNING:LNURL1…` (the LNURL-pay code for `https://<domain>/.well-known/lnurlp/<username>`), using the styled QR from Home (dot modules, rounded eyes, the longship app icon), always on a white card. Copy and Share carry the readable `user@domain`;
 - **under it:** the address in bold, then "Scan with any Lightning wallet";
 - **no address:** today's "Lightning address unavailable" with its Profile action.
 
 **Add amount:**
 - **Sheet:** the same keypad as Send, plus an "Add a note" chip (today's invoice description).
-- **Done:** runs today's `ReceiveModel` invoice creation. The QR redraws (radial reveal) as the **unified payment request**: today's BIP-321 URI with the Bitcoin and Ark addresses, the amount and the Lightning invoice. Use error correction M for long payloads, keeping the logo.
+- **Done:** runs today's `ReceiveModel` invoice creation. The QR redraws (radial reveal) as the **Lightning invoice**, whichever format was showing: an amount belongs to the invoice alone. Use error correction M for long payloads, keeping the logo.
 - **Band:** an inverted band grows at the bottom of the card with the amount and fiat.
-- **Caption:** "Scan with any bitcoin or Lightning wallet".
+- **Caption:** "Scan with any Lightning wallet".
 - **Change amount:** reopens the sheet. Clearing the amount returns to the Lightning address.
 
 **Ways to pay you:**
 - **Where:** Copy at the top right opens the "Ways to pay you" sheet. On the open Duo it's the trailing pane instead, with no sheet.
 - **Rows:** Lightning address, Payment request, Lightning invoice (dimmed until an amount exists), Ark address, Bitcoin address, each with a value preview, a one-line subtitle and its own copy button.
+- **Payment request:** the BIP-321 URI `bitcoin:<onchain>?lightning=lnurl1…&ark=<ark>`, with your Lightning address as its LNURL-pay code (LUD-01's fallback key, off-spec for BIP-321, as Arkade does). It never carries an amount or an invoice.
 - **Showing:** tapping a row shows that format on the card (radio dot, a small tilt, the QR redraws).
 
 **Buttons:**
@@ -188,7 +189,7 @@ New strings:
 - **Amount, To and Method:** "Hold to send", "Only {amount} available", "Recent", "Results", "No matches", "Name, address or invoice", "How to send {amount}", "Best", "Instant · free", "Seconds · {fee} fee", "About 20 min · {fee} fee".
 - **Sending phases:** "Splitting your coin", "Signing with Ark", "Delivering", "Delivered", "Locking {amount}", "Ark holds it while Lightning pays", "Paying over Lightning", "Their receipt unlocks it", "Paid", "That payment didn’t go through", "Ark signs it back to you", "Back in your wallet", "Swapping with Ark", "Waiting for block {height}", "Confirmed in block {height}", "{n} of {total}".
 - **Results:** "Sending {amount}", "Sent {amount}", "Still sending {amount}", "Payment failed", the result lines above, "Proof of payment".
-- **Receive:** "Ways to pay you", "Show", "Payment request", "Scan with any bitcoin or Lightning wallet", "Scan with an Ark wallet", "Instant and free from Ark wallets", "Bitcoin, Ark and Lightning for {amount}", "Bitcoin and Ark in one code. Add an amount for Lightning", "Change amount", "Add a note", "Incoming over Lightning", "Ark holds it for you", "Claiming with your key", "Received", "Seen on the network", "via Ark · just now", "via Lightning · just now", "On-chain · waiting for a block".
+- **Receive:** "Ways to pay you", "Show", "Payment request", "Scan with any bitcoin or Lightning wallet", "Scan with an Ark wallet", "Instant and free from Ark wallets", "Bitcoin, Ark and Lightning in one code", "Change amount", "Add a note", "Incoming over Lightning", "Ark holds it for you", "Claiming with your key", "Received", "Seen on the network", "via Ark · just now", "via Lightning · just now", "On-chain · waiting for a block".
 
 Reuse existing strings where they exist.
 
@@ -210,5 +211,5 @@ Live, against the regtest stack:
 Decode the shown QR for every format in both themes.
 
 Record per platform:
-- **one phone video:** an Ark send, a Lightning send, an on-chain send with its confirmation, then Receive: the Lightning address, add amount → payment request, and Lightning and on-chain arrivals;
+- **one phone video:** an Ark send, a Lightning send, an on-chain send with its confirmation, then Receive: the Lightning address, add amount → Lightning invoice, and Lightning and on-chain arrivals;
 - **one foldable video:** the Duo or Pixel Fold open, with a send and a receive, plus a pose change mid-wait.

@@ -3,7 +3,7 @@ import SwiftUI
 
 /// Receive (docs/native-rewrite/design/send-receive.md): your Lightning address as the
 /// default QR on a white card; Add amount runs today's invoice creation and shows the
-/// unified payment request with an amount band; every format is one tap away. Payments
+/// Lightning invoice with an amount band; every format is one tap away. Payments
 /// arriving on this screen play their rail's arrival and flip the card. Wide windows (the
 /// iPhone Duo open or half-open) put the card in the leading pane and the formats in the
 /// trailing one.
@@ -48,7 +48,10 @@ struct ReceiveView: View {
     }
 
     private struct Shown: Equatable {
+        /// What Share carries.
         var payload: String?
+        /// What the QR carries.
+        var qr: String?
         var title: String
         var caption: String
         var bandAmount: String?
@@ -71,8 +74,9 @@ struct ReceiveView: View {
         let sats = model.request?.amountSat
         return Shown(
             payload: payload,
+            qr: format.qr(request: model.request, address: address),
             title: format == .lightningAddress ? (address ?? "") : L10n.text(format.name, locale: locale.identifier),
-            caption: format.caption(hasAmount: hasAmount),
+            caption: format.caption,
             bandAmount: format.showsBand(hasAmount: hasAmount) ? amountText : nil,
             bandFiat: format.showsBand(hasAmount: hasAmount) ? sats.flatMap { sats in
                 btcPrice.map { FiatCurrency.display(sats: sats, btcPrice: $0, currency: app.preferredCurrency, locale: locale) }
@@ -235,7 +239,7 @@ struct ReceiveView: View {
 
     private var card: some View {
         let shown = shown
-        return ReceiveCard(payload: shown.payload, title: shown.title, caption: shown.caption,
+        return ReceiveCard(payload: shown.qr, title: shown.title, caption: shown.caption,
                            band: shown.bandAmount.map { ($0, shown.bandFiat) }, qrSide: qrSide,
                            listening: model.request != nil && scenePhase == .active, arrival: arrival,
                            unit: app.amountUnit, tilt: tilt, unavailable: shown.unavailable) {

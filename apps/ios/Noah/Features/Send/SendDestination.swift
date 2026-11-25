@@ -12,8 +12,22 @@ struct SendDestination: Equatable, Sendable {
         let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
         if let lnurl = lud17(trimmed) { return lnurl }
         let payload = trimmed.lowercased().hasPrefix("lightning:") ? String(trimmed.dropFirst(10)) : trimmed
+        if let address = lud16Address(payload) { return address }
         let address = String(payload.unicodeScalars.drop(while: { $0 == "₿" }))
         return address != payload && isLightningAddress(address) ? address : payload
+    }
+    /// An LNURL-pay link to LUD-16's `https://<domain>/.well-known/lnurlp/<username>` is that Lightning address, which is how
+    /// Noah's own QR codes carry it. Read back as `username@domain`, Send shows, remembers and repeats the address; it resolves
+    /// to the same URL. Only that exact text counts, as Android reads it: anything else (a port other than 443, a query,
+    /// other case, dot segments, `.onion`, a username outside LUD-16's characters) stays an LNURL.
+    private static func lud16Address(_ value: String) -> String? {
+        guard let decoded = PaymentEncoding.bech32(value), decoded.prefix == "lnurl", !decoded.isM,
+              let bytes = PaymentEncoding.bytes(decoded.words), let url = String(bytes: bytes, encoding: .utf8),
+              let match = url.wholeMatch(of: #/https://([a-z0-9.-]+)(?::443)?/\.well-known/lnurlp/([a-z0-9_.+-]+)/#),
+              !isOnion(String(match.1))
+        else { return nil }
+        let address = "\(match.2)@\(match.1)"
+        return isLightningAddress(address) ? address : nil
     }
     /// LUD-17 `lnurlp://` mapped to HTTPS as Bark maps it, then carried as the `lnurl1…` it stands for, so its URL keeps
     /// its case through Send's lowercased keys. A `.onion` host would need cleartext, so it stays unmapped (refused).

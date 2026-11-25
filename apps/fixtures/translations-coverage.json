@@ -6,8 +6,8 @@
     "ko",
     "sv"
   ],
-  "catalogEntries": 1585,
-  "sourceKeys": 1628,
+  "catalogEntries": 1584,
+  "sourceKeys": 1627,
   "coverage": {
     "ios": {
       "used": [
@@ -142,7 +142,6 @@
         "Bitcoin Core",
         "Bitcoin Map",
         "Bitcoin address",
-        "Bitcoin and Ark in one code. Add an amount for Lightning",
         "Bitcoin deposit address QR code",
         "Bitcoin in Ark moves instantly and costs less to send.",
         "Bitcoin merchant map",
@@ -150,7 +149,7 @@
         "Bitcoin places",
         "Bitcoin unit",
         "Bitcoin you receive shows up here as VTXOs.",
-        "Bitcoin, Ark and Lightning for {amount}",
+        "Bitcoin, Ark and Lightning in one code",
         "Bitcoin, simply.",
         "Bitcoind RPC",
         "Block hash",
@@ -1429,10 +1428,18 @@
         "₿1 = 1 sat."
       ],
       "untranslated": {
-        "es": [],
-        "ja": [],
-        "ko": [],
-        "sv": []
+        "es": [
+          "gt_4c0c6d1a3e05ce59"
+        ],
+        "ja": [
+          "gt_4c0c6d1a3e05ce59"
+        ],
+        "ko": [
+          "gt_4c0c6d1a3e05ce59"
+        ],
+        "sv": [
+          "gt_4c0c6d1a3e05ce59"
+        ]
       }
     },
     "android": {
@@ -1566,12 +1573,11 @@
         "Bitcoin Core",
         "Bitcoin Map",
         "Bitcoin address",
-        "Bitcoin and Ark in one code. Add an amount for Lightning",
         "Bitcoin in Ark moves instantly and costs less to send.",
         "Bitcoin payment request",
         "Bitcoin unit",
         "Bitcoin you receive shows up here as VTXOs.",
-        "Bitcoin, Ark and Lightning for {amount}",
+        "Bitcoin, Ark and Lightning in one code",
         "Bitcoin, simply.",
         "Bitcoind RPC",
         "Block hash",
@@ -2877,10 +2883,18 @@
         "₿1 = 1 sat."
       ],
       "untranslated": {
-        "es": [],
-        "ja": [],
-        "ko": [],
-        "sv": []
+        "es": [
+          "gt_4c0c6d1a3e05ce59"
+        ],
+        "ja": [
+          "gt_4c0c6d1a3e05ce59"
+        ],
+        "ko": [
+          "gt_4c0c6d1a3e05ce59"
+        ],
+        "sv": [
+          "gt_4c0c6d1a3e05ce59"
+        ]
       }
     }
   }

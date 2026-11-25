@@ -2,6 +2,7 @@ package com.noahwallet.services.wallet
 
 import com.noahwallet.fixtures.FixtureCase
 import com.noahwallet.fixtures.SharedFixtures
+import com.noahwallet.services.server.LightningIdentity
 import kotlinx.serialization.json.*
 import org.junit.Assert.*
 import org.junit.Test
@@ -12,16 +13,18 @@ import org.junit.runners.Parameterized
 class ReceiveRequestTest(private val case: FixtureCase) {
     @Test fun matchesSharedFixture() {
         val input = case.input.jsonObject
-        val amount = input["amountSat"]?.takeUnless { it == JsonNull }?.jsonPrimitive
-        val result = runCatching {
-            val sats = amount?.let { requireNotNull(it.longOrNull) }
-            ReceiveRequest(input.getValue("arkAddress").jsonPrimitive.content,
-                input.getValue("onchainAddress").jsonPrimitive.content, sats,
-                lightningInvoice = input["lightningInvoice"]?.jsonPrimitive?.content).uri()
-        }
         val expected = case.expected.jsonObject
-        if ("error" in expected) assertTrue(case.name, result.isFailure)
-        else assertEquals(case.name, expected.getValue("uri").jsonPrimitive.content, result.getOrThrow())
+        val onchain = input["onchainAddress"]?.jsonPrimitive?.content
+        if (onchain == null) {
+            val result = runCatching { ReceiveRequest.validate(requireNotNull(input.getValue("amountSat").jsonPrimitive.longOrNull)) }
+            assertEquals(case.name, "error" in expected, result.isFailure)
+            return
+        }
+        val address = input["lightningAddress"]?.jsonPrimitive?.content
+        val request = ReceiveRequest(input.getValue("arkAddress").jsonPrimitive.content, onchain, input["amountSat"]?.jsonPrimitive?.longOrNull,
+            lightningInvoice = input["lightningInvoice"]?.jsonPrimitive?.content)
+        assertEquals(case.name, expected.getValue("uri").jsonPrimitive.content, request.uri(address))
+        assertEquals(case.name, expected["lightningAddressQR"]?.jsonPrimitive?.contentOrNull, address?.let(LightningIdentity::lnurlQR))
     }
     companion object {
         @JvmStatic

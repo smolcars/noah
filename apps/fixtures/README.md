@@ -46,6 +46,11 @@ hand-specified `send-flow-native.json` runs beside the RN-generated `send-flow.j
 (same operations): that method pays on the Lightning rail, after an invoice and before
 an offer, and the rail order stays Ark, Lightning, on-chain.
 
+Noah's Lightning address as LNURL (hand-specified): `send-lnurl-address.json` is Send
+reading an LNURL to LUD-16's `https://<domain>/.well-known/lnurlp/<username>` back as
+`username@domain` (Noah's own QR codes carry the address that way), and leaving every
+other LNURL as it is. Its LNURLs were computed with the BIP-173 reference bech32.
+
 M6 boarding/exits: the fixtures are frozen from the React Native app and edited by hand; keep both platforms' tests passing. Their generator imported
 RN's `exitFeeEstimate`, `exitTimeline`, `useExitOverview`, and `buildAutoBoardPlan`;
 only platform/network dependencies were mocked. `exit-fee-estimate` (82),

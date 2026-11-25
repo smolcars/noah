@@ -141,7 +141,6 @@
   <string name="gt_f7cf2bcf911db9ad">"Bitcoin Core"</string>
   <string name="gt_5538c35c05d2ea68">"Bitcoin 지도"</string>
   <string name="gt_574c3a5e56925ad9">"Bitcoin 주소"</string>
-  <string name="gt_1b7ede8a6599a2f7">"비트코인과 Ark를 하나의 코드로. 라이트닝은 금액을 추가하세요"</string>
   <string name="gt_1b56841e496f03f9">"Bitcoin 입금 주소 QR 코드"</string>
   <string name="gt_d02d0e8a04250582">"Ark에 있는 비트코인은 즉시 이동하고 보내는 비용도 더 적어요."</string>
   <string name="gt_49f6aed17460951e">"Bitcoin 가맹점 지도"</string>
@@ -149,7 +148,7 @@
   <string name="gt_309f770f53455954">"Bitcoin 사용처"</string>
   <string name="gt_9ee95317954f93fd">"Bitcoin 단위"</string>
   <string name="gt_5c2d9cf515bae495">"받은 비트코인은 여기에 VTXO로 표시돼요."</string>
-  <string name="gt_f3feeab7f812d05e">"%1$s 비트코인·Ark·라이트닝"</string>
+  <string name="gt_4c0c6d1a3e05ce59">"Bitcoin, Ark and Lightning in one code"</string>
   <string name="gt_a800b1a6af330022">"비트코인, 간단하게."</string>
   <string name="gt_165fb7b76f269989">"Bitcoind RPC"</string>
   <string name="gt_97fffb31364c8804">"블록 해시"</string>

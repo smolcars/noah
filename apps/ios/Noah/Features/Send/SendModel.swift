@@ -361,9 +361,11 @@ import Observation
             var payment = SendPayment(
                 destination: target, method: method, amount: sats, source: rail == .onchain ? source : nil, max: isMax,
                 comment: comment)
-            if parsed.destinationType == "lnurl", SendDestination.isLightningAddress(destination) {
+            // Cleaned, so a scanned `lightning:` link or Noah's LNURL QR repeats as the address it stands for.
+            let address = SendDestination.cleaned(destination)
+            if parsed.destinationType == "lnurl", SendDestination.isLightningAddress(address) {
                 payment.repeatMetadata = try SendPayment.metadata(
-                    destination: destination, comment: comment, amount: amount,
+                    destination: address, comment: comment, amount: amount,
                     fiatCurrency: useFiat ? fiatCurrency : nil)
             }
             try SendMaxValidation.available(payment)

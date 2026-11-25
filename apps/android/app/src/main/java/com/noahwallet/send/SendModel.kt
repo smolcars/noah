@@ -229,10 +229,9 @@ class SendModel(val controller: SendController, private val network: String,
     private fun requireInvoiceAmount(invoice: String) {
         PaymentEncoding.invoice(invoice)?.sats?.takeIf { it.signum() > 0 }?.let { requireSend(it.compareTo(sats.toBigDecimal()) == 0) }
     }
-    /** What Repeat needs to send to a Lightning address again. */
-    private fun repeatMetadata() = if (parsed.destinationType == "lnurl" && SendDestination.isLightningAddress(destination)) {
-        SendPayment.metadata(destination, comment, amount, if (useFiat) fiatCurrency else null)
-    } else null
+    /** What Repeat needs to send to a Lightning address again; cleaned, so a scanned `lightning:` link or Noah's LNURL QR repeats as its address. */
+    private fun repeatMetadata() = SendDestination.cleaned(destination).takeIf { parsed.destinationType == "lnurl" && SendDestination.isLightningAddress(it) }
+        ?.let { SendPayment.metadata(it, comment, amount, if (useFiat) fiatCurrency else null) }
     private fun railTarget(rail: SendRail): Pair<String, String> {
         var method = parsed.destinationType ?: ""; var target = SendDestination.cleaned(destination)
         if (method == "lnurl") target = target.lowercase()

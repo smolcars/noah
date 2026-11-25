@@ -66,7 +66,7 @@ struct QRHubView: View {
     @ViewBuilder private func myCode(qrSide: CGFloat) -> some View {
         if let address = app.server.state.lightningAddress, !address.isEmpty {
             AdaptiveColumns { _ in
-                StyledQRCode(content: address)
+                StyledQRCode(content: LightningIdentity.lnurlQR(address: address) ?? address)
                     .frame(maxWidth: qrSide, maxHeight: qrSide).padding(20)
                     .background(.white, in: RoundedRectangle(cornerRadius: 28))
                     .frame(maxWidth: .infinity)

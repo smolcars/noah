@@ -1,7 +1,7 @@
 package com.noahwallet.services.wallet
 
+import com.noahwallet.services.server.LightningIdentity
 import kotlinx.serialization.Serializable
-import java.math.BigDecimal
 import java.net.URLEncoder
 
 /** BIP-321: the same address pair survives amount edits. */
@@ -14,14 +14,14 @@ data class ReceiveRequest(
     val lightningInvoice: String? = null,
     val paymentHash: String? = null,
 ) {
-    fun uri(): String {
+    /**
+     * The Payment request: the on-chain address, your Lightning address as an LNURL-pay code in `lightning` (LUD-01's
+     * fallback key; Noah is Lightning address first) and the Ark address. It never carries an amount or an invoice:
+     * those belong to the Lightning invoice format.
+     */
+    fun uri(lightningAddress: String?): String {
         val parameters = mutableListOf<String>()
-        amountSat?.let {
-            validate(it)
-            requireNotNull(lightningInvoice) { "An amount requires a Lightning invoice" }
-            parameters += "amount=${BigDecimal.valueOf(it, 8).stripTrailingZeros().toPlainString()}"
-            parameters += "lightning=${encode(lightningInvoice)}"
-        }
+        lightningAddress?.let(LightningIdentity::lnurl)?.let { parameters += "lightning=${encode(it)}" }
         parameters += "ark=${encode(arkAddress)}"
         return "bitcoin:$onchainAddress?${parameters.joinToString("&")}"
     }

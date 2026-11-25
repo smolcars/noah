@@ -110,7 +110,9 @@ internal object ReceiveTimeline {
 }
 
 /** The receive card's front: what the QR encodes and how it reads. */
-internal data class CardFace(val payload: String?, val title: String, val caption: String, val band: Pair<String, String?>?, val unavailable: Boolean)
+/** [payload] is what Share carries, [qr] what the QR does. */
+internal data class CardFace(val payload: String?, val title: String, val caption: String, val band: Pair<String, String?>?, val unavailable: Boolean,
+    val qr: String? = payload)
 
 /**
  * The Receive card: always white, the styled QR of the shown format, its name and a caption, the inverted
@@ -211,13 +213,13 @@ private fun CardFront(face: CardFace, qrSide: Dp, onProfile: () -> Unit, modifie
                 Text(tr("Finish setting up your Lightning address before sharing your QR."), style = HomeType.line, color = Color(0xFF6B6B6B))
                 Pill(tr("Open Profile"), height = 44.dp, container = ink, content = Color.White, onClick = onProfile)
             }
-            face.payload == null -> Box(Modifier.size(qrSide), contentAlignment = Alignment.Center) {
+            face.qr == null -> Box(Modifier.size(qrSide), contentAlignment = Alignment.Center) {
                 CircularProgressIndicator(Modifier.size(28.dp), color = ink, strokeWidth = 2.5.dp)
             }
             else -> {
                 Box(Modifier.size(qrSide).semantics { contentDescription = face.title }.testTag("receive-qr")) {
-                    StyledQR(face.payload, Modifier.fillMaxSize(), reveal = true, reduceMotion = reduceMotion,
-                        correction = ReceiveFormats.correction(face.payload))
+                    StyledQR(face.qr, Modifier.fillMaxSize(), reveal = true, reduceMotion = reduceMotion,
+                        correction = ReceiveFormats.correction(face.qr))
                 }
                 Text(face.title, Modifier.padding(top = 12.dp), style = HomeType.qrName, color = ink, maxLines = 1,
                     overflow = TextOverflow.Ellipsis)

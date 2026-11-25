@@ -51,9 +51,11 @@ import com.noahwallet.formatting.BitcoinAmount
 import com.noahwallet.formatting.BitcoinAmountUnit
 import com.noahwallet.history.HistoryTransaction
 import com.noahwallet.localization.tr
+import com.noahwallet.services.server.LightningIdentity
 import com.noahwallet.services.wallet.WalletBalance
 import com.noahwallet.ui.design.NoahTokens
 import com.noahwallet.ui.onboarding.*
+import com.noahwallet.ui.receive.ReceiveFormats
 import kotlinx.coroutines.launch
 import java.util.Date
 import java.util.Locale
@@ -894,7 +896,8 @@ private fun AddressFace(address: String, copyLabel: String, qrSide: Dp, qrOut: F
         }.then(if (Build.VERSION.SDK_INT >= 31 && blurring) Modifier.blur((6 * qrOut.coerceIn(0f, 1f)).dp,
             BlurredEdgeTreatment.Unbounded) else Modifier)
             .testTag("home-qr")) {
-            StyledQR(address, Modifier.fillMaxSize(), reveal = true, reduceMotion = reduceMotion)
+            val qr = LightningIdentity.lnurlQR(address) ?: address
+            StyledQR(qr, Modifier.fillMaxSize(), reveal = true, reduceMotion = reduceMotion, correction = ReceiveFormats.correction(qr))
         }
         Text(address, Modifier.padding(top = 14.dp).graphicsLayer { alpha = 1 - qrOut.coerceIn(0f, 1f) }, style = HomeType.qrName, color = ink,
             maxLines = 1, overflow = TextOverflow.Ellipsis)

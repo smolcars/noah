@@ -75,7 +75,7 @@ struct HomeQRCard: View {
 
     @ViewBuilder private var addressCard: some View {
         if let address {
-            StyledQRCode(content: address, animate: animateQR)
+            StyledQRCode(content: LightningIdentity.lnurlQR(address: address) ?? address, animate: animateQR)
                 .frame(width: qrSide, height: qrSide)
             Text(verbatim: address)
                 .noahText(NoahTokens.Typography.button)

@@ -137,8 +137,22 @@ class SendRecipientTest {
         assertEquals(listOf("alice@example.com"), resolved)
         assertEquals(SendPayment("alice@example.com", "lnurl", 1000), reviewed); assertTrue(m.showReview)
     }
+    /** Noah's Lightning address QR (an LNURL to LUD-16's well-known path): paid, shown and repeated as the address. */
+    @Test fun noahLightningAddressQrPaysAndRepeatsAsTheAddress() = runBlocking {
+        // LIGHTNING: and the LNURL for https://example.com/.well-known/lnurlp/alice.
+        val qr = "LIGHTNING:LNURL1DP68GURN8GHJ7ETCV9KHQMR99E3K7MF09EMK2MRV944KUMMHDCHKCMN4WFK8QTMPD35KXEG9SAEVQ"
+        val resolved = mutableListOf<String>(); var reviewed: SendPayment? = null
+        val m = model(this, resolve = { resolved += it; payRoute(it, 1000) }, quote = { reviewed = it; FakeSendWallet.quote })
+        m.amount = "1000"; m.arkBalance = 10000; m.stage = SendStage.amount
+        m.importRecipient(qr, stay = true)
+        m.continueStage()
+        assertEquals(listOf("alice@example.com"), resolved.distinct())
+        assertEquals("alice@example.com", reviewed?.destination)
+        assertTrue(reviewed?.repeatMetadata.orEmpty().contains("alice@example.com"))
+    }
     @Test fun paymentRequestPrefersArkAndResolvesItsLnurlOnlyOnceChosen() = runBlocking {
-        val lnurl = "LNURL1DP68GURN8GHJ7ETCV9KHQMR99E3K7MF09EMK2MRV944KUMMHDCHKCMN4WFK8QTMPD35KXEG9SAEVQ"
+        // https://example.com/lnurlp/alice: an LNURL that is not a Lightning address in disguise.
+        val lnurl = "LNURL1DP68GURN8GHJ7ETCV9KHQMR99E3K7MF0D3H82UNVWQHKZMRFVDJS6X0UCD"
         val ark = "tark1pwh9vsmezqqpjy9akejayl2vvcse6he97rn40g84xrlvrlnhayuuyefrp9nse2yspqqkm2rpd"
         val resolved = mutableListOf<String>(); var reviewed: SendPayment? = null
         val m = model(this, resolve = { resolved += it; payRoute(it, 1000) }, quote = { reviewed = it; FakeSendWallet.quote })

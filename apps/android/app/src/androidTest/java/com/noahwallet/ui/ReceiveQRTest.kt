@@ -41,7 +41,8 @@ class ReceiveQRTest {
         }
         for (theme in listOf(false, true)) for (state in listOf("address", "request", "amount", "invoice", "ark", "onchain")) {
             val shown = ReceiveFixtures.ui(state).copy(listening = false)
-            val payload = checkNotNull(ReceiveFormats.payload(shown.format, shown.request, shown.address))
+            // What the QR carries: the payload, with the Lightning address as its LNURL-pay code.
+            val payload = checkNotNull(ReceiveFormats.qr(shown.format, shown.request, shown.address))
             compose.runOnUiThread { dark = theme; ui = shown }
             // The QR draws in on the wall clock (about 1.3 s).
             compose.mainClock.advanceTimeBy(100)

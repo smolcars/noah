@@ -2,6 +2,7 @@ package com.noahwallet.ui.receive
 
 import com.google.zxing.qrcode.decoder.ErrorCorrectionLevel
 import com.noahwallet.history.HistoryTransaction
+import com.noahwallet.services.server.LightningIdentity
 import com.noahwallet.services.wallet.ReceiveRequest
 import kotlinx.serialization.Serializable
 
@@ -10,26 +11,34 @@ import kotlinx.serialization.Serializable
 enum class ReceiveFormat { lightningAddress, request, invoice, ark, onchain }
 
 /**
- * What each format shows, copies and shares: exactly its own payload. The Lightning address is the literal
- * address (as the QR hub shows it), the payment request is today's BIP-321 URI, and the invoice exists only
- * once an amount has been added.
+ * What each format copies and shares: exactly its own payload. The Lightning address is the literal address (as
+ * the QR hub shows it), the payment request is the BIP-321 URI with your Lightning address as its LNURL-pay code,
+ * and the invoice exists only once an amount has been added.
  */
 internal object ReceiveFormats {
     fun payload(format: ReceiveFormat, request: ReceiveRequest?, address: String?): String? = when (format) {
         ReceiveFormat.lightningAddress -> address?.takeIf { it.isNotEmpty() }
-        ReceiveFormat.request -> request?.let { runCatching { it.uri() }.getOrNull() }
+        ReceiveFormat.request -> request?.uri(address)
         ReceiveFormat.invoice -> request?.lightningInvoice?.takeIf { request.amountSat != null }
         ReceiveFormat.ark -> request?.arkAddress
         ReceiveFormat.onchain -> request?.onchainAddress
     }
 
+    /**
+     * What the card's QR carries: the payload, except that the Lightning address is LUD-01's `LIGHTNING:LNURL1…`, which
+     * any LNURL wallet or phone camera reads (`user@domain` isn't a QR format).
+     */
+    fun qr(format: ReceiveFormat, request: ReceiveRequest?, address: String?): String? = payload(format, request, address)?.let {
+        if (format == ReceiveFormat.lightningAddress) LightningIdentity.lnurlQR(it) ?: it else it
+    }
+
     /** H keeps the logo safest; long payloads (the request with its invoice) use M so the modules stay large. */
     fun correction(payload: String): ErrorCorrectionLevel = if (payload.length > 90) ErrorCorrectionLevel.M else ErrorCorrectionLevel.H
 
-    /** Adding an amount shows the payment request; clearing it returns from the request or invoice to the address. */
+    /** An amount is the invoice's alone: adding one shows the invoice; clearing it returns from the invoice to the address. */
     fun afterAmount(shown: ReceiveFormat, hasAmount: Boolean): ReceiveFormat = when {
-        hasAmount -> ReceiveFormat.request
-        shown == ReceiveFormat.request || shown == ReceiveFormat.invoice -> ReceiveFormat.lightningAddress
+        hasAmount -> ReceiveFormat.invoice
+        shown == ReceiveFormat.invoice -> ReceiveFormat.lightningAddress
         else -> shown
     }
 

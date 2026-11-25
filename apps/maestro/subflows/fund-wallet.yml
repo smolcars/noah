@@ -1,27 +1,16 @@
 appId: com.noahwallet.regtest
 ---
-# Funded job setup, run by scripts/test-maestro-native.sh: the job's wallet and a
-# 10,000-sat payment request in the clipboard. The script pays its Lightning invoice
-# from LND and passes its Ark address to the funded flows.
+# Funded job setup, run by scripts/test-maestro-native.sh, step 1 of 2: the job's wallet
+# and its Ark address in the clipboard, which the script passes to the funded flows.
+# fund-wallet-invoice.yml then puts a 10,000-sat Lightning invoice there for LND to pay.
 - runFlow: create-wallet.yml
 - tapOn: "Receive"
 - tapOn:
-    id: receive-amount-button
-- tapOn:
-    id: send-key-1
-- repeat:
-    times: 4
-    commands:
-      - tapOn:
-          id: send-key-0
-- tapOn:
-    id: receive-amount-submit
+    id: receive-formats
+# The Ark row shows its address once Receive has a request; its copy button does nothing before.
 - extendedWaitUntil:
-    visible:
-      id: receive-band
+    visible: "tark1.*"
     timeout: 20000
 - tapOn:
-    id: receive-formats
-- tapOn:
-    id: receive-copy-request
+    id: receive-copy-ark
 - pressKey: BACK

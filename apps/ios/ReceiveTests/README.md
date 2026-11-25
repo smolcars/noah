@@ -2,7 +2,7 @@
 
 ## Coverage
 
-- `ReceiveFixtureTests`: URI precision, amount validation, fiat conversion/rounding
+- `ReceiveFixtureTests`: the Payment request URI and Lightning address QR, amount validation, fiat conversion/rounding
   and the UTF-16 note limit, from the shared `receive-request.json` and
   `fiat-currency.json` fixtures.
 - `ReceiveCompletionTests`: destination sums, unrelated payments, pending/failed/canceled
@@ -24,8 +24,9 @@ xcodebuild -project apps/ios/Noah.xcodeproj -scheme Noah-Regtest \
 
 Environment-gated integration suites report as skipped unless their variables are set.
 
-The shared URI and fiat fixtures came from RN's real TypeScript implementations. They
-are frozen from the React Native app and edited by hand; keep both platforms' tests passing.
+The shared fiat fixtures came from RN's real TypeScript implementations. They are frozen
+from the React Native app and edited by hand. The receive-request fixture is hand-written
+(its LNURLs were computed with the BIP-173 reference bech32); keep both platforms' tests passing.
 
 ## Manual regtest check
 

@@ -6,18 +6,24 @@ import com.noahwallet.services.wallet.ReceiveRequest
 import org.junit.Assert.*
 import org.junit.Test
 
-/** Each format shows, copies and shares exactly its own payload; arrivals come only from new records. */
+/** Each format copies and shares exactly its own payload, and shows it (the Lightning address as LNURL); arrivals come only from new records. */
 class ReceiveFormatsTest {
     private val address = "maya@localhost.com"
+    private val lnurl = "lnurl1dp68gurn8ghj7mr0vdskc6r0wd6zucm0d5hjuam9d3kz66mwdamkutmvde6hymrs9akkz7tpyx6xp0"
     private val plain = ReceiveRequest("tark1qpayme", "bcrt1qpayme")
     private val withAmount = plain.copy(amountSat = 2_100, description = "coffee", lightningInvoice = "lnbcrt21u1pinvoice", paymentHash = "hash")
 
     @Test fun eachFormatEncodesExactlyItself() {
         assertEquals(address, ReceiveFormats.payload(ReceiveFormat.lightningAddress, plain, address))
-        assertEquals("bitcoin:bcrt1qpayme?ark=tark1qpayme", ReceiveFormats.payload(ReceiveFormat.request, plain, address))
-        assertEquals("bitcoin:bcrt1qpayme?amount=0.000021&lightning=lnbcrt21u1pinvoice&ark=tark1qpayme",
-            ReceiveFormats.payload(ReceiveFormat.request, withAmount, address))
-        assertEquals(withAmount.uri(), ReceiveFormats.payload(ReceiveFormat.request, withAmount, address))
+        // The Lightning address QR is LUD-01's LNURL-pay code; Copy and Share keep the readable address.
+        assertEquals("LIGHTNING:" + lnurl.uppercase(), ReceiveFormats.qr(ReceiveFormat.lightningAddress, plain, address))
+        // The payment request leads with the Lightning address and never carries the invoice or its amount.
+        assertEquals("bitcoin:bcrt1qpayme?lightning=$lnurl&ark=tark1qpayme", ReceiveFormats.payload(ReceiveFormat.request, plain, address))
+        assertEquals("bitcoin:bcrt1qpayme?lightning=$lnurl&ark=tark1qpayme", ReceiveFormats.payload(ReceiveFormat.request, withAmount, address))
+        assertEquals("bitcoin:bcrt1qpayme?ark=tark1qpayme", ReceiveFormats.payload(ReceiveFormat.request, plain, null))
+        for (format in ReceiveFormat.entries.filter { it != ReceiveFormat.lightningAddress }) {
+            assertEquals("$format", ReceiveFormats.payload(format, withAmount, address), ReceiveFormats.qr(format, withAmount, address))
+        }
         assertEquals("lnbcrt21u1pinvoice", ReceiveFormats.payload(ReceiveFormat.invoice, withAmount, address))
         assertEquals("tark1qpayme", ReceiveFormats.payload(ReceiveFormat.ark, withAmount, address))
         assertEquals("bcrt1qpayme", ReceiveFormats.payload(ReceiveFormat.onchain, withAmount, address))
@@ -25,6 +31,7 @@ class ReceiveFormatsTest {
         assertNull(ReceiveFormats.payload(ReceiveFormat.invoice, plain, address))
         assertNull(ReceiveFormats.payload(ReceiveFormat.lightningAddress, plain, null))
         assertNull(ReceiveFormats.payload(ReceiveFormat.lightningAddress, plain, ""))
+        assertNull(ReceiveFormats.qr(ReceiveFormat.lightningAddress, plain, null))
         assertNull(ReceiveFormats.payload(ReceiveFormat.ark, null, address))
         assertEquals(address, ReceiveFormats.payload(ReceiveFormat.lightningAddress, null, address))
     }
@@ -33,15 +40,18 @@ class ReceiveFormatsTest {
         assertEquals(ErrorCorrectionLevel.H, ReceiveFormats.correction(address))
         assertEquals(ErrorCorrectionLevel.M, ReceiveFormats.correction("x".repeat(91)))
         for (format in ReceiveFormat.entries) {
-            val payload = ReceiveFormats.payload(format, withAmount, address) ?: continue
+            val payload = ReceiveFormats.qr(format, withAmount, address) ?: continue
             assertNotNull("$format encodes", com.noahwallet.ui.home.StyledQRModel.encode(payload, ReceiveFormats.correction(payload)))
         }
     }
 
     @Test fun amountsSwitchTheShownFormat() {
-        assertEquals(ReceiveFormat.request, ReceiveFormats.afterAmount(ReceiveFormat.lightningAddress, true))
-        assertEquals(ReceiveFormat.request, ReceiveFormats.afterAmount(ReceiveFormat.ark, true))
-        assertEquals(ReceiveFormat.lightningAddress, ReceiveFormats.afterAmount(ReceiveFormat.request, false))
+        // An amount is the invoice's alone: adding one shows the invoice, whichever format asked for it.
+        assertEquals(ReceiveFormat.invoice, ReceiveFormats.afterAmount(ReceiveFormat.lightningAddress, true))
+        assertEquals(ReceiveFormat.invoice, ReceiveFormats.afterAmount(ReceiveFormat.ark, true))
+        assertEquals(ReceiveFormat.invoice, ReceiveFormats.afterAmount(ReceiveFormat.invoice, true))
+        assertEquals(ReceiveFormat.invoice, ReceiveFormats.afterAmount(ReceiveFormat.request, true))
+        assertEquals(ReceiveFormat.request, ReceiveFormats.afterAmount(ReceiveFormat.request, false))
         assertEquals(ReceiveFormat.lightningAddress, ReceiveFormats.afterAmount(ReceiveFormat.invoice, false))
         assertEquals(ReceiveFormat.onchain, ReceiveFormats.afterAmount(ReceiveFormat.onchain, false))
         assertEquals("tark1qpayme", ReceiveFormats.preview("tark1qpayme"))

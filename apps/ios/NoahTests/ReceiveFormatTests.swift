@@ -9,6 +9,7 @@ import UIKit
 @MainActor
 struct ReceiveFormatTests {
     static let address = "maya@noahwallet.io"
+    static let lnurl = "lnurl1dp68gurn8ghj7mn0v958wctvd3jhgtnfduhjuam9d3kz66mwdamkutmvde6hymrs9akkz7tpc4a4fm"
     static let plain = ReceiveRequest(arkAddress: SendReceiveShotTests.ark, onchainAddress: SendReceiveShotTests.bitcoin)
     static var priced: ReceiveRequest {
         var request = plain
@@ -21,16 +22,25 @@ struct ReceiveFormatTests {
     @Test func eachFormatCarriesExactlyItsPayload() throws {
         #expect(ReceiveFormat.lightningAddress.payload(request: nil, address: Self.address) == Self.address)
         #expect(ReceiveFormat.lightningAddress.payload(request: Self.plain, address: nil) == nil)
-        #expect(ReceiveFormat.request.payload(request: Self.plain, address: Self.address) == (try Self.plain.uri()))
-        #expect(ReceiveFormat.request.payload(request: Self.priced, address: Self.address) == (try Self.priced.uri()))
-        #expect(try Self.priced.uri().contains("lightning="))
+        // The Lightning address QR is LUD-01's LNURL-pay code; Copy and Share keep the readable address.
+        #expect(ReceiveFormat.lightningAddress.qr(request: nil, address: Self.address) == "LIGHTNING:" + Self.lnurl.uppercased())
+        #expect(ReceiveFormat.lightningAddress.qr(request: Self.plain, address: nil) == nil)
+        // The payment request leads with the Lightning address and never carries the invoice or its amount.
+        let request = "bitcoin:\(SendReceiveShotTests.bitcoin)?lightning=\(Self.lnurl)&ark=\(SendReceiveShotTests.ark)"
+        #expect(ReceiveFormat.request.payload(request: Self.plain, address: Self.address) == request)
+        #expect(ReceiveFormat.request.payload(request: Self.priced, address: Self.address) == request)
+        #expect(ReceiveFormat.request.payload(request: Self.plain, address: nil)
+            == "bitcoin:\(SendReceiveShotTests.bitcoin)?ark=\(SendReceiveShotTests.ark)")
+        for format in ReceiveFormat.allCases where format != .lightningAddress {
+            #expect(format.qr(request: Self.priced, address: Self.address) == format.payload(request: Self.priced, address: Self.address))
+        }
         #expect(ReceiveFormat.invoice.payload(request: Self.plain, address: Self.address) == nil)
         #expect(ReceiveFormat.invoice.payload(request: Self.priced, address: Self.address) == SendReceiveShotTests.invoice)
         #expect(ReceiveFormat.ark.payload(request: Self.priced, address: Self.address) == SendReceiveShotTests.ark)
         #expect(ReceiveFormat.bitcoin.payload(request: Self.priced, address: Self.address) == SendReceiveShotTests.bitcoin)
         #expect(ReceiveFormat.allCases.count == 5)
-        // An amount shows the unified request; removing it returns to the Lightning address from any format.
-        #expect(ReceiveFormat.after(amountChange: true) == .request)
+        // An amount is the invoice's alone: adding one shows the invoice; removing it returns to the Lightning address.
+        #expect(ReceiveFormat.after(amountChange: true) == .invoice)
         #expect(ReceiveFormat.after(amountChange: false) == .lightningAddress)
         // A fresh request keeps only what it can show: no invoice without an amount.
         for format in ReceiveFormat.allCases {
@@ -38,9 +48,9 @@ struct ReceiveFormatTests {
             #expect(kept.payload(request: Self.plain, address: Self.address) != nil, "\(format)")
         }
         #expect(ReceiveFormat.reconciled(.ark, hasAmount: false) == .ark && ReceiveFormat.reconciled(.bitcoin, hasAmount: false) == .bitcoin)
-        #expect(ReceiveFormat.reconciled(.invoice, hasAmount: true) == .invoice)
-        #expect(ReceiveFormat.request.showsBand(hasAmount: true) && !ReceiveFormat.ark.showsBand(hasAmount: true))
-        #expect(QRMatrix.correction(for: try Self.priced.uri()) == "M" && QRMatrix.correction(for: Self.address) == "H")
+        #expect(ReceiveFormat.reconciled(.invoice, hasAmount: true) == .invoice && ReceiveFormat.reconciled(.request, hasAmount: false) == .request)
+        #expect(ReceiveFormat.invoice.showsBand(hasAmount: true) && !ReceiveFormat.request.showsBand(hasAmount: true))
+        #expect(QRMatrix.correction(for: request) == "M" && QRMatrix.correction(for: Self.address) == "H")
     }
 
     /// The card as drawn decodes to exactly the shown format, with the logo: every format once, and the
@@ -51,8 +61,8 @@ struct ReceiveFormatTests {
             + [Card(format: .request, request: Self.plain, scheme: .light), Card(format: .request, request: Self.priced, scheme: .dark)]
         for card in cards {
             let format = card.format, request = card.request, scheme = card.scheme
-            let payload = try #require(format.payload(request: request, address: Self.address))
-            let card = ReceiveCard(payload: payload, title: format.name, caption: format.caption(hasAmount: request.amountSat != nil),
+            let payload = try #require(format.qr(request: request, address: Self.address))
+            let card = ReceiveCard(payload: payload, title: format.name, caption: format.caption,
                                    band: format.showsBand(hasAmount: request.amountSat != nil) ? ("₿ 1,500", nil) : nil, qrSide: 226,
                                    reveal: false)
                 .frame(width: 300)

@@ -21,7 +21,8 @@ struct StyledQRCodeTests {
                 .padding(24)
                 .background(NoahTokens.Colors.background)
                 .environment(\.colorScheme, scheme)
-            #expect(try Self.decode(card) == [address], "\(address) in \(scheme)")
+            // The card's QR is the address's LNURL-pay code (LUD-01), not the literal address.
+            #expect(try Self.decode(card) == [LightningIdentity.lnurlQR(address: address) ?? address], "\(address) in \(scheme)")
         }
     }
 

@@ -4993,42 +4993,6 @@
         }
       }
     },
-    "Bitcoin and Ark in one code. Add an amount for Lightning": {
-      "comment": "GT gt_1b7ede8a6599a2f7; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Bitcoin and Ark in one code. Add an amount for Lightning"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Bitcoin y Ark en un solo código. Añade un importe para Lightning"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "ビットコインとArkをひとつのコードに。Lightningには金額を追加"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "비트코인과 Ark를 하나의 코드로. 라이트닝은 금액을 추가하세요"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Bitcoin och Ark i en kod. Lägg till ett belopp för Lightning"
-          }
-        }
-      }
-    },
     "Bitcoin deposit address QR code": {
       "comment": "GT gt_1b56841e496f03f9; arguments: none",
       "extractionState": "manual",
@@ -5281,38 +5245,38 @@
         }
       }
     },
-    "Bitcoin, Ark and Lightning for {amount}": {
-      "comment": "GT gt_f3feeab7f812d05e; arguments: amount",
+    "Bitcoin, Ark and Lightning in one code": {
+      "comment": "GT gt_4c0c6d1a3e05ce59; arguments: none",
       "extractionState": "manual",
       "localizations": {
         "en": {
           "stringUnit": {
             "state": "translated",
-            "value": "Bitcoin, Ark and Lightning for %1$@"
+            "value": "Bitcoin, Ark and Lightning in one code"
           }
         },
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Bitcoin, Ark y Lightning por %1$@"
+            "value": "Bitcoin, Ark and Lightning in one code"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$@ のビットコイン、Ark、Lightning"
+            "value": "Bitcoin, Ark and Lightning in one code"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "%1$@ 비트코인·Ark·라이트닝"
+            "value": "Bitcoin, Ark and Lightning in one code"
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Bitcoin, Ark och Lightning för %1$@"
+            "value": "Bitcoin, Ark and Lightning in one code"
           }
         }
       }

@@ -14,9 +14,23 @@ data class SendDestination(val destinationType: String? = null, val amount: BigD
             val trimmed = value.trim()
             lud17(trimmed)?.let { return it }
             val payload = if (trimmed.startsWith("lightning:", true)) trimmed.drop(10) else trimmed
+            lud16Address(payload)?.let { return it }
             val address = payload.trimStart('₿')
             return if (address != payload && isLightningAddress(address)) address else payload
         }
+        /**
+         * An LNURL-pay link to LUD-16's `https://<domain>/.well-known/lnurlp/<username>` is that Lightning address, which is
+         * how Noah's own QR codes carry it. Read back as `username@domain`, Send shows, remembers and repeats the address; it
+         * resolves to the same URL. Only that exact text counts, as iOS reads it: anything else (a port other than 443, a
+         * query, other case, dot segments, `.onion`, a username outside LUD-16's characters) stays an LNURL.
+         */
+        private fun lud16Address(value: String): String? {
+            val url = PaymentEncoding.bech32(value)?.takeIf { it.prefix == "lnurl" && !it.isM }
+                ?.let { PaymentEncoding.bytes(it.words)?.toString(Charsets.UTF_8) } ?: return null
+            val match = lud16Url.matchEntire(url)?.takeIf { !isOnion(it.groupValues[1]) } ?: return null
+            return "${match.groupValues[2]}@${match.groupValues[1]}".takeIf(::isLightningAddress)
+        }
+        private val lud16Url = Regex("""https://([a-z0-9.-]+)(?::443)?/\.well-known/lnurlp/([a-z0-9_.+-]+)""")
         /** LUD-17 `lnurlp://` mapped to HTTPS as bark maps it, then carried as the `lnurl1…` it stands for, so its URL keeps
          *  its case through Send's lowercased keys. A `.onion` host would need cleartext, so it stays unmapped (refused). */
         private fun lud17(value: String): String? {

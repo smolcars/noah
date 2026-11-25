@@ -103,10 +103,9 @@ internal fun cardFace(ui: ReceiveUi, format: ReceiveFormat): CardFace {
     val payload = ReceiveFormats.payload(format, ui.request, ui.address)
     val amount = ui.amount
     return when (format) {
-        ReceiveFormat.lightningAddress -> CardFace(payload, ui.address ?: "", tr("Scan with any Lightning wallet"), null, ui.address.isNullOrEmpty())
-        ReceiveFormat.request -> CardFace(payload, tr("Payment request"),
-            if (amount != null) tr("Scan with any bitcoin or Lightning wallet") else tr("Scan with any bitcoin wallet"),
-            amount?.let { ui.sats(it) to ui.fiat(it) }, false)
+        ReceiveFormat.lightningAddress -> CardFace(payload, ui.address ?: "", tr("Scan with any Lightning wallet"), null, ui.address.isNullOrEmpty(),
+            ReceiveFormats.qr(format, ui.request, ui.address))
+        ReceiveFormat.request -> CardFace(payload, tr("Payment request"), tr("Scan with any bitcoin or Lightning wallet"), null, false)
         ReceiveFormat.invoice -> CardFace(payload, tr("Lightning invoice"), tr("Scan with any Lightning wallet"), amount?.let { ui.sats(it) to ui.fiat(it) },
             false)
         ReceiveFormat.ark -> CardFace(payload, tr("Ark address"), tr("Scan with an Ark wallet"), null, false)
@@ -123,9 +122,8 @@ private fun formatRows(ui: ReceiveUi): List<FormatRow> {
     return listOf(
         FormatRow(ReceiveFormat.lightningAddress, tr("Lightning address"), ui.address ?: tr("Lightning address unavailable"), tr("From any Lightning wallet"),
             !ui.address.isNullOrEmpty()),
-        FormatRow(ReceiveFormat.request, tr("Payment request"), preview(ReceiveFormat.request),
-            if (amount != null) tr("Bitcoin, Ark and Lightning for {amount}",
-                ui.sats(amount)) else tr("Bitcoin and Ark in one code. Add an amount for Lightning"), ui.request != null),
+        FormatRow(ReceiveFormat.request, tr("Payment request"), preview(ReceiveFormat.request), tr("Bitcoin, Ark and Lightning in one code"),
+            ui.request != null),
         FormatRow(ReceiveFormat.invoice, tr("Lightning invoice"), preview(ReceiveFormat.invoice).ifEmpty { tr("Add an amount first") },
             if (amount != null) tr("For {amount} only", ui.sats(amount)) else tr("Invoices need an amount"), amount != null),
         FormatRow(ReceiveFormat.ark, tr("Ark address"), preview(ReceiveFormat.ark), tr("Instant and free from Ark wallets"), ui.request != null),
