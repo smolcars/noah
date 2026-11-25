@@ -1,0 +1,198 @@
+{
+  "description": "Native-only SendFlow vectors for a BIP-321 request whose `lightning=` holds an LNURL-pay link or a Lightning address (the `lnurl` method key): it pays on the Lightning rail, after an invoice and before an offer, and the rail order stays Ark, Lightning, on-chain. Same operations and shape as send-flow. Hand-specified; shared by Android and iOS.",
+  "cases": [
+    {
+      "name": "method: an LNURL pays the Lightning rail",
+      "input": {
+        "operation": "method",
+        "args": [
+          "lightning",
+          {
+            "lnurl": "lnurl1dp68gurn8ghj7etcv9khqmr99e3k7mf09emk2mrv944kummhdchkcmn4wfk8qtmpd35kxeg9saevq"
+          }
+        ]
+      },
+      "expected": "lnurl"
+    },
+    {
+      "name": "method: a Lightning address pays the Lightning rail",
+      "input": {
+        "operation": "method",
+        "args": [
+          "lightning",
+          {
+            "lnurl": "alice@example.com"
+          }
+        ]
+      },
+      "expected": "lnurl"
+    },
+    {
+      "name": "method: an invoice wins over an LNURL",
+      "input": {
+        "operation": "method",
+        "args": [
+          "lightning",
+          {
+            "lightningInvoice": "lnbcrt1invoice",
+            "lnurl": "lnurl1dp68gurn8ghj7etcv9khqmr99e3k7mf09emk2mrv944kummhdchkcmn4wfk8qtmpd35kxeg9saevq"
+          }
+        ]
+      },
+      "expected": "lightning"
+    },
+    {
+      "name": "method: an LNURL wins over an offer",
+      "input": {
+        "operation": "method",
+        "args": [
+          "lightning",
+          {
+            "lnurl": "lnurl1dp68gurn8ghj7etcv9khqmr99e3k7mf09emk2mrv944kummhdchkcmn4wfk8qtmpd35kxeg9saevq",
+            "offer": "lno1offer"
+          }
+        ]
+      },
+      "expected": "lnurl"
+    },
+    {
+      "name": "method: an LNURL is not an Ark method",
+      "input": {
+        "operation": "method",
+        "args": [
+          "ark",
+          {
+            "lnurl": "lnurl1dp68gurn8ghj7etcv9khqmr99e3k7mf09emk2mrv944kummhdchkcmn4wfk8qtmpd35kxeg9saevq"
+          }
+        ]
+      },
+      "expected": null
+    },
+    {
+      "name": "method: an LNURL is not an on-chain method",
+      "input": {
+        "operation": "method",
+        "args": [
+          "onchain",
+          {
+            "lnurl": "lnurl1dp68gurn8ghj7etcv9khqmr99e3k7mf09emk2mrv944kummhdchkcmn4wfk8qtmpd35kxeg9saevq"
+          }
+        ]
+      },
+      "expected": null
+    },
+    {
+      "name": "rails: LNURL beside Ark and on-chain keeps Ark, Lightning, on-chain",
+      "input": {
+        "operation": "rails",
+        "args": [
+          "bip321",
+          {
+            "onchainAddress": "bcrt1qdestination",
+            "lnurl": "lnurl1dp68gurn8ghj7etcv9khqmr99e3k7mf09emk2mrv944kummhdchkcmn4wfk8qtmpd35kxeg9saevq",
+            "arkAddress": "tark1destination"
+          }
+        ]
+      },
+      "expected": [
+        "ark",
+        "lightning",
+        "onchain"
+      ]
+    },
+    {
+      "name": "rails: an LNURL alone is Lightning",
+      "input": {
+        "operation": "rails",
+        "args": [
+          "bip321",
+          {
+            "lnurl": "lnurl1dp68gurn8ghj7etcv9khqmr99e3k7mf09emk2mrv944kummhdchkcmn4wfk8qtmpd35kxeg9saevq"
+          }
+        ]
+      },
+      "expected": [
+        "lightning"
+      ]
+    },
+    {
+      "name": "rails: an LNURL outside a payment request adds nothing",
+      "input": {
+        "operation": "rails",
+        "args": [
+          null,
+          {
+            "lnurl": "lnurl1dp68gurn8ghj7etcv9khqmr99e3k7mf09emk2mrv944kummhdchkcmn4wfk8qtmpd35kxeg9saevq"
+          }
+        ]
+      },
+      "expected": []
+    },
+    {
+      "name": "recommend: Ark first when it can pay",
+      "input": {
+        "operation": "recommend",
+        "args": [
+          [
+            "ark",
+            "lightning",
+            "onchain"
+          ],
+          {
+            "ark": true,
+            "lightning": true,
+            "onchain": true
+          }
+        ]
+      },
+      "expected": "ark"
+    },
+    {
+      "name": "recommend: Lightning when Ark can't pay",
+      "input": {
+        "operation": "recommend",
+        "args": [
+          [
+            "ark",
+            "lightning",
+            "onchain"
+          ],
+          {
+            "ark": false,
+            "lightning": true,
+            "onchain": true
+          }
+        ]
+      },
+      "expected": "lightning"
+    },
+    {
+      "name": "max: an LNURL request has no on-chain max",
+      "input": {
+        "operation": "max",
+        "args": [
+          "bip321",
+          {
+            "lnurl": "lnurl1dp68gurn8ghj7etcv9khqmr99e3k7mf09emk2mrv944kummhdchkcmn4wfk8qtmpd35kxeg9saevq"
+          }
+        ]
+      },
+      "expected": false
+    },
+    {
+      "name": "max: an LNURL request with an on-chain address allows max",
+      "input": {
+        "operation": "max",
+        "args": [
+          "bip321",
+          {
+            "onchainAddress": "bcrt1qdestination",
+            "lnurl": "lnurl1dp68gurn8ghj7etcv9khqmr99e3k7mf09emk2mrv944kummhdchkcmn4wfk8qtmpd35kxeg9saevq",
+            "arkAddress": "tark1destination"
+          }
+        ]
+      },
+      "expected": true
+    }
+  ]
+}

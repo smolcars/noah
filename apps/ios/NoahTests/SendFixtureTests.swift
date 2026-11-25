@@ -45,8 +45,9 @@ struct SendFixtureTests {
         func decode<T: Decodable>(_ type: T.Type) throws -> T { try JSONDecoder().decode(type, from: JSONEncoder().encode(self)) }
     }
     struct FlowInput: Decodable { let operation: String; let args: [JSON] }
-    @Test func flowMatchesRN() throws {
-        for fixture in try Fixtures.load("send-flow", input: FlowInput.self, expected: JSON.self) {
+    /// RN's vectors, and the native-only ones for a payment request's LNURL method (same operations).
+    @Test(arguments: ["send-flow", "send-flow-native"]) func flowMatchesRN(domain: String) throws {
+        for fixture in try Fixtures.load(domain, input: FlowInput.self, expected: JSON.self) {
             let args = fixture.input.args
             switch fixture.input.operation {
             case "stage": #expect(try args[0].decode(SendProgress.self).next.rawValue == fixture.expected.decode(String.self), "\(fixture.name)")

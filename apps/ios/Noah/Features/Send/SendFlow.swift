@@ -42,7 +42,9 @@ enum SendFlow {
     static func method(rail: SendRail, request: [String: String]) -> String? {
         switch rail {
         case .ark: return request["arkAddress"] != nil ? "ark" : nil
-        case .lightning: return request["lightningInvoice"] != nil ? "lightning" : request["offer"] != nil ? "offer" : nil
+        // An LNURL or Lightning address in `lightning=` stands where an invoice would; an invoice, being exact, still wins.
+        case .lightning:
+            return request["lightningInvoice"] != nil ? "lightning" : request["lnurl"] != nil ? "lnurl" : request["offer"] != nil ? "offer" : nil
         case .onchain: return request["onchainAddress"] != nil ? "onchain" : nil
         }
     }

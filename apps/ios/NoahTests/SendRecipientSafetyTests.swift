@@ -162,6 +162,74 @@ import Testing
         #expect(model.matchingRoute?.commentAllowed == 10)
     }
 
+    /// A payment request's LNURL method: resolved and reviewed as a typed Lightning address would be, for the request's amount.
+    @Test func paymentRequestLightningAddressPaysThroughLnurl() async {
+        var resolved: [String] = []
+        var reviewed: SendPayment?
+        let model = SendModel(
+            controller: freshController(),
+            resolveRecipient: { recipient in
+                resolved.append(recipient)
+                return .init(destination: recipient, minMsat: 1000, maxMsat: 1_000_000_000, commentAllowed: 0)
+            },
+            quotePayment: { payment in
+                reviewed = payment
+                return .init(amount: payment.amount, fee: 0, total: payment.amount)
+            })
+        model.arkBalance = 10000
+        // An empty path and no network-bound method: every test variant parses it alike.
+        await model.importRecipient("bitcoin:?lightning=ALICE%40EXAMPLE.COM&amount=0.00001")
+        #expect(model.parsed.bip321 == ["lnurl": "ALICE@EXAMPLE.COM"])
+        #expect(resolved == ["alice@example.com"])
+        #expect(reviewed?.method == "lnurl" && reviewed?.destination == "alice@example.com" && reviewed?.amount == 1000)
+        #expect(model.showReview)
+    }
+
+    @Test func paymentRequestPrefersArkAndResolvesItsLnurlOnlyOnceChosen() async {
+        let lnurl = "LNURL1DP68GURN8GHJ7ETCV9KHQMR99E3K7MF09EMK2MRV944KUMMHDCHKCMN4WFK8QTMPD35KXEG9SAEVQ"
+        let ark = "tark1pwh9vsmezqqpjy9akejayl2vvcse6he97rn40g84xrlvrlnhayuuyefrp9nse2yspqqkm2rpd"
+        var resolved: [String] = []
+        var reviewed: SendPayment?
+        let model = SendModel(
+            controller: freshController(),
+            resolveRecipient: { recipient in
+                resolved.append(recipient)
+                return .init(destination: recipient, minMsat: 1000, maxMsat: 1_000_000_000, commentAllowed: 0)
+            },
+            quotePayment: { payment in
+                reviewed = payment
+                return .init(amount: payment.amount, fee: 0, total: payment.amount)
+            })
+        model.destination = "bitcoin:?lightning=\(lnurl)&ark=\(ark)"
+        model.parsed = SendDestination.parse(model.destination, network: "regtest")
+        model.amount = "1000"
+        model.arkBalance = 10000
+        model.progress.amountConfirmed = true
+        model.progress.recipientConfirmed = true
+        await model.advance()
+        // Ark stays first, and the LNURL isn't looked up while another method is chosen.
+        #expect(model.stage == .method && model.progress.rails == [.ark, .lightning] && model.progress.selectedRail == .ark)
+        #expect(resolved.isEmpty && reviewed == nil)
+        model.progress.selectedRail = .lightning
+        await model.continueStage()
+        #expect(resolved == [lnurl.lowercased()])
+        #expect(reviewed?.method == "lnurl" && reviewed?.destination == lnurl.lowercased() && model.showReview)
+    }
+
+    @Test func paymentRequestAmountOutsideItsLnurlBoundsIsRefused() async {
+        var reviewed: SendPayment?
+        let model = SendModel(
+            controller: freshController(),
+            resolveRecipient: { .init(destination: $0, minMsat: 2_000_000, maxMsat: 1_000_000_000, commentAllowed: 0) },
+            quotePayment: { payment in
+                reviewed = payment
+                return .init(amount: payment.amount, fee: 0, total: payment.amount)
+            })
+        model.arkBalance = 10000
+        await model.importRecipient("bitcoin:?lightning=alice%40example.com&amount=0.00001")
+        #expect(reviewed == nil && !model.showReview && model.error != nil && model.stage == .recipient)
+    }
+
     @Test func onchainMaxRequiresConfirmedCoins() async {
         let model = SendModel(controller: freshController())
         model.onchainBalance = 0

@@ -125,6 +125,39 @@ class SendRecipientTest {
         m.continueStage()
         assertEquals("Carlos", reviewed?.comment); assertTrue(m.showReview)
     }
+    private fun payRoute(destination: String, minMsat: Long) =
+        SendRecipientRoute(destination, minMsat, 1_000_000_000, 0, null, "https://example.com/callback".toHttpUrl(), null)
+    /** A payment request's LNURL method: resolved and reviewed as a typed Lightning address would be, for the request's amount. */
+    @Test fun paymentRequestLightningAddressPaysThroughLnurl() = runBlocking {
+        val resolved = mutableListOf<String>(); var reviewed: SendPayment? = null
+        val m = model(this, resolve = { resolved += it; payRoute(it, 1000) }, quote = { reviewed = it; FakeSendWallet.quote })
+        m.arkBalance = 10000
+        m.importRecipient("bitcoin:?lightning=ALICE%40EXAMPLE.COM&amount=0.00001")
+        assertEquals(mapOf("lnurl" to "ALICE@EXAMPLE.COM"), m.parsed.bip321)
+        assertEquals(listOf("alice@example.com"), resolved)
+        assertEquals(SendPayment("alice@example.com", "lnurl", 1000), reviewed); assertTrue(m.showReview)
+    }
+    @Test fun paymentRequestPrefersArkAndResolvesItsLnurlOnlyOnceChosen() = runBlocking {
+        val lnurl = "LNURL1DP68GURN8GHJ7ETCV9KHQMR99E3K7MF09EMK2MRV944KUMMHDCHKCMN4WFK8QTMPD35KXEG9SAEVQ"
+        val ark = "tark1pwh9vsmezqqpjy9akejayl2vvcse6he97rn40g84xrlvrlnhayuuyefrp9nse2yspqqkm2rpd"
+        val resolved = mutableListOf<String>(); var reviewed: SendPayment? = null
+        val m = model(this, resolve = { resolved += it; payRoute(it, 1000) }, quote = { reviewed = it; FakeSendWallet.quote })
+        m.setRecipient("bitcoin:?lightning=$lnurl&ark=$ark"); m.amount = "1000"; m.arkBalance = 10000; m.stage = SendStage.recipient
+        m.acceptRecipient()
+        // Ark stays first, and the LNURL isn't looked up while another method is chosen.
+        assertEquals(SendStage.method, m.stage); assertEquals(listOf(SendRail.ark, SendRail.lightning), m.progress.rails)
+        assertEquals(SendRail.ark, m.progress.selectedRail); assertTrue(resolved.isEmpty()); assertNull(reviewed)
+        m.progress = m.progress.copy(selectedRail = SendRail.lightning); m.continueStage()
+        assertEquals(listOf(lnurl.lowercase()), resolved)
+        assertEquals(SendPayment(lnurl.lowercase(), "lnurl", 1000), reviewed); assertTrue(m.showReview)
+    }
+    @Test fun paymentRequestAmountOutsideItsLnurlBoundsIsRefused() = runBlocking {
+        var reviewed: SendPayment? = null
+        val m = model(this, resolve = { payRoute(it, 2_000_000) }, quote = { reviewed = it; FakeSendWallet.quote })
+        m.arkBalance = 10000
+        m.importRecipient("bitcoin:?lightning=alice%40example.com&amount=0.00001")
+        assertNull(reviewed); assertFalse(m.showReview); assertNotNull(m.error); assertEquals(SendStage.recipient, m.stage)
+    }
     @Test fun lnurlValidatesExactAmountNetworkAndExpiry() {
         val value = invoice()
         assertTrue(runCatching { SendRecipientService.validateInvoice(value, 1000, "regtest") }.isFailure)

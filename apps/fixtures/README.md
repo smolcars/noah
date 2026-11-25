@@ -25,7 +25,7 @@ two board receipt totals (reviewed fee fallback and actual fee). Both platforms 
 that table; lookup failures are transient display state and never durable evidence.
 These two fixtures are hand-specified from the RN Home rules and the cutover decisions.
 
-Send inputs bark accepts and RN refused: `send-destination-native.json` (282 cases) is
+Send inputs bark accepts and RN refused: `send-destination-native.json` (298 cases) is
 native-only and hand-specified from bark 0.8 (`959a489f`) and the decision recorded in
 `docs/native-rewrite/ffi-phase-b.md` (rows 5, 16, 18 and 19). It covers Lightning
 addresses by bark's rule (long TLDs, `+` tags, internationalised domains, a leading `₿`
@@ -38,7 +38,13 @@ which would need cleartext. Its shape is `send-utils`, plus `url` for `lnurl` re
 refused LNURL forms: the HTTPS endpoint resolution requests first, or null when
 resolution refuses before any request. `error` is the English message. The RN-generated
 `send-utils.json` and `send-amount-safety.json` have no vectors for these inputs and pass
-unchanged, so no RN vector is overridden.
+unchanged, so no RN vector is overridden. Its last 16 cases cover BIP-321 `lightning=`
+holding an LNURL-pay `lnurl1…` or a Lightning address (any case, percent-decoded, also
+with an empty address), which Noah's Receive emits: kept under the `lnurl` method key,
+LNURL-auth dropped with its error, anything else in `lightning=` as before. The
+hand-specified `send-flow-native.json` runs beside the RN-generated `send-flow.json`
+(same operations): that method pays on the Lightning rail, after an invoice and before
+an offer, and the rail order stays Ark, Lightning, on-chain.
 
 M6 boarding/exits: the fixtures are frozen from the React Native app and edited by hand; keep both platforms' tests passing. Their generator imported
 RN's `exitFeeEstimate`, `exitTimeline`, `useExitOverview`, and `buildAutoBoardPlan`;

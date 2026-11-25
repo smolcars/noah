@@ -31,7 +31,7 @@ extension WalletSession {
                let estimate = try? await handles.wallet.estimateArkoorPaymentFee(amountSats: amount) {
                 fees[.ark] = estimate.feeSats
             }
-            if request["lightningInvoice"] != nil || request["offer"] != nil,
+            if request["lightningInvoice"] != nil || request["lnurl"] != nil || request["offer"] != nil,
                let estimate = try? await handles.wallet.estimateLightningSendFee(amountSats: amount) {
                 fees[.lightning] = estimate.feeSats
             }

@@ -136,7 +136,12 @@ struct SendDestination: Equatable, Sendable {
             || (type == "onchain" && actual == "testnet" && expected == "signet")
     }
     /// The BIP-321 request key holding each method's destination.
-    static let requestKeys = ["ark": "arkAddress", "lightning": "lightningInvoice", "offer": "offer", "onchain": "onchainAddress"]
+    static let requestKeys = ["ark": "arkAddress", "lightning": "lightningInvoice", "lnurl": "lnurl", "offer": "offer", "onchain": "onchainAddress"]
+    /// What BIP-321's `lightning=` may hold besides an invoice, as wallets that publish LNURL-pay put it there: an `lnurl1…`
+    /// link or a Lightning address, not a `lightning:` or `lnurlp://` link. Parsing still decides.
+    static func isLnurlMethod(_ value: String) -> Bool {
+        isLightningAddress(value) || PaymentEncoding.bech32(value).map { $0.prefix == "lnurl" && !$0.isM } == true
+    }
     static func parse(_ value: String, network: String = AppVariant.current.rawValue) -> Self {
         if value.lowercased().hasPrefix("bitcoin:") { return uri(value, network: network) }
         let value = cleaned(value)
@@ -230,6 +235,9 @@ struct SendDestination: Equatable, Sendable {
                 if let key = SendDestination.requestKeys[type] { methods[key] = raw }
             } else if case .networkMismatch(let expected, let actual) = parsed.error {
                 errors.append(.networkMismatch(expected: expected, actual: actual)); invalid = true
+            } else if parsed.error == .lnurlAuth {
+                // A login link is never a payment method; like an invalid offer, the request's other methods still pay.
+                errors.append(.lnurlAuth)
             } else if type == "offer" {
                 errors.append(.invalidOffer)
             }
@@ -248,7 +256,7 @@ struct SendDestination: Equatable, Sendable {
                     amount = sats
                 } else { errors.append(.invalidAmount); invalid = true }
             case "ark": add(decoded, type: "ark")
-            case "lightning": add(decoded, type: "lightning")
+            case "lightning": add(decoded, type: SendDestination.isLnurlMethod(decoded) ? "lnurl" : "lightning")
             case "lno": add(decoded, type: "offer")
             case "bc", "tb", "tbs", "bcrt":
                 let expected = switch lower { case "bc": "mainnet"; case "tb": "testnet"; case "tbs": "signet"; default: "regtest" }

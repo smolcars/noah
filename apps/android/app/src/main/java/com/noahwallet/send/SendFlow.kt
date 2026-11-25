@@ -33,7 +33,8 @@ object SendFlow {
     }
     fun method(rail: SendRail, request: Map<String, String>) = when (rail) {
         SendRail.ark -> "ark".takeIf { "arkAddress" in request }
-        SendRail.lightning -> if ("lightningInvoice" in request) "lightning" else "offer".takeIf { "offer" in request }
+        // An LNURL or Lightning address in `lightning=` stands where an invoice would; an invoice, being exact, still wins.
+        SendRail.lightning -> if ("lightningInvoice" in request) "lightning" else if ("lnurl" in request) "lnurl" else "offer".takeIf { "offer" in request }
         SendRail.onchain -> "onchain".takeIf { "onchainAddress" in request }
     }
     fun label(type: String?) = mapOf("ark" to "Ark address", "lightning" to "Lightning invoice", "offer" to "Lightning offer", "lnurl" to "Lightning address",

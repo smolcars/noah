@@ -73,6 +73,9 @@ data class SendDestination(val destinationType: String? = null, val amount: BigD
         }
         private fun validLabel(label: String) = label.isNotEmpty() && alphanumeric(label.codePointAt(0)) &&
             alphanumeric(label.codePointBefore(label.length)) && utf8Size(label) <= 63 && atom(label)
+        /** What BIP-321's `lightning=` may hold besides an invoice, as wallets that publish LNURL-pay put it there: an `lnurl1…`
+         *  link or a Lightning address, not a `lightning:` or `lnurlp://` link. Parsing still decides. */
+        fun isLnurlMethod(value: String) = isLightningAddress(value) || PaymentEncoding.bech32(value)?.let { it.prefix == "lnurl" && !it.isM } == true
         fun offer(value: String): Boolean {
             val chunks = value.split('+'); val normalized = chunks.mapIndexed { index, s -> if (index == 0) s else s.trimStart() }.joinToString("")
             return chunks.all { it.isNotBlank() } && (normalized == normalized.lowercase() || normalized == normalized.uppercase()) &&
@@ -167,9 +170,11 @@ private class UriRequest(private val network: String) {
     }
     private fun add(raw: String, type: String) {
         val parsed = SendDestination.parse(raw, network)
-        if (parsed.destinationType == type) methods[mapOf("ark" to "arkAddress", "lightning" to "lightningInvoice", "offer" to "offer",
+        if (parsed.destinationType == type) methods[mapOf("ark" to "arkAddress", "lightning" to "lightningInvoice", "lnurl" to "lnurl", "offer" to "offer",
             "onchain" to "onchainAddress").getValue(type)] = raw
         else if (parsed.error is SendDestinationError.NetworkMismatch) fail(parsed.error)
+        // A login link is never a payment method; like an invalid offer, the request's other methods still pay.
+        else if (parsed.error == SendDestinationError.LnurlAuth) errors.add(SendDestinationError.LnurlAuth)
         else if (type == "offer") errors.add(SendDestinationError.InvalidOffer)
     }
     fun parameter(key: String, decoded: String) {
@@ -179,13 +184,15 @@ private class UriRequest(private val network: String) {
         when (lower) {
             "amount" -> amountParameter(decoded)
             "ark" -> add(decoded, "ark")
-            "lightning" -> add(decoded, "lightning")
+            "lightning" -> lightningParameter(decoded)
             "lno" -> add(decoded, "offer")
             "bc", "tb", "tbs", "bcrt" -> addressParameter(lower, decoded)
             "label", "message", "pop" -> Unit
             else -> if (lower.startsWith("req-")) fail(SendDestinationError.UnknownRequiredParameter(key))
         }
     }
+    /** `lightning=`: an invoice, or an LNURL-pay link or Lightning address kept as the `lnurl` method. */
+    private fun lightningParameter(decoded: String) = add(decoded, if (SendDestination.isLnurlMethod(decoded)) "lnurl" else "lightning")
     private fun amountParameter(decoded: String) {
         val sats = SendDestination.uriAmount(decoded)
         if (sats != null) amount = sats

@@ -1,5 +1,5 @@
 {
-  "description": "Native-only SendDestination vectors for inputs bark 0.8 (959a489f) accepts and RN refused: ffi-phase-b.md rows 5, 16, 18 and 19, with rows 3, 9 and 17 kept. Same shape as send-utils, plus `url` for lnurl: the HTTPS endpoint resolution requests first (null: resolution refuses before any request). `error` is the English message. Hand-specified; shared by Android and iOS.",
+  "description": "Native-only SendDestination vectors for inputs bark 0.8 (959a489f) accepts and RN refused: ffi-phase-b.md rows 5, 16, 18 and 19, with rows 3, 9 and 17 kept; and BIP-321 `lightning=` carrying an LNURL-pay link or a Lightning address (the `lnurl` method key), which Noah's Receive emits. Same shape as send-utils, plus `url` for lnurl: the HTTPS endpoint resolution requests first (null: resolution refuses before any request). `error` is the English message. Hand-specified; shared by Android and iOS.",
   "cases": [
     {
       "name": "row 16 address: long TLD (mainnet)",
@@ -3601,6 +3601,241 @@
         "destinationType": null,
         "isAmountEditable": true,
         "error": "Network mismatch: expected signet, got mainnet"
+      }
+    },
+    {
+      "name": "BIP-321 lightning= LNURL beside on-chain and Ark (regtest)",
+      "input": {
+        "destination": "bitcoin:bcrt1q5mq29kaq9kq660m3eepqy8pkv7jhefd69klc22?lightning=lnurl1dp68gurn8ghj7etcv9khqmr99e3k7mf09emk2mrv944kummhdchkcmn4wfk8qtmpd35kxeg9saevq&ark=tark1pwh9vsmezqqpjy9akejayl2vvcse6he97rn40g84xrlvrlnhayuuyefrp9nse2yspqqkm2rpd",
+        "network": "regtest"
+      },
+      "expected": {
+        "valid": true,
+        "destinationType": "bip321",
+        "isAmountEditable": true,
+        "bip321": {
+          "onchainAddress": "bcrt1q5mq29kaq9kq660m3eepqy8pkv7jhefd69klc22",
+          "lnurl": "lnurl1dp68gurn8ghj7etcv9khqmr99e3k7mf09emk2mrv944kummhdchkcmn4wfk8qtmpd35kxeg9saevq",
+          "arkAddress": "tark1pwh9vsmezqqpjy9akejayl2vvcse6he97rn40g84xrlvrlnhayuuyefrp9nse2yspqqkm2rpd"
+        }
+      }
+    },
+    {
+      "name": "BIP-321 lightning= LNURL with an amount (mainnet)",
+      "input": {
+        "destination": "bitcoin:1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa?amount=0.0001&lightning=lnurl1dp68gurn8ghj7etcv9khqmr99e3k7mf09emk2mrv944kummhdchkcmn4wfk8qtmpd35kxeg9saevq&ark=ark1pwh9vsmezqqpjy9akejayl2vvcse6he97rn40g84xrlvrlnhayuuyefrp9nse2yspqqjl5wpy",
+        "network": "mainnet"
+      },
+      "expected": {
+        "valid": true,
+        "destinationType": "bip321",
+        "isAmountEditable": false,
+        "bip321": {
+          "onchainAddress": "1A1zP1eP5QGefi2DMPTfTL5SLmv7DivfNa",
+          "lnurl": "lnurl1dp68gurn8ghj7etcv9khqmr99e3k7mf09emk2mrv944kummhdchkcmn4wfk8qtmpd35kxeg9saevq",
+          "arkAddress": "ark1pwh9vsmezqqpjy9akejayl2vvcse6he97rn40g84xrlvrlnhayuuyefrp9nse2yspqqjl5wpy"
+        },
+        "amount": 10000
+      }
+    },
+    {
+      "name": "BIP-321 lightning= LNURL in upper case (regtest)",
+      "input": {
+        "destination": "bitcoin:bcrt1q5mq29kaq9kq660m3eepqy8pkv7jhefd69klc22?lightning=LNURL1DP68GURN8GHJ7ETCV9KHQMR99E3K7MF09EMK2MRV944KUMMHDCHKCMN4WFK8QTMPD35KXEG9SAEVQ",
+        "network": "regtest"
+      },
+      "expected": {
+        "valid": true,
+        "destinationType": "bip321",
+        "isAmountEditable": true,
+        "bip321": {
+          "onchainAddress": "bcrt1q5mq29kaq9kq660m3eepqy8pkv7jhefd69klc22",
+          "lnurl": "LNURL1DP68GURN8GHJ7ETCV9KHQMR99E3K7MF09EMK2MRV944KUMMHDCHKCMN4WFK8QTMPD35KXEG9SAEVQ"
+        }
+      }
+    },
+    {
+      "name": "BIP-321 lightning= percent-encoded Lightning address (regtest)",
+      "input": {
+        "destination": "bitcoin:bcrt1q5mq29kaq9kq660m3eepqy8pkv7jhefd69klc22?lightning=alice%40example.com&ark=tark1pwh9vsmezqqpjy9akejayl2vvcse6he97rn40g84xrlvrlnhayuuyefrp9nse2yspqqkm2rpd",
+        "network": "regtest"
+      },
+      "expected": {
+        "valid": true,
+        "destinationType": "bip321",
+        "isAmountEditable": true,
+        "bip321": {
+          "onchainAddress": "bcrt1q5mq29kaq9kq660m3eepqy8pkv7jhefd69klc22",
+          "lnurl": "alice@example.com",
+          "arkAddress": "tark1pwh9vsmezqqpjy9akejayl2vvcse6he97rn40g84xrlvrlnhayuuyefrp9nse2yspqqkm2rpd"
+        }
+      }
+    },
+    {
+      "name": "BIP-321 lightning= Lightning address in upper case (signet)",
+      "input": {
+        "destination": "bitcoin:?LIGHTNING=ALICE%40EXAMPLE.COM",
+        "network": "signet"
+      },
+      "expected": {
+        "valid": true,
+        "destinationType": "bip321",
+        "isAmountEditable": true,
+        "bip321": {
+          "lnurl": "ALICE@EXAMPLE.COM"
+        }
+      }
+    },
+    {
+      "name": "BIP-321 empty path with an LNURL (regtest)",
+      "input": {
+        "destination": "bitcoin:?lightning=LNURL1DP68GURN8GHJ7ETCV9KHQMR99E3K7MF09EMK2MRV944KUMMHDCHKCMN4WFK8QTMPD35KXEG9SAEVQ",
+        "network": "regtest"
+      },
+      "expected": {
+        "valid": true,
+        "destinationType": "bip321",
+        "isAmountEditable": true,
+        "bip321": {
+          "lnurl": "LNURL1DP68GURN8GHJ7ETCV9KHQMR99E3K7MF09EMK2MRV944KUMMHDCHKCMN4WFK8QTMPD35KXEG9SAEVQ"
+        }
+      }
+    },
+    {
+      "name": "BIP-321 empty path with a Lightning address and an amount (mainnet)",
+      "input": {
+        "destination": "bitcoin:?lightning=alice%40example.com&amount=0.00001",
+        "network": "mainnet"
+      },
+      "expected": {
+        "valid": true,
+        "destinationType": "bip321",
+        "isAmountEditable": false,
+        "bip321": {
+          "lnurl": "alice@example.com"
+        },
+        "amount": 1000
+      }
+    },
+    {
+      "name": "BIP-321 lightning= LNURL-auth alone is refused (regtest)",
+      "input": {
+        "destination": "bitcoin:?lightning=lnurl1dp68gurn8ghj7etcv9khqmr99e3k7mf0d3hkw6tw8a6xzeead3hkw6twye4nz0fsxqnxzcm5d9hku0tvdankjmsv8ve5h",
+        "network": "regtest"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true,
+        "error": "This is a login link, not a payment request"
+      }
+    },
+    {
+      "name": "BIP-321 lightning= LNURL-auth in upper case alone is refused (mainnet)",
+      "input": {
+        "destination": "bitcoin:?lightning=LNURL1DP68GURN8GHJ7ETCV9KHQMR99E3K7MF0D3HKW6TW8A6XZEEAD3HKW6TWYE4NZ0FSXQNXZCM5D9HKU0TVDANKJMSV8VE5H",
+        "network": "mainnet"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true,
+        "error": "This is a login link, not a payment request"
+      }
+    },
+    {
+      "name": "BIP-321 lightning= LNURL-auth is dropped beside on-chain (regtest)",
+      "input": {
+        "destination": "bitcoin:bcrt1q5mq29kaq9kq660m3eepqy8pkv7jhefd69klc22?lightning=lnurl1dp68gurn8ghj7etcv9khqmr99e3k7mf0d3hkw6tw8a6xzeead3hkw6twye4nz0fsxqnxzcm5d9hku0tvdankjmsv8ve5h",
+        "network": "regtest"
+      },
+      "expected": {
+        "valid": true,
+        "destinationType": "bip321",
+        "isAmountEditable": true,
+        "bip321": {
+          "onchainAddress": "bcrt1q5mq29kaq9kq660m3eepqy8pkv7jhefd69klc22"
+        }
+      }
+    },
+    {
+      "name": "BIP-321 lightning= HTTP LNURL stays refused (regtest)",
+      "input": {
+        "destination": "bitcoin:?lightning=lnurl1dp68gup69uhk27rpd4cxcefwvdhk6tewwajkcmpdddhx7amw9akxuatjd3cz7ctvd93k2l0ryum",
+        "network": "regtest"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true,
+        "error": "No valid payment methods found"
+      }
+    },
+    {
+      "name": "BIP-321 lightning= .onion Lightning address stays refused (regtest)",
+      "input": {
+        "destination": "bitcoin:?lightning=alice%40example.onion",
+        "network": "regtest"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true,
+        "error": "No valid payment methods found"
+      }
+    },
+    {
+      "name": "BIP-321 lightning= lnurlp link stays refused (regtest)",
+      "input": {
+        "destination": "bitcoin:?lightning=lnurlp%3A%2F%2Fexample.com%2Fpay",
+        "network": "regtest"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true,
+        "error": "No valid payment methods found"
+      }
+    },
+    {
+      "name": "BIP-321 lightning= garbage alone stays refused (regtest)",
+      "input": {
+        "destination": "bitcoin:?lightning=garbage",
+        "network": "regtest"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true,
+        "error": "No valid payment methods found"
+      }
+    },
+    {
+      "name": "BIP-321 lightning= garbage beside on-chain is ignored (regtest)",
+      "input": {
+        "destination": "bitcoin:bcrt1q5mq29kaq9kq660m3eepqy8pkv7jhefd69klc22?lightning=garbage",
+        "network": "regtest"
+      },
+      "expected": {
+        "valid": true,
+        "destinationType": "bip321",
+        "isAmountEditable": true,
+        "bip321": {
+          "onchainAddress": "bcrt1q5mq29kaq9kq660m3eepqy8pkv7jhefd69klc22"
+        }
+      }
+    },
+    {
+      "name": "BIP-321 req-lightning with an LNURL stays refused (regtest)",
+      "input": {
+        "destination": "bitcoin:?req-lightning=lnurl1dp68gurn8ghj7etcv9khqmr99e3k7mf09emk2mrv944kummhdchkcmn4wfk8qtmpd35kxeg9saevq",
+        "network": "regtest"
+      },
+      "expected": {
+        "valid": false,
+        "destinationType": null,
+        "isAmountEditable": true,
+        "error": "Unknown required parameter: req-lightning"
       }
     }
   ]

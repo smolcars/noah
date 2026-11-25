@@ -340,10 +340,10 @@ import Observation
                 guard let selected = SendFlow.method(rail: rail, request: request) else { throw SendFailure.invalid }
                 method = selected
                 guard let key = SendDestination.requestKeys[selected], let value = request[key] else { throw SendFailure.invalid }
-                target = value
+                target = selected == "lnurl" ? SendDestination.cleaned(value).lowercased() : value
             }
             if method == "lnurl" {
-                guard let route = matchingRoute else { throw SendFailure.invalid }
+                let route = try await lnurlRoute(target, generation: generation)
                 let (msat, overflow) = sats.multipliedReportingOverflow(by: 1000)
                 guard !overflow, msat >= route.minMsat, msat <= route.maxMsat,
                       comment.utf16.count <= route.commentAllowed
@@ -382,6 +382,16 @@ import Observation
                     ?? "Unable to prepare this payment. Check the destination and available funds."
             stage = .recipient
         }
+    }
+    /// The LNURL route `target` pays through: the one To resolved for a Lightning address, or, for a payment request's
+    /// LNURL method, resolved here once that method is chosen, so Ark and on-chain never wait on it.
+    private func lnurlRoute(_ target: String, generation: Int) async throws -> SendRecipientRoute {
+        if let route, route.destination == target { return route }
+        guard parsed.bip321 != nil else { throw SendFailure.invalid }
+        let resolved = try await resolveRecipient(target)
+        guard generation == reviewGeneration else { throw SendFailure.invalid }
+        route = resolved
+        return resolved
     }
     func discardReview() {
         reviewGeneration += 1

@@ -16,7 +16,8 @@ class SendFixtureTest(private val domain: String, private val case: FixtureCase)
         val input = case.input.jsonObject
         when (domain) {
             "send-utils" -> sendUtils(input)
-            "send-flow" -> assertEquals(case.name, case.expected, sendFlow(input.getValue("args").jsonArray, input.getValue("operation").jsonPrimitive.content))
+            "send-flow", "send-flow-native" ->
+                assertEquals(case.name, case.expected, sendFlow(input.getValue("args").jsonArray, input.getValue("operation").jsonPrimitive.content))
             "onchain-send" -> assertEquals(case.name, case.expected.jsonPrimitive.long,
                 SendFlow.maxBalance(input["source"]?.jsonPrimitive?.contentOrNull?.let(SendSource::valueOf), input.getValue("onchain").jsonPrimitive.long,
                     input.getValue("offchain").jsonPrimitive.long))
@@ -64,6 +65,7 @@ class SendFixtureTest(private val domain: String, private val case: FixtureCase)
         @JvmStatic
         @Parameterized.Parameters(name = "{0} {index}")
         fun cases() =
-            listOf("send-utils", "send-flow", "onchain-send", "lightning-invoice").flatMap { domain -> SharedFixtures.load(domain).map { arrayOf(domain, it) } }
+            listOf("send-utils", "send-flow", "send-flow-native", "onchain-send", "lightning-invoice")
+                .flatMap { domain -> SharedFixtures.load(domain).map { arrayOf(domain, it) } }
     }
 }

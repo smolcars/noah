@@ -188,7 +188,7 @@ class SendModel(val controller: SendController, private val network: String,
         discardReview(); payment = null; busy = true; val generation = reviewGeneration
         try {
             val rail = progress.selectedRail ?: throw SendFailure(SendFailure.Reason.invalid)
-            val payment = reviewedPayment(rail)
+            val payment = reviewedPayment(rail, generation)
             val reviewed = quotePayment(payment)
             if (generation != reviewGeneration || !currentCoroutineContext().isActive) { withContext(NonCancellable) { discardQuote(reviewed) }; return }
             quote = reviewed; this.payment = payment; showReview = true
@@ -204,10 +204,10 @@ class SendModel(val controller: SendController, private val network: String,
         }
     }
     /** The payment the chosen rail sends: a payment request's rail-specific target, or a Lightning address's Ark one. */
-    private fun reviewedPayment(rail: SendRail): SendPayment {
+    private suspend fun reviewedPayment(rail: SendRail, generation: Int): SendPayment {
         var (method, target) = railTarget(rail)
         if (method == "lnurl") {
-            val route = matchingRoute ?: throw SendFailure(SendFailure.Reason.invalid)
+            val route = lnurlRoute(target, generation)
             val msat = Math.multiplyExact(sats, 1000); requireSend(msat in route.minMsat..route.maxMsat && comment.length <= route.commentAllowed)
             if (rail == SendRail.ark && comment.isEmpty() && route.arkAddress != null) { method = "ark"; target = route.arkAddress }
         }
@@ -215,6 +215,16 @@ class SendModel(val controller: SendController, private val network: String,
         val payment = SendPayment(target, method, sats, if (rail == SendRail.onchain) source else null, isMax, comment, repeatMetadata())
         requireSend(!isMax || (method == "onchain" && source != null))
         return payment
+    }
+    /** The LNURL route [target] pays through: the one To resolved for a Lightning address, or, for a payment request's
+     *  LNURL method, resolved here once that method is chosen, so Ark and on-chain never wait on it. */
+    private suspend fun lnurlRoute(target: String, generation: Int): SendRecipientRoute {
+        route?.takeIf { it.destination == target }?.let { return it }
+        requireSend(parsed.bip321 != null)
+        val resolved = resolveRecipient(target)
+        requireSend(generation == reviewGeneration)
+        route = resolved
+        return resolved
     }
     private fun requireInvoiceAmount(invoice: String) {
         PaymentEncoding.invoice(invoice)?.sats?.takeIf { it.signum() > 0 }?.let { requireSend(it.compareTo(sats.toBigDecimal()) == 0) }
@@ -227,8 +237,9 @@ class SendModel(val controller: SendController, private val network: String,
         var method = parsed.destinationType ?: ""; var target = SendDestination.cleaned(destination)
         if (method == "lnurl") target = target.lowercase()
         parsed.bip321?.let { request -> method = SendFlow.method(rail, request) ?: throw SendFailure(SendFailure.Reason.invalid)
-            target = request.getValue(mapOf("ark" to "arkAddress", "lightning" to "lightningInvoice", "offer" to "offer",
-                "onchain" to "onchainAddress").getValue(method)) }
+            target = request.getValue(mapOf("ark" to "arkAddress", "lightning" to "lightningInvoice", "lnurl" to "lnurl", "offer" to "offer",
+                "onchain" to "onchainAddress").getValue(method))
+            if (method == "lnurl") target = SendDestination.cleaned(target).lowercase() }
         return method to target
     }
     fun reset() {
