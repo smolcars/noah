@@ -1,10 +1,16 @@
 package com.noahwallet.ui
 
 import androidx.activity.compose.BackHandler
-import androidx.compose.animation.EnterTransition
-import androidx.compose.animation.ExitTransition
+import androidx.compose.animation.AnimatedContentTransitionScope
+import androidx.compose.animation.ContentTransform
 import androidx.compose.animation.ExperimentalSharedTransitionApi
 import androidx.compose.animation.SharedTransitionLayout
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.slideInHorizontally
+import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
@@ -20,6 +26,7 @@ import androidx.navigation3.runtime.NavBackStack
 import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.runtime.entryProvider
 import androidx.navigation3.runtime.rememberNavBackStack
+import androidx.navigation3.scene.Scene
 import androidx.navigation3.ui.LocalNavAnimatedContentScope
 import androidx.navigation3.ui.NavDisplay
 import com.noahwallet.localization.tr
@@ -54,7 +61,8 @@ fun NoahApp(model: AppModel, links: PaymentLinks? = null) {
     // Settings' own pages: on Home's stack, Settings is one entry over Home.
     val settingsStack = rememberNavBackStack(SettingsDestination.Settings)
     val tab = rememberSaveable { mutableStateOf(Destination.Home) }
-    val nav = remember(backStack, settingsStack, tab) { AppNavigator(model, backStack, settingsStack, tab, SettingsEntry()) }
+    val nav = remember(backStack, settingsStack, tab) { AppNavigator(model, backStack, settingsStack, tab) }
+    val reduceMotion = com.noahwallet.ui.onboarding.rememberReduceMotion()
     // The launch preview shows Home alone: a tab or page restored with the activity reads the wallet once it's open.
     val preview = model.showsLaunchPreview
     val (selectedTab, homeStack) = if (preview) Destination.Home to listOf<NavKey>(Destination.Home) else tab.value to backStack
@@ -85,15 +93,19 @@ fun NoahApp(model: AppModel, links: PaymentLinks? = null) {
         AdaptiveNavigation(selectedTab, { tab.value = it }, fullWindow = homeOwnsWindow, showBar = !barHidden && !settingsVisible) { padding ->
             tabState.SaveableStateProvider(selectedTab) {
                 SharedTransitionLayout {
-                    CompositionLocalProvider(LocalAppShared provides this, LocalSettingsEntry provides nav.settingsEntry) {
+                    CompositionLocalProvider(LocalAppShared provides this) {
                         NavDisplay(
                             backStack = mainTabEntries(selectedTab, homeStack),
                             modifier = Modifier.padding(padding),
                             onBack = { nav.goBack() },
+                            sizeTransform = null,
+                            transitionSpec = { stackTransition(predictive = false, reduceMotion = reduceMotion) },
+                            popTransitionSpec = { stackTransition(predictive = false, reduceMotion = reduceMotion) },
+                            predictivePopTransitionSpec = { stackTransition(predictive = true, reduceMotion = reduceMotion) },
                             entryProvider = entryProvider {
                                 entry<QRDestination> { destination -> QRHub(model, nav, destination.scan) }
                                 entry<MapDestination> { com.noahwallet.btcmap.BtcMapScreen { nav.goBack() } }
-                                entry<SettingsDestination>(metadata = settingsZoom()) {
+                                entry<SettingsDestination> {
                                     CompositionLocalProvider(LocalEntryScope provides LocalNavAnimatedContentScope.current) {
                                         SettingsHost(model, settingsStack, close = { nav.goBack() }, myCode = { backStack.add(QRDestination(false)) },
                                             map = { backStack.add(MapDestination) })
@@ -114,7 +126,7 @@ fun NoahApp(model: AppModel, links: PaymentLinks? = null) {
 /** Where the app's tabs and stacks go: Home's stack, Settings beneath a page, Send with a scanned code. */
 @Stable
 private class AppNavigator(private val model: AppModel, val backStack: NavBackStack<NavKey>, val settingsStack: NavBackStack<NavKey>,
-    private val tab: MutableState<Destination>, val settingsEntry: SettingsEntry) {
+    private val tab: MutableState<Destination>) {
     val selectedTab get() = tab.value
     fun select(destination: Destination) { tab.value = destination }
     fun showHome() { backStack.clear(); backStack.add(Destination.Home); tab.value = Destination.Home }
@@ -126,11 +138,15 @@ private class AppNavigator(private val model: AppModel, val backStack: NavBackSt
         if (tab.value != Destination.Home) tab.value = Destination.Home
         else if (backStack.size > 1) backStack.removeAt(backStack.lastIndex)
     }
-    /** Opens [page] with Settings beneath it (settings.md, Deep links); [fromGear] zooms out of Home's gear. */
-    fun openSettings(page: NavKey, fromGear: Boolean = false) {
-        settingsEntry.fromGear = fromGear
+    /** Opens [page] with Settings beneath it (settings.md, Deep links). */
+    fun openSettings(page: NavKey) {
         tab.value = Destination.Home
         SettingsRoutes.open(backStack, settingsStack, page)
+    }
+    /** Opens Profile straight over Home, skipping Settings in the stack (matching iOS). */
+    fun openProfile() {
+        tab.value = Destination.Home
+        SettingsRoutes.openDirect(backStack, settingsStack, SettingsDestination.Profile)
     }
     fun repeat(payment: com.noahwallet.history.RepeatPayment) { model.repeatPayment = payment; showSend() }
     /** A recent recipient's shortcut or an assistant's Pay: Send fills it in once no payment holds it. */
@@ -230,9 +246,9 @@ private fun TabScreen(model: AppModel, nav: AppNavigator, destination: Destinati
             HomeScreen(model, onViewAll = { nav.select(Destination.History) }, onRepeatPayment = nav::repeat, onSettings = openPage,
                 onScan = { nav.backStack.add(QRDestination(true)) },
                 onBackup = { nav.openSettings(SettingsDestination.Seed) },
-                onProfile = { nav.openSettings(SettingsDestination.Profile) },
+                onProfile = { nav.openProfile() },
                 onRenew = { ids -> model.renewVtxos = ids; nav.openSettings(SettingsDestination.Vtxos) }) {
-                nav.openSettings(SettingsDestination.Settings, fromGear = true)
+                nav.openSettings(SettingsDestination.Settings)
             }
         }
         destination == Destination.History -> ActivityScreen(model, nav::repeat, onReceive = { nav.select(Destination.Receive) },
@@ -243,13 +259,30 @@ private fun TabScreen(model: AppModel, nav: AppNavigator, destination: Destinati
 }
 
 /**
- * Home → Settings (settings.md, Root): Home stays while Settings opens out of its gear, and Settings closes back
- * into it, drawn above Home; [SettingsHost] reads the entry's transition for the zoom itself.
+ * Home stack pushes/pops (Home ↔ Settings, QR hub, BTC Map): edge-to-edge opaque horizontal slide on the snappy spring
+ * so screens never overlap or ghost over Home's QR card; predictive back tracks the swipe 1:1. Direction comes from the
+ * transition's own scene depths rather than NavDisplay's `isPop` flag, because NavDisplay flips to `popTransitionSpec`
+ * while rewinding an interrupted open transition (whose segment is still `initialState = Home -> targetState = Settings`).
+ * Tab switches (both scenes at depth 0) cross-fade instead of sliding.
  */
-private fun settingsZoom(): Map<String, Any> {
-    // Home holds still (fully drawn) underneath until the zoom ends, then goes.
-    val hold = androidx.compose.animation.fadeOut(androidx.compose.animation.core.tween(520, easing = { if (it >= 1f) 1f else 0f }))
-    val stay = { EnterTransition.None togetherWith hold }
-    return NavDisplay.transitionSpec { stay() } + NavDisplay.popTransitionSpec { stay().apply { targetContentZIndex = -1f } } +
-        NavDisplay.predictivePopTransitionSpec { stay().apply { targetContentZIndex = -1f } }
+private fun AnimatedContentTransitionScope<Scene<NavKey>>.stackTransition(predictive: Boolean, reduceMotion: Boolean): ContentTransform {
+    val tabSwitch = initialState.previousEntries.isEmpty() && targetState.previousEntries.isEmpty()
+    if (reduceMotion || tabSwitch) {
+        return fadeIn(tween(com.noahwallet.ui.design.NoahTokens.Motion.REDUCE_MOTION_FADE_MS)) togetherWith
+            fadeOut(tween(com.noahwallet.ui.design.NoahTokens.Motion.REDUCE_MOTION_FADE_MS))
+    }
+    return horizontalSlide(forward = targetState.previousEntries.size >= initialState.previousEntries.size, predictive = predictive)
+}
+
+/** Edge-to-edge opaque horizontal slide on the snappy spring, or 1:1 linear travel during predictive back. */
+internal fun horizontalSlide(forward: Boolean, predictive: Boolean): ContentTransform {
+    if (predictive) {
+        return if (forward) slideInHorizontally(tween(250, easing = LinearEasing)) { it } togetherWith
+            slideOutHorizontally(tween(250, easing = LinearEasing)) { -it }
+        else slideInHorizontally(tween(250, easing = LinearEasing)) { -it } togetherWith
+            slideOutHorizontally(tween(250, easing = LinearEasing)) { it }
+    }
+    val spring = com.noahwallet.ui.design.NoahTokens.Motion.snappy<androidx.compose.ui.unit.IntOffset>()
+    return if (forward) slideInHorizontally(spring) { it } togetherWith slideOutHorizontally(spring) { -it }
+    else slideInHorizontally(spring) { -it } togetherWith slideOutHorizontally(spring) { it }
 }

@@ -64,4 +64,11 @@ internal object SettingsRoutes {
         while (home.size > 1) home.removeAt(home.lastIndex)
         home.add(SettingsDestination.Settings)
     }
+
+    /** Opens [page] straight over Home without Settings beneath it (matching iOS Home → Profile). */
+    fun openDirect(home: MutableList<NavKey>, settings: MutableList<NavKey>, page: NavKey) {
+        settings.clear(); settings.add(page)
+        while (home.size > 1) home.removeAt(home.lastIndex)
+        home.add(SettingsDestination.Settings)
+    }
 }

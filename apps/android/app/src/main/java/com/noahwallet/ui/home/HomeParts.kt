@@ -40,6 +40,7 @@ import com.noahwallet.localization.trPlural
 import com.noahwallet.ui.design.NoahTokens
 import com.noahwallet.ui.onboarding.LocalPalette
 import com.noahwallet.ui.onboarding.LocalReduceMotion
+import com.noahwallet.ui.settings.SettingsAvatar
 import com.noahwallet.ui.settings.meAvatar
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
@@ -53,7 +54,6 @@ internal object HomeType {
     // a fallback glyph such as ₿ can't make one line taller than another.
     private val box = LineHeightStyle(LineHeightStyle.Alignment.Center, LineHeightStyle.Trim.None)
     val chip = TextStyle(fontWeight = FontWeight.SemiBold, fontSize = 15.sp, lineHeight = 20.sp, lineHeightStyle = box)
-    val chipInitial = TextStyle(fontFamily = display, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, lineHeight = 14.sp, lineHeightStyle = trim)
     val badge = TextStyle(fontWeight = FontWeight.SemiBold, fontSize = 11.sp, lineHeight = 14.sp, lineHeightStyle = box)
     val mini = TextStyle(fontFamily = display, fontWeight = FontWeight.SemiBold, fontSize = 17.sp, letterSpacing = (-0.02).em)
     val balance = NoahTokens.Typography.balance.copy(lineHeight = 50.sp, lineHeightStyle = trim)
@@ -96,10 +96,7 @@ internal fun NameChip(address: String?, variant: String, onClick: () -> Unit) {
         .clickable(onClickLabel = label, role = Role.Button, onClick = onClick)
         .padding(start = 5.dp, end = if (local != null || variant != "mainnet") 14.dp else 5.dp),
         verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        Box(Modifier.size(30.dp).meAvatar().border(1.5.dp, palette.orange, CircleShape), contentAlignment = Alignment.Center) {
-            if (local != null) Text(local.take(1).lowercase(), style = HomeType.chipInitial, color = palette.foreground)
-            else Icon(painterResource(HomeIcons.person), null, Modifier.size(18.dp), tint = palette.foreground)
-        }
+        SettingsAvatar(30.dp, Modifier.meAvatar(), you = true, initial = local?.take(1), icon = HomeIcons.person)
         // Measured after the ring and badge, so a narrow bar shortens the name rather than dropping the badge.
         if (local != null) Text(local, style = HomeType.chip, color = palette.foreground, maxLines = 1, overflow = TextOverflow.Ellipsis,
             modifier = Modifier.weight(1f, fill = false).widthIn(max = 160.dp))

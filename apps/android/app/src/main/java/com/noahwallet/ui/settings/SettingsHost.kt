@@ -8,22 +8,11 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.CornerRadius
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Rect
-import androidx.compose.ui.geometry.RoundRect
-import androidx.compose.ui.geometry.Size
-import androidx.compose.ui.graphics.Outline
-import androidx.compose.ui.graphics.Shape
-import androidx.compose.ui.graphics.graphicsLayer
-import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.Density
-import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.util.lerp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.repeatOnLifecycle
@@ -31,6 +20,8 @@ import androidx.navigation3.runtime.NavBackStack
 import androidx.navigation3.runtime.NavEntry
 import androidx.navigation3.runtime.NavKey
 import androidx.navigation3.runtime.rememberSaveableStateHolderNavEntryDecorator
+import androidx.navigation3.scene.Scene
+import androidx.navigation3.ui.LocalNavAnimatedContentScope
 import androidx.navigation3.ui.NavDisplay
 import com.noahwallet.onchain.OnchainOverview
 import com.noahwallet.onchain.SharedOverview
@@ -116,18 +107,11 @@ internal fun rememberSettingsLive(model: AppModel): SettingsLive {
     return live
 }
 
-/** Home's gear, so Settings opens out of it; deep links open without the zoom. */
-internal class SettingsEntry {
-    var gear by mutableStateOf<Rect?>(null)
-    var fromGear by mutableStateOf(false)
-}
-internal val LocalSettingsEntry = staticCompositionLocalOf<SettingsEntry?> { null }
-
-/** The app's shared-element scope and Home's (or Settings') place in Home's stack, for your initial's move. */
+/** The app's shared-element scope and active entry scope for Home ↔ Settings ↔ Profile avatar flight. */
 internal val LocalAppShared = staticCompositionLocalOf<SharedTransitionScope?> { null }
 internal val LocalEntryScope = staticCompositionLocalOf<AnimatedVisibilityScope?> { null }
 
-/** Your orange-ringed initial: it moves from Home's name chip into Settings' header as Settings opens. */
+/** Your orange-ringed initial: follows cleanly between Home's chip, Settings' header, and Profile on one shared key. */
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
 internal fun Modifier.meAvatar(): Modifier {
@@ -135,28 +119,46 @@ internal fun Modifier.meAvatar(): Modifier {
     val visibility = LocalEntryScope.current ?: return this
     if (LocalReduceMotion.current) return this
     return with(shared) {
-        this@meAvatar.sharedBounds(rememberSharedContentState("settings-me"), visibility,
-            boundsTransform = { _, _ -> spring(.85f, 438.6491f / 1.44f, Rect.VisibilityThreshold) },
-            resizeMode = SharedTransitionScope.ResizeMode.scaleToBounds())
+        this@meAvatar.sharedElement(rememberSharedContentState("settings-me"), visibility,
+            boundsTransform = { _, _ -> spring(.85f, 438.6491f, Rect.VisibilityThreshold) })
     }
 }
 
-/** The page's transitions: Material's shared axis (X) on phones, a rise in the split page; a fade under Reduce Motion. */
-private fun pageTransition(forward: Boolean, reduceMotion: Boolean, split: Boolean, density: Density): ContentTransform {
-    if (reduceMotion) return fadeIn(tween(180)) togetherWith fadeOut(tween(180))
-    val spring = spring<androidx.compose.ui.unit.IntOffset>(.85f, 438.6491f / 1.21f)
-    val fade = spring<Float>(.85f, 438.6491f / 1.21f)
-    val shift = with(density) { 30.dp.roundToPx() }
-    if (split) return (fadeIn(tween(220,
-        delayMillis = 60)) + slideInVertically(spring) { with(density) { (if (forward) 10 else -6).dp.roundToPx() } }) togetherWith fadeOut(tween(140))
-    return (fadeIn(fade) + slideInHorizontally(spring) { if (forward) shift else -shift }) togetherWith
-        (fadeOut(fade) + slideOutHorizontally(spring) { if (forward) -shift else shift })
+/** Picks whichever of the outer (Home ↔ Settings) or inner (Settings page) scopes is driving this page's visibility. */
+private fun combinedEntryScope(outer: AnimatedVisibilityScope?, inner: AnimatedVisibilityScope): AnimatedVisibilityScope = when {
+    outer == null -> inner
+    outer.transition.targetState != EnterExitState.Visible -> outer
+    inner.transition.targetState != EnterExitState.Visible -> inner
+    outer.transition.currentState != EnterExitState.Visible -> outer
+    else -> inner
+}
+
+/**
+ * The page's transitions: edge-to-edge opaque horizontal slide on phones (matching Home ↔ Settings, with depth-derived
+ * direction so interrupted transitions rewind cleanly), a rise in the split page, and a fade under Reduce Motion.
+ */
+private fun AnimatedContentTransitionScope<Scene<NavKey>>.pageTransition(
+    predictive: Boolean,
+    reduceMotion: Boolean,
+    split: Boolean,
+    density: Density,
+): ContentTransform {
+    if (reduceMotion) {
+        return fadeIn(tween(com.noahwallet.ui.design.NoahTokens.Motion.REDUCE_MOTION_FADE_MS)) togetherWith
+            fadeOut(tween(com.noahwallet.ui.design.NoahTokens.Motion.REDUCE_MOTION_FADE_MS))
+    }
+    val forward = targetState.previousEntries.size >= initialState.previousEntries.size
+    if (split) {
+        val spring = spring<androidx.compose.ui.unit.IntOffset>(.85f, 438.6491f / 1.21f)
+        return (fadeIn(tween(220, delayMillis = 60)) +
+            slideInVertically(spring) { with(density) { (if (forward) 10 else -6).dp.roundToPx() } }) togetherWith fadeOut(tween(140))
+    }
+    return com.noahwallet.ui.horizontalSlide(forward = forward, predictive = predictive)
 }
 
 /**
  * Settings (docs/native-rewrite/design/settings.md): one stack of pages over the list on phones; on wide windows and
- * the fold the list leads and the page trails, split at the hinge (tabletop: list above, page below). Must sit in
- * Home's stack, which supplies the zoom out of Home's gear.
+ * the fold the list leads and the page trails, split at the hinge (tabletop: list above, page below).
  */
 @Composable
 internal fun SettingsHost(model: AppModel, stack: NavBackStack<NavKey>, close: () -> Unit, myCode: () -> Unit,
@@ -164,54 +166,60 @@ internal fun SettingsHost(model: AppModel, stack: NavBackStack<NavKey>, close: (
     val reduceMotion = com.noahwallet.ui.onboarding.rememberReduceMotion()
     val currentClose by rememberUpdatedState(close)
     val navigator = remember(stack, hold) { SettingsStack(stack, hold) { currentClose() } }
-    GearRevealBox(reduceMotion) {
-        OnboardingFrame(null, splitAtWindowCentre = true) {
-            val pose = LocalPose.current
-            val holder = rememberSaveableStateHolder()
-            // The list's own state (its sheet, its scroll), outside NavDisplay's, so a fold that recreates the activity keeps it.
-            val list = rememberSaveableStateHolder()
-            val toasts = remember { HomeToasts() }
-            val live = rememberSettingsLive(model)
-            val wide = pose !is OnboardingPose.Compact
-            // One list, moved with its state between the leading pane (split) and the first page (compact). A live pose
-            // change (tabletop needn't recreate the activity) animates the first page out: that copy reads the current pose
-            // and leaves the list alone, so its saved state has one owner.
-            val listState = rememberSettingsListState(preview?.sheet)
-            val root = remember { movableContentOf { nav: SettingsNav, selected: NavKey? ->
-                list.SaveableStateProvider(SettingsDestination.Settings) { SettingsRoot(model, live, nav, selected, listState) }
-            } }
-            val pages: List<NavKey> = if (wide) stack.drop(1).ifEmpty { listOf(SettingsDestination.Profile) } else stack.toList()
-            // The emergency exit takes the whole window: its picture leads and its details trail, split at the hinge (exit.md).
-            val exit = wide && SettingsRoutes.exit(pages.lastOrNull())
-            // A pose change (compact <-> split) swaps NavDisplay's pages without navigating, so that swap doesn't animate:
-            // NavDisplay drops a scene AnimatedContent still draws if the pose changes again mid-animation. Navigating
-            // animates again.
-            val density = androidx.compose.ui.platform.LocalDensity.current
-            var drawnWide by remember { mutableStateOf(wide) }
-            if (drawnWide != wide) SideEffect { drawnWide = wide; navigator.poseSwap = true }
-            val leave = { if (navigator.idle()) navigator.close() }
-            val code = { if (navigator.idle()) myCode() }
-            val btcMap = { if (navigator.idle()) map() }
-            CompositionLocalProvider(LocalSettingsToasts provides toasts) {
-                Box(Modifier.fillMaxSize()) {
-                    val listNav = SettingsNav(leave, { navigator.open(it, true, wide) }, leave, code, leave, hold::set, map = btcMap)
-                    if (wide && !exit) ListPane(pose) { root(listNav, pages.firstOrNull()) }
-                    PagePane(pose, exit) {
-                        NavDisplay(pages, onBack = { if (navigator.idle()) navigator.pop() },
-                            entryDecorators = listOf(rememberSaveableStateHolderNavEntryDecorator(holder)),
-                            transitionSpec = { navigator.transition(true, reduceMotion, wide, density) },
-                            popTransitionSpec = { navigator.transition(false, reduceMotion, wide, density) },
-                            predictivePopTransitionSpec = { pageTransition(false, reduceMotion, wide, density) },
-                            entryProvider = { key ->
-                                NavEntry(key) {
+    OnboardingFrame(null, splitAtWindowCentre = true) {
+        val pose = LocalPose.current
+        val holder = rememberSaveableStateHolder()
+        // The list's own state (its sheet, its scroll), outside NavDisplay's, so a fold that recreates the activity keeps it.
+        val list = rememberSaveableStateHolder()
+        val toasts = remember { HomeToasts() }
+        val live = rememberSettingsLive(model)
+        val wide = pose !is OnboardingPose.Compact
+        // One list, moved with its state between the leading pane (split) and the first page (compact). A live pose
+        // change (tabletop needn't recreate the activity) animates the first page out: that copy reads the current pose
+        // and leaves the list alone, so its saved state has one owner.
+        val listState = rememberSettingsListState(preview?.sheet)
+        val root = remember { movableContentOf { nav: SettingsNav, selected: NavKey? ->
+            list.SaveableStateProvider(SettingsDestination.Settings) { SettingsRoot(model, live, nav, selected, listState) }
+        } }
+        val direct = stack.firstOrNull() != SettingsDestination.Settings
+        val pages: List<NavKey> = if (wide) {
+            (if (direct) stack.toList() else stack.drop(1)).ifEmpty { listOf(SettingsDestination.Profile) }
+        } else stack.toList()
+        // The emergency exit takes the whole window: its picture leads and its details trail, split at the hinge (exit.md).
+        val exit = wide && SettingsRoutes.exit(pages.lastOrNull())
+        // A pose change (compact <-> split) swaps NavDisplay's pages without navigating, so that swap doesn't animate:
+        // NavDisplay drops a scene AnimatedContent still draws if the pose changes again mid-animation. Navigating
+        // animates again.
+        val density = androidx.compose.ui.platform.LocalDensity.current
+        var drawnWide by remember { mutableStateOf(wide) }
+        if (drawnWide != wide) SideEffect { drawnWide = wide; navigator.poseSwap = true }
+        val leave = { if (navigator.idle()) navigator.close() }
+        val code = { if (navigator.idle()) myCode() }
+        val btcMap = { if (navigator.idle()) map() }
+        val outerScope = LocalEntryScope.current
+        CompositionLocalProvider(LocalSettingsToasts provides toasts) {
+            Box(Modifier.fillMaxSize()) {
+                val listNav = SettingsNav(leave, { navigator.open(it, true, wide) }, leave, code, leave, hold::set, map = btcMap)
+                if (wide && !exit) ListPane(pose) { root(listNav, pages.firstOrNull()) }
+                PagePane(pose, exit) {
+                    NavDisplay(pages, onBack = { if (navigator.idle()) navigator.pop() },
+                        entryDecorators = listOf(rememberSaveableStateHolderNavEntryDecorator(holder)),
+                        sizeTransform = null,
+                        transitionSpec = { navigator.transition(this, predictive = false, reduceMotion, wide, density) },
+                        popTransitionSpec = { navigator.transition(this, predictive = false, reduceMotion, wide, density) },
+                        predictivePopTransitionSpec = { pageTransition(predictive = true, reduceMotion, wide, density) },
+                        entryProvider = { key ->
+                            NavEntry(key) {
+                                val pageScope = if (wide) null else combinedEntryScope(outerScope, LocalNavAnimatedContentScope.current)
+                                CompositionLocalProvider(LocalEntryScope provides pageScope) {
                                     val nav = navigator.pageNav(key, pages, wide, listNav)
                                     SettingsPage(model, key, nav, live, preview, root)
                                 }
-                            })
-                    }
+                            }
+                        })
                 }
-                SettingsBackHandlers(exit && pages.size == 1, hold, navigator::pop)
             }
+            SettingsBackHandlers(exit && pages.size == 1, hold, navigator::pop)
         }
     }
 }
@@ -226,14 +234,17 @@ private class SettingsStack(private val stack: NavBackStack<NavKey>, private val
     var poseSwap by mutableStateOf(false)
 
     fun idle() = !hold.held
-    fun transition(forward: Boolean, reduceMotion: Boolean, wide: Boolean, density: Density) =
-        if (poseSwap) EnterTransition.None togetherWith ExitTransition.None else pageTransition(forward, reduceMotion, wide, density)
+    fun transition(scope: AnimatedContentTransitionScope<Scene<NavKey>>, predictive: Boolean, reduceMotion: Boolean, wide: Boolean, density: Density) =
+        if (poseSwap) EnterTransition.None togetherWith ExitTransition.None else scope.pageTransition(predictive, reduceMotion, wide, density)
     fun pop() { poseSwap = false; if (stack.size > 1) stack.removeAt(stack.lastIndex) else close() }
     fun open(page: NavKey, fromList: Boolean, wide: Boolean) {
         if (!idle()) return
         poseSwap = false
         // In a split window the list replaces the page beside it; inside a page, pages stack.
-        if (fromList && wide) while (stack.size > 1) stack.removeAt(stack.lastIndex)
+        if (fromList && wide) {
+            if (stack.firstOrNull() != SettingsDestination.Settings) { stack.clear(); stack.add(SettingsDestination.Settings) }
+            else while (stack.size > 1) stack.removeAt(stack.lastIndex)
+        }
         if (stack.lastOrNull() != page) stack.add(page)
     }
     fun replace(page: NavKey) {
@@ -252,25 +263,6 @@ private class SettingsStack(private val stack: NavBackStack<NavKey>, private val
         return SettingsNav(back, { open(it, false, wide) }, { if (SettingsRoutes.top(stack, key)) pop() }, list.myCode, list.home, hold::set,
             { if (SettingsRoutes.top(stack, key)) replace(it) }, list.map)
     }
-}
-
-/** Settings opening out of Home's gear (a fade when opened another way, none under Reduce Motion's fade). */
-@Composable
-private fun GearRevealBox(reduceMotion: Boolean, content: @Composable () -> Unit) {
-    val entryScope = LocalEntryScope.current
-    val entry = LocalSettingsEntry.current
-    var origin by remember { mutableStateOf(Offset.Zero) }
-    val reveal = entryScope?.transition?.animateFloat({
-        if (reduceMotion) tween(180) else spring(.85f, 438.6491f / 1.44f)
-    }, label = "settings-zoom") { if (it == EnterExitState.Visible) 1f else 0f }
-    val zoom = entry?.fromGear == true && !reduceMotion
-    Box(Modifier.fillMaxSize().onGloballyPositioned { origin = it.positionInWindow() }.graphicsLayer {
-        val p = reveal?.value ?: 1f
-        if (p >= 1f) return@graphicsLayer
-        if (!zoom) { alpha = p; return@graphicsLayer }
-        clip = true
-        shape = GearReveal(entry.gear?.translate(-origin), p, 20.dp.toPx())
-    }) { content() }
 }
 
 /** The list's pane beside the page: leading when split, above the fold in tabletop. */
@@ -317,16 +309,6 @@ private fun SettingsBackHandlers(exitAlone: Boolean, hold: NavigationHold, pop: 
     androidx.navigationevent.compose.NavigationBackHandler(
         androidx.navigationevent.compose.rememberNavigationEventState(androidx.navigationevent.NavigationEventInfo.None),
         isBackEnabled = hold.held, onBackCompleted = {})
-}
-
-/** Home's gear growing into the window (prototype `zoom_`): a rounded rectangle from the gear's bounds to the whole window. */
-private class GearReveal(private val gear: Rect?, private val progress: Float, private val radius: Float) : Shape {
-    override fun createOutline(size: Size, layoutDirection: LayoutDirection, density: Density): Outline {
-        val from = gear ?: Rect(Offset(size.width - 64 * density.density, 12 * density.density), Size(40 * density.density, 40 * density.density))
-        val p = progress.coerceIn(0f, 1f)
-        return Outline.Rounded(RoundRect(lerp(from.left, 0f, p), lerp(from.top, 0f, p), lerp(from.right, size.width, p), lerp(from.bottom, size.height, p),
-            CornerRadius(lerp(radius, 0f, p))))
-    }
 }
 
 /**
