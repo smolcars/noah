@@ -21,6 +21,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.noahwallet.formatting.BitcoinAmountUnit
 import com.noahwallet.ui.NoahTheme
+import com.noahwallet.ui.homeQuoteDelayMillis
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Rule
@@ -163,5 +164,13 @@ class BalancePrivacyMorphTest {
         compose.waitForIdle()
         val balance = compose.onNodeWithTag("home-balance").fetchSemanticsNode()
         assertEquals("₿\u00a0152,742", balance.config[SemanticsProperties.ContentDescription].joinToString())
+    }
+
+    /** Cached fiat quotes wait out the remaining 5-minute TTL and refresh immediately once stale or absent. */
+    @Test fun homeQuoteDelayRespectsFiveMinuteTtl() {
+        assertEquals(0L, homeQuoteDelayMillis(fetchedAt = null, now = 10_000L))
+        assertEquals(295_000L, homeQuoteDelayMillis(fetchedAt = 10_000L, now = 15_000L))
+        assertEquals(0L, homeQuoteDelayMillis(fetchedAt = 10_000L, now = 310_000L))
+        assertEquals(0L, homeQuoteDelayMillis(fetchedAt = 10_000L, now = 500_000L))
     }
 }

@@ -108,9 +108,14 @@ class HomeMemory {
     var backedUpSeen: Boolean? = null
     var emailSeen: Boolean? = null
     var toastSeen: String? = null
+    /** Latest BTC quote per currency, kept across tab visits and pose changes so fiat renders on frame 0. */
+    val quotes = mutableStateMapOf<String, Quote>()
 
     /** A running first-payment sequence; timed from [startedAt] so a pose change resumes it in place. */
     data class FirstPayment(val startedAt: Long, val sats: Long, val from: String?)
+
+    /** One cached fiat quote for a currency, timed with elapsedRealtime. */
+    data class Quote(val price: Double, val at: Long)
 }
 
 class HomeToasts {
