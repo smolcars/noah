@@ -6,6 +6,8 @@ import android.content.Context
 import android.content.Intent
 import android.os.Build
 import android.os.SystemClock
+import androidx.compose.animation.*
+import androidx.compose.animation.core.*
 import androidx.compose.foundation.*
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -419,68 +421,106 @@ private fun TopBarButtons(ui: HomeUi, actions: HomeActions, suspended: Boolean) 
     }
 }
 
-/** Critically damped reveal for balance opacity and blur so it settles monotonically without re-triggering blur. */
-internal fun balanceMorphReveal() = androidx.compose.animation.core.spring<Float>(dampingRatio = 1f, stiffness = 438.6491f)
+private const val BALANCE_MORPH_SCALE = .84f
+private val BALANCE_MORPH_PEAK_BLUR = 8.dp
+private val BALANCE_MORPH_HORIZONTAL_BLEED = 8.dp
 
-private class BalanceMotion(initial: Boolean) {
-    var hidden by mutableStateOf(initial)
-    val morph = androidx.compose.animation.core.Animatable(1f)
-    val scale = androidx.compose.animation.core.Animatable(1f)
-}
+/** M3 Expressive default effects spring (critically damped): fast monotonic opacity/blur reveal without re-triggering blur. */
+internal fun balanceMorphReveal() = spring<Float>(dampingRatio = 1f, stiffness = 1_600f)
 
-@Composable
-private fun rememberBalanceMotion(targetHidden: Boolean, reduceMotion: Boolean): BalanceMotion {
-    val motion = remember { BalanceMotion(targetHidden) }
-    val morph = motion.morph
-    val scale = motion.scale
-    LaunchedEffect(targetHidden) {
-        if (motion.hidden == targetHidden && morph.value == 1f && scale.value == 1f) return@LaunchedEffect
-        if (motion.hidden != targetHidden) {
-            if (reduceMotion) morph.animateTo(0f, androidx.compose.animation.core.tween(90))
-            else kotlinx.coroutines.coroutineScope {
-                launch { morph.animateTo(0f, androidx.compose.animation.core.tween(140)) }
-                launch { scale.animateTo(.96f, androidx.compose.animation.core.tween(140)) }
-            }
-            motion.hidden = targetHidden
-            morph.snapTo(0f)
-            scale.snapTo(if (reduceMotion) 1f else 1.04f)
-        }
-        if (reduceMotion) {
-            scale.snapTo(1f)
-            morph.animateTo(1f, androidx.compose.animation.core.tween(90))
-        } else kotlinx.coroutines.coroutineScope {
-            launch { morph.animateTo(1f, balanceMorphReveal()) }
-            launch { scale.animateTo(1f, NoahTokens.Motion.bouncy()) }
-        }
-    }
-    return motion
+/** M3 Expressive fast effects spring (critically damped): clears outgoing text swiftly so the cross-morph never dips to blank. */
+internal fun balanceMorphExit() = spring<Float>(dampingRatio = 1f, stiffness = 3_800f)
+
+/** Critically damped fast spatial spring so outgoing digits visibly shrink away while fading out. */
+internal fun balanceMorphExitScale() = spring<Float>(dampingRatio = 1f, stiffness = 1_400f)
+
+/** Smooth 1.5-power blur falloff: visibly racks focus through the cross-morph, then clears before the bounce settles. */
+internal fun balanceMorphBlurDp(alpha: Float): Dp {
+    val remaining = 1f - alpha.coerceIn(0f, 1f)
+    return BALANCE_MORPH_PEAK_BLUR * (remaining * kotlin.math.sqrt(remaining))
 }
 
 /**
- * Applies the balance's tuck scale and hide/show blur-morph in one draw layer, adding vertical [bleed] inside the
- * layer bounds (cancelled outside) so Android's blur RenderEffect never clips ₿'s stems or separator descenders.
+ * Applies one morphing layer's alpha, scale and blur in a single draw layer, adding symmetric bleed inside the
+ * layer bounds (cancelled outside) so Android's blur RenderEffect never clips ₿'s stems or edge glyphs.
  */
 private fun Modifier.balanceMorphLayer(
-    bleed: Dp,
-    tuck: Float,
-    morph: () -> Float,
+    verticalBleed: Dp,
+    alpha: () -> Float,
     scale: () -> Float,
     reduceMotion: Boolean,
 ): Modifier = layout { measurable, constraints ->
-    val pad = bleed.roundToPx()
-    val placeable = measurable.measure(constraints.offset(vertical = pad * 2))
-    layout(placeable.width, (placeable.height - pad * 2).coerceAtLeast(0)) { placeable.place(0, -pad) }
+    val hPad = BALANCE_MORPH_HORIZONTAL_BLEED.roundToPx()
+    val vPad = verticalBleed.roundToPx()
+    val placeable = measurable.measure(constraints.offset(horizontal = hPad * 2, vertical = vPad * 2))
+    layout((placeable.width - hPad * 2).coerceAtLeast(0), (placeable.height - vPad * 2).coerceAtLeast(0)) {
+        placeable.place(-hPad, -vPad)
+    }
 }.graphicsLayer {
-    val m = morph().coerceIn(0f, 1f)
-    alpha = m
-    val s = (1 - .06f * tuck) * scale()
+    val a = alpha().coerceIn(0f, 1f)
+    this.alpha = a
+    val s = scale()
     scaleX = s
     scaleY = s
-    val pad = bleed.toPx()
-    transformOrigin = TransformOrigin(0f, if (size.height > 0f) ((size.height - pad) / size.height).coerceIn(0f, 1f) else 1f)
-    val radiusPx = if (Build.VERSION.SDK_INT >= 31 && !reduceMotion) (4.dp * (1f - m)).toPx() else 0f
+    val hPad = BALANCE_MORPH_HORIZONTAL_BLEED.toPx()
+    transformOrigin = TransformOrigin(if (size.width > 0f) (hPad / size.width).coerceIn(0f, 1f) else 0f, .5f)
+    val radiusPx = if (Build.VERSION.SDK_INT >= 31 && !reduceMotion) balanceMorphBlurDp(a).toPx() else 0f
     renderEffect = if (radiusPx > .25f) BlurEffect(radiusPx, radiusPx, TileMode.Decal) else null
-}.padding(vertical = bleed)
+}.padding(horizontal = BALANCE_MORPH_HORIZONTAL_BLEED, vertical = verticalBleed)
+
+private fun balanceText(hidden: Boolean, total: ULong?, unit: BitcoinAmountUnit, locale: Locale): String? = when {
+    hidden -> BitcoinAmount.format(0, unit, locale).replace("0", "••••••")
+    total != null -> BitcoinAmount.format(total.toLong(), unit, locale)
+    else -> null
+}
+
+/** Overlapping privacy cross-morph: outgoing shrinks and dissolves fast while incoming scales up and bounces into focus. */
+@Composable
+private fun AnimatedBalanceFigures(
+    ui: HomeUi,
+    total: ULong?,
+    entered: Long,
+    bleed: Dp,
+    reduceMotion: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    AnimatedContent(
+        targetState = ui.hidden,
+        modifier = modifier,
+        transitionSpec = {
+            (EnterTransition.None togetherWith ExitTransition.None).using(
+                SizeTransform(clip = false) { _, _ -> if (reduceMotion) snap() else NoahTokens.Motion.snappy() },
+            )
+        },
+        contentAlignment = Alignment.CenterStart,
+        label = "balance-privacy-morph",
+    ) { isHidden ->
+        val alpha by transition.animateFloat(
+            transitionSpec = {
+                when {
+                    reduceMotion -> tween(NoahTokens.Motion.REDUCE_MOTION_FADE_MS)
+                    targetState == EnterExitState.Visible -> balanceMorphReveal()
+                    else -> balanceMorphExit()
+                }
+            },
+            label = "balance-morph-alpha",
+        ) { state -> if (state == EnterExitState.Visible) 1f else 0f }
+        val scale by transition.animateFloat(
+            transitionSpec = {
+                when {
+                    reduceMotion -> snap()
+                    targetState == EnterExitState.Visible -> NoahTokens.Motion.bouncy()
+                    else -> balanceMorphExitScale()
+                }
+            },
+            label = "balance-morph-scale",
+        ) { state -> if (reduceMotion || state == EnterExitState.Visible) 1f else BALANCE_MORPH_SCALE }
+        val itemText = balanceText(isHidden, total, ui.unit, ui.locale)
+        Box(Modifier.balanceMorphLayer(bleed, { alpha }, { scale }, reduceMotion)) {
+            BalanceFigures(itemText, isHidden, rollFromZero = entered < 1_600, startDelay = if (entered < 1_600) 160 else 0)
+        }
+    }
+}
 
 /** 50 sp Space Grotesk; tap opens the balance sheet, long-press (or the accessibility action) hides it. */
 @OptIn(ExperimentalFoundationApi::class)
@@ -488,15 +528,9 @@ private fun Modifier.balanceMorphLayer(
 internal fun BalanceBlock(ui: HomeUi, total: ULong?, tuck: Float, entered: Long, onTap: () -> Unit, onToggle: () -> Unit) {
     if (ui.state == HomeRules.State.suspended) return
     val reduceMotion = LocalReduceMotion.current
-    val motion = rememberBalanceMotion(ui.hidden, reduceMotion)
-    val text = when {
-        motion.hidden -> BitcoinAmount.format(0, ui.unit, ui.locale).replace("0", "••••••")
-        total != null -> BitcoinAmount.format(total.toLong(), ui.unit, ui.locale)
-        else -> null
-    }
     val label = tr("Balance")
     val toggleLabel = tr(if (ui.hidden) "Show wallet balance" else "Hide wallet balance")
-    val description = text ?: tr("Loading…")
+    val description = balanceText(ui.hidden, total, ui.unit, ui.locale) ?: tr("Loading…")
     val bleed = with(androidx.compose.ui.platform.LocalDensity.current) { HomeType.balance.lineHeight.toDp() } * .25f
     // The eye hides or shows amounts (long-press still does too); the chevron says a tap opens the details.
     // Gone by the time the top bar's balance fades in (at 0.7), so the two never show at once.
@@ -514,9 +548,14 @@ internal fun BalanceBlock(ui: HomeUi, total: ULong?, tuck: Float, entered: Long,
                 customActions = listOf(CustomAccessibilityAction(toggleLabel) { onToggle(); true })
                 testTag = "home-balance"
             }
-            .balanceMorphLayer(bleed, tuck, { motion.morph.value }, { motion.scale.value }, reduceMotion),
+            .graphicsLayer {
+                val s = 1 - .06f * tuck
+                scaleX = s
+                scaleY = s
+                transformOrigin = TransformOrigin(0f, 1f)
+            },
             verticalAlignment = Alignment.CenterVertically) {
-            BalanceFigures(text, motion.hidden, rollFromZero = entered < 1_600, startDelay = if (entered < 1_600) 160 else 0, Modifier.weight(1f, fill = false))
+            AnimatedBalanceFigures(ui, total, entered, bleed, reduceMotion, Modifier.weight(1f, fill = false))
             DetailsChevron(total != null)
         }
         HideToggle(total != null, ui.hidden, toggleLabel, onToggle)
@@ -533,10 +572,25 @@ private fun DetailsChevron(shown: Boolean) {
 @Composable
 private fun HideToggle(shown: Boolean, hidden: Boolean, label: String, onToggle: () -> Unit) {
     if (!shown) return
+    val reduceMotion = LocalReduceMotion.current
     Box(Modifier.offset(x = 12.dp).padding(top = 8.dp).size(48.dp).clip(CircleShape).clickable(role = Role.Button, onClick = onToggle)
         .semantics { contentDescription = label; testTag = "home-balance-visibility" }, contentAlignment = Alignment.Center) {
-        Icon(painterResource(if (hidden) com.noahwallet.R.drawable.ic_set_eyeoff else com.noahwallet.R.drawable.ic_set_eye), null,
-            Modifier.size(22.dp), tint = LocalPalette.current.muted)
+        AnimatedContent(
+            targetState = hidden,
+            transitionSpec = {
+                if (reduceMotion) {
+                    val fade = tween<Float>(NoahTokens.Motion.REDUCE_MOTION_FADE_MS)
+                    fadeIn(fade) togetherWith fadeOut(fade)
+                } else {
+                    fadeIn(balanceMorphReveal()) + scaleIn(NoahTokens.Motion.bouncy(), initialScale = .72f) togetherWith
+                        fadeOut(balanceMorphExit()) + scaleOut(balanceMorphExitScale(), targetScale = .72f)
+                }
+            },
+            label = "balance-visibility-icon",
+        ) { isHidden ->
+            Icon(painterResource(if (isHidden) com.noahwallet.R.drawable.ic_set_eyeoff else com.noahwallet.R.drawable.ic_set_eye), null,
+                Modifier.size(22.dp), tint = LocalPalette.current.muted)
+        }
     }
 }
 

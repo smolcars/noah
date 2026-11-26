@@ -57,20 +57,58 @@ class BalancePrivacyMorphTest {
         backedUpAt = null,
     )
 
-    /** Critically damped reveal never overshoots 1f and dips back down to re-trigger the blur layer. */
+    /** Critically damped effects springs never overshoot 1f and clear swiftly without lingering blur. */
     @Test fun morphRevealIsMonotonicAndNeverOscillates() {
-        val vectorized = balanceMorphReveal().vectorize(Float.VectorConverter)
+        val reveal = balanceMorphReveal().vectorize(Float.VectorConverter)
+        val exit = balanceMorphExit().vectorize(Float.VectorConverter)
         val start = AnimationVector1D(0f)
         val end = AnimationVector1D(1f)
         val zeroVel = AnimationVector1D(0f)
-        var previous = 0f
+        var previousReveal = 0f
+        var previousExit = 0f
         for (ms in 0..800 step 4) {
-            val value = vectorized.getValueFromNanos(ms * 1_000_000L, start, end, zeroVel).value
-            assertTrue("morph dropped at ${ms}ms: $value < $previous", value >= previous - 1e-5f)
-            assertTrue("morph overshot 1f at ${ms}ms: $value", value <= 1f + 1e-5f)
-            previous = value
+            val nanos = ms * 1_000_000L
+            val r = reveal.getValueFromNanos(nanos, start, end, zeroVel).value
+            val e = exit.getValueFromNanos(nanos, start, end, zeroVel).value
+            assertTrue("reveal dropped at ${ms}ms: $r < $previousReveal", r >= previousReveal - 1e-5f)
+            assertTrue("reveal overshot 1f at ${ms}ms: $r", r <= 1f + 1e-5f)
+            assertTrue("exit dropped at ${ms}ms: $e < $previousExit", e >= previousExit - 1e-5f)
+            assertTrue("exit overshot 1f at ${ms}ms: $e", e <= 1f + 1e-5f)
+            previousReveal = r
+            previousExit = e
         }
-        assertEquals(1f, previous, 0.01f)
+        assertEquals(1f, previousReveal, 0.01f)
+        assertEquals(1f, previousExit, 0.01f)
+        // Fast M3 effects: outgoing clears within 80 ms, incoming reaches >= 90 % within 100 ms, blur is visible mid-morph and clears early.
+        assertTrue("exit clears swiftly by 80ms", exit.getValueFromNanos(80_000_000L, start, end, zeroVel).value >= 0.95f)
+        val revealAt100ms = reveal.getValueFromNanos(100_000_000L, start, end, zeroVel).value
+        assertTrue("reveal reaches >= 90% by 100ms (was $revealAt100ms)", revealAt100ms >= 0.90f)
+        assertTrue("blur is visible at 32ms", balanceMorphBlurDp(reveal.getValueFromNanos(32_000_000L, start, end, zeroVel).value) >= 3.dp)
+        assertTrue("blur clears to sub-0.1dp by 128ms", balanceMorphBlurDp(reveal.getValueFromNanos(128_000_000L, start, end, zeroVel).value) < 0.1.dp)
+        assertEquals(0.dp, balanceMorphBlurDp(1f))
+    }
+
+    /** Outgoing and incoming layers overlap immediately on toggle (no blank gap between states). */
+    @Test fun morphOverlapsOutgoingAndIncomingLayers() {
+        var hidden by mutableStateOf(false)
+        compose.mainClock.autoAdvance = false
+        compose.setContent {
+            NoahTheme {
+                Column(Modifier.width(360.dp)) {
+                    BalanceBlock(homeUi(hidden), total = 152_742uL, tuck = 0f, entered = 2_000L, onTap = {}, onToggle = { hidden = !hidden })
+                }
+            }
+        }
+        compose.mainClock.advanceTimeBy(100L)
+        val beforeCount = compose.onAllNodesWithTag("home-balance-char", useUnmergedTree = true).fetchSemanticsNodes().size
+        compose.onNodeWithTag("home-balance-visibility").performClick()
+        compose.mainClock.advanceTimeBy(32L)
+        val duringCount = compose.onAllNodesWithTag("home-balance-char", useUnmergedTree = true).fetchSemanticsNodes().size
+        assertTrue("both outgoing and incoming figures overlap at 32ms ($duringCount vs $beforeCount)", duringCount > beforeCount)
+        compose.mainClock.advanceTimeBy(1_500L)
+        compose.waitForIdle()
+        val afterCount = compose.onAllNodesWithTag("home-balance-char", useUnmergedTree = true).fetchSemanticsNodes().size
+        assertEquals("only the settled hidden figures remain (₿ + dots)", 2, afterCount)
     }
 
     /** Vertical blur bleed does not expand the balance's layout height or shift the Bitcoin glyph. */
