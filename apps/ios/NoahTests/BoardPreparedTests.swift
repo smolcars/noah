@@ -433,7 +433,9 @@ struct BoardPreparedTests {
         #expect(await calls.submitted == 1)
         #expect(await calls.discarded == [quote.id])
     }
+}
 
+extension BoardPreparedTests {
     actor ManualBoardCapture {
         // swiftlint:disable:next discouraged_optional_collection - records exact nil vs Set argument passed to prepare
         var exclusions: [Set<String>?] = []

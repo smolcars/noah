@@ -153,7 +153,8 @@ internal class OnchainOperations(
         }
     }
     private suspend fun boardQuote(base: OnchainQuote, amount: Long, excluded: Set<String>, selectedOutpoints: List<String>): OnchainQuote {
-        if (amount < 0 || amount > 2_100_000_000_000_000L || (base.automatic && selectedOutpoints.isNotEmpty())) fail(OnchainFailure.invalid)
+        if (amount < 0 || amount > 2_100_000_000_000_000L) fail(OnchainFailure.invalid)
+        if (base.automatic && selectedOutpoints.isNotEmpty()) fail(OnchainFailure.invalid)
         val allExcluded = if (selectedOutpoints.isEmpty()) excluded else {
             val selectionExcluded = BoardUtxoSelection.excludedOutpoints(localUtxos(), selectedOutpoints) ?: fail(OnchainFailure.changed)
             excluded + selectionExcluded
@@ -166,7 +167,8 @@ internal class OnchainOperations(
             currentCoroutineContext().ensureActive()
             val inputIds = prepared.inputs.map { "${it.txid}:${it.vout}" }.toSet()
             val validInputs = BoardUtxoSelection.inputsValid(inputIds, selectedOutpoints.toSet(), drainAll = amount == 0L)
-            if (!ready() || !validInputs || prepared.grossSats > Long.MAX_VALUE.toULong() ||
+            if (!ready() || !validInputs) fail(OnchainFailure.changed)
+            if (prepared.grossSats > Long.MAX_VALUE.toULong() ||
                 prepared.netSats + prepared.arkFeeSats != prepared.grossSats) fail(OnchainFailure.changed)
             val quote = base.copy(amount = prepared.grossSats.toLong(), fee = prepared.arkFeeSats.toLong(),
                 chainFee = prepared.onchainFeeSats.toLong(), boardAll = amount == 0L, feeRate = rate.toLong(),

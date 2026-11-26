@@ -233,15 +233,14 @@ private fun BoardSheet(app: AppModel, model: OnchainModel, confirmed: Long, sele
     val max = amount == "MAX"
     val sats = amount.toLongOrNull()
     val available = if (selected.isEmpty()) confirmed else selectedTotal
-    val line = if (selected.isEmpty()) tr("From your on-chain balance.") else trPlural("From {n} selected coins.", selected.size)
-    SettingsSheet(dismiss, tr("Move to Ark"), line, modifier = Modifier.testTag("board-sheet")) { close ->
+    SettingsSheet(dismiss, tr("Move to Ark"), boardSheetLine(selected), modifier = Modifier.testTag("board-sheet")) { close ->
         BoardAmountRow(app, model, amount, money(quote?.amount ?: available), available > 0) { amount = it }
         if (quote != null) BoardReviewRows(quote, current, money)
         model.error?.let { FinePrint(tr(it), failed = true) }
         SheetActions(tr("Cancel"), if (quote == null) tr("Review") else tr("Move"), onCancel = close, loading = model.busy, confirmTag = "board-review",
             enabled = !model.busy && !app.isWalletSuspended && boardSubmittable(quote, max, sats, current), onConfirm = {
                 // The page's scope, as today: closing the sheet must never cancel a submission.
-                val requested = if (max) 0 else sats ?: -1
+                val requested = boardRequestedAmount(max, sats)
                 scope.launch {
                     if (quote == null) model.review(OnchainAction.board, ids = selected, amount = requested)
                     else confirmBoardSheet(app, model) { haptics.success(); onMoved(); close() }
@@ -249,6 +248,12 @@ private fun BoardSheet(app: AppModel, model: OnchainModel, confirmed: Long, sele
             })
     }
 }
+
+@Composable
+private fun boardSheetLine(selected: List<String>) =
+    if (selected.isEmpty()) tr("From your on-chain balance.") else trPlural("From {n} selected coins.", selected.size)
+
+private fun boardRequestedAmount(max: Boolean, sats: Long?) = if (max) 0 else sats ?: -1
 
 private suspend fun confirmBoardSheet(app: AppModel, model: OnchainModel, done: () -> Unit) {
     model.confirm()

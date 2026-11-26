@@ -173,8 +173,8 @@ enum BoardUtxoSelection {
         }
     }
 
-    /// Outpoints to exclude from `prepareBoard` so only `selected` can be spent. Empty `selected` excludes nothing;
-    /// returns nil when `selected` has duplicates or names a missing or unconfirmed coin.
+    // Outpoints to exclude from `prepareBoard` so only `selected` can be spent. Empty `selected` excludes nothing;
+    // returns nil when `selected` has duplicates or names a missing or unconfirmed coin.
     // swiftlint:disable:next discouraged_optional_collection - nil means invalid/unavailable selection, distinct from empty exclusions
     static func excludedOutpoints(utxos: [OnchainUtxoModel], selected: [String]) -> Set<String>? {
         if selected.isEmpty { return [] }
