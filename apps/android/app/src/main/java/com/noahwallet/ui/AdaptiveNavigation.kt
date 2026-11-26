@@ -36,7 +36,8 @@ internal fun AdaptiveNavigation(selectedTab: Destination, select: (Destination) 
     val haptics = com.noahwallet.ui.onboarding.rememberHaptics()
     val hinges = LocalFoldingFeatures.current
     val chrome = LocalWindowChrome.current
-    fun choose(destination: Destination) {
+    // Regular lambda, not a ::localFunction reference whose FunctionReference.equals ignores captured selectedTab.
+    val choose: (Destination) -> Unit = { destination ->
         if (destination != selectedTab) haptics.selection()
         select(destination)
     }
@@ -52,9 +53,9 @@ internal fun AdaptiveNavigation(selectedTab: Destination, select: (Destination) 
             onDispose { chrome.bottom = null }
         }
         Row(Modifier.fillMaxSize()) {
-            if (rail) TabRail(selectedTab, ::choose)
+            if (rail) TabRail(selectedTab, choose)
             Scaffold(Modifier.weight(1f), topBar = topBar,
-                contentWindowInsets = WindowInsets(0, 0, 0, 0), bottomBar = { if (bar) TabBar(selectedTab, ::choose) }, content = content)
+                contentWindowInsets = WindowInsets(0, 0, 0, 0), bottomBar = { if (bar) TabBar(selectedTab, choose) }, content = content)
         }
     }
 }
