@@ -35,6 +35,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.compose.currentStateAsState
 import androidx.lifecycle.repeatOnLifecycle
 import com.noahwallet.R
 import com.noahwallet.localization.tr
@@ -52,7 +53,7 @@ fun LaunchGateView(model: AppModel) {
     val state = model.launchState
     val activity = LocalActivity.current as androidx.fragment.app.FragmentActivity
     val scope = androidx.compose.runtime.rememberCoroutineScope()
-    WalletLockEffects(model, activity)
+    WalletLockEffects(model.walletLock, activity)
     val gate = rememberPlatformGate(model, activity)
     ForegroundStart(model)
     val checking = !gate.ready && PlatformGateRules.launchResolved(state) && !model.customServerUnresponsive
@@ -101,17 +102,25 @@ private fun LaunchRouteContent(route: LaunchRoute, model: AppModel, gate: Platfo
 
 /** App lock follows the activity: it locks when the app leaves the screen, and the window stays secure while it's on. */
 @Composable
-private fun WalletLockEffects(model: AppModel, activity: androidx.fragment.app.FragmentActivity) {
+internal fun WalletLockEffects(lock: com.noahwallet.ui.settings.WalletLock, activity: androidx.fragment.app.FragmentActivity) {
     val lifecycleOwner = LocalLifecycleOwner.current
-    androidx.compose.runtime.DisposableEffect(lifecycleOwner) {
+    val lifecycleState by lifecycleOwner.lifecycle.currentStateAsState()
+    val scope = androidx.compose.runtime.rememberCoroutineScope()
+    LaunchedEffect(lock, lifecycleState, lock.locked, lock.automaticUnlockPending, lock.authenticating) {
+        if (lifecycleOwner.lifecycle.currentState == Lifecycle.State.RESUMED && lock.takeAutomaticUnlock()) {
+            // Device-credential fallback can pause/stop the activity. Keep its request alive across that hop.
+            scope.launch { lock.unlock(activity) }
+        }
+    }
+    androidx.compose.runtime.DisposableEffect(lifecycleOwner, activity, lock) {
         val observer = androidx.lifecycle.LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_STOP && !activity.isChangingConfigurations) model.walletLock.stopped()
+            if (event == Lifecycle.Event.ON_STOP && !activity.isChangingConfigurations) lock.stopped()
         }
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
-    androidx.compose.runtime.DisposableEffect(activity, model.walletLock.secure) {
-        model.walletLock.applySecure(activity.window)
+    androidx.compose.runtime.DisposableEffect(activity, lock, lock.secure) {
+        lock.applySecure(activity.window)
         onDispose { }
     }
 }
