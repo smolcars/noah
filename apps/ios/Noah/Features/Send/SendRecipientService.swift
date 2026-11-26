@@ -1,4 +1,3 @@
-import CryptoKit
 import Foundation
 
 struct SendRecipientRoute: Sendable {
@@ -164,7 +163,7 @@ enum SendRecipientService {
         struct Response: Decodable { let pr: String }
         guard (response as? HTTPURLResponse)?.statusCode == 200, data.count <= 65536 else { throw SendFailure.invalid }
         let invoice = try JSONDecoder().decode(Response.self, from: data).pr
-        try validateInvoice(invoice, amount: payment.amount, metadata: route.metadata)
+        try validateInvoice(invoice, amount: payment.amount)
         return invoice
     }
     /// The callback with this payment's `amount`, its note as `comment` and LUD-18 `payerdata`, each only when there is one
@@ -183,16 +182,13 @@ enum SendRecipientService {
     /// form decoder reads as a space.
     private static func queryValue(_ value: String) -> String { value.addingPercentEncoding(withAllowedCharacters: unreserved) ?? "" }
     private static let unreserved = CharacterSet(charactersIn: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~")
-    static func validateInvoice(_ value: String, amount: UInt64, metadata: String?) throws {
+    /// LNURL-pay no longer binds the invoice's description hash to the metadata (lnurl/luds#234), so it isn't checked.
+    static func validateInvoice(_ value: String, amount: UInt64) throws {
         let parsed = SendDestination.parse(value)
         guard parsed.destinationType == "lightning", parsed.error == nil,
               let invoice = PaymentEncoding.invoice(value), invoice.sats == Decimal(amount)
         else { throw SendFailure.invalid }
         guard invoice.expires > Date() else { throw SendFailure.expired }
-        // Pinned Bark treats metadata binding as a warning (LUD-06); keep RN parity.
-        if let metadata, invoice.descriptionHash != SHA256.hash(data: Data(metadata.utf8)).map({ String(format: "%02x", $0) }).joined() {
-            AppLog("send").w("LNURL invoice description hash does not commit to endpoint metadata")
-        }
     }
     static func suggestionQuery(_ destination: String, domain: String) -> String? {
         let value = SendDestination.cleaned(destination).lowercased()

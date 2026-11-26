@@ -22453,42 +22453,6 @@
         }
       }
     },
-    "LNURL invoice description hash does not commit to endpoint metadata": {
-      "comment": "GT gt_4993449490bbc0ac; arguments: none",
-      "extractionState": "manual",
-      "localizations": {
-        "en": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "LNURL invoice description hash does not commit to endpoint metadata"
-          }
-        },
-        "es": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "El hash de la descripción de la solicitud de pago LNURL no se corresponde con los metadatos del punto de acceso"
-          }
-        },
-        "ja": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "LNURL請求書の説明ハッシュがエンドポイントのメタデータに対応していません"
-          }
-        },
-        "ko": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "LNURL 결제 요청서의 설명 해시가 엔드포인트 메타데이터와 일치하지 않습니다"
-          }
-        },
-        "sv": {
-          "stringUnit": {
-            "state": "translated",
-            "value": "Beskrivningshashen för LNURL-betalningsbegäran stämmer inte överens med slutpunktens metadata"
-          }
-        }
-      }
-    },
     "Language": {
       "comment": "GT gt_a4fe65264ef7dbb3; arguments: none",
       "extractionState": "manual",

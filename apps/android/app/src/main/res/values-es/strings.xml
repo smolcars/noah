@@ -648,7 +648,6 @@
   <string name="gt_263743ebe703e2e0">"Mantén las notificaciones activadas para que los pagos se realicen aunque Noah esté cerrado."</string>
   <string name="gt_942c9e0587fb1e92">"Conservar pago"</string>
   <string name="gt_1223a5e3f6a37070">"Mantener detenido"</string>
-  <string name="gt_4993449490bbc0ac">"El hash de la descripción de la solicitud de pago LNURL no se corresponde con los metadatos del punto de acceso"</string>
   <string name="gt_a4fe65264ef7dbb3">"Idioma"</string>
   <string name="gt_aef7c5afac4b70b8">"VTXO máximo"</string>
   <string name="gt_eb970eb0951c6cde">"Último"</string>

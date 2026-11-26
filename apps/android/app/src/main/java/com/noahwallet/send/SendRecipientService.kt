@@ -61,8 +61,7 @@ object LnurlPayerData {
     fun json(shared: Map<String, String>) = buildJsonObject { shared.toSortedMap().forEach { (field, value) -> put(field, value) } }.toString()
 }
 
-class SendRecipientService(private val network: String, private val warn: (String) -> Unit = {},
-    private val fetch: suspend (HttpUrl) -> JsonObject = ::fetchJSON,
+class SendRecipientService(private val network: String, private val fetch: suspend (HttpUrl) -> JsonObject = ::fetchJSON,
     private val arkServerKey: suspend () -> String? = { null }, private val validateArk: suspend (String) -> Boolean = { false }) {
     suspend fun resolve(destination: String): SendRecipientRoute {
         val value = SendDestination.cleaned(destination).lowercase()
@@ -86,10 +85,8 @@ class SendRecipientService(private val network: String, private val warn: (Strin
         requireSend(msat in route.minMsat..route.maxMsat && payment.comment.length <= route.commentAllowed)
         val url = callbackUrl(route.callback, msat, payment.comment, LnurlPayerData.build(route.payerData, payment.payerData.orEmpty()))
         val invoice = fetch(url)["pr"]?.jsonPrimitive?.contentOrNull ?: throw SendFailure(SendFailure.Reason.invalid)
+        // LNURL-pay no longer binds the invoice's description hash to the metadata (lnurl/luds#234), so it isn't checked.
         validateInvoice(invoice, payment.amount, network)
-        val decoded = PaymentEncoding.invoice(invoice)!!
-        if (route.metadata != null && decoded.descriptionHash != PaymentEncoding.hex(PaymentEncoding.sha256(route.metadata.toByteArray())))
-            warn("LNURL invoice description hash does not commit to endpoint metadata")
         return invoice
     }
     companion object {

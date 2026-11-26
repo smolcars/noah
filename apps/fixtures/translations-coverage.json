@@ -6,8 +6,8 @@
     "ko",
     "sv"
   ],
-  "catalogEntries": 1598,
-  "sourceKeys": 1643,
+  "catalogEntries": 1597,
+  "sourceKeys": 1642,
   "coverage": {
     "ios": {
       "used": [
@@ -564,7 +564,6 @@
         "Keep notifications on so payments can go through while Noah is closed.",
         "Keep payment",
         "Keep stopped",
-        "LNURL invoice description hash does not commit to endpoint metadata",
         "Language",
         "Largest VTXO",
         "Last",
@@ -2038,7 +2037,6 @@
         "Keep notifications on so payments can go through while Noah is closed.",
         "Keep payment",
         "Keep stopped",
-        "LNURL invoice description hash does not commit to endpoint metadata",
         "Language",
         "Largest VTXO",
         "Last",

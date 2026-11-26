@@ -10,7 +10,7 @@ internal class SdkSendWallet(private val wallet: Wallet, private val onchain: On
     private val synchronization: com.noahwallet.services.wallet.WalletSync = com.noahwallet.services.wallet.WalletSync()) : SendWallet {
     private val preparations = SendPreparations(onchain::discardPrepared, warn)
     override suspend fun retryDiscards() = preparations.retryDiscards()
-    fun recipientService() = SendRecipientService(network, warn, arkServerKey = { wallet.arkInfo()?.serverPubkey },
+    fun recipientService() = SendRecipientService(network, arkServerKey = { wallet.arkInfo()?.serverPubkey },
         validateArk = { wallet.validateArkoorAddress(it) })
     suspend fun pendingHashes() = wallet.pendingLightningSends().map { it.paymentHash }.toSet()
     suspend fun offerAmount(offer: String) = offerAmount(offer) { wallet.parsePaymentRequest(it) }

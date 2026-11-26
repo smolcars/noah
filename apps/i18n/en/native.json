@@ -487,7 +487,6 @@
   "gt_4948e134182f8420": "Suspend",
   "gt_494ca78f7374e46f": "Custom",
   "gt_4959a2e0f7e6fc11": "Never share them. Anyone with these words can take your bitcoin.",
-  "gt_4993449490bbc0ac": "LNURL invoice description hash does not commit to endpoint metadata",
   "gt_499f9885f21d51cb": "Start exit",
   "gt_49a97d74c6bb00c8": "Recurring consumption evidence is incomplete. Sending remains stopped.",
   "gt_49ae83f26e5d0d93": "Lightning is still finding a route. You can leave this screen; Noah finishes it in the background.",
