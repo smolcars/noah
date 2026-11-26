@@ -533,6 +533,10 @@
   <string name="gt_d0d4acf522a64741">"Från dessa mynt"</string>
   <string name="gt_13bbc1285eb22070">"Från ditt saldo på blockkedjan."</string>
   <string name="gt_dbfd99a4abd0ded1">"Från din plånbok på kedjan"</string>
+  <plurals name="gt_6a7445b69570a820">
+    <item quantity="one">"From %1$s selected coin."</item>
+    <item quantity="other">"From %1$s selected coins."</item>
+  </plurals>
   <string name="gt_c41e04a73516abe6">"Finansieringsingångar"</string>
   <string name="gt_f64c1af83adbae63">"Finansieringstransaktion"</string>
   <string name="gt_e32bf7f648769c22">"Medlen kan överföras till en on-chain-adress."</string>
@@ -715,10 +719,15 @@
   <string name="gt_44541f362e819e01">"Flytta till Ark"</string>
   <string name="gt_fe09b8832fc8878e">"Flytta till kedjan"</string>
   <string name="gt_e5aa7874e42cca96">"Flytta fram ditt uttag?"</string>
+  <plurals name="gt_20bbe41bac045140">
+    <item quantity="one">"Move %1$s coin to Ark"</item>
+    <item quantity="other">"Move %1$s coins to Ark"</item>
+  </plurals>
   <string name="gt_5c948b346d0764f3">"Flyttat till Ark"</string>
   <string name="gt_21ea93c7befc7bad">"Flyttat till kedjan"</string>
   <string name="gt_dcfb842231d789f7">"Medelsrörelsens ID"</string>
   <string name="gt_0850cf54792998dd">"Typ av medelsrörelse"</string>
+  <string name="gt_6479a14bd9e57bc8">"Moves only the selected confirmed coins and deducts the onchain fee from them, with no change output."</string>
   <string name="gt_befdcebd952d5b84">"Flyttas till Ark"</string>
   <string name="gt_d8f4530e7856dd78">"Flyttas till kedjan"</string>
   <string name="gt_a29d635845ca0cd8">"Flyttar %1$s till Ark"</string>
@@ -876,6 +885,7 @@
   <string name="gt_8596d4a93b3d33a1">"På blockkedjan"</string>
   <string name="gt_af283a1c9bacc979">"On-chain-adress"</string>
   <string name="gt_1e86a7752acde6de">"On-chain-adresser stöds ännu inte för återkommande betalningar"</string>
+  <string name="gt_122cbba26acdb091">"On-chain coins"</string>
   <string name="gt_94a6189a83ddde95">"Avgift på kedjan"</string>
   <string name="gt_2b714f4a4b944bee">"På blockkedjan i block %1$s"</string>
   <string name="gt_2d5b3f2658ac152b">"Kvarvarande reserv på kedjan"</string>
@@ -1149,6 +1159,7 @@
   <string name="gt_0bdc583e8496eb4a">"Välj en betalning"</string>
   <string name="gt_c500adf55832eadf">"Välj distributör"</string>
   <string name="gt_a81bdedbd0dccc7d">"Välj de som snart löper ut"</string>
+  <string name="gt_dba7ec09b6883315">"Select one or more confirmed coins to move them on their own. Moving one coin at a time avoids linking your other on-chain coins, but each move pays its own network fee."</string>
   <string name="gt_70f58736b63e2c9e">"Välj synliga"</string>
   <string name="gt_3b18955703b2ebc3">"Vald skärmbild"</string>
   <string name="gt_f6f4688ff23d50c6">"Skicka"</string>
@@ -1375,6 +1386,7 @@
   <string name="gt_d8b8392e2c542950">"Försök igen"</string>
   <string name="gt_5fd38e8f1d7ab62f">"Testa att säga"</string>
   <string name="gt_026460792a12cc5d">"Slå på den eller säkerhetskopiera nu"</string>
+  <string name="gt_68d75d7c96ba16e9">"Turn off Move automatically to choose individual on-chain coins to move."</string>
   <string name="gt_92dfd3632baeb6d4">"Slå på aviseringar"</string>
   <string name="gt_ae9c99bb67325b70">"Slå på dem i Inställningar. Noah kollar igen när du kommer tillbaka."</string>
   <string name="gt_baaddf70fb5d432b">"Typ"</string>
@@ -1424,6 +1436,7 @@
   <string name="gt_28ef268f1e77dc1b">"Använd återställningsfrasen som finns sparad på den här enheten för att återställa din säkerhetskopia."</string>
   <string name="gt_a622e464b0866447">"Använd %1$s"</string>
   <string name="gt_0bc523a8f221ea9f">"Användarnamnet får endast innehålla a-z, 0-9, bindestreck, understreck och punkt"</string>
+  <string name="gt_03112d18f94b641d">"Uses only the selected confirmed coins. Any remainder returns as on-chain change."</string>
   <string name="gt_94dcfd1ebf80512e">"Använder standard"</string>
   <string name="gt_e3565da14a2f70b8">"Vanligtvis inom några sekunder"</string>
   <string name="gt_b338094d31cf192f">"VTXO"</string>

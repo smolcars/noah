@@ -20,7 +20,8 @@ extension WalletSession {
                 walletID: handles.wallet.fingerprint(), vtxos: vtxos, exits: models,
                 confirmed: try await handles.onchain.balance().confirmedSats, tip: tip,
                 pendingTotal: try await handles.wallet.pendingExitsTotalSats(),
-                claimableHeight: try await handles.wallet.allExitsClaimableAtHeight())
+                claimableHeight: try await handles.wallet.allExitsClaimableAtHeight(),
+                utxos: Self.localUtxos(try await handles.onchain.utxos()))
             // What the exit screens add; optional, so a failed read never hides the exits themselves.
             overview.exitDelta = try? await handles.wallet.arkInfo()?.vtxoExitDelta
             overview.claimRecords = ExitClaimRecord.Store(key: ExitClaimRecord.key).load(walletID: overview.walletID) ?? [:]
@@ -154,12 +155,21 @@ extension WalletSession {
         try await withOpenWallet { try await $0.wallet.arkInfo()?.minBoardAmountSats }
     }
 
+    static func localUtxos(_ utxos: [OnchainUtxo]) -> [OnchainUtxoModel] {
+        BoardUtxoSelection.sorted(utxos.compactMap { utxo in
+            guard case .local(let point, let amount, let height) = utxo else { return nil }
+            return OnchainUtxoModel(txid: point.txid, vout: point.vout, amount: amount, confirmationHeight: height)
+        })
+    }
+
     func quoteOnchain(
         _ action: OnchainAction, ids: [String] = [], amount: UInt64 = 0, destination: String? = nil,
         automatic: Bool = false) async throws -> OnchainQuote {
         try await withOpenWallet { handles in
             if action == .board {
-                guard let quote = try await self.prepareBoardReview(handles, requested: amount, automatic: automatic)
+                guard Set(ids).count == ids.count, !automatic || ids.isEmpty else { throw OnchainFailure.invalid }
+                guard let quote = try await self.prepareBoardReview(
+                    handles, requested: amount, automatic: automatic, selectedOutpoints: ids.sorted())
                 else { throw OnchainFailure.invalid }
                 return quote
             }
@@ -207,7 +217,8 @@ extension WalletSession {
     }
 
     private func prepareBoardReview(_ handles: Handles, requested: UInt64, automatic: Bool,
-                                    claims: AutoBoardFunding.Claims = .init()) async throws -> OnchainQuote? {
+                                    claims: AutoBoardFunding.Claims = .init(),
+                                    selectedOutpoints: [String] = []) async throws -> OnchainQuote? {
         let balance = try await handles.onchain.balance().confirmedSats
         let rate = SendFlow.sdkFeeRate(satsPerKwu: try await handles.onchain.feeRates().regularSatPerKwu)
         let walletID = handles.wallet.fingerprint()
@@ -219,14 +230,17 @@ extension WalletSession {
                 feeRateSatPerVb: rate, confirmedOnly: true, excludedOutpoints: excluding.map(Self.outpoints))
             let quote = OnchainQuote(action: .board, walletID: walletID, ids: [], amount: board.grossSats,
                                      fee: board.arkFeeSats, chainFee: board.onchainFeeSats, confirmed: balance, feeRate: rate,
-                                     reviewedAt: .now, automatic: automatic, boardAll: !automatic && requested == 0 ? true : nil, prepared: .init(board))
+                                     reviewedAt: .now, automatic: automatic, boardAll: !automatic && requested == 0 ? true : nil,
+                                     prepared: .init(board), selectedOutpoints: selectedOutpoints)
             await retainBoardReview(quote, wallet: handles.wallet)
             return quote
         }
         guard automatic else {
-            // Move to Ark excludes nothing: the user may move everything, exit claims to this phone included.
-            do { return try await prepare(requested, excluding: nil) }
-            catch { throw OnchainSubmission.boardFailure(error) ?? error }
+            return try await Self.manualBoardReview(
+                requested: requested, selectedOutpoints: selectedOutpoints,
+                utxos: { Self.localUtxos(try await handles.onchain.utxos()) },
+                discard: { await self.discardBoard($0) },
+                prepare: prepare)
         }
         return try await Self.reserveBoardReview(minimum: minimum, feeRate: rate, claims: claims,
                                                  discard: { quote in
@@ -235,6 +249,33 @@ extension WalletSession {
                                                          throw OnchainFailure.uncertain
                                                      }
                                                  }, prepare: prepare)
+    }
+
+    /// Manual Move to Ark: excludes nothing when `selectedOutpoints` is empty, otherwise excludes every other local
+    /// coin and verifies the signed board spends only the chosen coins (all of them for DrainAll).
+    static func manualBoardReview(
+        requested: UInt64, selectedOutpoints: [String],
+        utxos: @Sendable () async throws -> [OnchainUtxoModel],
+        discard: @Sendable (OnchainQuote) async -> Void,
+        // swiftlint:disable:next discouraged_optional_collection - nil excludes nothing, unlike an explicit empty set
+        prepare: @Sendable (UInt64, Set<String>?) async throws -> OnchainQuote) async throws -> OnchainQuote {
+        do {
+            if selectedOutpoints.isEmpty { return try await prepare(requested, nil) }
+            let current = try await utxos()
+            guard let excluded = BoardUtxoSelection.excludedOutpoints(utxos: current, selected: selectedOutpoints) else {
+                throw OnchainFailure.changed
+            }
+            let quote = try await prepare(requested, excluded)
+            let preparedInputs = Set((quote.prepared?.inputs ?? []).map { "\($0.txid):\($0.vout)" })
+            guard BoardUtxoSelection.inputsValid(
+                preparedInputs: preparedInputs, selected: Set(selectedOutpoints), drainAll: requested == 0) else {
+                await discard(quote)
+                throw OnchainFailure.changed
+            }
+            return quote
+        } catch {
+            throw OnchainSubmission.boardFailure(error) ?? error
+        }
     }
 
     /// "txid:vout" outpoints for `prepareBoard`; bark ignores malformed and foreign ones.

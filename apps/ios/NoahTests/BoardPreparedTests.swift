@@ -433,4 +433,116 @@ struct BoardPreparedTests {
         #expect(await calls.submitted == 1)
         #expect(await calls.discarded == [quote.id])
     }
+
+    actor ManualBoardCapture {
+        // swiftlint:disable:next discouraged_optional_collection - records exact nil vs Set argument passed to prepare
+        var exclusions: [Set<String>?] = []
+        var discarded: [UUID] = []
+        // swiftlint:disable:next discouraged_optional_collection - nil means no exclusions passed
+        func recordExclusion(_ excluded: Set<String>?) { exclusions.append(excluded) }
+        func recordDiscard(_ id: UUID) { discarded.append(id) }
+    }
+
+    private static func makeManualBoardQuote(inputs: [OutPoint], selected: [String], all: Bool) -> OnchainQuote {
+        var q = Self.quote
+        q.id = UUID()
+        q.boardAll = all ? true : nil
+        q.selectedOutpoints = selected
+        q.prepared = .init(PreparedBoard(
+            id: q.id.uuidString, txid: "board", grossSats: 48_000, netSats: 47_670,
+            arkFeeSats: 330, onchainFeeSats: 1_543, vsize: 150, inputs: inputs))
+        return q
+    }
+
+    @Test func manualBoardSelectionExcludesUnselectedCoins() async throws {
+        let local = WalletSession.localUtxos([
+            .local(outpoint: .init(txid: "a", vout: 0), amountSats: 50_000, confirmationHeight: 100),
+            .local(outpoint: .init(txid: "b", vout: 1), amountSats: 90_000, confirmationHeight: 101),
+            .local(outpoint: .init(txid: "pending", vout: 0), amountSats: 20_000, confirmationHeight: nil),
+            .exit(vtxoId: "exit-1", amountSats: 30_000, height: 100),
+        ])
+        #expect(local.map(\.id) == ["b:1", "a:0", "pending:0"])
+
+        let capture = ManualBoardCapture()
+        let single = try await WalletSession.manualBoardReview(
+            requested: 0, selectedOutpoints: ["a:0"], utxos: { local },
+            discard: { await capture.recordDiscard($0.id) },
+            prepare: { _, excluded in
+                await capture.recordExclusion(excluded)
+                return Self.makeManualBoardQuote(inputs: [.init(txid: "a", vout: 0)], selected: ["a:0"], all: true)
+            })
+        #expect(single.selectedOutpoints == ["a:0"])
+        #expect(await capture.exclusions.last == ["b:1", "pending:0"])
+        #expect(await capture.discarded.isEmpty)
+
+        let partial = try await WalletSession.manualBoardReview(
+            requested: 30_000, selectedOutpoints: ["a:0", "b:1"], utxos: { local },
+            discard: { await capture.recordDiscard($0.id) },
+            prepare: { _, excluded in
+                await capture.recordExclusion(excluded)
+                return Self.makeManualBoardQuote(inputs: [.init(txid: "b", vout: 1)], selected: ["a:0", "b:1"], all: false)
+            })
+        #expect(partial.selectedOutpoints == ["a:0", "b:1"])
+        #expect(await capture.exclusions.last == ["pending:0"])
+
+        _ = try await WalletSession.manualBoardReview(
+            requested: 0, selectedOutpoints: [], utxos: { local },
+            discard: { await capture.recordDiscard($0.id) },
+            prepare: { _, excluded in
+                await capture.recordExclusion(excluded)
+                return Self.makeManualBoardQuote(inputs: [.init(txid: "a", vout: 0), .init(txid: "b", vout: 1)], selected: [], all: true)
+            })
+        #expect(await capture.exclusions.last == nil)
+    }
+
+    @Test func manualBoardSelectionRejectsUnrelatedOrUnavailableCoinsAndDiscards() async throws {
+        let local = WalletSession.localUtxos([
+            .local(outpoint: .init(txid: "a", vout: 0), amountSats: 50_000, confirmationHeight: 100),
+            .local(outpoint: .init(txid: "b", vout: 1), amountSats: 90_000, confirmationHeight: 101),
+            .local(outpoint: .init(txid: "pending", vout: 0), amountSats: 20_000, confirmationHeight: nil),
+        ])
+        let capture = ManualBoardCapture()
+        await #expect(throws: OnchainFailure.changed) {
+            _ = try await WalletSession.manualBoardReview(
+                requested: 0, selectedOutpoints: ["a:0"], utxos: { local },
+                discard: { await capture.recordDiscard($0.id) },
+                prepare: { _, excluded in
+                    await capture.recordExclusion(excluded)
+                    return Self.makeManualBoardQuote(
+                        inputs: [.init(txid: "a", vout: 0), .init(txid: "b", vout: 1)], selected: ["a:0"], all: true)
+                })
+        }
+        #expect(await capture.discarded.count == 1)
+
+        let beforeCount = await capture.exclusions.count
+        await #expect(throws: OnchainFailure.changed) {
+            _ = try await WalletSession.manualBoardReview(
+                requested: 0, selectedOutpoints: ["pending:0"], utxos: { local },
+                discard: { await capture.recordDiscard($0.id) },
+                prepare: { _, excluded in
+                    await capture.recordExclusion(excluded)
+                    return Self.makeManualBoardQuote(inputs: [], selected: ["pending:0"], all: true)
+                })
+        }
+        #expect(await capture.exclusions.count == beforeCount)
+    }
+
+    @Test func onchainQuoteCodableDefaultsSelectedOutpointsAndMatchesOnSelection() throws {
+        // Legacy journal JSON without `selectedOutpoints` decodes with an empty list.
+        var base = Self.quote
+        base.selectedOutpoints = []
+        let legacyData = try JSONEncoder().encode(base)
+        let decodedLegacy = try JSONDecoder().decode(OnchainQuote.self, from: legacyData)
+        #expect(decodedLegacy.selectedOutpoints.isEmpty)
+
+        var selected = base
+        selected.selectedOutpoints = ["b:1", "a:0"]
+        let encodedSelected = try JSONEncoder().encode(selected)
+        let decodedSelected = try JSONDecoder().decode(OnchainQuote.self, from: encodedSelected)
+        #expect(decodedSelected.selectedOutpoints == ["b:1", "a:0"])
+        #expect(!base.matches(decodedSelected))
+        var reordered = base
+        reordered.selectedOutpoints = ["a:0", "b:1"]
+        #expect(decodedSelected.matches(reordered))
+    }
 }

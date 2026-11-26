@@ -18817,6 +18817,102 @@
         }
       }
     },
+    "From {n} selected coins.": {
+      "comment": "GT gt_6a7445b69570a820; arguments: n",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "From %1$lld selected coin."
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "From %1$lld selected coins."
+                }
+              }
+            }
+          }
+        },
+        "es": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "From %1$lld selected coin."
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "From %1$lld selected coins."
+                }
+              }
+            }
+          }
+        },
+        "ja": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "From %1$lld selected coin."
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "From %1$lld selected coins."
+                }
+              }
+            }
+          }
+        },
+        "ko": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "From %1$lld selected coin."
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "From %1$lld selected coins."
+                }
+              }
+            }
+          }
+        },
+        "sv": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "From %1$lld selected coin."
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "From %1$lld selected coins."
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "Funding inputs": {
       "comment": "GT gt_c41e04a73516abe6; arguments: none",
       "extractionState": "manual",
@@ -25225,6 +25321,102 @@
         }
       }
     },
+    "Move {n} coins to Ark": {
+      "comment": "GT gt_20bbe41bac045140; arguments: n",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Move %1$lld coin to Ark"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Move %1$lld coins to Ark"
+                }
+              }
+            }
+          }
+        },
+        "es": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Move %1$lld coin to Ark"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Move %1$lld coins to Ark"
+                }
+              }
+            }
+          }
+        },
+        "ja": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Move %1$lld coin to Ark"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Move %1$lld coins to Ark"
+                }
+              }
+            }
+          }
+        },
+        "ko": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Move %1$lld coin to Ark"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Move %1$lld coins to Ark"
+                }
+              }
+            }
+          }
+        },
+        "sv": {
+          "variations": {
+            "plural": {
+              "one": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Move %1$lld coin to Ark"
+                }
+              },
+              "other": {
+                "stringUnit": {
+                  "state": "translated",
+                  "value": "Move %1$lld coins to Ark"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "Moved to Ark": {
       "comment": "GT gt_5c948b346d0764f3; arguments: none",
       "extractionState": "manual",
@@ -25365,6 +25557,42 @@
           "stringUnit": {
             "state": "translated",
             "value": "Typ av medelsrörelse"
+          }
+        }
+      }
+    },
+    "Moves only the selected confirmed coins and deducts the onchain fee from them, with no change output.": {
+      "comment": "GT gt_6479a14bd9e57bc8; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Moves only the selected confirmed coins and deducts the onchain fee from them, with no change output."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Moves only the selected confirmed coins and deducts the onchain fee from them, with no change output."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Moves only the selected confirmed coins and deducts the onchain fee from them, with no change output."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Moves only the selected confirmed coins and deducts the onchain fee from them, with no change output."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Moves only the selected confirmed coins and deducts the onchain fee from them, with no change output."
           }
         }
       }
@@ -30969,6 +31197,42 @@
           "stringUnit": {
             "state": "translated",
             "value": "On-chain-adresser stöds ännu inte för återkommande betalningar"
+          }
+        }
+      }
+    },
+    "On-chain coins": {
+      "comment": "GT gt_122cbba26acdb091; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "On-chain coins"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "On-chain coins"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "On-chain coins"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "On-chain coins"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "On-chain coins"
           }
         }
       }
@@ -40657,6 +40921,42 @@
         }
       }
     },
+    "Select one or more confirmed coins to move them on their own. Moving one coin at a time avoids linking your other on-chain coins, but each move pays its own network fee.": {
+      "comment": "GT gt_dba7ec09b6883315; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Select one or more confirmed coins to move them on their own. Moving one coin at a time avoids linking your other on-chain coins, but each move pays its own network fee."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Select one or more confirmed coins to move them on their own. Moving one coin at a time avoids linking your other on-chain coins, but each move pays its own network fee."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Select one or more confirmed coins to move them on their own. Moving one coin at a time avoids linking your other on-chain coins, but each move pays its own network fee."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Select one or more confirmed coins to move them on their own. Moving one coin at a time avoids linking your other on-chain coins, but each move pays its own network fee."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Select one or more confirmed coins to move them on their own. Moving one coin at a time avoids linking your other on-chain coins, but each move pays its own network fee."
+          }
+        }
+      }
+    },
     "Select visible": {
       "comment": "GT gt_70f58736b63e2c9e; arguments: none",
       "extractionState": "manual",
@@ -48745,6 +49045,42 @@
         }
       }
     },
+    "Turn off Move automatically to choose individual on-chain coins to move.": {
+      "comment": "GT gt_68d75d7c96ba16e9; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Turn off Move automatically to choose individual on-chain coins to move."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Turn off Move automatically to choose individual on-chain coins to move."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Turn off Move automatically to choose individual on-chain coins to move."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Turn off Move automatically to choose individual on-chain coins to move."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Turn off Move automatically to choose individual on-chain coins to move."
+          }
+        }
+      }
+    },
     "Turn on notifications": {
       "comment": "GT gt_92dfd3632baeb6d4; arguments: none",
       "extractionState": "manual",
@@ -50505,6 +50841,42 @@
           "stringUnit": {
             "state": "translated",
             "value": "Användarnamnet får endast innehålla a-z, 0-9, bindestreck, understreck och punkt"
+          }
+        }
+      }
+    },
+    "Uses only the selected confirmed coins. Any remainder returns as on-chain change.": {
+      "comment": "GT gt_03112d18f94b641d; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Uses only the selected confirmed coins. Any remainder returns as on-chain change."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Uses only the selected confirmed coins. Any remainder returns as on-chain change."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Uses only the selected confirmed coins. Any remainder returns as on-chain change."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Uses only the selected confirmed coins. Any remainder returns as on-chain change."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Uses only the selected confirmed coins. Any remainder returns as on-chain change."
           }
         }
       }

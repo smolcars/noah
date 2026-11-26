@@ -6,8 +6,8 @@
     "ko",
     "sv"
   ],
-  "catalogEntries": 1585,
-  "sourceKeys": 1628,
+  "catalogEntries": 1592,
+  "sourceKeys": 1637,
   "coverage": {
     "ios": {
       "used": [
@@ -478,6 +478,7 @@
         "From these coins",
         "From your on-chain balance.",
         "From your on-chain wallet",
+        "From {n} selected coins.",
         "Funding inputs",
         "Funding tx",
         "Funds are sweepable to an on-chain address.",
@@ -634,10 +635,12 @@
         "Move to Ark",
         "Move to on-chain",
         "Move your exit forward?",
+        "Move {n} coins to Ark",
         "Moved to Ark",
         "Moved to on-chain",
         "Movement ID",
         "Movement type",
+        "Moves only the selected confirmed coins and deducts the onchain fee from them, with no change output.",
         "Moving to Ark",
         "Moving to on-chain",
         "Moving {amount} to Ark",
@@ -771,6 +774,7 @@
         "On-chain",
         "On-chain address",
         "On-chain addresses are not supported for recurring payments yet",
+        "On-chain coins",
         "On-chain fee",
         "On-chain in block {height}",
         "On-chain reserve left",
@@ -1005,6 +1009,7 @@
         "Select VTXOs",
         "Select a payment",
         "Select expiring",
+        "Select one or more confirmed coins to move them on their own. Moving one coin at a time avoids linking your other on-chain coins, but each move pays its own network fee.",
         "Select visible",
         "Selected screenshot",
         "Send",
@@ -1210,6 +1215,7 @@
         "Try again",
         "Try saying",
         "Turn it on or back up now",
+        "Turn off Move automatically to choose individual on-chain coins to move.",
         "Turn on notifications",
         "Turn them on in Settings. Noah checks again when you come back.",
         "Type",
@@ -1251,6 +1257,7 @@
         "Use the recovery phrase stored on this device to restore your backup.",
         "Use {name}",
         "Username may only contain a-z, 0-9, dash, underscore, and period",
+        "Uses only the selected confirmed coins. Any remainder returns as on-chain change.",
         "Using the default",
         "Usually in seconds",
         "VTXO",
@@ -1429,10 +1436,50 @@
         "₿1 = 1 sat."
       ],
       "untranslated": {
-        "es": [],
-        "ja": [],
-        "ko": [],
-        "sv": []
+        "es": [
+          "gt_03112d18f94b641d",
+          "gt_122cbba26acdb091",
+          "gt_20bbe41bac045140_one",
+          "gt_20bbe41bac045140_other",
+          "gt_6479a14bd9e57bc8",
+          "gt_68d75d7c96ba16e9",
+          "gt_6a7445b69570a820_one",
+          "gt_6a7445b69570a820_other",
+          "gt_dba7ec09b6883315"
+        ],
+        "ja": [
+          "gt_03112d18f94b641d",
+          "gt_122cbba26acdb091",
+          "gt_20bbe41bac045140_one",
+          "gt_20bbe41bac045140_other",
+          "gt_6479a14bd9e57bc8",
+          "gt_68d75d7c96ba16e9",
+          "gt_6a7445b69570a820_one",
+          "gt_6a7445b69570a820_other",
+          "gt_dba7ec09b6883315"
+        ],
+        "ko": [
+          "gt_03112d18f94b641d",
+          "gt_122cbba26acdb091",
+          "gt_20bbe41bac045140_one",
+          "gt_20bbe41bac045140_other",
+          "gt_6479a14bd9e57bc8",
+          "gt_68d75d7c96ba16e9",
+          "gt_6a7445b69570a820_one",
+          "gt_6a7445b69570a820_other",
+          "gt_dba7ec09b6883315"
+        ],
+        "sv": [
+          "gt_03112d18f94b641d",
+          "gt_122cbba26acdb091",
+          "gt_20bbe41bac045140_one",
+          "gt_20bbe41bac045140_other",
+          "gt_6479a14bd9e57bc8",
+          "gt_68d75d7c96ba16e9",
+          "gt_6a7445b69570a820_one",
+          "gt_6a7445b69570a820_other",
+          "gt_dba7ec09b6883315"
+        ]
       }
     },
     "android": {
@@ -1907,6 +1954,7 @@
         "From these coins",
         "From your on-chain balance.",
         "From your on-chain wallet",
+        "From {n} selected coins.",
         "Funding inputs",
         "Funding tx",
         "Funds are sweepable to an on-chain address.",
@@ -2067,10 +2115,12 @@
         "Move to Ark",
         "Move to on-chain",
         "Move your exit forward?",
+        "Move {n} coins to Ark",
         "Moved to Ark",
         "Moved to on-chain",
         "Movement ID",
         "Movement type",
+        "Moves only the selected confirmed coins and deducts the onchain fee from them, with no change output.",
         "Moving to Ark",
         "Moving to on-chain",
         "Moving {amount} to Ark",
@@ -2208,6 +2258,7 @@
         "On-chain",
         "On-chain address",
         "On-chain addresses are not supported for recurring payments yet",
+        "On-chain coins",
         "On-chain fee",
         "On-chain in block {height}",
         "On-chain reserve left",
@@ -2445,6 +2496,7 @@
         "Select VTXOs",
         "Select a payment",
         "Select distributor",
+        "Select one or more confirmed coins to move them on their own. Moving one coin at a time avoids linking your other on-chain coins, but each move pays its own network fee.",
         "Selected screenshot",
         "Send",
         "Send about {amount} here. Exits use it once it confirms.",
@@ -2643,6 +2695,7 @@
         "Tree root",
         "Try again",
         "Turn it on or back up now",
+        "Turn off Move automatically to choose individual on-chain coins to move.",
         "Turn on notifications",
         "Turn them on in Settings. Noah checks again when you come back.",
         "Type",
@@ -2687,6 +2740,7 @@
         "Use default",
         "Use default server",
         "Username may only contain a-z, 0-9, dash, underscore, and period",
+        "Uses only the selected confirmed coins. Any remainder returns as on-chain change.",
         "Using the default",
         "Usually in seconds",
         "VTXO",
@@ -2877,10 +2931,50 @@
         "₿1 = 1 sat."
       ],
       "untranslated": {
-        "es": [],
-        "ja": [],
-        "ko": [],
-        "sv": []
+        "es": [
+          "gt_03112d18f94b641d",
+          "gt_122cbba26acdb091",
+          "gt_20bbe41bac045140_one",
+          "gt_20bbe41bac045140_other",
+          "gt_6479a14bd9e57bc8",
+          "gt_68d75d7c96ba16e9",
+          "gt_6a7445b69570a820_one",
+          "gt_6a7445b69570a820_other",
+          "gt_dba7ec09b6883315"
+        ],
+        "ja": [
+          "gt_03112d18f94b641d",
+          "gt_122cbba26acdb091",
+          "gt_20bbe41bac045140_one",
+          "gt_20bbe41bac045140_other",
+          "gt_6479a14bd9e57bc8",
+          "gt_68d75d7c96ba16e9",
+          "gt_6a7445b69570a820_one",
+          "gt_6a7445b69570a820_other",
+          "gt_dba7ec09b6883315"
+        ],
+        "ko": [
+          "gt_03112d18f94b641d",
+          "gt_122cbba26acdb091",
+          "gt_20bbe41bac045140_one",
+          "gt_20bbe41bac045140_other",
+          "gt_6479a14bd9e57bc8",
+          "gt_68d75d7c96ba16e9",
+          "gt_6a7445b69570a820_one",
+          "gt_6a7445b69570a820_other",
+          "gt_dba7ec09b6883315"
+        ],
+        "sv": [
+          "gt_03112d18f94b641d",
+          "gt_122cbba26acdb091",
+          "gt_20bbe41bac045140_one",
+          "gt_20bbe41bac045140_other",
+          "gt_6479a14bd9e57bc8",
+          "gt_68d75d7c96ba16e9",
+          "gt_6a7445b69570a820_one",
+          "gt_6a7445b69570a820_other",
+          "gt_dba7ec09b6883315"
+        ]
       }
     }
   }

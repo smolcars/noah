@@ -54,6 +54,16 @@ struct ExitModel: Identifiable, Equatable, Sendable {
     }
 }
 
+struct OnchainUtxoModel: Identifiable, Equatable, Sendable {
+    var txid: String
+    var vout: UInt32
+    var amount: UInt64
+    var confirmationHeight: UInt32?
+    var id: String { "\(txid):\(vout)" }
+    var confirmed: Bool { confirmationHeight != nil }
+    var selectable: Bool { confirmed }
+}
+
 struct OnchainOverview: Sendable {
     var walletID: String
     var vtxos: [VtxoModel]
@@ -62,6 +72,8 @@ struct OnchainOverview: Sendable {
     var tip: UInt32
     var pendingTotal: UInt64
     var claimableHeight: UInt32?
+    /// Local on-chain UTXOs, confirmed first, for manual coin selection when Move automatically is off.
+    var utxos: [OnchainUtxoModel] = []
     /// The server's `vtxo_exit_delta`: blocks an exit waits after its last transaction confirms.
     var exitDelta: UInt32?
     /// Fees this wallet paid for its exits, by fee-child txid.
@@ -96,7 +108,7 @@ enum OnchainAction: String, Codable, Sendable {
     }
 }
 
-struct OnchainQuote: Identifiable, Codable, Equatable, Sendable {
+struct OnchainQuote: Identifiable, Equatable, Sendable {
     var id = UUID()
     var action: OnchainAction
     var walletID: String
@@ -118,10 +130,8 @@ struct OnchainQuote: Identifiable, Codable, Equatable, Sendable {
     var boardAll: Bool?
     var unknownFeeConsent: UUID?
     var prepared: SendPreparedTransaction?
-    private enum CodingKeys: String, CodingKey {
-        case id, action, walletID, ids, destination, destinationIsMine, amount, fee, chainFee, confirmed, feeRate,
-             createdAt, automatic, boardAll, unknownFeeConsent, prepared
-    }
+    /// Selected on-chain outpoints ("txid:vout") when manual boarding scopes to specific coins; empty uses all confirmed coins.
+    var selectedOutpoints: [String] = []
     func elapsed(at now: ContinuousClock.Instant = .now) -> Duration {
         ReviewClock.elapsed(since: reviewedAt, createdAt: createdAt, now: now)
     }
@@ -156,7 +166,56 @@ struct OnchainQuote: Identifiable, Codable, Equatable, Sendable {
         inputs.matches(other.inputs) && fee == other.fee
             && chainFee == other.chainFee && confirmed == other.confirmed && feeRate == other.feeRate
             && destinationIsMine == other.destinationIsMine && automatic == other.automatic && boardAll == other.boardAll
-            && prepared == other.prepared
+            && prepared == other.prepared && selectedOutpoints.sorted() == other.selectedOutpoints.sorted()
+    }
+}
+
+extension OnchainQuote: Codable {
+    private enum CodingKeys: String, CodingKey {
+        case id, action, walletID, ids, destination, destinationIsMine, amount, fee, chainFee, confirmed, feeRate,
+             createdAt, automatic, boardAll, unknownFeeConsent, prepared, selectedOutpoints
+    }
+
+    init(from decoder: Decoder) throws {
+        let values = try decoder.container(keyedBy: CodingKeys.self)
+        id = try values.decode(UUID.self, forKey: .id)
+        action = try values.decode(OnchainAction.self, forKey: .action)
+        walletID = try values.decode(String.self, forKey: .walletID)
+        ids = try values.decode([String].self, forKey: .ids)
+        destination = try values.decodeIfPresent(String.self, forKey: .destination)
+        destinationIsMine = try values.decodeIfPresent(Bool.self, forKey: .destinationIsMine)
+        amount = try values.decode(UInt64.self, forKey: .amount)
+        fee = try values.decodeIfPresent(UInt64.self, forKey: .fee)
+        chainFee = try values.decodeIfPresent(UInt64.self, forKey: .chainFee)
+        confirmed = try values.decode(UInt64.self, forKey: .confirmed)
+        feeRate = try values.decodeIfPresent(UInt64.self, forKey: .feeRate)
+        createdAt = try values.decode(Date.self, forKey: .createdAt)
+        automatic = try values.decode(Bool.self, forKey: .automatic)
+        boardAll = try values.decodeIfPresent(Bool.self, forKey: .boardAll)
+        unknownFeeConsent = try values.decodeIfPresent(UUID.self, forKey: .unknownFeeConsent)
+        prepared = try values.decodeIfPresent(SendPreparedTransaction.self, forKey: .prepared)
+        selectedOutpoints = try values.decodeIfPresent([String].self, forKey: .selectedOutpoints) ?? []
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var values = encoder.container(keyedBy: CodingKeys.self)
+        try values.encode(id, forKey: .id)
+        try values.encode(action, forKey: .action)
+        try values.encode(walletID, forKey: .walletID)
+        try values.encode(ids, forKey: .ids)
+        try values.encodeIfPresent(destination, forKey: .destination)
+        try values.encodeIfPresent(destinationIsMine, forKey: .destinationIsMine)
+        try values.encode(amount, forKey: .amount)
+        try values.encodeIfPresent(fee, forKey: .fee)
+        try values.encodeIfPresent(chainFee, forKey: .chainFee)
+        try values.encode(confirmed, forKey: .confirmed)
+        try values.encodeIfPresent(feeRate, forKey: .feeRate)
+        try values.encode(createdAt, forKey: .createdAt)
+        try values.encode(automatic, forKey: .automatic)
+        try values.encodeIfPresent(boardAll, forKey: .boardAll)
+        try values.encodeIfPresent(unknownFeeConsent, forKey: .unknownFeeConsent)
+        try values.encodeIfPresent(prepared, forKey: .prepared)
+        if !selectedOutpoints.isEmpty { try values.encode(selectedOutpoints, forKey: .selectedOutpoints) }
     }
 }
 

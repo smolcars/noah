@@ -46,6 +46,9 @@ only platform/network dependencies were mocked. `exit-fee-estimate` (82),
 `exit-cancellation` (56), `exit-timeline` (12), `exit-overview-coordination` (16),
 and `auto-boarding` (21) contain 187 portable cases. Swift runs these in
 `ExitFixtureTests`; Android can reuse the files without running React Native.
+`board-utxo-selection.json` (17 cases) is native-only (#366) and specifies manual
+UTXO sorting, `excludedOutpoints` derivation, signed-input validation (exact match for
+Max/DrainAll, non-empty subset for fixed amount), and selection pruning across both apps.
 
 M7 unattended fee cap: `recurring-fee-cap` (24 cases) is native-only (RN pays recurring
 Lightning without a cap) and hand-specified from the decision recorded in

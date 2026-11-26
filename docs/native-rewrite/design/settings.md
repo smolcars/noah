@@ -101,8 +101,9 @@ Build each page as the prototype and the notes' "Every current feature" tables d
   - the VTXO page has amount, status, lifetime bar, State, Expires, Blocks left, VTXO ID and Anchor with explorer, plus Details, with Renew at the bottom;
   - the missing-VTXO message as today.
 - **On-chain:**
-  - "Move to Ark" sheet: amount, Max, today's fee rows. While it confirms, Send's block row.
-  - "Move automatically": auto-board, with one line. Home's auto-board prompt is unchanged.
+  - "Move to Ark" sheet: amount, Max, today's fee rows (including `Funding inputs`). While it confirms, Send's block row.
+  - "Move automatically": auto-board, with one line (unchanged; combines eligible confirmed deposits while keeping the 5,000-sat exit fee reserve). Home's auto-board prompt is unchanged.
+  - **Manual coin selection (#366):** when "Move automatically" is off (and no board is confirming), the page lists local on-chain UTXOs (confirmed coins selectable, unconfirmed coins disabled) with a note explaining the on-chain privacy trade-off: moving one complete coin at a time avoids linking unrelated UTXOs on-chain and produces no change output when using Max, at the cost of a separate on-chain fee per move. Selecting one or more confirmed coins scopes "Move to Ark" to only those UTXOs (passing every other local UTXO in `prepareBoard`'s `excludedOutpoints`, defaulting the sheet to Max, and verifying the signed `PreparedBoard.inputs` match the selection before review). Turning "Move automatically" back on clears the selection and keeps a one-line hint that turning it off lets you choose individual coins.
   - Receipts as today.
 - **Recurring payments:**
   - **List:** Activity-style rows (name, "Monthly · next Nov 20" or a status word, amount); "Needs approval" carries the red badge; Run due payments; shown on every device.

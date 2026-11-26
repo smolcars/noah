@@ -163,6 +163,40 @@ enum BoardingRules {
     }
 }
 
+/// Platform-independent coin-selection rules for manual UTXO boarding (shared fixture: board-utxo-selection.json).
+enum BoardUtxoSelection {
+    static func sorted(_ utxos: [OnchainUtxoModel]) -> [OnchainUtxoModel] {
+        utxos.sorted { lhs, rhs in
+            if lhs.confirmed != rhs.confirmed { return lhs.confirmed }
+            if lhs.amount != rhs.amount { return lhs.amount > rhs.amount }
+            return lhs.id < rhs.id
+        }
+    }
+
+    /// Outpoints to exclude from `prepareBoard` so only `selected` can be spent. Empty `selected` excludes nothing;
+    /// returns nil when `selected` has duplicates or names a missing or unconfirmed coin.
+    // swiftlint:disable:next discouraged_optional_collection - nil means invalid/unavailable selection, distinct from empty exclusions
+    static func excludedOutpoints(utxos: [OnchainUtxoModel], selected: [String]) -> Set<String>? {
+        if selected.isEmpty { return [] }
+        let wanted = Set(selected)
+        guard wanted.count == selected.count else { return nil }
+        let selectable = Set(utxos.filter(\.selectable).map(\.id))
+        guard wanted.isSubset(of: selectable) else { return nil }
+        return Set(utxos.map(\.id)).subtracting(wanted)
+    }
+
+    /// Verifies the signed board's inputs honour `selected`: draining selected coins must spend every selected coin
+    /// and nothing else; a fixed amount must spend at least one selected coin and never an unselected coin.
+    static func inputsValid(preparedInputs: Set<String>, selected: Set<String>, drainAll: Bool) -> Bool {
+        if selected.isEmpty { return true }
+        return drainAll ? preparedInputs == selected : !preparedInputs.isEmpty && preparedInputs.isSubset(of: selected)
+    }
+
+    static func prune(_ selected: Set<String>, in utxos: [OnchainUtxoModel]) -> Set<String> {
+        selected.intersection(Set(utxos.filter(\.selectable).map(\.id)))
+    }
+}
+
 struct ExitReviewInputs: Codable, Sendable {
     var walletId: String?
     var vtxoIds: [String]
