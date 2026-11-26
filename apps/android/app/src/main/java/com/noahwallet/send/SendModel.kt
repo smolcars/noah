@@ -12,7 +12,9 @@ class SendModel(val controller: SendController, private val network: String,
     private val discardQuote: suspend (SendQuote) -> Unit,
     private val scope: CoroutineScope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate),
     /** The amount a BOLT12 offer fixes, or null; the quote checks it again. */
-    private val offerAmount: suspend (String) -> Long? = { null }) {
+    private val offerAmount: suspend (String) -> Long? = { null },
+    /** What Noah can send as LUD-18 payer data; the quote reads it again when it calls the address's callback. */
+    private val payerIdentity: () -> LnurlPayerIdentity = { LnurlPayerIdentity() }) {
     private var amountText by mutableStateOf("")
     /** A valid amount clears Next's zero-amount error at once; any other error stays. */
     var amount: String
@@ -31,7 +33,15 @@ class SendModel(val controller: SendController, private val network: String,
     var stage by mutableStateOf(SendStage.amount)
     var progress by mutableStateOf(SendProgress())
     var parsed by mutableStateOf(SendDestination())
-    var route by mutableStateOf<SendRecipientRoute?>(null)
+    private var routeState by mutableStateOf<SendRecipientRoute?>(null)
+    /** The LUD-18 payer data this Lightning address will be sent, or why it can't be paid. */
+    private var payerData by mutableStateOf<Result<Map<String, String>>?>(null)
+    var route: SendRecipientRoute?
+        get() = routeState
+        set(value) {
+            // Read once per lookup: To's notice, its error and the payment's payer data all come from this.
+            routeState = value; payerData = value?.let { runCatching { LnurlPayerData.build(it.payerData, payerIdentity().fields) } }
+        }
     var source by mutableStateOf<SendSource?>(null)
     var pendingLightningHashes by mutableStateOf<Set<String>>(emptySet())
     var arkBalance by mutableLongStateOf(0)
@@ -51,6 +61,11 @@ class SendModel(val controller: SendController, private val network: String,
     val sats: Long get() = if (isMax) SendFlow.maxBalance(source, onchainBalance, arkBalance)
     else if (useFiat) btcPrice?.let { FiatCurrency.fiatToSats(amount.toDoubleOrNull() ?: Double.NaN, it) } ?: 0 else amount.toLongOrNull() ?: 0
     val matchingRoute get() = route?.takeIf { parsed.destinationType == "lnurl" && it.destination == SendDestination.cleaned(destination).lowercase() }
+    /** What To's notice says Noah will share with this Lightning address (LUD-18); null when it asks for nothing Noah has saved,
+     *  or for something Noah can't send. */
+    val payerShare: LnurlPayerData.Share? get() = matchingRoute?.let { payerData?.getOrNull() }?.let(LnurlPayerData::share)
+    /** Why this Lightning address can't be paid: it requires payer data Noah can't send. */
+    private val payerDataFailure get() = matchingRoute?.let { payerData?.exceptionOrNull() }
     val rails get() = if (parsed.destinationType == "lnurl" && matchingRoute?.arkAddress != null && comment.isEmpty()) listOf(SendRail.ark,
         SendRail.lightning) else SendFlow.rails(parsed.destinationType, parsed.bip321)
     val availability: Map<String, Boolean> get() {
@@ -140,15 +155,23 @@ class SendModel(val controller: SendController, private val network: String,
             selectedRail = if (isMax) SendRail.onchain else SendFlow.recommend(rails, availability))
         return true
     }
-    /** A Lightning address not looked up yet; false when the recipient changed meanwhile, or when it takes a note To hasn't
-     *  shown yet (a scan, paste or tapped result): then it stops on To so a note can be added. */
+    /** A Lightning address looked up and ready to pay. False when the recipient changed meanwhile, or when To stays: with an
+     *  error while the address requires payer data Noah can't send, or after a lookup To hasn't shown yet (a scan, paste or
+     *  tapped result) that takes a note or will be sent payer data. */
     private suspend fun lnurlResolved(keypad: Boolean, unchanged: () -> Boolean): Boolean {
-        if (parsed.destinationType != "lnurl" || matchingRoute != null) return true
-        val resolved = resolveRecipient(SendDestination.cleaned(destination).lowercase())
-        if (!unchanged()) return false
-        route = resolved; requireSend(matchingRoute != null)
-        if (resolved.commentAllowed > 0 && comment.isEmpty()) { keypadAfterNote = keypad; stage = SendStage.recipient; return false }
-        return true
+        if (parsed.destinationType != "lnurl") return true
+        val lookedUp = matchingRoute == null
+        if (lookedUp) {
+            val resolved = resolveRecipient(SendDestination.cleaned(destination).lowercase())
+            if (!unchanged()) return false
+            route = resolved; requireSend(matchingRoute != null)
+        }
+        val failure = payerDataFailure
+        failure?.let { error = it.message }
+        val unseen = lookedUp && (((route?.commentAllowed ?: 0) > 0 && comment.isEmpty()) || payerShare != null)
+        if (failure == null && !unseen) return true
+        keypadAfterNote = keypad; stage = SendStage.recipient
+        return false
     }
     suspend fun continueStage() {
         if (busy || controller.locked) return
@@ -212,7 +235,9 @@ class SendModel(val controller: SendController, private val network: String,
             if (rail == SendRail.ark && comment.isEmpty() && route.arkAddress != null) { method = "ark"; target = route.arkAddress }
         }
         if (method == "lightning") requireInvoiceAmount(target)
-        val payment = SendPayment(target, method, sats, if (rail == SendRail.onchain) source else null, isMax, comment, repeatMetadata())
+        // The quote sends only what To showed.
+        val shared = if (method == "lnurl") payerData?.getOrThrow()?.takeIf { it.isNotEmpty() } else null
+        val payment = SendPayment(target, method, sats, if (rail == SendRail.onchain) source else null, isMax, comment, repeatMetadata(), shared)
         requireSend(!isMax || (method == "onchain" && source != null))
         return payment
     }

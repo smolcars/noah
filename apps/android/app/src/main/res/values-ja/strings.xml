@@ -581,6 +581,7 @@
   <string name="gt_cd65f6dcab984750">"書き留めました"</string>
   <string name="gt_a7c07c281fad3bc0">"INR"</string>
   <string name="gt_653b28e6a3e022c8">"Arkが動いているなら、ビットコインアドレスへの送金を使ってください。"</string>
+  <string name="gt_60be7f03334cecb2">"If the recipient asks, your name and Lightning address will be shared with each payment."</string>
   <string name="gt_1d93f10792a18bf1">"未成熟"</string>
   <string name="gt_86a486e897edd1bc">"VTXOをインポート"</string>
   <string name="gt_7584323bc1a01829">"Ark内"</string>
@@ -1357,6 +1358,8 @@
   <string name="gt_40db1d4d49d0c277">"このフレーズではバックアップのロックを解除できないか、バックアップが破損しています。12個または24個すべての単語とその順序を確認してください。"</string>
   <string name="gt_7d13ecdf60d28aa9">"この店舗では別の決済アプリが必要な場合があります"</string>
   <string name="gt_44f3e818daadd169">"この場所に登録されているリンクは無効です。"</string>
+  <string name="gt_eed34da3ded00d7c">"This recipient requires details Noah can\'t share."</string>
+  <string name="gt_6c1f7c367885f36b">"This recipient requires your name or Lightning address. Add it in Settings, then try again."</string>
   <string name="gt_5d5cfeffe0f4ad97">"委任されたArkラウンドで選択したVTXOを更新します。"</string>
   <string name="gt_01d7d06401b5eaad">"このスマートフォンからウォレットと復元フレーズを削除します。元に戻すことはできません。"</string>
   <string name="gt_e3475188c78e15ad">"この端末からウォレットと復元フレーズを削除します。復元フレーズを保存してあることを確認してください。確認のため delete と入力してください。"</string>
@@ -1547,6 +1550,7 @@
   <string name="gt_723022dbd02fce20">"定期支払いの登録数が上限に達しました。"</string>
   <string name="gt_3d26c2347422ac51">"Ark残高をこのウォレット自身のオンチェーンアドレスに全額送金することはできません。外部のBitcoinアドレスを使用してください。"</string>
   <string name="gt_d981ea9469a9b19c">"あなたのライトニングアドレスは%1$sです。"</string>
+  <string name="gt_09d7e041b4833c33">"Your Lightning address will be shared with this recipient."</string>
   <string name="gt_f9f55c49d8421334">"あなたのVTXO"</string>
   <plurals name="gt_bd4a6db1a4abe642">
     <item quantity="one">"あなたのVTXOはラウンドのツリーの葉です。そこに届くまで、あなたの枝の%1$s件のトランザクションがチェーンへ送られます。"</item>
@@ -1566,6 +1570,8 @@
   <string name="gt_8074a7762dd1f578">"新しいメールアドレスが確認されるまでは、現在のアドレスが使われます。"</string>
   <string name="gt_886bc67a71fe0f83">"メールアドレスはウォレットに関する緊急の通知にのみ使います。"</string>
   <string name="gt_2c6b2e253c01fb2e">"お名前"</string>
+  <string name="gt_d963d9432bad9d0d">"Your name and Lightning address will be shared with this recipient."</string>
+  <string name="gt_0f869adfb2385187">"Your name will be shared with this recipient."</string>
   <string name="gt_d9a846242ed7a22f">"復元フレーズは引き続きこの端末に安全に保存されています。このフレーズを使って、バックアップからウォレットを復元してください。"</string>
   <string name="gt_09233d973ee617bd">"ウォレットの準備ができました。"</string>
   <string name="gt_03a1be6d25f62f17">"ウォレットは一時停止中です。Noahを開いて再開してください。"</string>

@@ -1,0 +1,58 @@
+{
+  "description": "The LNURL-pay callback URL Noah requests: the service's own query is kept, stale `amount`, `comment` and `payerdata` are replaced or removed, an empty note sends no `comment`, and no payer data sends no `payerdata`. `params` is the query as an application/x-www-form-urlencoded decoder reads it (`+` is a space), without `payerdata`; `payerData` is that parameter's JSON, or null when it is absent. Every value must come back exactly, whatever characters it holds.",
+  "cases": [
+    {
+      "name": "amount only when the note is empty",
+      "input": { "callback": "https://pay.example.com/cb", "amountMsat": 1000000, "comment": "", "payerData": null },
+      "expected": { "params": { "amount": "1000000" }, "payerData": null }
+    },
+    {
+      "name": "note with form-sensitive characters",
+      "input": { "callback": "https://pay.example.com/cb", "amountMsat": 1000000, "comment": "1+1 = 2 & more #tag ?/%", "payerData": null },
+      "expected": { "params": { "amount": "1000000", "comment": "1+1 = 2 & more #tag ?/%" }, "payerData": null }
+    },
+    {
+      "name": "non-ASCII note",
+      "input": { "callback": "https://pay.example.com/cb", "amountMsat": 21000, "comment": "Tack för fikan ☕️ 🙏", "payerData": null },
+      "expected": { "params": { "amount": "21000", "comment": "Tack för fikan ☕️ 🙏" }, "payerData": null }
+    },
+    {
+      "name": "payer data alongside a note",
+      "input": {
+        "callback": "https://pay.example.com/cb",
+        "amountMsat": 1000000,
+        "comment": "hi",
+        "payerData": { "name": "Ada + Bob & Co = \"us\" 🌊", "identifier": "ada@noahwallet.io" }
+      },
+      "expected": {
+        "params": { "amount": "1000000", "comment": "hi" },
+        "payerData": { "name": "Ada + Bob & Co = \"us\" 🌊", "identifier": "ada@noahwallet.io" }
+      }
+    },
+    {
+      "name": "payer data without a note",
+      "input": { "callback": "https://pay.example.com/cb", "amountMsat": 5000, "comment": "", "payerData": { "identifier": "ada@noahwallet.io" } },
+      "expected": { "params": { "amount": "5000" }, "payerData": { "identifier": "ada@noahwallet.io" } }
+    },
+    {
+      "name": "service query kept, stale values removed",
+      "input": {
+        "callback": "https://pay.example.com/cb?token=keep&amount=1&comment=old&payerdata=old&tag=a%2Bb",
+        "amountMsat": 2000,
+        "comment": "",
+        "payerData": null
+      },
+      "expected": { "params": { "token": "keep", "tag": "a+b", "amount": "2000" }, "payerData": null }
+    },
+    {
+      "name": "stale values replaced by new ones",
+      "input": {
+        "callback": "https://pay.example.com/cb?amount=1&comment=old&payerdata=%7B%7D&token=keep",
+        "amountMsat": 3000,
+        "comment": "new",
+        "payerData": { "name": "Ada" }
+      },
+      "expected": { "params": { "token": "keep", "amount": "3000", "comment": "new" }, "payerData": { "name": "Ada" } }
+    }
+  ]
+}

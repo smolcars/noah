@@ -112,8 +112,11 @@ internal fun recurringEndDate(value: Long, zone: TimeZone = TimeZone.getDefault(
             keyboard = KeyboardOptions(autoCorrectEnabled = false, keyboardType = KeyboardType.Uri))
         SettingsField(label, { label = limitedRecurringText(it, 64) }, tr("e.g. Rent"), Modifier.testTag("recurring-label-input"), label = tr("Name"),
             enabled = !saving)
-        if (destination?.second == "lnurl") SettingsField(comment, { comment = limitedRecurringText(it, 140) }, tr("Shared with the recipient"),
-            label = tr("Note (optional)"), enabled = !saving)
+        if (destination?.second == "lnurl") {
+            SettingsField(comment, { comment = limitedRecurringText(it, 140) }, tr("Shared with the recipient"), label = tr("Note (optional)"),
+                enabled = !saving)
+            FinePrint(tr("If the recipient asks, your name and Lightning address will be shared with each payment."))
+        }
         RecurringRepeats(unit, every, !saving, { unit = it; every = recurringDefaultEvery(it) }) { every = it }
         FieldLabel(tr("First payment"))
         RecurringDatePicker(start, true, !saving) { start = it }

@@ -1,0 +1,218 @@
+{
+  "description": "LUD-18 payer data a pay request asks for (`payerData`) and the wallet's saved identity, to what Noah sends in the callback's `payerdata`. Only `name` (profile display name) and `identifier` (own Lightning address) are supported. `payerData` absent or null means none, and it is read leniently: a malformed object counts as none, and a malformed field (not an object, or `mandatory` missing or not a boolean) counts as not asked for. `error`: `unsupported` when a field Noah doesn't send is mandatory (checked first), `missing` when a mandatory supported field has no saved value. Saved values are trimmed; empty ones count as unset.",
+  "cases": [
+    {
+      "name": "no payerData advertised",
+      "input": { "identity": { "name": "Ada", "identifier": "ada@noahwallet.io" } },
+      "expected": { "payerData": null, "error": null }
+    },
+    {
+      "name": "payerData null",
+      "input": { "payerData": null, "identity": { "name": "Ada", "identifier": "ada@noahwallet.io" } },
+      "expected": { "payerData": null, "error": null }
+    },
+    {
+      "name": "empty payerData object",
+      "input": { "payerData": {}, "identity": { "name": "Ada", "identifier": "ada@noahwallet.io" } },
+      "expected": { "payerData": null, "error": null }
+    },
+    {
+      "name": "both optional and both saved",
+      "input": {
+        "payerData": { "name": { "mandatory": false }, "identifier": { "mandatory": false } },
+        "identity": { "name": "Ada", "identifier": "ada@noahwallet.io" }
+      },
+      "expected": { "payerData": { "name": "Ada", "identifier": "ada@noahwallet.io" }, "error": null }
+    },
+    {
+      "name": "only the name is asked for",
+      "input": {
+        "payerData": { "name": { "mandatory": false } },
+        "identity": { "name": "Ada", "identifier": "ada@noahwallet.io" }
+      },
+      "expected": { "payerData": { "name": "Ada" }, "error": null }
+    },
+    {
+      "name": "only the identifier is asked for",
+      "input": {
+        "payerData": { "identifier": { "mandatory": false } },
+        "identity": { "name": "Ada", "identifier": "ada@noahwallet.io" }
+      },
+      "expected": { "payerData": { "identifier": "ada@noahwallet.io" }, "error": null }
+    },
+    {
+      "name": "optional fields without saved values are left out",
+      "input": {
+        "payerData": { "name": { "mandatory": false }, "identifier": { "mandatory": false } },
+        "identity": { "name": null, "identifier": null }
+      },
+      "expected": { "payerData": null, "error": null }
+    },
+    {
+      "name": "optional name unset, identifier saved",
+      "input": {
+        "payerData": { "name": { "mandatory": false }, "identifier": { "mandatory": false } },
+        "identity": { "name": null, "identifier": "ada@noahwallet.io" }
+      },
+      "expected": { "payerData": { "identifier": "ada@noahwallet.io" }, "error": null }
+    },
+    {
+      "name": "whitespace-only name counts as unset",
+      "input": {
+        "payerData": { "name": { "mandatory": false }, "identifier": { "mandatory": false } },
+        "identity": { "name": "   ", "identifier": "ada@noahwallet.io" }
+      },
+      "expected": { "payerData": { "identifier": "ada@noahwallet.io" }, "error": null }
+    },
+    {
+      "name": "empty identifier counts as unset",
+      "input": {
+        "payerData": { "name": { "mandatory": false }, "identifier": { "mandatory": false } },
+        "identity": { "name": "Ada", "identifier": "" }
+      },
+      "expected": { "payerData": { "name": "Ada" }, "error": null }
+    },
+    {
+      "name": "saved values are trimmed",
+      "input": {
+        "payerData": { "name": { "mandatory": false }, "identifier": { "mandatory": false } },
+        "identity": { "name": "  Ada Lovelace  ", "identifier": " ada@noahwallet.io " }
+      },
+      "expected": { "payerData": { "name": "Ada Lovelace", "identifier": "ada@noahwallet.io" }, "error": null }
+    },
+    {
+      "name": "non-ASCII name is kept as is",
+      "input": {
+        "payerData": { "name": { "mandatory": false } },
+        "identity": { "name": "Åsa 🌊", "identifier": null }
+      },
+      "expected": { "payerData": { "name": "Åsa 🌊" }, "error": null }
+    },
+    {
+      "name": "mandatory name is sent",
+      "input": {
+        "payerData": { "name": { "mandatory": true } },
+        "identity": { "name": "Ada", "identifier": "ada@noahwallet.io" }
+      },
+      "expected": { "payerData": { "name": "Ada" }, "error": null }
+    },
+    {
+      "name": "mandatory name without a saved name",
+      "input": {
+        "payerData": { "name": { "mandatory": true }, "identifier": { "mandatory": false } },
+        "identity": { "name": null, "identifier": "ada@noahwallet.io" }
+      },
+      "expected": { "payerData": null, "error": "missing" }
+    },
+    {
+      "name": "mandatory identifier without a saved address",
+      "input": {
+        "payerData": { "identifier": { "mandatory": true } },
+        "identity": { "name": "Ada", "identifier": null }
+      },
+      "expected": { "payerData": null, "error": "missing" }
+    },
+    {
+      "name": "optional email is ignored",
+      "input": {
+        "payerData": { "name": { "mandatory": false }, "email": { "mandatory": false } },
+        "identity": { "name": "Ada", "identifier": "ada@noahwallet.io" }
+      },
+      "expected": { "payerData": { "name": "Ada" }, "error": null }
+    },
+    {
+      "name": "mandatory email is unsupported",
+      "input": {
+        "payerData": { "name": { "mandatory": false }, "email": { "mandatory": true } },
+        "identity": { "name": "Ada", "identifier": "ada@noahwallet.io" }
+      },
+      "expected": { "payerData": null, "error": "unsupported" }
+    },
+    {
+      "name": "optional auth with k1 is ignored",
+      "input": {
+        "payerData": {
+          "auth": { "mandatory": false, "k1": "e2af6254a8df433264fa23f67eb8188635d15ce883e8fc020989d5f82ae6f11e" },
+          "identifier": { "mandatory": false }
+        },
+        "identity": { "name": "Ada", "identifier": "ada@noahwallet.io" }
+      },
+      "expected": { "payerData": { "identifier": "ada@noahwallet.io" }, "error": null }
+    },
+    {
+      "name": "mandatory auth is unsupported",
+      "input": {
+        "payerData": { "auth": { "mandatory": true, "k1": "e2af6254a8df433264fa23f67eb8188635d15ce883e8fc020989d5f82ae6f11e" } },
+        "identity": { "name": "Ada", "identifier": "ada@noahwallet.io" }
+      },
+      "expected": { "payerData": null, "error": "unsupported" }
+    },
+    {
+      "name": "unsupported takes precedence over missing",
+      "input": {
+        "payerData": { "name": { "mandatory": true }, "email": { "mandatory": true } },
+        "identity": { "name": null, "identifier": null }
+      },
+      "expected": { "payerData": null, "error": "unsupported" }
+    },
+    {
+      "name": "unknown properties on a field are ignored",
+      "input": {
+        "payerData": { "name": { "mandatory": false, "hint": "Your nickname" } },
+        "identity": { "name": "Ada", "identifier": null }
+      },
+      "expected": { "payerData": { "name": "Ada" }, "error": null }
+    },
+    {
+      "name": "payerData as an array counts as none",
+      "input": { "payerData": [], "identity": { "name": "Ada", "identifier": "ada@noahwallet.io" } },
+      "expected": { "payerData": null, "error": null }
+    },
+    {
+      "name": "payerData as a string counts as none",
+      "input": { "payerData": "name", "identity": { "name": "Ada", "identifier": "ada@noahwallet.io" } },
+      "expected": { "payerData": null, "error": null }
+    },
+    {
+      "name": "field without mandatory is not asked for",
+      "input": { "payerData": { "name": {} }, "identity": { "name": "Ada", "identifier": "ada@noahwallet.io" } },
+      "expected": { "payerData": null, "error": null }
+    },
+    {
+      "name": "mandatory as a string is not asked for",
+      "input": { "payerData": { "name": { "mandatory": "true" } }, "identity": { "name": "Ada", "identifier": "ada@noahwallet.io" } },
+      "expected": { "payerData": null, "error": null }
+    },
+    {
+      "name": "mandatory as a number is not asked for",
+      "input": { "payerData": { "name": { "mandatory": 1 } }, "identity": { "name": "Ada", "identifier": "ada@noahwallet.io" } },
+      "expected": { "payerData": null, "error": null }
+    },
+    {
+      "name": "mandatory null is not asked for",
+      "input": { "payerData": { "name": { "mandatory": null } }, "identity": { "name": "Ada", "identifier": "ada@noahwallet.io" } },
+      "expected": { "payerData": null, "error": null }
+    },
+    {
+      "name": "field as a boolean is not asked for",
+      "input": { "payerData": { "name": true }, "identity": { "name": "Ada", "identifier": "ada@noahwallet.io" } },
+      "expected": { "payerData": null, "error": null }
+    },
+    {
+      "name": "malformed field Noah doesn't send is ignored",
+      "input": {
+        "payerData": { "name": { "mandatory": false }, "pubkey": {} },
+        "identity": { "name": "Ada", "identifier": "ada@noahwallet.io" }
+      },
+      "expected": { "payerData": { "name": "Ada" }, "error": null }
+    },
+    {
+      "name": "malformed supported field next to a valid one",
+      "input": {
+        "payerData": { "name": { "mandatory": "true" }, "identifier": { "mandatory": false } },
+        "identity": { "name": "Ada", "identifier": "ada@noahwallet.io" }
+      },
+      "expected": { "payerData": { "identifier": "ada@noahwallet.io" }, "error": null }
+    }
+  ]
+}

@@ -638,15 +638,25 @@ private fun WrongNetworkNote(shown: Boolean) {
     }
 }
 
-/** The recipient's note, when its Lightning address takes one; a note sends over Lightning even if Ark could pay. */
+/** The recipient's note, when its Lightning address takes one; a note sends over Lightning even if Ark could pay. Then what
+ *  Noah will share with the address as LUD-18 payer data, shown before the quote sends it. */
 @Composable
 private fun RecipientNote(model: SendModel) {
-    val route = model.matchingRoute?.takeIf { it.commentAllowed > 0 } ?: return
-    NoteField(model.comment, { model.comment = it }, route.commentAllowed, !model.busy)
-    if (model.comment.isNotEmpty() && route.arkAddress != null) {
-        Text(tr("Adding a note will send this payment over Lightning."), Modifier.padding(top = 8.dp), style = SendType.small,
-            color = LocalPalette.current.muted)
+    val route = model.matchingRoute ?: return
+    if (route.commentAllowed > 0) {
+        NoteField(model.comment, { model.comment = it }, route.commentAllowed, !model.busy)
+        if (model.comment.isNotEmpty() && route.arkAddress != null) {
+            Text(tr("Adding a note will send this payment over Lightning."), Modifier.padding(top = 8.dp), style = SendType.small,
+                color = LocalPalette.current.muted)
+        }
     }
+    val notice = when (model.payerShare) {
+        LnurlPayerData.Share.nameAndAddress -> tr("Your name and Lightning address will be shared with this recipient.")
+        LnurlPayerData.Share.nameOnly -> tr("Your name will be shared with this recipient.")
+        LnurlPayerData.Share.addressOnly -> tr("Your Lightning address will be shared with this recipient.")
+        null -> return
+    }
+    Text(notice, Modifier.padding(top = 8.dp).testTag("send-payer-notice"), style = SendType.small, color = LocalPalette.current.muted)
 }
 
 /** Before you type: recent recipients from history, each a tap to [pick]. */

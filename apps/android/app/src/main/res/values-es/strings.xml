@@ -590,6 +590,7 @@
   <string name="gt_cd65f6dcab984750">"Ya la anoté"</string>
   <string name="gt_a7c07c281fad3bc0">"INR"</string>
   <string name="gt_653b28e6a3e022c8">"Si Ark funciona, envía a una dirección de Bitcoin."</string>
+  <string name="gt_60be7f03334cecb2">"If the recipient asks, your name and Lightning address will be shared with each payment."</string>
   <string name="gt_1d93f10792a18bf1">"Sin madurar"</string>
   <string name="gt_86a486e897edd1bc">"Importar VTXO"</string>
   <string name="gt_7584323bc1a01829">"En Ark"</string>
@@ -1374,6 +1375,8 @@
   <string name="gt_40db1d4d49d0c277">"No se pudo desbloquear la copia de seguridad con esta frase, o la copia está dañada. Comprueba las 12 o 24 palabras y su orden."</string>
   <string name="gt_7d13ecdf60d28aa9">"Puede que necesites otra aplicación de pago en este lugar"</string>
   <string name="gt_44f3e818daadd169">"El enlace proporcionado por este lugar no es válido."</string>
+  <string name="gt_eed34da3ded00d7c">"This recipient requires details Noah can\'t share."</string>
+  <string name="gt_6c1f7c367885f36b">"This recipient requires your name or Lightning address. Add it in Settings, then try again."</string>
   <string name="gt_5d5cfeffe0f4ad97">"Esta acción renueva los VTXOs seleccionados en una ronda delegada de Ark."</string>
   <string name="gt_01d7d06401b5eaad">"Esto elimina la billetera y su frase de recuperación de este teléfono. No se puede deshacer."</string>
   <string name="gt_e3475188c78e15ad">"Esto elimina tu billetera y tu frase de recuperación de este dispositivo. Asegúrate de haber guardado tu frase de recuperación. Escribe delete para confirmar."</string>
@@ -1570,6 +1573,7 @@
   <string name="gt_723022dbd02fce20">"Has alcanzado el número máximo de pagos recurrentes."</string>
   <string name="gt_3d26c2347422ac51">"No puedes transferir todo tu saldo Ark a la dirección en cadena de esta misma billetera. Usa una dirección Bitcoin externa."</string>
   <string name="gt_d981ea9469a9b19c">"Tu dirección de Lightning es %1$s."</string>
+  <string name="gt_09d7e041b4833c33">"Your Lightning address will be shared with this recipient."</string>
   <string name="gt_f9f55c49d8421334">"Tu VTXO"</string>
   <plurals name="gt_bd4a6db1a4abe642">
     <item quantity="one">"Tu VTXO es una hoja del árbol de la ronda. Para llegar a ella, la única transacción de tu rama va a la cadena."</item>
@@ -1591,6 +1595,8 @@
   <string name="gt_8074a7762dd1f578">"Tu correo actual se mantiene hasta que se verifique el nuevo."</string>
   <string name="gt_886bc67a71fe0f83">"Tu correo es solo para alertas urgentes sobre tu billetera."</string>
   <string name="gt_2c6b2e253c01fb2e">"Tu nombre"</string>
+  <string name="gt_d963d9432bad9d0d">"Your name and Lightning address will be shared with this recipient."</string>
+  <string name="gt_0f869adfb2385187">"Your name will be shared with this recipient."</string>
   <string name="gt_d9a846242ed7a22f">"Tu frase de recuperación sigue guardada de forma segura en este dispositivo. Úsala para restaurar tu billetera desde su copia de seguridad."</string>
   <string name="gt_09233d973ee617bd">"Tu billetera está lista."</string>
   <string name="gt_03a1be6d25f62f17">"Tu billetera está suspendida. Abre Noah para reanudarla."</string>

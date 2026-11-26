@@ -20449,6 +20449,42 @@
         }
       }
     },
+    "If the recipient asks, your name and Lightning address will be shared with each payment.": {
+      "comment": "GT gt_60be7f03334cecb2; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "If the recipient asks, your name and Lightning address will be shared with each payment."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "If the recipient asks, your name and Lightning address will be shared with each payment."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "If the recipient asks, your name and Lightning address will be shared with each payment."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "If the recipient asks, your name and Lightning address will be shared with each payment."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "If the recipient asks, your name and Lightning address will be shared with each payment."
+          }
+        }
+      }
+    },
     "Immature": {
       "comment": "GT gt_1d93f10792a18bf1; arguments: none",
       "extractionState": "manual",
@@ -48001,6 +48037,78 @@
         }
       }
     },
+    "This recipient requires details Noah can't share.": {
+      "comment": "GT gt_eed34da3ded00d7c; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This recipient requires details Noah can't share."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This recipient requires details Noah can't share."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This recipient requires details Noah can't share."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This recipient requires details Noah can't share."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This recipient requires details Noah can't share."
+          }
+        }
+      }
+    },
+    "This recipient requires your name or Lightning address. Add it in Settings, then try again.": {
+      "comment": "GT gt_6c1f7c367885f36b; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This recipient requires your name or Lightning address. Add it in Settings, then try again."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This recipient requires your name or Lightning address. Add it in Settings, then try again."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This recipient requires your name or Lightning address. Add it in Settings, then try again."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This recipient requires your name or Lightning address. Add it in Settings, then try again."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "This recipient requires your name or Lightning address. Add it in Settings, then try again."
+          }
+        }
+      }
+    },
     "This refreshes the selected VTXOs in a delegated Ark round.": {
       "comment": "GT gt_5d5cfeffe0f4ad97; arguments: none",
       "extractionState": "manual",
@@ -54553,6 +54661,42 @@
         }
       }
     },
+    "Your Lightning address will be shared with this recipient.": {
+      "comment": "GT gt_09d7e041b4833c33; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your Lightning address will be shared with this recipient."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your Lightning address will be shared with this recipient."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your Lightning address will be shared with this recipient."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your Lightning address will be shared with this recipient."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your Lightning address will be shared with this recipient."
+          }
+        }
+      }
+    },
     "Your VTXO": {
       "comment": "GT gt_f9f55c49d8421334; arguments: none",
       "extractionState": "manual",
@@ -55137,6 +55281,78 @@
           "stringUnit": {
             "state": "translated",
             "value": "Ditt namn"
+          }
+        }
+      }
+    },
+    "Your name and Lightning address will be shared with this recipient.": {
+      "comment": "GT gt_d963d9432bad9d0d; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your name and Lightning address will be shared with this recipient."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your name and Lightning address will be shared with this recipient."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your name and Lightning address will be shared with this recipient."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your name and Lightning address will be shared with this recipient."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your name and Lightning address will be shared with this recipient."
+          }
+        }
+      }
+    },
+    "Your name will be shared with this recipient.": {
+      "comment": "GT gt_0f869adfb2385187; arguments: none",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your name will be shared with this recipient."
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your name will be shared with this recipient."
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your name will be shared with this recipient."
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your name will be shared with this recipient."
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Your name will be shared with this recipient."
           }
         }
       }

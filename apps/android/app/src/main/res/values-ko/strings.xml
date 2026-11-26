@@ -581,6 +581,7 @@
   <string name="gt_cd65f6dcab984750">"적어 두었어요"</string>
   <string name="gt_a7c07c281fad3bc0">"INR"</string>
   <string name="gt_653b28e6a3e022c8">"Ark가 작동한다면 Bitcoin 주소로 보내세요."</string>
+  <string name="gt_60be7f03334cecb2">"If the recipient asks, your name and Lightning address will be shared with each payment."</string>
   <string name="gt_1d93f10792a18bf1">"미성숙 잔액"</string>
   <string name="gt_86a486e897edd1bc">"VTXO 가져오기"</string>
   <string name="gt_7584323bc1a01829">"Ark에 보관 중"</string>
@@ -1357,6 +1358,8 @@
   <string name="gt_40db1d4d49d0c277">"이 문구로 백업의 잠금을 해제할 수 없거나 백업이 손상되었습니다. 12개 또는 24개 단어와 순서를 모두 확인하세요."</string>
   <string name="gt_7d13ecdf60d28aa9">"이곳에서는 다른 결제 앱이 필요할 수 있습니다"</string>
   <string name="gt_44f3e818daadd169">"이 장소에서 제공한 링크가 유효하지 않습니다."</string>
+  <string name="gt_eed34da3ded00d7c">"This recipient requires details Noah can\'t share."</string>
+  <string name="gt_6c1f7c367885f36b">"This recipient requires your name or Lightning address. Add it in Settings, then try again."</string>
   <string name="gt_5d5cfeffe0f4ad97">"위임된 Ark 라운드에서 선택한 VTXO를 갱신합니다."</string>
   <string name="gt_01d7d06401b5eaad">"이 휴대폰에서 지갑과 복구 문구를 삭제해요. 되돌릴 수 없어요."</string>
   <string name="gt_e3475188c78e15ad">"이 기기에서 지갑과 복구 문구가 삭제됩니다. 복구 문구를 별도로 저장했는지 확인하세요. 계속하려면 delete를 입력하세요."</string>
@@ -1547,6 +1550,7 @@
   <string name="gt_723022dbd02fce20">"정기 결제를 최대 개수만큼 등록했습니다."</string>
   <string name="gt_3d26c2347422ac51">"Ark 잔액 전액을 이 지갑의 온체인 주소로 보낼 수 없습니다. 외부 Bitcoin 주소를 사용해 주세요."</string>
   <string name="gt_d981ea9469a9b19c">"라이트닝 주소는 %1$s입니다."</string>
+  <string name="gt_09d7e041b4833c33">"Your Lightning address will be shared with this recipient."</string>
   <string name="gt_f9f55c49d8421334">"내 VTXO"</string>
   <plurals name="gt_bd4a6db1a4abe642">
     <item quantity="one">"내 VTXO는 라운드 트리의 잎이에요. 여기까지 가려면 내 가지에 있는 트랜잭션 %1$s개가 체인에 올라가요."</item>
@@ -1566,6 +1570,8 @@
   <string name="gt_8074a7762dd1f578">"새 이메일이 인증될 때까지 현재 이메일이 유지돼요."</string>
   <string name="gt_886bc67a71fe0f83">"이메일은 지갑에 관한 긴급 알림에만 사용해요."</string>
   <string name="gt_2c6b2e253c01fb2e">"내 이름"</string>
+  <string name="gt_d963d9432bad9d0d">"Your name and Lightning address will be shared with this recipient."</string>
+  <string name="gt_0f869adfb2385187">"Your name will be shared with this recipient."</string>
   <string name="gt_d9a846242ed7a22f">"복구 문구는 이 기기에 여전히 안전하게 저장되어 있습니다. 이 문구를 사용해 백업에서 지갑을 복원하세요."</string>
   <string name="gt_09233d973ee617bd">"지갑이 준비되었습니다."</string>
   <string name="gt_03a1be6d25f62f17">"지갑이 일시 중지되었습니다. Noah를 열어 다시 시작하세요."</string>

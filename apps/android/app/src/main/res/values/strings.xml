@@ -581,6 +581,7 @@
   <string name="gt_cd65f6dcab984750">"I wrote it down"</string>
   <string name="gt_a7c07c281fad3bc0">"INR"</string>
   <string name="gt_653b28e6a3e022c8">"If Ark works, send to a Bitcoin address instead."</string>
+  <string name="gt_60be7f03334cecb2">"If the recipient asks, your name and Lightning address will be shared with each payment."</string>
   <string name="gt_1d93f10792a18bf1">"Immature"</string>
   <string name="gt_86a486e897edd1bc">"Import VTXO"</string>
   <string name="gt_7584323bc1a01829">"In Ark"</string>
@@ -1357,6 +1358,8 @@
   <string name="gt_40db1d4d49d0c277">"This phrase couldn\'t unlock the backup, or the backup is damaged. Check all 12 or 24 words and their order."</string>
   <string name="gt_7d13ecdf60d28aa9">"This place may require another payment app"</string>
   <string name="gt_44f3e818daadd169">"This place provided an invalid link."</string>
+  <string name="gt_eed34da3ded00d7c">"This recipient requires details Noah can\'t share."</string>
+  <string name="gt_6c1f7c367885f36b">"This recipient requires your name or Lightning address. Add it in Settings, then try again."</string>
   <string name="gt_5d5cfeffe0f4ad97">"This refreshes the selected VTXOs in a delegated Ark round."</string>
   <string name="gt_01d7d06401b5eaad">"This removes the wallet and its recovery phrase from this phone. It can’t be undone."</string>
   <string name="gt_e3475188c78e15ad">"This removes your wallet and recovery phrase from this device. Make sure you have saved your recovery phrase. Type delete to confirm."</string>
@@ -1547,6 +1550,7 @@
   <string name="gt_723022dbd02fce20">"You\'ve reached the maximum number of recurring payments."</string>
   <string name="gt_3d26c2347422ac51">"Your Ark balance cannot be swept to this wallet\'s own onchain address. Use an external Bitcoin address."</string>
   <string name="gt_d981ea9469a9b19c">"Your Lightning address is %1$s."</string>
+  <string name="gt_09d7e041b4833c33">"Your Lightning address will be shared with this recipient."</string>
   <string name="gt_f9f55c49d8421334">"Your VTXO"</string>
   <plurals name="gt_bd4a6db1a4abe642">
     <item quantity="one">"Your VTXO is a leaf of the round’s tree. To reach it, the one transaction on your branch goes to the chain."</item>
@@ -1566,6 +1570,8 @@
   <string name="gt_8074a7762dd1f578">"Your current email stays until the new one is verified."</string>
   <string name="gt_886bc67a71fe0f83">"Your email is only for urgent alerts about your wallet."</string>
   <string name="gt_2c6b2e253c01fb2e">"Your name"</string>
+  <string name="gt_d963d9432bad9d0d">"Your name and Lightning address will be shared with this recipient."</string>
+  <string name="gt_0f869adfb2385187">"Your name will be shared with this recipient."</string>
   <string name="gt_d9a846242ed7a22f">"Your recovery phrase is still securely stored on this device. Use it to restore your wallet from its backup."</string>
   <string name="gt_09233d973ee617bd">"Your wallet is ready."</string>
   <string name="gt_03a1be6d25f62f17">"Your wallet is suspended. Open Noah to resume it."</string>

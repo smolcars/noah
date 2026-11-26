@@ -9,6 +9,8 @@ struct SendPayment: Codable, Equatable, Sendable {
     var max = false
     var comment = ""
     var repeatMetadata: String?
+    /// LUD-18 payer data the payer agreed to send: what To showed, or the saved identity for a recurring payment.
+    var payerData: [String: String]? // swiftlint:disable:this discouraged_optional_collection - persisted send journal field; older records lack it
 
     static func metadata(destination: String, comment: String, amount: String, fiatCurrency: String?) throws -> String {
         var details: [String: Any] = [
@@ -116,8 +118,11 @@ struct SendSnapshot: Codable, Sendable {
 }
 enum SendFailure: LocalizedError {
     case invalid, insufficient, expired, ownAddress, feeChanged, unresolved, fundsChanged, constructionFailed, lightningInProgress, recurringStopped
+    case payerDataUnsupported, payerDataMissing
     var errorDescription: String? {
         switch self {
+        case .payerDataUnsupported: "This recipient requires details Noah can't share."
+        case .payerDataMissing: "This recipient requires your name or Lightning address. Add it in Settings, then try again."
         case .recurringStopped: "Recurring payment stopped before submission. No payment was sent."
         case .lightningInProgress: "Another Lightning payment is still in progress. Try again once it completes."
         case .constructionFailed: "The transaction could not be built. No payment was submitted. Review the amount and fee."

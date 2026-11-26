@@ -351,7 +351,7 @@ extension SendView {
                 } else if let message = parsedLive.error?.message(locale: locale.identifier) ?? errorText {
                     error(message).padding(.top, 10)
                 }
-                if let route = model.matchingRoute, route.commentAllowed > 0 { noteField(route).padding(.top, 12) }
+                if let route = model.matchingRoute, route.commentAllowed > 0 { noteField(route).padding(.top, 12) }; payerNotice(model.payerShare)
             }
         } trailing: {
             ScrollView {

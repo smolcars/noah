@@ -35,6 +35,22 @@ extension SendModel {
 extension SendView {
     enum Field { case recipient, note }
 
+    /// Under To when a Lightning address asks for LUD-18 payer data: what Noah will share, shown before the quote sends it.
+    @ViewBuilder func payerNotice(_ share: LnurlPayerData.Share?) -> some View {
+        if let share {
+            Group {
+                switch share {
+                case .nameAndAddress: Text("Your name and Lightning address will be shared with this recipient.")
+                case .nameOnly: Text("Your name will be shared with this recipient.")
+                case .addressOnly: Text("Your Lightning address will be shared with this recipient.")
+                }
+            }
+            .noahText(HomeText.footnote).foregroundStyle(NoahTokens.Colors.muted)
+            .fixedSize(horizontal: false, vertical: true).padding(.horizontal, 4).padding(.top, 8)
+            .accessibilityIdentifier("send-payer-notice")
+        }
+    }
+
     func error(_ text: String) -> some View {
         Text(verbatim: text).noahText(HomeText.footnote).foregroundStyle(NoahTokens.Colors.failure)
             .fixedSize(horizontal: false, vertical: true)
