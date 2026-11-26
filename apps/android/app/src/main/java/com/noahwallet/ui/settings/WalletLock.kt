@@ -32,14 +32,27 @@ class WalletLock(private val settings: SettingsStorage) {
     var authenticating by mutableStateOf(false); private set
     var error by mutableStateOf<String?>(null); private set
     var generation by mutableIntStateOf(0); private set
+    internal var automaticUnlockPending by mutableStateOf(policy.locked); private set
     private var prompt: BiometricPrompt? = null
+
+    internal fun takeAutomaticUnlock(): Boolean {
+        if (!locked || authenticating || !automaticUnlockPending) return false
+        automaticUnlockPending = false
+        return true
+    }
 
     fun credentialStarted() {
         if (authenticating) { policy.credentialStarted(); locked = policy.locked }
     }
 
     // Activity results arrive before resume; any other return invalidates the pending request.
-    fun credentialReturned(success: Boolean) { if (success) policy.credentialFinished() else background() }
+    fun credentialReturned(success: Boolean) {
+        if (success) policy.credentialFinished() else {
+            background()
+            // Returning from a dismissed PIN/password prompt is not a new app visit.
+            automaticUnlockPending = false
+        }
+    }
     fun resumed() { if (policy.confirmingCredential) background() }
 
     fun stopped() {
@@ -48,11 +61,13 @@ class WalletLock(private val settings: SettingsStorage) {
 
     fun background() {
         policy.background(); generation = policy.generation; locked = policy.locked
+        automaticUnlockPending = locked
         prompt?.cancelAuthentication()
     }
 
     suspend fun authenticate(activity: FragmentActivity, reason: String): Boolean {
         if (authenticating) return false
+        automaticUnlockPending = false
         authenticating = true; error = null
         val started = generation
         return try {
