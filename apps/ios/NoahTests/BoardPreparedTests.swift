@@ -492,7 +492,7 @@ struct BoardPreparedTests {
                 await capture.recordExclusion(excluded)
                 return Self.makeManualBoardQuote(inputs: [.init(txid: "a", vout: 0), .init(txid: "b", vout: 1)], selected: [], all: true)
             })
-        #expect(await capture.exclusions.last == nil)
+        #expect(await capture.exclusions.last == .some(nil))
     }
 
     @Test func manualBoardSelectionRejectsUnrelatedOrUnavailableCoinsAndDiscards() async throws {
@@ -540,8 +540,8 @@ struct BoardPreparedTests {
         let encodedSelected = try JSONEncoder().encode(selected)
         let decodedSelected = try JSONDecoder().decode(OnchainQuote.self, from: encodedSelected)
         #expect(decodedSelected.selectedOutpoints == ["b:1", "a:0"])
-        #expect(!base.matches(decodedSelected))
-        var reordered = base
+        #expect(!decodedLegacy.matches(decodedSelected))
+        var reordered = decodedSelected
         reordered.selectedOutpoints = ["a:0", "b:1"]
         #expect(decodedSelected.matches(reordered))
     }

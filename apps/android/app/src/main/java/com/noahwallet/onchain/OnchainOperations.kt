@@ -17,10 +17,12 @@ internal class OnchainOperations(
     /** A refusal for [ids], noted against its VTXO. */
     private fun refusal(error: Exception, ids: List<String>) = ExitErrors.refusal(error,
         ids)?.also { r -> r.vtxoId?.let { refused[it] = checkNotNull(r.message) } }
-    private suspend fun localUtxos(): List<OnchainUtxoModel> = BoardUtxoSelection.sorted(
-        wallet.utxos().filterIsInstance<OnchainUtxo.Local>().map {
+    private suspend fun localUtxos(): List<OnchainUtxoModel> {
+        val local = wallet.utxos().filterIsInstance<OnchainUtxo.Local>().map {
             OnchainUtxoModel(it.outpoint.txid, it.outpoint.vout, it.amountSats.toLong(), it.confirmationHeight?.toLong())
-        })
+        }
+        return BoardUtxoSelection.sorted(local)
+    }
     suspend fun overview(threshold: UInt): OnchainOverview {
         val tip = wallet.tip()
         val expiring = wallet.expiring(threshold)

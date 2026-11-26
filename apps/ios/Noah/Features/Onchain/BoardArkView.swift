@@ -4,7 +4,11 @@ import SwiftUI
 /// rows in a sheet), Move automatically (auto-board), and today's receipts. While a move confirms,
 /// Send's block row. Home's auto-board prompt is unchanged.
 struct BoardArkView: View {
-    private struct MoveSheet: Identifiable, Equatable { var id: Int { 0 } }
+    /// Snapshots `selected` when opening the sheet so a background refresh pruning stale coins cannot silently widen it.
+    private struct MoveSheet: Identifiable, Equatable {
+        let id = UUID()
+        let selected: [String]
+    }
 
     @Environment(AppModel.self) private var app
     @Environment(SettingsSummary.self) private var summary: SettingsSummary?
@@ -25,6 +29,11 @@ struct BoardArkView: View {
     private var utxos: [OnchainUtxoModel] { model.overview?.utxos ?? [] }
     private var chosen: [String] {
         transaction.isAutoBoardingEnabled ? [] : utxos.filter { $0.selectable && selected.contains($0.id) }.map(\.id)
+    }
+    private var moveLabel: String {
+        chosen.isEmpty
+            ? L10n.text("Move to Ark", locale: language)
+            : L10n.plural("Move {n} coins to Ark", count: chosen.count, locale: language)
     }
     /// A move that's been sent and hasn't confirmed yet.
     private var confirming: OnchainOperationJournal.Attempt? {
@@ -62,12 +71,10 @@ struct BoardArkView: View {
         .settingsChrome("On-chain")
         .settingsFooter {
             if confirming == nil {
-                Button(chosen.isEmpty
-                    ? L10n.text("Move to Ark", locale: language)
-                    : L10n.plural("Move {n} coins to Ark", count: chosen.count, locale: language)) {
+                Button(moveLabel) {
                     haptics.play(.light)
                     amount = chosen.isEmpty ? "" : "MAX"
-                    moving = MoveSheet()
+                    moving = MoveSheet(selected: chosen)
                 }
                 .buttonStyle(SettingsActionStyle())
                 .disabled(model.locked || (chosen.isEmpty && (model.overview?.confirmed ?? 0) == 0))
@@ -76,8 +83,8 @@ struct BoardArkView: View {
         }
         .onboardingHaptics(haptics)
         .modifier(OnchainScreen(model: model, presentsReview: false))
-        .settingsSheet(item: $moving, locked: model.busy) { _ in
-            MoveToArkSheet(model: model, amount: $amount, selected: chosen, minimum: minimum, cancel: closeMove) {
+        .settingsSheet(item: $moving, locked: model.busy) { sheet in
+            MoveToArkSheet(model: model, amount: $amount, selected: sheet.selected, minimum: minimum, cancel: closeMove) {
                 Task {
                     moving = nil
                     await model.confirm()

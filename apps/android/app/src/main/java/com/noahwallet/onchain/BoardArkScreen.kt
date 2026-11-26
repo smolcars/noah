@@ -60,7 +60,9 @@ internal fun OnchainPage(app: AppModel, nav: SettingsNav) {
     var confirmations by remember { mutableStateOf<Long?>(null) }
     var autoBoard by remember { mutableStateOf(autoBoardEnabled(app)) }
     var selected by rememberSaveable { mutableStateOf(listOf<String>()) }
-    var moving by rememberSaveable { mutableStateOf(false) }
+    // Snapshots the selection when opening the sheet so a refresh pruning stale coins cannot silently widen or shift its scope.
+    var sheetSelected by rememberSaveable { mutableStateOf<List<String>?>(null) }
+    var sheetTotal by rememberSaveable { mutableStateOf(0L) }
     val scope = rememberCoroutineScope()
     val haptics = rememberHaptics()
     LaunchedEffect(app.isWalletSuspended) { loadBoardingTerms(app, { minimum = it }) { confirmations = it } }
@@ -68,18 +70,15 @@ internal fun OnchainPage(app: AppModel, nav: SettingsNav) {
     fun money(sats: Long) = shownAmount(app, locale, sats)
     val overview = model.overview
     val utxos = overview?.utxos.orEmpty()
-    LaunchedEffect(autoBoard, utxos) {
-        val pruned = if (autoBoard) emptyList() else BoardUtxoSelection.prune(selected.toSet(), utxos).let { valid -> selected.filter { it in valid } }
-        if (pruned != selected) selected = pruned
-    }
-    val chosen = if (autoBoard) emptyList() else BoardUtxoSelection.prune(selected.toSet(), utxos).let { valid -> selected.filter { it in valid } }
+    val chosen = activeSelection(autoBoard, selected, utxos)
+    LaunchedEffect(chosen) { if (chosen != selected) selected = chosen }
     val chosenTotal = utxos.filter { it.id in chosen }.sumOf { it.amount }
     // A submitted board until it has the confirmations Ark needs: Send's block row follows it.
     val boarding = model.attempts.firstOrNull { boardingUnsettled(it, overview, confirmations) }
-    val movable = (if (chosen.isEmpty()) (overview?.confirmed ?: 0) > 0 else true) && !model.busy && !app.isWalletSuspended
+    val movable = canMoveToArk(chosen, overview, model, app)
     val footLabel = if (chosen.isEmpty()) tr("Move to Ark") else trPlural("Move {n} coins to Ark", chosen.size)
     SettingsFrame(com.noahwallet.localization.tr("On-chain"), nav.back, foot = moveFoot(boarding == null, movable, footLabel) {
-        model.invalidate(); moving = true
+        model.invalidate(); sheetSelected = chosen; sheetTotal = chosenTotal
     }) {
         if (app.isWalletSuspended) { FinePrint(tr("Wallet suspended. Resume your wallet in Settings.")); return@SettingsFrame }
         OnchainTotal(model, boarding, confirmations, locale, ::money)
@@ -90,7 +89,7 @@ internal fun OnchainPage(app: AppModel, nav: SettingsNav) {
         if (!autoBoard && boarding == null && utxos.isNotEmpty()) {
             OnchainUtxoSection(utxos, chosen.toSet(), locale, enabled = !model.busy && !app.isWalletSuspended, money = ::money) { utxo ->
                 haptics.selection()
-                selected = if (utxo.id in selected) selected - utxo.id else selected + utxo.id
+                selected = toggleSelected(selected, utxo.id)
                 model.invalidate()
             }
         }
@@ -98,10 +97,20 @@ internal fun OnchainPage(app: AppModel, nav: SettingsNav) {
         FinePrint(boardingNote(confirmations))
         OnchainStatus(app, model)
     }
-    if (moving) BoardSheet(app, model, overview?.confirmed ?: 0, chosen, chosenTotal, ::money, scope, onMoved = { selected = emptyList() }) {
-        moving = false; model.invalidate()
+    sheetSelected?.let { snapshotted ->
+        BoardSheet(app, model, overview?.confirmed ?: 0, snapshotted, sheetTotal, ::money, scope, onMoved = { selected = emptyList() }) {
+            sheetSelected = null; model.invalidate()
+        }
     }
 }
+
+private fun activeSelection(autoBoard: Boolean, selected: List<String>, utxos: List<OnchainUtxoModel>): List<String> =
+    if (autoBoard) emptyList() else BoardUtxoSelection.prune(selected.toSet(), utxos).let { valid -> selected.filter { it in valid } }
+
+private fun canMoveToArk(chosen: List<String>, overview: OnchainOverview?, model: OnchainModel, app: AppModel) =
+    (chosen.isNotEmpty() || (overview?.confirmed ?: 0) > 0) && !model.busy && !app.isWalletSuspended
+
+private fun toggleSelected(selected: List<String>, id: String) = if (id in selected) selected - id else selected + id
 
 /** The confirmed total, what's boarding, and the block row while a board waits for its confirmations. */
 @Composable
@@ -235,10 +244,16 @@ private fun BoardSheet(app: AppModel, model: OnchainModel, confirmed: Long, sele
                 val requested = if (max) 0 else sats ?: -1
                 scope.launch {
                     if (quote == null) model.review(OnchainAction.board, ids = selected, amount = requested)
-                    else { model.confirm(); app.refresh(); if (model.error == null) { haptics.success(); onMoved(); close() } }
+                    else confirmBoardSheet(app, model) { haptics.success(); onMoved(); close() }
                 }
             })
     }
+}
+
+private suspend fun confirmBoardSheet(app: AppModel, model: OnchainModel, done: () -> Unit) {
+    model.confirm()
+    app.refresh()
+    if (model.error == null) done()
 }
 
 /** Review needs Max or an amount; Move needs a review that's still current. */
