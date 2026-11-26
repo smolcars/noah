@@ -110,27 +110,43 @@ private fun FirstPaymentBaseline(model: AppModel) {
         })
 }
 
-/** Today's price in [currency] while Home is started, every five minutes; none while suspended. */
+private const val QUOTE_REFRESH_MILLIS = 300_000L
+
+/** Milliseconds until a quote recorded at [fetchedAt] needs a refresh, or 0 if absent or stale. */
+internal fun homeQuoteDelayMillis(fetchedAt: Long?, now: Long): Long =
+    if (fetchedAt == null) 0L else (QUOTE_REFRESH_MILLIS - (now - fetchedAt)).coerceAtLeast(0L)
+
+/** Today's price in [currency] while Home is started, cached in [HomeMemory] across tab visits; none while suspended. */
 @Composable
 private fun rememberHomePrice(model: AppModel, currency: String): Double? {
-    var price by remember { mutableStateOf<Double?>(null) }
+    val memory = model.homeMemory
     val lifecycle = androidx.lifecycle.compose.LocalLifecycleOwner.current.lifecycle
     LaunchedEffect(currency, model.isWalletSuspended, lifecycle) {
-        price = null
         if (model.isWalletSuspended) return@LaunchedEffect
         lifecycle.repeatOnLifecycle(androidx.lifecycle.Lifecycle.State.STARTED) {
+            memory.quotes[currency]?.let { cached ->
+                // Widgets show the quote Home shows, cached ones included: switching currency back restores it.
+                model.republishWidget(com.noahwallet.services.push.WidgetDataWriter.Quote(currency, cached.price))
+                val wait = homeQuoteDelayMillis(cached.at, SystemClock.elapsedRealtime())
+                if (wait > 0L) kotlinx.coroutines.delay(wait)
+            }
             while (kotlinx.coroutines.currentCoroutineContext().isActive) {
-                try { price = com.noahwallet.api.generated.client.V0PricesClient(model.services.client)
-                    .fiatPrices(kotlinx.serialization.json.JsonObject(emptyMap())).value().rates[currency]?.takeIf { it.isFinite() && it > 0 }
-                    // The widget's fiat line is Home's latest quote.
-                    price?.let { model.republishWidget(com.noahwallet.services.push.WidgetDataWriter.Quote(currency, it)) } }
-                catch (cancelled: kotlinx.coroutines.CancellationException) { throw cancelled }
-                catch (_: Exception) { }
-                kotlinx.coroutines.delay(300_000)
+                try {
+                    val fresh = com.noahwallet.api.generated.client.V0PricesClient(model.services.client)
+                        .fiatPrices(kotlinx.serialization.json.JsonObject(emptyMap())).value().rates[currency]?.takeIf { it.isFinite() && it > 0 }
+                    if (fresh != null) {
+                        memory.quotes[currency] = HomeMemory.Quote(fresh, SystemClock.elapsedRealtime())
+                        // The widget's fiat line is Home's latest quote.
+                        model.republishWidget(com.noahwallet.services.push.WidgetDataWriter.Quote(currency, fresh))
+                    }
+                } catch (cancelled: kotlinx.coroutines.CancellationException) {
+                    throw cancelled
+                } catch (_: Exception) { }
+                kotlinx.coroutines.delay(QUOTE_REFRESH_MILLIS)
             }
         }
     }
-    return price
+    return if (model.isWalletSuspended) null else memory.quotes[currency]?.price
 }
 
 /**
