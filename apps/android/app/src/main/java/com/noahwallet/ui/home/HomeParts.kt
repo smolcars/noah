@@ -123,7 +123,7 @@ internal fun RollingText(text: String, style: TextStyle, color: Color, rollFromZ
     LaunchedEffect(text) {
         if (reduceMotion && rollFromZero) { fade.snapTo(0f); fade.animateTo(1f, tween(NoahTokens.Motion.REDUCE_MOTION_FADE_MS)) }
     }
-    Row(modifier.graphicsLayer { alpha = fade.value }, verticalAlignment = Alignment.Bottom) {
+    Row(modifier.graphicsLayer { alpha = fade.value; compositingStrategy = CompositingStrategy.ModulateAlpha }, verticalAlignment = Alignment.Bottom) {
         text.forEachIndexed { index, char ->
             key(text.length - index) {
                 // One line box for every character so they share a baseline; separators' descenders may overflow it.

@@ -3,14 +3,18 @@ package com.noahwallet.ui.home
 import android.app.Application
 import androidx.compose.animation.core.AnimationVector1D
 import androidx.compose.animation.core.VectorConverter
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.junit4.v2.createComposeRule
 import androidx.compose.ui.test.onAllNodesWithTag
@@ -172,5 +176,47 @@ class BalancePrivacyMorphTest {
         assertEquals(295_000L, homeQuoteDelayMillis(fetchedAt = 10_000L, now = 15_000L))
         assertEquals(0L, homeQuoteDelayMillis(fetchedAt = 10_000L, now = 310_000L))
         assertEquals(0L, homeQuoteDelayMillis(fetchedAt = 10_000L, now = 500_000L))
+    }
+
+    /** Vertical bleed expands the inner layer's bounds without shifting outer height or child placement. */
+    @Test fun verticalLayerBleedExpandsLayerBoundsWithoutShiftingLayout() {
+        val density = Density(2.625f)
+        var layerHeight = 0
+        var outerHeight = 0
+        compose.setContent {
+            CompositionLocalProvider(LocalDensity provides density) {
+                Box(Modifier.onSizeChanged { outerHeight = it.height }
+                    .verticalLayerBleed(12.dp) { onSizeChanged { layerHeight = it.height } }) {
+                    Box(Modifier.width(100.dp).height(50.dp).testTag("child"))
+                }
+            }
+        }
+        compose.waitForIdle()
+        val expectedOuter = with(density) { 50.dp.roundToPx() }
+        val expectedPad = with(density) { 12.dp.roundToPx() }
+        assertEquals("outer layout height is unchanged", expectedOuter, outerHeight)
+        assertEquals("inner layer height includes top and bottom bleed", expectedOuter + expectedPad * 2, layerHeight)
+        val child = compose.onNodeWithTag("child").fetchSemanticsNode()
+        assertEquals("child stays at y = 0", 0f, child.positionInRoot.y, 0.5f)
+    }
+
+    /** Scroll tuck fade preserves BalanceBlock's outer height so the fiat line below never shifts. */
+    @Test fun scrollTuckPreservesBalanceBlockHeight() {
+        val density = Density(2.625f)
+        var blockHeight = 0
+        compose.setContent {
+            NoahTheme {
+                CompositionLocalProvider(LocalDensity provides density) {
+                    Column(Modifier.width(360.dp)) {
+                        Box(Modifier.onSizeChanged { blockHeight = it.height }) {
+                            BalanceBlock(homeUi(false), total = 19_760uL, tuck = .2f, entered = 2_000L, onTap = {}, onToggle = {})
+                        }
+                    }
+                }
+            }
+        }
+        compose.waitForIdle()
+        val expectedHeight = with(density) { 8.dp.roundToPx() + 50.sp.roundToPx() }
+        assertEquals("outer BalanceBlock keeps 8 dp + 50 sp height under scroll tuck", expectedHeight, blockHeight)
     }
 }
