@@ -48,8 +48,10 @@ use crate::{
             CorrelationCandidate, LiveCorrelation, LnurlPayReceiveMetadataRepository,
         },
         mailbox_authorization_repo::{ActiveMailboxAuthorization, MailboxAuthorizationRepository},
+        push_token_repo::PushTokenRepository,
     },
     errors::ApiError,
+    lnurl_pay_notification::{self, LnurlPayReceiveNotification},
     push::{PushNotificationData, send_push_notification},
     types::{
         LightningClaimRequestNotification, LightningSendFinishedNotification, NotificationData,
@@ -1132,8 +1134,21 @@ pub(crate) async fn process_mailbox_message(
             // checkpoint, so one arkoor message is one payment and gets one push.
             let (amount, vtxo_ids) = incoming_ark_payment(&arkoor.vtxos)?;
             let usd_rate = load_notification_usd_rate(app_state).await;
+            let lnurl_pay = match &correlation {
+                Some((metadata_repo, metadata_id, _, observation)) => {
+                    lnurl_pay_push_field(
+                        app_state,
+                        metadata_repo,
+                        &mailbox.pubkey,
+                        *metadata_id,
+                        observation.delivered_amount_sat,
+                    )
+                    .await
+                }
+                None => None,
+            };
             if let Some(notification) =
-                build_receive_notification(amount, &vtxo_ids, usd_rate.as_ref())
+                build_receive_notification(amount, &vtxo_ids, usd_rate.as_ref(), lnurl_pay)
             {
                 tracing::info!(
                     service = "mailbox_worker",
@@ -1305,10 +1320,15 @@ fn incoming_ark_payment(raw_vtxos: &[Vec<u8>]) -> Result<(Amount, Vec<String>), 
 /// payment it arrived in. One is enough: all of a message's VTXOs land in one
 /// payment, and listing them all could push a many-VTXO payment past the
 /// APNs/FCM size limit. Apps that don't know the type ignore it.
+///
+/// A payment matched to an LNURL-pay record also carries `lnurl_pay_receive`
+/// (`lnurl_pay_notification::push_field`): the record's ID and, sealed for the app, the payer
+/// data it shows instead of this text. Apps that don't know it show the text.
 fn build_receive_notification(
     amount: Amount,
     vtxo_ids: &[String],
     usd_rate: Option<&FiatRate>,
+    lnurl_pay: Option<serde_json::Value>,
 ) -> Option<PushNotificationData> {
     if amount == Amount::ZERO {
         return None;
@@ -1320,17 +1340,60 @@ fn build_receive_notification(
         None => format!("{amount_sats} sats"),
     };
 
+    let mut data = serde_json::json!({
+        "notification_type": "ark_payment_received",
+        "vtxo_ids": &vtxo_ids[..vtxo_ids.len().min(1)],
+    });
+    if let Some(lnurl_pay) = lnurl_pay {
+        data["lnurl_pay_receive"] = lnurl_pay;
+    }
     Some(PushNotificationData {
         title: Some("Payment received".to_string()),
         body: Some(format!("You received {amount} via Ark.")),
-        data: serde_json::json!({
-            "notification_type": "ark_payment_received",
-            "vtxo_ids": &vtxo_ids[..vtxo_ids.len().min(1)],
-        })
-        .to_string(),
+        data: data.to_string(),
         priority: Priority::High,
         content_available: false,
     })
+}
+
+/// The `lnurl_pay_receive` push field for a matched record. `None` (the push goes out as a plain
+/// receive) when the record can't be read; a missing key leaves the field unsealed.
+async fn lnurl_pay_push_field(
+    app_state: &AppState,
+    metadata_repo: &LnurlPayReceiveMetadataRepository,
+    pubkey: &str,
+    metadata_id: Uuid,
+    delivered_amount_sat: u64,
+) -> Option<serde_json::Value> {
+    let (payer_data, comment) = match metadata_repo.payer_data_and_comment(metadata_id).await {
+        Ok(stored) => stored,
+        Err(error) => {
+            tracing::warn!(
+                service = "mailbox_worker",
+                metadata_id = %metadata_id,
+                error = %error,
+                "LNURL-pay record could not be read for its push"
+            );
+            return None;
+        }
+    };
+    let key = PushTokenRepository::new(&app_state.db_pool)
+        .find_notification_key(pubkey)
+        .await
+        .unwrap_or_else(|error| {
+            tracing::warn!(service = "mailbox_worker", error = %error, "failed to load the notification key");
+            None
+        });
+    let content = LnurlPayReceiveNotification {
+        amount_sat: delivered_amount_sat,
+        payer_data,
+        comment,
+    };
+    Some(lnurl_pay_notification::push_field(
+        &metadata_id.to_string(),
+        key.as_ref(),
+        &content,
+    ))
 }
 
 fn decode_mailbox_vtxo(raw_vtxo: &[u8]) -> Result<Vtxo<Full>, ApiError> {
@@ -2004,7 +2067,44 @@ mod tests {
     ) -> Option<PushNotificationData> {
         let raw: Vec<Vec<u8>> = vtxos.iter().map(|vtxo| vtxo.serialize()).collect();
         let (amount, vtxo_ids) = incoming_ark_payment(&raw).expect("test vtxos should decode");
-        build_receive_notification(amount, &vtxo_ids, usd_rate)
+        build_receive_notification(amount, &vtxo_ids, usd_rate, None)
+    }
+
+    #[test]
+    fn the_largest_lnurl_pay_push_fits_apns_and_fcm() {
+        // Every field at the callback's limits, in four-byte characters where allowed.
+        let content = LnurlPayReceiveNotification {
+            amount_sat: 2_100_000_000_000_000,
+            payer_data: Some(crate::types::LnurlPayReceivePayerData {
+                name: Some("😀".repeat(80)),
+                identifier: Some(format!("{}@example.com", "a".repeat(308))),
+            }),
+            comment: Some("😀".repeat(280)),
+        };
+        let field = lnurl_pay_notification::push_field(
+            &Uuid::new_v4().to_string(),
+            Some(&[1; 32]),
+            &content,
+        );
+        let vtxo_id = VTXO_VECTORS.arkoor2_vtxo.id().to_string();
+        let notification = build_receive_notification(
+            Amount::from_sat(2_100_000_000_000_000),
+            &[vtxo_id],
+            Some(&usd_rate(100_000.0)),
+            Some(field),
+        )
+        .unwrap();
+
+        let apns = serde_json::to_vec(&crate::direct_push::apns_body(&notification, true)).unwrap();
+        assert!(apns.len() <= 4096, "APNs payload is {} bytes", apns.len());
+        let fcm_data = &crate::direct_push::fcm_body("token", &notification)["message"]["data"];
+        let fcm_bytes: usize = fcm_data
+            .as_object()
+            .unwrap()
+            .iter()
+            .map(|(key, value)| key.len() + value.as_str().unwrap().len())
+            .sum();
+        assert!(fcm_bytes <= 4096, "FCM data is {fcm_bytes} bytes");
     }
 
     #[test]

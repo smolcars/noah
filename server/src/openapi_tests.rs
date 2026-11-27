@@ -290,7 +290,7 @@ const CALLER_ONLY_FIELDS: [(&str, &[&str]); 17] = [
     ("post /v0/prices", &[]),
     (
         "post /v0/register_push_token",
-        &["apns_sandbox", "provider", "push_token"],
+        &["apns_sandbox", "notification_key", "provider", "push_token"],
     ),
     (
         "post /v0/report_last_login",

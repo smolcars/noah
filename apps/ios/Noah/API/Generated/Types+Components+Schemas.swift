@@ -1913,6 +1913,11 @@ extension Components {
             ///
             /// - Remark: Generated from `#/components/schemas/RegisterPushToken/apns_sandbox`.
             internal var apnsSandbox: Swift.Bool?
+            /// Base64 of a random 32-byte key the app keeps: an LNURL-pay payment's push carries the
+            /// payer data encrypted with it. Omitted by apps that can't read it.
+            ///
+            /// - Remark: Generated from `#/components/schemas/RegisterPushToken/notification_key`.
+            internal var notificationKey: Swift.String?
             /// The service that delivers to a raw device token.
             ///
             /// - Remark: Generated from `#/components/schemas/RegisterPushToken/provider`.
@@ -1934,19 +1939,23 @@ extension Components {
             ///
             /// - Parameters:
             ///   - apnsSandbox: Whether an APNs token belongs to the sandbox environment. Defaults to false.
+            ///   - notificationKey: Base64 of a random 32-byte key the app keeps: an LNURL-pay payment's push carries the
             ///   - provider: The service that delivers to a raw device token.
             ///   - pushToken: A raw APNs or FCM device token when `provider` is set. Otherwise an Expo push
             internal init(
                 apnsSandbox: Swift.Bool? = nil,
+                notificationKey: Swift.String? = nil,
                 provider: Components.Schemas.RegisterPushToken.ProviderPayload? = nil,
                 pushToken: Swift.String
             ) {
                 self.apnsSandbox = apnsSandbox
+                self.notificationKey = notificationKey
                 self.provider = provider
                 self.pushToken = pushToken
             }
             internal enum CodingKeys: String, CodingKey {
                 case apnsSandbox = "apns_sandbox"
+                case notificationKey = "notification_key"
                 case provider
                 case pushToken = "push_token"
             }

@@ -1,7 +1,7 @@
 use anyhow::Result;
 use sqlx::{PgPool, Postgres, Transaction};
 
-use crate::types::PushProvider;
+use crate::{lnurl_pay_notification::NOTIFICATION_KEY_LEN, types::PushProvider};
 
 /// Where one wallet's pushes go. Without a provider, the token's own format decides
 /// between Expo and UnifiedPush.
@@ -44,35 +44,54 @@ impl<'a> PushTokenRepository<'a> {
 
     /// Inserts a new Expo or UnifiedPush token, or replaces whatever the pubkey had.
     pub async fn upsert(&self, pubkey: &str, push_token: &str) -> Result<()> {
-        self.upsert_with_provider(pubkey, push_token, None, false)
+        self.upsert_with_provider(pubkey, push_token, None, false, None)
             .await
     }
 
     /// Inserts a new push token record, or replaces the whole registration if the pubkey
-    /// already exists, so a wallet restored on an older app stops using the old provider.
+    /// already exists, so a wallet restored on an older app stops using the old provider (and
+    /// its notification key).
     pub async fn upsert_with_provider(
         &self,
         pubkey: &str,
         push_token: &str,
         provider: Option<PushProvider>,
         apns_sandbox: bool,
+        notification_key: Option<&[u8; NOTIFICATION_KEY_LEN]>,
     ) -> Result<()> {
         sqlx::query(
-            "INSERT INTO push_tokens (pubkey, push_token, provider, apns_sandbox)
-             VALUES ($1, $2, $3, $4)
+            "INSERT INTO push_tokens (pubkey, push_token, provider, apns_sandbox, notification_key)
+             VALUES ($1, $2, $3, $4, $5)
              ON CONFLICT(pubkey)
              DO UPDATE SET push_token = excluded.push_token,
                            provider = excluded.provider,
                            apns_sandbox = excluded.apns_sandbox,
+                           notification_key = excluded.notification_key,
                            updated_at = now()",
         )
         .bind(pubkey)
         .bind(push_token)
         .bind(provider.map(PushProvider::as_str))
         .bind(apns_sandbox)
+        .bind(notification_key.map(|key| key.to_vec()))
         .execute(self.pool)
         .await?;
         Ok(())
+    }
+
+    /// The key the pubkey's app registered to read sealed push content, if any.
+    pub async fn find_notification_key(
+        &self,
+        pubkey: &str,
+    ) -> Result<Option<[u8; NOTIFICATION_KEY_LEN]>> {
+        let key = sqlx::query_scalar::<_, Option<Vec<u8>>>(
+            "SELECT notification_key FROM push_tokens WHERE pubkey = $1",
+        )
+        .bind(pubkey)
+        .fetch_optional(self.pool)
+        .await?
+        .flatten();
+        Ok(key.and_then(|key| key.try_into().ok()))
     }
 
     /// Finds a push token by its associated public key.

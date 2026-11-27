@@ -23,8 +23,8 @@ Not covered yet:
   comment is attached, without calling the callback, so there is nothing to attach payer data to.
   This needs a proof the payer posts, planned as an extension of LNURL-verify
   ([LUD-21](https://github.com/lnurl/luds/blob/luds/21.md)).
-- **Notifications.** The recipient's "Payment received" push is unchanged and names no payer. The
-  push never carries payer data or comments.
+- **Notifications** are being added (see [Notifications](#notifications)); until then the
+  recipient's "Payment received" push names no payer.
 
 ## Settings
 
@@ -116,3 +116,78 @@ or time, store it in Bark's movement metadata so it is backed up with the wallet
 acknowledge it.
 
 Values are payer-provided and unverified; show them as such.
+
+## Notifications
+
+In progress. The visible "Payment received" push for a matched payment should name the payer
+(and show the comment) even when the app isn't running, including after the user swiped it away,
+without Apple, Google or a UnifiedPush distributor seeing the payer data. Decided on 2026-11-27:
+
+- **End-to-end encrypted content.** When the app registers its push token it also sends a random
+  notification key it keeps. The matched payment's push carries, besides today's text, the record
+  ID and the payer data encrypted with that key.
+- **Structured, not text.** The encrypted part is JSON (amount, name, identifier, comment), so the
+  device writes the notification in the user's language and can shorten it, for example for a
+  watch.
+- **Decrypted on the device before display.** iOS: a notification service extension, which iOS
+  runs for every push marked `mutable-content`, also after a force-quit. Android: the Firebase and
+  UnifiedPush handlers, which build Noah's notifications already. Without a key, or when
+  decryption fails, today's text shows.
+- The key must be readable while the phone is locked (after first unlock), since pushes arrive
+  then.
+
+### Push format
+
+`POST /v0/register_push_token` takes an optional `notification_key`: base64 of 32 random bytes
+the app generated and keeps. Registering without one (an older app) clears it.
+
+The visible push for a matched payment keeps its title and body ("Payment received", "You
+received … via Ark.") and its data (`notification_type: "ark_payment_received"`, `vtxo_ids`), and
+adds:
+
+```json
+"lnurl_pay_receive": {"v": 1, "id": "<record ID>", "sealed": "<base64>"}
+```
+
+`sealed` is there only when the app registered a key. It is AES-256-GCM under that key: base64 of
+`nonce (12 bytes) || ciphertext || tag (16 bytes)`, CryptoKit's combined box, with the additional
+data `noah-lnurl-pay-receive-notification:v1:<record ID>`. Inside is
+
+```json
+{"amount_sat": 9880, "payer_data": {"name": "…", "identifier": "…"}, "comment": "…"}
+```
+
+where `payer_data` and `comment` may be null, as in the list endpoint. `amount_sat` is what the
+recipient received. `apps/fixtures/lnurl-pay-receive-notification.json` holds sealed examples for
+both apps' tests. Every visible APNs push is marked `mutable-content`, so the extension sees them
+all and must pass through those it doesn't recognise. The largest possible content still fits
+APNs's and FCM's 4 KB limits (tested).
+
+The server sends this push before it marks the record ready, so an app that lists records right
+after the push may need to retry briefly.
+
+### iOS notification service extension: one-time Apple setup
+
+Needed before a device or release build contains the extension; simulator builds and CI tests sign
+ad hoc and don't need it. Status: **not done yet**.
+
+1. For each variant, an App ID for the extension, `<app bundle ID>.NotificationService`:
+   `com.noahwallet.mainnet.NotificationService`, `com.noahwallet.signet.NotificationService`,
+   `com.noahwallet.regtest.NotificationService`.
+2. Enable App Groups on each and add the variant's group (`group.com.noahwallet.mainnet`,
+   `.signet`, `.regtest`), which the app and widget already use.
+3. Release archives sign automatically on the self-hosted runner (`-allowProvisioningUpdates` in
+   `native-release.yml`), so Xcode can create the profiles for these App IDs if its account may;
+   otherwise create App Store profiles for them by hand. Check with one archive before tagging a
+   release that contains the extension.
+
+Reading:
+
+- [UNNotificationServiceExtension](https://developer.apple.com/documentation/usernotifications/unnotificationserviceextension)
+- [Modifying content in newly delivered notifications](https://developer.apple.com/documentation/usernotifications/modifying-content-in-newly-delivered-notifications)
+- [Generating a remote notification](https://developer.apple.com/documentation/usernotifications/generating-a-remote-notification)
+  (`mutable-content`)
+- [Pushing background updates to your app](https://developer.apple.com/documentation/usernotifications/pushing-background-updates-to-your-app)
+  (why a silent push can't do this: it is throttled and not delivered to a force-quit app)
+- [Receive messages in an Android app](https://firebase.google.com/docs/cloud-messaging/android/receive)
+  (data messages reach a swiped-away app, not a force-stopped one)

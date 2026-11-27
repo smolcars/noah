@@ -128,6 +128,14 @@ pub async fn register_push_token(
     }
 
     validate_push_token(&payload.push_token, payload.provider).await?;
+    let notification_key = payload
+        .notification_key
+        .as_deref()
+        .map(crate::lnurl_pay_notification::parse_key)
+        .transpose()
+        .map_err(|_| {
+            ApiError::InvalidArgument("Notification key must be 32 bytes of base64".to_string())
+        })?;
 
     let push_token_repo = PushTokenRepository::new(&app_state.db_pool);
     push_token_repo
@@ -136,6 +144,7 @@ pub async fn register_push_token(
             &payload.push_token,
             payload.provider,
             payload.provider == Some(PushProvider::Apns) && payload.apns_sandbox == Some(true),
+            notification_key.as_ref(),
         )
         .await?;
 

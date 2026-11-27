@@ -14,6 +14,7 @@ use http_body_util::BodyExt;
 use lightning_invoice::Bolt11Invoice;
 use serde_json::{Value, json};
 use server_rpc::protos::mailbox_server::{ArkoorMessage, MailboxMessage, mailbox_message::Message};
+use tokio::sync::mpsc::UnboundedReceiver;
 use tokio_util::sync::CancellationToken;
 use tower::ServiceExt;
 use uuid::Uuid;
@@ -29,11 +30,15 @@ use crate::{
             LnurlPayReceiveMetadataRepository, MAX_ACTIVE_CORRELATIONS_PER_RECIPIENT,
         },
         mailbox_authorization_repo::MailboxAuthorizationRepository,
+        push_token_repo::PushTokenRepository,
     },
+    lnurl_pay_notification::{self, LnurlPayReceiveNotification},
     mailbox_worker::{MailboxSessionContext, process_mailbox_message},
+    push::PushNotificationData,
     tests::common::{
-        TestDbGuard, TestUser, create_test_user, setup_test_app_with_barkd, test_invoice,
+        TestDbGuard, TestUser, create_test_user, setup_test_app_with_push, test_invoice,
     },
+    types::{LnurlPayReceivePayerData, PushProvider},
 };
 
 const AMOUNT_MSAT: u64 = 10_000_000;
@@ -111,19 +116,24 @@ fn recipient_address(vtxo: &Vtxo<Full>) -> Address {
         .unwrap()
 }
 
+/// The key the recipient's app registered with its push token.
+const NOTIFICATION_KEY: [u8; 32] = [0x6b; 32];
+
 struct Recipient {
     app: Router,
     state: AppState,
     user: TestUser,
     pubkey: String,
+    pushes: Mutex<UnboundedReceiver<(String, PushNotificationData)>>,
     _guard: TestDbGuard,
 }
 
 impl Recipient {
-    /// A recipient with an Ark address on our server and a mailbox authorization covering the
-    /// correlation window.
+    /// A recipient with an Ark address on our server, a mailbox authorization covering the
+    /// correlation window, and an app that registered a notification key.
     async fn new(barkd: Arc<ForwardingBarkd>) -> Self {
-        let (app, state, guard) = setup_test_app_with_barkd(Some(barkd)).await;
+        let (sender, pushes) = tokio::sync::mpsc::unbounded_channel();
+        let (app, state, guard) = setup_test_app_with_push(Some(barkd), Some(sender)).await;
         let vtxo = delivered_vtxo();
         *state.ark_server_pubkey.write().await = Some(vtxo.server_pubkey().to_string());
         let user = TestUser::new();
@@ -139,13 +149,30 @@ impl Recipient {
             )
             .await
             .unwrap();
+        PushTokenRepository::new(&state.db_pool)
+            .upsert_with_provider(
+                &pubkey,
+                &"ab".repeat(32),
+                Some(PushProvider::Apns),
+                false,
+                Some(&NOTIFICATION_KEY),
+            )
+            .await
+            .unwrap();
         Self {
             app,
             state,
             user,
             pubkey,
+            pushes: Mutex::new(pushes),
             _guard: guard,
         }
+    }
+
+    /// The data of the next push the recipient got.
+    fn next_push_data(&self) -> Value {
+        let (_, push) = self.pushes.lock().unwrap().try_recv().expect("a push");
+        serde_json::from_str(&push.data).unwrap()
     }
 
     fn repo(&self) -> &LnurlPayReceiveMetadataRepository {
@@ -290,7 +317,11 @@ async fn forwarded_payment_carries_payer_data_to_the_recipient() {
     assert_eq!(response["pr"], invoice);
     let [(record_id, state)] = recipient.records().await.try_into().unwrap();
     assert_eq!(state, "awaiting_payment");
-    let (payer_data, comment) = recipient.repo().stored_for_test(record_id).await.unwrap();
+    let (payer_data, comment) = recipient
+        .repo()
+        .payer_data_and_comment(record_id)
+        .await
+        .unwrap();
     let payer_data = payer_data.unwrap();
     assert_eq!(payer_data.name.as_deref(), Some("Alice Payer"));
     assert_eq!(payer_data.identifier.as_deref(), Some("alice@example.com"));
@@ -307,6 +338,26 @@ async fn forwarded_payment_carries_payer_data_to_the_recipient() {
         vec![(record_id, "ready".to_string())]
     );
 
+    // The push names the record and carries the payer data only the app can read.
+    let vtxo = delivered_vtxo();
+    let push = recipient.next_push_data();
+    assert_eq!(push["notification_type"], "ark_payment_received");
+    let lnurl_pay = &push["lnurl_pay_receive"];
+    assert_eq!(lnurl_pay["id"], record_id.to_string());
+    let sealed = lnurl_pay["sealed"].as_str().unwrap();
+    assert!(!push.to_string().contains("Alice") && !push.to_string().contains("coffee"));
+    assert_eq!(
+        lnurl_pay_notification::open(&NOTIFICATION_KEY, &record_id.to_string(), sealed).unwrap(),
+        LnurlPayReceiveNotification {
+            amount_sat: vtxo.amount().to_sat(),
+            payer_data: Some(LnurlPayReceivePayerData {
+                name: Some("Alice Payer".to_string()),
+                identifier: Some("alice@example.com".to_string()),
+            }),
+            comment: Some(COMMENT.to_string()),
+        }
+    );
+
     let (status, list) = recipient
         .post(
             &recipient.user,
@@ -315,7 +366,6 @@ async fn forwarded_payment_carries_payer_data_to_the_recipient() {
         )
         .await;
     assert_eq!(status, StatusCode::OK, "{list}");
-    let vtxo = delivered_vtxo();
     assert_eq!(
         list,
         json!({"items": [{
@@ -474,6 +524,11 @@ async fn invalid_payer_data_is_rejected_before_barkd() {
 async fn a_barkd_failure_discards_the_reservation() {
     let barkd = ForwardingBarkd::new(None);
     let recipient = Recipient::new(barkd.clone()).await;
+    let mut tx = recipient.state.db_pool.begin().await.unwrap();
+    PushTokenRepository::delete_by_pubkey(&mut tx, &recipient.pubkey)
+        .await
+        .unwrap();
+    tx.commit().await.unwrap();
 
     // The device fallback can't carry payer data; this recipient has no push token either.
     let (status, _) = recipient.callback(Some(PAYER_DATA), Some(COMMENT)).await;
@@ -580,4 +635,66 @@ async fn the_direct_ark_route_refuses_payer_data() {
     );
     assert_eq!(barkd.invoice_calls(), 0);
     assert!(recipient.records().await.is_empty());
+}
+
+#[tokio::test]
+async fn the_push_token_registers_and_replaces_a_notification_key() {
+    let recipient = Recipient::new(ForwardingBarkd::new(None)).await;
+    let tokens = PushTokenRepository::new(&recipient.state.db_pool);
+    let register = |key: Option<String>| {
+        let mut body = json!({"push_token": "cd".repeat(32), "provider": "apns"});
+        if let Some(key) = key {
+            body["notification_key"] = json!(key);
+        }
+        body
+    };
+    use base64::Engine;
+    let key = base64::engine::general_purpose::STANDARD.encode([0x11; 32]);
+
+    let (status, _) = recipient
+        .post(
+            &recipient.user,
+            "/v0/register_push_token",
+            register(Some(key)),
+        )
+        .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(
+        tokens
+            .find_notification_key(&recipient.pubkey)
+            .await
+            .unwrap(),
+        Some([0x11; 32])
+    );
+
+    // Not 32 bytes: refused, and the stored key stays.
+    let short = base64::engine::general_purpose::STANDARD.encode([0x11; 16]);
+    let (status, _) = recipient
+        .post(
+            &recipient.user,
+            "/v0/register_push_token",
+            register(Some(short)),
+        )
+        .await;
+    assert_eq!(status, StatusCode::BAD_REQUEST);
+    assert_eq!(
+        tokens
+            .find_notification_key(&recipient.pubkey)
+            .await
+            .unwrap(),
+        Some([0x11; 32])
+    );
+
+    // An app that doesn't send one (an older version after a restore) replaces it with none.
+    let (status, _) = recipient
+        .post(&recipient.user, "/v0/register_push_token", register(None))
+        .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(
+        tokens
+            .find_notification_key(&recipient.pubkey)
+            .await
+            .unwrap(),
+        None
+    );
 }

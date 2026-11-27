@@ -844,9 +844,8 @@ impl LnurlPayReceiveMetadataRepository {
         Ok(id)
     }
 
-    /// The decrypted payer data and comment of one record, for tests.
-    #[cfg(test)]
-    pub async fn stored_for_test(
+    /// One record's payer data and comment, decrypted.
+    pub async fn payer_data_and_comment(
         &self,
         id: Uuid,
     ) -> anyhow::Result<(Option<LnurlPayReceivePayerData>, Option<String>)> {

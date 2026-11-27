@@ -1307,6 +1307,13 @@
               "null"
             ]
           },
+          "notification_key": {
+            "description": "Base64 of a random 32-byte key the app keeps: an LNURL-pay payment's push carries the\npayer data encrypted with it. Omitted by apps that can't read it.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
           "provider": {
             "description": "The service that delivers to a raw device token.",
             "enum": [

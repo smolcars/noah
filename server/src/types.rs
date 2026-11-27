@@ -213,6 +213,10 @@ pub struct RegisterPushToken {
     /// Whether an APNs token belongs to the sandbox environment. Defaults to false.
     #[serde(default)]
     pub apns_sandbox: Option<bool>,
+    /// Base64 of a random 32-byte key the app keeps: an LNURL-pay payment's push carries the
+    /// payer data encrypted with it. Omitted by apps that can't read it.
+    #[serde(default)]
+    pub notification_key: Option<String>,
 }
 
 /// Defines the payload for granting mailbox authorization to the server.
