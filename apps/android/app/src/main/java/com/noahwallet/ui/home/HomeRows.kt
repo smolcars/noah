@@ -64,6 +64,9 @@ data class HomeRow(
             val noahUser = address != null && ownDomain != null && address.substringAfter('@') == ownDomain.lowercase(Locale.ROOT)
             val chain = row.type == "Onchain" || row.source == "onchain-wallet" || row.movementKind in chainKinds
             val recurring = row.recurring?.takeIf { outgoing }
+            // An LNURL-pay payment names its payer as they gave it. It arrived over Ark, as Details' "Via" says.
+            val payer = row.lnurlPay?.takeIf { !outgoing }
+            val sender = payer?.name ?: payer?.identifier
             // An invoice or offer names no one: its own description, else what happened.
             val invoiceRow = row.type == "Bolt11" || row.offer != null
             val lightning = row.type == "Bolt11" || row.type == "Lnurl"
@@ -73,6 +76,7 @@ data class HomeRow(
                 recurring != null -> recurring.label
                 noahUser -> local!!
                 address != null -> address
+                sender != null -> sender
                 row.isRenewal -> "Renewed"
                 invoiceRow -> row.description ?: if (outgoing) "Sent" else "Received"
                 // Plain words for what happened; the protocol's names (Board, Offboard) stay in Details.
@@ -96,6 +100,7 @@ data class HomeRow(
             fun avatar(): Avatar = when {
                 recurring != null -> Avatar.Recurring
                 local != null -> Avatar.Initial(local.take(1).lowercase(Locale.ROOT))
+                sender != null -> Avatar.Initial(String(Character.toChars(sender.codePointAt(0))).lowercase(Locale.ROOT))
                 row.isRenewal -> Avatar.Renewal
                 row.exitFeeFor != null -> Avatar.Exit
                 chain -> Avatar.Chain

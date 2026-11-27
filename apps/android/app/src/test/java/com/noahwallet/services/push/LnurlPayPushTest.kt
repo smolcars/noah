@@ -57,6 +57,15 @@ class LnurlPayPushTest {
         assertNull(LnurlPayPush.open("not json", key))
     }
 
+    @Test fun namesTheRecordWithOrWithoutASealedPart() {
+        // The app stores a record's payer data as soon as its push arrives, even when no key could open it.
+        assertEquals("r1", LnurlPayPush.recordId("""{"lnurl_pay_receive":{"v":1,"id":"r1"}}"""))
+        assertNull(LnurlPayPush.recordId("""{"notification_type":"ark_payment_received"}"""))
+        assertNull(LnurlPayPush.recordId("""{"lnurl_pay_receive":{"v":1,"id":{"nested":true}}}"""))
+        assertNull(LnurlPayPush.recordId("not json"))
+        assertNull(LnurlPayPush.recordId(null))
+    }
+
     @Test fun namesThePayerAsTheTitleWithTheirComment() {
         val context = RuntimeEnvironment.getApplication()
         fun copy(name: String?, identifier: String?, comment: String?) = LnurlPayPush.copy(context,

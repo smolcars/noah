@@ -81,6 +81,10 @@ object PushNotifications {
     fun visible(context: Context, push: VisiblePush) = show(context, push, sound = true, tag = java.util.UUID.randomUUID().toString())
 
     private fun show(context: Context, push: VisiblePush, sound: Boolean, tag: String) {
+        // A matched LNURL-pay payment while Noah is in front: store its payer data now, so History names the payer.
+        if (com.noahwallet.services.background.PeriodicExecution.isForeground) {
+            LnurlPayPush.recordId(push.data)?.let { com.noahwallet.services.AppServices.shared(context).lnurlPayPushArrived(it) }
+        }
         if (push.title.isNullOrEmpty() && push.body.isNullOrEmpty()) return
         ensureChannels(context)
         if (!permissionGranted(context)) return

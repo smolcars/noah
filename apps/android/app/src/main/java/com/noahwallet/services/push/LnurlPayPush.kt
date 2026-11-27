@@ -3,14 +3,14 @@ package com.noahwallet.services.push
 import android.content.Context
 import android.util.Base64
 import com.noahwallet.formatting.BitcoinAmountUnit
+import com.noahwallet.history.LnurlPayReceive
 import com.noahwallet.localization.NotificationCopy
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.JsonPrimitive
 import kotlinx.serialization.json.contentOrNull
-import kotlinx.serialization.json.intOrNull
-import kotlinx.serialization.json.jsonPrimitive
 import javax.crypto.Cipher
 import javax.crypto.spec.GCMParameterSpec
 import javax.crypto.spec.SecretKeySpec
@@ -33,12 +33,21 @@ internal object LnurlPayPush {
     private val json = Json { ignoreUnknownKeys = true }
 
     /** The sealed content in a push's data JSON, or null when there is none or it doesn't open with [key]. */
-    fun open(data: String?, key: ByteArray?): Content? = try {
-        val field = (json.parseToJsonElement(data ?: return null) as? JsonObject)?.get("lnurl_pay_receive") as? JsonObject
-        val id = field?.get("id")?.jsonPrimitive?.contentOrNull
-        val sealed = field?.takeIf { it["v"]?.jsonPrimitive?.intOrNull == 1 }?.get("sealed")?.jsonPrimitive?.contentOrNull
-        if (key == null || id == null || sealed == null) null else open(id, sealed, key)
+    fun open(data: String?, key: ByteArray?): Content? {
+        val field = field(data)
+        val sealed = field?.takeIf { it.string("v") == "1" }?.string("sealed")
+        val id = recordId(data)
+        return if (key == null || id == null || sealed == null) null else open(id, sealed, key)
+    }
+
+    /** The record a matched payment's push names, sealed for this app or not; null for any other push. */
+    fun recordId(data: String?): String? = field(data)?.string("id")
+
+    private fun field(data: String?): JsonObject? = try {
+        (json.parseToJsonElement(data ?: return null) as? JsonObject)?.get("lnurl_pay_receive") as? JsonObject
     } catch (_: Exception) { null }
+
+    private fun JsonObject.string(name: String) = (get(name) as? JsonPrimitive)?.contentOrNull
 
     /** AES-256-GCM: base64 of nonce (12) || ciphertext || tag (16), bound to the record [id]. */
     fun open(id: String, sealed: String, key: ByteArray): Content? = try {
@@ -53,20 +62,11 @@ internal object LnurlPayPush {
         }
     } catch (_: Exception) { null }
 
-    /** `Name (⚡ identifier)` when both are given, else whichever is; null for neither. */
-    fun payerLabel(payer: PayerData?): String? {
-        val name = payer?.name?.takeIf { it.isNotBlank() }
-        val identifier = payer?.identifier?.takeIf { it.isNotBlank() }
-        return when {
-            name != null && identifier != null -> "$name (⚡ $identifier)"
-            else -> name ?: identifier
-        }
-    }
-
     /** The payer as the title, as a message's sender would be; their comment under the amount. */
-    fun copy(context: Context, content: Content, unit: BitcoinAmountUnit): NotificationCopy =
-        NotificationCopy.lnurlPayReceived(context, content.amountSat, unit, payerLabel(content.payerData),
-            content.comment?.takeIf { it.isNotBlank() })
+    fun copy(context: Context, content: Content, unit: BitcoinAmountUnit): NotificationCopy {
+        val payer = LnurlPayReceive.of(content.payerData?.name, content.payerData?.identifier, content.comment)
+        return NotificationCopy.lnurlPayReceived(context, content.amountSat, unit, payer.payerLabel, payer.comment)
+    }
 
     private const val NONCE_BYTES = 12
     private const val TAG_BYTES = 16

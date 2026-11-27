@@ -327,6 +327,18 @@ class AppServices private constructor(private val context: Context) {
         log = AppLog(context, "wallet")::i,
     )
 
+    /** LNURL-pay payer data the server matched to Ark receives, into Bark's movements (docs/lnurl_pay.md). */
+    private val lnurlPayReceives = com.noahwallet.services.wallet.LnurlPayReceiveSync(
+        list = { com.noahwallet.api.generated.client.V0LnurlpReceiveMetadataListClient(client).listLnurlPayReceiveMetadata().value().items },
+        movements = session::movements,
+        write = session::updateHistoryMetadata,
+        backup = { backupCoordinator.schedule(com.noahwallet.services.backup.BackupCoordinator.Reason.databaseChanged, immediate = true) },
+        acknowledge = { ids ->
+            com.noahwallet.api.generated.client.V0LnurlpReceiveMetadataAckClient(client)
+                .acknowledgeLnurlPayReceiveMetadata(com.noahwallet.api.generated.models.LnurlPayReceiveMetadataAckPayload(ids)).value()
+        },
+    )
+
     /**
      * Foreground only: retain existing session/reservation rules and never open a wallet here. [entering]: the app just
      * came to the front, so this pass (or the next one that runs) also runs delegated maintenance, as the first pass on
@@ -344,12 +356,72 @@ class AppServices private constructor(private val context: Context) {
                     currentCoroutineContext().ensureActive()
                     if (!budget.available || !foregroundSyncAllowed()) return@run
                     reconcileMailboxProcessor()
-                    com.noahwallet.services.wallet.WalletBackgroundActivity.during(foreground = true) { foregroundWork.run(session.walletChanges.value) }
+                    com.noahwallet.services.wallet.WalletBackgroundActivity.during(foreground = true) { runForegroundWork() }
                 }
             }
         } catch (cancelled: CancellationException) { throw cancelled }
         catch (_: Exception) { /* The next foreground tick retries without provider diagnostics. */ }
         finally { cancellation.dispose() }
+    }
+
+    /** The pass's stages, then the LNURL-pay payer data: a failed stage (on-chain sync offline, say) still leaves the Ark movements. */
+    private suspend fun runForegroundWork() {
+        val failure = runCatching { foregroundWork.run(session.walletChanges.value) }.exceptionOrNull()
+        if (failure is CancellationException) throw failure
+        storeLnurlPayReceives()
+        failure?.let { throw it }
+    }
+
+    /** After the pass's sync, so a just-delivered payment's movement exists; never fails the pass. The records stored. */
+    private suspend fun storeLnurlPayReceives(): List<String> {
+        if (registration.state.isRegisteredWithServer != true) return emptyList()
+        return try {
+            lnurlPayReceives.run().also { stored ->
+                if (stored.isNotEmpty()) AppLog(context, "wallet").i("Stored LNURL-pay payer data on ${stored.size} receives")
+            }
+        } catch (cancelled: CancellationException) { throw cancelled }
+        catch (_: Exception) {
+            AppLog(context, "wallet").w("LNURL-pay payer data pass failed; the next pass retries")
+            emptyList()
+        }
+    }
+
+    /**
+     * A matched LNURL-pay payment's push arrived while Noah is in front. The mailbox processor has usually stored its
+     * movement already, so store the payer data now rather than at the next minute's pass, and History names the payer
+     * at once. The retries cover a movement still on its way; each attempt holds the pass's slot only while it stores.
+     */
+    fun lnurlPayPushArrived(recordId: String) {
+        scope.launch {
+            for (wait in lnurlPayPushRetries) {
+                kotlinx.coroutines.delay(wait)
+                if (recordId in storeLnurlPayReceivesInForeground()) break
+            }
+        }
+    }
+
+    /** The minute pass's admission around the payer data alone. A pass already running stores it at its end. */
+    private suspend fun storeLnurlPayReceivesInForeground(): List<String> {
+        var stored = emptyList<String>()
+        try {
+            com.noahwallet.recurring.RecurringRuntime.shared(context).syncForegroundAdmission.run { budget ->
+                withContext(Dispatchers.IO + com.noahwallet.services.wallet.WalletExecutionBudget(budget)) {
+                    stored = storeLnurlPayReceivesInSlot(budget)
+                }
+            }
+        } catch (cancelled: CancellationException) { throw cancelled }
+        catch (_: Exception) { /* The next attempt, or the minute's pass, retries. */ }
+        return stored
+    }
+
+    private suspend fun storeLnurlPayReceivesInSlot(budget: com.noahwallet.recurring.RecurringBudget): List<String> {
+        var stored = emptyList<String>()
+        foregroundSync.run {
+            if (budget.available && foregroundSyncAllowed()) {
+                stored = com.noahwallet.services.wallet.WalletBackgroundActivity.during(foreground = true) { storeLnurlPayReceives() }
+            }
+        }
+        return stored
     }
 
     /** The app left the front, or a payment's service started or stopped: the mailbox processor follows what holds now. */
@@ -432,5 +504,8 @@ class AppServices private constructor(private val context: Context) {
         fun shared(context: Context): AppServices = instance ?: synchronized(this) {
             instance ?: AppServices(context.applicationContext).also { instance = it }
         }
+
+        /** Milliseconds before each attempt after an LNURL-pay push: at once, then twice for a movement still syncing. */
+        private val lnurlPayPushRetries = listOf(0L, 2_000L, 5_000L)
     }
 }

@@ -6,8 +6,8 @@
     "ko",
     "sv"
   ],
-  "catalogEntries": 1598,
-  "sourceKeys": 1643,
+  "catalogEntries": 1599,
+  "sourceKeys": 1644,
   "coverage": {
     "ios": {
       "used": [
@@ -1942,6 +1942,7 @@
         "Forgetting this attempt does not cancel Bark’s stored transaction or its future broadcast retries. This payment may still complete. Check your full wallet history and confirm with the recipient first. Sending again may spend twice and cannot undo the first payment.",
         "Free",
         "From",
+        "From (payer-provided)",
         "From any Lightning wallet",
         "From any bitcoin wallet, about 20 min",
         "From these coins",
@@ -2936,6 +2937,7 @@
           "gt_60be7f03334cecb2",
           "gt_6c1f7c367885f36b",
           "gt_788be588850259e5",
+          "gt_a6d9aece336b8962",
           "gt_d963d9432bad9d0d",
           "gt_eed34da3ded00d7c"
         ],
@@ -2945,6 +2947,7 @@
           "gt_60be7f03334cecb2",
           "gt_6c1f7c367885f36b",
           "gt_788be588850259e5",
+          "gt_a6d9aece336b8962",
           "gt_d963d9432bad9d0d",
           "gt_eed34da3ded00d7c"
         ],
@@ -2954,6 +2957,7 @@
           "gt_60be7f03334cecb2",
           "gt_6c1f7c367885f36b",
           "gt_788be588850259e5",
+          "gt_a6d9aece336b8962",
           "gt_d963d9432bad9d0d",
           "gt_eed34da3ded00d7c"
         ],
@@ -2963,6 +2967,7 @@
           "gt_60be7f03334cecb2",
           "gt_6c1f7c367885f36b",
           "gt_788be588850259e5",
+          "gt_a6d9aece336b8962",
           "gt_d963d9432bad9d0d",
           "gt_eed34da3ded00d7c"
         ]

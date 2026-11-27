@@ -24,6 +24,8 @@ data class HistoryTransaction(
     val preimage: String? = null, val recurring: Recurring? = null,
     /** An exit fee child this wallet paid on-chain: the VTXO that exit is for (see [HistoryMapping.exitFees]). */
     val exitFeeFor: String? = null,
+    /** An incoming LNURL-pay payment's payer and comment, payer-provided (see [LnurlPayReceive]). */
+    val lnurlPay: LnurlPayReceive? = null,
 ) {
     @Serializable data class Destination(val destination: String, @SerialName("amount_sat") val amountSat: Long, val paymentMethod: String? = null)
     @Serializable data class Accounting(val direction: String, val amount: Long)

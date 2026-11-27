@@ -54,7 +54,8 @@ object HistoryMapping {
             offchainFeeSat = m.offchainFeeSats.toLong(), onchainFeeSat = metadata.onchainFeeSat, chainAnchor = metadata.chainAnchor,
             sentTo = m.sentToAddresses.map(::destination), receivedOn = m.receivedOnAddresses.map(::destination),
             inputVtxos = m.inputVtxoIds, outputVtxos = m.outputVtxoIds, exitedVtxos = m.exitedVtxoIds, repeatPayment = repeat,
-            preimage = metadata.paymentPreimage?.takeIf { m.status == "successful" && it.isNotEmpty() })
+            preimage = metadata.paymentPreimage?.takeIf { m.status == "successful" && it.isNotEmpty() },
+            lnurlPay = LnurlPayReceive.parse(m.metadataJson).takeUnless { outgoing })
     }
     private fun outgoing(m: Movement, subsystem: String?, kind: String?) = when (kind) {
         "offboard", "send-onchain", "exit" -> true

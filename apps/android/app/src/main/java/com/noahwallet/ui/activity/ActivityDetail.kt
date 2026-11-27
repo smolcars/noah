@@ -348,6 +348,10 @@ private fun paymentRows(ui: ActivityUi, row: ActivityRules.Row, toasts: HomeToas
         rows += { last -> if (ActivityRules.readable(to)) DetailRow("To", to, copy = to, toasts = toasts, last = last)
         else DetailRow("To", short(to, 10, 6), ValueKind.mono, copy = to, toasts = toasts, last = last) }
     }
+    ActivityRules.payer(record)?.let { payer ->
+        payer.name?.let { name -> rows += { last -> DetailRow("Name", name, toasts = toasts, last = last) } }
+        payer.identifier?.let { address -> rows += { last -> DetailRow("Lightning address", address, toasts = toasts, last = last) } }
+    }
     val rail = ActivityRules.rail(record)
     rows += { last -> DetailRow("Via", tr(rail.label), glyph = railGlyph.getValue(rail), toasts = toasts, last = last) }
     for (line in ActivityRules.fees(record, home)) rows += { last ->
@@ -384,7 +388,7 @@ private fun whenRows(ui: ActivityUi, row: ActivityRules.Row, toasts: HomeToasts)
                 last = last) }
         }
     }
-    val note = record.repeatPayment?.comment?.takeIf { it.isNotEmpty() } ?: record.description
+    val note = record.repeatPayment?.comment?.takeIf { it.isNotEmpty() } ?: record.lnurlPay?.comment ?: record.description
     note?.let { rows += { last -> DetailRow("Note", it, toasts = toasts, last = last) } }
     return rows
 }

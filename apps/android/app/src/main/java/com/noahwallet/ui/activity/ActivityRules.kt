@@ -36,6 +36,7 @@ object ActivityRules {
     /** Everything search looks in: names, notes, kinds, IDs and hashes; [words] adds the translated words shown. */
     fun haystack(row: Row, words: List<String> = emptyList()): String = (listOf(row.home.title, row.home.counterparty, row.home.kind,
         row.home.state, row.record.destination, row.record.repeatPayment?.destination, row.record.repeatPayment?.comment,
+        row.record.lnurlPay?.payerLabel, row.record.lnurlPay?.comment,
         row.record.description, row.record.recurring?.label, row.record.displayLabel, row.record.txid, row.record.paymentHash,
         row.record.id, row.record.movementId?.toString()) + words).filterNotNull().joinToString("\n").lowercase(Locale.ROOT)
 
@@ -155,6 +156,9 @@ object ActivityRules {
         if (record.invoice != null || record.offer != null) return null
         return record.destination?.takeIf { it.isNotEmpty() }
     }
+    /** Who paid an incoming LNURL-pay payment, as they said (unverified). */
+    fun payer(record: HistoryTransaction) = record.lnurlPay?.takeIf { record.direction == "incoming" }
+
     /** Lightning and Noah addresses read as words; everything else is an identifier shown in monospace. */
     fun readable(value: String) = RepeatPayment.normalizeLightningAddress(value) != null
 
