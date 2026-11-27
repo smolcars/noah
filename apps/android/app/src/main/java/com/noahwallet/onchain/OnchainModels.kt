@@ -19,6 +19,8 @@ data class OnchainQuote(
     val createdAt: Long = System.currentTimeMillis(), val automatic: Boolean = false,
     val destinationIsMine: Boolean? = null, val unknownFeeConsent: String? = null,
     val boardAll: Boolean = false, val preparedBoard: BoardPrepared? = null, val id: String = UUID.randomUUID().toString(),
+    /** Selected on-chain outpoints ("txid:vout") when manual boarding scopes to specific coins; empty uses all confirmed coins. */
+    val selectedOutpoints: List<String> = emptyList(),
     /** An exit's transactions still to broadcast, shared ones once (bark's estimate). */
     val transactions: Long? = null,
     /** When this review opened on [ReviewClock]. Never persisted, so null once read back from storage. */
@@ -36,8 +38,10 @@ data class OnchainQuote(
     val net get() = ExitRules.received(amount, checkNotNull(fee))
     val totalFee get() = checkNotNull(fee) + checkNotNull(chainFee)
     val fundable get() = chainFee?.let { confirmed >= it } ?: false
-    fun matches(other: OnchainQuote) = copy(id = "", createdAt = 0, reviewedAt = null, ids = ids.sorted(), unknownFeeConsent = null) ==
-        other.copy(id = "", createdAt = 0, reviewedAt = null, ids = other.ids.sorted(), unknownFeeConsent = null)
+    fun matches(other: OnchainQuote) =
+        copy(id = "", createdAt = 0, reviewedAt = null, ids = ids.sorted(), selectedOutpoints = selectedOutpoints.sorted(), unknownFeeConsent = null) ==
+            other.copy(id = "", createdAt = 0, reviewedAt = null, ids = other.ids.sorted(), selectedOutpoints = other.selectedOutpoints.sorted(),
+                unknownFeeConsent = null)
 }
 
 @Serializable
@@ -113,8 +117,14 @@ data class ExitModel(val id: String, val amount: Long, val state: String, val de
     val cancelable get() = ExitRules.cancelable(state, details.transactions?.lastOrNull()?.status?.kind)
     val timeline get() = ExitTimeline.build(history, historyDetails, state, details)
 }
+data class OnchainUtxoModel(val txid: String, val vout: UInt, val amount: Long, val confirmationHeight: Long? = null) {
+    val id get() = "$txid:$vout"
+    val confirmed get() = confirmationHeight != null
+    val selectable get() = confirmed
+}
 data class OnchainOverview(val walletID: String, val vtxos: List<VtxoModel>, val exits: List<ExitModel>,
-    val confirmed: Long, val tip: Long, val pendingTotal: Long, val claimableHeight: Long?)
+    val confirmed: Long, val tip: Long, val pendingTotal: Long, val claimableHeight: Long?,
+    val utxos: List<OnchainUtxoModel> = emptyList())
 
 /** Only estimator errors carry a validated, fee-less review. */
 class ExitEstimateUnavailable(val review: OnchainQuote) : Exception() {

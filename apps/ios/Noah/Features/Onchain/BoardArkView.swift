@@ -4,7 +4,11 @@ import SwiftUI
 /// rows in a sheet), Move automatically (auto-board), and today's receipts. While a move confirms,
 /// Send's block row. Home's auto-board prompt is unchanged.
 struct BoardArkView: View {
-    private struct MoveSheet: Identifiable, Equatable { var id: Int { 0 } }
+    /// Snapshots `selected` when opening the sheet so a background refresh pruning stale coins cannot silently widen it.
+    private struct MoveSheet: Identifiable, Equatable {
+        let id = UUID()
+        let selected: [String]
+    }
 
     @Environment(AppModel.self) private var app
     @Environment(SettingsSummary.self) private var summary: SettingsSummary?
@@ -15,12 +19,22 @@ struct BoardArkView: View {
     @Environment(\.settingsFixture) private var fixture
 
     init(model: OnchainModel = OnchainModel()) { _model = State(initialValue: model) }
+    @State private var selected = Set<String>()
     @State private var moving: MoveSheet?
     @State private var amount = ""
     @State private var error: String?
     @State private var haptics = OnboardingHaptics()
 
     private var language: String { locale.identifier }
+    private var utxos: [OnchainUtxoModel] { model.overview?.utxos ?? [] }
+    private var chosen: [String] {
+        transaction.isAutoBoardingEnabled ? [] : utxos.filter { $0.selectable && selected.contains($0.id) }.map(\.id)
+    }
+    private var moveLabel: String {
+        chosen.isEmpty
+            ? L10n.text("Move to Ark", locale: language)
+            : L10n.plural("Move {n} coins to Ark", count: chosen.count, locale: language)
+    }
     /// A move that's been sent and hasn't confirmed yet.
     private var confirming: OnchainOperationJournal.Attempt? {
         model.attempts.first { attempt in
@@ -32,22 +46,7 @@ struct BoardArkView: View {
 
     var body: some View {
         SettingsScroll {
-            Text(verbatim: model.overview.map { money($0.confirmed) } ?? " ")
-                .noahText(SettingsText.big).monospacedDigit().lineLimit(1).minimumScaleFactor(0.5)
-                .padding(.top, 6)
-                .accessibilityIdentifier("onchain-balance")
-            if let confirming {
-                Text(verbatim: L10n.text("Moving {amount} to Ark", money(confirming.quote.amount), locale: language))
-                    .noahText(NoahTokens.Typography.sub).foregroundStyle(NoahTokens.Colors.muted).padding(.top, 3)
-                ActivityBlockRow(tip: model.overview?.tip, confirmedHeight: nil)
-                    .frame(width: 204, height: 62).padding(.leading, -8).padding(.top, 18)
-                if let tip = model.overview?.tip {
-                    Text(verbatim: L10n.text("Waiting for block {height}", (tip + 1).formatted(.number.locale(locale)), locale: language))
-                        .noahText(NoahTokens.Typography.control).foregroundStyle(NoahTokens.Colors.muted).padding(.top, 4)
-                }
-            } else {
-                Text(L10n.text("Confirmed", locale: language)).noahText(NoahTokens.Typography.sub).foregroundStyle(NoahTokens.Colors.muted).padding(.top, 3)
-            }
+            balanceHeader
             SettingsGroup {
                 SettingsToggleRow(icon: "arrow.triangle.2.circlepath", title: L10n.text("Move automatically", locale: language),
                                   sub: minimum.map { L10n.text("Asks when you have {amount} or more", money(max($0, 20_000)), locale: language) }
@@ -59,41 +58,93 @@ struct BoardArkView: View {
                     }
                 }
             }
+            if !transaction.isAutoBoardingEnabled, confirming == nil, !utxos.isEmpty {
+                utxoSection
+            }
             if let error { SettingsFine(text: L10n.text(error, locale: language), failure: true) }
+            if transaction.isAutoBoardingEnabled {
+                SettingsFine(text: L10n.text("Turn off Move automatically to choose individual on-chain coins to move.", locale: language))
+            }
             SettingsFine(text: L10n.text("Bitcoin in Ark moves instantly and costs less to send.", locale: language))
             OnchainStatusSection(model: model).settingsReceipts().padding(.top, 18)
         }
         .settingsChrome("On-chain")
         .settingsFooter {
             if confirming == nil {
-                Button(L10n.text("Move to Ark", locale: language)) {
+                Button(moveLabel) {
                     haptics.play(.light)
-                    amount = ""
-                    moving = MoveSheet()
+                    amount = chosen.isEmpty ? "" : "MAX"
+                    moving = MoveSheet(selected: chosen)
                 }
                 .buttonStyle(SettingsActionStyle())
-                .disabled(model.locked || model.overview?.confirmed ?? 0 == 0)
+                .disabled(model.locked || (chosen.isEmpty && (model.overview?.confirmed ?? 0) == 0))
                 .accessibilityIdentifier("board-open")
             }
         }
         .onboardingHaptics(haptics)
         .modifier(OnchainScreen(model: model, presentsReview: false))
-        .settingsSheet(item: $moving, locked: model.busy) { _ in
-            MoveToArkSheet(model: model, amount: $amount, minimum: minimum, cancel: closeMove) {
+        .settingsSheet(item: $moving, locked: model.busy) { sheet in
+            MoveToArkSheet(model: model, amount: $amount, selected: sheet.selected, minimum: minimum, cancel: closeMove) {
                 Task {
                     moving = nil
                     await model.confirm()
-                    if model.error == nil { haptics.play(.success) }
+                    if model.error == nil {
+                        selected = []
+                        haptics.play(.success)
+                    }
                     await summary?.refresh(suspended: app.isWalletSuspended, force: true)
                 }
             }
         }
         .onChange(of: amount) { _, _ in model.invalidate() }
+        .onChange(of: utxos) { _, current in selected = BoardUtxoSelection.prune(selected, in: current) }
         .task {
             if let fixture { minimum = fixture.boardingMinimum; return }
             guard !app.isWalletSuspended else { return }
             minimum = try? await app.session.boardingMinimum()
         }
+    }
+
+    @ViewBuilder private var balanceHeader: some View {
+        Text(verbatim: model.overview.map { money($0.confirmed) } ?? " ")
+            .noahText(SettingsText.big).monospacedDigit().lineLimit(1).minimumScaleFactor(0.5)
+            .padding(.top, 6)
+            .accessibilityIdentifier("onchain-balance")
+        if let confirming {
+            Text(verbatim: L10n.text("Moving {amount} to Ark", money(confirming.quote.amount), locale: language))
+                .noahText(NoahTokens.Typography.sub).foregroundStyle(NoahTokens.Colors.muted).padding(.top, 3)
+            ActivityBlockRow(tip: model.overview?.tip, confirmedHeight: nil)
+                .frame(width: 204, height: 62).padding(.leading, -8).padding(.top, 18)
+            if let tip = model.overview?.tip {
+                Text(verbatim: L10n.text("Waiting for block {height}", (tip + 1).formatted(.number.locale(locale)), locale: language))
+                    .noahText(NoahTokens.Typography.control).foregroundStyle(NoahTokens.Colors.muted).padding(.top, 4)
+            }
+        } else {
+            Text(L10n.text("Confirmed", locale: language)).noahText(NoahTokens.Typography.sub).foregroundStyle(NoahTokens.Colors.muted).padding(.top, 3)
+        }
+    }
+
+    @ViewBuilder private var utxoSection: some View {
+        Text(L10n.text("On-chain coins", locale: language))
+            .noahText(HomeText.section).foregroundStyle(NoahTokens.Colors.muted)
+            .padding(.top, 18).padding(.bottom, 2)
+            .accessibilityAddTraits(.isHeader)
+        ForEach(Array(utxos.enumerated()), id: \.element.id) { index, utxo in
+            OnchainUtxoRow(utxo: utxo, selected: selected.contains(utxo.id), disabled: model.locked, hairline: index < utxos.count - 1) {
+                toggle(utxo)
+            }
+        }
+        SettingsFine(text: L10n.text(
+            // swiftlint:disable:next line_length - one literal: translations.mjs reads copy as a single string
+            "Select one or more confirmed coins to move them on their own. Moving one coin at a time avoids linking your other on-chain coins, but each move pays its own network fee.",
+            locale: language))
+    }
+
+    private func toggle(_ utxo: OnchainUtxoModel) {
+        guard utxo.selectable else { return }
+        haptics.play(.selection)
+        if selected.contains(utxo.id) { selected.remove(utxo.id) } else { selected.insert(utxo.id) }
+        model.invalidate()
     }
 
     private func closeMove() {
@@ -103,6 +154,10 @@ struct BoardArkView: View {
 
     private func setAutoBoard(_ enabled: Bool) {
         transaction.setAutoBoarding(enabled)
+        if enabled {
+            selected = []
+            model.invalidate()
+        }
         do { try SettingsStorage.shared.setPersistedState(transaction, key: PersistedTransactionState.key, version: PersistedTransactionState.version) }
         catch { self.error = "Couldn't save auto-board preference." }
     }
@@ -113,11 +168,64 @@ struct BoardArkView: View {
     }
 }
 
+/// One local on-chain UTXO on the On-chain screen while Move automatically is off.
+private struct OnchainUtxoRow: View {
+    let utxo: OnchainUtxoModel
+    var selected = false
+    var disabled = false
+    var hairline = true
+    let action: () -> Void
+    @Environment(AppModel.self) private var app
+    @Environment(\.locale) private var locale
+
+    private var language: String { locale.identifier }
+    private var shortPoint: String { "\(utxo.txid.prefix(6))…:\(utxo.vout)" }
+    private var subtitle: String {
+        utxo.confirmationHeight.map {
+            L10n.text("Block {height} · {id}", $0.formatted(.number.locale(locale)), shortPoint, locale: language)
+        } ?? shortPoint
+    }
+
+    var body: some View {
+        Button(action: action) {
+            HStack(spacing: 14) {
+                Image(systemName: selected ? "checkmark.circle.fill" : "circle").accessibilityHidden(true)
+                    .font(.system(size: 24))
+                    .foregroundStyle(utxo.selectable ? NoahTokens.Colors.foreground : NoahTokens.Colors.hairline)
+                    .frame(width: 42, height: 42)
+                VStack(alignment: .leading, spacing: 1) {
+                    Text(verbatim: utxo.confirmed ? L10n.text("Confirmed", locale: language) : L10n.text("Unconfirmed", locale: language))
+                        .noahText(SettingsText.value)
+                        .foregroundStyle(utxo.confirmed ? NoahTokens.Colors.foreground : NoahTokens.Colors.muted)
+                    Text(verbatim: subtitle).noahText(HomeText.footnote).foregroundStyle(NoahTokens.Colors.muted)
+                }
+                .lineLimit(1)
+                .frame(maxWidth: .infinity, alignment: .leading)
+                Text(verbatim: app.isBalanceHidden
+                    ? (app.amountUnit == .bip177 ? "₿••••" : "•••• sats")
+                    : BitcoinAmount.format(sats: Int64(clamping: utxo.amount), unit: app.amountUnit, locale: locale))
+                    .noahText(HomeText.amount).monospacedDigit()
+                    .foregroundStyle(utxo.confirmed ? NoahTokens.Colors.foreground : NoahTokens.Colors.muted)
+            }
+            .frame(height: 66)
+            .opacity(utxo.selectable ? 1 : 0.4)
+            .contentShape(Rectangle())
+            .overlay(alignment: .bottom) { if hairline { HomeHairline().padding(.leading, 56) } }
+        }
+        .buttonStyle(SettingsRowPressStyle())
+        .disabled(disabled || !utxo.selectable)
+        .accessibilityAddTraits(selected ? .isSelected : [])
+        .accessibilityIdentifier("onchain-utxo-\(utxo.txid.prefix(8))-\(utxo.vout)")
+    }
+}
+
 /// Move to Ark: the amount (or Max), then today's board review rows in the same sheet. The
 /// signed funding transaction expires after two minutes, as today; editing the amount drops it.
+/// When `selected` is non-empty, the board spends only those confirmed UTXOs and opens on Max.
 private struct MoveToArkSheet: View {
     let model: OnchainModel
     @Binding var amount: String
+    let selected: [String]
     let minimum: UInt64?
     let cancel: () -> Void
     let confirm: () -> Void
@@ -129,9 +237,14 @@ private struct MoveToArkSheet: View {
     private var max: Bool { amount == "MAX" }
     /// Whole, positive sats as typed: "1.5" or "-1000" are refused, never rewritten.
     private var requested: UInt64? { max ? 0 : OnchainAmountInput.sats(amount) }
+    private var subtitle: String {
+        selected.isEmpty
+            ? L10n.text("From your on-chain balance.", locale: language)
+            : L10n.plural("From {n} selected coins.", count: selected.count, locale: language)
+    }
 
     var body: some View {
-        SettingsSheetBody(title: L10n.text("Move to Ark", locale: language), line: L10n.text("From your on-chain balance.", locale: language)) {
+        SettingsSheetBody(title: L10n.text("Move to Ark", locale: language), line: subtitle) {
             amountField
             if let quote = model.quote {
                 quoteRows(quote)
@@ -150,14 +263,14 @@ private struct MoveToArkSheet: View {
                                      enabled: requested != nil, busy: model.busy, actionID: "board-review",
                                      onCancel: cancel) {
                     focused = false
-                    Task { await model.review(.board, amount: requested ?? 0) }
+                    Task { await model.review(.board, ids: selected, amount: requested ?? 0) }
                 }
             } else {
                 SettingsSheetButtons(cancel: L10n.text("Cancel", locale: language), action: L10n.text("Move", locale: language),
                                      busy: model.busy, actionID: "onchain-confirm", onCancel: cancel, onAction: confirm)
             }
         }
-        .onAppear { focused = true }
+        .onAppear { if !max { focused = true } }
     }
 
     private var amountField: some View {
@@ -176,7 +289,7 @@ private struct MoveToArkSheet: View {
             Spacer()
             Button(L10n.text("Max", locale: language)) { amount = max ? "" : "MAX" }
                 .buttonStyle(OnboardingChipStyle(bold: max))
-                .disabled(model.locked || model.overview?.confirmed ?? 0 == 0)
+                .disabled(model.locked || (selected.isEmpty && (model.overview?.confirmed ?? 0) == 0))
                 .accessibilityIdentifier("board-max")
         }
         .padding(.top, 16)
@@ -202,9 +315,7 @@ private struct MoveToArkSheet: View {
             // swiftlint:disable:next line_length - one literal: translations.mjs reads copy as a single string
             "Move onchain bitcoin into Ark using this exact signed funding transaction. The boarding amount includes the Ark fee; the onchain fee is paid in addition. Funds become spendable after the board completes. This review expires after two minutes.",
             locale: language)
-            + (quote.boardAll == true ? " " + L10n.text(
-                "MAX uses confirmed funds only and deducts the onchain fee from that balance.",
-                locale: language) : ""))
+            + OnchainReviewSheet.boardSelectionNote(quote, locale: language))
     }
 
     private func row(_ label: String, _ sats: UInt64) -> some View {

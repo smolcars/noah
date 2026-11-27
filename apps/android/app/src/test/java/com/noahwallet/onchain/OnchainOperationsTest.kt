@@ -389,4 +389,79 @@ internal class OnchainOperationsTest : OnchainOperationsFixture() {
             assertTrue(message, runCatching { ops.vtxo("coin", 24u) }.exceptionOrNull() is BarkError)
         }
     } }
+
+    @Test fun manualBoardSingleAndMultipleUtxosExcludesUnselectedCoins() = runBlocking { fixture { wallet, ops, _, _ ->
+        wallet.balance = 140_000
+        wallet.fundingUtxos = listOf(
+            OnchainUtxo.Local(OutPoint("a", 0u), 50_000u, 100u),
+            OnchainUtxo.Local(OutPoint("b", 1u), 90_000u, 101u),
+            OnchainUtxo.Local(OutPoint("pending", 0u), 20_000u, null),
+            OnchainUtxo.Exit("exit-1", 30_000u, 100u))
+        // Overview lists sorted local UTXOs only (confirmed largest first, then unconfirmed).
+        assertEquals(listOf("b:1", "a:0", "pending:0"), ops.overview(24u).utxos.map { it.id })
+        // Single complete UTXO (Max / DrainAll): excludes every other local UTXO and spends only a:0.
+        wallet.boardInputs = listOf(OutPoint("a", 0u))
+        val single = ops.quote(OnchainAction.board, ids = listOf("a:0"), amount = 0)
+        assertEquals(listOf(setOf("b:1", "pending:0")), wallet.excludedBy)
+        assertEquals(listOf("a:0"), single.selectedOutpoints)
+        assertTrue("board quote ids stay empty for journal/VTXO separation", single.ids.isEmpty())
+        assertTrue(single.boardAll)
+        assertEquals(50_000L - wallet.exactFee, single.amount)
+        // Multiple selected UTXOs (Max / DrainAll): excludes only pending:0.
+        wallet.boardInputs = listOf(OutPoint("a", 0u), OutPoint("b", 1u))
+        val multi = ops.quote(OnchainAction.board, ids = listOf("b:1", "a:0"), amount = 0)
+        assertEquals(setOf("pending:0"), wallet.excludedBy.last())
+        assertEquals(listOf("a:0", "b:1"), multi.selectedOutpoints)
+        assertTrue(multi.matches(multi.copy(selectedOutpoints = listOf("b:1", "a:0"))))
+        assertFalse(multi.matches(single))
+        // Custom amount from selected UTXOs accepts a subset of the selected coins.
+        wallet.boardInputs = listOf(OutPoint("b", 1u))
+        val partial = ops.quote(OnchainAction.board, ids = listOf("a:0", "b:1"), amount = 30_000)
+        assertFalse(partial.boardAll)
+        assertEquals(listOf("a:0", "b:1"), partial.selectedOutpoints)
+        assertEquals(30_000L, partial.amount)
+        // Empty selection keeps existing all-wallet manual board behavior (no exclusions).
+        wallet.boardInputs = listOf(OutPoint("a", 0u), OutPoint("b", 1u))
+        val all = ops.quote(OnchainAction.board, amount = 0)
+        assertEquals(emptySet<String>(), wallet.excludedBy.last())
+        assertTrue(all.selectedOutpoints.isEmpty())
+    } }
+
+    @Test fun manualBoardSelectedUtxoSubmitsPreparedTransaction() = runBlocking { fixture { wallet, ops, _, _ ->
+        wallet.balance = 140_000
+        wallet.fundingUtxos = listOf(
+            OnchainUtxo.Local(OutPoint("a", 0u), 50_000u, 100u),
+            OnchainUtxo.Local(OutPoint("b", 1u), 90_000u, 101u))
+        wallet.boardInputs = listOf(OutPoint("a", 0u))
+        val single = ops.quote(OnchainAction.board, ids = listOf("a:0"), amount = 0)
+        ops.execute(single)
+        assertEquals(listOf("submit:prepared-0"), wallet.calls.filter { it.startsWith("submit:") })
+    } }
+
+    @Test fun manualBoardSelectionRejectsUnrelatedOrUnavailableCoinsAndDiscards() = runBlocking { fixture { wallet, ops, _, _ ->
+        wallet.balance = 140_000
+        wallet.fundingUtxos = listOf(
+            OnchainUtxo.Local(OutPoint("a", 0u), 50_000u, 100u),
+            OnchainUtxo.Local(OutPoint("b", 1u), 90_000u, 101u),
+            OnchainUtxo.Local(OutPoint("pending", 0u), 20_000u, null))
+        // Unconfirmed or missing selection fails before prepareBoard is called.
+        for (bad in listOf(listOf("pending:0"), listOf("missing:0"))) {
+            val err = runCatching { ops.quote(OnchainAction.board, ids = bad, amount = 0) }.exceptionOrNull() as OnchainException
+            assertEquals(OnchainFailure.changed, err.reason)
+        }
+        assertTrue(wallet.preparations.isEmpty())
+        // Duplicate outpoints fail as invalid.
+        val dup = runCatching { ops.quote(OnchainAction.board, ids = listOf("a:0", "a:0"), amount = 0) }.exceptionOrNull() as OnchainException
+        assertEquals(OnchainFailure.invalid, dup.reason)
+        // If prepareBoard ever spends an unselected UTXO, discard it and fail with changed.
+        wallet.boardInputs = listOf(OutPoint("a", 0u), OutPoint("b", 1u))
+        val leaked = runCatching { ops.quote(OnchainAction.board, ids = listOf("a:0"), amount = 0) }.exceptionOrNull() as OnchainException
+        assertEquals(OnchainFailure.changed, leaked.reason)
+        assertEquals(listOf("prepared-0"), wallet.discarded)
+        assertTrue(wallet.bound.isEmpty())
+        // Custom amount spending an unselected coin is also rejected and discarded.
+        val leakedFixed = runCatching { ops.quote(OnchainAction.board, ids = listOf("a:0"), amount = 25_000) }.exceptionOrNull() as OnchainException
+        assertEquals(OnchainFailure.changed, leakedFixed.reason)
+        assertEquals(listOf("prepared-0", "prepared-1"), wallet.discarded)
+    } }
 }

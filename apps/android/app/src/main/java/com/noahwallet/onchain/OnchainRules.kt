@@ -34,6 +34,34 @@ object BoardingRules {
     }
 }
 
+/** Platform-independent coin-selection rules for manual UTXO boarding (shared fixture: board-utxo-selection.json). */
+object BoardUtxoSelection {
+    fun sorted(utxos: List<OnchainUtxoModel>): List<OnchainUtxoModel> =
+        utxos.sortedWith(compareByDescending<OnchainUtxoModel> { it.confirmed }.thenByDescending { it.amount }.thenBy { it.id })
+    /**
+     * Outpoints to exclude from `prepareBoard` so only [selected] can be spent. Empty [selected] excludes nothing;
+     * returns null when [selected] has duplicates or names a missing or unconfirmed coin.
+     */
+    fun excludedOutpoints(utxos: List<OnchainUtxoModel>, selected: List<String>): Set<String>? {
+        if (selected.isEmpty()) return emptySet()
+        if (selected.distinct().size != selected.size) return null
+        val selectable = utxos.filter { it.selectable }.map { it.id }.toSet()
+        if (selected.any { it !in selectable }) return null
+        return utxos.map { it.id }.toSet() - selected.toSet()
+    }
+    /**
+     * Verifies the signed board's inputs honour [selected]: draining selected coins must spend every selected coin and
+     * nothing else; a fixed amount must spend at least one selected coin and never an unselected coin.
+     */
+    fun inputsValid(preparedInputs: Set<String>, selected: Set<String>, drainAll: Boolean): Boolean = when {
+        selected.isEmpty() -> true
+        drainAll -> preparedInputs == selected
+        else -> preparedInputs.isNotEmpty() && preparedInputs.all { it in selected }
+    }
+    fun prune(selected: Set<String>, utxos: List<OnchainUtxoModel>): Set<String> =
+        selected.intersect(utxos.filter { it.selectable }.map { it.id }.toSet())
+}
+
 @Serializable
 data class ExitReviewInputs(
     val walletId: String? = null, val vtxoIds: List<String>, val amountSat: Long, val scope: String,

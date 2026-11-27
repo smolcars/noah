@@ -1,0 +1,196 @@
+{
+  "source": "native-only: manual UTXO selection for boarding one or more confirmed on-chain coins (#366)",
+  "cases": [
+    {
+      "name": "sort confirmed largest first then outpoint then unconfirmed",
+      "input": {
+        "operation": "sort",
+        "utxos": [
+          { "txid": "u1", "vout": 0, "amount": 90000, "confirmationHeight": null },
+          { "txid": "b1", "vout": 0, "amount": 50000, "confirmationHeight": 100 },
+          { "txid": "a1", "vout": 1, "amount": 50000, "confirmationHeight": 102 },
+          { "txid": "c1", "vout": 0, "amount": 80000, "confirmationHeight": 99 },
+          { "txid": "u2", "vout": 0, "amount": 40000, "confirmationHeight": null }
+        ]
+      },
+      "expected": ["c1:0", "a1:1", "b1:0", "u1:0", "u2:0"]
+    },
+    {
+      "name": "exclusions empty selection excludes nothing",
+      "input": {
+        "operation": "exclusions",
+        "utxos": [
+          { "txid": "a", "vout": 0, "amount": 50000, "confirmationHeight": 100 },
+          { "txid": "b", "vout": 1, "amount": 60000, "confirmationHeight": 101 }
+        ],
+        "selected": []
+      },
+      "expected": []
+    },
+    {
+      "name": "exclusions single selected coin excludes every other local coin",
+      "input": {
+        "operation": "exclusions",
+        "utxos": [
+          { "txid": "a", "vout": 0, "amount": 50000, "confirmationHeight": 100 },
+          { "txid": "b", "vout": 1, "amount": 60000, "confirmationHeight": 101 },
+          { "txid": "c", "vout": 0, "amount": 40000, "confirmationHeight": null }
+        ],
+        "selected": ["a:0"]
+      },
+      "expected": ["b:1", "c:0"]
+    },
+    {
+      "name": "exclusions multiple selected coins exclude only unselected coins",
+      "input": {
+        "operation": "exclusions",
+        "utxos": [
+          { "txid": "a", "vout": 0, "amount": 50000, "confirmationHeight": 100 },
+          { "txid": "b", "vout": 1, "amount": 60000, "confirmationHeight": 101 },
+          { "txid": "c", "vout": 0, "amount": 70000, "confirmationHeight": 102 },
+          { "txid": "d", "vout": 2, "amount": 80000, "confirmationHeight": 103 }
+        ],
+        "selected": ["b:1", "d:2"]
+      },
+      "expected": ["a:0", "c:0"]
+    },
+    {
+      "name": "exclusions all confirmed coins selected excludes only unconfirmed",
+      "input": {
+        "operation": "exclusions",
+        "utxos": [
+          { "txid": "a", "vout": 0, "amount": 50000, "confirmationHeight": 100 },
+          { "txid": "b", "vout": 0, "amount": 60000, "confirmationHeight": null }
+        ],
+        "selected": ["a:0"]
+      },
+      "expected": ["b:0"]
+    },
+    {
+      "name": "exclusions rejects missing selected coin",
+      "input": {
+        "operation": "exclusions",
+        "utxos": [
+          { "txid": "a", "vout": 0, "amount": 50000, "confirmationHeight": 100 }
+        ],
+        "selected": ["missing:0"]
+      },
+      "expected": null
+    },
+    {
+      "name": "exclusions rejects unconfirmed selected coin",
+      "input": {
+        "operation": "exclusions",
+        "utxos": [
+          { "txid": "a", "vout": 0, "amount": 50000, "confirmationHeight": 100 },
+          { "txid": "u", "vout": 0, "amount": 60000, "confirmationHeight": null }
+        ],
+        "selected": ["u:0"]
+      },
+      "expected": null
+    },
+    {
+      "name": "exclusions rejects duplicate selected outpoints",
+      "input": {
+        "operation": "exclusions",
+        "utxos": [
+          { "txid": "a", "vout": 0, "amount": 50000, "confirmationHeight": 100 }
+        ],
+        "selected": ["a:0", "a:0"]
+      },
+      "expected": null
+    },
+    {
+      "name": "inputsValid empty selection accepts any prepared inputs",
+      "input": {
+        "operation": "inputsValid",
+        "preparedInputs": ["a:0", "b:0"],
+        "selected": [],
+        "drainAll": true
+      },
+      "expected": true
+    },
+    {
+      "name": "inputsValid drainAll single coin requires exact match",
+      "input": {
+        "operation": "inputsValid",
+        "preparedInputs": ["a:0"],
+        "selected": ["a:0"],
+        "drainAll": true
+      },
+      "expected": true
+    },
+    {
+      "name": "inputsValid drainAll rejects extra unselected input",
+      "input": {
+        "operation": "inputsValid",
+        "preparedInputs": ["a:0", "b:0"],
+        "selected": ["a:0"],
+        "drainAll": true
+      },
+      "expected": false
+    },
+    {
+      "name": "inputsValid drainAll multiple coins requires all selected spent",
+      "input": {
+        "operation": "inputsValid",
+        "preparedInputs": ["a:0"],
+        "selected": ["a:0", "b:0"],
+        "drainAll": true
+      },
+      "expected": false
+    },
+    {
+      "name": "inputsValid drainAll multiple coins accepts exact set",
+      "input": {
+        "operation": "inputsValid",
+        "preparedInputs": ["b:0", "a:0"],
+        "selected": ["a:0", "b:0"],
+        "drainAll": true
+      },
+      "expected": true
+    },
+    {
+      "name": "inputsValid custom amount accepts subset of selected coins",
+      "input": {
+        "operation": "inputsValid",
+        "preparedInputs": ["a:0"],
+        "selected": ["a:0", "b:0"],
+        "drainAll": false
+      },
+      "expected": true
+    },
+    {
+      "name": "inputsValid custom amount rejects unselected input",
+      "input": {
+        "operation": "inputsValid",
+        "preparedInputs": ["a:0", "c:0"],
+        "selected": ["a:0", "b:0"],
+        "drainAll": false
+      },
+      "expected": false
+    },
+    {
+      "name": "inputsValid custom amount rejects empty inputs",
+      "input": {
+        "operation": "inputsValid",
+        "preparedInputs": [],
+        "selected": ["a:0"],
+        "drainAll": false
+      },
+      "expected": false
+    },
+    {
+      "name": "prune drops missing and unconfirmed coins",
+      "input": {
+        "operation": "prune",
+        "utxos": [
+          { "txid": "a", "vout": 0, "amount": 50000, "confirmationHeight": 100 },
+          { "txid": "b", "vout": 1, "amount": 60000, "confirmationHeight": null }
+        ],
+        "selected": ["a:0", "b:1", "gone:0"]
+      },
+      "expected": ["a:0"]
+    }
+  ]
+}

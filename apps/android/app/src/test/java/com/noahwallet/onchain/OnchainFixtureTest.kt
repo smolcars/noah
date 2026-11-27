@@ -14,7 +14,8 @@ class OnchainFixtureTest(private val domain: String, private val name: String, p
         @JvmStatic
         @Parameterized.Parameters(name = "{0}: {1}")
         fun cases(): List<Array<Any>> =
-            listOf("exit-fee-estimate", "exit-cancellation", "exit-timeline", "exit-overview-coordination", "auto-boarding").flatMap { domain ->
+            listOf("exit-fee-estimate", "exit-cancellation", "exit-timeline", "exit-overview-coordination", "auto-boarding",
+                "board-utxo-selection").flatMap { domain ->
                 val stream = checkNotNull(OnchainFixtureTest::class.java.classLoader!!.getResourceAsStream("$domain.json"))
                 val root = stream.bufferedReader().use { json.parseToJsonElement(it.readText()).jsonObject }
                 root.getValue("cases").jsonArray.map { case -> case.jsonObject.let {
@@ -26,6 +27,11 @@ class OnchainFixtureTest(private val domain: String, private val name: String, p
     private fun s(key: String) = input.getValue(key).jsonPrimitive.content
     private fun b(key: String) = input.getValue(key).jsonPrimitive.boolean
     private inline fun <reified T> decode(value: JsonElement): T = json.decodeFromJsonElement<T>(value)
+    private fun utxos(): List<OnchainUtxoModel> = input.getValue("utxos").jsonArray.map { item ->
+        val obj = item.jsonObject
+        OnchainUtxoModel(obj.getValue("txid").jsonPrimitive.content, obj.getValue("vout").jsonPrimitive.int.toUInt(),
+            obj.getValue("amount").jsonPrimitive.long, obj["confirmationHeight"]?.jsonPrimitive?.longOrNull)
+    }
     @Test fun matchesRN() {
         when (domain) {
             "exit-fee-estimate" -> when (s("operation")) {
@@ -40,6 +46,18 @@ class OnchainFixtureTest(private val domain: String, private val name: String, p
             "exit-cancellation" -> assertEquals(expected.jsonPrimitive.boolean,
                 ExitRules.cancelable(s("state"), decode<ExitDetails>(input.getValue("details")).transactions?.lastOrNull()?.status?.kind))
             "auto-boarding" -> assertEquals(expected.jsonPrimitive.longOrNull, BoardingRules.autoAmount(n("balance"), n("minimum"), n("chainFee"), n("arkFee")))
+            "board-utxo-selection" -> when (s("operation")) {
+                "sort" -> assertEquals(decode<List<String>>(expected), BoardUtxoSelection.sorted(utxos()).map { it.id })
+                "exclusions" -> assertEquals(
+                    if (expected is JsonNull) null else decode<List<String>>(expected),
+                    BoardUtxoSelection.excludedOutpoints(utxos(), decode(input.getValue("selected")))?.sorted())
+                "inputsValid" -> assertEquals(expected.jsonPrimitive.boolean,
+                    BoardUtxoSelection.inputsValid(decode<List<String>>(input.getValue("preparedInputs")).toSet(),
+                        decode<List<String>>(input.getValue("selected")).toSet(), b("drainAll")))
+                "prune" -> assertEquals(decode<List<String>>(expected),
+                    BoardUtxoSelection.prune(decode<List<String>>(input.getValue("selected")).toSet(), utxos()).sorted())
+                else -> error("Unknown fixture")
+            }
             "exit-overview-coordination" -> {
                 val ready = ExitRules.ready(b("isInitialized"), b("isWalletLoaded"), b("isWalletSuspended"), b("isBackgroundJobRunning"))
                 assertEquals(expected.jsonObject.getValue("enabled").jsonPrimitive.boolean, ready)

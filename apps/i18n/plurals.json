@@ -182,5 +182,13 @@
   "You sent {sats} sats {when}.": {
     "one": "You sent {sats} sat {when}.",
     "other": "You sent {sats} sats {when}."
+  },
+  "Move {n} coins to Ark": {
+    "one": "Move {n} coin to Ark",
+    "other": "Move {n} coins to Ark"
+  },
+  "From {n} selected coins.": {
+    "one": "From {n} selected coin.",
+    "other": "From {n} selected coins."
   }
 }

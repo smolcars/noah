@@ -60,9 +60,9 @@ internal abstract class OnchainOperationsFixture {
         override suspend fun prepareBoard(amount: Long, all: Boolean, rate: ULong, excluded: Set<String>): PreparedBoard {
             excludedBy += excluded
             prepareError?.let { throw it }
-            // As bark's selection: excluded coins are never spent, so their value isn't there to board.
+            // As bark's selection (confirmedOnly = true): excluded confirmed coins are never spent, so their value isn't there to board.
             val spendable = balance - fundingUtxos.filterIsInstance<OnchainUtxo.Local>().filter {
-                "${it.outpoint.txid}:${it.outpoint.vout}" in excluded
+                it.confirmationHeight != null && "${it.outpoint.txid}:${it.outpoint.vout}" in excluded
             }.sumOf { it.amountSats.toLong() }
             val chainFee = exactFee + if (all) 0 else 43 * rate.toLong() + extraFixedFee
             val gross = if (all) spendable - chainFee else amount

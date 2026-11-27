@@ -17,13 +17,19 @@ internal class OnchainOperations(
     /** A refusal for [ids], noted against its VTXO. */
     private fun refusal(error: Exception, ids: List<String>) = ExitErrors.refusal(error,
         ids)?.also { r -> r.vtxoId?.let { refused[it] = checkNotNull(r.message) } }
+    private suspend fun localUtxos(): List<OnchainUtxoModel> {
+        val local = wallet.utxos().filterIsInstance<OnchainUtxo.Local>().map {
+            OnchainUtxoModel(it.outpoint.txid, it.outpoint.vout, it.amountSats.toLong(), it.confirmationHeight?.toLong())
+        }
+        return BoardUtxoSelection.sorted(local)
+    }
     suspend fun overview(threshold: UInt): OnchainOverview {
         val tip = wallet.tip()
         val expiring = wallet.expiring(threshold)
         val vtxos = wallet.vtxos().map { vtxoModel(it, tip, expiring) }
         // SDK persisted rows cover live and terminal exits, including wallets imported without Noah's index.
         val exits = enrich(wallet.allExits().map(::exitModel))
-        return OnchainOverview(wallet.walletID, vtxos, exits, wallet.confirmed(), tip, wallet.pendingTotal(), wallet.claimableHeight())
+        return OnchainOverview(wallet.walletID, vtxos, exits, wallet.confirmed(), tip, wallet.pendingTotal(), wallet.claimableHeight(), localUtxos())
     }
     /**
      * What this wallet paid each exit's fee children (by txid, from its own transactions) and, for a transaction waiting
@@ -139,26 +145,35 @@ internal class OnchainOperations(
             reviewedAt = elapsed())
         if (ids.distinct().size != ids.size) fail(OnchainFailure.invalid)
         return when (action) {
-            OnchainAction.board -> boardQuote(quote, amount, excluded)
+            // Keep board quote.ids empty so journal/VTXO logic never treats outpoints as VTXO IDs.
+            OnchainAction.board -> boardQuote(quote.copy(ids = emptyList()), amount, excluded, ids.sorted())
             OnchainAction.refresh, OnchainAction.startExit -> vtxoQuote(quote, ids, estimate)
             OnchainAction.progress, OnchainAction.claim -> exitQuote(quote, ids, destination, estimate)
             OnchainAction.cancel -> cancelQuote(quote, ids)
         }
     }
-    private suspend fun boardQuote(base: OnchainQuote, amount: Long, excluded: Set<String>): OnchainQuote {
+    private suspend fun boardQuote(base: OnchainQuote, amount: Long, excluded: Set<String>, selectedOutpoints: List<String>): OnchainQuote {
         if (amount < 0 || amount > 2_100_000_000_000_000L) fail(OnchainFailure.invalid)
+        if (base.automatic && selectedOutpoints.isNotEmpty()) fail(OnchainFailure.invalid)
+        val allExcluded = if (selectedOutpoints.isEmpty()) excluded else {
+            val selectionExcluded = BoardUtxoSelection.excludedOutpoints(localUtxos(), selectedOutpoints) ?: fail(OnchainFailure.changed)
+            excluded + selectionExcluded
+        }
         val rate = ((wallet.regularSatPerKwu() + 249) / 250).coerceAtLeast(1).toULong()
-        val prepared = try { wallet.prepareBoard(amount, amount == 0L, rate, excluded) }
+        val prepared = try { wallet.prepareBoard(amount, amount == 0L, rate, allExcluded) }
         catch (error: BarkError) { throw OnchainException(boardFailure(error)) }
         var bound = false
         try {
             currentCoroutineContext().ensureActive()
-            if (!ready() || prepared.grossSats > Long.MAX_VALUE.toULong() ||
+            val inputIds = prepared.inputs.map { "${it.txid}:${it.vout}" }.toSet()
+            val validInputs = BoardUtxoSelection.inputsValid(inputIds, selectedOutpoints.toSet(), drainAll = amount == 0L)
+            if (!ready() || !validInputs) fail(OnchainFailure.changed)
+            if (prepared.grossSats > Long.MAX_VALUE.toULong() ||
                 prepared.netSats + prepared.arkFeeSats != prepared.grossSats) fail(OnchainFailure.changed)
             val quote = base.copy(amount = prepared.grossSats.toLong(), fee = prepared.arkFeeSats.toLong(),
                 chainFee = prepared.onchainFeeSats.toLong(), boardAll = amount == 0L, feeRate = rate.toLong(),
                 preparedBoard = BoardPrepared(prepared.id, prepared.txid, prepared.vsize.toLong(),
-                    prepared.inputs.map { BoardInput(it.txid, it.vout) }))
+                    prepared.inputs.map { BoardInput(it.txid, it.vout) }), selectedOutpoints = selectedOutpoints)
             wallet.bindBoard(quote)
             bound = true
             return quote

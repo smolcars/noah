@@ -7,7 +7,7 @@ import kotlinx.serialization.json.jsonPrimitive
 /** Native access exists only while WalletSession owns a counted, shielded call. */
 internal interface OnchainWalletAccess {
     val walletID: String
-    suspend fun utxos(): List<OnchainUtxo> = error("""Unsupported""")
+    suspend fun utxos(): List<OnchainUtxo> = emptyList()
     suspend fun hasPendingBoards(): Boolean = error("""Unsupported""")
     suspend fun abandonUnsubmittedBoard(quote: OnchainQuote): Boolean = false
     suspend fun confirmed(): Long = error("""Unsupported""")

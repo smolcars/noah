@@ -533,6 +533,10 @@
   <string name="gt_d0d4acf522a64741">"これらのコインから"</string>
   <string name="gt_13bbc1285eb22070">"オンチェーン残高から。"</string>
   <string name="gt_dbfd99a4abd0ded1">"オンチェーンウォレットから"</string>
+  <plurals name="gt_6a7445b69570a820">
+    <item quantity="one">"From %1$s selected coin."</item>
+    <item quantity="other">"From %1$s selected coins."</item>
+  </plurals>
   <string name="gt_c41e04a73516abe6">"資金供給用の入力"</string>
   <string name="gt_f64c1af83adbae63">"資金供給トランザクション"</string>
   <string name="gt_e32bf7f648769c22">"資金をオンチェーンアドレスにまとめて送金できます。"</string>
@@ -715,10 +719,15 @@
   <string name="gt_44541f362e819e01">"Arkに移動"</string>
   <string name="gt_fe09b8832fc8878e">"オンチェーンに移動"</string>
   <string name="gt_e5aa7874e42cca96">"出金を進めますか？"</string>
+  <plurals name="gt_20bbe41bac045140">
+    <item quantity="one">"Move %1$s coin to Ark"</item>
+    <item quantity="other">"Move %1$s coins to Ark"</item>
+  </plurals>
   <string name="gt_5c948b346d0764f3">"Arkに移動しました"</string>
   <string name="gt_21ea93c7befc7bad">"オンチェーンに移動済み"</string>
   <string name="gt_dcfb842231d789f7">"資金移動ID"</string>
   <string name="gt_0850cf54792998dd">"資金移動の種類"</string>
+  <string name="gt_6479a14bd9e57bc8">"Moves only the selected confirmed coins and deducts the onchain fee from them, with no change output."</string>
   <string name="gt_befdcebd952d5b84">"Arkへ移動中"</string>
   <string name="gt_d8f4530e7856dd78">"オンチェーンに移動中"</string>
   <string name="gt_a29d635845ca0cd8">"%1$s をArkへ移動中"</string>
@@ -876,6 +885,7 @@
   <string name="gt_8596d4a93b3d33a1">"オンチェーン"</string>
   <string name="gt_af283a1c9bacc979">"オンチェーンアドレス"</string>
   <string name="gt_1e86a7752acde6de">"定期支払いではオンチェーンアドレスはまだ利用できません"</string>
+  <string name="gt_122cbba26acdb091">"On-chain coins"</string>
   <string name="gt_94a6189a83ddde95">"オンチェーン手数料"</string>
   <string name="gt_2b714f4a4b944bee">"ブロック %1$s でオンチェーン"</string>
   <string name="gt_2d5b3f2658ac152b">"オンチェーン予備資金の残額"</string>
@@ -1149,6 +1159,7 @@
   <string name="gt_0bdc583e8496eb4a">"支払いを選択"</string>
   <string name="gt_c500adf55832eadf">"配布者を選択"</string>
   <string name="gt_a81bdedbd0dccc7d">"まもなく期限切れになるものを選択"</string>
+  <string name="gt_dba7ec09b6883315">"Select one or more confirmed coins to move them on their own. Moving one coin at a time avoids linking your other on-chain coins, but each move pays its own network fee."</string>
   <string name="gt_70f58736b63e2c9e">"表示中のものを選択"</string>
   <string name="gt_3b18955703b2ebc3">"選択したスクリーンショット"</string>
   <string name="gt_f6f4688ff23d50c6">"送る"</string>
@@ -1375,6 +1386,7 @@
   <string name="gt_d8b8392e2c542950">"再試行"</string>
   <string name="gt_5fd38e8f1d7ab62f">"こう言ってみてください"</string>
   <string name="gt_026460792a12cc5d">"オンにするか、今すぐバックアップしてください"</string>
+  <string name="gt_68d75d7c96ba16e9">"Turn off Move automatically to choose individual on-chain coins to move."</string>
   <string name="gt_92dfd3632baeb6d4">"通知をオンにする"</string>
   <string name="gt_ae9c99bb67325b70">"設定でオンにしてください。戻ってきたときにNoahがもう一度確認します。"</string>
   <string name="gt_baaddf70fb5d432b">"種類"</string>
@@ -1424,6 +1436,7 @@
   <string name="gt_28ef268f1e77dc1b">"この端末に保存された復元フレーズを使ってバックアップを復元します。"</string>
   <string name="gt_a622e464b0866447">"%1$sを使う"</string>
   <string name="gt_0bc523a8f221ea9f">"ユーザー名に使用できるのはa-z、0-9、ハイフン、アンダースコア、ピリオドのみです"</string>
+  <string name="gt_03112d18f94b641d">"Uses only the selected confirmed coins. Any remainder returns as on-chain change."</string>
   <string name="gt_94dcfd1ebf80512e">"デフォルトを使用中"</string>
   <string name="gt_e3565da14a2f70b8">"通常は数秒"</string>
   <string name="gt_b338094d31cf192f">"VTXO"</string>

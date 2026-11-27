@@ -205,11 +205,26 @@ struct OnchainReviewSheet: View {
     }
 
     // swiftlint:disable line_length - copy literals stay whole: translations.mjs reads each as a single string
+    static func boardSelectionNote(_ quote: OnchainQuote, locale: String) -> String {
+        if !quote.selectedOutpoints.isEmpty {
+            return quote.boardAll == true
+                ? " " + L10n.text("Moves only the selected confirmed coins and deducts the onchain fee from them, with no change output.", locale: locale)
+                : " " + L10n.text("Uses only the selected confirmed coins. Any remainder returns as on-chain change.", locale: locale)
+        }
+        return quote.boardAll == true
+            ? " " + L10n.text("MAX uses confirmed funds only and deducts the onchain fee from that balance.", locale: locale)
+            : ""
+    }
+
     private var explanation: String {
         switch quote.action {
         case .board:
             "Move onchain bitcoin into Ark using this exact signed funding transaction. The boarding amount includes the Ark fee; the onchain fee is paid in addition. Funds become spendable after the board completes. This review expires after two minutes."
-                + (quote.boardAll == true ? " MAX uses confirmed funds only and deducts the onchain fee from that balance." : "")
+                + (!quote.selectedOutpoints.isEmpty
+                    ? (quote.boardAll == true
+                        ? " Moves only the selected confirmed coins and deducts the onchain fee from them, with no change output."
+                        : " Uses only the selected confirmed coins. Any remainder returns as on-chain change.")
+                    : (quote.boardAll == true ? " MAX uses confirmed funds only and deducts the onchain fee from that balance." : ""))
         case .refresh: "This refreshes the selected VTXOs in a delegated Ark round."
         case .startExit:
             quote

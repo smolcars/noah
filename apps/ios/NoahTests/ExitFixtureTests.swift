@@ -132,4 +132,55 @@ struct ExitFixtureTests {
         #expect(BoardingRules.onchainFee(satsPerKwu: 250) == 208)
         #expect(BoardingRules.onchainFee(satsPerKwu: 375) == 312)
     }
+
+    struct UtxoFixtureItem: Decodable {
+        var txid: String
+        var vout: UInt32
+        var amount: UInt64
+        var confirmationHeight: UInt32?
+        var model: OnchainUtxoModel { .init(txid: txid, vout: vout, amount: amount, confirmationHeight: confirmationHeight) }
+    }
+    struct UtxoSelectionInput: Decodable {
+        var operation: String
+        // swiftlint:disable discouraged_optional_collection - fixture inputs only include fields for their operation
+        var utxos: [UtxoFixtureItem]?
+        var selected: [String]?
+        var preparedInputs: [String]?
+        // swiftlint:enable discouraged_optional_collection
+        // swiftlint:disable:next discouraged_optional_boolean - fixture inputs only include drainAll for inputsValid
+        var drainAll: Bool?
+    }
+    enum UtxoSelectionExpected: Decodable, Equatable {
+        case bool(Bool)
+        case list([String])
+        case null
+        init(from decoder: Decoder) throws {
+            let container = try decoder.singleValueContainer()
+            if container.decodeNil() { self = .null }
+            else if let flag = try? container.decode(Bool.self) { self = .bool(flag) }
+            else { self = .list(try container.decode([String].self)) }
+        }
+    }
+    @Test func boardUtxoSelectionMatchesFixture() throws {
+        for test in try Fixtures.load(
+            "board-utxo-selection", input: UtxoSelectionInput.self, expected: UtxoSelectionExpected.self) {
+            let i = test.input
+            let models = (i.utxos ?? []).map(\.model)
+            switch i.operation {
+            case "sort":
+                #expect(UtxoSelectionExpected.list(BoardUtxoSelection.sorted(models).map(\.id)) == test.expected, "\(test.name)")
+            case "exclusions":
+                let actual = BoardUtxoSelection.excludedOutpoints(utxos: models, selected: i.selected ?? []).map { $0.sorted() }
+                #expect((actual.map(UtxoSelectionExpected.list) ?? .null) == test.expected, "\(test.name)")
+            case "inputsValid":
+                let valid = BoardUtxoSelection.inputsValid(
+                    preparedInputs: Set(i.preparedInputs ?? []), selected: Set(i.selected ?? []), drainAll: i.drainAll == true)
+                #expect(UtxoSelectionExpected.bool(valid) == test.expected, "\(test.name)")
+            case "prune":
+                let kept = BoardUtxoSelection.prune(Set(i.selected ?? []), in: models).sorted()
+                #expect(UtxoSelectionExpected.list(kept) == test.expected, "\(test.name)")
+            default: Issue.record("Unknown operation \(i.operation)")
+            }
+        }
+    }
 }

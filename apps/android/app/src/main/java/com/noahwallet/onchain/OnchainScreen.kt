@@ -313,10 +313,21 @@ private fun ReviewWarnings(quote: OnchainQuote) {
     }
 }
 
-/** The review's explanation; MAX adds its own sentence, translated separately. */
+/** The review's explanation; MAX and selected-coin boards add their own sentence, translated separately. */
 @Composable
 internal fun reviewText(quote: OnchainQuote): String = tr(reviewExplanation(quote)) +
-    if (quote.action == OnchainAction.board && quote.boardAll) " " + tr("MAX uses confirmed funds only and deducts the onchain fee from that balance.") else ""
+    if (quote.action == OnchainAction.board) boardSelectionNote(quote) else ""
+
+@Composable
+private fun boardSelectionNote(quote: OnchainQuote): String = when {
+    quote.selectedOutpoints.isNotEmpty() && quote.boardAll ->
+        " " + tr("Moves only the selected confirmed coins and deducts the onchain fee from them, with no change output.")
+    quote.selectedOutpoints.isNotEmpty() ->
+        " " + tr("Uses only the selected confirmed coins. Any remainder returns as on-chain change.")
+    quote.boardAll ->
+        " " + tr("MAX uses confirmed funds only and deducts the onchain fee from that balance.")
+    else -> ""
+}
 @Suppress("MaxLineLength") // translation source strings
 internal fun reviewExplanation(quote: OnchainQuote): String = when (quote.action) {
     OnchainAction.board -> "Move onchain bitcoin into Ark using this exact signed funding transaction. The boarding amount includes the Ark fee; the onchain fee is paid in addition. Funds become spendable after the board completes. This review expires after two minutes."
