@@ -3,7 +3,7 @@
 **Apps Covered:** Noah, Noah (Signet)  
 **Developer:** Hampus Sjöberg  
 **Privacy Contact:** hampus.sjoberg at protonmail.com  
-**Last Updated: 2025-11-06**
+**Last Updated: 2026-11-27**
 
 ## Our Commitment to Privacy
 
@@ -32,10 +32,22 @@ Noah Wallet uses Sentry, an error tracking and monitoring service, to help us id
 
 Sentry's data collection is configured with privacy in mind. We use Sentry's data scrubbing features to minimize the collection of sensitive information. You can learn more about Sentry's privacy practices at [Sentry's Privacy Policy](https://sentry.io/privacy/).
 
+### Lightning Address Payments
+
+When someone pays your Noah Lightning address, their wallet can include a name, their own Lightning address and a comment. The payer chooses what to send, and Noah does not verify it. Noah's server:
+
+- Stores it encrypted until your app has saved it with the payment, for at most seven days. If the payment doesn't arrive within an hour, it is deleted.
+- Sends it to your phone inside the payment notification, encrypted with a key only your app holds, so Apple, Google and push services can't read it.
+- Keeps it out of its logs and out of Sentry.
+
+Your app saves it with the payment in your wallet, and so in your wallet backup, which is encrypted with your recovery phrase.
+
+When you pay a Lightning address or another LNURL-pay service that asks for them, Noah sends your name (if you set one) and your Noah Lightning address with the payment. Noah tells you before you confirm the payment, or when you set up a recurring payment.
+
 ## Information We Don't Collect
 
 - **No User Analytics**: We do not implement user behavior tracking or analytics services such as Firebase Analytics
-- **No Personal Data**: We do not collect, store, or transmit personal information, transaction data, or wallet information to our servers beyond what is necessary for error tracking
+- **No Personal Data**: We do not collect, store, or transmit personal information, transaction data, or wallet information to our servers beyond what is necessary for error tracking and the Lightning address payment details described above
 - **No Third-Party Analytics**: We do not use third-party analytics services to monitor your app usage patterns
 
 ## Information Collected by App Stores
