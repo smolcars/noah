@@ -527,6 +527,16 @@ private fun AnimatedBalanceFigures(
     }
 }
 
+/**
+ * Expands a layer's vertical bounds by [bleed] on both sides without changing layout height or child position, so
+ * offscreen layers (`alpha < 1` during scroll tuck or entrance rise) don't clip ₿'s stems or separator descenders.
+ */
+internal fun Modifier.verticalLayerBleed(bleed: Dp, layer: Modifier.() -> Modifier): Modifier = layout { measurable, constraints ->
+    val pad = bleed.roundToPx()
+    val placeable = measurable.measure(constraints.offset(vertical = pad * 2))
+    layout(placeable.width, (placeable.height - pad * 2).coerceAtLeast(0)) { placeable.place(0, -pad) }
+}.layer().padding(vertical = bleed)
+
 /** 50 sp Space Grotesk; tap opens the balance sheet, long-press (or the accessibility action) hides it. */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -539,8 +549,13 @@ internal fun BalanceBlock(ui: HomeUi, total: ULong?, tuck: Float, entered: Long,
     val bleed = with(androidx.compose.ui.platform.LocalDensity.current) { HomeType.balance.lineHeight.toDp() } * .25f
     // The eye hides or shows amounts (long-press still does too); the chevron says a tap opens the details.
     // Gone by the time the top bar's balance fades in (at 0.7), so the two never show at once.
-    Row(Modifier.fillMaxWidth().rise(entered, 100, 14f, reduceMotion).graphicsLayer { alpha = (1 - tuck / .7f).coerceAtLeast(0f)
-        translationY = -6 * tuck * density },
+    Row(Modifier.fillMaxWidth()
+        .verticalLayerBleed(bleed) {
+            rise(entered, 100, 14f, reduceMotion).graphicsLayer {
+                alpha = (1 - tuck / .7f).coerceAtLeast(0f)
+                translationY = -6 * tuck * density
+            }
+        },
         verticalAlignment = Alignment.CenterVertically) {
         // Takes the width (the eye keeps its own), so the figures fit as large as before.
         Row(Modifier.weight(1f).padding(top = 8.dp)
