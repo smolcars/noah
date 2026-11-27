@@ -81,13 +81,20 @@ object PushNotifications {
     fun visible(context: Context, push: VisiblePush) = show(context, push, sound = true, tag = java.util.UUID.randomUUID().toString())
 
     private fun show(context: Context, push: VisiblePush, sound: Boolean, tag: String) {
-        val (title, body) = push
-        if (title.isNullOrEmpty() && body.isNullOrEmpty()) return
+        if (push.title.isNullOrEmpty() && push.body.isNullOrEmpty()) return
         ensureChannels(context)
         if (!permissionGranted(context)) return
+        // An LNURL-pay payment names its payer from the data sealed for this app; otherwise the server's text.
+        val rich = LnurlPayPush.open(push.data, runCatching { NotificationKey.of(context).current() }.getOrNull())?.let {
+            val profile = com.noahwallet.services.storage.SettingsStorage(context).string("profile-storage")
+            LnurlPayPush.copy(context, it, com.noahwallet.services.storage.SettingsPreferences.amountUnit(profile))
+        }
+        val title = rich?.title ?: push.title
+        val body = rich?.body ?: push.body
         val intent = open(context, tag, push.data)
         val notification = NotificationCompat.Builder(context, NotificationChannels.DEFAULT)
             .setSmallIcon(R.drawable.ic_notification).setContentTitle(title).setContentText(body)
+            .setStyle(NotificationCompat.BigTextStyle().bigText(body))
             .setContentIntent(intent).setAutoCancel(true).setPriority(NotificationCompat.PRIORITY_HIGH)
         if (sound) notification.setDefaults(android.app.Notification.DEFAULT_SOUND)
         context.getSystemService(NotificationManager::class.java).notify(tag, 1, notification.build())

@@ -1180,6 +1180,7 @@
   <string name="gt_7d162c4a2f308b74">"Sent by someone else"</string>
   <string name="gt_4e7201c7b8985a98">"Sent to"</string>
   <string name="gt_21cfd8fdcf01d5a0">"Sent to %1$s"</string>
+  <string name="gt_788be588850259e5">"Sent you %1$s"</string>
   <string name="gt_fba003c1a141b7a1">"Sent %1$s"</string>
   <string name="gt_0e9f9136e344eb7d">"Sent %1$s in all, last on %2$s."</string>
   <string name="gt_7dc2f77d8a0a618e">"Sent %1$s to %2$s"</string>

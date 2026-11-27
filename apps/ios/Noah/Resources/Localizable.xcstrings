@@ -41677,6 +41677,42 @@
         }
       }
     },
+    "Sent you {amount}": {
+      "comment": "GT gt_788be588850259e5; arguments: amount",
+      "extractionState": "manual",
+      "localizations": {
+        "en": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sent you %1$@"
+          }
+        },
+        "es": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sent you %1$@"
+          }
+        },
+        "ja": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sent you %1$@"
+          }
+        },
+        "ko": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sent you %1$@"
+          }
+        },
+        "sv": {
+          "stringUnit": {
+            "state": "translated",
+            "value": "Sent you %1$@"
+          }
+        }
+      }
+    },
     "Sent {amount}": {
       "comment": "GT gt_fba003c1a141b7a1; arguments: amount",
       "extractionState": "manual",

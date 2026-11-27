@@ -6,8 +6,8 @@
     "ko",
     "sv"
   ],
-  "catalogEntries": 1597,
-  "sourceKeys": 1642,
+  "catalogEntries": 1598,
+  "sourceKeys": 1643,
   "coverage": {
     "ios": {
       "used": [
@@ -2508,6 +2508,7 @@
         "Sent by someone else",
         "Sent to",
         "Sent to {address}",
+        "Sent you {amount}",
         "Sent {amount}",
         "Server key",
         "Server refreshed",
@@ -2934,6 +2935,7 @@
           "gt_0f869adfb2385187",
           "gt_60be7f03334cecb2",
           "gt_6c1f7c367885f36b",
+          "gt_788be588850259e5",
           "gt_d963d9432bad9d0d",
           "gt_eed34da3ded00d7c"
         ],
@@ -2942,6 +2944,7 @@
           "gt_0f869adfb2385187",
           "gt_60be7f03334cecb2",
           "gt_6c1f7c367885f36b",
+          "gt_788be588850259e5",
           "gt_d963d9432bad9d0d",
           "gt_eed34da3ded00d7c"
         ],
@@ -2950,6 +2953,7 @@
           "gt_0f869adfb2385187",
           "gt_60be7f03334cecb2",
           "gt_6c1f7c367885f36b",
+          "gt_788be588850259e5",
           "gt_d963d9432bad9d0d",
           "gt_eed34da3ded00d7c"
         ],
@@ -2958,6 +2962,7 @@
           "gt_0f869adfb2385187",
           "gt_60be7f03334cecb2",
           "gt_6c1f7c367885f36b",
+          "gt_788be588850259e5",
           "gt_d963d9432bad9d0d",
           "gt_eed34da3ded00d7c"
         ]

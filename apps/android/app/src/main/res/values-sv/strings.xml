@@ -1180,6 +1180,7 @@
   <string name="gt_7d162c4a2f308b74">"Skickad av någon annan"</string>
   <string name="gt_4e7201c7b8985a98">"Skickat till"</string>
   <string name="gt_21cfd8fdcf01d5a0">"Skickad till %1$s"</string>
+  <string name="gt_788be588850259e5">"Sent you %1$s"</string>
   <string name="gt_fba003c1a141b7a1">"%1$s skickat"</string>
   <string name="gt_0e9f9136e344eb7d">"%1$s skickat totalt, senast %2$s."</string>
   <string name="gt_7dc2f77d8a0a618e">"%1$s skickat till %2$s"</string>
