@@ -541,9 +541,9 @@
   <string name="gt_13bbc1285eb22070">"Desde tu saldo en cadena."</string>
   <string name="gt_dbfd99a4abd0ded1">"De tu billetera en la cadena"</string>
   <plurals name="gt_6a7445b69570a820">
-    <item quantity="one">"From %1$s selected coin."</item>
-    <item quantity="many">"From %1$s selected coins."</item>
-    <item quantity="other">"From %1$s selected coins."</item>
+    <item quantity="one">"De %1$s moneda seleccionada."</item>
+    <item quantity="many">"De %1$s monedas seleccionadas."</item>
+    <item quantity="other">"De %1$s monedas seleccionadas."</item>
   </plurals>
   <string name="gt_c41e04a73516abe6">"Entradas de financiación"</string>
   <string name="gt_f64c1af83adbae63">"Transacción de financiación"</string>
@@ -731,15 +731,15 @@
   <string name="gt_fe09b8832fc8878e">"Transferir a la cadena"</string>
   <string name="gt_e5aa7874e42cca96">"¿Avanzar tu salida?"</string>
   <plurals name="gt_20bbe41bac045140">
-    <item quantity="one">"Move %1$s coin to Ark"</item>
-    <item quantity="many">"Move %1$s coins to Ark"</item>
-    <item quantity="other">"Move %1$s coins to Ark"</item>
+    <item quantity="one">"Mover %1$s moneda a Ark"</item>
+    <item quantity="many">"Mover %1$s monedas a Ark"</item>
+    <item quantity="other">"Mover %1$s monedas a Ark"</item>
   </plurals>
   <string name="gt_5c948b346d0764f3">"Movido a Ark"</string>
   <string name="gt_21ea93c7befc7bad">"Transferido a la cadena"</string>
   <string name="gt_dcfb842231d789f7">"ID del movimiento"</string>
   <string name="gt_0850cf54792998dd">"Tipo de movimiento"</string>
-  <string name="gt_6479a14bd9e57bc8">"Moves only the selected confirmed coins and deducts the onchain fee from them, with no change output."</string>
+  <string name="gt_6479a14bd9e57bc8">"Mueve solo las monedas confirmadas seleccionadas y descuenta de ellas la comisión en cadena, sin generar una salida de cambio."</string>
   <string name="gt_befdcebd952d5b84">"Moviendo a Ark"</string>
   <string name="gt_d8f4530e7856dd78">"Transfiriendo a la cadena"</string>
   <string name="gt_a29d635845ca0cd8">"Moviendo %1$s a Ark"</string>
@@ -898,7 +898,7 @@
   <string name="gt_8596d4a93b3d33a1">"En cadena"</string>
   <string name="gt_af283a1c9bacc979">"Dirección en cadena"</string>
   <string name="gt_1e86a7752acde6de">"Las direcciones en cadena aún no son compatibles con los pagos recurrentes"</string>
-  <string name="gt_122cbba26acdb091">"On-chain coins"</string>
+  <string name="gt_122cbba26acdb091">"Monedas en cadena"</string>
   <string name="gt_94a6189a83ddde95">"Comisión en la cadena"</string>
   <string name="gt_2b714f4a4b944bee">"En cadena en el bloque %1$s"</string>
   <string name="gt_2d5b3f2658ac152b">"Reserva restante en la cadena"</string>
@@ -1175,7 +1175,7 @@
   <string name="gt_0bdc583e8496eb4a">"Selecciona un pago"</string>
   <string name="gt_c500adf55832eadf">"Seleccionar distribuidor"</string>
   <string name="gt_a81bdedbd0dccc7d">"Seleccionar los próximos a vencer"</string>
-  <string name="gt_dba7ec09b6883315">"Select one or more confirmed coins to move them on their own. Moving one coin at a time avoids linking your other on-chain coins, but each move pays its own network fee."</string>
+  <string name="gt_dba7ec09b6883315">"Selecciona una o más monedas confirmadas para moverlas por separado. Mover las monedas de una en una evita vincular tus otras monedas en cadena, pero cada movimiento conlleva su propia comisión de red."</string>
   <string name="gt_70f58736b63e2c9e">"Seleccionar los visibles"</string>
   <string name="gt_3b18955703b2ebc3">"Captura de pantalla seleccionada"</string>
   <string name="gt_f6f4688ff23d50c6">"Enviar"</string>
@@ -1403,7 +1403,7 @@
   <string name="gt_d8b8392e2c542950">"Intentar de nuevo"</string>
   <string name="gt_5fd38e8f1d7ab62f">"Prueba a decir"</string>
   <string name="gt_026460792a12cc5d">"Actívalas o respalda ahora"</string>
-  <string name="gt_68d75d7c96ba16e9">"Turn off Move automatically to choose individual on-chain coins to move."</string>
+  <string name="gt_68d75d7c96ba16e9">"Desactiva Mover automáticamente para seleccionar las monedas en cadena que quieras mover."</string>
   <string name="gt_92dfd3632baeb6d4">"Activar notificaciones"</string>
   <string name="gt_ae9c99bb67325b70">"Actívalas en Ajustes. Noah volverá a comprobarlo cuando regreses."</string>
   <string name="gt_baaddf70fb5d432b">"Tipo"</string>
@@ -1453,7 +1453,7 @@
   <string name="gt_28ef268f1e77dc1b">"Usa la frase de recuperación guardada en este dispositivo para restaurar tu copia de seguridad."</string>
   <string name="gt_a622e464b0866447">"Usar %1$s"</string>
   <string name="gt_0bc523a8f221ea9f">"El nombre de usuario solo puede contener a-z, 0-9, guion, guion bajo y punto"</string>
-  <string name="gt_03112d18f94b641d">"Uses only the selected confirmed coins. Any remainder returns as on-chain change."</string>
+  <string name="gt_03112d18f94b641d">"Usa solo las monedas confirmadas seleccionadas. El importe sobrante se devuelve como cambio en cadena."</string>
   <string name="gt_94dcfd1ebf80512e">"Usando el predeterminado"</string>
   <string name="gt_e3565da14a2f70b8">"Normalmente en unos segundos"</string>
   <string name="gt_b338094d31cf192f">"VTXO"</string>

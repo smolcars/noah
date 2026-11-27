@@ -18845,13 +18845,13 @@
               "one": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "From %1$lld selected coin."
+                  "value": "De %1$lld moneda seleccionada."
                 }
               },
               "other": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "From %1$lld selected coins."
+                  "value": "De %1$lld monedas seleccionadas."
                 }
               }
             }
@@ -18863,13 +18863,13 @@
               "one": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "From %1$lld selected coin."
+                  "value": "選択した%1$lld個のコインから。"
                 }
               },
               "other": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "From %1$lld selected coins."
+                  "value": "選択した%1$lld個のコインから。"
                 }
               }
             }
@@ -18881,13 +18881,13 @@
               "one": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "From %1$lld selected coin."
+                  "value": "선택한 코인 %1$lld개에서."
                 }
               },
               "other": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "From %1$lld selected coins."
+                  "value": "선택한 코인 %1$lld개에서."
                 }
               }
             }
@@ -18899,13 +18899,13 @@
               "one": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "From %1$lld selected coin."
+                  "value": "Från %1$lld valt mynt."
                 }
               },
               "other": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "From %1$lld selected coins."
+                  "value": "Från %1$lld valda mynt."
                 }
               }
             }
@@ -25349,13 +25349,13 @@
               "one": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "Move %1$lld coin to Ark"
+                  "value": "Mover %1$lld moneda a Ark"
                 }
               },
               "other": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "Move %1$lld coins to Ark"
+                  "value": "Mover %1$lld monedas a Ark"
                 }
               }
             }
@@ -25367,13 +25367,13 @@
               "one": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "Move %1$lld coin to Ark"
+                  "value": "%1$lld個のコインをArkに移動"
                 }
               },
               "other": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "Move %1$lld coins to Ark"
+                  "value": "%1$lld個のコインをArkに移動"
                 }
               }
             }
@@ -25385,13 +25385,13 @@
               "one": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "Move %1$lld coin to Ark"
+                  "value": "코인 %1$lld개를 Ark로 이동"
                 }
               },
               "other": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "Move %1$lld coins to Ark"
+                  "value": "코인 %1$lld개를 Ark로 이동"
                 }
               }
             }
@@ -25403,13 +25403,13 @@
               "one": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "Move %1$lld coin to Ark"
+                  "value": "Flytta %1$lld mynt till Ark"
                 }
               },
               "other": {
                 "stringUnit": {
                   "state": "translated",
-                  "value": "Move %1$lld coins to Ark"
+                  "value": "Flytta %1$lld mynt till Ark"
                 }
               }
             }
@@ -25574,25 +25574,25 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Moves only the selected confirmed coins and deducts the onchain fee from them, with no change output."
+            "value": "Mueve solo las monedas confirmadas seleccionadas y descuenta de ellas la comisión en cadena, sin generar una salida de cambio."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Moves only the selected confirmed coins and deducts the onchain fee from them, with no change output."
+            "value": "選択した確認済みのコインのみを移動し、そこからオンチェーン手数料を差し引きます。お釣りの出力は作成されません。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "Moves only the selected confirmed coins and deducts the onchain fee from them, with no change output."
+            "value": "확정된 코인 중 선택한 코인만 이동합니다. 온체인 수수료는 해당 코인에서 차감되며, 잔돈 출력은 생성되지 않습니다."
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Moves only the selected confirmed coins and deducts the onchain fee from them, with no change output."
+            "value": "Flyttar endast de valda bekräftade mynten och drar av avgiften för transaktionen på blockkedjan från beloppet, utan att skapa någon växelutgång."
           }
         }
       }
@@ -31214,25 +31214,25 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "On-chain coins"
+            "value": "Monedas en cadena"
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "On-chain coins"
+            "value": "オンチェーンのコイン"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "On-chain coins"
+            "value": "온체인 코인"
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "On-chain coins"
+            "value": "Mynt på blockkedjan"
           }
         }
       }
@@ -40934,25 +40934,25 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Select one or more confirmed coins to move them on their own. Moving one coin at a time avoids linking your other on-chain coins, but each move pays its own network fee."
+            "value": "Selecciona una o más monedas confirmadas para moverlas por separado. Mover las monedas de una en una evita vincular tus otras monedas en cadena, pero cada movimiento conlleva su propia comisión de red."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Select one or more confirmed coins to move them on their own. Moving one coin at a time avoids linking your other on-chain coins, but each move pays its own network fee."
+            "value": "確認済みのコインを1つ以上選択すると、そのコインだけを移動できます。1つずつ移動すれば、他のオンチェーンのコインとの関連付けを避けられますが、移動のたびにネットワーク手数料がかかります。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "Select one or more confirmed coins to move them on their own. Moving one coin at a time avoids linking your other on-chain coins, but each move pays its own network fee."
+            "value": "확정된 코인을 하나 이상 선택해 해당 코인만 이동하세요. 코인을 하나씩 이동하면 다른 온체인 코인과 연결되는 것을 막을 수 있지만, 이동할 때마다 네트워크 수수료가 부과됩니다."
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Select one or more confirmed coins to move them on their own. Moving one coin at a time avoids linking your other on-chain coins, but each move pays its own network fee."
+            "value": "Välj ett eller flera bekräftade mynt för att flytta dem separat. Genom att flytta ett mynt i taget undviker du att koppla samman dina andra mynt på blockkedjan, men varje flytt medför en egen nätverksavgift."
           }
         }
       }
@@ -49058,25 +49058,25 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Turn off Move automatically to choose individual on-chain coins to move."
+            "value": "Desactiva Mover automáticamente para seleccionar las monedas en cadena que quieras mover."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Turn off Move automatically to choose individual on-chain coins to move."
+            "value": "「自動で移動」をオフにすると、移動するオンチェーンのコインを個別に選べます。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "Turn off Move automatically to choose individual on-chain coins to move."
+            "value": "이동할 온체인 코인을 개별적으로 선택하려면 자동 이동을 끄세요."
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Turn off Move automatically to choose individual on-chain coins to move."
+            "value": "Stäng av Flytta automatiskt för att välja vilka enskilda mynt på blockkedjan som ska flyttas."
           }
         }
       }
@@ -50858,25 +50858,25 @@
         "es": {
           "stringUnit": {
             "state": "translated",
-            "value": "Uses only the selected confirmed coins. Any remainder returns as on-chain change."
+            "value": "Usa solo las monedas confirmadas seleccionadas. El importe sobrante se devuelve como cambio en cadena."
           }
         },
         "ja": {
           "stringUnit": {
             "state": "translated",
-            "value": "Uses only the selected confirmed coins. Any remainder returns as on-chain change."
+            "value": "選択した確認済みのコインのみを使用します。残額はオンチェーンのお釣りとして戻ります。"
           }
         },
         "ko": {
           "stringUnit": {
             "state": "translated",
-            "value": "Uses only the selected confirmed coins. Any remainder returns as on-chain change."
+            "value": "확정된 코인 중 선택한 코인만 사용합니다. 남은 금액은 온체인 잔돈으로 반환됩니다."
           }
         },
         "sv": {
           "stringUnit": {
             "state": "translated",
-            "value": "Uses only the selected confirmed coins. Any remainder returns as on-chain change."
+            "value": "Använder endast de valda bekräftade mynten. Eventuellt restbelopp återförs som växel på blockkedjan."
           }
         }
       }

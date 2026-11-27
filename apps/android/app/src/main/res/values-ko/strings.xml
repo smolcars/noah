@@ -534,8 +534,8 @@
   <string name="gt_13bbc1285eb22070">"온체인 잔액에서."</string>
   <string name="gt_dbfd99a4abd0ded1">"온체인 지갑에서 차감"</string>
   <plurals name="gt_6a7445b69570a820">
-    <item quantity="one">"From %1$s selected coin."</item>
-    <item quantity="other">"From %1$s selected coins."</item>
+    <item quantity="one">"선택한 코인 %1$s개에서."</item>
+    <item quantity="other">"선택한 코인 %1$s개에서."</item>
   </plurals>
   <string name="gt_c41e04a73516abe6">"자금 조달 입력"</string>
   <string name="gt_f64c1af83adbae63">"자금 조달 거래"</string>
@@ -720,14 +720,14 @@
   <string name="gt_fe09b8832fc8878e">"온체인으로 이동"</string>
   <string name="gt_e5aa7874e42cca96">"출금을 진행할까요?"</string>
   <plurals name="gt_20bbe41bac045140">
-    <item quantity="one">"Move %1$s coin to Ark"</item>
-    <item quantity="other">"Move %1$s coins to Ark"</item>
+    <item quantity="one">"코인 %1$s개를 Ark로 이동"</item>
+    <item quantity="other">"코인 %1$s개를 Ark로 이동"</item>
   </plurals>
   <string name="gt_5c948b346d0764f3">"Ark로 이동됨"</string>
   <string name="gt_21ea93c7befc7bad">"온체인으로 이동 완료"</string>
   <string name="gt_dcfb842231d789f7">"자금 이동 ID"</string>
   <string name="gt_0850cf54792998dd">"자금 이동 유형"</string>
-  <string name="gt_6479a14bd9e57bc8">"Moves only the selected confirmed coins and deducts the onchain fee from them, with no change output."</string>
+  <string name="gt_6479a14bd9e57bc8">"확정된 코인 중 선택한 코인만 이동합니다. 온체인 수수료는 해당 코인에서 차감되며, 잔돈 출력은 생성되지 않습니다."</string>
   <string name="gt_befdcebd952d5b84">"Ark로 이동 중"</string>
   <string name="gt_d8f4530e7856dd78">"온체인으로 이동 중"</string>
   <string name="gt_a29d635845ca0cd8">"%1$s Ark로 이동 중"</string>
@@ -885,7 +885,7 @@
   <string name="gt_8596d4a93b3d33a1">"온체인"</string>
   <string name="gt_af283a1c9bacc979">"온체인 주소"</string>
   <string name="gt_1e86a7752acde6de">"정기 결제에서는 아직 온체인 주소를 지원하지 않습니다"</string>
-  <string name="gt_122cbba26acdb091">"On-chain coins"</string>
+  <string name="gt_122cbba26acdb091">"온체인 코인"</string>
   <string name="gt_94a6189a83ddde95">"온체인 수수료"</string>
   <string name="gt_2b714f4a4b944bee">"블록 %1$s에서 온체인"</string>
   <string name="gt_2d5b3f2658ac152b">"남은 온체인 예비금"</string>
@@ -1159,7 +1159,7 @@
   <string name="gt_0bdc583e8496eb4a">"결제 선택"</string>
   <string name="gt_c500adf55832eadf">"배포자 선택"</string>
   <string name="gt_a81bdedbd0dccc7d">"만료 임박 항목 선택"</string>
-  <string name="gt_dba7ec09b6883315">"Select one or more confirmed coins to move them on their own. Moving one coin at a time avoids linking your other on-chain coins, but each move pays its own network fee."</string>
+  <string name="gt_dba7ec09b6883315">"확정된 코인을 하나 이상 선택해 해당 코인만 이동하세요. 코인을 하나씩 이동하면 다른 온체인 코인과 연결되는 것을 막을 수 있지만, 이동할 때마다 네트워크 수수료가 부과됩니다."</string>
   <string name="gt_70f58736b63e2c9e">"표시된 항목 선택"</string>
   <string name="gt_3b18955703b2ebc3">"선택한 화면 캡처"</string>
   <string name="gt_f6f4688ff23d50c6">"보내기"</string>
@@ -1386,7 +1386,7 @@
   <string name="gt_d8b8392e2c542950">"다시 시도"</string>
   <string name="gt_5fd38e8f1d7ab62f">"이렇게 말해 보세요"</string>
   <string name="gt_026460792a12cc5d">"켜거나 지금 백업하세요"</string>
-  <string name="gt_68d75d7c96ba16e9">"Turn off Move automatically to choose individual on-chain coins to move."</string>
+  <string name="gt_68d75d7c96ba16e9">"이동할 온체인 코인을 개별적으로 선택하려면 자동 이동을 끄세요."</string>
   <string name="gt_92dfd3632baeb6d4">"알림 켜기"</string>
   <string name="gt_ae9c99bb67325b70">"설정에서 켜세요. 돌아오면 Noah가 다시 확인해요."</string>
   <string name="gt_baaddf70fb5d432b">"유형"</string>
@@ -1436,7 +1436,7 @@
   <string name="gt_28ef268f1e77dc1b">"이 기기에 저장된 복구 문구로 백업을 복원하세요."</string>
   <string name="gt_a622e464b0866447">"%1$s 사용"</string>
   <string name="gt_0bc523a8f221ea9f">"사용자 이름에는 a-z, 0-9, 하이픈, 밑줄, 마침표만 사용할 수 있습니다"</string>
-  <string name="gt_03112d18f94b641d">"Uses only the selected confirmed coins. Any remainder returns as on-chain change."</string>
+  <string name="gt_03112d18f94b641d">"확정된 코인 중 선택한 코인만 사용합니다. 남은 금액은 온체인 잔돈으로 반환됩니다."</string>
   <string name="gt_94dcfd1ebf80512e">"기본값 사용 중"</string>
   <string name="gt_e3565da14a2f70b8">"보통 몇 초 이내"</string>
   <string name="gt_b338094d31cf192f">"VTXO"</string>

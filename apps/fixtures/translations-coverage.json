@@ -1436,50 +1436,10 @@
         "₿1 = 1 sat."
       ],
       "untranslated": {
-        "es": [
-          "gt_03112d18f94b641d",
-          "gt_122cbba26acdb091",
-          "gt_20bbe41bac045140_one",
-          "gt_20bbe41bac045140_other",
-          "gt_6479a14bd9e57bc8",
-          "gt_68d75d7c96ba16e9",
-          "gt_6a7445b69570a820_one",
-          "gt_6a7445b69570a820_other",
-          "gt_dba7ec09b6883315"
-        ],
-        "ja": [
-          "gt_03112d18f94b641d",
-          "gt_122cbba26acdb091",
-          "gt_20bbe41bac045140_one",
-          "gt_20bbe41bac045140_other",
-          "gt_6479a14bd9e57bc8",
-          "gt_68d75d7c96ba16e9",
-          "gt_6a7445b69570a820_one",
-          "gt_6a7445b69570a820_other",
-          "gt_dba7ec09b6883315"
-        ],
-        "ko": [
-          "gt_03112d18f94b641d",
-          "gt_122cbba26acdb091",
-          "gt_20bbe41bac045140_one",
-          "gt_20bbe41bac045140_other",
-          "gt_6479a14bd9e57bc8",
-          "gt_68d75d7c96ba16e9",
-          "gt_6a7445b69570a820_one",
-          "gt_6a7445b69570a820_other",
-          "gt_dba7ec09b6883315"
-        ],
-        "sv": [
-          "gt_03112d18f94b641d",
-          "gt_122cbba26acdb091",
-          "gt_20bbe41bac045140_one",
-          "gt_20bbe41bac045140_other",
-          "gt_6479a14bd9e57bc8",
-          "gt_68d75d7c96ba16e9",
-          "gt_6a7445b69570a820_one",
-          "gt_6a7445b69570a820_other",
-          "gt_dba7ec09b6883315"
-        ]
+        "es": [],
+        "ja": [],
+        "ko": [],
+        "sv": []
       }
     },
     "android": {
@@ -2931,50 +2891,10 @@
         "₿1 = 1 sat."
       ],
       "untranslated": {
-        "es": [
-          "gt_03112d18f94b641d",
-          "gt_122cbba26acdb091",
-          "gt_20bbe41bac045140_one",
-          "gt_20bbe41bac045140_other",
-          "gt_6479a14bd9e57bc8",
-          "gt_68d75d7c96ba16e9",
-          "gt_6a7445b69570a820_one",
-          "gt_6a7445b69570a820_other",
-          "gt_dba7ec09b6883315"
-        ],
-        "ja": [
-          "gt_03112d18f94b641d",
-          "gt_122cbba26acdb091",
-          "gt_20bbe41bac045140_one",
-          "gt_20bbe41bac045140_other",
-          "gt_6479a14bd9e57bc8",
-          "gt_68d75d7c96ba16e9",
-          "gt_6a7445b69570a820_one",
-          "gt_6a7445b69570a820_other",
-          "gt_dba7ec09b6883315"
-        ],
-        "ko": [
-          "gt_03112d18f94b641d",
-          "gt_122cbba26acdb091",
-          "gt_20bbe41bac045140_one",
-          "gt_20bbe41bac045140_other",
-          "gt_6479a14bd9e57bc8",
-          "gt_68d75d7c96ba16e9",
-          "gt_6a7445b69570a820_one",
-          "gt_6a7445b69570a820_other",
-          "gt_dba7ec09b6883315"
-        ],
-        "sv": [
-          "gt_03112d18f94b641d",
-          "gt_122cbba26acdb091",
-          "gt_20bbe41bac045140_one",
-          "gt_20bbe41bac045140_other",
-          "gt_6479a14bd9e57bc8",
-          "gt_68d75d7c96ba16e9",
-          "gt_6a7445b69570a820_one",
-          "gt_6a7445b69570a820_other",
-          "gt_dba7ec09b6883315"
-        ]
+        "es": [],
+        "ja": [],
+        "ko": [],
+        "sv": []
       }
     }
   }
