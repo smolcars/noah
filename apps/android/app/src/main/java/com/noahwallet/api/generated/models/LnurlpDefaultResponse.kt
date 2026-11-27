@@ -25,10 +25,11 @@ public data class LnurlpDefaultResponse(
   @SerialName("callback")
   public val callback: String,
   /**
-   * The maximum length of a comment that can be included with the payment.
+   * The maximum length of a LUD-12 comment, in characters. Present only while the server can
+   * pass a comment on to the recipient.
    */
   @SerialName("commentAllowed")
-  public val commentAllowed: Int,
+  public val commentAllowed: Int? = null,
   /**
    * The maximum amount that can be sent in a single payment, in millisatoshis. Unsigned Rust u64; values are below 2^63 in practice for native Int64/Long clients.
    */
@@ -44,6 +45,11 @@ public data class LnurlpDefaultResponse(
    */
   @SerialName("minSendable")
   public val minSendable: Long,
+  /**
+   * The LUD-18 fields Noah accepts; neither is mandatory.
+   */
+  @SerialName("payerData")
+  public val payerData: LnurlpDefaultResponsePayerData? = null,
   /**
    * The LNURL-pay tag, which is always "payRequest".
    */

@@ -26,6 +26,7 @@ use crate::{
         k1_store::K1Store, maintenance_store::MaintenanceStore, redis_client::RedisClient,
     },
     config::Config,
+    db::lnurl_pay_receive_metadata_repo::LnurlPayReceiveMetadataRepository,
     email_client::EmailClient,
 };
 
@@ -49,6 +50,8 @@ pub struct AppStruct {
     pub email_client: EmailClient,
     pub maintenance_store: MaintenanceStore,
     pub barkd_invoice_provider: Option<Arc<dyn ForwardingInvoiceProvider>>,
+    /// Present while `LNURL_PAY_RECEIVE_METADATA_ENCRYPTION_KEY` is set.
+    pub lnurl_pay_receive_metadata_repo: Option<LnurlPayReceiveMetadataRepository>,
 }
 
 pub async fn build_app_state(config: Config) -> anyhow::Result<AppState> {
@@ -71,6 +74,10 @@ pub async fn build_app_state(config: Config) -> anyhow::Result<AppState> {
     let email_client =
         EmailClient::new(config.ses_from_address.clone(), config.email_dev_mode).await?;
     let barkd_invoice_provider = build_forwarding_invoice_provider(&config)?;
+    let lnurl_pay_receive_metadata_repo = config
+        .lnurl_pay_receive_metadata_encryption_key
+        .as_ref()
+        .map(|key| LnurlPayReceiveMetadataRepository::new(&db_pool, key));
 
     Ok(Arc::new(AppStruct {
         #[cfg(test)]
@@ -87,5 +94,6 @@ pub async fn build_app_state(config: Config) -> anyhow::Result<AppState> {
         email_client,
         maintenance_store,
         barkd_invoice_provider,
+        lnurl_pay_receive_metadata_repo,
     }))
 }

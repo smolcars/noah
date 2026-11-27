@@ -133,6 +133,20 @@ internal protocol APIProtocol: Sendable {
     /// - Remark: HTTP `POST /v0/ln_address_suggestions`.
     /// - Remark: Generated from `#/paths//v0/ln_address_suggestions/post(ln_address_suggestions)`.
     func lnAddressSuggestions(_ input: Operations.LnAddressSuggestions.Input) async throws -> Operations.LnAddressSuggestions.Output
+    /// Deletes LNURL-pay receive metadata the app has stored with its movements.
+    ///
+    /// Requires a bearer JWT and a registered user (user-exists middleware). Email verification is not required.
+    ///
+    /// - Remark: HTTP `POST /v0/lnurlp/receive_metadata/ack`.
+    /// - Remark: Generated from `#/paths//v0/lnurlp/receive_metadata/ack/post(acknowledge_lnurl_pay_receive_metadata)`.
+    func acknowledgeLnurlPayReceiveMetadata(_ input: Operations.AcknowledgeLnurlPayReceiveMetadata.Input) async throws -> Operations.AcknowledgeLnurlPayReceiveMetadata.Output
+    /// Lists the caller's settled LNURL-pay receives that carry payer data or a comment.
+    ///
+    /// Requires a bearer JWT and a registered user (user-exists middleware). Email verification is not required. Returns at most 100 items, oldest first; acknowledge them to see later ones.
+    ///
+    /// - Remark: HTTP `POST /v0/lnurlp/receive_metadata/list`.
+    /// - Remark: Generated from `#/paths//v0/lnurlp/receive_metadata/list/post(list_lnurl_pay_receive_metadata)`.
+    func listLnurlPayReceiveMetadata(_ input: Operations.ListLnurlPayReceiveMetadata.Input) async throws -> Operations.ListLnurlPayReceiveMetadata.Output
     /// Receives and processes a BOLT11 invoice from a user's device.
     ///
     /// Requires a bearer JWT and a registered user (user-exists middleware). Email verification is not required.
@@ -507,6 +521,30 @@ extension APIProtocol {
             headers: headers,
             body: body
         ))
+    }
+    /// Deletes LNURL-pay receive metadata the app has stored with its movements.
+    ///
+    /// Requires a bearer JWT and a registered user (user-exists middleware). Email verification is not required.
+    ///
+    /// - Remark: HTTP `POST /v0/lnurlp/receive_metadata/ack`.
+    /// - Remark: Generated from `#/paths//v0/lnurlp/receive_metadata/ack/post(acknowledge_lnurl_pay_receive_metadata)`.
+    internal func acknowledgeLnurlPayReceiveMetadata(
+        headers: Operations.AcknowledgeLnurlPayReceiveMetadata.Input.Headers = .init(),
+        body: Operations.AcknowledgeLnurlPayReceiveMetadata.Input.Body
+    ) async throws -> Operations.AcknowledgeLnurlPayReceiveMetadata.Output {
+        try await acknowledgeLnurlPayReceiveMetadata(Operations.AcknowledgeLnurlPayReceiveMetadata.Input(
+            headers: headers,
+            body: body
+        ))
+    }
+    /// Lists the caller's settled LNURL-pay receives that carry payer data or a comment.
+    ///
+    /// Requires a bearer JWT and a registered user (user-exists middleware). Email verification is not required. Returns at most 100 items, oldest first; acknowledge them to see later ones.
+    ///
+    /// - Remark: HTTP `POST /v0/lnurlp/receive_metadata/list`.
+    /// - Remark: Generated from `#/paths//v0/lnurlp/receive_metadata/list/post(list_lnurl_pay_receive_metadata)`.
+    internal func listLnurlPayReceiveMetadata(headers: Operations.ListLnurlPayReceiveMetadata.Input.Headers = .init()) async throws -> Operations.ListLnurlPayReceiveMetadata.Output {
+        try await listLnurlPayReceiveMetadata(Operations.ListLnurlPayReceiveMetadata.Input(headers: headers))
     }
     /// Receives and processes a BOLT11 invoice from a user's device.
     ///

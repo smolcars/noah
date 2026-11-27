@@ -3,6 +3,7 @@ pub mod device_repo;
 pub mod fiat_rate_repo;
 pub mod heartbeat_repo;
 pub mod job_status_repo;
+pub mod lnurl_pay_receive_metadata_repo;
 pub mod mailbox_authorization_repo;
 pub mod migrations;
 pub mod notification_tracking_repo;

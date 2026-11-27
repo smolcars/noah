@@ -657,6 +657,182 @@
         ],
         "type": "object"
       },
+      "LnurlPayPayerDataFieldSpec": {
+        "properties": {
+          "mandatory": {
+            "type": "boolean"
+          }
+        },
+        "required": [
+          "mandatory"
+        ],
+        "type": "object"
+      },
+      "LnurlPayPayerDataSpec": {
+        "description": "The LUD-18 fields Noah accepts; neither is mandatory.",
+        "properties": {
+          "identifier": {
+            "$ref": "#/components/schemas/LnurlPayPayerDataFieldSpec"
+          },
+          "name": {
+            "$ref": "#/components/schemas/LnurlPayPayerDataFieldSpec"
+          }
+        },
+        "required": [
+          "name",
+          "identifier"
+        ],
+        "type": "object"
+      },
+      "LnurlPayReceiveMetadata": {
+        "description": "Payer data and comment for one settled LNURL-pay receive.",
+        "properties": {
+          "amount_sat": {
+            "description": "The amount the recipient received. Unsigned Rust u64; values are below 2^63 in practice for native Int64/Long clients.",
+            "format": "int64",
+            "minimum": 0,
+            "type": "integer"
+          },
+          "comment": {
+            "description": "The payer's LUD-12 comment.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "id": {
+            "description": "Identifier to acknowledge once the metadata is stored with the movement.",
+            "type": "string"
+          },
+          "payer_data": {
+            "description": "LUD-18 identity a payer sent with an LNURL-pay callback. Payer-provided and unverified.",
+            "properties": {
+              "identifier": {
+                "description": "The payer's Lightning address, normalized to lowercase.",
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "name": {
+                "description": "The payer's name.",
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "type": [
+              "object",
+              "null"
+            ]
+          },
+          "target": {
+            "$ref": "#/components/schemas/LnurlPayReceiveTarget"
+          }
+        },
+        "required": [
+          "id",
+          "amount_sat",
+          "target"
+        ],
+        "type": "object"
+      },
+      "LnurlPayReceiveMetadataAckPayload": {
+        "properties": {
+          "ids": {
+            "description": "Identifiers from the list response, at most 100.",
+            "items": {
+              "type": "string"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "ids"
+        ],
+        "type": "object"
+      },
+      "LnurlPayReceiveMetadataListResponse": {
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/LnurlPayReceiveMetadata"
+            },
+            "type": "array"
+          }
+        },
+        "required": [
+          "items"
+        ],
+        "type": "object"
+      },
+      "LnurlPayReceivePayerData": {
+        "description": "LUD-18 identity a payer sent with an LNURL-pay callback. Payer-provided and unverified.",
+        "properties": {
+          "identifier": {
+            "description": "The payer's Lightning address, normalized to lowercase.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "name": {
+            "description": "The payer's name.",
+            "type": [
+              "string",
+              "null"
+            ]
+          }
+        },
+        "type": "object"
+      },
+      "LnurlPayReceiveTarget": {
+        "description": "The wallet movement a receive's metadata belongs to.",
+        "oneOf": [
+          {
+            "description": "A Lightning receive with this payment hash. Reserved for invoices the device creates; the\nserver does not produce it yet.",
+            "properties": {
+              "payment_hash": {
+                "type": "string"
+              },
+              "type": {
+                "enum": [
+                  "lightning_payment_hash"
+                ],
+                "type": "string"
+              }
+            },
+            "required": [
+              "payment_hash",
+              "type"
+            ],
+            "type": "object"
+          },
+          {
+            "description": "An Arkoor receive with exactly these output VTXOs: a payment barkd forwarded.",
+            "properties": {
+              "type": {
+                "enum": [
+                  "ark_output_vtxos"
+                ],
+                "type": "string"
+              },
+              "vtxo_ids": {
+                "items": {
+                  "type": "string"
+                },
+                "type": "array"
+              }
+            },
+            "required": [
+              "vtxo_ids",
+              "type"
+            ],
+            "type": "object"
+          }
+        ]
+      },
       "LnurlpDefaultResponse": {
         "description": "Represents the first response in the LNURL-pay protocol.\n\nThis response provides the necessary details for a wallet to make a payment,\nsuch as the callback URL, sendable amounts, and metadata.",
         "properties": {
@@ -672,10 +848,13 @@
             "type": "string"
           },
           "commentAllowed": {
-            "description": "The maximum length of a comment that can be included with the payment.",
+            "description": "The maximum length of a LUD-12 comment, in characters. Present only while the server can\npass a comment on to the recipient.",
             "format": "uint16",
             "minimum": 0,
-            "type": "integer"
+            "type": [
+              "integer",
+              "null"
+            ]
           },
           "maxSendable": {
             "description": "The maximum amount that can be sent in a single payment, in millisatoshis. Unsigned Rust u64; values are below 2^63 in practice for native Int64/Long clients.",
@@ -693,6 +872,25 @@
             "minimum": 0,
             "type": "integer"
           },
+          "payerData": {
+            "description": "The LUD-18 fields Noah accepts; neither is mandatory.",
+            "properties": {
+              "identifier": {
+                "$ref": "#/components/schemas/LnurlPayPayerDataFieldSpec"
+              },
+              "name": {
+                "$ref": "#/components/schemas/LnurlPayPayerDataFieldSpec"
+              }
+            },
+            "required": [
+              "name",
+              "identifier"
+            ],
+            "type": [
+              "object",
+              "null"
+            ]
+          },
           "tag": {
             "description": "The LNURL-pay tag, which is always \"payRequest\".",
             "type": "string"
@@ -703,8 +901,7 @@
           "maxSendable",
           "minSendable",
           "metadata",
-          "tag",
-          "commentAllowed"
+          "tag"
         ],
         "type": "object"
       },
@@ -3772,6 +3969,175 @@
           }
         ],
         "summary": "Returns autocomplete suggestions for a partial lightning address query.",
+        "tags": [
+          "gated_api_v0"
+        ]
+      }
+    },
+    "/v0/lnurlp/receive_metadata/ack": {
+      "post": {
+        "description": "Requires a bearer JWT and a registered user (user-exists middleware). Email verification is not required.",
+        "operationId": "acknowledge_lnurl_pay_receive_metadata",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/LnurlPayReceiveMetadataAckPayload"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DefaultSuccessPayload"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "400": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              },
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Invalid input (ApiError), or malformed JSON/query (plain text)"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Missing, invalid or expired credentials; or user is not registered"
+          },
+          "413": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Request body too large"
+          },
+          "415": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "Expected application/json"
+          },
+          "422": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "JSON does not match the request payload"
+          },
+          "429": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "IP rate limit exceeded"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Deletes LNURL-pay receive metadata the app has stored with its movements.",
+        "tags": [
+          "gated_api_v0"
+        ]
+      }
+    },
+    "/v0/lnurlp/receive_metadata/list": {
+      "post": {
+        "description": "Requires a bearer JWT and a registered user (user-exists middleware). Email verification is not required. Returns at most 100 items, oldest first; acknowledge them to see later ones.",
+        "operationId": "list_lnurl_pay_receive_metadata",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LnurlPayReceiveMetadataListResponse"
+                }
+              }
+            },
+            "description": "Success"
+          },
+          "401": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Missing, invalid or expired credentials; or user is not registered"
+          },
+          "429": {
+            "content": {
+              "text/plain": {
+                "schema": {
+                  "type": "string"
+                }
+              }
+            },
+            "description": "IP rate limit exceeded"
+          },
+          "500": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ApiErrorResponse"
+                }
+              }
+            },
+            "description": "Internal server error"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ],
+        "summary": "Lists the caller's settled LNURL-pay receives that carry payer data or a comment.",
         "tags": [
           "gated_api_v0"
         ]

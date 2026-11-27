@@ -4,6 +4,7 @@ use std::{
     cmp,
     collections::{HashMap, HashSet},
     future::Future,
+    str::FromStr,
     sync::{
         Arc, Mutex, MutexGuard,
         atomic::{AtomicUsize, Ordering},
@@ -11,13 +12,15 @@ use std::{
     time::Duration,
 };
 
-use anyhow::Result;
-use ark::{ProtocolEncoding, Vtxo, vtxo::Full, vtxo::policy::VtxoPolicyKind};
+use anyhow::{Context, Result};
+use ark::{
+    Address, ProtocolEncoding, Vtxo, VtxoId, VtxoPolicy, vtxo::Full, vtxo::policy::VtxoPolicyKind,
+};
 use async_trait::async_trait;
 use bitcoin::Amount;
 use chrono::Utc;
 use expo_push_notification_client::Priority;
-use futures_util::StreamExt;
+use futures_util::{StreamExt, stream};
 use server_rpc::{
     ServerConnection,
     client::ArkServiceInterceptor,
@@ -37,9 +40,13 @@ use uuid::Uuid;
 
 use crate::{
     AppState,
+    barkd_client::{ForwardedReceiveHistory, ForwardedReceiveStatus},
     config::ARK_USER_AGENT,
     db::{
         fiat_rate_repo::{FiatRate, FiatRateRepository},
+        lnurl_pay_receive_metadata_repo::{
+            CorrelationCandidate, LiveCorrelation, LnurlPayReceiveMetadataRepository,
+        },
         mailbox_authorization_repo::{ActiveMailboxAuthorization, MailboxAuthorizationRepository},
     },
     errors::ApiError,
@@ -1032,6 +1039,41 @@ pub(crate) async fn process_mailbox_message(
         return Ok(false);
     }
 
+    let checkpoint = i64::try_from(message.checkpoint).map_err(|_| {
+        ApiError::Anyhow(anyhow::anyhow!(
+            "mailbox checkpoint exceeded the supported range"
+        ))
+    })?;
+
+    // Match a barkd-forwarded payment to its LNURL-pay record, also while catch-up notifications
+    // are suppressed. A failed or pending barkd lookup is an error, so the message replays.
+    let mut correlation = None;
+    if let Some(Message::Arkoor(arkoor)) = &message.message
+        && !arkoor.vtxos.is_empty()
+        && let Some(metadata_repo) = &app_state.lnurl_pay_receive_metadata_repo
+    {
+        let observation = decode_arkoor_observation(&arkoor.vtxos)?;
+        match correlate_arkoor_observation(
+            app_state,
+            metadata_repo,
+            mailbox,
+            checkpoint,
+            &observation,
+        )
+        .await
+        .map_err(ApiError::from)?
+        {
+            // One page done without a decision: end the session unadvanced, so the replay
+            // continues with the records this scan hasn't checked.
+            ArkoorCorrelation::Continue => return Ok(false),
+            ArkoorCorrelation::Matched {
+                metadata_id,
+                observation_id,
+            } => correlation = Some((metadata_repo, metadata_id, observation_id, observation)),
+            ArkoorCorrelation::Unmatched => {}
+        }
+    }
+
     match &message.message {
         Some(Message::IncomingLightningPayment(lightning_payment)) if send_notifications => {
             let payment_hash = hex::encode(&lightning_payment.payment_hash);
@@ -1116,9 +1158,41 @@ pub(crate) async fn process_mailbox_message(
         _ => {}
     }
 
+    // The ready record and the checkpoint commit together, after the push as for any message:
+    // if the app could acknowledge the record first, a replay would lose its observation.
+    if let Some((metadata_repo, metadata_id, observation_id, observation)) = correlation {
+        let ready = metadata_repo
+            .mark_ready_and_update_checkpoint(
+                metadata_id,
+                observation_id,
+                &observation.output_vtxo_ids,
+                observation.delivered_amount_sat,
+                checkpoint,
+                mailbox.auth_version,
+                &session.worker_id,
+            )
+            .await
+            .map_err(ApiError::from)?;
+        if ready.is_some() {
+            tracing::info!(
+                service = "mailbox_worker",
+                pubkey = %mailbox.pubkey,
+                checkpoint = message.checkpoint,
+                metadata_id = %metadata_id,
+                "mailbox forwarded Lightning receive matched its LNURL-pay record"
+            );
+            return Ok(true);
+        }
+        // Its correlation window closed after the match: the payment goes without metadata.
+        metadata_repo
+            .delete_arkoor_observation(observation_id)
+            .await
+            .map_err(ApiError::from)?;
+    }
+
     repo.update_checkpoint(
         &mailbox.pubkey,
-        message.checkpoint as i64,
+        checkpoint,
         mailbox.auth_version,
         &session.worker_id,
     )
@@ -1259,11 +1333,565 @@ fn build_receive_notification(
     })
 }
 
+fn decode_mailbox_vtxo(raw_vtxo: &[u8]) -> Result<Vtxo<Full>, ApiError> {
+    let mut cursor = std::io::Cursor::new(raw_vtxo);
+    let vtxo: Vtxo<Full> = Vtxo::decode(&mut cursor)
+        .map_err(|e| ApiError::Anyhow(anyhow::anyhow!("failed to decode mailbox vtxo: {}", e)))?;
+    if cursor.position() != raw_vtxo.len() as u64 {
+        return Err(ApiError::Anyhow(anyhow::anyhow!(
+            "mailbox vtxo contained trailing bytes"
+        )));
+    }
+    Ok(vtxo)
+}
+
+/// One Arkoor message: every VTXO of one payment (captaind stores a post under one checkpoint).
+#[derive(Debug)]
+struct DecodedArkoorObservation {
+    vtxos: Vec<Vtxo<Full>>,
+    /// Sorted, so a replay stores the same observation.
+    output_vtxo_ids: Vec<String>,
+    ancestor_vtxo_ids: Vec<String>,
+    ancestor_vtxo_id_set: HashSet<VtxoId>,
+    delivered_amount_sat: u64,
+}
+
+fn decode_arkoor_observation(raw_vtxos: &[Vec<u8>]) -> Result<DecodedArkoorObservation, ApiError> {
+    let mut vtxos = Vec::with_capacity(raw_vtxos.len());
+    let mut output_ids = HashSet::<VtxoId>::with_capacity(raw_vtxos.len());
+    let mut ancestor_ids = HashSet::<VtxoId>::new();
+    let mut delivered_amount_sat = 0u64;
+
+    for raw_vtxo in raw_vtxos {
+        let vtxo = decode_mailbox_vtxo(raw_vtxo)?;
+        if !output_ids.insert(vtxo.id()) {
+            return Err(ApiError::Anyhow(anyhow::anyhow!(
+                "mailbox arkoor package contained duplicate vtxos"
+            )));
+        }
+        ancestor_ids.extend(vtxo.ancestor_ids());
+        delivered_amount_sat = delivered_amount_sat
+            .checked_add(vtxo.amount().to_sat())
+            .context("mailbox arkoor amount overflow")
+            .map_err(ApiError::from)?;
+        vtxos.push(vtxo);
+    }
+
+    let mut output_vtxo_ids: Vec<String> = output_ids.iter().map(|id| id.to_string()).collect();
+    output_vtxo_ids.sort_unstable();
+    let mut ancestor_vtxo_ids: Vec<String> = ancestor_ids.iter().map(|id| id.to_string()).collect();
+    ancestor_vtxo_ids.sort_unstable();
+
+    Ok(DecodedArkoorObservation {
+        vtxos,
+        output_vtxo_ids,
+        ancestor_vtxo_ids,
+        ancestor_vtxo_id_set: ancestor_ids,
+        delivered_amount_sat,
+    })
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum ArkoorCorrelation {
+    Unmatched,
+    Matched {
+        metadata_id: Uuid,
+        observation_id: Uuid,
+    },
+    /// This page decided nothing and more pending records remain.
+    Continue,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+enum ArkoorCandidateDecision {
+    Unmatched,
+    /// The delivery fits, but barkd hasn't finished its movement yet.
+    Pending,
+    Matched,
+}
+
+const CORRELATION_PAGE_SIZE: usize = 16;
+const CORRELATION_LOOKUP_CONCURRENCY: usize = 8;
+
+/// Matches one Arkoor delivery against a page of the recipient's pending LNURL-pay records by
+/// asking barkd which HTLC VTXOs each record's invoice was paid with. An error (a failed or still
+/// pending lookup) keeps the checkpoint so the message replays.
+async fn correlate_arkoor_observation(
+    app_state: &AppState,
+    repo: &LnurlPayReceiveMetadataRepository,
+    mailbox: &ActiveMailboxAuthorization,
+    mailbox_checkpoint: i64,
+    observation: &DecodedArkoorObservation,
+) -> Result<ArkoorCorrelation> {
+    let stored = repo
+        .store_arkoor_observation(
+            &mailbox.pubkey,
+            &mailbox.mailbox_id,
+            mailbox_checkpoint,
+            &observation.output_vtxo_ids,
+            &observation.ancestor_vtxo_ids,
+            observation.delivered_amount_sat,
+        )
+        .await
+        .context("failed to store the mailbox Ark observation")?;
+    let candidates = repo
+        .list_unchecked_correlations(stored.id, CORRELATION_PAGE_SIZE)
+        .await
+        .context("failed to list pending LNURL-pay receives")?;
+
+    let expected_server_pubkey = app_state.ark_server_pubkey.read().await.clone();
+    let mut matched_metadata_id = None;
+    let mut requires_retry = false;
+    let checked_metadata_ids: Vec<Uuid> = candidates
+        .iter()
+        .map(CorrelationCandidate::metadata_id)
+        .collect();
+    let correlations: Vec<LiveCorrelation> = candidates
+        .into_iter()
+        .filter_map(|candidate| match candidate {
+            CorrelationCandidate::Decoded(correlation) => Some(correlation),
+            CorrelationCandidate::Unreadable { .. } => {
+                // A newer server may read it; keep it and the checkpoint.
+                requires_retry = true;
+                None
+            }
+        })
+        .collect();
+
+    let lookups = if correlations.is_empty() {
+        Vec::new()
+    } else if let Some(provider) = &app_state.barkd_invoice_provider {
+        stream::iter(correlations.into_iter().map(|correlation| {
+            let provider = Arc::clone(provider);
+            async move {
+                provider
+                    .lookup_forwarded_receive(&correlation.invoice)
+                    .await
+                    .map(|history| (correlation, history))
+                    // One failing lookup must not starve the others, and the error must not keep
+                    // the invoice it was for.
+                    .map_err(|_| anyhow::anyhow!("barkd history lookup failed"))
+            }
+        }))
+        .buffer_unordered(CORRELATION_LOOKUP_CONCURRENCY)
+        .collect::<Vec<_>>()
+        .await
+    } else {
+        requires_retry = true;
+        Vec::new()
+    };
+
+    for lookup in lookups {
+        let Ok((correlation, history)) = lookup else {
+            requires_retry = true;
+            continue;
+        };
+        let Some(history) = history else {
+            continue;
+        };
+        let decision = match classify_arkoor_candidate(
+            observation,
+            &correlation,
+            &history,
+            expected_server_pubkey.as_deref(),
+        ) {
+            Ok(decision) => decision,
+            Err(error) => {
+                tracing::warn!(
+                    service = "mailbox_worker",
+                    metadata_id = %correlation.metadata_id,
+                    error = %error,
+                    "LNURL-pay receive candidate could not be classified"
+                );
+                requires_retry = true;
+                continue;
+            }
+        };
+        match decision {
+            ArkoorCandidateDecision::Unmatched => {}
+            ArkoorCandidateDecision::Pending => requires_retry = true,
+            ArkoorCandidateDecision::Matched => {
+                if matched_metadata_id.is_some_and(|id| id != correlation.metadata_id) {
+                    anyhow::bail!("mailbox Ark observation matched several LNURL-pay receives");
+                }
+                matched_metadata_id = Some(correlation.metadata_id);
+            }
+        }
+    }
+
+    let page = repo
+        .finish_correlation_page(
+            stored.id,
+            &checked_metadata_ids,
+            matched_metadata_id,
+            requires_retry,
+        )
+        .await
+        .context("failed to record a correlation page")?;
+    if page.has_more {
+        return Ok(ArkoorCorrelation::Continue);
+    }
+    if page.requires_retry {
+        repo.reset_correlation_scan(stored.id)
+            .await
+            .context("failed to reset an undecided correlation scan")?;
+        // barkd can post to the mailbox before it marks its movement successful.
+        anyhow::bail!("LNURL-pay receive correlation is pending or undecided");
+    }
+    if let Some(metadata_id) = page.matched_metadata_id {
+        return Ok(ArkoorCorrelation::Matched {
+            metadata_id,
+            observation_id: stored.id,
+        });
+    }
+
+    repo.delete_arkoor_observation(stored.id)
+        .await
+        .context("failed to discard an unmatched mailbox Ark observation")?;
+    Ok(ArkoorCorrelation::Unmatched)
+}
+
+/// Whether this delivery is the payment barkd received for `correlation`'s invoice: barkd's HTLC
+/// VTXOs are all in its history, each delivered VTXO descends from one of them, and it went to the
+/// stored address on our Ark server for barkd's net amount.
+fn classify_arkoor_candidate(
+    observation: &DecodedArkoorObservation,
+    correlation: &LiveCorrelation,
+    history: &ForwardedReceiveHistory,
+    expected_server_pubkey: Option<&str>,
+) -> Result<ArkoorCandidateDecision> {
+    let htlc_vtxos: HashSet<VtxoId> = history.htlc_vtxos.iter().copied().collect();
+    if htlc_vtxos.is_empty()
+        || !htlc_vtxos.is_subset(&observation.ancestor_vtxo_id_set)
+        || !observation.vtxos.iter().all(|vtxo| {
+            vtxo.ancestor_ids()
+                .iter()
+                .any(|ancestor| htlc_vtxos.contains(ancestor))
+        })
+        || !history
+            .payment_hash
+            .eq_ignore_ascii_case(&correlation.payment_hash)
+    {
+        return Ok(ArkoorCandidateDecision::Unmatched);
+    }
+    if matches!(
+        history.status,
+        ForwardedReceiveStatus::Failed | ForwardedReceiveStatus::Canceled
+    ) {
+        return Ok(ArkoorCandidateDecision::Unmatched);
+    }
+
+    let expected_server_pubkey = expected_server_pubkey
+        .context("Ark server pubkey is unavailable while matching an LNURL-pay receive")?;
+    let Ok(stored_address) = validate_correlated_arkoor_outputs(
+        observation,
+        &correlation.ark_address,
+        expected_server_pubkey,
+    ) else {
+        return Ok(ArkoorCandidateDecision::Unmatched);
+    };
+
+    if history.status == ForwardedReceiveStatus::Pending {
+        return Ok(ArkoorCandidateDecision::Pending);
+    }
+
+    let Some(destination) = &history.destination else {
+        return Ok(ArkoorCandidateDecision::Unmatched);
+    };
+    let Ok(destination_address) = Address::from_str(&destination.address) else {
+        return Ok(ArkoorCandidateDecision::Unmatched);
+    };
+    if destination_address != stored_address
+        || destination.amount_sat != observation.delivered_amount_sat
+    {
+        return Ok(ArkoorCandidateDecision::Unmatched);
+    }
+
+    Ok(ArkoorCandidateDecision::Matched)
+}
+
+/// Every delivered VTXO pays the stored address's key on our Ark server.
+fn validate_correlated_arkoor_outputs(
+    observation: &DecodedArkoorObservation,
+    ark_address: &str,
+    expected_server_pubkey: &str,
+) -> Result<Address> {
+    let address = Address::from_str(ark_address).context("stored Ark address was invalid")?;
+    let expected_server_pubkey = expected_server_pubkey
+        .parse()
+        .context("configured Ark server pubkey was invalid")?;
+
+    if !address.is_for_server(expected_server_pubkey) {
+        anyhow::bail!("stored Ark address did not match the configured Ark server");
+    }
+    if !matches!(address.policy(), VtxoPolicy::Pubkey(_)) {
+        anyhow::bail!("stored Ark address had an unsupported policy");
+    }
+    for vtxo in &observation.vtxos {
+        if vtxo.policy_type() != VtxoPolicyKind::Pubkey
+            || vtxo.policy() != address.policy()
+            || vtxo.server_pubkey() != expected_server_pubkey
+        {
+            anyhow::bail!("mailbox arkoor output did not match its stored Ark destination");
+        }
+    }
+
+    Ok(address)
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
     use anyhow::anyhow;
     use ark::test_util::VTXO_VECTORS;
+
+    use crate::barkd_client::ForwardedArkDestination;
+
+    fn test_ark_address(vtxo: &Vtxo<Full>, policy: VtxoPolicy) -> Address {
+        let blinded_id = ark::mailbox::BlindedMailboxIdentifier::from_pubkey(vtxo.user_pubkey());
+        Address::builder()
+            .testnet(true)
+            .server_pubkey(vtxo.server_pubkey())
+            .policy(policy)
+            .delivery(ark::address::VtxoDelivery::ServerMailbox { blinded_id })
+            .into_address()
+            .unwrap()
+    }
+
+    fn alternate_pubkey(current: impl ToString) -> String {
+        let current = current.to_string();
+        [
+            "0279be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798",
+            "02c6047f9441ed7d6d3045406e95c07cd85a199bc1c778e4b8cef3ca7abac09b95c",
+        ]
+        .into_iter()
+        .find(|candidate| *candidate != current)
+        .unwrap()
+        .to_string()
+    }
+
+    fn test_correlation(address: &Address) -> LiveCorrelation {
+        LiveCorrelation {
+            metadata_id: Uuid::nil(),
+            invoice: "test-invoice".to_string(),
+            payment_hash: "11".repeat(32),
+            amount_msat: 10_000_000,
+            ark_address: address.to_string(),
+        }
+    }
+
+    /// barkd's movement: it claimed the delivered VTXO's direct parent.
+    fn test_history(
+        vtxo: &Vtxo<Full>,
+        address: &Address,
+        status: ForwardedReceiveStatus,
+    ) -> ForwardedReceiveHistory {
+        ForwardedReceiveHistory {
+            status,
+            payment_hash: "11".repeat(32),
+            htlc_vtxos: vec![*vtxo.ancestor_ids().last().unwrap()],
+            destination: (status == ForwardedReceiveStatus::Successful).then(|| {
+                ForwardedArkDestination {
+                    address: address.to_string(),
+                    amount_sat: vtxo.amount().to_sat(),
+                }
+            }),
+        }
+    }
+
+    fn classify(
+        observation: &DecodedArkoorObservation,
+        correlation: &LiveCorrelation,
+        history: &ForwardedReceiveHistory,
+        server_pubkey: &str,
+    ) -> ArkoorCandidateDecision {
+        classify_arkoor_candidate(observation, correlation, history, Some(server_pubkey)).unwrap()
+    }
+
+    #[test]
+    fn decodes_complete_arkoor_observation_canonically() {
+        let vtxo = &VTXO_VECTORS.arkoor2_vtxo;
+        let observation = decode_arkoor_observation(&[vtxo.serialize()]).unwrap();
+
+        assert_eq!(observation.output_vtxo_ids, vec![vtxo.id().to_string()]);
+        assert_eq!(observation.delivered_amount_sat, vtxo.amount().to_sat());
+        let mut expected_ancestors: Vec<String> = vtxo
+            .ancestor_ids()
+            .iter()
+            .map(|id| id.to_string())
+            .collect();
+        expected_ancestors.sort_unstable();
+        expected_ancestors.dedup();
+        assert_eq!(observation.ancestor_vtxo_ids, expected_ancestors);
+    }
+
+    #[test]
+    fn rejects_duplicate_or_noncanonical_arkoor_vtxos() {
+        let raw = VTXO_VECTORS.arkoor2_vtxo.serialize();
+        assert!(decode_arkoor_observation(&[raw.clone(), raw.clone()]).is_err());
+
+        let mut with_trailing_bytes = raw;
+        with_trailing_bytes.extend_from_slice(&[0xde, 0xad]);
+        assert!(decode_arkoor_observation(&[with_trailing_bytes]).is_err());
+    }
+
+    #[test]
+    fn a_delivery_from_barkds_htlc_to_the_stored_address_matches() {
+        let vtxo = &VTXO_VECTORS.arkoor2_vtxo;
+        let observation = decode_arkoor_observation(&[vtxo.serialize()]).unwrap();
+        let address = test_ark_address(vtxo, vtxo.policy().clone());
+        let server = vtxo.server_pubkey().to_string();
+        let history = test_history(vtxo, &address, ForwardedReceiveStatus::Successful);
+
+        assert_eq!(
+            classify(&observation, &test_correlation(&address), &history, &server),
+            ArkoorCandidateDecision::Matched
+        );
+        assert!(
+            validate_correlated_arkoor_outputs(&observation, &address.to_string(), &server).is_ok()
+        );
+        assert!(
+            validate_correlated_arkoor_outputs(
+                &observation,
+                &address.to_string(),
+                &alternate_pubkey(&server)
+            )
+            .is_err()
+        );
+    }
+
+    #[test]
+    fn missing_or_partial_htlc_ancestry_does_not_match() {
+        let vtxo = &VTXO_VECTORS.arkoor2_vtxo;
+        let observation = decode_arkoor_observation(&[vtxo.serialize()]).unwrap();
+        let address = test_ark_address(vtxo, vtxo.policy().clone());
+        let server = vtxo.server_pubkey().to_string();
+        let correlation = test_correlation(&address);
+
+        let mut history = test_history(vtxo, &address, ForwardedReceiveStatus::Successful);
+        history.htlc_vtxos.clear();
+        assert_eq!(
+            classify(&observation, &correlation, &history, &server),
+            ArkoorCandidateDecision::Unmatched
+        );
+
+        // barkd claimed one more HTLC than this delivery descends from.
+        let mut history = test_history(vtxo, &address, ForwardedReceiveStatus::Successful);
+        history
+            .htlc_vtxos
+            .push(format!("{}:0", "ff".repeat(32)).parse().unwrap());
+        assert_eq!(
+            classify(&observation, &correlation, &history, &server),
+            ArkoorCandidateDecision::Unmatched
+        );
+
+        let mut history = test_history(vtxo, &address, ForwardedReceiveStatus::Successful);
+        history.payment_hash = "22".repeat(32);
+        assert_eq!(
+            classify(&observation, &correlation, &history, &server),
+            ArkoorCandidateDecision::Unmatched
+        );
+    }
+
+    #[test]
+    fn a_vtxo_that_descends_from_no_htlc_spoils_the_match() {
+        let vtxo = &VTXO_VECTORS.arkoor2_vtxo;
+        let other = &VTXO_VECTORS.board_vtxo;
+        let observation =
+            decode_arkoor_observation(&[vtxo.serialize(), other.serialize()]).unwrap();
+        let address = test_ark_address(vtxo, vtxo.policy().clone());
+        let history = test_history(vtxo, &address, ForwardedReceiveStatus::Successful);
+
+        assert_eq!(
+            classify(
+                &observation,
+                &test_correlation(&address),
+                &history,
+                &vtxo.server_pubkey().to_string()
+            ),
+            ArkoorCandidateDecision::Unmatched
+        );
+    }
+
+    #[test]
+    fn a_pending_movement_waits_for_barkd() {
+        let vtxo = &VTXO_VECTORS.arkoor2_vtxo;
+        let observation = decode_arkoor_observation(&[vtxo.serialize()]).unwrap();
+        let address = test_ark_address(vtxo, vtxo.policy().clone());
+        let history = test_history(vtxo, &address, ForwardedReceiveStatus::Pending);
+
+        assert_eq!(
+            classify(
+                &observation,
+                &test_correlation(&address),
+                &history,
+                &vtxo.server_pubkey().to_string()
+            ),
+            ArkoorCandidateDecision::Pending
+        );
+    }
+
+    #[test]
+    fn wrong_address_server_or_net_amount_does_not_match() {
+        let vtxo = &VTXO_VECTORS.arkoor2_vtxo;
+        let observation = decode_arkoor_observation(&[vtxo.serialize()]).unwrap();
+        let address = test_ark_address(vtxo, vtxo.policy().clone());
+        let server = vtxo.server_pubkey().to_string();
+        let correlation = test_correlation(&address);
+        let history = test_history(vtxo, &address, ForwardedReceiveStatus::Successful);
+
+        let wrong_address = test_ark_address(
+            vtxo,
+            VtxoPolicy::new_pubkey(alternate_pubkey(vtxo.user_pubkey()).parse().unwrap()),
+        );
+        assert_eq!(
+            classify(
+                &observation,
+                &test_correlation(&wrong_address),
+                &history,
+                &server
+            ),
+            ArkoorCandidateDecision::Unmatched
+        );
+        assert_eq!(
+            classify(
+                &observation,
+                &correlation,
+                &history,
+                &alternate_pubkey(&server)
+            ),
+            ArkoorCandidateDecision::Unmatched
+        );
+
+        let mut wrong_amount = history;
+        wrong_amount.destination.as_mut().unwrap().amount_sat += 1;
+        assert_eq!(
+            classify(&observation, &correlation, &wrong_amount, &server),
+            ArkoorCandidateDecision::Unmatched
+        );
+    }
+
+    #[test]
+    fn failed_and_canceled_movements_do_not_match() {
+        let vtxo = &VTXO_VECTORS.arkoor2_vtxo;
+        let observation = decode_arkoor_observation(&[vtxo.serialize()]).unwrap();
+        let address = test_ark_address(vtxo, vtxo.policy().clone());
+
+        for status in [
+            ForwardedReceiveStatus::Failed,
+            ForwardedReceiveStatus::Canceled,
+        ] {
+            assert_eq!(
+                classify(
+                    &observation,
+                    &test_correlation(&address),
+                    &test_history(vtxo, &address, status),
+                    &vtxo.server_pubkey().to_string()
+                ),
+                ArkoorCandidateDecision::Unmatched
+            );
+        }
+    }
 
     fn usd_rate(btc_price: f64) -> FiatRate {
         FiatRate {

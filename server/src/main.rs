@@ -32,19 +32,23 @@ use crate::{
     },
     config::Config,
     cron::cron_scheduler,
+    db::lnurl_pay_receive_metadata_repo::LnurlPayReceiveMetadataRepository,
     email_client::EmailClient,
     mailbox_worker::{Beta8MailboxTransport, MailboxWorker, MailboxWorkerConfig},
     routes::{
         app_middleware,
         gated_api_v0::{
-            authorize_mailbox, complete_backup_object_upload, complete_upload, delete_backup,
-            delete_backup_object, deregister, get_backup_object_download_url, get_download_url,
-            get_upload_url, get_user_info, heartbeat_response, initiate_backup_object_upload,
-            list_backup_objects, list_backups, ln_address_suggestions, register_push_token,
-            report_job_status, report_last_login, revoke_mailbox_authorization, submit_invoice,
-            submit_support_ticket, sync_recurring_payments, update_backup_settings,
-            update_lightning_identity, update_profile,
+            acknowledge_lnurl_pay_receive_metadata, authorize_mailbox,
+            complete_backup_object_upload, complete_upload, delete_backup, delete_backup_object,
+            deregister, get_backup_object_download_url, get_download_url, get_upload_url,
+            get_user_info, heartbeat_response, initiate_backup_object_upload, list_backup_objects,
+            list_backups, list_lnurl_pay_receive_metadata, ln_address_suggestions,
+            register_push_token, report_job_status, report_last_login,
+            revoke_mailbox_authorization, submit_invoice, submit_support_ticket,
+            sync_recurring_payments, update_backup_settings, update_lightning_identity,
+            update_profile,
         },
+        lnurl_pay_privacy::redact_lnurl_pay_query_middleware,
         public_api_v0::{
             auth_login, check_app_version, fiat_prices, get_k1, historical_fiat_price,
             lnurlp_request, nip05_request, register, send_verification_email, verify_email,
@@ -98,6 +102,8 @@ pub struct AppStruct {
     pub email_client: EmailClient,
     pub maintenance_store: MaintenanceStore,
     pub barkd_invoice_provider: Option<Arc<dyn ForwardingInvoiceProvider>>,
+    /// Present while `LNURL_PAY_RECEIVE_METADATA_ENCRYPTION_KEY` is set.
+    pub lnurl_pay_receive_metadata_repo: Option<LnurlPayReceiveMetadataRepository>,
 }
 
 #[utoipa::path(get, path = "/", responses((status = 204, description = "Server reachable")))]
@@ -253,6 +259,10 @@ async fn start_server(config: Config) -> anyhow::Result<()> {
         email_client,
         maintenance_store,
         barkd_invoice_provider,
+        lnurl_pay_receive_metadata_repo: config
+            .lnurl_pay_receive_metadata_encryption_key
+            .as_ref()
+            .map(|key| LnurlPayReceiveMetadataRepository::new(&db_pool, key)),
     });
     spawn_barkd_startup_probe(app_state.barkd_invoice_provider.clone());
 
@@ -322,9 +332,7 @@ async fn start_server(config: Config) -> anyhow::Result<()> {
         None
     };
 
-    let app = app_router(app_state)
-        .layer(SentryHttpLayer::new().enable_transaction())
-        .layer(NewSentryLayer::new_from_top());
+    let app = app_router(app_state);
 
     let addr = SocketAddr::from((host, config.port));
     tracing::debug!("server started listening on {}", addr);
@@ -384,6 +392,14 @@ fn app_router(app_state: AppState) -> Router {
         .route("/mailbox/authorize", post(authorize_mailbox))
         .route("/mailbox/revoke", post(revoke_mailbox_authorization))
         .route("/lnurlp/submit_invoice", post(submit_invoice))
+        .route(
+            "/lnurlp/receive_metadata/list",
+            post(list_lnurl_pay_receive_metadata),
+        )
+        .route(
+            "/lnurlp/receive_metadata/ack",
+            post(acknowledge_lnurl_pay_receive_metadata),
+        )
         .route("/ln_address_suggestions", post(ln_address_suggestions))
         .route("/user_info", post(get_user_info))
         .route(
@@ -457,4 +473,8 @@ fn app_router(app_state: AppState) -> Router {
         .merge(lnurl_router)
         .with_state(app_state)
         .layer(middleware::from_fn(trace_layer::trace_middleware))
+        .layer(SentryHttpLayer::new().enable_transaction())
+        .layer(NewSentryLayer::new_from_top())
+        // Outermost, so LNURL-pay payer data and comments never reach tracing or Sentry.
+        .layer(middleware::from_fn(redact_lnurl_pay_query_middleware))
 }

@@ -70,6 +70,39 @@ fn validate_email_dev_mode(network: Network) -> Result<()> {
     Ok(())
 }
 
+fn env_flag(key: &str) -> bool {
+    std::env::var(key).is_ok_and(|v| matches!(v.as_str(), "1" | "true" | "TRUE" | "True"))
+}
+
+fn parse_encryption_key(value: &str) -> Result<[u8; 32]> {
+    use base64::Engine;
+    let decoded = base64::engine::general_purpose::STANDARD
+        .decode(value)
+        .context("LNURL_PAY_RECEIVE_METADATA_ENCRYPTION_KEY must be valid base64")?;
+    decoded.try_into().map_err(|_| {
+        anyhow::anyhow!("LNURL_PAY_RECEIVE_METADATA_ENCRYPTION_KEY must decode to exactly 32 bytes")
+    })
+}
+
+/// Advertising needs a server that accepts the data, and accepting it needs the key.
+fn validate_lnurl_pay_receive_metadata_config(
+    has_key: bool,
+    enabled: bool,
+    advertised: bool,
+) -> Result<()> {
+    if advertised && !enabled {
+        anyhow::bail!(
+            "LNURL_PAY_RECEIVE_METADATA_ADVERTISED requires LNURL_PAY_RECEIVE_METADATA_ENABLED"
+        );
+    }
+    if enabled && !has_key {
+        anyhow::bail!(
+            "LNURL_PAY_RECEIVE_METADATA_ENABLED requires LNURL_PAY_RECEIVE_METADATA_ENCRYPTION_KEY"
+        );
+    }
+    Ok(())
+}
+
 /// Configuration for the Noah server
 ///
 /// All config fields are set via environment variables:
@@ -78,6 +111,8 @@ fn validate_email_dev_mode(network: Network) -> Result<()> {
 /// - `EXPO_ACCESS_TOKEN`, `ARK_SERVER_URL`
 /// - `APNS_KEY_P8`, `APNS_KEY_ID`, `APNS_TEAM_ID`, `APNS_TOPIC`, `FCM_SERVICE_ACCOUNT_JSON`
 /// - `BARKD_FORWARDED_INVOICES_ENABLED`, `BARKD_URL`, `BARKD_AUTH_TOKEN`
+/// - `LNURL_PAY_RECEIVE_METADATA_ENCRYPTION_KEY`, `LNURL_PAY_RECEIVE_METADATA_ENABLED`,
+///   `LNURL_PAY_RECEIVE_METADATA_ADVERTISED`
 /// - `AWS_ACCESS_KEY_ID`, `AWS_SECRET_ACCESS_KEY`, `AWS_REGION`
 #[derive(Debug, Clone)]
 pub struct Config {
@@ -119,6 +154,13 @@ pub struct Config {
     pub barkd_url: Option<String>,
     pub barkd_auth_token: Option<String>,
     pub barkd_request_timeout_seconds: u64,
+    /// Encrypts stored LUD-12/18 receive metadata. Without it the feature is off.
+    pub lnurl_pay_receive_metadata_encryption_key: Option<[u8; 32]>,
+    /// Accept and store payer data and comments sent with a barkd-forwarded payment.
+    pub lnurl_pay_receive_metadata_enabled: bool,
+    /// Advertise LUD-18 `payerData` and LUD-12 `commentAllowed`. Turn it on only once every
+    /// running server instance accepts them.
+    pub lnurl_pay_receive_metadata_advertised: bool,
     pub zoho_client_id: Option<String>,
     pub zoho_client_secret: Option<String>,
     pub zoho_refresh_token: Option<String>,
@@ -224,6 +266,17 @@ impl Config {
                 .ok()
                 .and_then(|v| v.parse().ok())
                 .unwrap_or(10),
+            lnurl_pay_receive_metadata_encryption_key: std::env::var(
+                "LNURL_PAY_RECEIVE_METADATA_ENCRYPTION_KEY",
+            )
+            .ok()
+            .filter(|v| !v.trim().is_empty())
+            .map(|v| parse_encryption_key(v.trim()))
+            .transpose()?,
+            lnurl_pay_receive_metadata_enabled: env_flag("LNURL_PAY_RECEIVE_METADATA_ENABLED"),
+            lnurl_pay_receive_metadata_advertised: env_flag(
+                "LNURL_PAY_RECEIVE_METADATA_ADVERTISED",
+            ),
             zoho_client_id: std::env::var("ZOHO_CLIENT_ID").ok(),
             zoho_client_secret: std::env::var("ZOHO_CLIENT_SECRET").ok(),
             zoho_refresh_token: std::env::var("ZOHO_REFRESH_TOKEN").ok(),
@@ -287,6 +340,11 @@ impl Config {
                 anyhow::bail!("BARKD_REQUEST_TIMEOUT_SECONDS must be greater than zero");
             }
         }
+        validate_lnurl_pay_receive_metadata_config(
+            self.lnurl_pay_receive_metadata_encryption_key.is_some(),
+            self.lnurl_pay_receive_metadata_enabled,
+            self.lnurl_pay_receive_metadata_advertised,
+        )?;
         Ok(())
     }
 
@@ -403,6 +461,19 @@ impl Config {
             "Barkd request timeout seconds: {}",
             self.barkd_request_timeout_seconds
         );
+        tracing::debug!(
+            "LNURL-pay receive metadata key: {}",
+            if self.lnurl_pay_receive_metadata_encryption_key.is_some() {
+                "[SET]"
+            } else {
+                "[NOT SET]"
+            }
+        );
+        tracing::debug!(
+            "LNURL-pay receive metadata enabled: {}, advertised: {}",
+            self.lnurl_pay_receive_metadata_enabled,
+            self.lnurl_pay_receive_metadata_advertised
+        );
         tracing::debug!("============================");
     }
 }
@@ -412,6 +483,27 @@ mod tests {
     use bitcoin::Network;
 
     use super::validate_barkd_url;
+
+    #[test]
+    fn lnurl_pay_receive_metadata_needs_its_key_and_acceptance_before_advertising() {
+        use super::validate_lnurl_pay_receive_metadata_config as validate;
+        assert!(validate(false, false, false).is_ok());
+        assert!(validate(true, false, false).is_ok());
+        assert!(validate(true, true, false).is_ok());
+        assert!(validate(true, true, true).is_ok());
+        assert!(validate(false, true, false).is_err());
+        assert!(validate(true, false, true).is_err());
+    }
+
+    #[test]
+    fn lnurl_pay_receive_metadata_key_is_32_base64_bytes() {
+        assert_eq!(
+            super::parse_encryption_key("QkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkJCQkI=").unwrap(),
+            [0x42; 32]
+        );
+        assert!(super::parse_encryption_key("QkJC").is_err());
+        assert!(super::parse_encryption_key("not base64").is_err());
+    }
 
     #[test]
     fn email_dev_mode_is_refused_on_mainnet_only() {
