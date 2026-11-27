@@ -12,6 +12,20 @@ struct NotificationCopy {
                      body: L10n.text("You received {amount}", amount, locale: locale))
     }
 
+    /// A Lightning address payment: from `payer` when the payer named themselves, with their `comment`.
+    static func lnurlPayReceived(sats: Int64, unit: BitcoinAmountUnit, payer: String?, comment: String?,
+                                 defaults: UserDefaults = .standard) -> Self {
+        let locale = LegacyLocale.resolved(from: defaults)
+        let amount = BitcoinAmount.format(sats: sats, unit: unit, locale: Locale(identifier: locale))
+        guard let payer else {
+            return .init(title: L10n.text("Lightning Payment Received! ⚡", locale: locale),
+                         body: [L10n.text("You received {amount}", amount, locale: locale), comment].compactMap(\.self)
+                             .joined(separator: "\n"))
+        }
+        return .init(title: payer, body: [L10n.text("Sent you {amount}", amount, locale: locale), comment].compactMap(\.self)
+            .joined(separator: "\n"))
+    }
+
     static func reminder(amount: String, recipient: String, upcoming: Bool, defaults: UserDefaults = .standard) -> Self {
         let locale = LegacyLocale.resolved(from: defaults)
         return .init(title: L10n.text(upcoming ? "Upcoming recurring payment" : "Recurring payment waiting", locale: locale),

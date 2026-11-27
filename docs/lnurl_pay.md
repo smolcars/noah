@@ -23,8 +23,8 @@ Not covered yet:
   comment is attached, without calling the callback, so there is nothing to attach payer data to.
   This needs a proof the payer posts, planned as an extension of LNURL-verify
   ([LUD-21](https://github.com/lnurl/luds/blob/luds/21.md)).
-- **Notifications** are being added (see [Notifications](#notifications)); until then the
-  recipient's "Payment received" push names no payer.
+- **Notifications** name the payer only on app versions that register a notification key (see
+  [Notifications](#notifications)); older ones show "Payment received" as before.
 
 ## Settings
 
@@ -119,9 +119,10 @@ Values are payer-provided and unverified; show them as such.
 
 ## Notifications
 
-In progress. The visible "Payment received" push for a matched payment should name the payer
-(and show the comment) even when the app isn't running, including after the user swiped it away,
-without Apple, Google or a UnifiedPush distributor seeing the payer data. Decided on 2026-11-27:
+The visible "Payment received" push for a matched payment names the payer (and shows the comment)
+even when the app isn't running, including after the user swiped it away, without Apple, Google or
+a UnifiedPush distributor seeing the payer data. The title is the payer (`Name (⚡ identifier)`),
+the body "Sent you {amount}" with the comment below. Decided on 2026-11-27:
 
 - **End-to-end encrypted content.** When the app registers its push token it also sends a random
   notification key it keeps. The matched payment's push carries, besides today's text, the record
@@ -129,12 +130,23 @@ without Apple, Google or a UnifiedPush distributor seeing the payer data. Decide
 - **Structured, not text.** The encrypted part is JSON (amount, name, identifier, comment), so the
   device writes the notification in the user's language and can shorten it, for example for a
   watch.
-- **Decrypted on the device before display.** iOS: a notification service extension, which iOS
-  runs for every push marked `mutable-content`, also after a force-quit. Android: the Firebase and
+- **Decrypted on the device before display.** iOS: the `NoahNotificationService` extension, which
+  iOS runs for every push marked `mutable-content`, also after a force-quit; it reads the app's
+  language and amount unit from the widget snapshot in the app group. Android: the Firebase and
   UnifiedPush handlers, which build Noah's notifications already. Without a key, or when
   decryption fails, today's text shows.
 - The key must be readable while the phone is locked (after first unlock), since pushes arrive
-  then.
+  then. iOS keeps it in the app group container; Android in `noBackupFilesDir`, encrypted under an
+  AndroidKeyStore key. Neither is backed up; a key that can't be read is replaced and registered
+  again.
+
+The apps store the payer data with the payment in a pass after each foreground sync, as described
+under [App API](#app-api). History names the payer on the row, and the payment's details show
+"Name" and "Lightning address" on their own rows, with the comment as its note. When the push
+arrives while Noah is in front, the app runs that pass for the push's record at once, since bark's
+mailbox processor has usually stored the payment already. It tries again after 2 and 5 seconds if
+the payment hasn't arrived yet. Otherwise History would show a plain Ark receive until the next
+minute's pass.
 
 ### Push format
 

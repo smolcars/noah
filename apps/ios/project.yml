@@ -143,6 +143,7 @@ targets:
           - $(PRODUCT_BUNDLE_IDENTIFIER).maintenance
     dependencies:
       - target: NoahWidget
+      - target: NoahNotificationService
       - package: Sentry
         product: Sentry
       - package: MapLibre
@@ -187,6 +188,36 @@ targets:
         CODE_SIGN_ENTITLEMENTS: NoahWidget/Entitlements/$(NOAH_VARIANT_NAME).entitlements
         ASSETCATALOG_COMPILER_WIDGET_BACKGROUND_COLOR_NAME: WidgetBackground
         ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+
+  # Names an LNURL-pay payer in payment notifications, decrypting the push with the app's notification key
+  # (docs/lnurl_pay.md). Its App IDs and profiles are set up in the Apple developer account.
+  NoahNotificationService:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: NoahNotificationService
+        excludes:
+          - Entitlements
+      - path: Noah/Services/Push/LnurlPayPush.swift
+      - path: Noah/Services/Push/NotificationKey.swift
+      - path: Noah/Features/History/LnurlPayReceive.swift
+      - path: Noah/App/AppVariant.swift
+      - path: Noah/App/String+JSON.swift
+      # The app's catalog and lookup, its amounts and the snapshot that mirrors its language and unit.
+      - path: Noah/Resources/Localizable.xcstrings
+        buildPhase: resources
+      - path: Noah/Localization/L10n.swift
+      - path: Noah/Localization/NotificationCopy.swift
+      - path: Noah/Services/Storage/LegacyLocale.swift
+      - path: Noah/Widget/WidgetSnapshot.swift
+      - path: Noah/Widget/WidgetWave.swift
+      - path: Noah/Formatting/BitcoinAmount.swift
+    settings:
+      base:
+        PRODUCT_NAME: NoahNotificationService
+        PRODUCT_BUNDLE_IDENTIFIER: $(NOAH_BUNDLE_ID).NotificationService
+        INFOPLIST_FILE: NoahNotificationService/Info.plist
+        CODE_SIGN_ENTITLEMENTS: NoahNotificationService/Entitlements/$(NOAH_VARIANT_NAME).entitlements
 
   NoahTests:
     type: bundle.unit-test

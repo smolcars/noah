@@ -43,9 +43,10 @@ final class PushRegistration {
         #endif
     }
 
-    nonisolated static func body(deviceToken: Data, sandbox: Bool) -> Components.Schemas.RegisterPushToken {
+    nonisolated static func body(deviceToken: Data, sandbox: Bool,
+                                 notificationKey: String? = NotificationKey.registrationValue()) -> Components.Schemas.RegisterPushToken {
         .init(
-            apnsSandbox: sandbox, provider: .apns,
+            apnsSandbox: sandbox, notificationKey: notificationKey, provider: .apns,
             pushToken: deviceToken.map { String(format: "%02x", $0) }.joined())
     }
 

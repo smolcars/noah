@@ -106,8 +106,12 @@ final class AppDelegate: NSObject, UIApplicationDelegate, UNUserNotificationCent
     }
 
     // swiftlint:disable:next async_without_await - UNUserNotificationCenterDelegate's async requirement; a sync one is never called
-    nonisolated func userNotificationCenter(_: UNUserNotificationCenter, willPresent _: UNNotification) async -> UNNotificationPresentationOptions {
-        [.banner, .list, .sound, .badge]
+    nonisolated func userNotificationCenter(_: UNUserNotificationCenter, willPresent notification: UNNotification) async -> UNNotificationPresentationOptions {
+        // A matched LNURL-pay payment while Noah is in front: store its payer data now, so History names the payer.
+        if let record = LnurlPayPush.recordID(userInfo: notification.request.content.userInfo) {
+            Task { @MainActor in await AppServices.shared.lnurlPayPushArrived(record) }
+        }
+        return [.banner, .list, .sound, .badge]
     }
 
     func applicationSignificantTimeChange(_: UIApplication) {
