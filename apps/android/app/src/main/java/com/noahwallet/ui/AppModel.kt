@@ -37,7 +37,7 @@ class AppModel(application: Application, val settings: SettingsStorage = Setting
     /** The wallet's tabs show, once onboarded: open, suspended, or in the launch preview. */
     val showsWallet get() = open || isWalletSuspended || showsLaunchPreview
     /** Home's balance until the launch's first summary: the widget's last, and only in the launch preview. */
-    val previewBalance get() = launchBalance.takeIf { previewsLaunch }
+    val previewBalance get() = launchBalance.takeIf { showsLaunchPreview }
     var summaryRevision by mutableLongStateOf(0L); private set
     var summary by mutableStateOf<WalletSession.Summary?>(null); private set
     var hidden by mutableStateOf((state("privacy-storage")["isHomeBalanceHidden"] as? JsonPrimitive)?.booleanOrNull ?: false)
@@ -396,7 +396,8 @@ class AppModel(application: Application, val settings: SettingsStorage = Setting
             previewsLaunch = true
             LaunchTiming.shared(getApplication()).mark(LaunchTiming.Milestone.previewShown)
         }
-        // Ends after the first summary, so Home's balance never blanks between the preview's and the wallet's.
+        // Read the first summary before opening the UI: once [open] flips true, WalletForeground starts its own
+        // refresh() which would overtake an in-flight launch refresh and blank Home's balance when the preview ends.
         try {
             withContext(Dispatchers.IO) {
                 if (retry) openInForeground() else openInForegroundTwice()
@@ -404,10 +405,9 @@ class AppModel(application: Application, val settings: SettingsStorage = Setting
             }
             LaunchTiming.shared(getApplication()).mark(LaunchTiming.Milestone.walletOpened)
             launchState = LaunchState.existingWallet
-            open = true
             onboarded = services.isOnboarded()
             if (!onboarded) step = OnboardingNavigation.resumeStep
-            refresh(walletMutationHeld = true)
+            publishLaunchOpen()
         } finally { previewsLaunch = false }
         services.startServerServices()
     }
@@ -545,16 +545,33 @@ class AppModel(application: Application, val settings: SettingsStorage = Setting
             checkStage()
             sync?.invoke()
             var ticket = 0L
-            summary = ForegroundWidgetRefresh.read({ ticket = com.noahwallet.services.push.WidgetDataWriter.ticket(); session.summary() },
+            val latest = ForegroundWidgetRefresh.read({ ticket = com.noahwallet.services.push.WidgetDataWriter.ticket(); session.summary() },
                 session::widgetExtras, ::checkStage) { balance, extras ->
                 com.noahwallet.services.push.WidgetDataWriter.write(getApplication(), balance, extras, { widgetDisplay }, BuildConfig.APP_VARIANT,
                     ticket, known = widgetBlockTimes(), checkStage = ::checkStage)
             }
+            if (latest != null) summary = latest
             summaryRevision++
             error = null
-            if (summary != null) LaunchTiming.shared(getApplication()).mark(LaunchTiming.Milestone.summaryShown)
+            if (latest != null) LaunchTiming.shared(getApplication()).mark(LaunchTiming.Milestone.summaryShown)
         } catch (_: CancellationException) { caller.ensureActive() }
         catch (_: Exception) { error = "Couldn't load your balance. Pull down to try again." }
+    }
+
+    internal fun previewLaunchBalance(balance: ULong?) { launchBalance = balance; previewsLaunch = true }
+
+    /** Reads the launch's first summary before [open] exposes the wallet, so foreground refreshes can't cancel it and blank Home. */
+    internal suspend fun publishLaunchOpen(readSummary: suspend () -> WalletSession.Summary? = session::summary) {
+        if (!isWalletSuspended && !persistedSuspended()) {
+            try {
+                readSummary()?.takeIf { !isWalletSuspended && !persistedSuspended() }?.let {
+                    summary = it; summaryRevision++; error = null
+                    LaunchTiming.shared(getApplication()).mark(LaunchTiming.Milestone.summaryShown)
+                }
+            } catch (cancelled: CancellationException) { throw cancelled }
+            catch (_: Exception) { error = "Couldn't load your balance. Pull down to try again." }
+        }
+        open = true
     }
 
     /**
