@@ -45,6 +45,7 @@ import com.noahwallet.services.push.PushWork
 import com.noahwallet.services.storage.PersistedWalletState
 import com.noahwallet.ui.launch.*
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
@@ -57,10 +58,12 @@ fun LaunchGateView(model: AppModel) {
     val gate = rememberPlatformGate(model, activity)
     ForegroundStart(model)
     val checking = !gate.ready && PlatformGateRules.launchResolved(state) && !model.customServerUnresponsive
-    val covered = model.walletLock.locked || checking
+    val covered = model.walletLock.locked
     val focus = LocalFocusManager.current
     LaunchedEffect(covered) { if (covered) focus.clearFocus(force = true) }
     val route = launchRoute(model, gate)
+    val loading = isLaunchLoading(route, state, model.error != null)
+    val showLoadingMessage = rememberDelayedLaunchLoading(loading)
     val links = androidx.lifecycle.viewmodel.compose.viewModel<PaymentLinks>()
     // The launch preview's links wait for the opened wallet, as they did behind the opening message.
     val linkStep = linkStep(if (model.showsLaunchPreview) LaunchRoute.message else route, model.walletLock.locked, checking, state,
@@ -68,26 +71,30 @@ fun LaunchGateView(model: AppModel) {
     DropIgnoredLinks(links, linkStep)
     fun unlock() { scope.launch { model.walletLock.unlock(activity) } }
     androidx.compose.runtime.CompositionLocalProvider(LocalWalletPrivacy provides WalletPrivacy(covered,
-        unlock = if (model.walletLock.locked) ::unlock else null), LocalWindowChrome provides remember { WindowChrome() }) {
-        LaunchWindow(route, covered) { LaunchRouteContent(route, model, gate, links.takeIf { linkStep == LinkStep.open }) }
+        unlock = if (covered) ::unlock else null), LocalWindowChrome provides remember { WindowChrome() }) {
+        LaunchWindow(route, covered, loading) {
+            LaunchRouteContent(route, model, gate, links.takeIf { linkStep == LinkStep.open }, showLoadingMessage)
+        }
     }
     if (!covered) model.error?.let { message ->
         WalletAlertDialog(onDismissRequest = { model.error = null },
             title = { Text(tr("Please try again")) }, text = { Text(tr(message)) },
             confirmButton = { androidx.compose.material3.TextButton({ model.error = null }) { Text(tr("OK")) } })
     }
-    if (covered) LaunchCover(model, locked = !(checking && !model.walletLock.locked), ::unlock)
+    if (covered) LaunchCover(model, ::unlock)
 }
 
 @Composable
-private fun LaunchRouteContent(route: LaunchRoute, model: AppModel, gate: PlatformGate, links: PaymentLinks?) {
+private fun LaunchRouteContent(route: LaunchRoute, model: AppModel, gate: PlatformGate, links: PaymentLinks?, showLoadingMessage: Boolean) {
     when (route) {
         LaunchRoute.customServer -> NoahForm("The custom server isn't responding.") {
             if (model.switchingToDefaultServer) Text(tr("The server isn't responding; switching back…"))
             NoahButton("Use default server", enabled = !model.switchingToDefaultServer) { model.useDefaultEsploraServer() }
         }
-        LaunchRoute.message -> LaunchMessage(model.launchState, model.error != null, model::start, model)
-        LaunchRoute.loading -> LaunchMessage(null, false, model::start, model)
+        LaunchRoute.message -> if (!isLaunchLoading(route, model.launchState, model.error != null) || showLoadingMessage) {
+            LaunchMessage(model.launchState, model.error != null, model::start, model)
+        }
+        LaunchRoute.loading -> if (showLoadingMessage) LaunchMessage(null, false, model::start, model)
         LaunchRoute.push -> PushNotificationsRequiredScreen(gate.requesting, gate.request)
         LaunchRoute.battery -> com.noahwallet.ui.onboarding.OnboardingFrame(null) { BatteryOptimizationScreen(model, onContinue = gate.recheck) }
         // One branch for the launch preview and the opened wallet, so the same composition carries on when the open finishes.
@@ -129,11 +136,11 @@ internal fun WalletLockEffects(lock: com.noahwallet.ui.settings.WalletLock, acti
  * The push and battery gates after launch: [ready] once the gate matches today's inputs, [resolved] once any gate has
  * been decided. [request] asks for notifications (or opens Settings); [recheck] re-reads the gate.
  */
-private class PlatformGate(val ready: Boolean, val resolved: Boolean, val gate: PlatformGateRules.Gate?, val requesting: Boolean,
+internal class PlatformGate(val ready: Boolean, val resolved: Boolean, val gate: PlatformGateRules.Gate?, val requesting: Boolean,
     val request: () -> Unit, val recheck: () -> Unit)
 
 @Composable
-private fun rememberPlatformGate(model: AppModel, activity: androidx.fragment.app.FragmentActivity): PlatformGate {
+internal fun rememberPlatformGate(model: AppModel, activity: androidx.fragment.app.FragmentActivity): PlatformGate {
     val context = LocalContext.current.applicationContext
     val lifecycleOwner = LocalLifecycleOwner.current
     val scope = androidx.compose.runtime.rememberCoroutineScope()
@@ -142,11 +149,11 @@ private fun rememberPlatformGate(model: AppModel, activity: androidx.fragment.ap
     var requesting by remember { mutableStateOf(false) }
     var permissionStatus by remember { mutableStateOf(PlatformGateRules.Permission.checking) }
     var gateRevision by remember { mutableIntStateOf(0) }
-    var hasResolvedPlatformGate by remember { mutableStateOf(false) }
+    var resolvedOnboarded by remember { mutableStateOf<Boolean?>(null) }
     var platformGate by remember { mutableStateOf<PlatformGateRules.Gate?>(null) }
     var resolvedGateInputs by remember { mutableStateOf<Triple<Boolean, PlatformGateRules.Permission, Int>?>(null) }
     val gateInputs = Triple(model.onboarded, permissionStatus, gateRevision)
-    val gatesReady = resolvedGateInputs == gateInputs && (!model.onboarded || permissionStatus != PlatformGateRules.Permission.checking)
+    val gatesReady = resolvedGateInputs == gateInputs && platformPermissionSettled(model.onboarded, permissionStatus)
     fun refreshPermission() {
         resolvedGateInputs = null
         scope.launch {
@@ -183,16 +190,21 @@ private fun rememberPlatformGate(model: AppModel, activity: androidx.fragment.ap
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
     LaunchedEffect(model.onboarded, permissionStatus, gateRevision) {
-        platformGate = withContext(Dispatchers.IO) {
-            PlatformGateRules.gate(model.onboarded, PlatformAccess.physical(), permissionStatus,
-                PlatformAccess.batteryEnabled(context),
-                model.settings.persistedState<PersistedWalletState>(PersistedWalletState.key)?.hasSeenBatteryOptimizationPrompt == true)
-        }
+        val (onboarded, status) = model.onboarded to permissionStatus
+        platformGate = withContext(Dispatchers.IO) { currentPlatformGate(context, model, onboarded, status) }
         resolvedGateInputs = gateInputs
-        hasResolvedPlatformGate = true
+        if (platformPermissionSettled(onboarded, status)) resolvedOnboarded = onboarded
     }
-    return PlatformGate(gatesReady, hasResolvedPlatformGate, platformGate, requesting, ::requestPermission) { gateRevision++ }
+    return PlatformGate(gatesReady, resolvedOnboarded == model.onboarded, platformGate, requesting, ::requestPermission) { gateRevision++ }
 }
+
+private fun platformPermissionSettled(onboarded: Boolean, permission: PlatformGateRules.Permission) =
+    !onboarded || permission != PlatformGateRules.Permission.checking
+
+private fun currentPlatformGate(context: android.content.Context, model: AppModel, onboarded: Boolean,
+    permission: PlatformGateRules.Permission): PlatformGateRules.Gate? =
+    PlatformGateRules.gate(onboarded, PlatformAccess.physical(), permission, PlatformAccess.batteryEnabled(context),
+        model.settings.persistedState<PersistedWalletState>(PersistedWalletState.key)?.hasSeenBatteryOptimizationPrompt == true)
 
 /** Each time the app is in front: open the wallet if it isn't, and refresh it and sync it (with delegated maintenance) if it is. */
 @Composable
@@ -216,19 +228,22 @@ private fun ForegroundStart(model: AppModel) {
     }
 }
 
-private fun launchRoute(model: AppModel, gate: PlatformGate): LaunchRoute {
-    val state = model.launchState
-    return when {
-        model.customServerUnresponsive -> LaunchRoute.customServer
-        // Stored-phrase recovery is an onboarding step, so Restoring follows it in the same host, as on iOS.
-        state == LaunchState.seedWithoutWalletData -> LaunchRoute.onboarding
-        !PlatformGateRules.launchResolved(state) -> LaunchRoute.message
-        !gate.ready && !gate.resolved -> LaunchRoute.loading
-        finishingRestore(model) -> LaunchRoute.onboarding
-        model.showsWallet && model.onboarded -> gateRoute(gate.gate)
-        state == LaunchState.onboarding || (model.open && !model.onboarded) -> LaunchRoute.onboarding
-        else -> LaunchRoute.message
-    }
+internal fun launchRoute(model: AppModel, gate: PlatformGate): LaunchRoute = launchRoute(
+    model.launchState, model.customServerUnresponsive, finishingRestore(model), model.showsWallet, model.open, model.onboarded, gate,
+)
+
+@Suppress("LongParameterList") // a pure decision over the launch's inputs, which LaunchLoadingTest drives one by one
+internal fun launchRoute(state: LaunchState?, customServerUnresponsive: Boolean, finishingRestore: Boolean, showsWallet: Boolean, open: Boolean,
+    onboarded: Boolean, gate: PlatformGate): LaunchRoute = when {
+    customServerUnresponsive -> LaunchRoute.customServer
+    // Stored-phrase recovery is an onboarding step, so Restoring follows it in the same host, as on iOS.
+    state == LaunchState.seedWithoutWalletData -> LaunchRoute.onboarding
+    !PlatformGateRules.launchResolved(state) -> LaunchRoute.message
+    finishingRestore -> LaunchRoute.onboarding
+    !gate.ready && !gate.resolved -> LaunchRoute.loading
+    showsWallet && onboarded -> gateRoute(gate.gate)
+    state == LaunchState.onboarding || (open && !onboarded) -> LaunchRoute.onboarding
+    else -> LaunchRoute.message
 }
 
 /** A finished onboarding restore shows "Ready" and its balance before Home. */
@@ -246,12 +261,15 @@ private fun gateRoute(gate: PlatformGateRules.Gate?) = when (gate) {
  * everything else keeps one pane. The wallet app applies that per screen: Home splits the window itself, other tabs keep one pane.
  */
 @Composable
-private fun LaunchWindow(route: LaunchRoute, covered: Boolean, content: @Composable () -> Unit) {
+private fun LaunchWindow(route: LaunchRoute, covered: Boolean, loading: Boolean, content: @Composable () -> Unit) {
     val fullWindow = route in setOf(LaunchRoute.onboarding, LaunchRoute.push, LaunchRoute.battery)
+    val usePalette = fullWindow || loading
     val chrome = LocalWindowChrome.current
     val insets = androidx.compose.foundation.layout.WindowInsets.safeDrawing
-    val background = if (fullWindow) com.noahwallet.ui.onboarding.noahPalette().background else MaterialTheme.colorScheme.background
-    androidx.compose.material3.Surface(color = background) {
+    val palette = com.noahwallet.ui.onboarding.noahPalette()
+    val background = if (usePalette) palette.background else MaterialTheme.colorScheme.background
+    val contentColor = if (usePalette) palette.foreground else MaterialTheme.colorScheme.onBackground
+    androidx.compose.material3.Surface(color = background, contentColor = contentColor) {
         androidx.compose.foundation.layout.Box(Modifier.fillMaxSize()
             .walletContentProtection(covered)
             .drawBehind {
@@ -266,23 +284,42 @@ private fun LaunchWindow(route: LaunchRoute, covered: Boolean, content: @Composa
     }
 }
 
-/** The secure cover over a locked wallet (App lock) or an unfinished gate check ([locked] false: still loading). */
+/** The secure cover over a locked wallet (App lock). */
 @Composable
-private fun LaunchCover(model: AppModel, locked: Boolean, unlock: () -> Unit) {
+private fun LaunchCover(model: AppModel, unlock: () -> Unit) {
     androidx.compose.ui.window.Dialog(onDismissRequest = {}, properties = androidx.compose.ui.window.DialogProperties(
         dismissOnBackPress = false, dismissOnClickOutside = false, usePlatformDefaultWidth = false,
         securePolicy = androidx.compose.ui.window.SecureFlagPolicy.SecureOn, decorFitsSystemWindows = false,
     )) {
         androidx.compose.material3.Surface(Modifier.fillMaxSize().windowInsetsPadding(androidx.compose.foundation.layout.WindowInsets.safeDrawing).avoidHinge(),
-            color = if (locked) com.noahwallet.ui.onboarding.noahPalette().background else MaterialTheme.colorScheme.background) {
-            if (!locked) {
-                LaunchMessage(null, false, model::start, model)
-            } else com.noahwallet.ui.settings.LockCover(model.walletLock.error, model.walletLock.authenticating, unlock)
+            color = com.noahwallet.ui.onboarding.noahPalette().background) {
+            com.noahwallet.ui.settings.LockCover(model.walletLock.error, model.walletLock.authenticating, unlock)
         }
     }
 }
 
 internal enum class LaunchRoute { customServer, message, loading, push, battery, app, onboarding }
+
+internal const val LAUNCH_LOADING_DELAY_MILLIS = 100L
+
+/** Whether [route] is showing the transient "Opening wallet" message rather than a settled screen or error. */
+internal fun isLaunchLoading(route: LaunchRoute, state: LaunchState?, openFailed: Boolean): Boolean =
+    route == LaunchRoute.loading || (route == LaunchRoute.message && (state == null || (state == LaunchState.existingWallet && !openFailed)))
+
+/** Holds the "Opening wallet" copy for [delayMillis] so fast startups show only the background, never a flash. */
+@Composable
+internal fun rememberDelayedLaunchLoading(loading: Boolean, delayMillis: Long = LAUNCH_LOADING_DELAY_MILLIS): Boolean {
+    var visible by remember { mutableStateOf(false) }
+    LaunchedEffect(loading, delayMillis) {
+        if (!loading) {
+            visible = false
+        } else {
+            delay(delayMillis)
+            visible = true
+        }
+    }
+    return loading && visible
+}
 
 /**
  * A link waits out loading and an unfinished gate check. Onboarding, suspension and every decided gate then drop it, even
@@ -290,8 +327,7 @@ internal enum class LaunchRoute { customServer, message, loading, push, battery,
  */
 @Suppress("LongParameterList") // a pure decision over the launch's inputs, which PaymentLinksTest drives one by one
 internal fun linkStep(route: LaunchRoute, locked: Boolean, checking: Boolean, state: LaunchState?, openFailed: Boolean, suspended: Boolean) = when {
-    checking || route == LaunchRoute.loading || (route == LaunchRoute.message &&
-        (state == null || (state == LaunchState.existingWallet && !openFailed))) -> LinkStep.wait
+    checking || isLaunchLoading(route, state, openFailed) -> LinkStep.wait
     route != LaunchRoute.app || suspended -> LinkStep.ignore
     locked -> LinkStep.wait
     else -> LinkStep.open
