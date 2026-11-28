@@ -51,19 +51,11 @@ class LnurlPayPushTest {
         assertEquals("Alice Payer", LnurlPayPush.open(data, key)?.payerData?.name)
         // No key registered, another key, an unknown version, or no field: the server's own text shows.
         assertNull(LnurlPayPush.open(data, null))
+        assertNull(LnurlPayPush.open(data.replace("\"id\":", "\"unused\":"), key))
         assertNull(LnurlPayPush.open(data, ByteArray(32) { 1 }))
         assertNull(LnurlPayPush.open(data.replace("\"v\":1", "\"v\":2"), key))
         assertNull(LnurlPayPush.open("""{"notification_type":"ark_payment_received"}""", key))
         assertNull(LnurlPayPush.open("not json", key))
-    }
-
-    @Test fun namesTheRecordWithOrWithoutASealedPart() {
-        // The app stores a record's payer data as soon as its push arrives, even when no key could open it.
-        assertEquals("r1", LnurlPayPush.recordId("""{"lnurl_pay_receive":{"v":1,"id":"r1"}}"""))
-        assertNull(LnurlPayPush.recordId("""{"notification_type":"ark_payment_received"}"""))
-        assertNull(LnurlPayPush.recordId("""{"lnurl_pay_receive":{"v":1,"id":{"nested":true}}}"""))
-        assertNull(LnurlPayPush.recordId("not json"))
-        assertNull(LnurlPayPush.recordId(null))
     }
 
     @Test fun namesThePayerAsTheTitleWithTheirComment() {

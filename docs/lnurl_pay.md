@@ -142,11 +142,15 @@ the body "Sent you {amount}" with the comment below. Decided on 2026-11-27:
 
 The apps store the payer data with the payment in a pass after each foreground sync, as described
 under [App API](#app-api). History names the payer on the row, and the payment's details show
-"Name" and "Lightning address" on their own rows, with the comment as its note. When the push
-arrives while Noah is in front, the app runs that pass for the push's record at once, since bark's
-mailbox processor has usually stored the payment already. It tries again after 2 and 5 seconds if
-the payment hasn't arrived yet. Otherwise History would show a plain Ark receive until the next
-minute's pass.
+"Name" and "Lightning address" on their own rows, with the comment as its note. While Noah is
+in front, a session-owned wallet notification observer also triggers the pass for successful
+`bark.arkoor` receives. It tries immediately, then after delays of 2 and 5 seconds, stopping once
+the exact movement contains the metadata. Empty or busy passes still retry: the server may not
+have marked the record ready yet. Each attempt uses the usual foreground admission and sync
+slot; retries release that slot while waiting. Wallet database changes refresh History after the
+write, without a manual refresh. This works with notifications denied or push delivery unavailable;
+push receipt no longer triggers metadata retrieval. The minute pass remains the fallback for
+missed events and records that become ready after the short retries.
 
 ### Push format
 

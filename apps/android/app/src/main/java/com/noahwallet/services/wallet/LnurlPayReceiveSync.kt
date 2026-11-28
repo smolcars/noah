@@ -3,6 +3,7 @@ package com.noahwallet.services.wallet
 import com.noahwallet.api.generated.models.LnurlPayReceiveMetadata
 import com.noahwallet.history.LnurlPayReceive
 import io.github.niteshbalusu11.bark.Movement
+import kotlinx.coroutines.ensureActive
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.serialization.json.JsonArray
 import kotlinx.serialization.json.JsonObject
@@ -55,7 +56,24 @@ class LnurlPayReceiveSync(
         } finally { running.unlock() }
     }
 
+    /** Another foreground pass may have stored the exact movement while this trigger yielded its slot. */
+    suspend fun isStored(movement: Movement): Boolean = movements().any {
+        it.id == movement.id && it.outputVtxoIds.toSet() == movement.outputVtxoIds.toSet() && LnurlPayReceive.parse(it.metadataJson) != null
+    }
+
     companion object {
+        fun needsMetadata(movement: Movement): Boolean = movement.isArkoorReceive() &&
+            movement.outputVtxoIds.isNotEmpty() && LnurlPayReceive.parse(movement.metadataJson) == null
+
+        /** Empty/busy passes retry too; no foreground slot is held during a delay. */
+        suspend fun retryReceive(sleep: suspend (Long) -> Unit = { kotlinx.coroutines.delay(it) }, attempt: suspend () -> Boolean) {
+            for (wait in listOf(0L, 2_000L, 5_000L)) {
+                sleep(wait)
+                kotlinx.coroutines.currentCoroutineContext().ensureActive()
+                if (attempt()) return
+            }
+        }
+
         /** The record's `ark_output_vtxos` target; null for a target this version doesn't handle. */
         fun arkOutputs(record: LnurlPayReceiveMetadata): Set<String>? {
             val target = record.target as? JsonObject ?: return null

@@ -81,14 +81,11 @@ struct LnurlPayReceiveTests {
         let rewritten = try #require(LnurlPayPush.rewritten(original, key: key, group: nil, variant: .regtest))
         #expect(rewritten.title == "Alice Payer (⚡ alice@example.com)")
         #expect(rewritten.body.components(separatedBy: "\n").last == "Thanks for the coffee ☕")
-        // The app stores the record's payer data as soon as the push arrives, even when no key opens it.
-        #expect(LnurlPayPush.recordID(userInfo: original.userInfo) == first["id"] as? String)
         // No key, another key, or a push without the field: shown as it came.
         #expect(LnurlPayPush.rewritten(original, key: nil, group: nil, variant: .regtest) == nil)
         #expect(LnurlPayPush.rewritten(original, key: SymmetricKey(size: .bits256), group: nil, variant: .regtest) == nil)
         original.userInfo = ["body": #"{"notification_type":"ark_payment_received"}"#]
         #expect(LnurlPayPush.rewritten(original, key: key, group: nil, variant: .regtest) == nil)
-        #expect(LnurlPayPush.recordID(userInfo: original.userInfo) == nil)
     }
 
     @Test func nobodyNamedKeepsTheUsualTitleWithTheComment() {
@@ -122,6 +119,14 @@ struct LnurlPayReceiveTests {
         var writes: [UInt32] = []
         var acknowledged: [[String]] = []
         var backups = 0
+        var lists = 0
+        var waits: [Duration] = []
+        func list(_ records: [LnurlPayReceiveSync.Record], readyAfter: Int) -> [LnurlPayReceiveSync.Record] {
+            lists += 1
+            return lists > readyAfter ? records : []
+        }
+        func sleep(_ delay: Duration) { waits.append(delay) }
+
         let keepsWrites: Bool
 
         init(_ movements: [Movement], keepsWrites: Bool = true) {
@@ -140,9 +145,9 @@ struct LnurlPayReceiveTests {
         func backup() { backups += 1 }
         func acknowledge(_ ids: [String]) { acknowledged.append(ids) }
 
-        nonisolated func sync(_ records: [LnurlPayReceiveSync.Record]) -> LnurlPayReceiveSync {
+        nonisolated func sync(_ records: [LnurlPayReceiveSync.Record], readyAfter: Int = 0) -> LnurlPayReceiveSync {
             LnurlPayReceiveSync(.init(
-                list: { records }, movements: { await self.movements },
+                list: { await self.list(records, readyAfter: readyAfter) }, movements: { await self.movements },
                 write: { await self.write($0, $1) }, backup: { await self.backup() },
                 acknowledge: { await self.acknowledge($0) }))
         }
@@ -159,7 +164,7 @@ struct LnurlPayReceiveTests {
         #expect(await LnurlPayReceive.parse(wallet.movements[1].metadataJson) == .init(name: "Alice", comment: "Thanks"))
         #expect(await wallet.backups == 1)
         #expect(await wallet.acknowledged == [["r1"]])
-        #expect(await sync.hasAcknowledged("r1"))
+        #expect(try await sync.isStored(Self.movement(2, outputs: Self.outputs)))
     }
 
     @Test func aRecordWhoseReceiveHasNotSyncedWaits() async throws {
@@ -168,7 +173,7 @@ struct LnurlPayReceiveTests {
         #expect(try await sync.run().isEmpty)
         #expect(await wallet.writes.isEmpty)
         #expect(await wallet.acknowledged.isEmpty)
-        #expect(await !sync.hasAcknowledged("r1"))
+        #expect(try await !sync.isStored(Self.movement(2, outputs: Self.outputs)))
         let hash = LnurlPayReceiveSync.Record(amountSat: 1, id: "r2",
                                               target: .case1(.init(paymentHash: "00", _type: .lightningPaymentHash)))
         #expect(LnurlPayReceiveSync.arkOutputs(hash).isEmpty)
@@ -186,6 +191,81 @@ struct LnurlPayReceiveTests {
         let wallet = Wallet([Self.movement(2, outputs: Self.outputs)], keepsWrites: false)
         #expect(try await wallet.sync([Self.record("r1", outputs: Self.outputs)]).run().isEmpty)
         #expect(await wallet.acknowledged.isEmpty)
+    }
+
+    @Test func walletReceiveRetriesUntilServerRecordIsReadyWithoutAPush() async throws {
+        let movement = Self.movement(2, outputs: Self.outputs)
+        let wallet = Wallet([movement])
+        let sync = wallet.sync([Self.record("r1", outputs: Self.outputs)], readyAfter: 1)
+        await LnurlPayReceiveSync.retryReceive(sleep: { await wallet.sleep($0) }) {
+            _ = try? await sync.run()
+            return (try? await sync.isStored(movement)) == true
+        }
+        #expect(await wallet.waits == [.zero, .seconds(2)])
+        #expect(await wallet.writes == [2])
+        #expect(try await sync.isStored(movement))
+        // IDs can be reused by a replacement wallet: output identity must match too.
+        #expect(try await !sync.isStored(Self.movement(2, outputs: ["other:0"])))
+    }
+
+    @Test(.timeLimit(.minutes(1))) func aBusyPassDoesNotConsumeTheReceiveRetries() async throws {
+        let movement = Self.movement(2, outputs: Self.outputs)
+        let wallet = Wallet([movement])
+        let gate = RecurringReservationTests.Gate()
+        let sync = LnurlPayReceiveSync(.init(
+            list: { if !(await gate.entered) { await gate.wait() }; return [Self.record("r1", outputs: Self.outputs)] },
+            movements: { await wallet.movements }, write: { await wallet.write($0, $1) },
+            backup: { await wallet.backup() }, acknowledge: { await wallet.acknowledge($0) }))
+        let running = Task { try await sync.run() }
+        while !(await gate.entered) { await Task.yield() }
+        await LnurlPayReceiveSync.retryReceive(sleep: { delay in
+            await wallet.sleep(delay)
+            if delay != .zero {
+                await gate.release(); _ = try await running.value
+            }
+        }) {
+            _ = try? await sync.run()
+            return (try? await sync.isStored(movement)) == true
+        }
+        #expect(await wallet.waits == [.zero, .seconds(2)])
+        #expect(await wallet.writes == [2])
+        #expect(try await sync.isStored(movement))
+    }
+
+    @Test func unmatchedReceiveStopsAfterTheShortRetries() async {
+        let wallet = Wallet([Self.movement(2, outputs: Self.outputs)])
+        let sync = wallet.sync([])
+        await LnurlPayReceiveSync.retryReceive(sleep: { await wallet.sleep($0) }) {
+            _ = try? await sync.run()
+            return false
+        }
+        #expect(await wallet.waits == [.zero, .seconds(2), .seconds(5)])
+        #expect(await wallet.lists == 3)
+        #expect(await wallet.writes.isEmpty)
+    }
+
+    @Test func cancellationStopsReceiveRetries() async {
+        let wallet = Wallet([])
+        await LnurlPayReceiveSync.retryReceive(sleep: { _ in throw CancellationError() }) {
+            await wallet.backup()
+            return false
+        }
+        #expect(await wallet.backups == 0)
+    }
+
+    @Test func onlySuccessfulUnlabelledArkoorReceivesTrigger() throws {
+        let movement = Self.movement(2, outputs: Self.outputs)
+        #expect(LnurlPayReceiveSync.needsMetadata(movement))
+        #expect(!LnurlPayReceiveSync.needsMetadata(Self.movement(2, outputs: Self.outputs, status: "pending")))
+        #expect(!LnurlPayReceiveSync.needsMetadata(Self.movement(2, outputs: [])))
+        let metadata = try LnurlPayReceive.checked(name: nil, identifier: nil, comment: nil).patch()
+        #expect(!LnurlPayReceiveSync.needsMetadata(Self.movement(2, outputs: Self.outputs, metadata: metadata)))
+        var send = movement
+        send.subsystemKind = "send"
+        #expect(!LnurlPayReceiveSync.needsMetadata(send))
+        send.subsystemKind = "receive"
+        send.subsystemName = "bark.lightning_receive"
+        #expect(!LnurlPayReceiveSync.needsMetadata(send))
     }
 
     // MARK: History

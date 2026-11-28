@@ -33,11 +33,6 @@ enum LnurlPayPush {
         return open(id: id, sealed: sealed, key: key)
     }
 
-    /// The record a matched payment's push names, sealed for this app or not; nil for any other push.
-    static func recordID(userInfo: [AnyHashable: Any]) -> String? {
-        field(userInfo)["id"] as? String
-    }
-
     /// `lnurl_pay_receive` in the push's data; empty when there is none.
     private static func field(_ userInfo: [AnyHashable: Any]) -> [String: Any] {
         let text = userInfo["body"] as? String

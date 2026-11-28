@@ -36,12 +36,9 @@ internal object LnurlPayPush {
     fun open(data: String?, key: ByteArray?): Content? {
         val field = field(data)
         val sealed = field?.takeIf { it.string("v") == "1" }?.string("sealed")
-        val id = recordId(data)
+        val id = field?.string("id")
         return if (key == null || id == null || sealed == null) null else open(id, sealed, key)
     }
-
-    /** The record a matched payment's push names, sealed for this app or not; null for any other push. */
-    fun recordId(data: String?): String? = field(data)?.string("id")
 
     private fun field(data: String?): JsonObject? = try {
         (json.parseToJsonElement(data ?: return null) as? JsonObject)?.get("lnurl_pay_receive") as? JsonObject

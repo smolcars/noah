@@ -660,6 +660,43 @@ class WalletSession internal constructor(
         }
     }
 
+    /** Session-owned native reader; close stops and joins it before releasing the wallet. */
+    @Suppress("TooGenericExceptionCaught") // Native failures finish the flow; the next foreground entry subscribes again.
+    @OptIn(ExperimentalCoroutinesApi::class, DelicateCoroutinesApi::class)
+    fun receiveMovements(): Flow<Movement> = flow {
+        val events = Channel<Movement>(Channel.UNLIMITED)
+        val observer = synchronized(lock) {
+            val handles = (state as? State.Open)?.handles ?: throw SessionError()
+            val holder = handles.notifications()
+            Observer(holder).also { observer ->
+                observer.job = scope.async(start = CoroutineStart.ATOMIC) {
+                    try {
+                        while (isActive) {
+                            val movements = when (val event = holder.next() ?: break) {
+                                is WalletNotification.MovementCreated -> listOf(event.movement)
+                                is WalletNotification.MovementUpdated -> listOf(event.movement)
+                                WalletNotification.ChannelLagging -> withOpen { it.history() }
+                            }
+                            for (movement in movements) if (LnurlPayReceiveSync.needsMetadata(movement)) events.send(movement)
+                        }
+                    } catch (failure: Exception) { events.close(failure) }
+                    finally {
+                        synchronized(holder) { observer.holderClosed = true; holder.close() }
+                        events.close()
+                    }
+                    null
+                }
+                observers.add(observer)
+            }
+        }
+        try { for (event in events) emit(event) }
+        finally {
+            withContext(NonCancellable) { stopObserver(observer) }
+            synchronized(lock) { observers.remove(observer) }
+            events.cancel()
+        }
+    }.flowOn(Dispatchers.IO)
+
     private suspend fun stopObserver(observer: Observer) {
         // Cancel the coroutine and release Rust's pending wait before disposing its wrapper.
         // The job closes the holder; synchronized prevents cancelWait racing that close.

@@ -6,6 +6,8 @@ import com.noahwallet.fixtures.SharedFixtures
 import com.noahwallet.services.wallet.LnurlPayReceiveSync
 import com.noahwallet.ui.home.HomeRow
 import io.github.niteshbalusu11.bark.Movement
+import kotlinx.coroutines.CompletableDeferred
+import kotlinx.coroutines.async
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.JsonNull
@@ -17,6 +19,7 @@ import kotlinx.serialization.json.jsonPrimitive
 import kotlinx.serialization.json.put
 import kotlinx.serialization.json.putJsonArray
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
@@ -65,8 +68,10 @@ class LnurlPayReceiveTest {
         val writes = mutableListOf<Pair<UInt, String>>()
         val acknowledged = mutableListOf<List<String>>()
         var backups = 0
+        var lists = 0
+        var readyAfter = 0
         fun sync(records: List<LnurlPayReceiveMetadata>) = LnurlPayReceiveSync(
-            list = { records },
+            list = { lists++; if (lists > readyAfter) records else emptyList() },
             movements = { movements },
             write = { id, patch ->
                 writes += id to patch
@@ -112,6 +117,74 @@ class LnurlPayReceiveTest {
             { wallet.acknowledged += it })
         assertTrue(sync.run().isEmpty())
         assertTrue(wallet.acknowledged.isEmpty())
+    }
+
+    @Test fun walletReceiveRetriesUntilServerRecordIsReadyWithoutAPush() = runBlocking {
+        val movement = movement(2u, outputs)
+        val wallet = Wallet(listOf(movement)).also { it.readyAfter = 1 }
+        val sync = wallet.sync(listOf(record("r1", outputs)))
+        val waits = mutableListOf<Long>()
+        LnurlPayReceiveSync.retryReceive(sleep = { waits += it }) {
+            sync.run()
+            sync.isStored(movement)
+        }
+        assertEquals(listOf(0L, 2_000L), waits)
+        assertEquals(listOf(2u), wallet.writes.map { it.first })
+        assertTrue(sync.isStored(movement))
+        assertFalse(sync.isStored(movement.copy(outputVtxoIds = listOf("other:0"))))
+    }
+
+    @Test fun aBusyPassDoesNotConsumeTheReceiveRetries() = runBlocking {
+        val movement = movement(2u, outputs)
+        val wallet = Wallet(listOf(movement))
+        val entered = CompletableDeferred<Unit>()
+        val release = CompletableDeferred<Unit>()
+        val sync = LnurlPayReceiveSync(
+            list = { entered.complete(Unit); release.await(); listOf(record("r1", outputs)) },
+            movements = { wallet.movements },
+            write = { id, patch ->
+                wallet.writes += id to patch
+                wallet.movements = wallet.movements.map { if (it.id == id) it.copy(metadataJson = patch) else it }
+            }, backup = {}, acknowledge = {},
+        )
+        val running = async { sync.run() }
+        entered.await()
+        val waits = mutableListOf<Long>()
+        LnurlPayReceiveSync.retryReceive(sleep = { wait ->
+            waits += wait
+            if (wait != 0L) { release.complete(Unit); running.await() }
+        }) { sync.run(); sync.isStored(movement) }
+        assertEquals(listOf(0L, 2_000L), waits)
+        assertEquals(listOf(2u), wallet.writes.map { it.first })
+        assertTrue(sync.isStored(movement))
+    }
+
+    @Test fun unmatchedReceiveStopsAfterTheShortRetries() = runBlocking {
+        val wallet = Wallet(listOf(movement(2u, outputs)))
+        val sync = wallet.sync(emptyList())
+        val waits = mutableListOf<Long>()
+        LnurlPayReceiveSync.retryReceive(sleep = { waits += it }) { sync.run(); false }
+        assertEquals(listOf(0L, 2_000L, 5_000L), waits)
+        assertEquals(3, wallet.lists)
+        assertTrue(wallet.writes.isEmpty())
+    }
+
+    @Test fun cancellationStopsReceiveRetries() = runBlocking {
+        var attempts = 0
+        try {
+            LnurlPayReceiveSync.retryReceive(sleep = { throw kotlinx.coroutines.CancellationException() }) { attempts++; false }
+        } catch (_: kotlinx.coroutines.CancellationException) { /* The foreground observer ended. */ }
+        assertEquals(0, attempts)
+    }
+
+    @Test fun onlySuccessfulUnlabelledArkoorReceivesTrigger() {
+        val movement = movement(2u, outputs)
+        assertTrue(LnurlPayReceiveSync.needsMetadata(movement))
+        assertFalse(LnurlPayReceiveSync.needsMetadata(movement.copy(status = "pending")))
+        assertFalse(LnurlPayReceiveSync.needsMetadata(movement.copy(outputVtxoIds = emptyList())))
+        assertFalse(LnurlPayReceiveSync.needsMetadata(movement.copy(metadataJson = LnurlPayReceive.of(null, null, null).patch())))
+        assertFalse(LnurlPayReceiveSync.needsMetadata(movement.copy(subsystemKind = "send")))
+        assertFalse(LnurlPayReceiveSync.needsMetadata(movement.copy(subsystemName = "bark.lightning_receive")))
     }
 
     @Test fun historyNamesThePayerOnIncomingRows() {

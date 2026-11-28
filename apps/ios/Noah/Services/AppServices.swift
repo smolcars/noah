@@ -1,3 +1,4 @@
+import BarkBoltFFI
 import Foundation
 
 /// Process-wide services shared by the UI, push handlers and background
@@ -129,30 +130,46 @@ final class AppServices: Sendable {
         return await session.isOpen
     }
 
-    /// A matched LNURL-pay payment's push arrived while Noah is in front. bark's mailbox processor has usually stored
-    /// its movement already, so store the payer data now rather than at the next minute's pass, and History names the
-    /// payer at once. The retries cover a movement still on its way; each attempt holds the pass's slot only while it
-    /// stores.
-    @MainActor func lnurlPayPushArrived(_ recordID: String) async {
-        for wait in [Duration.zero, .seconds(2), .seconds(5)] {
-            do { try await Task.sleep(for: wait) } catch { return }
-            await ForegroundExecution.run { await storeLnurlPayReceivesInForeground() }
-            if await lnurlPayReceives.hasAcknowledged(recordID) { return }
-        }
+    /// Foreground view lifetime; each payment retries independently, without holding up other receive events.
+    func observeLnurlPayReceives() async {
+        do {
+            let changes = try await session.receiveMovements()
+            await withTaskGroup(of: Void.self) { group in
+                var seen = Set<UInt32>()
+                do {
+                    for try await movement in changes {
+                        guard !Task.isCancelled else { break }
+                        guard seen.insert(movement.id).inserted else { continue }
+                        group.addTask { [self] in
+                            await LnurlPayReceiveSync.retryReceive {
+                                await storeLnurlPayReceivesInForeground(for: movement)
+                            }
+                        }
+                    }
+                } catch { /* Reopening or the next foreground entry subscribes again. */ }
+                group.cancelAll()
+            }
+        } catch { /* The wallet closed before the observer subscribed. */ }
     }
 
     /// The minute pass's checks and slot around the payer data alone. A pass already running stores it at its end.
-    private func storeLnurlPayReceivesInForeground() async {
-        do {
-            try await foregroundSync.run { [self] in
-                try await ForegroundExecution.checkActive()
-                try BackgroundExecution.checkActive()
-                guard await foregroundPassAllowed() else { return }
-                await WalletBackgroundActivity.shared.begin()
-                await storeLnurlPayReceives()
-                await WalletBackgroundActivity.shared.end()
-            }
-        } catch { /* The next attempt, or the minute's pass, retries. */ }
+    @MainActor private func storeLnurlPayReceivesInForeground(for movement: Movement) async -> Bool {
+        var stored = false
+        await ForegroundExecution.run {
+            do {
+                stored = try await foregroundSync.run { [self] in
+                    try await ForegroundExecution.checkActive()
+                    try BackgroundExecution.checkActive()
+                    guard await foregroundPassAllowed() else { return false }
+                    await WalletBackgroundActivity.shared.begin()
+                    await storeLnurlPayReceives()
+                    let found = (try? await lnurlPayReceives.isStored(movement)) == true
+                    await WalletBackgroundActivity.shared.end()
+                    return found
+                } ?? false
+            } catch { /* The next attempt, or the minute's pass, retries. */ }
+        }
+        return stored
     }
 
     /// After the pass's sync, so a just-delivered payment's movement exists; never fails the pass.

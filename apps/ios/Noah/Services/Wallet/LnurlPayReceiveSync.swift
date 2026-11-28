@@ -19,15 +19,35 @@ actor LnurlPayReceiveSync {
 
     private let dependencies: Dependencies
     private var running = false
-    /// The records acknowledged lately, newest last, so a push's retries know when theirs is done.
-    private var acknowledged: [String] = []
 
     init(_ dependencies: Dependencies) {
         self.dependencies = dependencies
     }
 
-    func hasAcknowledged(_ id: String) -> Bool {
-        acknowledged.contains(id)
+    /// Check the exact movement again: another pass may have stored it while this trigger yielded the slot.
+    func isStored(_ movement: Movement) async throws -> Bool {
+        try await dependencies.movements().contains {
+            $0.id == movement.id && Set($0.outputVtxoIds) == Set(movement.outputVtxoIds)
+                && LnurlPayReceive.parse($0.metadataJson) != nil
+        }
+    }
+
+    nonisolated static func needsMetadata(_ movement: Movement) -> Bool {
+        movement.subsystemName.lowercased() == "bark.arkoor" && movement.subsystemKind.lowercased() == "receive"
+            && movement.status == "successful" && !movement.outputVtxoIds.isEmpty
+            && LnurlPayReceive.parse(movement.metadataJson) == nil
+    }
+
+    /// Empty/busy passes must retry too. Each attempt obtains its own foreground admission and slot.
+    nonisolated static func retryReceive(
+        sleep: @Sendable (Duration) async throws -> Void = { try await Task.sleep(for: $0) },
+        attempt: @Sendable () async -> Bool) async {
+        for delay in [Duration.zero, .seconds(2), .seconds(5)] {
+            do { try await sleep(delay); try Task.checkCancellation() } catch { return }
+            if await attempt() {
+                return
+            }
+        }
     }
 
     /// The records this pass acknowledged.
@@ -58,7 +78,6 @@ actor LnurlPayReceiveSync {
         guard !stored.isEmpty else { return [] }
         if wrote { await dependencies.backup() }
         try await dependencies.acknowledge(stored)
-        acknowledged = Array((acknowledged + stored).suffix(100))
         return stored
     }
 

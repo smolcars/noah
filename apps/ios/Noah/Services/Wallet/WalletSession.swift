@@ -1,3 +1,4 @@
+// swiftlint:disable file_length - Keep native observer ownership beside close, which stops and drains every reader.
 import BarkBoltFFI
 import Foundation
 
@@ -627,6 +628,40 @@ extension WalletSession {
             } catch {
                 continuation.finish(throwing: error)
             }
+            stop.finish()
+            await self?.observerEnded(id)
+        }
+        observers[id] = Observer(task: task, stop: stop)
+        continuation.onTermination = { _ in
+            stop.requestStop()
+            Task.detached { await stop.stop() }
+        }
+        return stream
+    }
+
+    /// Successful, unlabelled Ark receives. The session stops and drains the native reader on close;
+    /// the foreground consumer owns the short metadata retries and cancels them when this stream ends.
+    func receiveMovements() throws -> AsyncThrowingStream<Movement, Error> {
+        try checkAccess()
+        guard case .open(let handles) = state else { throw SessionError.notOpen }
+        let holder = handles.wallet.notifications()
+        let stop = WalletObserverStop { holder.cancelNextNotificationWait() }
+        let id = UUID()
+        let (stream, continuation) = AsyncThrowingStream<Movement, Error>.makeStream()
+        let task = Task.detached { [weak self] in
+            do {
+                while !stop.isStopped, let event = try await holder.nextNotification() {
+                    let movements: [Movement]
+                    switch event {
+                    case .movementCreated(let movement), .movementUpdated(let movement): movements = [movement]
+                    case .channelLagging: movements = try await Task { try await handles.wallet.history() }.value
+                    }
+                    for movement in movements where LnurlPayReceiveSync.needsMetadata(movement) {
+                        continuation.yield(movement)
+                    }
+                }
+                continuation.finish()
+            } catch { continuation.finish(throwing: error) }
             stop.finish()
             await self?.observerEnded(id)
         }

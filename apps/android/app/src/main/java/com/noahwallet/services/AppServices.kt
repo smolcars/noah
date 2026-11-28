@@ -386,27 +386,33 @@ class AppServices private constructor(private val context: Context) {
         }
     }
 
-    /**
-     * A matched LNURL-pay payment's push arrived while Noah is in front. The mailbox processor has usually stored its
-     * movement already, so store the payer data now rather than at the next minute's pass, and History names the payer
-     * at once. The retries cover a movement still on its way; each attempt holds the pass's slot only while it stores.
-     */
-    fun lnurlPayPushArrived(recordId: String) {
-        scope.launch {
-            for (wait in lnurlPayPushRetries) {
-                kotlinx.coroutines.delay(wait)
-                if (recordId in storeLnurlPayReceivesInForeground()) break
+    /** Foreground view lifetime; each receive retries independently without delaying wallet notifications. */
+    suspend fun observeLnurlPayReceives() = kotlinx.coroutines.coroutineScope {
+        val pending = mutableListOf<Job>()
+        val seen = mutableSetOf<UInt>()
+        try {
+            session.receiveMovements().collect { movement ->
+                if (seen.add(movement.id)) {
+                    pending.removeAll { it.isCompleted }
+                    pending += launch {
+                        com.noahwallet.services.wallet.LnurlPayReceiveSync.retryReceive {
+                            storeLnurlPayReceivesInForeground(movement)
+                        }
+                    }
+                }
             }
-        }
+        } catch (cancelled: CancellationException) { throw cancelled }
+        catch (_: Exception) { /* Reopening or the next foreground entry subscribes again. */ }
+        finally { pending.forEach { it.cancel() } }
     }
 
     /** The minute pass's admission around the payer data alone. A pass already running stores it at its end. */
-    private suspend fun storeLnurlPayReceivesInForeground(): List<String> {
-        var stored = emptyList<String>()
+    private suspend fun storeLnurlPayReceivesInForeground(movement: io.github.niteshbalusu11.bark.Movement): Boolean {
+        var stored = false
         try {
             com.noahwallet.recurring.RecurringRuntime.shared(context).syncForegroundAdmission.run { budget ->
                 withContext(Dispatchers.IO + com.noahwallet.services.wallet.WalletExecutionBudget(budget)) {
-                    stored = storeLnurlPayReceivesInSlot(budget)
+                    stored = storeLnurlPayReceivesInSlot(budget, movement)
                 }
             }
         } catch (cancelled: CancellationException) { throw cancelled }
@@ -414,11 +420,16 @@ class AppServices private constructor(private val context: Context) {
         return stored
     }
 
-    private suspend fun storeLnurlPayReceivesInSlot(budget: com.noahwallet.recurring.RecurringBudget): List<String> {
-        var stored = emptyList<String>()
+    private suspend fun storeLnurlPayReceivesInSlot(
+        budget: com.noahwallet.recurring.RecurringBudget, movement: io.github.niteshbalusu11.bark.Movement,
+    ): Boolean {
+        var stored = false
         foregroundSync.run {
             if (budget.available && foregroundSyncAllowed()) {
-                stored = com.noahwallet.services.wallet.WalletBackgroundActivity.during(foreground = true) { storeLnurlPayReceives() }
+                stored = com.noahwallet.services.wallet.WalletBackgroundActivity.during(foreground = true) {
+                    storeLnurlPayReceives()
+                    lnurlPayReceives.isStored(movement)
+                }
             }
         }
         return stored
@@ -504,8 +515,5 @@ class AppServices private constructor(private val context: Context) {
         fun shared(context: Context): AppServices = instance ?: synchronized(this) {
             instance ?: AppServices(context.applicationContext).also { instance = it }
         }
-
-        /** Milliseconds before each attempt after an LNURL-pay push: at once, then twice for a movement still syncing. */
-        private val lnurlPayPushRetries = listOf(0L, 2_000L, 5_000L)
     }
 }
