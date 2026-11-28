@@ -174,6 +174,12 @@ struct TransactionDetailView: View {
         if let to = detail.to {
             line("To", to, mono: detail.toIsAddress, copy: to, id: "transaction-detail-to")
         }
+        if let name = detail.payer?.name {
+            line("Name", name, id: "transaction-detail-payer-name")
+        }
+        if let address = detail.payer?.identifier {
+            line("Lightning address", address, id: "transaction-detail-payer-address")
+        }
         line("Via", L10n.text(detail.rail.title, locale: language), glyph: detail.rail.symbol)
         fees
         if let total = detail.total { line("Total", money(total), numeric: true) }

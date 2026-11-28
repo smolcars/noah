@@ -1196,6 +1196,7 @@
   <string name="gt_7d162c4a2f308b74">"Enviada por otra persona"</string>
   <string name="gt_4e7201c7b8985a98">"Enviado a"</string>
   <string name="gt_21cfd8fdcf01d5a0">"Enviado a %1$s"</string>
+  <string name="gt_788be588850259e5">"Sent you %1$s"</string>
   <string name="gt_fba003c1a141b7a1">"%1$s enviado"</string>
   <string name="gt_0e9f9136e344eb7d">"%1$s enviados en total, el último el %2$s."</string>
   <string name="gt_7dc2f77d8a0a618e">"%1$s enviado a %2$s"</string>

@@ -97,7 +97,8 @@ enum HistoryMapping {
             repeatPayment: repeatPayment,
             preimage: movement.status == "successful" ? metadata.paymentPreimage.flatMap { $0.isEmpty ? nil : $0 } : nil,
             paymentHash: movement.paymentHash ?? invoice?.hash,
-            paymentDescription: description?.isEmpty == false ? description : nil)
+            paymentDescription: description?.isEmpty == false ? description : nil,
+            lnurlPay: outgoing ? nil : LnurlPayReceive.parse(movement.metadataJson))
     }
 
     /// Recurring sends the journal can tie to a movement, by its ID or payment hash.

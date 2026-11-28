@@ -277,7 +277,7 @@ async fn mailbox_lightning_send_finished_wakes_the_sender_on_every_route() {
     let mut ids = HashSet::new();
     for (token, provider) in routes {
         tokens
-            .upsert_with_provider(&pubkey, token, provider, false)
+            .upsert_with_provider(&pubkey, token, provider, false, None)
             .await
             .unwrap();
         for succeeded in [true, false] {
@@ -1168,7 +1168,7 @@ lwIDAQAB
             .unwrap();
         tx.commit().await.unwrap();
         PushTokenRepository::new(&state.db_pool)
-            .upsert_with_provider(&pubkey, token, Some(provider), apns_sandbox)
+            .upsert_with_provider(&pubkey, token, Some(provider), apns_sandbox, None)
             .await
             .unwrap();
         pubkey

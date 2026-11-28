@@ -1180,6 +1180,7 @@
   <string name="gt_7d162c4a2f308b74">"다른 사람이 보냄"</string>
   <string name="gt_4e7201c7b8985a98">"수신 대상"</string>
   <string name="gt_21cfd8fdcf01d5a0">"%1$s(으)로 보냄"</string>
+  <string name="gt_788be588850259e5">"Sent you %1$s"</string>
   <string name="gt_fba003c1a141b7a1">"%1$s 보냄"</string>
   <string name="gt_0e9f9136e344eb7d">"총 %1$s를 보냈습니다. 마지막: %2$s."</string>
   <string name="gt_7dc2f77d8a0a618e">"%2$s에게 %1$s 보냄"</string>

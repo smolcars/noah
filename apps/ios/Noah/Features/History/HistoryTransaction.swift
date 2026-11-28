@@ -49,6 +49,8 @@ struct HistoryTransaction: Codable, Equatable, Identifiable, Sendable {
     var recurring: Recurring?
     /// The exit (its VTXO ID) this on-chain transaction paid fees for: a fee child bark recorded for it.
     var exitFeeFor: String?
+    /// An incoming LNURL-pay payment's payer and comment, payer-provided (see `LnurlPayReceive`).
+    var lnurlPay: LnurlPayReceive?
 
     struct Destination: Codable, Equatable, Sendable {
         var destination: String

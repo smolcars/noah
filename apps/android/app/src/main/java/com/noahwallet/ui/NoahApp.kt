@@ -186,6 +186,11 @@ private fun WalletForeground(model: AppModel) {
     val lifecycle = LocalLifecycleOwner.current.lifecycle
     val sessionRevision by model.session.walletChanges.collectAsState()
     val walletAvailable = model.open && !model.isWalletSuspended && model.session.isOpen
+    LaunchedEffect(model, lifecycle, walletAvailable, sessionRevision) {
+        if (walletAvailable) lifecycle.repeatOnLifecycle(Lifecycle.State.RESUMED) {
+            model.services.observeLnurlPayReceives()
+        }
+    }
     LaunchedEffect(model, model.preferredCurrency, lifecycle, walletAvailable, sessionRevision) {
         if (walletAvailable) lifecycle.repeatOnLifecycle(Lifecycle.State.STARTED) {
             model.refresh()

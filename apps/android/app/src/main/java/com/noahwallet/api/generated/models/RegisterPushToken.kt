@@ -16,6 +16,12 @@ public data class RegisterPushToken(
   @SerialName("apns_sandbox")
   public val apnsSandbox: Boolean? = null,
   /**
+   * Base64 of a random 32-byte key the app keeps: an LNURL-pay payment's push carries the
+   * payer data encrypted with it. Omitted by apps that can't read it.
+   */
+  @SerialName("notification_key")
+  public val notificationKey: String? = null,
+  /**
    * The service that delivers to a raw device token.
    */
   @SerialName("provider")

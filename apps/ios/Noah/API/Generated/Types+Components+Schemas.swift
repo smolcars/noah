@@ -923,6 +923,288 @@ extension Components {
                 case notificationId = "notification_id"
             }
         }
+        /// - Remark: Generated from `#/components/schemas/LnurlPayPayerDataFieldSpec`.
+        internal struct LnurlPayPayerDataFieldSpec: Codable, Hashable, Sendable {
+            /// - Remark: Generated from `#/components/schemas/LnurlPayPayerDataFieldSpec/mandatory`.
+            internal var mandatory: Swift.Bool
+            /// Creates a new `LnurlPayPayerDataFieldSpec`.
+            ///
+            /// - Parameters:
+            ///   - mandatory:
+            internal init(mandatory: Swift.Bool) {
+                self.mandatory = mandatory
+            }
+            internal enum CodingKeys: String, CodingKey {
+                case mandatory
+            }
+        }
+        /// The LUD-18 fields Noah accepts; neither is mandatory.
+        ///
+        /// - Remark: Generated from `#/components/schemas/LnurlPayPayerDataSpec`.
+        internal struct LnurlPayPayerDataSpec: Codable, Hashable, Sendable {
+            /// - Remark: Generated from `#/components/schemas/LnurlPayPayerDataSpec/identifier`.
+            internal var identifier: Components.Schemas.LnurlPayPayerDataFieldSpec
+            /// - Remark: Generated from `#/components/schemas/LnurlPayPayerDataSpec/name`.
+            internal var name: Components.Schemas.LnurlPayPayerDataFieldSpec
+            /// Creates a new `LnurlPayPayerDataSpec`.
+            ///
+            /// - Parameters:
+            ///   - identifier:
+            ///   - name:
+            internal init(
+                identifier: Components.Schemas.LnurlPayPayerDataFieldSpec,
+                name: Components.Schemas.LnurlPayPayerDataFieldSpec
+            ) {
+                self.identifier = identifier
+                self.name = name
+            }
+            internal enum CodingKeys: String, CodingKey {
+                case identifier
+                case name
+            }
+        }
+        /// Payer data and comment for one settled LNURL-pay receive.
+        ///
+        /// - Remark: Generated from `#/components/schemas/LnurlPayReceiveMetadata`.
+        internal struct LnurlPayReceiveMetadata: Codable, Hashable, Sendable {
+            /// The amount the recipient received. Unsigned Rust u64; values are below 2^63 in practice for native Int64/Long clients.
+            ///
+            /// - Remark: Generated from `#/components/schemas/LnurlPayReceiveMetadata/amount_sat`.
+            internal var amountSat: Swift.Int64
+            /// The payer's LUD-12 comment.
+            ///
+            /// - Remark: Generated from `#/components/schemas/LnurlPayReceiveMetadata/comment`.
+            internal var comment: Swift.String?
+            /// Identifier to acknowledge once the metadata is stored with the movement.
+            ///
+            /// - Remark: Generated from `#/components/schemas/LnurlPayReceiveMetadata/id`.
+            internal var id: Swift.String
+            /// LUD-18 identity a payer sent with an LNURL-pay callback. Payer-provided and unverified.
+            ///
+            /// - Remark: Generated from `#/components/schemas/LnurlPayReceiveMetadata/payer_data`.
+            internal struct PayerDataPayload: Codable, Hashable, Sendable {
+                /// The payer's Lightning address, normalized to lowercase.
+                ///
+                /// - Remark: Generated from `#/components/schemas/LnurlPayReceiveMetadata/payer_data/identifier`.
+                internal var identifier: Swift.String?
+                /// The payer's name.
+                ///
+                /// - Remark: Generated from `#/components/schemas/LnurlPayReceiveMetadata/payer_data/name`.
+                internal var name: Swift.String?
+                /// Creates a new `PayerDataPayload`.
+                ///
+                /// - Parameters:
+                ///   - identifier: The payer's Lightning address, normalized to lowercase.
+                ///   - name: The payer's name.
+                internal init(
+                    identifier: Swift.String? = nil,
+                    name: Swift.String? = nil
+                ) {
+                    self.identifier = identifier
+                    self.name = name
+                }
+                internal enum CodingKeys: String, CodingKey {
+                    case identifier
+                    case name
+                }
+            }
+            /// LUD-18 identity a payer sent with an LNURL-pay callback. Payer-provided and unverified.
+            ///
+            /// - Remark: Generated from `#/components/schemas/LnurlPayReceiveMetadata/payer_data`.
+            internal var payerData: Components.Schemas.LnurlPayReceiveMetadata.PayerDataPayload?
+            /// - Remark: Generated from `#/components/schemas/LnurlPayReceiveMetadata/target`.
+            internal var target: Components.Schemas.LnurlPayReceiveTarget
+            /// Creates a new `LnurlPayReceiveMetadata`.
+            ///
+            /// - Parameters:
+            ///   - amountSat: The amount the recipient received. Unsigned Rust u64; values are below 2^63 in practice for native Int64/Long clients.
+            ///   - comment: The payer's LUD-12 comment.
+            ///   - id: Identifier to acknowledge once the metadata is stored with the movement.
+            ///   - payerData: LUD-18 identity a payer sent with an LNURL-pay callback. Payer-provided and unverified.
+            ///   - target:
+            internal init(
+                amountSat: Swift.Int64,
+                comment: Swift.String? = nil,
+                id: Swift.String,
+                payerData: Components.Schemas.LnurlPayReceiveMetadata.PayerDataPayload? = nil,
+                target: Components.Schemas.LnurlPayReceiveTarget
+            ) {
+                self.amountSat = amountSat
+                self.comment = comment
+                self.id = id
+                self.payerData = payerData
+                self.target = target
+            }
+            internal enum CodingKeys: String, CodingKey {
+                case amountSat = "amount_sat"
+                case comment
+                case id
+                case payerData = "payer_data"
+                case target
+            }
+        }
+        /// - Remark: Generated from `#/components/schemas/LnurlPayReceiveMetadataAckPayload`.
+        internal struct LnurlPayReceiveMetadataAckPayload: Codable, Hashable, Sendable {
+            /// Identifiers from the list response, at most 100.
+            ///
+            /// - Remark: Generated from `#/components/schemas/LnurlPayReceiveMetadataAckPayload/ids`.
+            internal var ids: [Swift.String]
+            /// Creates a new `LnurlPayReceiveMetadataAckPayload`.
+            ///
+            /// - Parameters:
+            ///   - ids: Identifiers from the list response, at most 100.
+            internal init(ids: [Swift.String]) {
+                self.ids = ids
+            }
+            internal enum CodingKeys: String, CodingKey {
+                case ids
+            }
+        }
+        /// - Remark: Generated from `#/components/schemas/LnurlPayReceiveMetadataListResponse`.
+        internal struct LnurlPayReceiveMetadataListResponse: Codable, Hashable, Sendable {
+            /// - Remark: Generated from `#/components/schemas/LnurlPayReceiveMetadataListResponse/items`.
+            internal var items: [Components.Schemas.LnurlPayReceiveMetadata]
+            /// Creates a new `LnurlPayReceiveMetadataListResponse`.
+            ///
+            /// - Parameters:
+            ///   - items:
+            internal init(items: [Components.Schemas.LnurlPayReceiveMetadata]) {
+                self.items = items
+            }
+            internal enum CodingKeys: String, CodingKey {
+                case items
+            }
+        }
+        /// LUD-18 identity a payer sent with an LNURL-pay callback. Payer-provided and unverified.
+        ///
+        /// - Remark: Generated from `#/components/schemas/LnurlPayReceivePayerData`.
+        internal struct LnurlPayReceivePayerData: Codable, Hashable, Sendable {
+            /// The payer's Lightning address, normalized to lowercase.
+            ///
+            /// - Remark: Generated from `#/components/schemas/LnurlPayReceivePayerData/identifier`.
+            internal var identifier: Swift.String?
+            /// The payer's name.
+            ///
+            /// - Remark: Generated from `#/components/schemas/LnurlPayReceivePayerData/name`.
+            internal var name: Swift.String?
+            /// Creates a new `LnurlPayReceivePayerData`.
+            ///
+            /// - Parameters:
+            ///   - identifier: The payer's Lightning address, normalized to lowercase.
+            ///   - name: The payer's name.
+            internal init(
+                identifier: Swift.String? = nil,
+                name: Swift.String? = nil
+            ) {
+                self.identifier = identifier
+                self.name = name
+            }
+            internal enum CodingKeys: String, CodingKey {
+                case identifier
+                case name
+            }
+        }
+        /// The wallet movement a receive's metadata belongs to.
+        ///
+        /// - Remark: Generated from `#/components/schemas/LnurlPayReceiveTarget`.
+        internal enum LnurlPayReceiveTarget: Codable, Hashable, Sendable {
+            /// A Lightning receive with this payment hash. Reserved for invoices the device creates; the
+            /// server does not produce it yet.
+            ///
+            /// - Remark: Generated from `#/components/schemas/LnurlPayReceiveTarget/case1`.
+            internal struct Case1Payload: Codable, Hashable, Sendable {
+                /// - Remark: Generated from `#/components/schemas/LnurlPayReceiveTarget/case1/payment_hash`.
+                internal var paymentHash: Swift.String
+                /// - Remark: Generated from `#/components/schemas/LnurlPayReceiveTarget/case1/type`.
+                internal enum _TypePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                    case lightningPaymentHash = "lightning_payment_hash"
+                }
+                /// - Remark: Generated from `#/components/schemas/LnurlPayReceiveTarget/case1/type`.
+                internal var _type: Components.Schemas.LnurlPayReceiveTarget.Case1Payload._TypePayload
+                /// Creates a new `Case1Payload`.
+                ///
+                /// - Parameters:
+                ///   - paymentHash:
+                ///   - _type:
+                internal init(
+                    paymentHash: Swift.String,
+                    _type: Components.Schemas.LnurlPayReceiveTarget.Case1Payload._TypePayload
+                ) {
+                    self.paymentHash = paymentHash
+                    self._type = _type
+                }
+                internal enum CodingKeys: String, CodingKey {
+                    case paymentHash = "payment_hash"
+                    case _type = "type"
+                }
+            }
+            /// A Lightning receive with this payment hash. Reserved for invoices the device creates; the
+            /// server does not produce it yet.
+            ///
+            /// - Remark: Generated from `#/components/schemas/LnurlPayReceiveTarget/case1`.
+            case case1(Components.Schemas.LnurlPayReceiveTarget.Case1Payload)
+            /// An Arkoor receive with exactly these output VTXOs: a payment barkd forwarded.
+            ///
+            /// - Remark: Generated from `#/components/schemas/LnurlPayReceiveTarget/case2`.
+            internal struct Case2Payload: Codable, Hashable, Sendable {
+                /// - Remark: Generated from `#/components/schemas/LnurlPayReceiveTarget/case2/type`.
+                internal enum _TypePayload: String, Codable, Hashable, Sendable, CaseIterable {
+                    case arkOutputVtxos = "ark_output_vtxos"
+                }
+                /// - Remark: Generated from `#/components/schemas/LnurlPayReceiveTarget/case2/type`.
+                internal var _type: Components.Schemas.LnurlPayReceiveTarget.Case2Payload._TypePayload
+                /// - Remark: Generated from `#/components/schemas/LnurlPayReceiveTarget/case2/vtxo_ids`.
+                internal var vtxoIds: [Swift.String]
+                /// Creates a new `Case2Payload`.
+                ///
+                /// - Parameters:
+                ///   - _type:
+                ///   - vtxoIds:
+                internal init(
+                    _type: Components.Schemas.LnurlPayReceiveTarget.Case2Payload._TypePayload,
+                    vtxoIds: [Swift.String]
+                ) {
+                    self._type = _type
+                    self.vtxoIds = vtxoIds
+                }
+                internal enum CodingKeys: String, CodingKey {
+                    case _type = "type"
+                    case vtxoIds = "vtxo_ids"
+                }
+            }
+            /// An Arkoor receive with exactly these output VTXOs: a payment barkd forwarded.
+            ///
+            /// - Remark: Generated from `#/components/schemas/LnurlPayReceiveTarget/case2`.
+            case case2(Components.Schemas.LnurlPayReceiveTarget.Case2Payload)
+            internal init(from decoder: any Swift.Decoder) throws {
+                var errors: [any Swift.Error] = []
+                do {
+                    self = .case1(try .init(from: decoder))
+                    return
+                } catch {
+                    errors.append(error)
+                }
+                do {
+                    self = .case2(try .init(from: decoder))
+                    return
+                } catch {
+                    errors.append(error)
+                }
+                throw Swift.DecodingError.failedToDecodeOneOfSchema(
+                    type: Self.self,
+                    codingPath: decoder.codingPath,
+                    errors: errors
+                )
+            }
+            internal func encode(to encoder: any Swift.Encoder) throws {
+                switch self {
+                case let .case1(value):
+                    try value.encode(to: encoder)
+                case let .case2(value):
+                    try value.encode(to: encoder)
+                }
+            }
+        }
         /// Represents the first response in the LNURL-pay protocol.
         ///
         /// This response provides the necessary details for a wallet to make a payment,
@@ -938,10 +1220,11 @@ extension Components {
             ///
             /// - Remark: Generated from `#/components/schemas/LnurlpDefaultResponse/callback`.
             internal var callback: Swift.String
-            /// The maximum length of a comment that can be included with the payment.
+            /// The maximum length of a LUD-12 comment, in characters. Present only while the server can
+            /// pass a comment on to the recipient.
             ///
             /// - Remark: Generated from `#/components/schemas/LnurlpDefaultResponse/commentAllowed`.
-            internal var commentAllowed: Swift.Int
+            internal var commentAllowed: Swift.Int?
             /// The maximum amount that can be sent in a single payment, in millisatoshis. Unsigned Rust u64; values are below 2^63 in practice for native Int64/Long clients.
             ///
             /// - Remark: Generated from `#/components/schemas/LnurlpDefaultResponse/maxSendable`.
@@ -954,6 +1237,35 @@ extension Components {
             ///
             /// - Remark: Generated from `#/components/schemas/LnurlpDefaultResponse/minSendable`.
             internal var minSendable: Swift.Int64
+            /// The LUD-18 fields Noah accepts; neither is mandatory.
+            ///
+            /// - Remark: Generated from `#/components/schemas/LnurlpDefaultResponse/payerData`.
+            internal struct PayerDataPayload: Codable, Hashable, Sendable {
+                /// - Remark: Generated from `#/components/schemas/LnurlpDefaultResponse/payerData/identifier`.
+                internal var identifier: Components.Schemas.LnurlPayPayerDataFieldSpec
+                /// - Remark: Generated from `#/components/schemas/LnurlpDefaultResponse/payerData/name`.
+                internal var name: Components.Schemas.LnurlPayPayerDataFieldSpec
+                /// Creates a new `PayerDataPayload`.
+                ///
+                /// - Parameters:
+                ///   - identifier:
+                ///   - name:
+                internal init(
+                    identifier: Components.Schemas.LnurlPayPayerDataFieldSpec,
+                    name: Components.Schemas.LnurlPayPayerDataFieldSpec
+                ) {
+                    self.identifier = identifier
+                    self.name = name
+                }
+                internal enum CodingKeys: String, CodingKey {
+                    case identifier
+                    case name
+                }
+            }
+            /// The LUD-18 fields Noah accepts; neither is mandatory.
+            ///
+            /// - Remark: Generated from `#/components/schemas/LnurlpDefaultResponse/payerData`.
+            internal var payerData: Components.Schemas.LnurlpDefaultResponse.PayerDataPayload?
             /// The LNURL-pay tag, which is always "payRequest".
             ///
             /// - Remark: Generated from `#/components/schemas/LnurlpDefaultResponse/tag`.
@@ -963,18 +1275,20 @@ extension Components {
             /// - Parameters:
             ///   - ark: The user's Ark address when requested for a compatible Ark server.
             ///   - callback: The URL where the wallet should send the second request.
-            ///   - commentAllowed: The maximum length of a comment that can be included with the payment.
+            ///   - commentAllowed: The maximum length of a LUD-12 comment, in characters. Present only while the server can
             ///   - maxSendable: The maximum amount that can be sent in a single payment, in millisatoshis. Unsigned Rust u64; values are below 2^63 in practice for native Int64/Long clients.
             ///   - metadata: A JSON string containing metadata about the payment.
             ///   - minSendable: The minimum amount that can be sent in a single payment, in millisatoshis. Unsigned Rust u64; values are below 2^63 in practice for native Int64/Long clients.
+            ///   - payerData: The LUD-18 fields Noah accepts; neither is mandatory.
             ///   - tag: The LNURL-pay tag, which is always "payRequest".
             internal init(
                 ark: Swift.String? = nil,
                 callback: Swift.String,
-                commentAllowed: Swift.Int,
+                commentAllowed: Swift.Int? = nil,
                 maxSendable: Swift.Int64,
                 metadata: Swift.String,
                 minSendable: Swift.Int64,
+                payerData: Components.Schemas.LnurlpDefaultResponse.PayerDataPayload? = nil,
                 tag: Swift.String
             ) {
                 self.ark = ark
@@ -983,6 +1297,7 @@ extension Components {
                 self.maxSendable = maxSendable
                 self.metadata = metadata
                 self.minSendable = minSendable
+                self.payerData = payerData
                 self.tag = tag
             }
             internal enum CodingKeys: String, CodingKey {
@@ -992,6 +1307,7 @@ extension Components {
                 case maxSendable
                 case metadata
                 case minSendable
+                case payerData
                 case tag
             }
         }
@@ -1597,6 +1913,11 @@ extension Components {
             ///
             /// - Remark: Generated from `#/components/schemas/RegisterPushToken/apns_sandbox`.
             internal var apnsSandbox: Swift.Bool?
+            /// Base64 of a random 32-byte key the app keeps: an LNURL-pay payment's push carries the
+            /// payer data encrypted with it. Omitted by apps that can't read it.
+            ///
+            /// - Remark: Generated from `#/components/schemas/RegisterPushToken/notification_key`.
+            internal var notificationKey: Swift.String?
             /// The service that delivers to a raw device token.
             ///
             /// - Remark: Generated from `#/components/schemas/RegisterPushToken/provider`.
@@ -1618,19 +1939,23 @@ extension Components {
             ///
             /// - Parameters:
             ///   - apnsSandbox: Whether an APNs token belongs to the sandbox environment. Defaults to false.
+            ///   - notificationKey: Base64 of a random 32-byte key the app keeps: an LNURL-pay payment's push carries the
             ///   - provider: The service that delivers to a raw device token.
             ///   - pushToken: A raw APNs or FCM device token when `provider` is set. Otherwise an Expo push
             internal init(
                 apnsSandbox: Swift.Bool? = nil,
+                notificationKey: Swift.String? = nil,
                 provider: Components.Schemas.RegisterPushToken.ProviderPayload? = nil,
                 pushToken: Swift.String
             ) {
                 self.apnsSandbox = apnsSandbox
+                self.notificationKey = notificationKey
                 self.provider = provider
                 self.pushToken = pushToken
             }
             internal enum CodingKeys: String, CodingKey {
                 case apnsSandbox = "apns_sandbox"
+                case notificationKey = "notification_key"
                 case provider
                 case pushToken = "push_token"
             }

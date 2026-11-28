@@ -16,6 +16,7 @@ use crate::types::NotificationData;
     paths(
         crate::root,
         crate::health,
+        gated_api_v0::acknowledge_lnurl_pay_receive_metadata,
         gated_api_v0::authorize_mailbox,
         gated_api_v0::complete_backup_object_upload,
         gated_api_v0::complete_upload,
@@ -30,6 +31,7 @@ use crate::types::NotificationData;
         gated_api_v0::initiate_backup_object_upload,
         gated_api_v0::list_backup_objects,
         gated_api_v0::list_backups,
+        gated_api_v0::list_lnurl_pay_receive_metadata,
         gated_api_v0::ln_address_suggestions,
         gated_api_v0::register_push_token,
         gated_api_v0::report_job_status,

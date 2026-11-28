@@ -11,11 +11,12 @@ actor ForegroundWalletSync {
         self.mutation = mutation
     }
 
-    func run(_ operation: @escaping @Sendable () async throws -> Void) async throws {
-        guard !running else { return }
+    @discardableResult
+    func run<T: Sendable>(_ operation: @escaping @Sendable () async throws -> T) async throws -> T? {
+        guard !running else { return nil }
         running = true
         defer { running = false }
-        try await configuration.withLock {
+        return try await configuration.withLock {
             try await self.mutation.withLock(operation)
         }
     }

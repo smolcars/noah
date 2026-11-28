@@ -370,6 +370,25 @@ internal class WalletSessionTest : WalletSessionFixture() {
         }
     }
 
+    @Test fun receiveMovementObserverStopsOnCloseAndConsumerCancellation() = runBlocking {
+        for (cancelConsumer in listOf(false, true)) withLocation { location ->
+            val handles = Handles()
+            val session = WalletSession("regtest", location, opener = { _, _, _, _ -> handles })
+            session.createNew("unused", "test")
+            val observer = launch { session.receiveMovements().collect() }
+            handles.waiting.await()
+            withTimeout(2000) {
+                if (cancelConsumer) {
+                    observer.cancelAndJoin()
+                    assertTrue(handles.holderClosed); assertFalse(handles.closed)
+                    assertNotNull(session.summary())
+                }
+                session.close(); observer.join()
+            }
+            assertTrue(handles.holderClosed); assertTrue(handles.closed)
+        }
+    }
+
     @Test fun closeAlsoCancelsBeforeNativeWaitHasRegistered() = runBlocking {
         withLocation { location ->
             val handles = Handles().apply { beforeNativeWait = CompletableDeferred() }

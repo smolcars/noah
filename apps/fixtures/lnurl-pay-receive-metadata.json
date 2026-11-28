@@ -1,0 +1,60 @@
+{
+  "description": "The `noah.lnurl_pay` movement metadata both apps write for an LNURL-pay receive (docs/lnurl_pay.md). `patch` cases: a server record's payer_data and comment → the JSON merge patch written with update_history_metadata. `parse` cases: a movement's metadata JSON → what History shows (null when there is no valid entry). Values are trimmed; one that is empty, too long (name 80, identifier 320, comment 280 characters) or holds control or bidirectional control characters is dropped. The label is `Name (⚡ identifier)` when both are present.",
+  "cases": [
+    {
+      "name": "patch: name, address and comment",
+      "input": {"kind": "patch", "payer_data": {"name": "Alice Payer", "identifier": "alice@example.com"}, "comment": "Thanks for the coffee ☕"},
+      "expected": {"noah": {"lnurl_pay": {"schema_version": 1, "payer_data": {"name": "Alice Payer", "identifier": "alice@example.com"}, "comment": "Thanks for the coffee ☕"}}}
+    },
+    {
+      "name": "patch: no payer data or comment still marks the receive",
+      "input": {"kind": "patch", "payer_data": null, "comment": null},
+      "expected": {"noah": {"lnurl_pay": {"schema_version": 1, "payer_data": {}}}}
+    },
+    {
+      "name": "patch: trimmed, and unsafe or oversized values dropped",
+      "input": {"kind": "patch", "payer_data": {"name": " Alice‮ ", "identifier": "  bob@example.com "}, "comment": "  "},
+      "expected": {"noah": {"lnurl_pay": {"schema_version": 1, "payer_data": {"identifier": "bob@example.com"}}}}
+    },
+    {
+      "name": "parse: next to bark's and Noah's other keys",
+      "input": {"kind": "parse", "metadata": "{\"payment_hash\":\"00\",\"noah\":{\"repeat_payment\":{\"version\":1},\"lnurl_pay\":{\"schema_version\":1,\"payer_data\":{\"name\":\"Alice Payer\",\"identifier\":\"alice@example.com\"},\"comment\":\"Thanks\"}}}"},
+      "expected": {"name": "Alice Payer", "identifier": "alice@example.com", "comment": "Thanks", "label": "Alice Payer (⚡ alice@example.com)"}
+    },
+    {
+      "name": "parse: name only",
+      "input": {"kind": "parse", "metadata": "{\"noah\":{\"lnurl_pay\":{\"schema_version\":1,\"payer_data\":{\"name\":\"Zoë 🚀\"}}}}"},
+      "expected": {"name": "Zoë 🚀", "identifier": null, "comment": null, "label": "Zoë 🚀"}
+    },
+    {
+      "name": "parse: address only",
+      "input": {"kind": "parse", "metadata": "{\"noah\":{\"lnurl_pay\":{\"schema_version\":1,\"payer_data\":{\"identifier\":\"alice@example.com\"}}}}"},
+      "expected": {"name": null, "identifier": "alice@example.com", "comment": null, "label": "alice@example.com"}
+    },
+    {
+      "name": "parse: nobody named",
+      "input": {"kind": "parse", "metadata": "{\"noah\":{\"lnurl_pay\":{\"schema_version\":1,\"payer_data\":{}}}}"},
+      "expected": {"name": null, "identifier": null, "comment": null, "label": null}
+    },
+    {
+      "name": "parse: a stored value that isn't safe to show is dropped",
+      "input": {"kind": "parse", "metadata": "{\"noah\":{\"lnurl_pay\":{\"schema_version\":1,\"payer_data\":{\"name\":\"Alice\\u2066\",\"identifier\":\"alice@example.com\"}}}}"},
+      "expected": {"name": null, "identifier": "alice@example.com", "comment": null, "label": "alice@example.com"}
+    },
+    {
+      "name": "parse: another schema version",
+      "input": {"kind": "parse", "metadata": "{\"noah\":{\"lnurl_pay\":{\"schema_version\":2,\"payer_data\":{\"name\":\"Alice\"}}}}"},
+      "expected": null
+    },
+    {
+      "name": "parse: no entry",
+      "input": {"kind": "parse", "metadata": "{\"noah\":{\"repeat_payment\":{\"version\":1}}}"},
+      "expected": null
+    },
+    {
+      "name": "parse: not JSON",
+      "input": {"kind": "parse", "metadata": "not json"},
+      "expected": null
+    }
+  ]
+}

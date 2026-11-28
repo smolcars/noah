@@ -74,6 +74,8 @@ class WalletSession internal constructor(
         fun notifications(): Notifications
         suspend fun pendingRounds(): List<PendingRoundStatus> = throw UnsupportedOperationException()
         suspend fun history(): List<Movement>
+        /** bark's `update_history_metadata`: a JSON merge patch into one movement's metadata. */
+        suspend fun updateHistoryMetadata(movementId: UInt, patchJson: String): Unit = throw UnsupportedOperationException()
         suspend fun transactions(): List<WalletTransaction> = throw UnsupportedOperationException()
         suspend fun receiveRequest(): ReceiveRequest
         suspend fun receiveInvoice(request: ReceiveRequest, amountSat: Long, description: String): ReceiveRequest
@@ -238,6 +240,8 @@ class WalletSession internal constructor(
         withOpen { (it.send as SdkSendWallet).estimateFee(rail, amount, destination) }
     /** bark's own records, for Send to read a failed Lightning send's recorded refund. */
     suspend fun movements(): List<io.github.niteshbalusu11.bark.Movement> = withOpen { it.history() }
+    /** Merges [patchJson] into one movement's metadata, as Send does for `noah.repeat_payment`. */
+    suspend fun updateHistoryMetadata(movementId: UInt, patchJson: String) = withOpen { it.updateHistoryMetadata(movementId, patchJson) }
     /** The tip of the chain source the wallet already uses, for Send and Receive's block row. */
     suspend fun chainTip(): Long = withOpen { it.m6.tip() }
     /** A transaction's confirmation from that same chain source, for Activity's block row. */
@@ -656,6 +660,43 @@ class WalletSession internal constructor(
         }
     }
 
+    /** Session-owned native reader; close stops and joins it before releasing the wallet. */
+    @Suppress("TooGenericExceptionCaught") // Native failures finish the flow; the next foreground entry subscribes again.
+    @OptIn(ExperimentalCoroutinesApi::class, DelicateCoroutinesApi::class)
+    fun receiveMovements(): Flow<Movement> = flow {
+        val events = Channel<Movement>(Channel.UNLIMITED)
+        val observer = synchronized(lock) {
+            val handles = (state as? State.Open)?.handles ?: throw SessionError()
+            val holder = handles.notifications()
+            Observer(holder).also { observer ->
+                observer.job = scope.async(start = CoroutineStart.ATOMIC) {
+                    try {
+                        while (isActive) {
+                            val movements = when (val event = holder.next() ?: break) {
+                                is WalletNotification.MovementCreated -> listOf(event.movement)
+                                is WalletNotification.MovementUpdated -> listOf(event.movement)
+                                WalletNotification.ChannelLagging -> withOpen { it.history() }
+                            }
+                            for (movement in movements) if (LnurlPayReceiveSync.needsMetadata(movement)) events.send(movement)
+                        }
+                    } catch (failure: Exception) { events.close(failure) }
+                    finally {
+                        synchronized(holder) { observer.holderClosed = true; holder.close() }
+                        events.close()
+                    }
+                    null
+                }
+                observers.add(observer)
+            }
+        }
+        try { for (event in events) emit(event) }
+        finally {
+            withContext(NonCancellable) { stopObserver(observer) }
+            synchronized(lock) { observers.remove(observer) }
+            events.cancel()
+        }
+    }.flowOn(Dispatchers.IO)
+
     private suspend fun stopObserver(observer: Observer) {
         // Cancel the coroutine and release Rust's pending wait before disposing its wrapper.
         // The job closes the holder; synchronized prevents cancelWait racing that close.
@@ -850,6 +891,7 @@ class WalletSession internal constructor(
         }
         override suspend fun pendingRounds() = wallet.syncPendingRounds()
         override suspend fun history() = wallet.history()
+        override suspend fun updateHistoryMetadata(movementId: UInt, patchJson: String) = wallet.updateHistoryMetadata(movementId, patchJson)
         override suspend fun transactions() = onchain.transactions()
         // Each address until it's paid, so a Receive visit derives nothing and later on-chain syncs don't grow.
         override suspend fun receiveRequest() = ReceiveRequest(wallet.nextUnusedAddress().address, onchain.nextUnusedAddress())

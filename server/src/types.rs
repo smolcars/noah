@@ -213,6 +213,10 @@ pub struct RegisterPushToken {
     /// Whether an APNs token belongs to the sandbox environment. Defaults to false.
     #[serde(default)]
     pub apns_sandbox: Option<bool>,
+    /// Base64 of a random 32-byte key the app keeps: an LNURL-pay payment's push carries the
+    /// payer data encrypted with it. Omitted by apps that can't read it.
+    #[serde(default)]
+    pub notification_key: Option<String>,
 }
 
 /// Defines the payload for granting mailbox authorization to the server.
@@ -250,6 +254,52 @@ pub struct SubmitInvoicePayload {
     pub invoice: String,
     /// The unique identifier for the payment transaction.
     pub transaction_id: String,
+}
+
+/// LUD-18 identity a payer sent with an LNURL-pay callback. Payer-provided and unverified.
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, utoipa::ToSchema)]
+pub struct LnurlPayReceivePayerData {
+    /// The payer's name.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub name: Option<String>,
+    /// The payer's Lightning address, normalized to lowercase.
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub identifier: Option<String>,
+}
+
+/// The wallet movement a receive's metadata belongs to.
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, utoipa::ToSchema)]
+#[serde(tag = "type", rename_all = "snake_case")]
+pub enum LnurlPayReceiveTarget {
+    /// A Lightning receive with this payment hash. Reserved for invoices the device creates; the
+    /// server does not produce it yet.
+    LightningPaymentHash { payment_hash: String },
+    /// An Arkoor receive with exactly these output VTXOs: a payment barkd forwarded.
+    ArkOutputVtxos { vtxo_ids: Vec<String> },
+}
+
+/// Payer data and comment for one settled LNURL-pay receive.
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, utoipa::ToSchema)]
+pub struct LnurlPayReceiveMetadata {
+    /// Identifier to acknowledge once the metadata is stored with the movement.
+    pub id: String,
+    /// The amount the recipient received.
+    pub amount_sat: u64,
+    pub target: LnurlPayReceiveTarget,
+    pub payer_data: Option<LnurlPayReceivePayerData>,
+    /// The payer's LUD-12 comment.
+    pub comment: Option<String>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, utoipa::ToSchema)]
+pub struct LnurlPayReceiveMetadataListResponse {
+    pub items: Vec<LnurlPayReceiveMetadata>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, PartialEq, Eq, utoipa::ToSchema)]
+pub struct LnurlPayReceiveMetadataAckPayload {
+    /// Identifiers from the list response, at most 100.
+    pub ids: Vec<String>,
 }
 
 /// Defines the payload for atomically configuring a hosted Lightning identity.

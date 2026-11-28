@@ -213,6 +213,11 @@ struct HomeActivityRow: Equatable {
     /// "+", "−", or nothing for internal transfers.
     let sign: String
 
+    /// The payer's initial, as an address's would be; the usual received mark when they named nobody.
+    private static func payerAvatar(_ sender: String?) -> Avatar {
+        sender.map { .initial(String($0.prefix(1)).lowercased()) } ?? .incoming
+    }
+
     init(_ transaction: HistoryTransaction, ownDomain: String) {
         let outgoing = transaction.direction == "outgoing"
         let onchain = transaction.type == "Onchain" || transaction.source == "onchain-wallet"
@@ -236,6 +241,13 @@ struct HomeActivityRow: Equatable {
             titleIsVerbatim = true
             kind = kindLabel
             avatar = .initial(String(parts[0].prefix(1)).lowercased())
+        } else if !outgoing, let payer = transaction.lnurlPay {
+            // An LNURL-pay payment names its payer as they gave it. It arrived over Ark, as Details' "Via" says.
+            let sender = payer.name ?? payer.identifier
+            title = sender ?? "Received"
+            titleIsVerbatim = sender != nil
+            kind = kindLabel
+            avatar = Self.payerAvatar(sender)
         } else if transaction.isRenewal {
             title = transaction.baseLabel
             titleIsVerbatim = false

@@ -239,6 +239,10 @@ struct WalletTabs: View {
         .environment(\.scanPayment, ScanPaymentAction(handle: scanned))
         // Activity's links and a recurring payment notification: Home opens the page with Settings beneath.
         .onChange(of: settingsRoute.page != nil, initial: true) { _, pending in if pending { selection = .home } }
+        .task(id: app.summary == nil || scenePhase != .active ? nil : app.walletSessionRevision) {
+            guard app.summary != nil, scenePhase == .active else { return }
+            await AppServices.shared.observeLnurlPayReceives()
+        }
         .task(id: app.summary == nil ? nil : "\(app.preferredCurrency):\(app.walletSessionRevision)") {
             guard app.summary != nil else { return }
             await history.observe(currency: app.preferredCurrency)

@@ -19,6 +19,8 @@ struct ActivityDetail: Equatable {
     /// The recipient, for sends that name one: an address, never an invoice or offer.
     let to: String?
     let toIsAddress: Bool
+    /// Who paid an incoming LNURL-pay payment, as they said (unverified): their name and Lightning address.
+    let payer: LnurlPayReceive?
     let fee: Fee?
     /// What left the wallet, when fees make it differ from the amount.
     let total: Int64?
@@ -42,6 +44,7 @@ struct ActivityDetail: Equatable {
         (status, tone) = Self.status(facts, renewedCoins: renewedCoins)
         rail = Self.rail(facts)
         (to, toIsAddress) = Self.recipient(facts)
+        payer = transaction.direction == "incoming" ? transaction.lnurlPay : nil
 
         let settledLightningSend = outgoing && lightning && transaction.subsystemName == "bark.lightning_send"
             && transaction.movementStatus == "successful"
@@ -73,7 +76,7 @@ struct ActivityDetail: Equatable {
         chainTxid = rail == .onchain ? transaction.chainTxid : transaction.isRenewal ? transaction.fundingTxid : nil
         let broadcast = row.status == .confirming && ["offboard", "send-onchain"].contains(transaction.movementKind)
         blockTxid = walletRow && row.status.isPending ? transaction.txid : broadcast ? transaction.broadcastTxid : nil
-        let comment = transaction.repeatPayment?.comment ?? ""
+        let comment = transaction.repeatPayment?.comment ?? transaction.lnurlPay?.comment ?? ""
         note = !comment.isEmpty ? comment : row.title == transaction.paymentDescription ? nil : transaction.paymentDescription
         showsDate = transaction.dateLabel == nil || transaction.hasConfirmation != true
     }

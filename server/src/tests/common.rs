@@ -97,6 +97,9 @@ impl TestUser {
             barkd_url: None,
             barkd_auth_token: None,
             barkd_request_timeout_seconds: 10,
+            lnurl_pay_receive_metadata_encryption_key: Some([0x42; 32]),
+            lnurl_pay_receive_metadata_enabled: true,
+            lnurl_pay_receive_metadata_advertised: true,
             zoho_client_id: None,
             zoho_client_secret: None,
             zoho_refresh_token: None,
@@ -184,6 +187,13 @@ pub async fn setup_test_app_with_push(
         email_client,
         maintenance_store,
         barkd_invoice_provider,
+        lnurl_pay_receive_metadata_repo: TestUser::get_config()
+            .lnurl_pay_receive_metadata_encryption_key
+            .map(|key| {
+                crate::db::lnurl_pay_receive_metadata_repo::LnurlPayReceiveMetadataRepository::new(
+                    &db_pool, &key,
+                )
+            }),
         config: Arc::new(TestUser::get_config()),
     });
 

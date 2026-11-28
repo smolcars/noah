@@ -119,7 +119,8 @@ class PushRuntime(private val context: Context, private val services: AppService
                 token
             },
             registerToken = { token, provider ->
-                V0RegisterPushTokenClient(client).registerPushToken(RegisterPushToken(pushToken = token, provider = provider)).value()
+                V0RegisterPushTokenClient(client).registerPushToken(RegisterPushToken(pushToken = token, provider = provider,
+                    notificationKey = NotificationKey.registrationValue(context))).value()
                 onToken(token)
             },
         ).register()

@@ -572,3 +572,30 @@ struct WalletSessionTests {
         #expect(await gate.calls == 1)
     }
 }
+
+extension WalletSessionTests {
+    @Test(.regtestStack, .timeLimit(.minutes(1))) func receiveMovementObserverStopsOnCloseAndConsumerCancellation() async throws {
+        defer { try? FileManager.default.removeItem(at: documents) }
+        for cancelConsumer in [false, true] {
+            let session = offlineSession()
+            try await session.createNew(mnemonic: try generateMnemonic(), appVersion: "test")
+            let movements = try await session.receiveMovements()
+            let reader = Task {
+                do {
+                    for try await _ in movements { /* Waiting for close to end the stream. */ }
+                } catch is CancellationError { /* Consumer cancellation also stops the reader. */ }
+            }
+            try await Task.sleep(for: .milliseconds(10))
+            if cancelConsumer {
+                reader.cancel()
+                try await reader.value
+                #expect(await session.isOpen)
+            }
+            try await session.close()
+            try await reader.value
+            let reservation = try await session.reserve()
+            await session.release(reservation)
+            try FileManager.default.removeItem(at: documents)
+        }
+    }
+}

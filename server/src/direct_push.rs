@@ -497,7 +497,7 @@ fn apns_headers(data: &PushNotificationData) -> (&'static str, &'static str) {
 }
 
 /// `body` is the key the apps already read Noah's payload from.
-fn apns_body(data: &PushNotificationData, sound: bool) -> Value {
+pub(crate) fn apns_body(data: &PushNotificationData, sound: bool) -> Value {
     let mut aps = serde_json::Map::new();
     if is_visible(data) {
         let mut alert = serde_json::Map::new();
@@ -508,6 +508,9 @@ fn apns_body(data: &PushNotificationData, sound: bool) -> Value {
             alert.insert("body".to_string(), json!(body));
         }
         aps.insert("alert".to_string(), Value::Object(alert));
+        // Lets the app's notification service extension rewrite the text, for example to name
+        // an LNURL-pay payer from the sealed payer data. Without an extension iOS ignores it.
+        aps.insert("mutable-content".to_string(), json!(1));
     }
     if data.content_available || !is_visible(data) {
         aps.insert("content-available".to_string(), json!(1));
@@ -520,7 +523,7 @@ fn apns_body(data: &PushNotificationData, sound: bool) -> Value {
 
 /// Data-only, so the app's service runs in every state. `message` and `title` are the
 /// keys it already shows a visible notification from.
-fn fcm_body(token: &str, data: &PushNotificationData) -> Value {
+pub(crate) fn fcm_body(token: &str, data: &PushNotificationData) -> Value {
     let mut fields = serde_json::Map::new();
     fields.insert("body".to_string(), json!(data.data));
     if let Some(title) = &data.title {
@@ -604,6 +607,7 @@ mod tests {
             json!({
                 "aps": {
                     "alert": { "title": "Payment received", "body": "You received 1 sat" },
+                    "mutable-content": 1,
                     "sound": "default",
                 },
                 "body": "{}",

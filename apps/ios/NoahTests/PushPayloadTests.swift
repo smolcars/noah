@@ -64,10 +64,11 @@ struct PushPayloadTests {
 struct PushRegistrationBodyTests {
     @Test func registersTheRawTokenAsHexWithItsEnvironment() {
         for sandbox in [true, false] {
-            let body = PushRegistration.body(deviceToken: Data([0x0A, 0xFF, 0x01]), sandbox: sandbox)
+            let body = PushRegistration.body(deviceToken: Data([0x0A, 0xFF, 0x01]), sandbox: sandbox, notificationKey: "a2V5")
             #expect(body.pushToken == "0aff01")
             #expect(body.provider == .apns)
             #expect(body.apnsSandbox == sandbox)
+            #expect(body.notificationKey == "a2V5")
         }
     }
 

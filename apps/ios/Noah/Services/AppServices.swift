@@ -1,3 +1,4 @@
+import BarkBoltFFI
 import Foundation
 
 /// Process-wide services shared by the UI, push handlers and background
@@ -19,6 +20,8 @@ final class AppServices: Sendable {
     let backupCoordinator: BackupCoordinator
     /// Foreground launch recovery; headless jobs defer pending journals/markers.
     let restoreRecovery: RestoreRecovery
+    /// LNURL-pay payer data the server matched to Ark receives, into Bark's movements (docs/lnurl_pay.md).
+    let lnurlPayReceives: LnurlPayReceiveSync
 
     init(variant: AppVariant, session: WalletSession = .shared) {
         self.variant = variant
@@ -35,6 +38,12 @@ final class AppServices: Sendable {
         })
         let coordinator = BackupCoordinator(dependencies: .live(service: backups, session: session))
         backupCoordinator = coordinator
+        lnurlPayReceives = LnurlPayReceiveSync(.init(
+            list: { try await client.listLnurlPayReceiveMetadata().ok.body.json.items },
+            movements: { try await session.movements() },
+            write: { try await session.updateHistoryMetadata(movementId: $0, patchJSON: $1) },
+            backup: { await coordinator.schedule(.databaseChanged, immediate: true) },
+            acknowledge: { _ = try await client.acknowledgeLnurlPayReceiveMetadata(body: .json(.init(ids: $0))).ok }))
         let location = WalletDataLocation(variant: variant)
         let lifecycle = WalletLifecycle(dependencies: .init(
             session: session, location: location, seed: seed,
@@ -99,17 +108,80 @@ final class AppServices: Sendable {
             try await foregroundSync.run { [self] in
                 try await ForegroundExecution.checkActive()
                 try BackgroundExecution.checkActive()
-                let location = WalletDataLocation(variant: variant)
-                let wallet = SettingsStorage.shared.persistedState(PersistedWalletState.self, key: PersistedWalletState.key)
-                guard wallet?.isInitialized != false, wallet?.isWalletSuspended != true,
-                      !location.restorePending, !FileManager.default.fileExists(atPath: location.deletionMarker.path),
-                      await session.isOpen else { return }
+                guard await foregroundPassAllowed() else { return }
                 await WalletBackgroundActivity.shared.begin()
-                do { try await session.syncInForeground() }
-                catch { await WalletBackgroundActivity.shared.end(); throw error }
+                // A failed stage (on-chain sync offline, say) still leaves the Ark movements to update.
+                var failure: (any Error)?
+                do { try await session.syncInForeground() } catch { failure = error }
+                if !(failure is CancellationError) { await storeLnurlPayReceives() }
                 await WalletBackgroundActivity.shared.end()
+                if let failure { throw failure }
             }
         } catch { /* A later foreground tick retries; no secrets or provider errors are logged. */ }
+    }
+
+    /// An initialized, unsuspended wallet that is open and not being restored or deleted.
+    private func foregroundPassAllowed() async -> Bool {
+        let location = WalletDataLocation(variant: variant)
+        let wallet = SettingsStorage.shared.persistedState(PersistedWalletState.self, key: PersistedWalletState.key)
+        guard wallet?.isInitialized != false, wallet?.isWalletSuspended != true,
+              !location.restorePending, !FileManager.default.fileExists(atPath: location.deletionMarker.path)
+        else { return false }
+        return await session.isOpen
+    }
+
+    /// Foreground view lifetime; each payment retries independently, without holding up other receive events.
+    func observeLnurlPayReceives() async {
+        do {
+            let changes = try await session.receiveMovements()
+            await withTaskGroup(of: Void.self) { group in
+                var seen = Set<UInt32>()
+                do {
+                    for try await movement in changes {
+                        guard !Task.isCancelled else { break }
+                        guard seen.insert(movement.id).inserted else { continue }
+                        group.addTask { [self] in
+                            await LnurlPayReceiveSync.retryReceive {
+                                await storeLnurlPayReceivesInForeground(for: movement)
+                            }
+                        }
+                    }
+                } catch { /* Reopening or the next foreground entry subscribes again. */ }
+                group.cancelAll()
+            }
+        } catch { /* The wallet closed before the observer subscribed. */ }
+    }
+
+    /// The minute pass's checks and slot around the payer data alone. A pass already running stores it at its end.
+    @MainActor private func storeLnurlPayReceivesInForeground(for movement: Movement) async -> Bool {
+        var stored = false
+        await ForegroundExecution.run {
+            do {
+                stored = try await foregroundSync.run { [self] in
+                    try await ForegroundExecution.checkActive()
+                    try BackgroundExecution.checkActive()
+                    guard await foregroundPassAllowed() else { return false }
+                    await WalletBackgroundActivity.shared.begin()
+                    await storeLnurlPayReceives()
+                    let found = (try? await lnurlPayReceives.isStored(movement)) == true
+                    await WalletBackgroundActivity.shared.end()
+                    return found
+                } ?? false
+            } catch { /* The next attempt, or the minute's pass, retries. */ }
+        }
+        return stored
+    }
+
+    /// After the pass's sync, so a just-delivered payment's movement exists; never fails the pass.
+    private func storeLnurlPayReceives() async {
+        let server = SettingsStorage.shared.persistedState(PersistedServerState.self, key: PersistedServerState.key)
+        guard server?.isRegisteredWithServer == true else { return }
+        do {
+            let stored = try await lnurlPayReceives.run()
+            if !stored.isEmpty { AppLog("wallet").i("Stored LNURL-pay payer data on \(stored.count) receives") }
+        } catch {
+            AppLog("wallet").w("LNURL-pay payer data pass failed; the next pass retries")
+        }
     }
 
     func switchEsploraEndpoint(_ input: String?) async throws {

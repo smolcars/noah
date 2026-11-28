@@ -2,6 +2,7 @@ use std::sync::Arc;
 use std::time::Duration;
 
 use anyhow::{Context, Result};
+use ark::VtxoId;
 use async_trait::async_trait;
 use bitcoin::Network;
 use lightning_invoice::Bolt11Invoice;
@@ -12,10 +13,36 @@ use crate::config::Config;
 
 const CREATE_INVOICE_FOR_ADDRESS_PATH: &str = "api/v1/lightning/receives/invoice/for-address";
 const ARK_INFO_PATH: &str = "api/v1/wallet/ark-info";
+const HISTORY_PATH: &str = "api/v1/history";
 
 #[derive(Debug, Clone, PartialEq, Eq)]
 pub struct ForwardingInvoice {
     pub invoice: String,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum ForwardedReceiveStatus {
+    Pending,
+    Successful,
+    Failed,
+    Canceled,
+}
+
+/// Where barkd forwarded a receive, and the amount it delivered after its fee.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ForwardedArkDestination {
+    pub address: String,
+    pub amount_sat: u64,
+}
+
+/// barkd's receive movement for one invoice: the HTLC VTXOs it claimed are the parents of the
+/// VTXOs it delivers to the recipient's mailbox.
+#[derive(Debug, Clone, PartialEq, Eq)]
+pub struct ForwardedReceiveHistory {
+    pub status: ForwardedReceiveStatus,
+    pub payment_hash: String,
+    pub htlc_vtxos: Vec<VtxoId>,
+    pub destination: Option<ForwardedArkDestination>,
 }
 
 #[async_trait]
@@ -28,6 +55,16 @@ pub trait ForwardingInvoiceProvider: Send + Sync {
         amount_sat: u64,
         description: Option<&str>,
     ) -> Result<ForwardingInvoice>;
+
+    /// barkd's Lightning receive movement for this exact invoice, if there is one.
+    ///
+    /// The default suits test providers that only create invoices.
+    async fn lookup_forwarded_receive(
+        &self,
+        _invoice: &str,
+    ) -> Result<Option<ForwardedReceiveHistory>> {
+        Ok(None)
+    }
 }
 
 #[derive(Clone)]
@@ -128,6 +165,62 @@ struct ArkInfoResponse {
     network: Network,
 }
 
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "kebab-case")]
+enum BarkdMovementStatus {
+    Pending,
+    Successful,
+    Failed,
+    Canceled,
+}
+
+impl From<BarkdMovementStatus> for ForwardedReceiveStatus {
+    fn from(status: BarkdMovementStatus) -> Self {
+        match status {
+            BarkdMovementStatus::Pending => Self::Pending,
+            BarkdMovementStatus::Successful => Self::Successful,
+            BarkdMovementStatus::Failed => Self::Failed,
+            BarkdMovementStatus::Canceled => Self::Canceled,
+        }
+    }
+}
+
+#[derive(Debug, Deserialize)]
+struct BarkdMovementSubsystem {
+    name: String,
+    kind: String,
+}
+
+/// The movement's Lightning metadata. It also holds the payment preimage, which is
+/// deliberately not read.
+#[derive(Debug, Deserialize)]
+struct BarkdLightningMetadata {
+    payment_hash: String,
+    htlc_vtxos: Vec<VtxoId>,
+}
+
+#[derive(Debug, Deserialize)]
+struct BarkdPaymentMethod {
+    #[serde(rename = "type")]
+    method_type: String,
+    value: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct BarkdMovementDestination {
+    destination: BarkdPaymentMethod,
+    amount_sat: u64,
+}
+
+#[derive(Debug, Deserialize)]
+struct BarkdHistoryMovement {
+    status: BarkdMovementStatus,
+    subsystem: BarkdMovementSubsystem,
+    metadata: Option<BarkdLightningMetadata>,
+    #[serde(default)]
+    sent_to: Vec<BarkdMovementDestination>,
+}
+
 #[async_trait]
 impl ForwardingInvoiceProvider for BarkdClient {
     async fn check_readiness(&self) -> Result<()> {
@@ -215,6 +308,95 @@ impl ForwardingInvoiceProvider for BarkdClient {
             invoice: response.invoice,
         })
     }
+
+    async fn lookup_forwarded_receive(
+        &self,
+        invoice: &str,
+    ) -> Result<Option<ForwardedReceiveHistory>> {
+        let parsed_invoice: Bolt11Invoice = invoice
+            .parse()
+            .context("stored barkd invoice was not a valid BOLT11 invoice")?;
+        let expected_payment_hash = parsed_invoice.payment_hash().to_string();
+        let response = self
+            .client
+            .get(self.endpoint(HISTORY_PATH)?)
+            .header(AUTHORIZATION, self.authorization.clone())
+            .query(&[("type", "invoice"), ("value", invoice)])
+            .send()
+            .await
+            // A reqwest error can carry its URL, invoice included; never keep it as a source.
+            .map_err(|_| anyhow::anyhow!("barkd history request failed"))?;
+
+        let status = response.status();
+        if !status.is_success() {
+            anyhow::bail!("barkd history request returned HTTP {status}");
+        }
+
+        let movements: Vec<BarkdHistoryMovement> = response
+            .json()
+            .await
+            // Decoding errors can also carry the URL.
+            .map_err(|_| anyhow::anyhow!("barkd history response was invalid"))?;
+        let mut receive_movements = movements.into_iter().filter(|movement| {
+            movement.subsystem.name == "bark.lightning_receive"
+                && movement.subsystem.kind == "receive"
+        });
+        let Some(movement) = receive_movements.next() else {
+            return Ok(None);
+        };
+        if receive_movements.next().is_some() {
+            anyhow::bail!("barkd history returned several receive movements for one invoice");
+        }
+
+        let metadata = movement
+            .metadata
+            .context("barkd receive movement omitted its Lightning metadata")?;
+        if !metadata
+            .payment_hash
+            .eq_ignore_ascii_case(&expected_payment_hash)
+        {
+            anyhow::bail!("barkd receive movement payment hash did not match its invoice");
+        }
+
+        let mut htlc_vtxos = metadata.htlc_vtxos;
+        let htlc_count = htlc_vtxos.len();
+        htlc_vtxos.sort_unstable();
+        htlc_vtxos.dedup();
+        if htlc_vtxos.len() != htlc_count {
+            anyhow::bail!("barkd receive movement listed an HTLC VTXO twice");
+        }
+
+        let status = ForwardedReceiveStatus::from(movement.status);
+        let destination = if status == ForwardedReceiveStatus::Successful {
+            if htlc_vtxos.is_empty() {
+                anyhow::bail!("successful barkd receive movement listed no HTLC VTXOs");
+            }
+            let [destination] = movement.sent_to.as_slice() else {
+                anyhow::bail!(
+                    "successful barkd receive was not forwarded to exactly one destination"
+                );
+            };
+            if destination.destination.method_type != "ark"
+                || destination.destination.value.trim().is_empty()
+                || destination.amount_sat == 0
+            {
+                anyhow::bail!("successful barkd receive had an invalid Ark destination");
+            }
+            Some(ForwardedArkDestination {
+                address: destination.destination.value.clone(),
+                amount_sat: destination.amount_sat,
+            })
+        } else {
+            None
+        };
+
+        Ok(Some(ForwardedReceiveHistory {
+            status,
+            payment_hash: metadata.payment_hash,
+            htlc_vtxos,
+            destination,
+        }))
+    }
 }
 
 #[cfg(test)]
@@ -228,17 +410,182 @@ mod tests {
     use bitcoin::Network;
     use bitcoin::hashes::{Hash, sha256};
     use bitcoin::secp256k1::{Secp256k1, SecretKey};
-    use lightning_invoice::{Currency, InvoiceBuilder, PaymentSecret};
+    use lightning_invoice::{Bolt11Invoice, Currency, InvoiceBuilder, PaymentSecret};
     use serde::Deserialize;
     use serde_json::json;
 
-    use super::{BarkdClient, ForwardingInvoiceProvider};
+    use super::{
+        BarkdClient, ForwardedArkDestination, ForwardedReceiveHistory, ForwardedReceiveStatus,
+        ForwardingInvoiceProvider,
+    };
 
     #[derive(Deserialize)]
     struct ReceivedInvoiceRequest {
         address: String,
         amount_sat: u64,
         description: Option<String>,
+    }
+
+    #[derive(Deserialize)]
+    struct ReceivedHistoryQuery {
+        #[serde(rename = "type")]
+        method_type: String,
+        value: String,
+    }
+
+    fn history_client(base_url: &str) -> BarkdClient {
+        BarkdClient::new(
+            base_url,
+            "secret-token",
+            Network::Signet,
+            Duration::from_secs(1),
+        )
+        .unwrap()
+    }
+
+    #[tokio::test]
+    async fn looks_up_forwarded_receive_by_exact_authenticated_invoice() {
+        let invoice = test_invoice(Network::Signet, 330_000);
+        let payment_hash = invoice
+            .parse::<Bolt11Invoice>()
+            .unwrap()
+            .payment_hash()
+            .to_string();
+        let htlc_vtxo = format!("{}:1", "11".repeat(32));
+        let (expected_invoice, response_hash, response_htlc) =
+            (invoice.clone(), payment_hash.clone(), htlc_vtxo.clone());
+        let app =
+            Router::new().route(
+                "/api/v1/history",
+                get(
+                    move |headers: HeaderMap,
+                          axum::extract::Query(query): axum::extract::Query<
+                        ReceivedHistoryQuery,
+                    >| {
+                        let (expected_invoice, payment_hash, htlc_vtxo) = (
+                            expected_invoice.clone(),
+                            response_hash.clone(),
+                            response_htlc.clone(),
+                        );
+                        async move {
+                            if headers
+                                .get("authorization")
+                                .and_then(|value| value.to_str().ok())
+                                != Some("Bearer secret-token")
+                                || query.method_type != "invoice"
+                                || query.value != expected_invoice
+                            {
+                                return StatusCode::BAD_REQUEST.into_response();
+                            }
+                            axum::Json(json!([{
+                                "status": "pending",
+                                "subsystem": {"name": "bark.lightning_receive", "kind": "receive"},
+                                "metadata": {
+                                    "payment_hash": payment_hash,
+                                    "htlc_vtxos": [htlc_vtxo],
+                                    "payment_preimage": "sensitive-preimage"
+                                },
+                                "sent_to": []
+                            }]))
+                            .into_response()
+                        }
+                    },
+                ),
+            );
+        let client = history_client(&spawn_server(app).await);
+
+        let history = client
+            .lookup_forwarded_receive(&invoice)
+            .await
+            .unwrap()
+            .unwrap();
+
+        assert_eq!(history.status, ForwardedReceiveStatus::Pending);
+        assert_eq!(history.payment_hash, payment_hash);
+        assert_eq!(history.htlc_vtxos, vec![htlc_vtxo.parse().unwrap()]);
+        assert_eq!(history.destination, None);
+        assert!(!format!("{history:?}").contains("sensitive-preimage"));
+    }
+
+    #[tokio::test]
+    async fn parses_successful_forwarded_receive_destination() {
+        let invoice = test_invoice(Network::Signet, 330_000);
+        let payment_hash = invoice
+            .parse::<Bolt11Invoice>()
+            .unwrap()
+            .payment_hash()
+            .to_string();
+        let response_hash = payment_hash.clone();
+        // A split payment: barkd lists every HTLC VTXO it claimed.
+        let htlc_vtxos = [
+            format!("{}:2", "22".repeat(32)),
+            format!("{}:0", "33".repeat(32)),
+        ];
+        let response_htlcs = htlc_vtxos.clone();
+        let app = Router::new().route(
+            "/api/v1/history",
+            get(move || {
+                let (payment_hash, htlc_vtxos) = (response_hash.clone(), response_htlcs.clone());
+                async move {
+                    axum::Json(json!([{
+                        "status": "successful",
+                        "subsystem": {"name": "bark.lightning_receive", "kind": "receive"},
+                        "metadata": {"payment_hash": payment_hash, "htlc_vtxos": htlc_vtxos},
+                        "sent_to": [{
+                            "destination": {"type": "ark", "value": "tark1destination"},
+                            "amount_sat": 329
+                        }]
+                    }]))
+                }
+            }),
+        );
+        let client = history_client(&spawn_server(app).await);
+
+        let history = client
+            .lookup_forwarded_receive(&invoice)
+            .await
+            .unwrap()
+            .unwrap();
+
+        let mut expected_htlcs: Vec<_> = htlc_vtxos.iter().map(|id| id.parse().unwrap()).collect();
+        expected_htlcs.sort_unstable();
+        assert_eq!(
+            history,
+            ForwardedReceiveHistory {
+                status: ForwardedReceiveStatus::Successful,
+                payment_hash,
+                htlc_vtxos: expected_htlcs,
+                destination: Some(ForwardedArkDestination {
+                    address: "tark1destination".to_string(),
+                    amount_sat: 329,
+                }),
+            }
+        );
+    }
+
+    #[tokio::test]
+    async fn history_errors_do_not_expose_invoice_or_response_body() {
+        let invoice = test_invoice(Network::Signet, 330_000);
+        let app = Router::new().route(
+            "/api/v1/history",
+            get(|| async {
+                (
+                    StatusCode::INTERNAL_SERVER_ERROR,
+                    "sensitive upstream history details",
+                )
+            }),
+        );
+        let client = history_client(&spawn_server(app).await);
+
+        let error = client
+            .lookup_forwarded_receive(&invoice)
+            .await
+            .unwrap_err()
+            .to_string();
+
+        assert!(error.contains("HTTP 500 Internal Server Error"));
+        assert!(!error.contains(&invoice));
+        assert!(!error.contains("sensitive upstream history details"));
     }
 
     async fn spawn_server(app: Router) -> String {

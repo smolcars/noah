@@ -1180,6 +1180,7 @@
   <string name="gt_7d162c4a2f308b74">"別の人が送信済み"</string>
   <string name="gt_4e7201c7b8985a98">"送金先"</string>
   <string name="gt_21cfd8fdcf01d5a0">"%1$s に送金済み"</string>
+  <string name="gt_788be588850259e5">"Sent you %1$s"</string>
   <string name="gt_fba003c1a141b7a1">"%1$s を送金しました"</string>
   <string name="gt_0e9f9136e344eb7d">"合計%1$sを送金、最後は%2$s。"</string>
   <string name="gt_7dc2f77d8a0a618e">"%2$sに%1$sを送金しました"</string>

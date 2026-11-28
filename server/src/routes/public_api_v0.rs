@@ -17,13 +17,17 @@ use serde::{Deserialize, Serialize};
 use tokio::time::sleep;
 use validator::Validate;
 
+use super::lnurl_pay_privacy::LnurlPaySensitiveQuery;
 use crate::{
     AppState,
     auth::mint_access_token,
     cache::email_verification_store::EmailVerificationStore,
     db::{
-        device_repo::DeviceRepository, fiat_rate_repo::FiatRateRepository,
-        mailbox_authorization_repo::MailboxAuthorizationRepository, user_repo::UserRepository,
+        device_repo::DeviceRepository,
+        fiat_rate_repo::FiatRateRepository,
+        lnurl_pay_receive_metadata_repo::{CORRELATION_TTL, LnurlPayReceiveMetadataRepository},
+        mailbox_authorization_repo::MailboxAuthorizationRepository,
+        user_repo::UserRepository,
     },
     errors::ApiError,
     fiat_rates::{CoinGeckoFiatRateProvider, is_supported_currency},
@@ -32,8 +36,9 @@ use crate::{
         AppVersionCheckPayload, AppVersionInfo, AuthEvent, AuthLoginPayload, AuthLoginResponse,
         AuthenticatedUser, EmailVerificationResponse, FiatPricesPayload, FiatPricesResponse,
         HistoricalFiatPricePayload, HistoricalFiatPriceResponse,
-        LightningInvoiceRequestNotification, NotificationData, RegisterPayload, RegisterResponse,
-        SendEmailVerificationPayload, UserStatus, VerifyEmailPayload, is_valid_ln_username,
+        LightningInvoiceRequestNotification, LnurlPayReceivePayerData, NotificationData,
+        RegisterPayload, RegisterResponse, SendEmailVerificationPayload, UserStatus,
+        VerifyEmailPayload, is_valid_ln_username,
     },
     utils::{make_k1, verify_auth},
     wide_event::WideEventHandle,
@@ -51,6 +56,9 @@ pub struct GetK1 {
 const LNURLP_MIN_SENDABLE: u64 = 1000;
 const LNURLP_MAX_SENDABLE: u64 = 1000000000;
 const COMMENT_ALLOWED_SIZE: u16 = 280;
+const MAX_PAYER_DATA_BYTES: usize = 2 * 1024;
+const MAX_PAYER_NAME_CHARS: usize = 80;
+const MAX_PAYER_IDENTIFIER_CHARS: usize = 320;
 const POLL_INTERVAL: Duration = Duration::from_millis(500);
 const TIMEOUT: Duration = Duration::from_secs(45);
 
@@ -369,11 +377,29 @@ pub struct LnurlpDefaultResponse {
     pub metadata: String,
     /// The LNURL-pay tag, which is always "payRequest".
     pub tag: String,
-    /// The maximum length of a comment that can be included with the payment.
-    pub comment_allowed: u16,
+    /// The maximum length of a LUD-12 comment, in characters. Present only while the server can
+    /// pass a comment on to the recipient.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub comment_allowed: Option<u16>,
+    /// LUD-18 payer identity fields the callback accepts. Present only while the server can pass
+    /// them on to the recipient.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub payer_data: Option<LnurlPayPayerDataSpec>,
     /// The user's Ark address when requested for a compatible Ark server.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub ark: Option<String>,
+}
+
+/// The LUD-18 fields Noah accepts; neither is mandatory.
+#[derive(Serialize, Deserialize, utoipa::ToSchema)]
+pub struct LnurlPayPayerDataSpec {
+    pub name: LnurlPayPayerDataFieldSpec,
+    pub identifier: LnurlPayPayerDataFieldSpec,
+}
+
+#[derive(Serialize, Deserialize, utoipa::ToSchema)]
+pub struct LnurlPayPayerDataFieldSpec {
+    pub mandatory: bool,
 }
 
 /// Represents the second response in the LNURL-pay protocol.
@@ -430,6 +456,166 @@ async fn negotiated_ark_address(
     None
 }
 
+#[derive(Deserialize)]
+struct LnurlPayPayerDataInput {
+    name: Option<String>,
+    identifier: Option<String>,
+}
+
+/// Payer data and comment from the callback, validated and normalized. An empty comment counts
+/// as none: released Noah apps always send `comment=`.
+fn validate_sensitive_lnurl_pay_query(
+    sensitive: &LnurlPaySensitiveQuery,
+) -> Result<(Option<LnurlPayReceivePayerData>, Option<String>), ApiError> {
+    let payer_data = match sensitive.payer_data.as_deref() {
+        Some(raw) => {
+            if raw.len() > MAX_PAYER_DATA_BYTES {
+                return Err(ApiError::InvalidArgument(
+                    "LNURL-pay payerdata is too large".to_string(),
+                ));
+            }
+            let input: LnurlPayPayerDataInput = serde_json::from_str(raw).map_err(|_| {
+                ApiError::InvalidArgument("LNURL-pay payerdata must be valid JSON".to_string())
+            })?;
+            let name = input
+                .name
+                .map(|value| {
+                    validate_payer_text("name", value.trim().to_string(), MAX_PAYER_NAME_CHARS)
+                })
+                .transpose()?;
+            let identifier = input
+                .identifier
+                .map(|value| {
+                    let value = validate_payer_text(
+                        "identifier",
+                        value.trim().to_lowercase(),
+                        MAX_PAYER_IDENTIFIER_CHARS,
+                    )?;
+                    normalize_payer_identifier(value)
+                })
+                .transpose()?;
+            (name.is_some() || identifier.is_some())
+                .then_some(LnurlPayReceivePayerData { name, identifier })
+        }
+        None => None,
+    };
+
+    let comment = match sensitive.comment.as_deref() {
+        None | Some("") => None,
+        Some(value) => Some(validate_payer_text(
+            "comment",
+            value.to_string(),
+            COMMENT_ALLOWED_SIZE as usize,
+        )?),
+    };
+    Ok((payer_data, comment))
+}
+
+fn normalize_payer_identifier(value: String) -> Result<String, ApiError> {
+    let invalid_identifier = || {
+        ApiError::InvalidArgument(
+            "LNURL-pay payer identifier must be a valid Lightning Address".to_string(),
+        )
+    };
+    if !crate::types::is_valid_lightning_address(&value) {
+        return Err(invalid_identifier());
+    }
+
+    let (username, domain) = value.split_once('@').ok_or_else(invalid_identifier)?;
+    let url::Host::Domain(domain) = url::Host::parse(domain).map_err(|_| invalid_identifier())?
+    else {
+        return Err(invalid_identifier());
+    };
+    if !is_valid_dns_name(&domain) {
+        return Err(invalid_identifier());
+    }
+
+    let normalized = format!("{username}@{domain}");
+    if normalized.len() > MAX_PAYER_IDENTIFIER_CHARS {
+        return Err(invalid_identifier());
+    }
+    Ok(normalized)
+}
+
+fn is_valid_dns_name(domain: &str) -> bool {
+    domain.len() <= 253
+        && domain.split('.').all(|label| {
+            !label.is_empty()
+                && label.len() <= 63
+                && label
+                    .bytes()
+                    .all(|character| character.is_ascii_alphanumeric() || character == b'-')
+                && label
+                    .as_bytes()
+                    .first()
+                    .is_some_and(u8::is_ascii_alphanumeric)
+                && label
+                    .as_bytes()
+                    .last()
+                    .is_some_and(u8::is_ascii_alphanumeric)
+        })
+}
+
+fn validate_payer_text(
+    field_name: &str,
+    value: String,
+    max_chars: usize,
+) -> Result<String, ApiError> {
+    let length = value.chars().count();
+    if length == 0 || length > max_chars {
+        return Err(ApiError::InvalidArgument(format!(
+            "LNURL-pay payer {field_name} has an invalid length"
+        )));
+    }
+    if value.chars().any(is_unsafe_payer_character) {
+        return Err(ApiError::InvalidArgument(format!(
+            "LNURL-pay payer {field_name} contains unsupported characters"
+        )));
+    }
+    Ok(value)
+}
+
+/// Control characters, and the bidirectional controls that can make a name or comment display
+/// as something it isn't.
+fn is_unsafe_payer_character(character: char) -> bool {
+    character.is_control()
+        || matches!(
+            character as u32,
+            0x061c | 0x200e | 0x200f | 0x2028..=0x202e | 0x2066..=0x2069
+        )
+}
+
+/// The repository to store this recipient's payer data in, when the server can match a payment to
+/// it: barkd forwards the payment to the recipient's Ark address, and their mailbox authorization
+/// covers the correlation window so the mailbox worker sees the delivery.
+async fn receive_metadata_repo<'a>(
+    state: &'a AppState,
+    pubkey: &str,
+    ark_address: Option<&str>,
+) -> Result<Option<&'a LnurlPayReceiveMetadataRepository>, ApiError> {
+    let Some(repo) = state.lnurl_pay_receive_metadata_repo.as_ref() else {
+        return Ok(None);
+    };
+    if !state.config.lnurl_pay_receive_metadata_enabled
+        || state.barkd_invoice_provider.is_none()
+        || ark_address.is_none()
+    {
+        return Ok(None);
+    }
+    let covered_until = Utc::now() + CORRELATION_TTL;
+    let mailbox_covered = MailboxAuthorizationRepository::new(&state.db_pool)
+        .has_active_authorization(pubkey, covered_until.timestamp())
+        .await?;
+    Ok(mailbox_covered.then_some(repo))
+}
+
+async fn discard_reservation(repo: &LnurlPayReceiveMetadataRepository, id: Uuid) {
+    if let Err(error) = repo.delete_reservation(id).await {
+        // Cleanup also removes expired reservations, so a failed delete is bounded.
+        tracing::warn!(reservation_id = %id, error = %error, "failed to discard an unused LNURL-pay receive reservation");
+    }
+}
+
 /// Handles LNURL-pay requests.
 ///
 /// This endpoint manages the two-step LNURL-pay flow. The first request (without an amount)
@@ -451,6 +637,7 @@ pub async fn lnurlp_request(
     State(state): State<AppState>,
     Path(username): Path<String>,
     Query(query): Query<LnurlpRequestQuery>,
+    sensitive: Option<Extension<LnurlPaySensitiveQuery>>,
     event: Option<Extension<WideEventHandle>>,
 ) -> anyhow::Result<axum::response::Json<serde_json::Value>, ApiError> {
     let lnurl_domain = &state.lnurl_domain;
@@ -491,13 +678,23 @@ pub async fn lnurlp_request(
         ])
         .to_string();
 
+        // Advertise payer data and comments only while the callback could pass them on.
+        let receive_metadata_available = state.config.lnurl_pay_receive_metadata_advertised
+            && match receive_metadata_repo(&state, &pubkey, user.ark_address.as_deref()).await? {
+                Some(repo) => repo.has_capacity(&pubkey).await?,
+                None => false,
+            };
         let response = LnurlpDefaultResponse {
             callback: format!("https://{}/.well-known/lnurlp/{}", lnurl_domain, username),
             min_sendable: LNURLP_MIN_SENDABLE,
             max_sendable: LNURLP_MAX_SENDABLE,
             metadata,
             tag: "payRequest".to_string(),
-            comment_allowed: COMMENT_ALLOWED_SIZE,
+            comment_allowed: receive_metadata_available.then_some(COMMENT_ALLOWED_SIZE),
+            payer_data: receive_metadata_available.then_some(LnurlPayPayerDataSpec {
+                name: LnurlPayPayerDataFieldSpec { mandatory: false },
+                identifier: LnurlPayPayerDataFieldSpec { mandatory: false },
+            }),
             ark: negotiated_ark_address(&state, &query, user.ark_address.as_ref()).await,
         };
         return Ok(Json(
@@ -521,9 +718,26 @@ pub async fn lnurlp_request(
         )));
     }
 
+    // Payer data and a comment reach the recipient only through a barkd-forwarded payment the
+    // mailbox worker can match. Refuse them anywhere else rather than drop them unseen.
+    let sensitive = sensitive.map(|Extension(value)| value).unwrap_or_default();
+    let metadata_submitted = sensitive.payer_data.is_some()
+        || sensitive
+            .comment
+            .as_deref()
+            .is_some_and(|comment| !comment.is_empty());
+    let metadata_unavailable = || {
+        ApiError::InvalidArgument(
+            "Payer data and comments are not available for this recipient right now".to_string(),
+        )
+    };
+
     if let Some(ark_address) =
         negotiated_ark_address(&state, &query, user.ark_address.as_ref()).await
     {
+        if metadata_submitted {
+            return Err(metadata_unavailable());
+        }
         let response = LnurlpInvoiceResponse {
             pr: "".to_string(),
             routes: vec![],
@@ -532,6 +746,15 @@ pub async fn lnurlp_request(
         return Ok(Json(
             serde_json::to_value(response).map_err(|e| ApiError::SerializeErr(e.to_string()))?,
         ));
+    }
+
+    let metadata_repo = receive_metadata_repo(&state, &pubkey, user.ark_address.as_deref()).await?;
+    let (payer_data, comment) = match metadata_repo {
+        Some(_) => validate_sensitive_lnurl_pay_query(&sensitive)?,
+        None => (None, None),
+    };
+    if metadata_repo.is_none() && metadata_submitted {
+        return Err(metadata_unavailable());
     }
 
     if let (Some(provider), Some(ark_address)) =
@@ -545,11 +768,59 @@ pub async fn lnurlp_request(
         let amount_sat = amount / 1000;
         let description = format!("Paying satoshis to {lightning_address}");
 
+        // Reserve the record before barkd issues the invoice, so a full quota never strands an
+        // invoice. Every matched payment gets a record, with or without payer data, so the app can
+        // show it as a Lightning address receive rather than a plain Ark one.
+        let reservation = match metadata_repo {
+            Some(repo) => match repo
+                .reserve(&pubkey, amount, payer_data, comment, ark_address)
+                .await?
+            {
+                Some(id) => Some((repo, id)),
+                None if metadata_submitted => return Err(metadata_unavailable()),
+                None => None,
+            },
+            None => None,
+        };
+
         match provider
             .create_invoice_for_address(ark_address, amount_sat, Some(&description))
             .await
         {
             Ok(invoice) => {
+                if let Some((repo, id)) = reservation {
+                    // barkd_client already checked that it parses.
+                    let finalized = match invoice.invoice.parse::<Bolt11Invoice>() {
+                        Ok(parsed) => {
+                            let expires_at = chrono::DateTime::<Utc>::from(
+                                SystemTime::UNIX_EPOCH
+                                    + parsed.duration_since_epoch()
+                                    + parsed.expiry_time(),
+                            );
+                            repo.finalize(
+                                id,
+                                &pubkey,
+                                &invoice.invoice,
+                                &parsed.payment_hash().to_string(),
+                                expires_at,
+                            )
+                            .await
+                        }
+                        Err(_) => Err(anyhow::anyhow!("barkd returned an invalid invoice")),
+                    };
+                    if let Err(error) = finalized {
+                        discard_reservation(repo, id).await;
+                        tracing::error!(error = %error, "Failed to store LNURL-pay receive metadata");
+                        // Never hand out an invoice whose payer data can't be kept: the payer
+                        // retries and barkd's unpaid invoice expires. Without payer data the
+                        // payment just goes unlabeled.
+                        if metadata_submitted {
+                            return Err(ApiError::ServerErr(
+                                "Failed to prepare payment request".to_string(),
+                            ));
+                        }
+                    }
+                }
                 tracing::info!(
                     pubkey = %pubkey,
                     amount_msats = amount,
@@ -569,6 +840,11 @@ pub async fn lnurlp_request(
                 ));
             }
             Err(error) => {
+                // The device invoice carries no payer data: that path can't match it to a
+                // payment yet (docs/lnurl_pay.md).
+                if let Some((repo, id)) = reservation {
+                    discard_reservation(repo, id).await;
+                }
                 tracing::warn!(
                     pubkey = %pubkey,
                     amount_msats = amount,
@@ -1044,6 +1320,108 @@ pub async fn verify_email(
             Err(ApiError::InvalidArgument(
                 "Invalid or expired verification code".to_string(),
             ))
+        }
+    }
+}
+
+#[cfg(test)]
+mod lnurl_pay_tests {
+    use super::*;
+
+    fn sensitive(payer_data: Option<&str>, comment: Option<&str>) -> LnurlPaySensitiveQuery {
+        LnurlPaySensitiveQuery {
+            payer_data: payer_data.map(str::to_string),
+            comment: comment.map(str::to_string),
+        }
+    }
+
+    #[test]
+    fn accepts_direct_lud18_strings_and_normalizes_identity() {
+        let (payer_data, comment) = validate_sensitive_lnurl_pay_query(&sensitive(
+            Some(r#"{"name":" Alice ","identifier":" ALICE@Example.COM ","ignored":true}"#),
+            Some("Hello"),
+        ))
+        .unwrap();
+        let payer_data = payer_data.unwrap();
+        assert_eq!(payer_data.name.as_deref(), Some("Alice"));
+        assert_eq!(payer_data.identifier.as_deref(), Some("alice@example.com"));
+        assert_eq!(comment.as_deref(), Some("Hello"));
+    }
+
+    #[test]
+    fn an_empty_comment_counts_as_none() {
+        assert_eq!(
+            validate_sensitive_lnurl_pay_query(&sensitive(None, Some(""))).unwrap(),
+            (None, None)
+        );
+    }
+
+    #[test]
+    fn rejects_nested_or_unsafe_payer_data() {
+        assert!(
+            validate_sensitive_lnurl_pay_query(&sensitive(
+                Some(r#"{"name":{"value":"Alice"}}"#),
+                None
+            ))
+            .is_err()
+        );
+        assert!(
+            validate_sensitive_lnurl_pay_query(&sensitive(
+                Some("{\"name\":\"Alice\\u202e\"}"),
+                None
+            ))
+            .is_err()
+        );
+        for separator in ['\u{2028}', '\u{2029}'] {
+            let comment = format!("Hello{separator}world");
+            assert!(validate_sensitive_lnurl_pay_query(&sensitive(None, Some(&comment))).is_err());
+        }
+    }
+
+    #[test]
+    fn enforces_length_limits_in_characters() {
+        let name = format!(r#"{{"name":"{}"}}"#, "😀".repeat(MAX_PAYER_NAME_CHARS));
+        assert!(validate_sensitive_lnurl_pay_query(&sensitive(Some(&name), None)).is_ok());
+        let name = format!(r#"{{"name":"{}"}}"#, "a".repeat(MAX_PAYER_NAME_CHARS + 1));
+        assert!(validate_sensitive_lnurl_pay_query(&sensitive(Some(&name), None)).is_err());
+
+        let comment = "😀".repeat(COMMENT_ALLOWED_SIZE as usize);
+        assert!(validate_sensitive_lnurl_pay_query(&sensitive(None, Some(&comment))).is_ok());
+        let comment = "a".repeat(COMMENT_ALLOWED_SIZE as usize + 1);
+        assert!(validate_sensitive_lnurl_pay_query(&sensitive(None, Some(&comment))).is_err());
+    }
+
+    #[test]
+    fn accepts_and_normalizes_valid_payer_identifier_domains() {
+        for (identifier, expected) in [
+            ("alice@localhost", "alice@localhost"),
+            ("alice@Example.COM", "alice@example.com"),
+            ("alice@bücher.example", "alice@xn--bcher-kva.example"),
+        ] {
+            assert_eq!(
+                normalize_payer_identifier(identifier.to_lowercase()).unwrap(),
+                expected
+            );
+        }
+    }
+
+    #[test]
+    fn rejects_invalid_payer_identifier_domains() {
+        let oversized_label = "a".repeat(64);
+        for identifier in [
+            "alice@example .com".to_string(),
+            "alice@example.com:443".to_string(),
+            "alice@-example.com".to_string(),
+            "alice@example-.com".to_string(),
+            "alice@example..com".to_string(),
+            "alice@example_com".to_string(),
+            "alice@127.0.0.1".to_string(),
+            format!("alice@{oversized_label}.com"),
+        ] {
+            assert!(
+                normalize_payer_identifier(identifier.clone()).is_err(),
+                "{identifier} should be rejected"
+            );
         }
     }
 }

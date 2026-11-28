@@ -27,6 +27,7 @@ const SUPERSEDED_BACKUP_UPLOAD_TIMEOUT_MINUTES: i64 = 20;
 const STALE_BACKUP_UPLOAD_SWEEP_SCHEDULE: &str = "every 5 minutes";
 const FIAT_RATE_REFRESH_LOCK_ID: i64 = 2025110501;
 const RECURRING_PAYMENT_SWEEP_SCHEDULE: &str = "every 5 minutes";
+const LNURL_PAY_RECEIVE_CLEANUP_SCHEDULE: &str = "every 10 minutes";
 /// Re-send the wake-up push at most once per hour while a payment stays due.
 pub(crate) const RECURRING_PAYMENT_RENOTIFY_MINUTES: i64 = 60;
 /// Stop pushing for payments that are overdue for more than 3 days; the device
@@ -295,6 +296,23 @@ pub async fn cleanup_stale_backup_uploads(app_state: AppState) -> anyhow::Result
     Ok(())
 }
 
+/// Deletes LNURL-pay receive metadata past its window: unpaid after an hour, unacknowledged after
+/// seven days.
+pub async fn cleanup_lnurl_pay_receive_metadata(app_state: AppState) -> anyhow::Result<()> {
+    let Some(repo) = app_state.lnurl_pay_receive_metadata_repo.as_ref() else {
+        return Ok(());
+    };
+    let deleted = repo.cleanup_expired().await?;
+    if deleted > 0 {
+        tracing::info!(
+            job = "lnurl_pay_receive_cleanup",
+            deleted_count = deleted,
+            "deleted expired LNURL-pay receive metadata"
+        );
+    }
+    Ok(())
+}
+
 pub async fn mark_expired_mailbox_authorizations(app_state: AppState) -> anyhow::Result<()> {
     let affected = MailboxAuthorizationRepository::new(&app_state.db_pool)
         .mark_expired_authorizations(chrono::Utc::now().timestamp())
@@ -484,6 +502,17 @@ pub async fn cron_scheduler(
         })
     })?;
     sched.add(recurring_payment_job).await?;
+
+    let receive_cleanup_state = app_state.clone();
+    let receive_cleanup_job = Job::new_async(LNURL_PAY_RECEIVE_CLEANUP_SCHEDULE, move |_, _| {
+        let app_state = receive_cleanup_state.clone();
+        Box::pin(async move {
+            if let Err(error) = cleanup_lnurl_pay_receive_metadata(app_state).await {
+                tracing::error!(job = "lnurl_pay_receive_cleanup", error = %error, "job failed");
+            }
+        })
+    })?;
+    sched.add(receive_cleanup_job).await?;
 
     // Redis keepalive to prevent Upstash idle connection timeout
     let keepalive_app_state = app_state.clone();

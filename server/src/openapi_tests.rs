@@ -127,7 +127,7 @@ async fn every_operation_is_served_behind_its_documented_gates() {
             .values()
             .map(|item| item.as_object().unwrap().len())
             .sum::<usize>(),
-        37
+        39
     );
 
     for (path, item) in paths {
@@ -209,7 +209,7 @@ async fn every_operation_is_served_behind_its_documented_gates() {
 /// Gated operations whose request names a stored object (an ID, key or name another user can
 /// hold), with all their request fields. `true` marks one that may still succeed when it names
 /// another user's object, because it then acts only on the caller's own.
-const OBJECT_FIELDS: [(&str, &[&str], bool); 14] = [
+const OBJECT_FIELDS: [(&str, &[&str], bool); 15] = [
     (
         "post /v0/backup/complete_upload",
         &["backup_size", "backup_version", "s3_key"],
@@ -228,6 +228,8 @@ const OBJECT_FIELDS: [(&str, &[&str], bool); 14] = [
         &["encoded", "expiry", "mailbox_id"],
         false,
     ),
+    // Acknowledging another user's record succeeds but deletes only the caller's own.
+    ("post /v0/lnurlp/receive_metadata/ack", &["ids"], true),
     (
         "post /v0/lnurlp/submit_invoice",
         &["invoice", "transaction_id"],
@@ -270,7 +272,7 @@ const OBJECT_FIELDS: [(&str, &[&str], bool); 14] = [
 ];
 
 /// Gated operations whose request fields were reviewed as naming nothing another user owns.
-const CALLER_ONLY_FIELDS: [(&str, &[&str]); 16] = [
+const CALLER_ONLY_FIELDS: [(&str, &[&str]); 17] = [
     ("post /v0/backup/list", &[]),
     ("post /v0/backup/settings", &["backup_enabled"]),
     ("post /v0/backup/v2/list", &[]),
@@ -283,11 +285,12 @@ const CALLER_ONLY_FIELDS: [(&str, &[&str]); 16] = [
     ("post /v0/email/verify", &["code"]),
     ("post /v0/historical-price", &["currency", "timestamp"]),
     ("post /v0/ln_address_suggestions", &["query"]),
+    ("post /v0/lnurlp/receive_metadata/list", &[]),
     ("post /v0/mailbox/revoke", &[]),
     ("post /v0/prices", &[]),
     (
         "post /v0/register_push_token",
-        &["apns_sandbox", "provider", "push_token"],
+        &["apns_sandbox", "notification_key", "provider", "push_token"],
     ),
     (
         "post /v0/report_last_login",
@@ -327,7 +330,7 @@ const CALLER_ONLY_FIELDS: [(&str, &[&str]); 16] = [
 
 /// Whether each gated operation's answer carries data the caller holds. Those that do are sent
 /// by the read probe, unless UNPROBED_READS says why not.
-const RETURNS_CALLER_DATA: [(&str, bool); 30] = [
+const RETURNS_CALLER_DATA: [(&str, bool); 32] = [
     ("post /v0/backup/complete_upload", false),
     ("post /v0/backup/delete", false),
     ("post /v0/backup/download_url", true),
@@ -345,6 +348,8 @@ const RETURNS_CALLER_DATA: [(&str, bool); 30] = [
     ("post /v0/heartbeat_response", false),
     ("post /v0/historical-price", false),
     ("post /v0/ln_address_suggestions", true),
+    ("post /v0/lnurlp/receive_metadata/ack", false),
+    ("post /v0/lnurlp/receive_metadata/list", true),
     ("post /v0/lnurlp/submit_invoice", false),
     ("post /v0/mailbox/authorize", false),
     ("post /v0/mailbox/revoke", false),
@@ -391,7 +396,7 @@ const UNPROBED_READS: [(&str, &str); 6] = [
 
 /// What each read in caller_reads answers a caller who holds nothing but its profile, with
 /// `{lightning_address}` for the caller's own. A read that stops reaching its lookup changes this.
-const READ_BASELINES: [(&str, u16, &str); 6] = [
+const READ_BASELINES: [(&str, u16, &str); 7] = [
     (
         "post /v0/backup/download_url",
         404,
@@ -404,6 +409,11 @@ const READ_BASELINES: [(&str, u16, &str); 6] = [
         r#"{"status": "ERROR", "code": "NOT_FOUND", "message": "Backup not found", "reason": "Backup not found"}"#,
     ),
     ("post /v0/backup/v2/list", 200, "[]"),
+    (
+        "post /v0/lnurlp/receive_metadata/list",
+        200,
+        r#"{"items": []}"#,
+    ),
     // A registered caller's register returns its stored profile.
     (
         "post /v0/register",
@@ -733,7 +743,7 @@ async fn holdings(
     let backups = BackupRepository::new(&state.db_pool);
     let backup_id = named["backup_id"].as_str().unwrap().parse().unwrap();
     format!(
-        "{:?}\n{:?}\n{:?}\n{:?}\n{:?}\n{:?}\n{:?}\n{:?}",
+        "{:?}\n{:?}\n{:?}\n{:?}\n{:?}\n{:?}\n{:?}\n{:?}\n{:?}",
         UserRepository::new(&state.db_pool)
             .find_by_pubkey(owner)
             .await
@@ -764,6 +774,13 @@ async fn holdings(
             .unwrap(),
         MailboxAuthorizationRepository::new(&state.db_pool)
             .find_by_pubkey(owner)
+            .await
+            .unwrap(),
+        state
+            .lnurl_pay_receive_metadata_repo
+            .as_ref()
+            .unwrap()
+            .ids_for_test(owner)
             .await
             .unwrap(),
     )
@@ -949,6 +966,13 @@ async fn no_gated_operation_acts_on_an_object_another_user_holds() {
         .create_notification(&pubkey_b)
         .await
         .unwrap();
+    let receive_metadata_b = state
+        .lnurl_pay_receive_metadata_repo
+        .as_ref()
+        .unwrap()
+        .insert_ready_for_test(&pubkey_b)
+        .await
+        .unwrap();
     let mut tx = state.db_pool.begin().await.unwrap();
     JobStatusRepository::create_with_k1_and_prune(
         &mut tx,
@@ -980,6 +1004,8 @@ async fn no_gated_operation_acts_on_an_object_another_user_holds() {
         "backup_size": 2048,
         "backup_id": backup_id,
         "notification_id": notification_id,
+        // B's LNURL-pay receive metadata, which only B may acknowledge away.
+        "ids": [receive_metadata_b.to_string()],
         // The ID the LNURL callback pushed to B, answered with an invoice other than B's.
         "transaction_id": "b-transaction",
         "invoice": test_invoice(bitcoin::Network::Regtest, 1_000_000, 7),
@@ -1013,6 +1039,7 @@ async fn no_gated_operation_acts_on_an_object_another_user_holds() {
             json!("00000000-0000-4000-8000-000000000001"),
         ),
         ("transaction_id", json!("nobody-transaction")),
+        ("ids", json!(["00000000-0000-4000-8000-000000000002"])),
         (
             "schedules",
             json!([{"schedule_id": "nobody-schedule", "next_run_at": hour + 3600}]),
@@ -1234,7 +1261,7 @@ fn all_schema_types_and_unsigned_fields_have_schemas() {
             }
         }
     }
-    assert_eq!(schema_types, 68);
+    assert_eq!(schema_types, 75);
     let amount = &doc["paths"]["/.well-known/lnurlp/{username}"]["get"]["parameters"][1]["schema"];
     assert_eq!(amount["format"], "int64");
     assert_eq!(amount["minimum"].as_f64(), Some(0.0));

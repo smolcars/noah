@@ -16,7 +16,8 @@ use crate::types::{
     DefaultSuccessPayload, DeleteBackupObjectPayload, DeleteBackupPayload, DownloadUrlResponse,
     GetBackupObjectDownloadPayload, GetDownloadUrlPayload, HeartbeatResponsePayload,
     InitiateBackupUploadPayload, InitiateBackupUploadResponse, LightningAddressSuggestionsPayload,
-    LightningAddressSuggestionsResponse, LightningIdentityResponse, ReportJobStatusPayload,
+    LightningAddressSuggestionsResponse, LightningIdentityResponse,
+    LnurlPayReceiveMetadataAckPayload, LnurlPayReceiveMetadataListResponse, ReportJobStatusPayload,
     ReportLastLoginPayload, ReportStatus, SubmitInvoicePayload, SubmitSupportTicketPayload,
     SubmitSupportTicketResponse, SyncRecurringPaymentsPayload, UpdateLightningIdentityPayload,
     UpdateProfilePayload, UserInfoResponse, UserStatus, is_valid_ln_username,
@@ -38,6 +39,7 @@ use uuid::Uuid;
 use validator::Validate;
 
 const MAX_MAILBOX_AUTH_TTL_SECS: i64 = 90 * 24 * 60 * 60;
+const MAX_LNURL_PAY_RECEIVE_METADATA_BATCH: usize = 100;
 pub(crate) const MAX_RECURRING_PAYMENT_SCHEDULES: usize = 50;
 const MAX_RECURRING_PAYMENT_HORIZON_SECS: i64 = 10 * 366 * 24 * 60 * 60;
 const LN_SUGGESTIONS_MIN_USERNAME_LEN: usize = 2;
@@ -126,6 +128,14 @@ pub async fn register_push_token(
     }
 
     validate_push_token(&payload.push_token, payload.provider).await?;
+    let notification_key = payload
+        .notification_key
+        .as_deref()
+        .map(crate::lnurl_pay_notification::parse_key)
+        .transpose()
+        .map_err(|_| {
+            ApiError::InvalidArgument("Notification key must be 32 bytes of base64".to_string())
+        })?;
 
     let push_token_repo = PushTokenRepository::new(&app_state.db_pool);
     push_token_repo
@@ -134,6 +144,7 @@ pub async fn register_push_token(
             &payload.push_token,
             payload.provider,
             payload.provider == Some(PushProvider::Apns) && payload.apns_sandbox == Some(true),
+            notification_key.as_ref(),
         )
         .await?;
 
@@ -323,6 +334,86 @@ pub async fn submit_invoice(
             ApiError::ServerErr("Failed to store invoice".to_string())
         })?;
 
+    Ok(Json(DefaultSuccessPayload { success: true }))
+}
+
+/// Lists the caller's settled LNURL-pay receives that carry payer data or a comment.
+///
+/// Each item names the wallet movement it belongs to. The app stores it with that movement and
+/// then acknowledges it, which deletes it here.
+#[utoipa::path(
+    post, path = "/v0/lnurlp/receive_metadata/list",
+    description = "Requires a bearer JWT and a registered user (user-exists middleware). Email verification is not required. Returns at most 100 items, oldest first; acknowledge them to see later ones.",
+    responses(
+        (status = 200, description = "Success", body = LnurlPayReceiveMetadataListResponse),
+        (status = 401, description = "Missing, invalid or expired credentials; or user is not registered", body = crate::types::ApiErrorResponse),
+        (status = 429, description = "IP rate limit exceeded", body = String, content_type = "text/plain"),
+        (status = 500, description = "Internal server error", body = crate::types::ApiErrorResponse),
+    ),
+    security(("bearer" = [])),
+)]
+pub async fn list_lnurl_pay_receive_metadata(
+    State(state): State<AppState>,
+    Extension(auth_payload): Extension<AuthenticatedUser>,
+) -> anyhow::Result<Json<LnurlPayReceiveMetadataListResponse>, ApiError> {
+    let Some(repo) = state.lnurl_pay_receive_metadata_repo.as_ref() else {
+        return Ok(Json(LnurlPayReceiveMetadataListResponse { items: vec![] }));
+    };
+    let items = repo
+        .list_ready(&auth_payload.key, MAX_LNURL_PAY_RECEIVE_METADATA_BATCH)
+        .await
+        .map_err(|error| {
+            tracing::error!(error = %error, "Failed to list LNURL-pay receive metadata");
+            ApiError::ServerErr("Failed to load receive metadata".to_string())
+        })?;
+    Ok(Json(LnurlPayReceiveMetadataListResponse { items }))
+}
+
+/// Deletes LNURL-pay receive metadata the app has stored with its movements.
+///
+/// Identifiers that are unknown, already acknowledged or another user's are ignored.
+#[utoipa::path(
+    post, path = "/v0/lnurlp/receive_metadata/ack",
+    description = "Requires a bearer JWT and a registered user (user-exists middleware). Email verification is not required.",
+    request_body = LnurlPayReceiveMetadataAckPayload,
+    responses(
+        (status = 200, description = "Success", body = DefaultSuccessPayload),
+        (status = 400, description = "Invalid input (ApiError), or malformed JSON/query (plain text)", content((crate::types::ApiErrorResponse = "application/json"), (String = "text/plain"))),
+        (status = 413, description = "Request body too large", body = String, content_type = "text/plain"),
+        (status = 415, description = "Expected application/json", body = String, content_type = "text/plain"),
+        (status = 422, description = "JSON does not match the request payload", body = String, content_type = "text/plain"),
+        (status = 401, description = "Missing, invalid or expired credentials; or user is not registered", body = crate::types::ApiErrorResponse),
+        (status = 429, description = "IP rate limit exceeded", body = String, content_type = "text/plain"),
+        (status = 500, description = "Internal server error", body = crate::types::ApiErrorResponse),
+    ),
+    security(("bearer" = [])),
+)]
+pub async fn acknowledge_lnurl_pay_receive_metadata(
+    State(state): State<AppState>,
+    Extension(auth_payload): Extension<AuthenticatedUser>,
+    Json(payload): Json<LnurlPayReceiveMetadataAckPayload>,
+) -> anyhow::Result<Json<DefaultSuccessPayload>, ApiError> {
+    if payload.ids.len() > MAX_LNURL_PAY_RECEIVE_METADATA_BATCH {
+        return Err(ApiError::InvalidArgument(
+            "Too many receive metadata identifiers".to_string(),
+        ));
+    }
+    let ids = payload
+        .ids
+        .iter()
+        .map(|id| Uuid::parse_str(id))
+        .collect::<Result<Vec<_>, _>>()
+        .map_err(|_| {
+            ApiError::InvalidArgument("Invalid receive metadata identifier".to_string())
+        })?;
+    if let Some(repo) = state.lnurl_pay_receive_metadata_repo.as_ref() {
+        repo.acknowledge(&auth_payload.key, &ids)
+            .await
+            .map_err(|error| {
+                tracing::error!(error = %error, "Failed to acknowledge LNURL-pay receive metadata");
+                ApiError::ServerErr("Failed to acknowledge receive metadata".to_string())
+            })?;
+    }
     Ok(Json(DefaultSuccessPayload { success: true }))
 }
 
