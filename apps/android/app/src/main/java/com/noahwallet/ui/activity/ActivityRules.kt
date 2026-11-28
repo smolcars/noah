@@ -135,6 +135,12 @@ object ActivityRules {
     /** Failed, refunded and canceled amounts are struck through and have no value at the time. */
     fun struck(home: HomeRow) = home.failed || home.canceled
 
+    /** Whether the detail's status line shows the same plain label as the row's title ("Received", "Sent", "Moved to Ark"). */
+    fun sharesTitle(row: Row): Boolean {
+        val (status, tone) = status(row)
+        return tone == Tone.plain && status != renewed && row.home.title == status
+    }
+
     /**
      * Who the payment went to, as the record names it: a Lightning address, an on-chain or Ark address. Invoices and
      * offers name no one (they're in Details), and incoming records never name a sender.

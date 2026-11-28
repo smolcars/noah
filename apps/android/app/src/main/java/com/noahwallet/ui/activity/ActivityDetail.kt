@@ -138,11 +138,14 @@ private fun Header(ui: ActivityUi, row: ActivityRules.Row, wide: Boolean, shared
     // Wide, the avatar pops in (bouncy) as a row is chosen.
     val pop = remember(row.id) { Animatable(if (wide && !reduceMotion) .6f else 1f) }
     LaunchedEffect(row.id) { if (pop.value < 1f) pop.animateTo(1f, NoahTokens.Motion.bouncy()) }
+    val shareTitle = shared != null && ActivityRules.sharesTitle(row)
     Column(Modifier.padding(top = 6.dp)) {
         RowAvatar(home, new = false, pop = false, large = true, modifier = Modifier.shared("avatar-${row.id}", shared)
             .graphicsLayer { scaleX = pop.value; scaleY = pop.value; alpha = ((pop.value - .6f) / .4f).coerceIn(0f, 1f) })
         HeaderAmount(ui, row, wide, shared)
-        HeaderStatus(row, Modifier.padding(top = 12.dp).enter(1, wide, shared, elapsed).testTag("activity-detail-status"))
+        HeaderStatus(row, Modifier.padding(top = 12.dp)
+            .then(if (shareTitle) Modifier.shared("title-${row.id}", shared) else Modifier.enter(1, wide, shared, elapsed))
+            .testTag("activity-detail-status"))
         fiatLine(ui, row)?.let { Text(it, Modifier.padding(top = 3.dp).enter(2, wide, shared, elapsed), style = HomeType.line, color = palette.muted) }
         blockWait(ui, record, home)?.let { (tip, confirmedAt, needed) ->
             Column(Modifier.enter(3, wide, shared, elapsed)) { ActivityBlockRow(tip, confirmedAt, needed, ui.locale) }

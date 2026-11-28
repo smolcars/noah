@@ -273,4 +273,21 @@ class ActivityRulesTest {
         // A board that recorded no fee shows none ("Free" is a claim for sends).
         assertEquals(emptyList<ActivityRules.FeeLine>(), fees(board.copy(offchainFeeSat = 0)))
     }
+
+    @Test fun titleTransitionsOnlyWhenRowTitleMatchesDetailStatus() {
+        val now = Date()
+        assertTrue(ActivityRules.sharesTitle(rows(record("rx", now, direction = "incoming")).single()))
+        assertTrue(ActivityRules.sharesTitle(rows(record("tx", now, direction = "outgoing")).single()))
+        assertTrue(ActivityRules.sharesTitle(rows(record("board", now, type = "Onchain").copy(movementKind = "onboard")).single()))
+        // Counterparty names, invoice descriptions, renewals, offboards and non-settled states differ from the detail status.
+        assertFalse(ActivityRules.sharesTitle(rows(record("addr", now, type = "Lnurl", destination = "bob@getalby.com")).single()))
+        assertFalse(ActivityRules.sharesTitle(rows(record("inv", now, type = "Bolt11").copy(
+            sentTo = listOf(HistoryTransaction.Destination(ActivityFixtures.invoice("Coffee", 1), 2_500, "invoice")),
+        )).single()))
+        assertFalse(ActivityRules.sharesTitle(rows(record("offboard", now, type = "Onchain").copy(movementKind = "offboard")).single()))
+        assertFalse(ActivityRules.sharesTitle(rows(record("renewal", now).copy(movementKind = "refresh", inputVtxos = listOf("a:0"))).single()))
+        assertFalse(ActivityRules.sharesTitle(rows(record("pending", now, status = "pending")).single()))
+        assertFalse(ActivityRules.sharesTitle(rows(record("failed", now, status = "failed")).single()))
+        assertFalse(ActivityRules.sharesTitle(rows(record("canceled", now, status = "canceled")).single()))
+    }
 }

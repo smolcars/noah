@@ -346,10 +346,16 @@ private fun ListRow(ui: ActivityUi, row: ActivityRules.Row, look: ListRowLook, s
     val id = row.id
     var fading by remember(id) { mutableStateOf(false) }
     LaunchedEffect(look.new, look.onScreen) { if (look.new && look.onScreen) { delay(1_400); fading = true } }
-    ActivityRow(row.home, ui.hidden, ui.unit, ui.locale, ui.now, new = look.new, pop = false, divider = look.divider,
-        modifier = Modifier.shared("row-$id", shared, container = true).testTag("activity-row-$id"), selected = look.selected,
-        fading = fading, onSeen = seen,
-        avatarModifier = Modifier.shared("avatar-$id", shared), amountModifier = Modifier.shared("amount-$id", shared), onClick = open)
+    Box {
+        // Only the row's bounds act as the container target, so unshared text (e.g. rail/time) stays put in the list.
+        Box(Modifier.matchParentSize().shared("row-$id", shared, container = true))
+        ActivityRow(row.home, ui.hidden, ui.unit, ui.locale, ui.now, new = look.new, pop = false, divider = look.divider,
+            modifier = Modifier.testTag("activity-row-$id"), selected = look.selected,
+            fading = fading, onSeen = seen,
+            avatarModifier = Modifier.shared("avatar-$id", shared),
+            titleModifier = if (ActivityRules.sharesTitle(row)) Modifier.shared("title-$id", shared) else Modifier,
+            amountModifier = Modifier.shared("amount-$id", shared), onClick = open)
+    }
 }
 
 /** The trailing pane: the payment, or "Select a payment". */
@@ -370,8 +376,9 @@ private fun DetailPane(ui: ActivityUi, selected: ActivityRules.Row?, actions: Ac
 internal class Shared(val transition: SharedTransitionScope, val visibility: AnimatedVisibilityScope)
 
 /**
- * Moves this element between the row and the detail on the snappy spring: the avatar, amount and name scale to their
- * bounds; the [container] (the row's rectangle ↔ the whole screen) re-measures and clips, so the payment opens out of it.
+ * Moves this element between the row and the detail on the snappy spring: the avatar, amount and matching status title
+ * scale to their bounds above the [container] (the row's rectangle ↔ the whole screen), which re-measures and clips so
+ * the payment opens out of it.
  */
 @OptIn(ExperimentalSharedTransitionApi::class)
 @Composable
@@ -382,7 +389,8 @@ internal fun Modifier.shared(key: String, shared: Shared?, container: Boolean = 
         boundsTransform = { _, _ -> snappy }, resizeMode = SharedTransitionScope.ResizeMode.RemeasureToBounds,
         clipInOverlayDuringTransition = OverlayClip(RoundedCornerShape(16.dp)))
     else this@shared.sharedBounds(state, shared.visibility, enter = fadeIn(tween(160)), exit = fadeOut(tween(160)), boundsTransform = { _, _ -> snappy },
-        resizeMode = SharedTransitionScope.ResizeMode.scaleToBounds(androidx.compose.ui.layout.ContentScale.Fit, Alignment.CenterStart))
+        resizeMode = SharedTransitionScope.ResizeMode.scaleToBounds(androidx.compose.ui.layout.ContentScale.Fit, Alignment.CenterStart),
+        zIndexInOverlay = 1f)
 }
 
 /** The list and its bar: title (or search), the filter chip, ⋯, pull to refresh and the list's states. */
