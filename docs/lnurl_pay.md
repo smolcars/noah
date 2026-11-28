@@ -21,8 +21,7 @@ Not covered yet:
   can't match it to its payment yet. The payment itself goes through.
 - **Direct Ark payments.** Noah's own apps pay a Noah recipient's Ark address directly when no
   comment is attached, without calling the callback, so there is nothing to attach payer data to.
-  This needs a proof the payer posts, planned as an extension of LNURL-verify
-  ([LUD-21](https://github.com/lnurl/luds/blob/luds/21.md)).
+  See [Planned: payer data on Ark payments](#planned-payer-data-on-ark-payments).
 - **Notifications** name the payer only on app versions that register a notification key (see
   [Notifications](#notifications)); older ones show "Payment received" as before.
 
@@ -207,3 +206,138 @@ Reading:
   (why a silent push can't do this: it is throttled and not delivered to a force-quit app)
 - [Receive messages in an Android app](https://firebase.google.com/docs/cloud-messaging/android/receive)
   (data messages reach a swiped-away app, not a force-stopped one)
+
+## Planned: payer data on Ark payments
+
+Not built yet; decided on 2026-11-28. It covers payments from Noah apps that go over Ark instead
+of Lightning, so the comment and payer data reach the recipient without barkd.
+
+### The gap in `paymentOptions`
+
+LUD-12 comments and LUD-18 payer data date from when every callback returned its own invoice, so
+a service could always tie a payment to its callback. `paymentOptions`
+([lnurl/luds#303](https://github.com/lnurl/luds/pull/303)) adds rails whose destination may be
+reused, such as a static Ark address or an on-chain address. A comment sent for such an option
+reaches the service, but the service can't tell which payment it belongs to, so it is lost
+unseen. #303 keeps `commentAllowed` and `payerData` at the top level and can't limit them to some
+options.
+
+The rule we follow, and would propose on #303: comments and payer data apply to an option only
+when the service can tie the payment to its callback. That holds for Lightning (one invoice per
+callback), for a destination issued per payment, and for a report both sides support (below).
+
+### Report
+
+A proposed extension to `paymentOptions`, built so others can adopt it; whether #303 takes it is
+open. The payer tells the service which payment was its own, after or just before paying. Three
+fields, named apart in the way #303's proposed `verifiable` sits beside `verify`:
+
+- **The option** lists the method it accepts: `"reportMethod": "vtxo"`. A name rather than a
+  boolean, so a stronger method later gets its own name instead of changing what an existing one
+  means. It may become a list if a service needs to accept an old and a new method at once.
+- **The callback request** repeats it, `reportMethod=vtxo`: the wallet promises to report. A
+  service refuses a comment or payer data for an option it can't tie to the callback unless the
+  wallet made this promise, as it refuses rather than drops data today.
+- **The callback response** carries `"report": "<url>"` beside `paymentDestination` (and `verify`,
+  if any). The URL holds at least 128 random bits and names that one callback. It is a capability:
+  keep it, and what is reported to it, out of logs.
+
+Methods:
+
+- **`vtxo`** (bark): after paying, `POST <report URL>` with
+  `{"vtxoIds": ["<txid>:<vout>", …]}`, the VTXOs the send created for the recipient.
+- **`tx`** (on-chain, later): before broadcasting, the wallet posts the signed transaction. Only the
+  payer has it until then, and the service can check the outputs and amount at once, as with
+  BIP70's Payment message. A txid reported after broadcast would prove nothing, since anyone
+  watching the address sees it. A fee bump posts the replacement to the same URL; it must spend
+  the same inputs. The alternative, a fresh address per payment derived from the user's on-chain
+  xpub, needs no report but lets our server see all of the user's on-chain activity.
+
+### Flow
+
+1. **Discovery.** The server lists `lightning`, and `bark` with the Ark server's public key as
+   `operator` (as proposed on #303) and `"reportMethod": "vtxo"`. The app offers `bark` only when
+   the operator is its own Ark server. `ark=<server key>` at discovery keeps working for released
+   apps.
+2. **Callback.** `paymentOption=bark&reportMethod=vtxo`, with `amount`, `payerdata` and `comment`
+   as today. The server reserves a record for the recipient and returns the Ark address as
+   `paymentDestination` plus `report`.
+3. **Payment.** The app stores the report URL in the send journal before paying, as it stores the
+   invoice on the Lightning rail, then pays with `send_arkoor_payment`.
+4. **Report.** From the movement it gets back, the app reads the VTXOs the send created for the
+   recipient (`metadata.destination_vtxos`, see [bark change](#bark-change)) and posts them. It
+   retries on later passes until the server accepts or the URL expires; a failed report never
+   makes the payment fail.
+5. **Match.** The server matches the reported set against one delivery to the recipient that the
+   mailbox worker saw, in either order. It also checks that every VTXO pays the recipient's
+   address on our Ark server, that they add up to the callback's amount, and that no other
+   report bound any of them. The first valid report binds the set; the same set again is
+   accepted, a different one refused. The record then becomes ready and follows the existing
+   push, list and ack path, so the recipient's app needs no change.
+
+Recurring payments do the same. With this in place, a payment with a comment can go over Ark too.
+
+### Why report the recipient's VTXOs
+
+- Before delivery only the payer and the Ark server know these VTXO IDs, so nobody else can attach
+  payer data to someone else's payment. The recipient and our server learn them on delivery.
+- The payer's spent VTXOs would need no bark change, but whoever paid those VTXOs to the payer also
+  knows their IDs and could report the payment as theirs, or block its payer data.
+- It is not a cryptographic proof: a payer with two callbacks to the same recipient could swap
+  their reports. It can only mislabel its own payments, whose payer data it chose anyway.
+
+### Why not LNURL-verify
+
+[LUD-21](https://github.com/lnurl/luds/blob/luds/21.md)'s `verify` lets the payer ask whether a
+payment settled. A report goes the other way: the payer tells the service which delivery was its
+payment. LUD-21's `pr` and `preimage` don't exist for Ark, other wallets would read a `verify`
+field as plain LUD-21, and the name promises more than knowing the VTXO IDs proves. So the report
+gets its own URL.
+
+### bark change
+
+bark records the spent and change VTXOs on an arkoor send's movement, but the VTXOs it creates for
+the recipient only live in the send's checkpoint, which bark deletes when the send is done.
+[bark MR 2610](https://gitlab.com/ark-bitcoin/bark/-/merge_requests/2610) made
+`send_arkoor_payment` return the movement ID, which isn't enough on its own. A bark MR to store
+them as `metadata.destination_vtxos` when the movement is created, as lightning movements keep
+`htlc_vtxos`, is prepared; then bark-bolt-ffi needs a release with it and both apps a version bump.
+
+### Later: an address pool
+
+A fresh address per payment, as ArkLabs does, needs no report at all and also names payers using
+other bark wallets. Noah can't wake the phone for every callback, so the app would upload a pool
+of addresses ahead of time:
+
+- bark already knows their keys, they are in the backed-up wallet database, and a pool well under
+  bark's VTXO key gap limit (250) is found again on recovery from the seed phrase.
+- The server hands out one only for a callback with payer data or a comment, and puts an
+  address back once its callback expires unpaid (the amount check guards a late payment).
+- Draining the pool is the DoS risk, limited per recipient. An empty pool falls back to the
+  static address, with a report from Noah payers, so payments always go through.
+
+Ruled out: the server deriving addresses from the wallet's VTXO xpub. bark refuses an arkoor
+VTXO for a key it hasn't revealed yet (only seed recovery scans ahead), the server's indices would
+mix with the wallet's own, and the xpub would let our server recognise every VTXO a user spends,
+including in payments to other Noah users.
+
+## Open items
+
+- Confirm barkd forwarding is enabled on mainnet; without it, payments use the device-invoice
+  fallback, which carries no payer data.
+- Ask barkd to keep `htlc_vtxo_ids` on a settled receive, or to list the VTXOs it delivered, so
+  [matching](#matching-the-delivery) doesn't depend on keys in barkd's movement metadata.
+- Pay Lightning addresses with bark's payment origin (`pay_lightning_invoice_with_origin`, not in
+  bark-bolt-ffi yet), so the movement's `sent_to` is a `lightning-address` that any bark tool
+  reads. Today the apps write the address in `noah.repeat_payment`, after the payment succeeds.
+
+## Rejected alternatives
+
+- **Matching by amount and time.** Two payments of the same amount would get each other's payer
+  data.
+- **Sending callbacks with payer data to the phone instead of barkd.** Those payments would need
+  the phone to answer, and lose barkd's forwarding while it is offline.
+- **Extending LNURL-verify, or using the spent VTXOs, for Ark payments.** See
+  [Why not LNURL-verify](#why-not-lnurl-verify) and
+  [Why report the recipient's VTXOs](#why-report-the-recipients-vtxos).
+- **Deriving Ark addresses on the server.** See [Later: an address pool](#later-an-address-pool).
