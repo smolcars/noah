@@ -15,6 +15,11 @@ public data class LnurlpInvoiceResponse(
   @SerialName("ark")
   public val ark: String? = null,
   /**
+   * `lightning` when the wallet chose it as its `paymentOption` (lnurl/luds#303).
+   */
+  @SerialName("paymentOption")
+  public val paymentOption: String? = null,
+  /**
    * The BOLT11 payment request (invoice).
    */
   @SerialName("pr")

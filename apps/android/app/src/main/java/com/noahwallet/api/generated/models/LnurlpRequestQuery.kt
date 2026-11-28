@@ -20,4 +20,10 @@ public data class LnurlpRequestQuery(
    */
   @SerialName("ark")
   public val ark: String? = null,
+  /**
+   * The `id` of the `paymentOptions` entry to pay through (lnurl/luds#303); `lightning` when
+   * absent.
+   */
+  @SerialName("paymentOption")
+  public val paymentOption: String? = null,
 )

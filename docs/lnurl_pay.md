@@ -51,6 +51,11 @@ configured, the recipient has an Ark address, their mailbox authorization covers
 (the mailbox worker must see the delivery), and they have fewer than 128 payments waiting to be
 matched. Otherwise both fields are left out, so wallets don't offer a comment that would be lost.
 
+It always lists its rails in `paymentOptions`
+([lnurl/luds#303](https://github.com/lnurl/luds/pull/303)): `{"id": "lightning", "type": "lightning"}`,
+and `{"id": "second", "type": "bark"}` while the recipient has an Ark address. Discovery with
+`ark=<server key>` still returns the Ark address as `ark`, for released Noah apps.
+
 ## Callback
 
 1. Before tracing or Sentry see the request, `redact_lnurl_pay_query_middleware` (the outermost
@@ -61,13 +66,21 @@ matched. Otherwise both fields are left out, so wallets don't offer a comment th
    lowercase with an IDNA domain. A comment is at most 280 characters. Control and bidirectional
    control characters are refused. An empty `comment=` counts as no comment (released Noah apps
    always send one).
-3. Payer data or a comment sent where it can't reach the recipient (none of the conditions above,
-   or the 128-record quota is full) is refused with an LNURL error, never dropped unseen.
+3. On the Lightning rail, payer data or a comment sent where it can't reach the recipient (none of
+   the conditions above, or the 128-record quota is full) is refused with an LNURL error, never
+   dropped unseen.
 4. When the recipient qualifies, the server reserves an encrypted record before asking barkd for
    the invoice, then stores the invoice and its payment hash in it. A record is kept for every such
    payment, with or without payer data, so the app can show the payment as a Lightning address
    receive. If storing fails after barkd issued the invoice, the callback fails when payer data was
    sent (barkd's unpaid invoice expires), and otherwise returns the invoice unlabeled.
+5. `paymentOption=second` returns the recipient's Ark address,
+   `{"paymentOption": "second", "paymentDestination": "<address>"}`, for a whole number of sats.
+   Payer data and a comment are checked as above, then dropped: until there are
+   [reports](#report), nothing ties an Ark payment to its callback, and a note isn't worth failing
+   the payment over. `paymentOption=lightning`, or none, gets an invoice as above (with
+   `"paymentOption": "lightning"` when it was asked for); any other value gets
+   `Unsupported paymentOption`. With a `paymentOption`, the older `ark=` negotiation is ignored.
 
 ## Matching the delivery
 
@@ -222,9 +235,11 @@ reaches the service, but the service can't tell which payment it belongs to, so 
 unseen. #303 keeps `commentAllowed` and `payerData` at the top level and can't limit them to some
 options.
 
-The rule we follow, and would propose on #303: comments and payer data apply to an option only
-when the service can tie the payment to its callback. That holds for Lightning (one invoice per
-callback), for a destination issued per payment, and for a report both sides support (below).
+What we would propose on #303: comments and payer data reach the recipient on an option only when
+the service can tie the payment to its callback. That holds for Lightning (one invoice per
+callback), for a destination issued per payment, and for a report both sides support (below). Our
+server still accepts them on `second` without a report and drops them, rather than fail a payment
+over a note; a report is best effort anyway.
 
 ### Report
 
@@ -235,9 +250,8 @@ fields, named apart in the way #303's proposed `verifiable` sits beside `verify`
 - **The option** lists the method it accepts: `"reportMethod": "vtxo"`. A name rather than a
   boolean, so a stronger method later gets its own name instead of changing what an existing one
   means. It may become a list if a service needs to accept an old and a new method at once.
-- **The callback request** repeats it, `reportMethod=vtxo`: the wallet promises to report. A
-  service refuses a comment or payer data for an option it can't tie to the callback unless the
-  wallet made this promise, as it refuses rather than drops data today.
+- **The callback request** repeats it, `reportMethod=vtxo`: the wallet promises to report, so the
+  service keeps the comment and payer data for the match instead of dropping them.
 - **The callback response** carries `"report": "<url>"` beside `paymentDestination` (and `verify`,
   if any). The URL holds at least 128 random bits and names that one callback. It is a capability:
   keep it, and what is reported to it, out of logs.
@@ -255,11 +269,11 @@ Methods:
 
 ### Flow
 
-1. **Discovery.** The server lists `lightning`, and `bark` with the Ark server's public key as
-   `operator` (as proposed on #303) and `"reportMethod": "vtxo"`. The app offers `bark` only when
-   the operator is its own Ark server. `ark=<server key>` at discovery keeps working for released
-   apps.
-2. **Callback.** `paymentOption=bark&reportMethod=vtxo`, with `amount`, `payerdata` and `comment`
+1. **Discovery.** The server lists `lightning`, and `second` (type `bark`) with the Ark server's
+   public key as `operator` (as proposed on #303) and `"reportMethod": "vtxo"`. The app offers
+   Ark only when the operator is its own Ark server. `ark=<server key>` at discovery keeps working
+   for released apps.
+2. **Callback.** `paymentOption=second&reportMethod=vtxo`, with `amount`, `payerdata` and `comment`
    as today. The server reserves a record for the recipient and returns the Ark address as
    `paymentDestination` plus `report`.
 3. **Payment.** The app stores the report URL in the send journal before paying, as it stores the

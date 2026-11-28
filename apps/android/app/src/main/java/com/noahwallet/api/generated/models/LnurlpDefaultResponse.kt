@@ -3,6 +3,7 @@ package com.noahwallet.api.generated.models
 import kotlin.Int
 import kotlin.Long
 import kotlin.String
+import kotlin.collections.List
 import kotlinx.serialization.SerialName
 import kotlinx.serialization.Serializable
 
@@ -50,6 +51,12 @@ public data class LnurlpDefaultResponse(
    */
   @SerialName("payerData")
   public val payerData: LnurlpDefaultResponsePayerData? = null,
+  /**
+   * The rails the callback can pay through (lnurl/luds#303): always `lightning`, and `second`
+   * (type `bark`) while the user has an Ark address.
+   */
+  @SerialName("paymentOptions")
+  public val paymentOptions: List<LnurlPayOption>,
   /**
    * The LNURL-pay tag, which is always "payRequest".
    */

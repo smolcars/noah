@@ -657,6 +657,24 @@
         ],
         "type": "object"
       },
+      "LnurlPayOption": {
+        "description": "One rail in `paymentOptions` (lnurl/luds#303).",
+        "properties": {
+          "id": {
+            "description": "The value a wallet sends to the callback as `paymentOption`.",
+            "type": "string"
+          },
+          "type": {
+            "description": "The payment method: `lightning` or `bark`.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "id",
+          "type"
+        ],
+        "type": "object"
+      },
       "LnurlPayPayerDataFieldSpec": {
         "properties": {
           "mandatory": {
@@ -891,6 +909,13 @@
               "null"
             ]
           },
+          "paymentOptions": {
+            "description": "The rails the callback can pay through (lnurl/luds#303): always `lightning`, and `second`\n(type `bark`) while the user has an Ark address.",
+            "items": {
+              "$ref": "#/components/schemas/LnurlPayOption"
+            },
+            "type": "array"
+          },
           "tag": {
             "description": "The LNURL-pay tag, which is always \"payRequest\".",
             "type": "string"
@@ -901,7 +926,26 @@
           "maxSendable",
           "minSendable",
           "metadata",
-          "tag"
+          "tag",
+          "paymentOptions"
+        ],
+        "type": "object"
+      },
+      "LnurlpDestinationResponse": {
+        "description": "The callback response for a `paymentOption` paid without an invoice (lnurl/luds#303).",
+        "properties": {
+          "paymentDestination": {
+            "description": "Where to pay: for `second`, the user's Ark address.",
+            "type": "string"
+          },
+          "paymentOption": {
+            "description": "The `paymentOption` the wallet chose.",
+            "type": "string"
+          }
+        },
+        "required": [
+          "paymentOption",
+          "paymentDestination"
         ],
         "type": "object"
       },
@@ -909,6 +953,13 @@
         "description": "Represents the second response in the LNURL-pay protocol.\n\nThis response contains the BOLT11 invoice that the wallet will use to pay.",
         "properties": {
           "ark": {
+            "type": [
+              "string",
+              "null"
+            ]
+          },
+          "paymentOption": {
+            "description": "`lightning` when the wallet chose it as its `paymentOption` (lnurl/luds#303).",
             "type": [
               "string",
               "null"
@@ -950,6 +1001,13 @@
               "string",
               "null"
             ]
+          },
+          "paymentOption": {
+            "description": "The `id` of the `paymentOptions` entry to pay through (lnurl/luds#303); `lightning` when\nabsent.",
+            "type": [
+              "string",
+              "null"
+            ]
           }
         },
         "type": "object"
@@ -962,6 +1020,9 @@
           },
           {
             "$ref": "#/components/schemas/LnurlpInvoiceResponse"
+          },
+          {
+            "$ref": "#/components/schemas/LnurlpDestinationResponse"
           }
         ]
       },
@@ -1811,7 +1872,7 @@
     },
     "/.well-known/lnurlp/{username}": {
       "get": {
-        "description": "Public endpoint; no bearer token required. Without amount, returns payment parameters; with amount, returns an invoice (pr is empty for negotiated direct Ark payment).",
+        "description": "Public endpoint; no bearer token required. Without amount, returns payment parameters; with amount, returns an invoice (pr is empty for negotiated direct Ark payment), or the Ark address as paymentDestination for paymentOption=second.",
         "operationId": "lnurlp_request",
         "parameters": [
           {
@@ -1839,6 +1900,15 @@
             "description": "The payer's Ark server pubkey, used to negotiate a compatible Ark address.",
             "in": "query",
             "name": "ark",
+            "required": false,
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "description": "The `id` of the `paymentOptions` entry to pay through (lnurl/luds#303); `lightning` when\nabsent.",
+            "in": "query",
+            "name": "paymentOption",
             "required": false,
             "schema": {
               "type": "string"
