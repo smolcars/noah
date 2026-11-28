@@ -430,7 +430,7 @@ extension SendView {
             }
             .padding(.horizontal, 18).padding(.vertical, 14)
             .glassCompat(in: RoundedRectangle(cornerRadius: 22, style: .continuous))
-            if !model.comment.isEmpty && route.arkAddress != nil {
+            if !model.comment.isEmpty && route.offersArk {
                 Text("Adding a note will send this payment over Lightning.").noahText(HomeText.footnote)
                     .foregroundStyle(NoahTokens.Colors.muted).padding(.horizontal, 4)
             }
@@ -653,7 +653,7 @@ extension SendView {
         railFees = [:]
         var request = model.parsed.bip321 ?? [:]
         if model.parsed.destinationType == "lnurl", let route = model.matchingRoute {
-            if let ark = route.arkAddress { request["arkAddress"] = ark }
+            if route.arkRail(sats: model.sats) != nil { request["arkAddress"] = route.arkAddress ?? "" } // An option's address comes at review.
             request["lightningInvoice"] = route.destination
         }
         guard !request.isEmpty, model.sats > 0 else { return }

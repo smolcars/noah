@@ -71,7 +71,10 @@ enum RecurringRecipient {
         var payment = SendPayment(destination: recipient.destination, method: recipient.type, amount: schedule.amountSat, comment: schedule.comment)
         if recipient.type == "lnurl" {
             let route = try await SendRecipientService.resolve(recipient.destination, session: session)
-            payment = try lnurlPayment(payment, route: route)
+            let sats = payment.amount
+            payment = try await lnurlPayment(payment, route: route) {
+                try await SendRecipientService.arkAddress($0, route: route, sats: sats, session: session)
+            }
             // The editor's notice covers sharing the saved identity; the quote sends what the address asks for.
             let fields = LnurlPayerIdentity.stored().fields
             if payment.method == "lnurl", !fields.isEmpty { payment.payerData = fields }
@@ -87,14 +90,19 @@ enum RecurringRecipient {
         }
         return .init(payment: payment, quote: quote, fees: fees)
     }
-    static func lnurlPayment(_ input: SendPayment, route: SendRecipientRoute) throws -> SendPayment {
+    /// `arkAddress` gives the address to pay when the payment goes over Ark.
+    static func lnurlPayment(_ input: SendPayment, route: SendRecipientRoute,
+                             arkAddress: (SendArkRail) async throws -> String) async throws -> SendPayment {
         var payment = input
         let (msat, overflow) = payment.amount.multipliedReportingOverflow(by: 1000)
         guard !overflow, msat >= route.minMsat, msat <= route.maxMsat else {
             throw RecurringError.message("The recipient no longer accepts this amount. Update or cancel the recurring payment.")
         }
         // RN uses Lightning when a note is present so it reaches the recipient.
-        if payment.comment.isEmpty, let ark = route.arkAddress { payment.destination = ark; payment.method = "ark" }
+        if payment.comment.isEmpty, let rail = route.arkRail(sats: payment.amount) {
+            payment.destination = try await arkAddress(rail)
+            payment.method = "ark"
+        }
         return payment
     }
     static func lightningFees(_ fetch: () async throws -> LightningSendFees?) async -> LightningSendFees {

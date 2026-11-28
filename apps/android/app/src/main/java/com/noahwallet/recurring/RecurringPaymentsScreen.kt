@@ -383,7 +383,7 @@ private fun OverrideSheets(step: Int, changeStep: (Int) -> Unit, confirm: () -> 
 private fun ApprovalSheet(app: AppModel, item: RecurringExecutor.Review, controller: SendController, close: () -> Unit, reload: () -> Unit,
     pay: (finished: () -> Unit) -> Unit, done: () -> Unit) {
     val presentation = remember(item) { SendPresentation(SendModel(controller, BuildConfig.APP_VARIANT,
-        app.session::resolveSendRecipient, app.session::quoteSend, app.session::discardSend)) }
+        app.session::resolveSendRecipient, app.session::quoteSend, app.session::discardSend, arkAddress = app.session::sendArkAddress)) }
     val refund = rememberSendProgress(presentation, app.session::movements)
     val scope = rememberCoroutineScope()
     val locked = controller.locked || presentation.submitting

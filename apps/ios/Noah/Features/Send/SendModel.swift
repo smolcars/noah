@@ -80,12 +80,15 @@ import Observation
     private let offerAmount: (String) async throws -> UInt64?
     /// What Noah can send as LUD-18 payer data; the quote reads it again when it calls the address's callback.
     private let payerIdentity: () -> LnurlPayerIdentity
+    /// The Ark address to pay a Lightning address over Ark, for an amount in sats.
+    private let arkAddress: (SendArkRail, SendRecipientRoute, UInt64) async throws -> String
     init(session: WalletSession = .shared, controller: SendPaymentController = .shared,
          resolveRecipient: ((String) async throws -> SendRecipientRoute)? = nil,
          quotePayment: ((SendPayment) async throws -> SendQuote)? = nil,
          discardQuote: ((SendQuote) async -> Void)? = nil,
          offerAmount: ((String) async throws -> UInt64?)? = nil,
-         payerIdentity: (() -> LnurlPayerIdentity)? = nil) {
+         payerIdentity: (() -> LnurlPayerIdentity)? = nil,
+         arkAddress: ((SendArkRail, SendRecipientRoute, UInt64) async throws -> String)? = nil) {
         self.session = session
         self.controller = controller
         self.resolveRecipient = resolveRecipient ?? { try await SendRecipientService.resolve($0, session: session) }
@@ -93,6 +96,7 @@ import Observation
         self.discardQuote = discardQuote ?? { await session.discardSend($0) }
         self.offerAmount = offerAmount ?? { try await session.sendOfferAmount($0) }
         self.payerIdentity = payerIdentity ?? { .stored() }
+        self.arkAddress = arkAddress ?? { try await SendRecipientService.arkAddress($0, route: $1, sats: $2, session: session) }
     }
     var isMax: Bool { progress.entry == .max }
     var sats: UInt64 {
@@ -119,7 +123,7 @@ import Observation
         return failure as? SendFailure
     }
     var rails: [SendRail] {
-        if parsed.destinationType == "lnurl", matchingRoute?.arkAddress != nil, comment.isEmpty { return [.ark, .lightning] }
+        if parsed.destinationType == "lnurl", matchingRoute?.arkRail(sats: sats) != nil, comment.isEmpty { return [.ark, .lightning] }
         return SendFlow.rails(type: parsed.destinationType, request: parsed.bip321)
     }
     var availability: [String: Bool] {
@@ -376,9 +380,9 @@ import Observation
                 guard !overflow, msat >= route.minMsat, msat <= route.maxMsat,
                       comment.utf16.count <= route.commentAllowed
                 else { throw SendFailure.invalid }
-                if rail == .ark, comment.isEmpty, let ark = route.arkAddress {
+                if rail == .ark, comment.isEmpty, let ark = route.arkRail(sats: sats) {
                     method = "ark"
-                    target = ark
+                    target = try await arkAddress(ark, route, sats)
                 }
             }
             // A BIP-321 invoice may carry an amount even when its URI does not.

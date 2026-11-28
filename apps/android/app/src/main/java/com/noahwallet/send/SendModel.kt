@@ -14,7 +14,11 @@ class SendModel(val controller: SendController, private val network: String,
     /** The amount a BOLT12 offer fixes, or null; the quote checks it again. */
     private val offerAmount: suspend (String) -> Long? = { null },
     /** What Noah can send as LUD-18 payer data; the quote reads it again when it calls the address's callback. */
-    private val payerIdentity: () -> LnurlPayerIdentity = { LnurlPayerIdentity() }) {
+    private val payerIdentity: () -> LnurlPayerIdentity = { LnurlPayerIdentity() },
+    /** The Ark address to pay a Lightning address over Ark, for an amount in sats. */
+    private val arkAddress: suspend (SendArkRail, SendRecipientRoute, Long) -> String = { rail, _, _ ->
+        (rail as? SendArkRail.Address)?.address ?: throw SendFailure(SendFailure.Reason.invalid)
+    }) {
     private var amountText by mutableStateOf("")
     /** A valid amount clears Next's zero-amount error at once; any other error stays. */
     var amount: String
@@ -66,7 +70,7 @@ class SendModel(val controller: SendController, private val network: String,
     val payerShare: LnurlPayerData.Share? get() = matchingRoute?.let { payerData?.getOrNull() }?.let(LnurlPayerData::share)
     /** Why this Lightning address can't be paid: it requires payer data Noah can't send. */
     private val payerDataFailure get() = matchingRoute?.let { payerData?.exceptionOrNull() }
-    val rails get() = if (parsed.destinationType == "lnurl" && matchingRoute?.arkAddress != null && comment.isEmpty()) listOf(SendRail.ark,
+    val rails get() = if (parsed.destinationType == "lnurl" && matchingRoute?.arkRail(sats) != null && comment.isEmpty()) listOf(SendRail.ark,
         SendRail.lightning) else SendFlow.rails(parsed.destinationType, parsed.bip321)
     val availability: Map<String, Boolean> get() {
         val invoice = parsed.bip321?.get("lightningInvoice") ?: destination
@@ -227,12 +231,13 @@ class SendModel(val controller: SendController, private val network: String,
         }
     }
     /** The payment the chosen rail sends: a payment request's rail-specific target, or a Lightning address's Ark one. */
-    private fun reviewedPayment(rail: SendRail): SendPayment {
+    private suspend fun reviewedPayment(rail: SendRail): SendPayment {
         var (method, target) = railTarget(rail)
         if (method == "lnurl") {
             val route = matchingRoute ?: throw SendFailure(SendFailure.Reason.invalid)
             val msat = Math.multiplyExact(sats, 1000); requireSend(msat in route.minMsat..route.maxMsat && comment.length <= route.commentAllowed)
-            if (rail == SendRail.ark && comment.isEmpty() && route.arkAddress != null) { method = "ark"; target = route.arkAddress }
+            val ark = route.arkRail(sats)
+            if (rail == SendRail.ark && comment.isEmpty() && ark != null) { method = "ark"; target = arkAddress(ark, route, sats) }
         }
         if (method == "lightning") requireInvoiceAmount(target)
         // The quote sends only what To showed.

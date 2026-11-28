@@ -1,5 +1,5 @@
 {
-  "description": "The LNURL-pay callback URL Noah requests: the service's own query is kept, stale `amount`, `comment` and `payerdata` are replaced or removed, an empty note sends no `comment`, and no payer data sends no `payerdata`. `params` is the query as an application/x-www-form-urlencoded decoder reads it (`+` is a space), without `payerdata`; `payerData` is that parameter's JSON, or null when it is absent. Every value must come back exactly, whatever characters it holds.",
+  "description": "The LNURL-pay callback URL Noah requests: the service's own query is kept, stale `amount`, `comment`, `payerdata` and `paymentOption` are replaced or removed, an empty note sends no `comment`, no payer data sends no `payerdata`, and `paymentOption` (lnurl/luds#303) is sent only for a payment through one. `params` is the query as an application/x-www-form-urlencoded decoder reads it (`+` is a space), without `payerdata`; `payerData` is that parameter's JSON, or null when it is absent. Every value must come back exactly, whatever characters it holds.",
   "cases": [
     {
       "name": "amount only when the note is empty",
@@ -53,6 +53,27 @@
         "payerData": { "name": "Ada" }
       },
       "expected": { "params": { "token": "keep", "amount": "3000", "comment": "new" }, "payerData": { "name": "Ada" } }
+    },
+    {
+      "name": "a payment option",
+      "input": { "callback": "https://pay.example.com/cb", "amountMsat": 330000, "comment": "", "payerData": null, "paymentOption": "second" },
+      "expected": { "params": { "amount": "330000", "paymentOption": "second" }, "payerData": null }
+    },
+    {
+      "name": "a stale payment option replaced",
+      "input": {
+        "callback": "https://pay.example.com/cb?paymentOption=old&token=keep",
+        "amountMsat": 330000,
+        "comment": "",
+        "payerData": null,
+        "paymentOption": "second + more"
+      },
+      "expected": { "params": { "token": "keep", "amount": "330000", "paymentOption": "second + more" }, "payerData": null }
+    },
+    {
+      "name": "no payment option removes a stale one",
+      "input": { "callback": "https://pay.example.com/cb?paymentOption=old", "amountMsat": 1000, "comment": "", "payerData": null },
+      "expected": { "params": { "amount": "1000" }, "payerData": null }
     }
   ]
 }

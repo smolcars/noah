@@ -2,6 +2,7 @@ package com.noahwallet.send
 
 import kotlinx.coroutines.runBlocking
 import kotlinx.serialization.json.*
+import okhttp3.HttpUrl
 import org.junit.Assert.*
 import org.junit.Test
 
@@ -79,5 +80,25 @@ class SendLnurlTest {
             put("ark", "foreign")
         } })
         assertNull(service.resolve("alice@example.com").arkAddress)
+    }
+    /** A `bark` payment option's callback is asked for the address, without the note or payer data, and the answer is checked. */
+    @Test fun paymentOptionAddressComesFromTheCallbackAndIsChecked() = runBlocking {
+        for (answer in listOf("tark-ours", "foreign")) {
+            val requests = mutableListOf<HttpUrl>()
+            val service = SendRecipientService("regtest", fetch = { url ->
+                requests += url
+                if (requests.size == 1) buildJsonObject {
+                    put("tag", "payRequest"); put("callback", "https://example.com/callback?token=keep"); put("minSendable", 1000)
+                    put("maxSendable", 10_000_000)
+                    put("paymentOptions", buildJsonArray { add(buildJsonObject { put("id", "second"); put("type", "bark") }) })
+                } else buildJsonObject { put("paymentOption", "second"); put("paymentDestination", answer) }
+            }, validateArk = { it == "tark-ours" })
+            val route = service.resolve("alice@example.com")
+            assertEquals(SendArkOption("second", 1000, 10_000_000), route.arkOption)
+            val rail = route.arkRail(330) ?: error("no Ark rail")
+            val address = runCatching { service.arkAddress(rail, route, 330) }
+            if (answer == "tark-ours") assertEquals(answer, address.getOrNull()) else assertTrue(address.isFailure)
+            assertEquals("https://example.com/callback?token=keep&amount=330000&paymentOption=second", requests[1].toString())
+        }
     }
 }

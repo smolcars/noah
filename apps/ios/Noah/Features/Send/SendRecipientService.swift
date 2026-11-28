@@ -9,6 +9,87 @@ struct SendRecipientRoute: Sendable {
     var callback: URL?
     var metadata: String?
     var payerData: LnurlPayerData.Requirements = [:]
+    /// The `bark` payment option, when the service offers one (lnurl/luds#303).
+    var arkOption: SendArkOption?
+
+    /// Whether Ark can pay this address at all, whatever the amount.
+    var offersArk: Bool { arkOption != nil || arkAddress != nil }
+
+    /// How Ark pays `sats` here (0: any amount): through the payment option while the amount fits it, else to the address
+    /// discovery returned. Nil when neither can.
+    func arkRail(sats: UInt64) -> SendArkRail? {
+        if let option = arkOption {
+            let (msat, overflow) = sats.multipliedReportingOverflow(by: 1000)
+            if sats == 0 || (!overflow && msat >= option.minMsat && msat <= option.maxMsat) { return .option(option.id) }
+        }
+        return arkAddress.map(SendArkRail.address)
+    }
+}
+
+/// How a Lightning address is paid over Ark.
+enum SendArkRail: Equatable, Sendable {
+    /// Through a `bark` payment option: its callback returns the address.
+    case option(String)
+    /// To the address discovery returned for `ark=`, Noah's older contract.
+    case address(String)
+}
+
+/// The `bark` payment option Noah pays through (lnurl/luds#303, `apps/fixtures/lnurl-pay-options.json`), with the amount range
+/// it allows.
+struct SendArkOption: Equatable, Sendable {
+    var id: String
+    var minMsat: UInt64
+    var maxMsat: UInt64
+
+    /// A pay request's `paymentOptions`; anything but an array counts as none.
+    struct Advertised: Decodable, Sendable {
+        let entries: [SendPaymentOptionEntry]
+
+        init(from decoder: any Decoder) {
+            entries = (try? decoder.singleValueContainer().decode([SendPaymentOptionEntry].self)) ?? []
+        }
+    }
+
+    /// The first usable `bark` entry, its own range narrowing the pay request's; nil when there is none.
+    static func first(_ advertised: Advertised?, minMsat: UInt64, maxMsat: UInt64) -> Self? {
+        for entry in advertised?.entries ?? [] where entry.usable && entry.type == "bark" {
+            guard let id = entry.id, !id.isEmpty else { continue }
+            let low = max(minMsat, entry.minMsat ?? minMsat)
+            let high = min(maxMsat, entry.maxMsat ?? maxMsat)
+            guard low <= high else { continue }
+            return .init(id: id, minMsat: low, maxMsat: high)
+        }
+        return nil
+    }
+}
+
+/// One `paymentOptions` entry; `usable` is false when it isn't an object or a field it has is malformed.
+struct SendPaymentOptionEntry: Decodable, Sendable {
+    var id: String?
+    var type: String?
+    var minMsat: UInt64?
+    var maxMsat: UInt64?
+    var usable = true
+
+    init(from decoder: any Decoder) {
+        guard let container = try? decoder.container(keyedBy: CodingKeys.self) else {
+            usable = false
+            return
+        }
+        id = try? container.decode(String.self, forKey: .id)
+        type = try? container.decode(String.self, forKey: .type)
+        if container.contains(.available), (try? container.decode(Bool.self, forKey: .available)) != true { usable = false }
+        if container.contains(.minSendable) {
+            minMsat = try? container.decode(UInt64.self, forKey: .minSendable)
+            if minMsat == nil { usable = false }
+        }
+        if container.contains(.maxSendable) {
+            maxMsat = try? container.decode(UInt64.self, forKey: .maxSendable)
+            if maxMsat == nil { usable = false }
+        }
+    }
+
+    private enum CodingKeys: String, CodingKey { case id, type, available, minSendable, maxSendable }
 }
 
 /// The identity Noah can send as LUD-18 payer data: the profile's display name and the wallet's own Lightning address.
@@ -137,6 +218,7 @@ enum SendRecipientService {
             let ark: String?
             let metadata: String?
             let payerData: LnurlPayerData.Advertised?
+            let paymentOptions: SendArkOption.Advertised?
         }
         guard (response as? HTTPURLResponse)?.statusCode == 200, data.count <= 65536 else { throw SendFailure.invalid }
         let decoded = try JSONDecoder().decode(Response.self, from: data)
@@ -149,7 +231,27 @@ enum SendRecipientService {
         return SendRecipientRoute(
             destination: value, minMsat: decoded.minSendable, maxMsat: decoded.maxSendable,
             commentAllowed: max(0, decoded.commentAllowed ?? 0), arkAddress: ark,
-            callback: callback, metadata: decoded.metadata, payerData: decoded.payerData?.requirements ?? [:])
+            callback: callback, metadata: decoded.metadata, payerData: decoded.payerData?.requirements ?? [:],
+            arkOption: SendArkOption.first(decoded.paymentOptions, minMsat: decoded.minSendable, maxMsat: decoded.maxSendable))
+    }
+    /// The Ark address to pay: discovery's own, or the one a payment option's callback returns, checked as discovery's is.
+    /// Sends no comment or payer data: an Ark payment can't carry them to the recipient yet.
+    static func arkAddress(_ rail: SendArkRail, route: SendRecipientRoute, sats: UInt64, session: WalletSession = .shared,
+                           fetch: Fetch = fetch) async throws -> String {
+        let option: String
+        switch rail {
+        case .address(let address): return address
+        case .option(let id): option = id
+        }
+        let (msat, overflow) = sats.multipliedReportingOverflow(by: 1000)
+        guard !overflow, let callback = route.callback else { throw SendFailure.invalid }
+        let url = try callbackURL(callback, msat: msat, comment: "", payerData: [:], paymentOption: option)
+        let (data, response) = try await fetch(URLRequest(url: url, timeoutInterval: 20))
+        struct Response: Decodable { let paymentDestination: String }
+        guard (response as? HTTPURLResponse)?.statusCode == 200, data.count <= 65536 else { throw SendFailure.invalid }
+        let address = try JSONDecoder().decode(Response.self, from: data).paymentDestination
+        guard (try? await session.validateSendArkAddress(address)) == true else { throw SendFailure.invalid }
+        return address
     }
     /// Resolve without paying: Bark's payLnurl/payLightningAddress can resume an old checkpoint. Sends only the payer data
     /// the payment carries (what To showed), as far as this lookup still asks for it.
@@ -166,14 +268,19 @@ enum SendRecipientService {
         try validateInvoice(invoice, amount: payment.amount)
         return invoice
     }
-    /// The callback with this payment's `amount`, its note as `comment` and LUD-18 `payerdata`, each only when there is one
-    /// (`apps/fixtures/lnurl-pay-callback.json`). The service's own query stays as it was. The provider enforces commentAllowed.
-    static func callbackURL(_ callback: URL, msat: UInt64, comment: String, payerData: [String: String]) throws -> URL {
+    /// The callback with this payment's `amount`, its note as `comment`, LUD-18 `payerdata` and its `paymentOption`
+    /// (lnurl/luds#303), each only when there is one (`apps/fixtures/lnurl-pay-callback.json`). The service's own query stays
+    /// as it was. The provider enforces commentAllowed.
+    static func callbackURL(_ callback: URL, msat: UInt64, comment: String, payerData: [String: String],
+                            paymentOption: String? = nil) throws -> URL {
         guard var components = URLComponents(url: callback, resolvingAgainstBaseURL: false) else { throw SendFailure.invalid }
-        var items = (components.percentEncodedQueryItems ?? []).filter { !["amount", "comment", "payerdata"].contains($0.name) }
+        var items = (components.percentEncodedQueryItems ?? []).filter {
+            !["amount", "comment", "payerdata", "paymentOption"].contains($0.name)
+        }
         items.append(URLQueryItem(name: "amount", value: String(msat)))
         if !comment.isEmpty { items.append(URLQueryItem(name: "comment", value: queryValue(comment))) }
         if !payerData.isEmpty { try items.append(URLQueryItem(name: "payerdata", value: queryValue(LnurlPayerData.json(payerData)))) }
+        if let paymentOption { items.append(URLQueryItem(name: "paymentOption", value: queryValue(paymentOption))) }
         components.percentEncodedQueryItems = items
         guard let url = components.url else { throw SendFailure.invalid }
         return url

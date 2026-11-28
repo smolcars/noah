@@ -645,7 +645,7 @@ private fun RecipientNote(model: SendModel) {
     val route = model.matchingRoute ?: return
     if (route.commentAllowed > 0) {
         NoteField(model.comment, { model.comment = it }, route.commentAllowed, !model.busy)
-        if (model.comment.isNotEmpty() && route.arkAddress != null) {
+        if (model.comment.isNotEmpty() && route.offersArk) {
             Text(tr("Adding a note will send this payment over Lightning."), Modifier.padding(top = 8.dp), style = SendType.small,
                 color = LocalPalette.current.muted)
         }

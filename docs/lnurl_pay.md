@@ -19,9 +19,11 @@ Not covered yet:
 - **The device-invoice fallback.** When barkd fails before issuing an invoice, the server wakes
   the recipient's phone to create one. That invoice carries no payer data or comment: the server
   can't match it to its payment yet. The payment itself goes through.
-- **Direct Ark payments.** Noah's own apps pay a Noah recipient's Ark address directly when no
-  comment is attached, without calling the callback, so there is nothing to attach payer data to.
-  See [Planned: payer data on Ark payments](#planned-payer-data-on-ark-payments).
+- **Direct Ark payments.** Noah's own apps pay a Noah recipient over Ark when no comment is
+  attached: through the `second` payment option, whose callback returns the Ark address at review
+  (older app versions take the address discovery returns for `ark=`). Nothing ties that Ark
+  payment to the callback yet, so there is nothing to attach payer data to. See
+  [Planned: payer data on Ark payments](#planned-payer-data-on-ark-payments).
 - **Notifications** name the payer only on app versions that register a notification key (see
   [Notifications](#notifications)); older ones show "Payment received" as before.
 

@@ -130,6 +130,36 @@ import Testing
         #expect(model.stage == .amount && model.error == nil && !model.showReview && !model.busy)
     }
 
+    /// A `bark` payment option (lnurl/luds#303) offers Ark, and Review pays the address its callback returns.
+    @Test func paymentOptionAsksTheCallbackForTheArkAddress() async {
+        var reviewed: SendPayment?
+        var asked: [SendArkRail] = []
+        let model = SendModel(
+            controller: freshController(),
+            resolveRecipient: { recipient in
+                var route = SendRecipientRoute(destination: recipient, minMsat: 1000, maxMsat: 1_000_000_000, commentAllowed: 0)
+                route.arkOption = .init(id: "second", minMsat: 1000, maxMsat: 1_000_000_000)
+                return route
+            },
+            quotePayment: { payment in
+                reviewed = payment
+                return .init(amount: payment.amount, fee: 0, total: payment.amount)
+            },
+            arkAddress: { rail, _, sats in
+                asked.append(rail)
+                return "tark-from-callback-\(sats)"
+            })
+        model.amount = "1000"
+        model.arkBalance = 10000
+        model.destination = "alice@example.com"
+        await model.acceptRecipient()
+        #expect(model.rails == [.ark, .lightning])
+        model.progress.selectedRail = .ark
+        await model.review()
+        #expect(asked == [.option("second")])
+        #expect(reviewed?.method == "ark" && reviewed?.destination == "tark-from-callback-1000")
+    }
+
     @Test func noteTakingAddressStopsOnToBeforeReview() async {
         var reviewed: SendPayment?
         let model = SendModel(
