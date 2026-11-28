@@ -110,6 +110,22 @@ class SendRecipientTest {
         val m = model(this); m.prefill(com.noahwallet.history.RepeatPayment("alice@example.com", "note", "SATS", "1000", 1000), "USD")
         assertEquals(SendStage.recipient, m.stage); assertNull(m.route); assertNull(m.quote); assertFalse(m.progress.recipientConfirmed)
     }
+    /** A `bark` payment option (lnurl/luds#303) offers Ark, and Review pays the address its callback returns. */
+    @Test fun paymentOptionAsksTheCallbackForTheArkAddress() = runBlocking {
+        var reviewed: SendPayment? = null
+        val asked = mutableListOf<SendArkRail>()
+        val m = SendModel(controller(FakeSendWallet(), TestJournal(), this), "regtest",
+            { SendRecipientRoute(it, 1000, 10_000_000, 0, null, "https://example.com/callback".toHttpUrl(), "metadata",
+                arkOption = SendArkOption("second", 1000, 10_000_000)) },
+            { reviewed = it; FakeSendWallet.quote }, {}, this,
+            arkAddress = { rail, _, sats -> asked += rail; "tark-from-callback-$sats" })
+        m.amount = "1000"; m.arkBalance = 10000
+        m.setRecipient("alice@example.com"); m.acceptRecipient()
+        assertEquals(listOf(SendRail.ark, SendRail.lightning), m.rails)
+        m.progress = m.progress.copy(selectedRail = SendRail.ark); m.review()
+        assertEquals(listOf<SendArkRail>(SendArkRail.Option("second")), asked)
+        assertEquals("ark", reviewed?.method); assertEquals("tark-from-callback-1000", reviewed?.destination)
+    }
     @Test fun noteTakingAddressStopsOnToBeforeReview() = runBlocking {
         var reviewed: SendPayment? = null
         val m = model(this, resolve = { SendRecipientRoute(it, 1000, 10_000_000, 10, null, "https://example.com/callback".toHttpUrl(), "metadata") },

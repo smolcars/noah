@@ -57,7 +57,7 @@ internal enum Operations {
     }
     /// Handles LNURL-pay requests.
     ///
-    /// Public endpoint; no bearer token required. Without amount, returns payment parameters; with amount, returns an invoice (pr is empty for negotiated direct Ark payment).
+    /// Public endpoint; no bearer token required. Without amount, returns payment parameters; with amount, returns an invoice (pr is empty for negotiated direct Ark payment), or the Ark address as paymentDestination for paymentOption=second.
     ///
     /// - Remark: HTTP `GET /.well-known/lnurlp/{username}`.
     /// - Remark: Generated from `#/paths//.well-known/lnurlp/{username}/get(lnurlp_request)`.
@@ -89,17 +89,25 @@ internal enum Operations {
                 ///
                 /// - Remark: Generated from `#/paths/.well-known/lnurlp/{username}/GET/query/ark`.
                 internal var ark: Swift.String?
+                /// The `id` of the `paymentOptions` entry to pay through (lnurl/luds#303); `lightning` when
+                /// absent.
+                ///
+                /// - Remark: Generated from `#/paths/.well-known/lnurlp/{username}/GET/query/paymentOption`.
+                internal var paymentOption: Swift.String?
                 /// Creates a new `Query`.
                 ///
                 /// - Parameters:
                 ///   - amount: The amount of the payment in millisatoshis.
                 ///   - ark: The payer's Ark server pubkey, used to negotiate a compatible Ark address.
+                ///   - paymentOption: The `id` of the `paymentOptions` entry to pay through (lnurl/luds#303); `lightning` when
                 internal init(
                     amount: Swift.Int64? = nil,
-                    ark: Swift.String? = nil
+                    ark: Swift.String? = nil,
+                    paymentOption: Swift.String? = nil
                 ) {
                     self.amount = amount
                     self.ark = ark
+                    self.paymentOption = paymentOption
                 }
             }
             internal var query: Operations.LnurlpRequest.Input.Query

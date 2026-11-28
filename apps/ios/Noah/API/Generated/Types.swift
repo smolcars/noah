@@ -10,7 +10,7 @@ internal protocol APIProtocol: Sendable {
     func root(_ input: Operations.Root.Input) async throws -> Operations.Root.Output
     /// Handles LNURL-pay requests.
     ///
-    /// Public endpoint; no bearer token required. Without amount, returns payment parameters; with amount, returns an invoice (pr is empty for negotiated direct Ark payment).
+    /// Public endpoint; no bearer token required. Without amount, returns payment parameters; with amount, returns an invoice (pr is empty for negotiated direct Ark payment), or the Ark address as paymentDestination for paymentOption=second.
     ///
     /// - Remark: HTTP `GET /.well-known/lnurlp/{username}`.
     /// - Remark: Generated from `#/paths//.well-known/lnurlp/{username}/get(lnurlp_request)`.
@@ -243,7 +243,7 @@ extension APIProtocol {
     }
     /// Handles LNURL-pay requests.
     ///
-    /// Public endpoint; no bearer token required. Without amount, returns payment parameters; with amount, returns an invoice (pr is empty for negotiated direct Ark payment).
+    /// Public endpoint; no bearer token required. Without amount, returns payment parameters; with amount, returns an invoice (pr is empty for negotiated direct Ark payment), or the Ark address as paymentDestination for paymentOption=second.
     ///
     /// - Remark: HTTP `GET /.well-known/lnurlp/{username}`.
     /// - Remark: Generated from `#/paths//.well-known/lnurlp/{username}/get(lnurlp_request)`.

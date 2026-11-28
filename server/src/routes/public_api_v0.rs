@@ -388,7 +388,30 @@ pub struct LnurlpDefaultResponse {
     /// The user's Ark address when requested for a compatible Ark server.
     #[serde(skip_serializing_if = "Option::is_none")]
     pub ark: Option<String>,
+    /// The rails the callback can pay through (lnurl/luds#303): always `lightning`, and `second`
+    /// (type `bark`) while the user has an Ark address.
+    pub payment_options: Vec<LnurlPayOption>,
 }
+
+/// One rail in `paymentOptions` (lnurl/luds#303).
+#[derive(Serialize, Deserialize, utoipa::ToSchema)]
+pub struct LnurlPayOption {
+    /// The value a wallet sends to the callback as `paymentOption`.
+    pub id: String,
+    /// The payment method: `lightning` or `bark`.
+    #[serde(rename = "type")]
+    pub option_type: String,
+    /// For `bark`, the Ark server's public key (compressed, lowercase hex), so a wallet can tell
+    /// whether it can pay this option before calling back. Noah's extension, proposed on
+    /// lnurl/luds#303.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub operator: Option<String>,
+}
+
+/// The `paymentOption` for a Lightning invoice, the default.
+pub const PAYMENT_OPTION_LIGHTNING: &str = "lightning";
+/// The `paymentOption` for an Ark payment to the user's address on Second's Ark server.
+pub const PAYMENT_OPTION_SECOND: &str = "second";
 
 /// The LUD-18 fields Noah accepts; neither is mandatory.
 #[derive(Serialize, Deserialize, utoipa::ToSchema)]
@@ -413,6 +436,19 @@ pub struct LnurlpInvoiceResponse {
     pub routes: Vec<String>,
     #[serde(skip_serializing_if = "Option::is_none")]
     pub ark: Option<String>,
+    /// `lightning` when the wallet chose it as its `paymentOption` (lnurl/luds#303).
+    #[serde(rename = "paymentOption", skip_serializing_if = "Option::is_none")]
+    pub payment_option: Option<String>,
+}
+
+/// The callback response for a `paymentOption` paid without an invoice (lnurl/luds#303).
+#[derive(Serialize, Deserialize, utoipa::ToSchema)]
+#[serde(rename_all = "camelCase")]
+pub struct LnurlpDestinationResponse {
+    /// The `paymentOption` the wallet chose.
+    pub payment_option: String,
+    /// Where to pay: for `second`, the user's Ark address.
+    pub payment_destination: String,
 }
 
 /// Schema for the query-dependent JSON returned by `lnurlp_request`.
@@ -425,6 +461,7 @@ pub struct LnurlpInvoiceResponse {
 pub enum LnurlpResponse {
     Parameters(LnurlpDefaultResponse),
     Invoice(LnurlpInvoiceResponse),
+    Destination(LnurlpDestinationResponse),
 }
 
 /// Defines the query parameters for an LNURL-pay request.
@@ -435,6 +472,10 @@ pub struct LnurlpRequestQuery {
     amount: Option<u64>,
     /// The payer's Ark server pubkey, used to negotiate a compatible Ark address.
     ark: Option<String>,
+    /// The `id` of the `paymentOptions` entry to pay through (lnurl/luds#303); `lightning` when
+    /// absent.
+    #[serde(rename = "paymentOption")]
+    payment_option: Option<String>,
 }
 
 async fn negotiated_ark_address(
@@ -454,6 +495,29 @@ async fn negotiated_ark_address(
     }
 
     None
+}
+
+/// The rails discovery lists: Lightning always, and Ark while the user has an address, with the
+/// Ark server's key as its `operator` once the server knows it.
+async fn payment_options(state: &AppState, has_ark_address: bool) -> Vec<LnurlPayOption> {
+    let mut options = vec![LnurlPayOption {
+        id: PAYMENT_OPTION_LIGHTNING.to_string(),
+        option_type: "lightning".to_string(),
+        operator: None,
+    }];
+    if has_ark_address {
+        options.push(LnurlPayOption {
+            id: PAYMENT_OPTION_SECOND.to_string(),
+            option_type: "bark".to_string(),
+            operator: state
+                .ark_server_pubkey
+                .read()
+                .await
+                .as_deref()
+                .map(str::to_lowercase),
+        });
+    }
+    options
 }
 
 #[derive(Deserialize)]
@@ -619,12 +683,12 @@ async fn discard_reservation(repo: &LnurlPayReceiveMetadataRepository, id: Uuid)
 /// Handles LNURL-pay requests.
 ///
 /// This endpoint manages the two-step LNURL-pay flow. The first request (without an amount)
-/// returns payment parameters. The second request (with an amount) returns a direct Ark response
-/// when negotiated, otherwise it asks barkd for a forwarding invoice when configured and falls
-/// back to waking the user's device.
+/// returns payment parameters. The second request (with an amount) returns the user's Ark address
+/// for `paymentOption=second`, or a direct Ark response when negotiated with `ark=`. Otherwise it
+/// asks barkd for a forwarding invoice when configured and falls back to waking the user's device.
 #[utoipa::path(
     get, path = "/.well-known/lnurlp/{username}",
-    description = "Public endpoint; no bearer token required. Without amount, returns payment parameters; with amount, returns an invoice (pr is empty for negotiated direct Ark payment).",
+    description = "Public endpoint; no bearer token required. Without amount, returns payment parameters; with amount, returns an invoice (pr is empty for negotiated direct Ark payment), or the Ark address as paymentDestination for paymentOption=second.",
     params(("username" = String, Path, description = "Hosted Lightning username"), LnurlpRequestQuery),
     responses(
         (status = 200, description = "Success", body = LnurlpResponse),
@@ -696,6 +760,7 @@ pub async fn lnurlp_request(
                 identifier: LnurlPayPayerDataFieldSpec { mandatory: false },
             }),
             ark: negotiated_ark_address(&state, &query, user.ark_address.as_ref()).await,
+            payment_options: payment_options(&state, user.ark_address.is_some()).await,
         };
         return Ok(Json(
             serde_json::to_value(response).map_err(|e| ApiError::SerializeErr(e.to_string()))?,
@@ -732,9 +797,41 @@ pub async fn lnurlp_request(
         )
     };
 
-    if let Some(ark_address) =
-        negotiated_ark_address(&state, &query, user.ark_address.as_ref()).await
-    {
+    let unsupported_option = || ApiError::InvalidArgument("Unsupported paymentOption".to_string());
+    match query.payment_option.as_deref() {
+        None | Some(PAYMENT_OPTION_LIGHTNING) => {}
+        Some(PAYMENT_OPTION_SECOND) => {
+            let Some(ark_address) = user.ark_address.clone() else {
+                return Err(unsupported_option());
+            };
+            if amount % 1000 != 0 {
+                return Err(ApiError::InvalidArgument(
+                    "Amount must be a whole number of satoshis".to_string(),
+                ));
+            }
+            // Checked like any callback's, then dropped: nothing ties an Ark payment to this
+            // request yet, and a note isn't worth failing the payment over.
+            validate_sensitive_lnurl_pay_query(&sensitive)?;
+            let response = LnurlpDestinationResponse {
+                payment_option: PAYMENT_OPTION_SECOND.to_string(),
+                payment_destination: ark_address,
+            };
+            return Ok(Json(
+                serde_json::to_value(response)
+                    .map_err(|e| ApiError::SerializeErr(e.to_string()))?,
+            ));
+        }
+        Some(_) => return Err(unsupported_option()),
+    }
+    // The wallet's `paymentOption` sets the rail; the older `ark=` negotiation applies only
+    // without one.
+    let payment_option = query.payment_option.clone();
+    let legacy_ark_address = match payment_option {
+        Some(_) => None,
+        None => negotiated_ark_address(&state, &query, user.ark_address.as_ref()).await,
+    };
+
+    if let Some(ark_address) = legacy_ark_address {
         if metadata_submitted {
             return Err(metadata_unavailable());
         }
@@ -742,6 +839,7 @@ pub async fn lnurlp_request(
             pr: "".to_string(),
             routes: vec![],
             ark: Some(ark_address),
+            payment_option: None,
         };
         return Ok(Json(
             serde_json::to_value(response).map_err(|e| ApiError::SerializeErr(e.to_string()))?,
@@ -833,6 +931,7 @@ pub async fn lnurlp_request(
                     pr: invoice.invoice,
                     routes: vec![],
                     ark: user.ark_address,
+                    payment_option,
                 };
                 return Ok(Json(
                     serde_json::to_value(response)
@@ -973,6 +1072,7 @@ pub async fn lnurlp_request(
         pr: invoice,
         routes: vec![],
         ark: user.ark_address,
+        payment_option,
     };
     Ok(Json(
         serde_json::to_value(response).map_err(|e| ApiError::SerializeErr(e.to_string()))?,

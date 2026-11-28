@@ -923,6 +923,45 @@ extension Components {
                 case notificationId = "notification_id"
             }
         }
+        /// One rail in `paymentOptions` (lnurl/luds#303).
+        ///
+        /// - Remark: Generated from `#/components/schemas/LnurlPayOption`.
+        internal struct LnurlPayOption: Codable, Hashable, Sendable {
+            /// The value a wallet sends to the callback as `paymentOption`.
+            ///
+            /// - Remark: Generated from `#/components/schemas/LnurlPayOption/id`.
+            internal var id: Swift.String
+            /// For `bark`, the Ark server's public key (compressed, lowercase hex), so a wallet can tell
+            /// whether it can pay this option before calling back. Noah's extension, proposed on
+            /// lnurl/luds#303.
+            ///
+            /// - Remark: Generated from `#/components/schemas/LnurlPayOption/operator`.
+            internal var _operator: Swift.String?
+            /// The payment method: `lightning` or `bark`.
+            ///
+            /// - Remark: Generated from `#/components/schemas/LnurlPayOption/type`.
+            internal var _type: Swift.String
+            /// Creates a new `LnurlPayOption`.
+            ///
+            /// - Parameters:
+            ///   - id: The value a wallet sends to the callback as `paymentOption`.
+            ///   - _operator: For `bark`, the Ark server's public key (compressed, lowercase hex), so a wallet can tell
+            ///   - _type: The payment method: `lightning` or `bark`.
+            internal init(
+                id: Swift.String,
+                _operator: Swift.String? = nil,
+                _type: Swift.String
+            ) {
+                self.id = id
+                self._operator = _operator
+                self._type = _type
+            }
+            internal enum CodingKeys: String, CodingKey {
+                case id
+                case _operator = "operator"
+                case _type = "type"
+            }
+        }
         /// - Remark: Generated from `#/components/schemas/LnurlPayPayerDataFieldSpec`.
         internal struct LnurlPayPayerDataFieldSpec: Codable, Hashable, Sendable {
             /// - Remark: Generated from `#/components/schemas/LnurlPayPayerDataFieldSpec/mandatory`.
@@ -1266,6 +1305,11 @@ extension Components {
             ///
             /// - Remark: Generated from `#/components/schemas/LnurlpDefaultResponse/payerData`.
             internal var payerData: Components.Schemas.LnurlpDefaultResponse.PayerDataPayload?
+            /// The rails the callback can pay through (lnurl/luds#303): always `lightning`, and `second`
+            /// (type `bark`) while the user has an Ark address.
+            ///
+            /// - Remark: Generated from `#/components/schemas/LnurlpDefaultResponse/paymentOptions`.
+            internal var paymentOptions: [Components.Schemas.LnurlPayOption]
             /// The LNURL-pay tag, which is always "payRequest".
             ///
             /// - Remark: Generated from `#/components/schemas/LnurlpDefaultResponse/tag`.
@@ -1280,6 +1324,7 @@ extension Components {
             ///   - metadata: A JSON string containing metadata about the payment.
             ///   - minSendable: The minimum amount that can be sent in a single payment, in millisatoshis. Unsigned Rust u64; values are below 2^63 in practice for native Int64/Long clients.
             ///   - payerData: The LUD-18 fields Noah accepts; neither is mandatory.
+            ///   - paymentOptions: The rails the callback can pay through (lnurl/luds#303): always `lightning`, and `second`
             ///   - tag: The LNURL-pay tag, which is always "payRequest".
             internal init(
                 ark: Swift.String? = nil,
@@ -1289,6 +1334,7 @@ extension Components {
                 metadata: Swift.String,
                 minSendable: Swift.Int64,
                 payerData: Components.Schemas.LnurlpDefaultResponse.PayerDataPayload? = nil,
+                paymentOptions: [Components.Schemas.LnurlPayOption],
                 tag: Swift.String
             ) {
                 self.ark = ark
@@ -1298,6 +1344,7 @@ extension Components {
                 self.metadata = metadata
                 self.minSendable = minSendable
                 self.payerData = payerData
+                self.paymentOptions = paymentOptions
                 self.tag = tag
             }
             internal enum CodingKeys: String, CodingKey {
@@ -1308,7 +1355,37 @@ extension Components {
                 case metadata
                 case minSendable
                 case payerData
+                case paymentOptions
                 case tag
+            }
+        }
+        /// The callback response for a `paymentOption` paid without an invoice (lnurl/luds#303).
+        ///
+        /// - Remark: Generated from `#/components/schemas/LnurlpDestinationResponse`.
+        internal struct LnurlpDestinationResponse: Codable, Hashable, Sendable {
+            /// Where to pay: for `second`, the user's Ark address.
+            ///
+            /// - Remark: Generated from `#/components/schemas/LnurlpDestinationResponse/paymentDestination`.
+            internal var paymentDestination: Swift.String
+            /// The `paymentOption` the wallet chose.
+            ///
+            /// - Remark: Generated from `#/components/schemas/LnurlpDestinationResponse/paymentOption`.
+            internal var paymentOption: Swift.String
+            /// Creates a new `LnurlpDestinationResponse`.
+            ///
+            /// - Parameters:
+            ///   - paymentDestination: Where to pay: for `second`, the user's Ark address.
+            ///   - paymentOption: The `paymentOption` the wallet chose.
+            internal init(
+                paymentDestination: Swift.String,
+                paymentOption: Swift.String
+            ) {
+                self.paymentDestination = paymentDestination
+                self.paymentOption = paymentOption
+            }
+            internal enum CodingKeys: String, CodingKey {
+                case paymentDestination
+                case paymentOption
             }
         }
         /// Represents the second response in the LNURL-pay protocol.
@@ -1319,6 +1396,10 @@ extension Components {
         internal struct LnurlpInvoiceResponse: Codable, Hashable, Sendable {
             /// - Remark: Generated from `#/components/schemas/LnurlpInvoiceResponse/ark`.
             internal var ark: Swift.String?
+            /// `lightning` when the wallet chose it as its `paymentOption` (lnurl/luds#303).
+            ///
+            /// - Remark: Generated from `#/components/schemas/LnurlpInvoiceResponse/paymentOption`.
+            internal var paymentOption: Swift.String?
             /// The BOLT11 payment request (invoice).
             ///
             /// - Remark: Generated from `#/components/schemas/LnurlpInvoiceResponse/pr`.
@@ -1331,19 +1412,23 @@ extension Components {
             ///
             /// - Parameters:
             ///   - ark:
+            ///   - paymentOption: `lightning` when the wallet chose it as its `paymentOption` (lnurl/luds#303).
             ///   - pr: The BOLT11 payment request (invoice).
             ///   - routes: A list of routes for the payment, typically empty.
             internal init(
                 ark: Swift.String? = nil,
+                paymentOption: Swift.String? = nil,
                 pr: Swift.String,
                 routes: [Swift.String]
             ) {
                 self.ark = ark
+                self.paymentOption = paymentOption
                 self.pr = pr
                 self.routes = routes
             }
             internal enum CodingKeys: String, CodingKey {
                 case ark
+                case paymentOption
                 case pr
                 case routes
             }
@@ -1360,21 +1445,30 @@ extension Components {
             ///
             /// - Remark: Generated from `#/components/schemas/LnurlpRequestQuery/ark`.
             internal var ark: Swift.String?
+            /// The `id` of the `paymentOptions` entry to pay through (lnurl/luds#303); `lightning` when
+            /// absent.
+            ///
+            /// - Remark: Generated from `#/components/schemas/LnurlpRequestQuery/paymentOption`.
+            internal var paymentOption: Swift.String?
             /// Creates a new `LnurlpRequestQuery`.
             ///
             /// - Parameters:
             ///   - amount: The amount of the payment in millisatoshis. Unsigned Rust u64; values are below 2^63 in practice for native Int64/Long clients.
             ///   - ark: The payer's Ark server pubkey, used to negotiate a compatible Ark address.
+            ///   - paymentOption: The `id` of the `paymentOptions` entry to pay through (lnurl/luds#303); `lightning` when
             internal init(
                 amount: Swift.Int64? = nil,
-                ark: Swift.String? = nil
+                ark: Swift.String? = nil,
+                paymentOption: Swift.String? = nil
             ) {
                 self.amount = amount
                 self.ark = ark
+                self.paymentOption = paymentOption
             }
             internal enum CodingKeys: String, CodingKey {
                 case amount
                 case ark
+                case paymentOption
             }
         }
         /// Schema for the query-dependent JSON returned by `lnurlp_request`.
@@ -1385,6 +1479,8 @@ extension Components {
             case LnurlpDefaultResponse(Components.Schemas.LnurlpDefaultResponse)
             /// - Remark: Generated from `#/components/schemas/LnurlpResponse/case2`.
             case LnurlpInvoiceResponse(Components.Schemas.LnurlpInvoiceResponse)
+            /// - Remark: Generated from `#/components/schemas/LnurlpResponse/case3`.
+            case LnurlpDestinationResponse(Components.Schemas.LnurlpDestinationResponse)
             internal init(from decoder: any Swift.Decoder) throws {
                 var errors: [any Swift.Error] = []
                 do {
@@ -1395,6 +1491,12 @@ extension Components {
                 }
                 do {
                     self = .LnurlpInvoiceResponse(try .init(from: decoder))
+                    return
+                } catch {
+                    errors.append(error)
+                }
+                do {
+                    self = .LnurlpDestinationResponse(try .init(from: decoder))
                     return
                 } catch {
                     errors.append(error)
@@ -1410,6 +1512,8 @@ extension Components {
                 case let .LnurlpDefaultResponse(value):
                     try value.encode(to: encoder)
                 case let .LnurlpInvoiceResponse(value):
+                    try value.encode(to: encoder)
+                case let .LnurlpDestinationResponse(value):
                     try value.encode(to: encoder)
                 }
             }

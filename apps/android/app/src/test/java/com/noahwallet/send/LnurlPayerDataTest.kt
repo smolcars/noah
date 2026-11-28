@@ -51,15 +51,30 @@ class LnurlPayerDataTest {
 
     @Test fun callbackFixture() {
         val cases = SharedFixtures.load("lnurl-pay-callback")
-        assertEquals(7, cases.size)
+        assertEquals(10, cases.size)
         for (case in cases) {
             val input = case.input.jsonObject
             val url = SendRecipientService.callbackUrl(input.getValue("callback").jsonPrimitive.content.toHttpUrl(),
-                input.getValue("amountMsat").jsonPrimitive.long, input.getValue("comment").jsonPrimitive.content, strings(input["payerData"]))
+                input.getValue("amountMsat").jsonPrimitive.long, input.getValue("comment").jsonPrimitive.content, strings(input["payerData"]),
+                input["paymentOption"]?.jsonPrimitive?.contentOrNull)
             val params = formDecoded(url)
             val payerData = payerData(params)
             assertEquals(case.name, strings(case.expected.jsonObject["params"]), params)
             assertEquals(case.name, (case.expected.jsonObject["payerData"] as? JsonObject)?.let(::strings), payerData)
+        }
+    }
+
+    @Test fun paymentOptionsFixture() {
+        val cases = SharedFixtures.load("lnurl-pay-options")
+        assertEquals(21, cases.size)
+        for (case in cases) {
+            val input = case.input.jsonObject
+            val option = SendArkOption.first(input["paymentOptions"], input.getValue("minSendable").jsonPrimitive.long,
+                input.getValue("maxSendable").jsonPrimitive.long, input["serverKey"]?.jsonPrimitive?.contentOrNull)
+            val expected = (case.expected as? JsonObject)?.let {
+                SendArkOption(it.getValue("id").jsonPrimitive.content, it.getValue("minMsat").jsonPrimitive.long, it.getValue("maxMsat").jsonPrimitive.long)
+            }
+            assertEquals(case.name, expected, option)
         }
     }
 

@@ -232,6 +232,11 @@ class WalletSession internal constructor(
         val sdk = handles.send as? SdkSendWallet ?: throw SessionError()
         sdk.recipientService().resolve(destination)
     }
+    /** The Ark address that pays a Lightning address over Ark: a payment option's callback answers with it (lnurl/luds#303). */
+    suspend fun sendArkAddress(rail: SendArkRail, route: SendRecipientRoute, sats: Long): String = withOpen { handles ->
+        val sdk = handles.send as? SdkSendWallet ?: throw SessionError()
+        sdk.recipientService().arkAddress(rail, route, sats)
+    }
     suspend fun pendingSendHashes(): Set<String> = withOpen { (it.send as SdkSendWallet).pendingHashes() }
     /** The amount a BOLT12 offer fixes, for Send's keypad; the quote checks it again. */
     suspend fun sendOfferAmount(offer: String): Long? = withOpen { (it.send as SdkSendWallet).offerAmount(offer) }

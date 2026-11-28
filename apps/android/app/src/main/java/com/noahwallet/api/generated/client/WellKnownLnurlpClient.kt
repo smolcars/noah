@@ -21,12 +21,14 @@ public class WellKnownLnurlpClient(
 ) {
   /**
    * Handles LNURL-pay requests.
-   * Public endpoint; no bearer token required. Without amount, returns payment parameters; with amount, returns an invoice (pr is empty for negotiated direct Ark payment).
+   * Public endpoint; no bearer token required. Without amount, returns payment parameters; with amount, returns an invoice (pr is empty for negotiated direct Ark payment), or the Ark address as paymentDestination for paymentOption=second.
    *
    * Parameters:
    * 	 @param username Hosted Lightning username
    * 	 @param amount The amount of the payment in millisatoshis.
    * 	 @param ark The payer's Ark server pubkey, used to negotiate a compatible Ark address.
+   * 	 @param paymentOption The `id` of the `paymentOptions` entry to pay through (lnurl/luds#303); `lightning` when
+   * absent.
    *
    * Returns:
    * 	[NetworkResult.Success] with [kotlinx.serialization.json.JsonElement] if the request was successful.
@@ -36,6 +38,7 @@ public class WellKnownLnurlpClient(
     username: String,
     amount: Long? = null,
     ark: String? = null,
+    paymentOption: String? = null,
     apiConfiguration: ApiConfiguration = ApiConfiguration(),
   ): NetworkResult<JsonElement> {
     val basePath = apiConfiguration.basePath.trimEnd('/')
@@ -45,6 +48,7 @@ public class WellKnownLnurlpClient(
       val params = buildList {
         amount?.let { add("amount=${it}") }
         ark?.let { add("ark=${it}") }
+        paymentOption?.let { add("paymentOption=${it}") }
       }
       if (params.isNotEmpty()) append("?").append(params.joinToString("&"))
     }

@@ -1,0 +1,168 @@
+{
+  "description": "The Ark payment option Noah takes from an LNURL-pay response's `paymentOptions` (lnurl/luds#303): the first entry of type `bark` that is an object with a string `id`, `available` absent or true, and its own `minSendable`/`maxSendable` (millisatoshis) narrowing the top-level range to a range that isn't empty, and, if it names an `operator` (Noah's extension: the Ark server's public key), one equal to the wallet's own Ark server key (`serverKey`; absent when the wallet doesn't know it), compared ignoring case. Read leniently: a malformed entry or field counts as an option not offered, and anything malformed outside the entries counts as no options. `expected` is the option, with the range Noah allows for it, or null when there is none.",
+  "cases": [
+    {
+      "name": "no paymentOptions",
+      "input": { "minSendable": 1000, "maxSendable": 100000000 },
+      "expected": null
+    },
+    {
+      "name": "Lightning only",
+      "input": { "minSendable": 1000, "maxSendable": 100000000, "paymentOptions": [{ "id": "lightning", "type": "lightning" }] },
+      "expected": null
+    },
+    {
+      "name": "a bark option",
+      "input": {
+        "minSendable": 1000,
+        "maxSendable": 100000000,
+        "paymentOptions": [{ "id": "lightning", "type": "lightning" }, { "id": "second", "type": "bark" }]
+      },
+      "expected": { "id": "second", "minMsat": 1000, "maxMsat": 100000000 }
+    },
+    {
+      "name": "unknown fields and types ignored",
+      "input": {
+        "minSendable": 1000,
+        "maxSendable": 100000000,
+        "paymentOptions": [{ "id": "liquid", "type": "liquid" }, { "id": "second", "type": "bark", "extra": [1] }]
+      },
+      "expected": { "id": "second", "minMsat": 1000, "maxMsat": 100000000 }
+    },
+    {
+      "name": "explicitly available",
+      "input": { "minSendable": 1000, "maxSendable": 100000000, "paymentOptions": [{ "id": "second", "type": "bark", "available": true }] },
+      "expected": { "id": "second", "minMsat": 1000, "maxMsat": 100000000 }
+    },
+    {
+      "name": "unavailable",
+      "input": { "minSendable": 1000, "maxSendable": 100000000, "paymentOptions": [{ "id": "second", "type": "bark", "available": false }] },
+      "expected": null
+    },
+    {
+      "name": "malformed availability",
+      "input": { "minSendable": 1000, "maxSendable": 100000000, "paymentOptions": [{ "id": "second", "type": "bark", "available": "yes" }] },
+      "expected": null
+    },
+    {
+      "name": "the first usable bark option wins",
+      "input": {
+        "minSendable": 1000,
+        "maxSendable": 100000000,
+        "paymentOptions": [
+          { "id": "down", "type": "bark", "available": false },
+          { "id": "second", "type": "bark" },
+          { "id": "other", "type": "bark" }
+        ]
+      },
+      "expected": { "id": "second", "minMsat": 1000, "maxMsat": 100000000 }
+    },
+    {
+      "name": "its own range narrows the top-level one",
+      "input": {
+        "minSendable": 1000,
+        "maxSendable": 100000000,
+        "paymentOptions": [{ "id": "second", "type": "bark", "minSendable": 330000, "maxSendable": 5000000 }]
+      },
+      "expected": { "id": "second", "minMsat": 330000, "maxMsat": 5000000 }
+    },
+    {
+      "name": "its own range never widens the top-level one",
+      "input": {
+        "minSendable": 1000,
+        "maxSendable": 100000000,
+        "paymentOptions": [{ "id": "second", "type": "bark", "minSendable": 1, "maxSendable": 200000000 }]
+      },
+      "expected": { "id": "second", "minMsat": 1000, "maxMsat": 100000000 }
+    },
+    {
+      "name": "an empty range",
+      "input": {
+        "minSendable": 1000,
+        "maxSendable": 100000000,
+        "paymentOptions": [{ "id": "second", "type": "bark", "minSendable": 200000000 }]
+      },
+      "expected": null
+    },
+    {
+      "name": "a malformed range",
+      "input": {
+        "minSendable": 1000,
+        "maxSendable": 100000000,
+        "paymentOptions": [{ "id": "second", "type": "bark", "minSendable": "330000" }]
+      },
+      "expected": null
+    },
+    {
+      "name": "no id",
+      "input": { "minSendable": 1000, "maxSendable": 100000000, "paymentOptions": [{ "type": "bark" }] },
+      "expected": null
+    },
+    {
+      "name": "an empty id",
+      "input": { "minSendable": 1000, "maxSendable": 100000000, "paymentOptions": [{ "id": "", "type": "bark" }] },
+      "expected": null
+    },
+    {
+      "name": "a type that isn't a string",
+      "input": { "minSendable": 1000, "maxSendable": 100000000, "paymentOptions": [{ "id": "second", "type": ["bark"] }] },
+      "expected": null
+    },
+    {
+      "name": "an entry that isn't an object is skipped",
+      "input": {
+        "minSendable": 1000,
+        "maxSendable": 100000000,
+        "paymentOptions": ["bark", { "id": "second", "type": "bark" }]
+      },
+      "expected": { "id": "second", "minMsat": 1000, "maxMsat": 100000000 }
+    },
+    {
+      "name": "its operator is the wallet's Ark server",
+      "input": {
+        "minSendable": 1000,
+        "maxSendable": 100000000,
+        "serverKey": "02aa0000000000000000000000000000000000000000000000000000000000000a",
+        "paymentOptions": [{ "id": "second", "type": "bark", "operator": "02AA0000000000000000000000000000000000000000000000000000000000000A" }]
+      },
+      "expected": { "id": "second", "minMsat": 1000, "maxMsat": 100000000 }
+    },
+    {
+      "name": "another Ark server's option is skipped",
+      "input": {
+        "minSendable": 1000,
+        "maxSendable": 100000000,
+        "serverKey": "02aa0000000000000000000000000000000000000000000000000000000000000a",
+        "paymentOptions": [
+          { "id": "other", "type": "bark", "operator": "03bb0000000000000000000000000000000000000000000000000000000000000b" },
+          { "id": "second", "type": "bark", "operator": "02aa0000000000000000000000000000000000000000000000000000000000000a" }
+        ]
+      },
+      "expected": { "id": "second", "minMsat": 1000, "maxMsat": 100000000 }
+    },
+    {
+      "name": "an operator the wallet can't compare",
+      "input": {
+        "minSendable": 1000,
+        "maxSendable": 100000000,
+        "paymentOptions": [{ "id": "second", "type": "bark", "operator": "02aa0000000000000000000000000000000000000000000000000000000000000a" }]
+      },
+      "expected": null
+    },
+    {
+      "name": "a malformed operator",
+      "input": {
+        "minSendable": 1000,
+        "maxSendable": 100000000,
+        "serverKey": "02aa0000000000000000000000000000000000000000000000000000000000000a",
+        "paymentOptions": [{ "id": "second", "type": "bark", "operator": 2 }]
+      },
+      "expected": null
+    },
+    {
+      "name": "paymentOptions that isn't an array",
+      "input": { "minSendable": 1000, "maxSendable": 100000000, "paymentOptions": { "id": "second", "type": "bark" } },
+      "expected": null
+    }
+  ]
+}

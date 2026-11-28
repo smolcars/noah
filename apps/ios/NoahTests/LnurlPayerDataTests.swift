@@ -13,6 +13,7 @@ import Testing
         let comment: String
         // swiftlint:disable:next discouraged_optional_collection - null means no payer data, as the fixture says
         let payerData: [String: String]?
+        let paymentOption: String?
     }
     struct CallbackExpected: Decodable {
         let params: [String: String]
@@ -49,6 +50,32 @@ import Testing
         }
     }
 
+    /// A pay request's amount range and `paymentOptions`, decoded as discovery decodes them.
+    struct OptionsProbe: Decodable {
+        let minSendable: UInt64
+        let maxSendable: UInt64
+        let paymentOptions: SendArkOption.Advertised?
+        let serverKey: String?
+    }
+
+    @Test func paymentOptionsFixture() throws {
+        let file = try #require(JSONSerialization.jsonObject(with: Fixtures.data("lnurl-pay-options")) as? [String: Any])
+        let cases = try #require(file["cases"] as? [[String: Any]])
+        #expect(cases.count == 21)
+        for fixture in cases {
+            let name = try #require(fixture["name"] as? String)
+            let input = try #require(fixture["input"] as? [String: Any])
+            let probe = try JSONDecoder().decode(OptionsProbe.self, from: JSONSerialization.data(withJSONObject: input))
+            let option = SendArkOption.first(probe.paymentOptions, minMsat: probe.minSendable, maxMsat: probe.maxSendable,
+                                             serverKey: probe.serverKey)
+            let expected = (fixture["expected"] as? [String: Any]).map {
+                SendArkOption(id: $0["id"] as? String ?? "", minMsat: $0["minMsat"] as? UInt64 ?? 0,
+                              maxMsat: $0["maxMsat"] as? UInt64 ?? 0)
+            }
+            #expect(option == expected, "\(name)")
+        }
+    }
+
     /// The query as a form decoder reads it (`+` is a space), as LNURL services do.
     static func formDecoded(_ url: URL) throws -> [String: String] {
         let query = try #require(URLComponents(url: url, resolvingAgainstBaseURL: false)?.percentEncodedQuery)
@@ -65,11 +92,11 @@ import Testing
 
     @Test func callbackFixture() throws {
         let cases = try Fixtures.load("lnurl-pay-callback", input: CallbackInput.self, expected: CallbackExpected.self)
-        #expect(cases.count == 7)
+        #expect(cases.count == 10)
         for fixture in cases {
             let callback = try #require(URL(string: fixture.input.callback))
             let url = try SendRecipientService.callbackURL(callback, msat: fixture.input.amountMsat, comment: fixture.input.comment,
-                                                           payerData: fixture.input.payerData ?? [:])
+                                                           payerData: fixture.input.payerData ?? [:], paymentOption: fixture.input.paymentOption)
             var params = try Self.formDecoded(url)
             let payerData = try params.removeValue(forKey: "payerdata").map { try JSONDecoder().decode([String: String].self, from: Data($0.utf8)) }
             #expect(params == fixture.expected.params, "\(fixture.name)")

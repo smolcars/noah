@@ -569,6 +569,184 @@ async fn test_lnurlp_invoice_request_falls_back_when_barkd_fails() {
     assert_eq!(barkd.calls().len(), 1);
 }
 
+/// GETs an LNURL-pay URL and returns the status and the JSON body.
+async fn lnurlp_get(app: axum::Router, uri: &str) -> (StatusCode, serde_json::Value) {
+    let response = app
+        .oneshot(
+            Request::builder()
+                .method(http::Method::GET)
+                .uri(uri)
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    let status = response.status();
+    let body = response.into_body().collect().await.unwrap().to_bytes();
+    (status, serde_json::from_slice(&body).unwrap())
+}
+
+#[tracing_test::traced_test]
+#[tokio::test]
+async fn test_lnurlp_request_lists_payment_options() {
+    let (app, app_state, _guard) = setup_test_app().await;
+    let (server_pubkey, ark_address) = test_ark_address(0x11);
+
+    sqlx::query("INSERT INTO users (pubkey, lightning_address, ark_address) VALUES ($1, $2, $3)")
+        .bind("test_pubkey")
+        .bind("test@localhost")
+        .bind(&ark_address)
+        .execute(&app_state.db_pool)
+        .await
+        .unwrap();
+    sqlx::query("INSERT INTO users (pubkey, lightning_address) VALUES ($1, $2)")
+        .bind("other_pubkey")
+        .bind("other@localhost")
+        .execute(&app_state.db_pool)
+        .await
+        .unwrap();
+
+    // Before the server knows its Ark server's key, `second` has no `operator`.
+    let (status, with_ark) = lnurlp_get(app.clone(), "/.well-known/lnurlp/test").await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(
+        with_ark["paymentOptions"],
+        serde_json::json!([
+            {"id": "lightning", "type": "lightning"},
+            {"id": "second", "type": "bark"},
+        ])
+    );
+
+    *app_state.ark_server_pubkey.write().await = Some(server_pubkey.to_string().to_uppercase());
+    let (_, with_operator) = lnurlp_get(app.clone(), "/.well-known/lnurlp/test").await;
+    assert_eq!(
+        with_operator["paymentOptions"][1],
+        serde_json::json!({"id": "second", "type": "bark", "operator": server_pubkey.to_string()})
+    );
+
+    let (status, without_ark) = lnurlp_get(app, "/.well-known/lnurlp/other").await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(
+        without_ark["paymentOptions"],
+        serde_json::json!([{"id": "lightning", "type": "lightning"}])
+    );
+}
+
+#[tracing_test::traced_test]
+#[tokio::test]
+async fn test_lnurlp_callback_returns_the_ark_address_for_second() {
+    let barkd = Arc::new(TestForwardingInvoiceProvider::returning("lnbc-forwarded"));
+    let (app, app_state, _guard) = setup_test_app_with_barkd(Some(barkd.clone())).await;
+    let (server_pubkey, ark_address) = test_ark_address(0x11);
+    *app_state.ark_server_pubkey.write().await = Some(server_pubkey.to_string());
+
+    sqlx::query("INSERT INTO users (pubkey, lightning_address, ark_address) VALUES ($1, $2, $3)")
+        .bind("test_pubkey")
+        .bind("test@localhost")
+        .bind(&ark_address)
+        .execute(&app_state.db_pool)
+        .await
+        .unwrap();
+
+    // A comment and payer data are accepted, then dropped: nothing ties the Ark payment to this
+    // request yet. No mailbox authorization or push token is needed, and barkd isn't asked.
+    let payer_data = "%7B%22name%22%3A%22Alice%22%7D";
+    let (status, res) = lnurlp_get(
+        app.clone(),
+        &format!(
+            "/.well-known/lnurlp/test?amount=330000&paymentOption=second&comment=Hi&payerdata={payer_data}&ark={server_pubkey}"
+        ),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(
+        res,
+        serde_json::json!({"paymentOption": "second", "paymentDestination": ark_address})
+    );
+    assert!(barkd.calls().is_empty());
+
+    // Still checked like any callback's.
+    let (status, res) = lnurlp_get(
+        app.clone(),
+        "/.well-known/lnurlp/test?amount=330000&paymentOption=second&comment=%07",
+    )
+    .await;
+    assert_eq!(status, StatusCode::BAD_REQUEST);
+    assert_eq!(res["code"], "INVALID_ARGUMENT");
+
+    let (status, res) = lnurlp_get(
+        app,
+        "/.well-known/lnurlp/test?amount=330001&paymentOption=second",
+    )
+    .await;
+    assert_eq!(status, StatusCode::BAD_REQUEST);
+    assert_eq!(res["message"], "Amount must be a whole number of satoshis");
+    assert!(barkd.calls().is_empty());
+}
+
+#[tracing_test::traced_test]
+#[tokio::test]
+async fn test_lnurlp_callback_with_lightning_option_ignores_ark_negotiation() {
+    let barkd = Arc::new(TestForwardingInvoiceProvider::returning("lnbc-forwarded"));
+    let (app, app_state, _guard) = setup_test_app_with_barkd(Some(barkd.clone())).await;
+    let (server_pubkey, ark_address) = test_ark_address(0x11);
+    *app_state.ark_server_pubkey.write().await = Some(server_pubkey.to_string());
+
+    sqlx::query("INSERT INTO users (pubkey, lightning_address, ark_address) VALUES ($1, $2, $3)")
+        .bind("test_pubkey")
+        .bind("test@localhost")
+        .bind(&ark_address)
+        .execute(&app_state.db_pool)
+        .await
+        .unwrap();
+
+    // `paymentOption` picks the rail, so a matching `ark=` no longer returns the address.
+    let (status, res) = lnurlp_get(
+        app,
+        &format!(
+            "/.well-known/lnurlp/test?amount=330000&paymentOption=lightning&ark={server_pubkey}"
+        ),
+    )
+    .await;
+    assert_eq!(status, StatusCode::OK);
+    assert_eq!(res["pr"], "lnbc-forwarded");
+    assert_eq!(res["paymentOption"], "lightning");
+    assert_eq!(barkd.calls().len(), 1);
+}
+
+#[tracing_test::traced_test]
+#[tokio::test]
+async fn test_lnurlp_callback_refuses_unsupported_payment_options() {
+    let barkd = Arc::new(TestForwardingInvoiceProvider::returning("lnbc-forwarded"));
+    let (app, app_state, _guard) = setup_test_app_with_barkd(Some(barkd.clone())).await;
+    let (_, ark_address) = test_ark_address(0x11);
+
+    sqlx::query("INSERT INTO users (pubkey, lightning_address, ark_address) VALUES ($1, $2, $3)")
+        .bind("test_pubkey")
+        .bind("test@localhost")
+        .bind(&ark_address)
+        .execute(&app_state.db_pool)
+        .await
+        .unwrap();
+    sqlx::query("INSERT INTO users (pubkey, lightning_address) VALUES ($1, $2)")
+        .bind("other_pubkey")
+        .bind("other@localhost")
+        .execute(&app_state.db_pool)
+        .await
+        .unwrap();
+
+    // An option the service doesn't list, and `second` for a user without an Ark address.
+    for uri in [
+        "/.well-known/lnurlp/test?amount=330000&paymentOption=liquid",
+        "/.well-known/lnurlp/other?amount=330000&paymentOption=second",
+    ] {
+        let (status, res) = lnurlp_get(app.clone(), uri).await;
+        assert_eq!(status, StatusCode::BAD_REQUEST, "{uri}");
+        assert_eq!(res["message"], "Unsupported paymentOption", "{uri}");
+    }
+    assert!(barkd.calls().is_empty());
+}
+
 #[tracing_test::traced_test]
 #[tokio::test]
 async fn test_lnurlp_request_omits_ark_address_when_user_has_none() {

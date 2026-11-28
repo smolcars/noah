@@ -16,7 +16,62 @@ import java.util.concurrent.TimeUnit
 data class SendRecipientRoute(val destination: String, val minMsat: Long, val maxMsat: Long,
     val commentAllowed: Int, val arkAddress: String?, val callback: HttpUrl, val metadata: String?,
     /** LUD-18 fields the address asks for, each to whether it's mandatory. Empty when it asks for none. */
-    val payerData: Map<String, Boolean> = emptyMap())
+    val payerData: Map<String, Boolean> = emptyMap(),
+    /** The `bark` payment option, when the service offers one (lnurl/luds#303). */
+    val arkOption: SendArkOption? = null) {
+    /** Whether Ark can pay this address at all, whatever the amount. */
+    val offersArk get() = arkOption != null || arkAddress != null
+
+    /** How Ark pays [sats] here (0: any amount): through the payment option while the amount fits it, else to the address
+     *  discovery returned. Null when neither can. */
+    fun arkRail(sats: Long): SendArkRail? {
+        if (arkOption != null) {
+            val msat = runCatching { Math.multiplyExact(sats, 1000) }.getOrNull()
+            if (sats == 0L || (msat != null && msat in arkOption.minMsat..arkOption.maxMsat)) return SendArkRail.Option(arkOption.id)
+        }
+        return arkAddress?.let(SendArkRail::Address)
+    }
+}
+
+/** How a Lightning address is paid over Ark. */
+sealed interface SendArkRail {
+    /** Through a `bark` payment option: its callback returns the address. */
+    data class Option(val id: String) : SendArkRail
+    /** To the address discovery returned for `ark=`, Noah's older contract. */
+    data class Address(val address: String) : SendArkRail
+}
+
+/** The `bark` payment option Noah pays through (lnurl/luds#303, `apps/fixtures/lnurl-pay-options.json`), with the amount range
+ *  it allows. */
+data class SendArkOption(val id: String, val minMsat: Long, val maxMsat: Long) {
+    companion object {
+        /** The first usable `bark` entry of a pay request's `paymentOptions`, its own range narrowing the pay request's. Read
+         *  leniently: a malformed entry or field counts as not offered, and anything but an array as no options. An entry naming
+         *  an `operator` (Noah's extension, proposed on lnurl/luds#303) must name [serverKey], the wallet's own Ark server. */
+        fun first(paymentOptions: JsonElement?, minMsat: Long, maxMsat: Long, serverKey: String? = null): SendArkOption? =
+            (paymentOptions as? JsonArray)?.firstNotNullOfOrNull { option(it, minMsat, maxMsat, serverKey) }
+        /** [entry] as a usable `bark` option, or null. */
+        private fun option(entry: JsonElement, minMsat: Long, maxMsat: Long, serverKey: String?): SendArkOption? {
+            val option = (entry as? JsonObject)?.takeIf { it.text("type") == "bark" && it.available() && it.operates(serverKey) } ?: return null
+            val id = option.text("id")?.takeIf { it.isNotEmpty() } ?: return null
+            val low = maxOf(minMsat, option.msat("minSendable", minMsat) ?: return null)
+            val high = minOf(maxMsat, option.msat("maxSendable", maxMsat) ?: return null)
+            return SendArkOption(id, low, high).takeIf { low <= high }
+        }
+        /** No `operator`, or one equal to [serverKey] ignoring case. */
+        private fun JsonObject.operates(serverKey: String?) =
+            get("operator") == null || (serverKey != null && text("operator")?.equals(serverKey, ignoreCase = true) == true)
+        /** `available` absent or true; anything else, malformed included, counts as unavailable. */
+        private fun JsonObject.available() =
+            get("available").let { it == null || (it as? JsonPrimitive)?.takeUnless { value -> value.isString }?.booleanOrNull == true }
+        private fun JsonObject.text(key: String) = (get(key) as? JsonPrimitive)?.takeIf { it.isString }?.content
+        /** [key] in millisatoshis, [absent] when it's missing; null when it's malformed. */
+        private fun JsonObject.msat(key: String, absent: Long): Long? {
+            val value = get(key) ?: return absent
+            return (value as? JsonPrimitive)?.takeUnless { it.isString }?.longOrNull?.takeIf { it >= 0 }
+        }
+    }
+}
 
 /** The identity Noah can send as LUD-18 payer data: the profile's display name and the wallet's own Lightning address. */
 data class LnurlPayerIdentity(val name: String? = null, val identifier: String? = null) {
@@ -68,7 +123,8 @@ class SendRecipientService(private val network: String, private val fetch: suspe
         val endpoint = if (SendDestination.isLightningAddress(value)) SendDestination.addressEndpoint(value)
         else PaymentEncoding.bech32(value)?.let { PaymentEncoding.bytes(it.words)?.toString(Charsets.UTF_8)?.toHttpUrlOrNull() }
         requireSend(SendDestination.allowsLnurl(endpoint))
-        val request = endpoint!!.newBuilder().apply { runCatching { arkServerKey() }.getOrNull()?.let { addQueryParameter("ark", it) } }.build()
+        val serverKey = runCatching { arkServerKey() }.getOrNull()
+        val request = endpoint!!.newBuilder().apply { serverKey?.let { addQueryParameter("ark", it) } }.build()
         val response = fetch(request)
         fun string(key: String) = response[key]?.jsonPrimitive?.contentOrNull
         val callback = string("callback")?.toHttpUrlOrNull()
@@ -76,7 +132,19 @@ class SendRecipientService(private val network: String, private val fetch: suspe
         requireSend(string("tag") == "payRequest" && SendDestination.allowsLnurl(callback) && min != null && max != null && min >= 0 && min <= max)
         val ark = string("ark")?.takeIf { runCatching { validateArk(it) }.getOrDefault(false) }
         return SendRecipientRoute(value, min!!, max!!, maxOf(0, response["commentAllowed"]?.jsonPrimitive?.intOrNull ?: 0), ark, callback!!, string("metadata"),
-            LnurlPayerData.requirements(response["payerData"]))
+            LnurlPayerData.requirements(response["payerData"]), SendArkOption.first(response["paymentOptions"], min, max, serverKey))
+    }
+    /** The Ark address to pay: discovery's own, or the one a payment option's callback returns, checked as discovery's is.
+     *  Sends no comment or payer data: an Ark payment can't carry them to the recipient yet. */
+    suspend fun arkAddress(rail: SendArkRail, route: SendRecipientRoute, sats: Long): String = when (rail) {
+        is SendArkRail.Address -> rail.address
+        is SendArkRail.Option -> {
+            val response = fetch(callbackUrl(route.callback, Math.multiplyExact(sats, 1000), "", emptyMap(), rail.id))
+            val address = (response["paymentDestination"] as? JsonPrimitive)?.takeIf { it.isString }?.content
+                ?: throw SendFailure(SendFailure.Reason.invalid)
+            requireSend(runCatching { validateArk(address) }.getOrDefault(false))
+            address
+        }
     }
     /** Sends only the payer data the payment carries (what To showed), as far as this lookup still asks for it. */
     suspend fun invoice(payment: SendPayment): String {
@@ -90,14 +158,18 @@ class SendRecipientService(private val network: String, private val fetch: suspe
         return invoice
     }
     companion object {
-        /** The callback with this payment's `amount`, its note as `comment` and LUD-18 `payerdata`, each only when there is one
-         *  (`apps/fixtures/lnurl-pay-callback.json`). The service's own query stays as it was. The provider enforces commentAllowed. */
-        fun callbackUrl(callback: HttpUrl, msat: Long, comment: String, payerData: Map<String, String>): HttpUrl = callback.newBuilder()
-            .removeAllQueryParameters("amount").removeAllQueryParameters("comment").removeAllQueryParameters("payerdata")
-            .addQueryParameter("amount", msat.toString())
-            .apply { if (comment.isNotEmpty()) addQueryParameter("comment", comment) }
-            .apply { if (payerData.isNotEmpty()) addQueryParameter("payerdata", LnurlPayerData.json(payerData)) }
-            .build()
+        /** The callback with this payment's `amount`, its note as `comment`, LUD-18 `payerdata` and its `paymentOption`
+         *  (lnurl/luds#303), each only when there is one (`apps/fixtures/lnurl-pay-callback.json`). The service's own query stays
+         *  as it was. The provider enforces commentAllowed. */
+        fun callbackUrl(callback: HttpUrl, msat: Long, comment: String, payerData: Map<String, String>, paymentOption: String? = null): HttpUrl =
+            callback.newBuilder()
+                .removeAllQueryParameters("amount").removeAllQueryParameters("comment").removeAllQueryParameters("payerdata")
+                .removeAllQueryParameters("paymentOption")
+                .addQueryParameter("amount", msat.toString())
+                .apply { if (comment.isNotEmpty()) addQueryParameter("comment", comment) }
+                .apply { if (payerData.isNotEmpty()) addQueryParameter("payerdata", LnurlPayerData.json(payerData)) }
+                .apply { if (paymentOption != null) addQueryParameter("paymentOption", paymentOption) }
+                .build()
         private val http = OkHttpClient.Builder().callTimeout(20, TimeUnit.SECONDS).followRedirects(false).build()
         private suspend fun fetchJSON(url: HttpUrl): JsonObject = withContext(Dispatchers.IO) {
             http.newCall(Request.Builder().url(url).build()).execute().use { response ->

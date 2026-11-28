@@ -4,25 +4,46 @@ import Testing
 
 @MainActor struct RecurringParityTests {
     @Test(arguments: ["", "Rent for April", " ", "Thank you 🌱"])
-    func lnurlNotesKeepLightningRoute(comment: String) throws {
+    func lnurlNotesKeepLightningRoute(comment: String) async throws {
         let route = SendRecipientRoute(destination: "recipient@example.com", minMsat: 1_000,
                                        maxMsat: 100_000_000, commentAllowed: 140, arkAddress: "ark-recipient")
-        let payment = try RecurringRecipient.lnurlPayment(
+        let payment = try await RecurringRecipient.lnurlPayment(
             .init(destination: route.destination, method: "lnurl", amount: 50_000, comment: comment),
-            route: route)
+            route: route, arkAddress: Self.address)
         #expect(payment.method == (comment.isEmpty ? "ark" : "lnurl"))
         #expect(payment.destination == (comment.isEmpty ? "ark-recipient" : route.destination))
         #expect(payment.comment == comment && payment.amount == 50_000)
         var lightningOnly = route; lightningOnly.arkAddress = nil
-        #expect(try RecurringRecipient.lnurlPayment(payment, route: lightningOnly).comment == comment)
+        #expect(try await RecurringRecipient.lnurlPayment(payment, route: lightningOnly, arkAddress: Self.address).comment == comment)
+    }
+
+    /// A `bark` payment option (lnurl/luds#303) pays the address its callback returns, while the amount fits its range.
+    @Test func paymentOptionPaysTheCallbacksAddress() async throws {
+        var route = SendRecipientRoute(destination: "recipient@example.com", minMsat: 1_000,
+                                       maxMsat: 100_000_000, commentAllowed: 140, arkAddress: "ark-recipient")
+        route.arkOption = .init(id: "second", minMsat: 1_000, maxMsat: 60_000_000)
+        let input = SendPayment(destination: route.destination, method: "lnurl", amount: 50_000, comment: "")
+        let viaOption = try await RecurringRecipient.lnurlPayment(input, route: route, arkAddress: Self.address)
+        #expect(viaOption.method == "ark" && viaOption.destination == "callback-second")
+        // Above the option's range: discovery's address still pays it.
+        var large = input; large.amount = 70_000
+        #expect(try await RecurringRecipient.lnurlPayment(large, route: route, arkAddress: Self.address).destination == "ark-recipient")
+    }
+
+    private nonisolated static func address(_ rail: SendArkRail) -> String {
+        switch rail {
+        case .address(let address): address
+        case .option(let id): "callback-\(id)"
+        }
     }
 
     @Test(arguments: [UInt64(0), 101, UInt64.max])
-    func lnurlAmountBoundsStillApply(amount: UInt64) {
+    func lnurlAmountBoundsStillApply(amount: UInt64) async {
         let route = SendRecipientRoute(destination: "recipient@example.com", minMsat: 1_000,
                                        maxMsat: 100_000, commentAllowed: 140, arkAddress: "ark-recipient")
-        #expect(throws: (any Error).self) {
-            try RecurringRecipient.lnurlPayment(.init(destination: route.destination, method: "lnurl", amount: amount, comment: "Note"), route: route)
+        await #expect(throws: (any Error).self) {
+            try await RecurringRecipient.lnurlPayment(.init(destination: route.destination, method: "lnurl", amount: amount, comment: "Note"),
+                                                      route: route, arkAddress: Self.address)
         }
     }
 

@@ -1261,7 +1261,7 @@ fn all_schema_types_and_unsigned_fields_have_schemas() {
             }
         }
     }
-    assert_eq!(schema_types, 75);
+    assert_eq!(schema_types, 77);
     let amount = &doc["paths"]["/.well-known/lnurlp/{username}"]["get"]["parameters"][1]["schema"];
     assert_eq!(amount["format"], "int64");
     assert_eq!(amount["minimum"].as_f64(), Some(0.0));
@@ -1311,7 +1311,8 @@ fn nullable_references_and_serde_names_survive_normalization() {
         schemas["LnurlpResponse"]["oneOf"],
         json!([
             {"$ref":"#/components/schemas/LnurlpDefaultResponse"},
-            {"$ref":"#/components/schemas/LnurlpInvoiceResponse"}
+            {"$ref":"#/components/schemas/LnurlpInvoiceResponse"},
+            {"$ref":"#/components/schemas/LnurlpDestinationResponse"}
         ])
     );
 }

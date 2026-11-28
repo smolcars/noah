@@ -112,7 +112,10 @@ object RecurringRecipient {
             require(Math.multiplyExact(schedule.amountSat,
                 1000) in route.minMsat..route.maxMsat) { "The recipient no longer accepts this amount. Update or cancel the recurring payment." }
             // Match attended Send: a note must reach the recipient through LNURL.
-            if (route.arkAddress != null && schedule.comment.isEmpty()) payment = payment.copy(destination = route.arkAddress, method = "ark")
+            val ark = route.arkRail(schedule.amountSat)
+            if (ark != null && schedule.comment.isEmpty()) {
+                payment = payment.copy(destination = session.sendArkAddress(ark, route, schedule.amountSat), method = "ark")
+            }
             if (payment.method == "lnurl") payment = payment.copy(payerData = identity.fields.takeIf { it.isNotEmpty() })
         }
         payment = payment.copy(repeatMetadata = SendPayment.metadata(schedule.destination, schedule.comment, schedule.amountSat.toString(), null))

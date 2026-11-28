@@ -68,7 +68,7 @@ internal struct Client: APIProtocol {
     }
     /// Handles LNURL-pay requests.
     ///
-    /// Public endpoint; no bearer token required. Without amount, returns payment parameters; with amount, returns an invoice (pr is empty for negotiated direct Ark payment).
+    /// Public endpoint; no bearer token required. Without amount, returns payment parameters; with amount, returns an invoice (pr is empty for negotiated direct Ark payment), or the Ark address as paymentDestination for paymentOption=second.
     ///
     /// - Remark: HTTP `GET /.well-known/lnurlp/{username}`.
     /// - Remark: Generated from `#/paths//.well-known/lnurlp/{username}/get(lnurlp_request)`.
@@ -101,6 +101,13 @@ internal struct Client: APIProtocol {
                     explode: true,
                     name: "ark",
                     value: input.query.ark
+                )
+                try converter.setQueryItemAsURI(
+                    in: &request,
+                    style: .form,
+                    explode: true,
+                    name: "paymentOption",
+                    value: input.query.paymentOption
                 )
                 converter.setAcceptHeader(
                     in: &request.headerFields,
