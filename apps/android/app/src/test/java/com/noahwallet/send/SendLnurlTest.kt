@@ -30,9 +30,9 @@ class SendLnurlTest {
         for (value in listOf(invoice("20u"), invoice(network = "lnbc"), invoice(timestamp = 1), invoice(amount = "")))
             assertTrue(runCatching { SendRecipientService.validateInvoice(value, 1000, "regtest") }.isFailure)
     }
-    @Test fun resolvesInAppWithBoundsCommentAndMetadataWarning() = runBlocking {
-        var requests = 0; val warnings = mutableListOf<String>(); val callbackInvoice = invoice()
-        val service = SendRecipientService("regtest", warnings::add, fetch = { url ->
+    @Test fun resolvesInAppWithBoundsAndComment() = runBlocking {
+        var requests = 0; val callbackInvoice = invoice()
+        val service = SendRecipientService("regtest", fetch = { url ->
             requests++
             if (url.encodedPath == "/callback") {
                 assertEquals("1000000", url.queryParameter("amount"))
@@ -45,7 +45,7 @@ class SendLnurlTest {
             }
         })
         assertEquals(callbackInvoice, service.invoice(SendPayment("alice@example.com", "lnurl", 1000, comment = "note")))
-        assertEquals(2, requests); assertEquals(1, warnings.size); assertFalse(warnings.single().contains(callbackInvoice))
+        assertEquals(2, requests)
         requests = 0
         assertTrue(runCatching { service.invoice(SendPayment("alice@example.com", "lnurl", 3000)) }.isFailure); assertEquals(1, requests)
         requests = 0

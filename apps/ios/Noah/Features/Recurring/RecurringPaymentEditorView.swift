@@ -92,6 +92,8 @@ struct RecurringPaymentEditorView: View {
             SettingsField(label: L10n.text("Note (optional)", locale: language), placeholder: L10n.text("Shared with the recipient", locale: language),
                           text: $comment)
                 .onChange(of: comment) { _, value in comment = Self.limitedText(value, limit: 140) }
+            SettingsFine(text: L10n.text("If the recipient asks, your name and Lightning address will be shared with each payment.", locale: language))
+                .padding(.top, -8)
         }
     }
 

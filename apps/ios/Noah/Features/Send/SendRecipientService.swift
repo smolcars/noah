@@ -1,4 +1,3 @@
-import CryptoKit
 import Foundation
 
 struct SendRecipientRoute: Sendable {
@@ -9,6 +8,78 @@ struct SendRecipientRoute: Sendable {
     var arkAddress: String?
     var callback: URL?
     var metadata: String?
+    var payerData: LnurlPayerData.Requirements = [:]
+}
+
+/// The identity Noah can send as LUD-18 payer data: the profile's display name and the wallet's own Lightning address.
+struct LnurlPayerIdentity: Equatable, Sendable {
+    var name: String?
+    var identifier: String?
+
+    static func stored(_ storage: SettingsStorage = .shared) -> Self {
+        .init(name: storage.persistedState(PersistedProfileState.self, key: PersistedProfileState.key)?.displayName,
+              identifier: storage.persistedState(PersistedServerState.self, key: PersistedServerState.key)?.lightningAddress)
+    }
+
+    /// The saved values Noah can send, trimmed; an empty one counts as unset.
+    var fields: [String: String] {
+        ["name": name, "identifier": identifier].compactMapValues { $0?.trimmingCharacters(in: .whitespacesAndNewlines) }.filter { !$0.value.isEmpty }
+    }
+}
+
+/// LUD-18 payer data (`apps/fixtures/lnurl-pay-payer-data.json`). Noah sends only the fields a pay request asks for.
+enum LnurlPayerData {
+    struct Field: Equatable, Sendable { let mandatory: Bool }
+    /// Each field a pay request asks for. Empty when it asks for none.
+    typealias Requirements = [String: Field]
+    /// A pay request's `payerData`, read leniently: a malformed object or field counts as not asked for.
+    struct Advertised: Decodable, Sendable {
+        let requirements: Requirements
+
+        init(from decoder: any Decoder) {
+            requirements = ((try? decoder.singleValueContainer().decode([String: AdvertisedPayerDataField].self)) ?? [:]).compactMapValues(\.field)
+        }
+    }
+    /// What To's notice says Noah shares.
+    enum Share: Equatable, Sendable {
+        case nameOnly, addressOnly, nameAndAddress
+
+        init?(_ shared: [String: String]) {
+            switch (shared["name"] != nil, shared["identifier"] != nil) {
+            case (true, true): self = .nameAndAddress
+            case (true, false): self = .nameOnly
+            case (false, true): self = .addressOnly
+            case (false, false): return nil
+            }
+        }
+    }
+
+    static let supported: Set = ["name", "identifier"]
+
+    /// The fields to send: those asked for among `available` (the saved identity on To, what To showed at the quote).
+    /// Throws when a field Noah doesn't send is mandatory, then when a mandatory field Noah sends isn't available.
+    static func build(_ requirements: Requirements, available: [String: String]) throws -> [String: String] {
+        if requirements.contains(where: { !supported.contains($0.key) && $0.value.mandatory }) { throw SendFailure.payerDataUnsupported }
+        if requirements.contains(where: { supported.contains($0.key) && $0.value.mandatory && available[$0.key] == nil }) {
+            throw SendFailure.payerDataMissing
+        }
+        return available.filter { supported.contains($0.key) && requirements[$0.key] != nil }
+    }
+
+    static func json(_ shared: [String: String]) throws -> String {
+        try String(json: JSONSerialization.data(withJSONObject: shared, options: [.sortedKeys, .withoutEscapingSlashes]))
+    }
+}
+
+/// One advertised `payerData` field; `field` is nil when it's malformed (not an object, or `mandatory` isn't a boolean).
+private struct AdvertisedPayerDataField: Decodable {
+    let field: LnurlPayerData.Field?
+
+    init(from decoder: any Decoder) {
+        field = (try? decoder.container(keyedBy: CodingKeys.self).decode(Bool.self, forKey: .mandatory)).map(LnurlPayerData.Field.init(mandatory:))
+    }
+
+    private enum CodingKeys: String, CodingKey { case mandatory }
 }
 enum SendRecipientService {
     typealias Fetch = @Sendable (URLRequest) async throws -> (Data, URLResponse)
@@ -65,6 +136,7 @@ enum SendRecipientService {
             let commentAllowed: Int?
             let ark: String?
             let metadata: String?
+            let payerData: LnurlPayerData.Advertised?
         }
         guard (response as? HTTPURLResponse)?.statusCode == 200, data.count <= 65536 else { throw SendFailure.invalid }
         let decoded = try JSONDecoder().decode(Response.self, from: data)
@@ -77,40 +149,46 @@ enum SendRecipientService {
         return SendRecipientRoute(
             destination: value, minMsat: decoded.minSendable, maxMsat: decoded.maxSendable,
             commentAllowed: max(0, decoded.commentAllowed ?? 0), arkAddress: ark,
-            callback: callback, metadata: decoded.metadata)
+            callback: callback, metadata: decoded.metadata, payerData: decoded.payerData?.requirements ?? [:])
     }
-    /// Resolve without paying: Bark's payLnurl/payLightningAddress can resume an old checkpoint.
-    static func invoice(_ payment: SendPayment, session: WalletSession = .shared,
-                        fetch: Fetch = fetch) async throws -> String {
+    /// Resolve without paying: Bark's payLnurl/payLightningAddress can resume an old checkpoint. Sends only the payer data
+    /// the payment carries (what To showed), as far as this lookup still asks for it.
+    static func invoice(_ payment: SendPayment, session: WalletSession = .shared, fetch: Fetch = fetch) async throws -> String {
         let route = try await resolve(payment.destination, session: session, fetch: fetch)
         let (msat, overflow) = payment.amount.multipliedReportingOverflow(by: 1000)
-        guard !overflow, msat >= route.minMsat, msat <= route.maxMsat,
-              let callback = route.callback,
-              var components = URLComponents(url: callback, resolvingAgainstBaseURL: false)
-        else { throw SendFailure.invalid }
-        var items = (components.queryItems ?? []).filter { !["amount", "comment"].contains($0.name) }
-        items.append(URLQueryItem(name: "amount", value: String(msat)))
-        // Like RN/Bark, forward the comment; the provider enforces commentAllowed.
-        items.append(URLQueryItem(name: "comment", value: payment.comment))
-        components.queryItems = items
-        guard let url = components.url else { throw SendFailure.invalid }
+        guard !overflow, msat >= route.minMsat, msat <= route.maxMsat, let callback = route.callback else { throw SendFailure.invalid }
+        let url = try callbackURL(callback, msat: msat, comment: payment.comment,
+                                  payerData: LnurlPayerData.build(route.payerData, available: payment.payerData ?? [:]))
         let (data, response) = try await fetch(URLRequest(url: url, timeoutInterval: 20))
         struct Response: Decodable { let pr: String }
         guard (response as? HTTPURLResponse)?.statusCode == 200, data.count <= 65536 else { throw SendFailure.invalid }
         let invoice = try JSONDecoder().decode(Response.self, from: data).pr
-        try validateInvoice(invoice, amount: payment.amount, metadata: route.metadata)
+        try validateInvoice(invoice, amount: payment.amount)
         return invoice
     }
-    static func validateInvoice(_ value: String, amount: UInt64, metadata: String?) throws {
+    /// The callback with this payment's `amount`, its note as `comment` and LUD-18 `payerdata`, each only when there is one
+    /// (`apps/fixtures/lnurl-pay-callback.json`). The service's own query stays as it was. The provider enforces commentAllowed.
+    static func callbackURL(_ callback: URL, msat: UInt64, comment: String, payerData: [String: String]) throws -> URL {
+        guard var components = URLComponents(url: callback, resolvingAgainstBaseURL: false) else { throw SendFailure.invalid }
+        var items = (components.percentEncodedQueryItems ?? []).filter { !["amount", "comment", "payerdata"].contains($0.name) }
+        items.append(URLQueryItem(name: "amount", value: String(msat)))
+        if !comment.isEmpty { items.append(URLQueryItem(name: "comment", value: queryValue(comment))) }
+        if !payerData.isEmpty { try items.append(URLQueryItem(name: "payerdata", value: queryValue(LnurlPayerData.json(payerData)))) }
+        components.percentEncodedQueryItems = items
+        guard let url = components.url else { throw SendFailure.invalid }
+        return url
+    }
+    /// Everything but RFC 3986's unreserved characters percent-encoded. `URLComponents.queryItems` leaves `+` as is, which a
+    /// form decoder reads as a space.
+    private static func queryValue(_ value: String) -> String { value.addingPercentEncoding(withAllowedCharacters: unreserved) ?? "" }
+    private static let unreserved = CharacterSet(charactersIn: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~")
+    /// LNURL-pay no longer binds the invoice's description hash to the metadata (lnurl/luds#234), so it isn't checked.
+    static func validateInvoice(_ value: String, amount: UInt64) throws {
         let parsed = SendDestination.parse(value)
         guard parsed.destinationType == "lightning", parsed.error == nil,
               let invoice = PaymentEncoding.invoice(value), invoice.sats == Decimal(amount)
         else { throw SendFailure.invalid }
         guard invoice.expires > Date() else { throw SendFailure.expired }
-        // Pinned Bark treats metadata binding as a warning (LUD-06); keep RN parity.
-        if let metadata, invoice.descriptionHash != SHA256.hash(data: Data(metadata.utf8)).map({ String(format: "%02x", $0) }).joined() {
-            AppLog("send").w("LNURL invoice description hash does not commit to endpoint metadata")
-        }
     }
     static func suggestionQuery(_ destination: String, domain: String) -> String? {
         let value = SendDestination.cleaned(destination).lowercased()

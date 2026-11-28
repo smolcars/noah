@@ -191,7 +191,7 @@ extension WalletSession {
             var resolved = payment
             if payment.method == "lnurl" {
                 guard let invoice = snapshot.resolvedInvoice else { throw SendFailure.invalid }
-                try SendRecipientService.validateInvoice(invoice, amount: payment.amount, metadata: nil)
+                try SendRecipientService.validateInvoice(invoice, amount: payment.amount)
                 resolved.destination = invoice
                 resolved.method = "lightning"
             }

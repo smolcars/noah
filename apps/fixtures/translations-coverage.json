@@ -6,8 +6,8 @@
     "ko",
     "sv"
   ],
-  "catalogEntries": 1592,
-  "sourceKeys": 1637,
+  "catalogEntries": 1597,
+  "sourceKeys": 1642,
   "coverage": {
     "ios": {
       "used": [
@@ -515,6 +515,7 @@
         "I wrote it down",
         "INR",
         "If Ark works, send to a Bitcoin address instead.",
+        "If the recipient asks, your name and Lightning address will be shared with each payment.",
         "Immature",
         "Import VTXO",
         "In Ark",
@@ -563,7 +564,6 @@
         "Keep notifications on so payments can go through while Noah is closed.",
         "Keep payment",
         "Keep stopped",
-        "LNURL invoice description hash does not commit to endpoint metadata",
         "Language",
         "Largest VTXO",
         "Last",
@@ -1191,6 +1191,8 @@
         "This phone’s on-chain wallet",
         "This phrase couldn't unlock the backup, or the backup is damaged. Check all 12 or 24 words and their order.",
         "This place may require another payment app",
+        "This recipient requires details Noah can't share.",
+        "This recipient requires your name or Lightning address. Add it in Settings, then try again.",
         "This refreshes the selected VTXOs in a delegated Ark round.",
         "This removes the wallet and its recovery phrase from this phone. It can’t be undone.",
         "This saved payment outcome could not be verified. It may have been sent. Check history before sending again.",
@@ -1334,6 +1336,7 @@
         "You've reached the maximum number of recurring payments.",
         "Your Ark balance cannot be swept to this wallet's own onchain address. Use an external Bitcoin address.",
         "Your Lightning address is {address}.",
+        "Your Lightning address will be shared with this recipient.",
         "Your VTXO",
         "Your VTXO is a leaf of the round’s tree. To reach it, the {n} transactions on your branch go to the chain, root first.",
         "Your VTXO leaves Ark. Nothing from here on needs Ark’s server.",
@@ -1344,6 +1347,8 @@
         "Your current email stays until the new one is verified.",
         "Your email is only for urgent alerts about your wallet.",
         "Your name",
+        "Your name and Lightning address will be shared with this recipient.",
+        "Your name will be shared with this recipient.",
         "Your recovery phrase is still securely stored on this device. Use it to restore your wallet from its backup.",
         "Your wallet is ready.",
         "Your wallet is suspended. Open Noah to resume it.",
@@ -1436,10 +1441,38 @@
         "₿1 = 1 sat."
       ],
       "untranslated": {
-        "es": [],
-        "ja": [],
-        "ko": [],
-        "sv": []
+        "es": [
+          "gt_09d7e041b4833c33",
+          "gt_0f869adfb2385187",
+          "gt_60be7f03334cecb2",
+          "gt_6c1f7c367885f36b",
+          "gt_d963d9432bad9d0d",
+          "gt_eed34da3ded00d7c"
+        ],
+        "ja": [
+          "gt_09d7e041b4833c33",
+          "gt_0f869adfb2385187",
+          "gt_60be7f03334cecb2",
+          "gt_6c1f7c367885f36b",
+          "gt_d963d9432bad9d0d",
+          "gt_eed34da3ded00d7c"
+        ],
+        "ko": [
+          "gt_09d7e041b4833c33",
+          "gt_0f869adfb2385187",
+          "gt_60be7f03334cecb2",
+          "gt_6c1f7c367885f36b",
+          "gt_d963d9432bad9d0d",
+          "gt_eed34da3ded00d7c"
+        ],
+        "sv": [
+          "gt_09d7e041b4833c33",
+          "gt_0f869adfb2385187",
+          "gt_60be7f03334cecb2",
+          "gt_6c1f7c367885f36b",
+          "gt_d963d9432bad9d0d",
+          "gt_eed34da3ded00d7c"
+        ]
       }
     },
     "android": {
@@ -1952,6 +1985,7 @@
         "I wrote it down",
         "INR",
         "If Ark works, send to a Bitcoin address instead.",
+        "If the recipient asks, your name and Lightning address will be shared with each payment.",
         "Immature",
         "Import VTXO",
         "In Ark",
@@ -2003,7 +2037,6 @@
         "Keep notifications on so payments can go through while Noah is closed.",
         "Keep payment",
         "Keep stopped",
-        "LNURL invoice description hash does not commit to endpoint metadata",
         "Language",
         "Largest VTXO",
         "Last",
@@ -2630,6 +2663,8 @@
         "This phrase couldn't unlock the backup, or the backup is damaged. Check all 12 or 24 words and their order.",
         "This place may require another payment app",
         "This place provided an invalid link.",
+        "This recipient requires details Noah can't share.",
+        "This recipient requires your name or Lightning address. Add it in Settings, then try again.",
         "This refreshes the selected VTXOs in a delegated Ark round.",
         "This removes the wallet and its recovery phrase from this phone. It can’t be undone.",
         "This removes your wallet and recovery phrase from this device. Make sure you have saved your recovery phrase. Type delete to confirm.",
@@ -2779,6 +2814,7 @@
         "You've reached the maximum number of recurring payments.",
         "Your Ark balance cannot be swept to this wallet's own onchain address. Use an external Bitcoin address.",
         "Your Lightning address is {address}.",
+        "Your Lightning address will be shared with this recipient.",
         "Your VTXO",
         "Your VTXO is a leaf of the round’s tree. To reach it, the {n} transactions on your branch go to the chain, root first.",
         "Your VTXO leaves Ark. Nothing from here on needs Ark’s server.",
@@ -2792,6 +2828,8 @@
         "Your current email stays until the new one is verified.",
         "Your email is only for urgent alerts about your wallet.",
         "Your name",
+        "Your name and Lightning address will be shared with this recipient.",
+        "Your name will be shared with this recipient.",
         "Your recovery phrase is still securely stored on this device. Use it to restore your wallet from its backup.",
         "Your wallet is ready.",
         "Your wallet is suspended. Resume it to view transactions.",
@@ -2891,10 +2929,38 @@
         "₿1 = 1 sat."
       ],
       "untranslated": {
-        "es": [],
-        "ja": [],
-        "ko": [],
-        "sv": []
+        "es": [
+          "gt_09d7e041b4833c33",
+          "gt_0f869adfb2385187",
+          "gt_60be7f03334cecb2",
+          "gt_6c1f7c367885f36b",
+          "gt_d963d9432bad9d0d",
+          "gt_eed34da3ded00d7c"
+        ],
+        "ja": [
+          "gt_09d7e041b4833c33",
+          "gt_0f869adfb2385187",
+          "gt_60be7f03334cecb2",
+          "gt_6c1f7c367885f36b",
+          "gt_d963d9432bad9d0d",
+          "gt_eed34da3ded00d7c"
+        ],
+        "ko": [
+          "gt_09d7e041b4833c33",
+          "gt_0f869adfb2385187",
+          "gt_60be7f03334cecb2",
+          "gt_6c1f7c367885f36b",
+          "gt_d963d9432bad9d0d",
+          "gt_eed34da3ded00d7c"
+        ],
+        "sv": [
+          "gt_09d7e041b4833c33",
+          "gt_0f869adfb2385187",
+          "gt_60be7f03334cecb2",
+          "gt_6c1f7c367885f36b",
+          "gt_d963d9432bad9d0d",
+          "gt_eed34da3ded00d7c"
+        ]
       }
     }
   }

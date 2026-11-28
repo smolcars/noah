@@ -581,6 +581,7 @@
   <string name="gt_cd65f6dcab984750">"Jag har skrivit ner den"</string>
   <string name="gt_a7c07c281fad3bc0">"INR"</string>
   <string name="gt_653b28e6a3e022c8">"Om Ark fungerar, skicka till en Bitcoin-adress i stället."</string>
+  <string name="gt_60be7f03334cecb2">"If the recipient asks, your name and Lightning address will be shared with each payment."</string>
   <string name="gt_1d93f10792a18bf1">"Omoget"</string>
   <string name="gt_86a486e897edd1bc">"Importera VTXO"</string>
   <string name="gt_7584323bc1a01829">"I Ark"</string>
@@ -637,7 +638,6 @@
   <string name="gt_263743ebe703e2e0">"Ha aviseringarna på så att betalningar kan gå igenom medan Noah är stängd."</string>
   <string name="gt_942c9e0587fb1e92">"Behåll betalning"</string>
   <string name="gt_1223a5e3f6a37070">"Låt vara stoppad"</string>
-  <string name="gt_4993449490bbc0ac">"Beskrivningshashen för LNURL-betalningsbegäran stämmer inte överens med slutpunktens metadata"</string>
   <string name="gt_a4fe65264ef7dbb3">"Språk"</string>
   <string name="gt_aef7c5afac4b70b8">"Största VTXO"</string>
   <string name="gt_eb970eb0951c6cde">"Senaste"</string>
@@ -1357,6 +1357,8 @@
   <string name="gt_40db1d4d49d0c277">"Det gick inte att låsa upp säkerhetskopian med den här frasen, eller så är säkerhetskopian skadad. Kontrollera alla 12 eller 24 ord och deras ordning."</string>
   <string name="gt_7d13ecdf60d28aa9">"Det här stället kan kräva en annan betalapp"</string>
   <string name="gt_44f3e818daadd169">"Den här platsen angav en ogiltig länk."</string>
+  <string name="gt_eed34da3ded00d7c">"This recipient requires details Noah can\'t share."</string>
+  <string name="gt_6c1f7c367885f36b">"This recipient requires your name or Lightning address. Add it in Settings, then try again."</string>
   <string name="gt_5d5cfeffe0f4ad97">"De valda VTXO:erna förnyas i en delegerad Ark-omgång."</string>
   <string name="gt_01d7d06401b5eaad">"Det här tar bort plånboken och dess återställningsfras från telefonen. Det går inte att ångra."</string>
   <string name="gt_e3475188c78e15ad">"Det här tar bort din plånbok och återställningsfras från den här enheten. Se till att du har sparat din återställningsfras. Skriv delete för att bekräfta."</string>
@@ -1547,6 +1549,7 @@
   <string name="gt_723022dbd02fce20">"Du har nått gränsen för antalet återkommande betalningar."</string>
   <string name="gt_3d26c2347422ac51">"Det går inte att överföra hela ditt Ark-saldo till den här plånbokens egen adress på kedjan. Använd en extern Bitcoin-adress."</string>
   <string name="gt_d981ea9469a9b19c">"Din Lightning-adress är %1$s."</string>
+  <string name="gt_09d7e041b4833c33">"Your Lightning address will be shared with this recipient."</string>
   <string name="gt_f9f55c49d8421334">"Din VTXO"</string>
   <plurals name="gt_bd4a6db1a4abe642">
     <item quantity="one">"Din VTXO är ett löv i rundans träd. För att nå den skickas den enda transaktionen på din gren till blockkedjan."</item>
@@ -1566,6 +1569,8 @@
   <string name="gt_8074a7762dd1f578">"Din nuvarande e-post gäller tills den nya är verifierad."</string>
   <string name="gt_886bc67a71fe0f83">"Din e-post används bara för brådskande varningar om din plånbok."</string>
   <string name="gt_2c6b2e253c01fb2e">"Ditt namn"</string>
+  <string name="gt_d963d9432bad9d0d">"Your name and Lightning address will be shared with this recipient."</string>
+  <string name="gt_0f869adfb2385187">"Your name will be shared with this recipient."</string>
   <string name="gt_d9a846242ed7a22f">"Din återställningsfras är fortfarande säkert lagrad på den här enheten. Använd den för att återställa plånboken från säkerhetskopian."</string>
   <string name="gt_09233d973ee617bd">"Din plånbok är klar."</string>
   <string name="gt_03a1be6d25f62f17">"Din plånbok är inaktiverad. Öppna Noah för att aktivera den igen."</string>

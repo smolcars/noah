@@ -42,7 +42,12 @@ import Observation
     var stage: SendStage = .amount
     var progress = SendProgress()
     var parsed = SendDestination()
-    var route: SendRecipientRoute?
+    var route: SendRecipientRoute? {
+        // Read once per lookup: To's notice, its error and the payment's payer data all come from this.
+        didSet { payerDataResult = route.map { found in Result { try LnurlPayerData.build(found.payerData, available: payerIdentity().fields) } } }
+    }
+    /// The LUD-18 payer data this Lightning address will be sent, or why it can't be paid.
+    private var payerDataResult: Result<[String: String], any Error>?
     var source: SendSource?
     var pendingLightningHashes: Set<String> = []
     /// When Send last checked a payment's status by itself, on entry or every 30 s while a
@@ -73,17 +78,21 @@ import Observation
     private let discardQuote: (SendQuote) async -> Void
     /// The amount a BOLT12 offer fixes, or nil; the quote checks it again.
     private let offerAmount: (String) async throws -> UInt64?
+    /// What Noah can send as LUD-18 payer data; the quote reads it again when it calls the address's callback.
+    private let payerIdentity: () -> LnurlPayerIdentity
     init(session: WalletSession = .shared, controller: SendPaymentController = .shared,
          resolveRecipient: ((String) async throws -> SendRecipientRoute)? = nil,
          quotePayment: ((SendPayment) async throws -> SendQuote)? = nil,
          discardQuote: ((SendQuote) async -> Void)? = nil,
-         offerAmount: ((String) async throws -> UInt64?)? = nil) {
+         offerAmount: ((String) async throws -> UInt64?)? = nil,
+         payerIdentity: (() -> LnurlPayerIdentity)? = nil) {
         self.session = session
         self.controller = controller
         self.resolveRecipient = resolveRecipient ?? { try await SendRecipientService.resolve($0, session: session) }
         self.quotePayment = quotePayment ?? { try await session.quoteSend($0) }
         self.discardQuote = discardQuote ?? { await session.discardSend($0) }
         self.offerAmount = offerAmount ?? { try await session.sendOfferAmount($0) }
+        self.payerIdentity = payerIdentity ?? { .stored() }
     }
     var isMax: Bool { progress.entry == .max }
     var sats: UInt64 {
@@ -97,6 +106,17 @@ import Observation
         guard parsed.destinationType == "lnurl", let route,
               route.destination == SendDestination.cleaned(destination).lowercased() else { return nil }
         return route
+    }
+    /// What To's notice says Noah will share with this Lightning address (LUD-18); nil when it asks for nothing Noah has
+    /// saved, or for something Noah can't send.
+    var payerShare: LnurlPayerData.Share? {
+        guard matchingRoute != nil, let shared = try? payerDataResult?.get() else { return nil }
+        return LnurlPayerData.Share(shared)
+    }
+    /// Why this Lightning address can't be paid: it requires payer data Noah can't send.
+    private var payerDataFailure: SendFailure? {
+        guard matchingRoute != nil, case .failure(let failure) = payerDataResult else { return nil }
+        return failure as? SendFailure
     }
     var rails: [SendRail] {
         if parsed.destinationType == "lnurl", matchingRoute?.arkAddress != nil, comment.isEmpty { return [.ark, .lightning] }
@@ -255,31 +275,39 @@ import Observation
             useFiat = false
             progress.amountConfirmed = true
         }
-        if type == "lnurl", matchingRoute == nil {
-            let revision = recipientRevision
-            let candidate = SendDestination.cleaned(destination).lowercased()
-            do {
-                let resolved = try await resolveRecipient(candidate)
-                guard revision == recipientRevision else { return }
-                route = resolved
-                guard matchingRoute != nil else { throw SendFailure.invalid }
-            } catch {
-                guard revision == recipientRevision else { return }
-                self.error = "Unable to resolve this recipient. Please check the address."
-                return
-            }
-            // A scan, paste or tapped result hasn't shown the note field yet: stop on To so a note can be added.
-            if (matchingRoute?.commentAllowed ?? 0) > 0, comment.isEmpty {
-                keypadAfterNote = keepingKeypad
-                stage = .recipient
-                return
-            }
-        }
+        if type == "lnurl", await !lnurlAccepted(keepingKeypad: keepingKeypad) { return }
         progress.recipientConfirmed = true
         keypadAfterNote = false
         if keepingKeypad { progress.amountConfirmed = parsed.amount != nil } else if sats > 0 { progress.amountConfirmed = true }
         progress.selectedRail = isMax ? .onchain : SendFlow.recommend(rails, availability: availability)
         await advance()
+    }
+    /// A Lightning address looked up and ready to pay. False when the recipient changed meanwhile or the lookup failed, or
+    /// when To stays: with an error while the address requires payer data Noah can't send, or after a lookup To hasn't shown
+    /// yet (a scan, paste or tapped result) that takes a note or will be sent payer data.
+    private func lnurlAccepted(keepingKeypad: Bool) async -> Bool {
+        let lookedUp = matchingRoute == nil
+        if lookedUp {
+            let revision = recipientRevision
+            let candidate = SendDestination.cleaned(destination).lowercased()
+            do {
+                let resolved = try await resolveRecipient(candidate)
+                guard revision == recipientRevision else { return false }
+                route = resolved
+                guard matchingRoute != nil else { throw SendFailure.invalid }
+            } catch {
+                guard revision == recipientRevision else { return false }
+                self.error = "Unable to resolve this recipient. Please check the address."
+                return false
+            }
+        }
+        let failure = payerDataFailure
+        if let failure { error = failure.errorDescription }
+        let unseen = lookedUp && (((matchingRoute?.commentAllowed ?? 0) > 0 && comment.isEmpty) || payerShare != nil)
+        guard failure != nil || unseen else { return true }
+        keypadAfterNote = keepingKeypad
+        stage = .recipient
+        return false
     }
     func advance() async {
         error = nil
@@ -361,6 +389,8 @@ import Observation
             var payment = SendPayment(
                 destination: target, method: method, amount: sats, source: rail == .onchain ? source : nil, max: isMax,
                 comment: comment)
+            // The quote sends only what To showed.
+            if method == "lnurl", let shared = try payerDataResult?.get(), !shared.isEmpty { payment.payerData = shared }
             if parsed.destinationType == "lnurl", SendDestination.isLightningAddress(destination) {
                 payment.repeatMetadata = try SendPayment.metadata(
                     destination: destination, comment: comment, amount: amount,

@@ -65,11 +65,11 @@ import Testing
     }
     @Test func normalResolvedInvoicePaysOnceAndRejectsWrongAmountOrAmountless() async throws {
         let invoice = try invoice()
-        try SendRecipientService.validateInvoice(invoice, amount: 1000, metadata: "[]")
-        #expect(throws: SendFailure.invalid) { try SendRecipientService.validateInvoice(invoice, amount: 999, metadata: nil) }
+        try SendRecipientService.validateInvoice(invoice, amount: 1000)
+        #expect(throws: SendFailure.invalid) { try SendRecipientService.validateInvoice(invoice, amount: 999) }
         let decoded = try #require(PaymentEncoding.bech32(invoice))
         let amountless = encode(prefix: "lnbcrt", words: decoded.words)
-        #expect(throws: SendFailure.invalid) { try SendRecipientService.validateInvoice(amountless, amount: 1000, metadata: nil) }
+        #expect(throws: SendFailure.invalid) { try SendRecipientService.validateInvoice(amountless, amount: 1000) }
         let payer = SendLightningSafetyTests.Payer()
         _ = try await SendLightningSubmission
             .submit(payment: .init(destination: invoice, method: "lightning", amount: 1000), state: .unknown, movements: []) { await payer.pay() }

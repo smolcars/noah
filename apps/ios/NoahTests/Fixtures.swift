@@ -19,13 +19,17 @@ enum Fixtures {
     }
 
     static func decode<Value: Decodable>(_ name: String, as type: Value.Type) throws -> Value {
+        try JSONDecoder().decode(type, from: data(name))
+    }
+
+    /// A fixture's bytes, for cases whose input can be any JSON value.
+    static func data(_ name: String) throws -> Data {
         let url = URL(fileURLWithPath: #filePath)
             .deletingLastPathComponent() // NoahTests
             .deletingLastPathComponent() // ios
             .deletingLastPathComponent() // apps
             .appending(path: "fixtures/\(name).json")
-        let data = try Data(contentsOf: url)
-        return try JSONDecoder().decode(type, from: data)
+        return try Data(contentsOf: url)
     }
 
     /// A JSON object compared the way Foundation compares it (key order ignored, NSNumber equality).

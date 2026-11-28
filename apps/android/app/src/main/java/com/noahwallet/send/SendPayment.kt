@@ -7,7 +7,9 @@ import kotlinx.serialization.json.*
 
 @Serializable data class SendIdentity(val fingerprint: String, val network: String)
 @Serializable data class SendPayment(val destination: String, val method: String, val amount: Long,
-    val source: SendSource? = null, val max: Boolean = false, val comment: String = "", val repeatMetadata: String? = null) {
+    val source: SendSource? = null, val max: Boolean = false, val comment: String = "", val repeatMetadata: String? = null,
+    /** LUD-18 payer data the payer agreed to send: what To showed, or the saved identity for a recurring payment. */
+    val payerData: Map<String, String>? = null) {
     companion object {
         fun metadata(destination: String, comment: String, amount: String, currency: String?): String = buildJsonObject {
             putJsonObject("noah") { putJsonObject("repeat_payment") {
@@ -94,7 +96,9 @@ class SendFailure(val reason: Reason) : Exception(reason.message) {
         unresolved("This payment may have been sent. Check its status before making another payment."),
         fundsChanged("The available funds changed. Review the payment again."),
         constructionFailed("The transaction could not be built. No payment was submitted. Review the amount and fee."),
-        lightningInProgress("Another Lightning payment is still in progress. Try again once it completes.")
+        lightningInProgress("Another Lightning payment is still in progress. Try again once it completes."),
+        payerDataUnsupported("This recipient requires details Noah can't share."),
+        payerDataMissing("This recipient requires your name or Lightning address. Add it in Settings, then try again.")
     }
 }
 internal fun requireSend(value: Boolean, reason: SendFailure.Reason = SendFailure.Reason.invalid) { if (!value) throw SendFailure(reason) }

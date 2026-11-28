@@ -72,6 +72,9 @@ enum RecurringRecipient {
         if recipient.type == "lnurl" {
             let route = try await SendRecipientService.resolve(recipient.destination, session: session)
             payment = try lnurlPayment(payment, route: route)
+            // The editor's notice covers sharing the saved identity; the quote sends what the address asks for.
+            let fields = LnurlPayerIdentity.stored().fields
+            if payment.method == "lnurl", !fields.isEmpty { payment.payerData = fields }
         }
         payment.repeatMetadata = try SendPayment.metadata(
             destination: schedule.destination,

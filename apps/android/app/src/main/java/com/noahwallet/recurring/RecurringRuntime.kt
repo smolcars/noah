@@ -29,7 +29,7 @@ class RecurringRuntime private constructor(context: Context) {
         },
         allowed = {
             requireAdmission(location, settings.persistedState<PersistedWalletState>(PersistedWalletState.key), services.recurringAutomationStorageFailed)
-        }, quote = { RecurringRecipient.quote(it, services.session) },
+        }, quote = { RecurringRecipient.quote(it, services.session, LnurlPayerIdentity.stored(settings)) },
         automationGeneration = { settings.string(WalletLifecycle.automationStopKey) },
         sync = {
             check(services.registration.state.isRegisteredWithServer == true) { "Register this wallet before syncing recurring payments." }
@@ -101,7 +101,8 @@ object RecurringRecipient {
             else -> error("Unsupported recipient")
         }
     }
-    suspend fun quote(schedule: RecurringPayment, session: WalletSession): Pair<SendPayment, SendQuote> {
+    /** [identity]: the editor's notice covers sharing the saved identity; the quote sends what the address asks for. */
+    suspend fun quote(schedule: RecurringPayment, session: WalletSession, identity: LnurlPayerIdentity = LnurlPayerIdentity()): Pair<SendPayment, SendQuote> {
         require(schedule.validPolicy)
         val (destination, type) = resolve(schedule.destination)
         require(type == schedule.destinationType)
@@ -112,6 +113,7 @@ object RecurringRecipient {
                 1000) in route.minMsat..route.maxMsat) { "The recipient no longer accepts this amount. Update or cancel the recurring payment." }
             // Match attended Send: a note must reach the recipient through LNURL.
             if (route.arkAddress != null && schedule.comment.isEmpty()) payment = payment.copy(destination = route.arkAddress, method = "ark")
+            if (payment.method == "lnurl") payment = payment.copy(payerData = identity.fields.takeIf { it.isNotEmpty() })
         }
         payment = payment.copy(repeatMetadata = SendPayment.metadata(schedule.destination, schedule.comment, schedule.amountSat.toString(), null))
         return payment to session.quoteSend(payment)
