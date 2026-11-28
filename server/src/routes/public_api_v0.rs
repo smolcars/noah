@@ -401,6 +401,11 @@ pub struct LnurlPayOption {
     /// The payment method: `lightning` or `bark`.
     #[serde(rename = "type")]
     pub option_type: String,
+    /// For `bark`, the Ark server's public key (compressed, lowercase hex), so a wallet can tell
+    /// whether it can pay this option before calling back. Noah's extension, proposed on
+    /// lnurl/luds#303.
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub operator: Option<String>,
 }
 
 /// The `paymentOption` for a Lightning invoice, the default.
@@ -492,16 +497,24 @@ async fn negotiated_ark_address(
     None
 }
 
-/// The rails discovery lists: Lightning always, and Ark while the user has an address.
-fn payment_options(has_ark_address: bool) -> Vec<LnurlPayOption> {
+/// The rails discovery lists: Lightning always, and Ark while the user has an address, with the
+/// Ark server's key as its `operator` once the server knows it.
+async fn payment_options(state: &AppState, has_ark_address: bool) -> Vec<LnurlPayOption> {
     let mut options = vec![LnurlPayOption {
         id: PAYMENT_OPTION_LIGHTNING.to_string(),
         option_type: "lightning".to_string(),
+        operator: None,
     }];
     if has_ark_address {
         options.push(LnurlPayOption {
             id: PAYMENT_OPTION_SECOND.to_string(),
             option_type: "bark".to_string(),
+            operator: state
+                .ark_server_pubkey
+                .read()
+                .await
+                .as_deref()
+                .map(str::to_lowercase),
         });
     }
     options
@@ -747,7 +760,7 @@ pub async fn lnurlp_request(
                 identifier: LnurlPayPayerDataFieldSpec { mandatory: false },
             }),
             ark: negotiated_ark_address(&state, &query, user.ark_address.as_ref()).await,
-            payment_options: payment_options(user.ark_address.is_some()),
+            payment_options: payment_options(&state, user.ark_address.is_some()).await,
         };
         return Ok(Json(
             serde_json::to_value(response).map_err(|e| ApiError::SerializeErr(e.to_string()))?,

@@ -46,17 +46,21 @@ sealed interface SendArkRail {
 data class SendArkOption(val id: String, val minMsat: Long, val maxMsat: Long) {
     companion object {
         /** The first usable `bark` entry of a pay request's `paymentOptions`, its own range narrowing the pay request's. Read
-         *  leniently: a malformed entry or field counts as not offered, and anything but an array as no options. */
-        fun first(paymentOptions: JsonElement?, minMsat: Long, maxMsat: Long): SendArkOption? =
-            (paymentOptions as? JsonArray)?.firstNotNullOfOrNull { option(it, minMsat, maxMsat) }
+         *  leniently: a malformed entry or field counts as not offered, and anything but an array as no options. An entry naming
+         *  an `operator` (Noah's extension, proposed on lnurl/luds#303) must name [serverKey], the wallet's own Ark server. */
+        fun first(paymentOptions: JsonElement?, minMsat: Long, maxMsat: Long, serverKey: String? = null): SendArkOption? =
+            (paymentOptions as? JsonArray)?.firstNotNullOfOrNull { option(it, minMsat, maxMsat, serverKey) }
         /** [entry] as a usable `bark` option, or null. */
-        private fun option(entry: JsonElement, minMsat: Long, maxMsat: Long): SendArkOption? {
-            val option = (entry as? JsonObject)?.takeIf { it.text("type") == "bark" && it.available() } ?: return null
+        private fun option(entry: JsonElement, minMsat: Long, maxMsat: Long, serverKey: String?): SendArkOption? {
+            val option = (entry as? JsonObject)?.takeIf { it.text("type") == "bark" && it.available() && it.operates(serverKey) } ?: return null
             val id = option.text("id")?.takeIf { it.isNotEmpty() } ?: return null
             val low = maxOf(minMsat, option.msat("minSendable", minMsat) ?: return null)
             val high = minOf(maxMsat, option.msat("maxSendable", maxMsat) ?: return null)
             return SendArkOption(id, low, high).takeIf { low <= high }
         }
+        /** No `operator`, or one equal to [serverKey] ignoring case. */
+        private fun JsonObject.operates(serverKey: String?) =
+            get("operator") == null || (serverKey != null && text("operator")?.equals(serverKey, ignoreCase = true) == true)
         /** `available` absent or true; anything else, malformed included, counts as unavailable. */
         private fun JsonObject.available() =
             get("available").let { it == null || (it as? JsonPrimitive)?.takeUnless { value -> value.isString }?.booleanOrNull == true }
@@ -119,7 +123,8 @@ class SendRecipientService(private val network: String, private val fetch: suspe
         val endpoint = if (SendDestination.isLightningAddress(value)) SendDestination.addressEndpoint(value)
         else PaymentEncoding.bech32(value)?.let { PaymentEncoding.bytes(it.words)?.toString(Charsets.UTF_8)?.toHttpUrlOrNull() }
         requireSend(SendDestination.allowsLnurl(endpoint))
-        val request = endpoint!!.newBuilder().apply { runCatching { arkServerKey() }.getOrNull()?.let { addQueryParameter("ark", it) } }.build()
+        val serverKey = runCatching { arkServerKey() }.getOrNull()
+        val request = endpoint!!.newBuilder().apply { serverKey?.let { addQueryParameter("ark", it) } }.build()
         val response = fetch(request)
         fun string(key: String) = response[key]?.jsonPrimitive?.contentOrNull
         val callback = string("callback")?.toHttpUrlOrNull()
@@ -127,7 +132,7 @@ class SendRecipientService(private val network: String, private val fetch: suspe
         requireSend(string("tag") == "payRequest" && SendDestination.allowsLnurl(callback) && min != null && max != null && min >= 0 && min <= max)
         val ark = string("ark")?.takeIf { runCatching { validateArk(it) }.getOrDefault(false) }
         return SendRecipientRoute(value, min!!, max!!, maxOf(0, response["commentAllowed"]?.jsonPrimitive?.intOrNull ?: 0), ark, callback!!, string("metadata"),
-            LnurlPayerData.requirements(response["payerData"]), SendArkOption.first(response["paymentOptions"], min, max))
+            LnurlPayerData.requirements(response["payerData"]), SendArkOption.first(response["paymentOptions"], min, max, serverKey))
     }
     /** The Ark address to pay: discovery's own, or the one a payment option's callback returns, checked as discovery's is.
      *  Sends no comment or payer data: an Ark payment can't carry them to the recipient yet. */

@@ -664,6 +664,13 @@
             "description": "The value a wallet sends to the callback as `paymentOption`.",
             "type": "string"
           },
+          "operator": {
+            "description": "For `bark`, the Ark server's public key (compressed, lowercase hex), so a wallet can tell\nwhether it can pay this option before calling back. Noah's extension, proposed on\nlnurl/luds#303.",
+            "type": [
+              "string",
+              "null"
+            ]
+          },
           "type": {
             "description": "The payment method: `lightning` or `bark`.",
             "type": "string"

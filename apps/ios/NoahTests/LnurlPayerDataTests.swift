@@ -55,17 +55,19 @@ import Testing
         let minSendable: UInt64
         let maxSendable: UInt64
         let paymentOptions: SendArkOption.Advertised?
+        let serverKey: String?
     }
 
     @Test func paymentOptionsFixture() throws {
         let file = try #require(JSONSerialization.jsonObject(with: Fixtures.data("lnurl-pay-options")) as? [String: Any])
         let cases = try #require(file["cases"] as? [[String: Any]])
-        #expect(cases.count == 17)
+        #expect(cases.count == 21)
         for fixture in cases {
             let name = try #require(fixture["name"] as? String)
             let input = try #require(fixture["input"] as? [String: Any])
             let probe = try JSONDecoder().decode(OptionsProbe.self, from: JSONSerialization.data(withJSONObject: input))
-            let option = SendArkOption.first(probe.paymentOptions, minMsat: probe.minSendable, maxMsat: probe.maxSendable)
+            let option = SendArkOption.first(probe.paymentOptions, minMsat: probe.minSendable, maxMsat: probe.maxSendable,
+                                             serverKey: probe.serverKey)
             let expected = (fixture["expected"] as? [String: Any]).map {
                 SendArkOption(id: $0["id"] as? String ?? "", minMsat: $0["minMsat"] as? UInt64 ?? 0,
                               maxMsat: $0["maxMsat"] as? UInt64 ?? 0)

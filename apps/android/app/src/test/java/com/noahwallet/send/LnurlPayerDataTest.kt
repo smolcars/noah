@@ -66,11 +66,11 @@ class LnurlPayerDataTest {
 
     @Test fun paymentOptionsFixture() {
         val cases = SharedFixtures.load("lnurl-pay-options")
-        assertEquals(17, cases.size)
+        assertEquals(21, cases.size)
         for (case in cases) {
             val input = case.input.jsonObject
             val option = SendArkOption.first(input["paymentOptions"], input.getValue("minSendable").jsonPrimitive.long,
-                input.getValue("maxSendable").jsonPrimitive.long)
+                input.getValue("maxSendable").jsonPrimitive.long, input["serverKey"]?.jsonPrimitive?.contentOrNull)
             val expected = (case.expected as? JsonObject)?.let {
                 SendArkOption(it.getValue("id").jsonPrimitive.content, it.getValue("minMsat").jsonPrimitive.long, it.getValue("maxMsat").jsonPrimitive.long)
             }

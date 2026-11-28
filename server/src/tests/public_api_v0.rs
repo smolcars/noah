@@ -590,7 +590,7 @@ async fn lnurlp_get(app: axum::Router, uri: &str) -> (StatusCode, serde_json::Va
 #[tokio::test]
 async fn test_lnurlp_request_lists_payment_options() {
     let (app, app_state, _guard) = setup_test_app().await;
-    let (_, ark_address) = test_ark_address(0x11);
+    let (server_pubkey, ark_address) = test_ark_address(0x11);
 
     sqlx::query("INSERT INTO users (pubkey, lightning_address, ark_address) VALUES ($1, $2, $3)")
         .bind("test_pubkey")
@@ -606,6 +606,7 @@ async fn test_lnurlp_request_lists_payment_options() {
         .await
         .unwrap();
 
+    // Before the server knows its Ark server's key, `second` has no `operator`.
     let (status, with_ark) = lnurlp_get(app.clone(), "/.well-known/lnurlp/test").await;
     assert_eq!(status, StatusCode::OK);
     assert_eq!(
@@ -614,6 +615,13 @@ async fn test_lnurlp_request_lists_payment_options() {
             {"id": "lightning", "type": "lightning"},
             {"id": "second", "type": "bark"},
         ])
+    );
+
+    *app_state.ark_server_pubkey.write().await = Some(server_pubkey.to_string().to_uppercase());
+    let (_, with_operator) = lnurlp_get(app.clone(), "/.well-known/lnurlp/test").await;
+    assert_eq!(
+        with_operator["paymentOptions"][1],
+        serde_json::json!({"id": "second", "type": "bark", "operator": server_pubkey.to_string()})
     );
 
     let (status, without_ark) = lnurlp_get(app, "/.well-known/lnurlp/other").await;

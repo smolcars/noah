@@ -931,6 +931,12 @@ extension Components {
             ///
             /// - Remark: Generated from `#/components/schemas/LnurlPayOption/id`.
             internal var id: Swift.String
+            /// For `bark`, the Ark server's public key (compressed, lowercase hex), so a wallet can tell
+            /// whether it can pay this option before calling back. Noah's extension, proposed on
+            /// lnurl/luds#303.
+            ///
+            /// - Remark: Generated from `#/components/schemas/LnurlPayOption/operator`.
+            internal var _operator: Swift.String?
             /// The payment method: `lightning` or `bark`.
             ///
             /// - Remark: Generated from `#/components/schemas/LnurlPayOption/type`.
@@ -939,16 +945,20 @@ extension Components {
             ///
             /// - Parameters:
             ///   - id: The value a wallet sends to the callback as `paymentOption`.
+            ///   - _operator: For `bark`, the Ark server's public key (compressed, lowercase hex), so a wallet can tell
             ///   - _type: The payment method: `lightning` or `bark`.
             internal init(
                 id: Swift.String,
+                _operator: Swift.String? = nil,
                 _type: Swift.String
             ) {
                 self.id = id
+                self._operator = _operator
                 self._type = _type
             }
             internal enum CodingKeys: String, CodingKey {
                 case id
+                case _operator = "operator"
                 case _type = "type"
             }
         }

@@ -50,10 +50,12 @@ struct SendArkOption: Equatable, Sendable {
         }
     }
 
-    /// The first usable `bark` entry, its own range narrowing the pay request's; nil when there is none.
-    static func first(_ advertised: Advertised?, minMsat: UInt64, maxMsat: UInt64) -> Self? {
+    /// The first usable `bark` entry, its own range narrowing the pay request's; nil when there is none. An entry naming an
+    /// `operator` (Noah's extension, proposed on lnurl/luds#303) must name `serverKey`, the wallet's own Ark server.
+    static func first(_ advertised: Advertised?, minMsat: UInt64, maxMsat: UInt64, serverKey: String? = nil) -> Self? {
         for entry in advertised?.entries ?? [] where entry.usable && entry.type == "bark" {
             guard let id = entry.id, !id.isEmpty else { continue }
+            if let operatorKey = entry.operatorKey, operatorKey.lowercased() != serverKey?.lowercased() { continue }
             let low = max(minMsat, entry.minMsat ?? minMsat)
             let high = min(maxMsat, entry.maxMsat ?? maxMsat)
             guard low <= high else { continue }
@@ -69,6 +71,8 @@ struct SendPaymentOptionEntry: Decodable, Sendable {
     var type: String?
     var minMsat: UInt64?
     var maxMsat: UInt64?
+    /// The Ark server's public key the entry names, if any.
+    var operatorKey: String?
     var usable = true
 
     init(from decoder: any Decoder) {
@@ -78,6 +82,10 @@ struct SendPaymentOptionEntry: Decodable, Sendable {
         }
         id = try? container.decode(String.self, forKey: .id)
         type = try? container.decode(String.self, forKey: .type)
+        if container.contains(.operatorKey) {
+            operatorKey = try? container.decode(String.self, forKey: .operatorKey)
+            if operatorKey == nil { usable = false }
+        }
         if container.contains(.available), (try? container.decode(Bool.self, forKey: .available)) != true { usable = false }
         if container.contains(.minSendable) {
             minMsat = try? container.decode(UInt64.self, forKey: .minSendable)
@@ -89,7 +97,10 @@ struct SendPaymentOptionEntry: Decodable, Sendable {
         }
     }
 
-    private enum CodingKeys: String, CodingKey { case id, type, available, minSendable, maxSendable }
+    private enum CodingKeys: String, CodingKey {
+        case id, type, available, minSendable, maxSendable
+        case operatorKey = "operator"
+    }
 }
 
 /// The identity Noah can send as LUD-18 payer data: the profile's display name and the wallet's own Lightning address.
@@ -203,7 +214,8 @@ enum SendRecipientService {
             if let path = endpoint?.percentEncodedPath { endpoint?.percentEncodedPath = SendDestination.removingDotSegments(path) }
         }
         guard endpoint.map(SendDestination.allowsLnurl) == true else { throw SendFailure.invalid }
-        if let key = try? await session.sendArkServerKey() {
+        let serverKey = try? await session.sendArkServerKey()
+        if let key = serverKey {
             let items = endpoint?.queryItems ?? []
             endpoint?.queryItems = items + [URLQueryItem(name: "ark", value: key)]
         }
@@ -232,7 +244,8 @@ enum SendRecipientService {
             destination: value, minMsat: decoded.minSendable, maxMsat: decoded.maxSendable,
             commentAllowed: max(0, decoded.commentAllowed ?? 0), arkAddress: ark,
             callback: callback, metadata: decoded.metadata, payerData: decoded.payerData?.requirements ?? [:],
-            arkOption: SendArkOption.first(decoded.paymentOptions, minMsat: decoded.minSendable, maxMsat: decoded.maxSendable))
+            arkOption: SendArkOption.first(decoded.paymentOptions, minMsat: decoded.minSendable, maxMsat: decoded.maxSendable,
+                                           serverKey: serverKey))
     }
     /// The Ark address to pay: discovery's own, or the one a payment option's callback returns, checked as discovery's is.
     /// Sends no comment or payer data: an Ark payment can't carry them to the recipient yet.

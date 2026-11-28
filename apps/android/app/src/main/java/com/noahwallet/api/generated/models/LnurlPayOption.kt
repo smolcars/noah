@@ -15,6 +15,13 @@ public data class LnurlPayOption(
   @SerialName("id")
   public val id: String,
   /**
+   * For `bark`, the Ark server's public key (compressed, lowercase hex), so a wallet can tell
+   * whether it can pay this option before calling back. Noah's extension, proposed on
+   * lnurl/luds#303.
+   */
+  @SerialName("operator")
+  public val `operator`: String? = null,
+  /**
    * The payment method: `lightning` or `bark`.
    */
   @SerialName("type")

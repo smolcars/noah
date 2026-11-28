@@ -55,8 +55,12 @@ matched. Otherwise both fields are left out, so wallets don't offer a comment th
 
 It always lists its rails in `paymentOptions`
 ([lnurl/luds#303](https://github.com/lnurl/luds/pull/303)): `{"id": "lightning", "type": "lightning"}`,
-and `{"id": "second", "type": "bark"}` while the recipient has an Ark address. Discovery with
-`ark=<server key>` still returns the Ark address as `ark`, for released Noah apps.
+and `{"id": "second", "type": "bark", "operator": "<Ark server key>"}` while the recipient has an
+Ark address. `operator` is Noah's extension, proposed on #303: the Ark server's public key
+(compressed, lowercase hex), so a wallet can tell before calling back whether it can pay the
+option. It is left out until the server knows the key. Noah's apps skip a `bark` option whose
+`operator` isn't their own Ark server. Discovery with `ark=<server key>` still returns the Ark
+address as `ark`, for released Noah apps.
 
 ## Callback
 
