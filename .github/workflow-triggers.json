@@ -35,5 +35,6 @@
   "rust-toolchain.toml": ["server.yml", "server-push.yml", "native-generated.yml"],
   "scripts": ["native-android.yml", "native-release-checks.yml"],
   "server": ["server.yml", "server-push.yml", "native-generated.yml", "formal-mailbox-lease.yml"],
-  "start.md": []
+  "start.md": [],
+  "zapstore.yaml": []
 }
