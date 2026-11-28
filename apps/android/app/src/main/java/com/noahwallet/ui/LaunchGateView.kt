@@ -153,7 +153,7 @@ internal fun rememberPlatformGate(model: AppModel, activity: androidx.fragment.a
     var platformGate by remember { mutableStateOf<PlatformGateRules.Gate?>(null) }
     var resolvedGateInputs by remember { mutableStateOf<Triple<Boolean, PlatformGateRules.Permission, Int>?>(null) }
     val gateInputs = Triple(model.onboarded, permissionStatus, gateRevision)
-    val gatesReady = resolvedGateInputs == gateInputs && (!model.onboarded || permissionStatus != PlatformGateRules.Permission.checking)
+    val gatesReady = resolvedGateInputs == gateInputs && platformPermissionSettled(model.onboarded, permissionStatus)
     fun refreshPermission() {
         resolvedGateInputs = null
         scope.launch {
@@ -191,15 +191,20 @@ internal fun rememberPlatformGate(model: AppModel, activity: androidx.fragment.a
     }
     LaunchedEffect(model.onboarded, permissionStatus, gateRevision) {
         val (onboarded, status) = model.onboarded to permissionStatus
-        platformGate = withContext(Dispatchers.IO) {
-            PlatformGateRules.gate(onboarded, PlatformAccess.physical(), status, PlatformAccess.batteryEnabled(context),
-                model.settings.persistedState<PersistedWalletState>(PersistedWalletState.key)?.hasSeenBatteryOptimizationPrompt == true)
-        }
+        platformGate = withContext(Dispatchers.IO) { currentPlatformGate(context, model, onboarded, status) }
         resolvedGateInputs = gateInputs
-        if (!onboarded || status != PlatformGateRules.Permission.checking) resolvedOnboarded = onboarded
+        if (platformPermissionSettled(onboarded, status)) resolvedOnboarded = onboarded
     }
     return PlatformGate(gatesReady, resolvedOnboarded == model.onboarded, platformGate, requesting, ::requestPermission) { gateRevision++ }
 }
+
+private fun platformPermissionSettled(onboarded: Boolean, permission: PlatformGateRules.Permission) =
+    !onboarded || permission != PlatformGateRules.Permission.checking
+
+private fun currentPlatformGate(context: android.content.Context, model: AppModel, onboarded: Boolean,
+    permission: PlatformGateRules.Permission): PlatformGateRules.Gate? =
+    PlatformGateRules.gate(onboarded, PlatformAccess.physical(), permission, PlatformAccess.batteryEnabled(context),
+        model.settings.persistedState<PersistedWalletState>(PersistedWalletState.key)?.hasSeenBatteryOptimizationPrompt == true)
 
 /** Each time the app is in front: open the wallet if it isn't, and refresh it and sync it (with delegated maintenance) if it is. */
 @Composable
