@@ -8,7 +8,7 @@ permissions:
   packages: write
 
 env:
-  BARK_VERSION: "0.8.0"
+  BARK_VERSION: "0.9.0"
 
 concurrency:
   group: barkd-image-build
